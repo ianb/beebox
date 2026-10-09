@@ -16,9 +16,15 @@ schema. `todoAssignedWarning` (`beebox/src/shared/todo-model.ts`) makes
 `user`, `me`, `boxholder`, `you`, and `owner` (any case) a card-lint warning;
 the todo is still collected. The badge still renders any value. Covered in
 `beebox/test/shared/markdoc-config.todo.doctest.md`.
-Frontmatter `todos:` entries get the same warning. Left open as a product
-question, not part of this fix: `isBoxholderTodo` still counts a todo assigned
-to another person on the boxholder's plate.
+Frontmatter `todos:` entries get the same warning.
+
+2026-10-09: boxholder decision — another person's todo stays off the
+boxholder's plate but stays visible. `isBoxholderTodo` now admits only an
+absent or empty `assigned` or a boxholder placeholder word; `"agent"` and a
+person's name are excluded. The nav badge, The Plate, a card's and a
+directory's todo line, and the unreviewed-todos health check all read it. The
+todo still renders on its card with its assignee badge. Covered in
+`beebox/test/core/todo/count.doctest.md`.
 
 In the C-reconnecting walk the agent wrote `assigned="user"` on a todo. The
 reading view and The Plate then printed a badge reading "user" next to the

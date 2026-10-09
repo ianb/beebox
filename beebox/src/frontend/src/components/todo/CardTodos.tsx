@@ -12,8 +12,8 @@
  * - `CardTodosContext`, from which each rendered todo reads its plate state
  *   by locator (`card-todos-context.ts`).
  *
- * The query is boxholder scope (the default), so agent follow-ups neither
- * count nor get a plate state. It refreshes on a `file-change` for this path.
+ * The query is boxholder scope (the default), so agent follow-ups and
+ * another person's todos neither count nor get a plate state. It refreshes on a `file-change` for this path.
  * On failure there is no line and the todos render without plate state; the
  * failure is logged, and the card's own load reports its own errors.
  */

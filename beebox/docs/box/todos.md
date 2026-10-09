@@ -26,7 +26,8 @@ Attributes, all optional: `id` (a short slug for `{% see-also %}` cross-
 reference — never a UUID), `status` (`open`/`done`/`dropped`/`parked`;
 absent = `open`), `assigned` (absent = the boxholder; `"agent"` = yours to
 chase; any other value names a person — a plain name such as `"Dana"` is
-fine, and whether it should become a ref is not settled. Never write `user`,
+fine, and whether it should become a ref is not settled. Only the
+boxholder's todos are on the plate and in its counts. Never write `user`,
 `me`, `boxholder`, `you`, or `owner` for the boxholder: leave `assigned` off,
 or lint warns), `by` (absent = boxholder-authored; `"agent"` = you wrote it), `due`,
 and `start` (an absolute date or `-3d`/`-2w` relative to `due` — this is

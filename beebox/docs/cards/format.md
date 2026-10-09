@@ -53,6 +53,8 @@ todo. Full vocabulary:
 - `assigned` — plain string; absence = the boxholder. `"agent"` marks work
   the agent itself is chasing. Any other value names a person (`"Dana"`); a
   plain name is acceptable, and whether it should be a ref is not settled yet.
+  Only the boxholder's todos count on the plate; the agent's and another
+  person's render on their card with an assignee badge.
   A placeholder for the boxholder (`user`, `me`, `boxholder`, `you`, `owner`,
   any case) draws a lint warning: the boxholder's todos leave `assigned` off.
 - `by` — provenance: absence = boxholder-authored, `"agent"` = agent-authored.

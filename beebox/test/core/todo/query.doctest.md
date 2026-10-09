@@ -18,13 +18,13 @@ import { runTodoQuery } from "../../../src/core/todo/query.js";
 import { formatTodoLocation } from "../../../src/core/todo/collect-types.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
-/** Every todo in scope, whatever its status, plus the issues beside them. */
+/** Every todo in the glob, whatever its status or assignee, plus the issues beside them. */
 async function collectTodos(boxRoot: string, options?: { glob: string }) {
   const result = await runTodoQuery(boxRoot, {
     query: {
       here: "",
       ...(options === undefined ? {} : { glob: options.glob }),
-      params: { status: ["open", "done", "dropped", "parked"] },
+      params: { status: ["open", "done", "dropped", "parked"], scope: "all" },
     },
     since: null,
   });
