@@ -57,6 +57,23 @@ const WAIT_BEFORE = new Set(["snapshot", "screenshot"]);
  * target: `open /` lands on `/chat`, and a redirect across origins in either
  * direction would otherwise decide the wait on a URL nobody is looking at.
  */
+/**
+ * The browse-key cookie lasts 30 minutes (`authCookieArgs`) and was re-seeded
+ * only on `open`, so a long session of clicks and snapshots on one page was
+ * signed out halfway (D-chemistry journey, 2026-10-09: "Your session has ended"
+ * exactly 30 minutes after the walker's only `open`). Re-seed it on every
+ * command while the browser is on this worktree's origin.
+ */
+async function refreshAuthCookie(ctx: WorktreeContext): Promise<void> {
+  let current: string;
+  try {
+    current = await getUrl();
+  } catch (_e) {
+    return; // No page yet; the next `open` seeds the cookie.
+  }
+  if (isOwnOrigin(current, ctx)) await run(authCookieArgs(current, ctx));
+}
+
 async function waitForReady(ctx: WorktreeContext): Promise<void> {
   let target: string;
   try {
@@ -138,6 +155,10 @@ async function main(): Promise<number> {
   }
   const ctx = detectWorktreeContext();
   const sub = args[0] === undefined ? "" : args[0];
+
+  if (sub !== "open" && sub !== "close") {
+    await refreshAuthCookie(ctx);
+  }
 
   if (!skipWait && WAIT_BEFORE.has(sub)) {
     await waitForReady(ctx);
