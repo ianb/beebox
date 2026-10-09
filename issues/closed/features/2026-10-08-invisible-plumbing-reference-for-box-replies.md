@@ -1,6 +1,7 @@
 ---
 title: "One user-facing-language reference for everything the box agent says: invisible plumbing, lay translations, and when to switch registers"
 workstream: user-facing-language
+resolution: implemented
 area: beebox
 needs: [design]
 labels: [prompts, ui-sensibility, competitive-research]
@@ -16,7 +17,7 @@ Imbue Studio keeps one 96-line reference,
 title, skill "report to the user" step, and notification is held to. The
 output style and the agent instructions both defer to it, "so a rule about
 what the user hears lives in this file and nowhere else"
-([research](../../research/imbue-studio/chat-app.md), section 6). Its shape:
+([research](../../../research/imbue-studio/chat-app.md), section 6). Its shape:
 
 - **Who is reading.** A non-technical person who asked for an outcome and
   "does not run commands, read code, or know the tools you use". Every
@@ -39,7 +40,7 @@ what the user hears lives in this file and nowhere else"
 Bee Box has the pieces in three places and no single reference: the
 glossary's user-facing register (`beebox/docs/glossary.md`), the agent
 guide's "Speak the User's Language" section from the
-[vocab leak fix](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md),
+[vocab leak fix](../bugs/2026-08-08-implementation-vocab-leaks-into-ui.md),
 and the STE rules the briefing and chat prompts carry. None has the plumbing
 table or the register-switch triggers, and the box agent's replies still name
 commits, paths, and `bbx` commands when the person did not.
@@ -62,6 +63,8 @@ three triggers are the answer, not a per-box setting; the reference must say
 so plainly so the agent does not swing to vagueness.
 
 ## Resolution (user-facing-language, 2026-10-09)
+
+Closed by the user-facing-language merge to main.
 
 - The reference is a box doc, `beebox/docs/box/speaking-to-the-person.md`
   (shipped as `box-docs/speaking-to-the-person.md`): who is reading, the
