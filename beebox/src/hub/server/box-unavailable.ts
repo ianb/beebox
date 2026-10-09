@@ -8,7 +8,7 @@ import type { FastifyReply } from "fastify";
 import { boxMaintenanceStatus } from "../../lib/box-maintenance.js";
 import { resolveGitDir } from "../../lib/git-lock.js";
 import type { EndpointProvider } from "../endpoints.js";
-import { escapeHtml } from "./html.js";
+import { escapeHtml } from "../../lib/escape-html.js";
 
 export interface UnavailableBox {
   status: 503;

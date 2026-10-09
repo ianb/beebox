@@ -19,7 +19,7 @@ import { resolveRequestIdentity, getOwnerEmail } from "../../webapp/auth.js";
 import { filterAccessibleBoxes } from "../../webapp/box-access.js";
 import { loginRedirect, stripBasePrefixHeader } from "../../webapp/base-prefix.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
-import { escapeHtml } from "./html.js";
+import { escapeHtml } from "../../lib/escape-html.js";
 
 function renderPage(boxes: BoxSpec[]): string {
   const items = boxes

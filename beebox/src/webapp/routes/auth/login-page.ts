@@ -20,11 +20,7 @@
  * `<script>` is not — hence a scriptless plain form.
  */
 
-/** HTML-escape a value before interpolating it into markup or an attribute. */
-export function escapeHtml(value: string): string {
-  const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-  return value.replace(/["&'<>]/g, (c) => map[c] ?? c);
-}
+import { escapeHtml } from "../../../lib/escape-html.js";
 
 /**
  * Sanitize an untrusted `returnTo` to a same-origin path, failing safe to
