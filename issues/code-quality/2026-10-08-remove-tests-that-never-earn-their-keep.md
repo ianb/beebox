@@ -52,6 +52,24 @@ keep list above stands, plus cross-system contracts (mobile and scan wire
 contracts, `beebox/*` package exports) and the files that have failed on
 their own. The sample put this at about 5k of 145k test lines.
 
+## Round 2 (2026-10-08, boxholder-approved)
+
+Done: tests of in-memory fakes removed; repeated setup consolidated in the
+37 largest files; static markup and prose checks removed except
+branch-dependent, `bbx-` id/aria, security and incident-named ones; model
+ids unpinned (wildcards inside the value, e.g. `claude-opus-«*»`); every
+box migration retired to a shared tombstone with its migrator code and
+tests deleted.
+
+Round 3 (same day) did the rest of the list below: zod shape probes cut
+to one positive and one negative per schema, exact-text and snapshot
+assertions narrowed to the claim, auth gates folded into one table per
+file (every pair kept), the weak tests fixed so each fails when its
+behavior breaks, the box-admission source-regex test rewritten against
+the real code, and the per-span review give-up rule tested. What remains
+open is the recurring sweep this issue proposes (a `schedules/` job in the
+knip-sweep shape); nothing from the list below is pending.
+
 ## Further trims to consider
 
 Ideas outside the agreed criteria, collected during the sweep for a later

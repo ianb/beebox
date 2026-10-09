@@ -24,14 +24,23 @@ theme:
 Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
 `manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), and `letter-set`
-(`strawberry`, `lemon`, `sky`). The system-only `spectrum` (`gradient`) and
+(`strawberry`, `lemon`, `sky`). Harlequin (`harlequin`, stock `pigment`), Electric
+Playground (`electric-playground`, stock `prism`), and Daydream (`daydream`, stock
+`cloud`) support both cards and app chrome. The material collections also
+support both: Selvedge (`selvedge`/`wool`), Footlights (`footlights`/`marquee`),
+Overpass (`overpass`/`silhouette`), Golden Hour (`golden-hour`/`canopy`),
+Blacklight (`blacklight`/`ink`), and Far Horizon
+(`far-horizon`/`gouache`). Their matching names help pair a workspace and card;
+the two choices remain independent. The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
 Resolution is explicit: card choice, first matching box path rule, box card-type
 choice, schema preference, box default, then plain. Properties identifies which
-of those supplied the result. A malformed or unknown choice remains visible as
-a presentation problem and falls back to plain while it is repaired.
+of those supplied the result. A malformed choice remains visible as a
+presentation problem and falls back to plain while it is repaired. Card theme
+names and stocks are open values; an unfamiliar name is preserved for
+box-authored styling, with `neutral` as its default stock.
 
 ## Symbols
 
@@ -87,8 +96,9 @@ The **system theme** styles the toolbar, shared background, user-message slips,
 text selection, and floating controls such as the selection “+”. It is
 independent of card themes; a card theme may set its own selection color.
 Choose the box default in **Settings → System theme**. The system swatches preview
-these interface parts rather than a card. Flat, Spectrum, Paper, and Candy support the
-system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
+these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Harlequin,
+Electric Playground, and Daydream support the system; Sticky note and Letter set
+are card themes only. Paper offers Slate, Terracotta, and Blue palettes
 (stored as `cream`, `manila`, and `blue` respectively).
 
 A landmark can override the box system theme. Open the landmark's directory from the
@@ -120,8 +130,9 @@ The universal quote tag keeps attribution with quoted words. Its optional
 `treatment` is `layered`, `inset`, or `plain`; omit it when the theme's default
 should apply.
 
-Paper and Sticky note use layered slips for both ordinary Markdown blockquotes
-and attributed quote blocks. Plain keeps both flat, like a web page. An explicit
+Paper, Sticky note, and Letter set use layered slips for both ordinary Markdown
+blockquotes and attributed quote blocks. Harlequin, Electric Playground, and
+Daydream use inset quotes. Plain keeps both flat, like a web page. An explicit
 `treatment="inset"` or `treatment="plain"` opts out of the slip for that quote;
 `treatment="layered"` can opt into a slip even on Plain.
 
@@ -139,8 +150,8 @@ theme. A self-styled authored view can still draw its own material inside that
 frame.
 
 Themes may provide optional app chrome, but a card theme does not require a
-top-bar or composer implementation. Do not invent a new theme name or stock in
-a card: built-ins are catalogued by the engine and unknown values are errors.
+top-bar or composer implementation. System choices must provide registered
+chrome support; accepting a custom card theme does not give it system support.
 
 ## App bar materials
 
@@ -156,7 +167,11 @@ blue bar. Changing this choice updates open pages through the box's existing
 configuration subscription.
 
 The chrome theme also owns the common background behind chat and companion
-cards. Assistant replies sit directly on that background. In Paper chrome,
+cards. Harlequin uses pigment wedges and angular edges; Electric Playground
+uses bright geometric structures; Daydream uses a soft sky and rounded shapes.
+These three themes give assistant replies opaque reading panels, coordinate
+the composer and menus, and keep independently chosen card materials intact.
+Other themes keep assistant replies directly on the background. In Paper chrome,
 local user messages appear as dark, borderless paper slips with white text attached to the right
 edge; their tint follows the app bar stock. Flat keeps its usual message
 bubbles. This treatment does not change message or scrolling behavior.

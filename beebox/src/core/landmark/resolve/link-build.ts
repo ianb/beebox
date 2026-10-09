@@ -26,9 +26,16 @@ export interface ResolvedLink {
   title: string;
   /** True if the target file exists on disk. */
   exists: boolean;
-  /** Where this link came from — hand-authored, the prominence index, or an `expand` glob. */
-  source: "listed" | "derived" | "expand";
-  /** The target's prominence level. Only ever set on a `source: "derived"` link. */
+  /**
+   * Where this link came from — hand-authored, the prominence index, an
+   * `expand` glob, or a nested landmark (`"place"`: the row for a place
+   * inside this one, which opens its entry point or its landmark card).
+   */
+  source: "listed" | "derived" | "expand" | "place";
+  /**
+   * The target's prominence level. Set on a `source: "derived"` or `"place"` link,
+   * and on a `"listed"` link whose card is also a derived entry point or primary card.
+   */
   prominence?: ProminenceLevel;
 }
 

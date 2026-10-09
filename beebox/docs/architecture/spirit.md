@@ -26,7 +26,7 @@ This means:
 
 - **Every action has a source.** Where did this information come from? A voice memo? An email? A PDF that got synced? You can always trace back.
 - **Every decision has a reason.** Why did the box do this and not that? The reasoning isn't hidden in a model's weights — it's captured in the commit history, in the procedure logs, in the questions the box asked along the way.
-- **History is real history.** Every change is a commit. You can look at what changed, when, and what triggered it. If something went wrong, you can rewind. Not theoretically. Actually.
+- **History is real history.** Most changes are commits; chat messages are the exception. You can look at what changed, when, and what triggered it. If something went wrong, you can rewind. Not theoretically. Actually.
 
 This is about the box being honest about what it knows and doesn't know. Rosa's evening haziness means she might confirm something she doesn't fully track. A good system acknowledges that — not by refusing to act, but by making it easy for Diana to see what Rosa agreed to and when.
 

@@ -32,7 +32,7 @@ art, and nothing at all on a server with no emoji font.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: 🍳\n---\n");
+await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Kitchen\n---\n");
 const icon = await render(box);
 await describe(icon.png)
 => 192x192 colour
@@ -55,7 +55,7 @@ to an unauthenticated caller to improve on that is not a trade worth making.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/art/pan.png", "not really a png, and never read");
-await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol:\n    src: /_content/art/pan.png\n---\n");
+await box.write("_content/Box.landmark.card", "---\nsymbol:\n  src: /_content/art/pan.png\nnavigation:\n  label: Kitchen\n---\n");
 await render(box)
 => null
 ```
@@ -67,7 +67,7 @@ back to the app's own icon rather than failing the request.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: Kitchen\n---\n");
+await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: Kitchen\nnavigation:\n  label: Kitchen\n---\n");
 JSON.stringify([await render(box), await render(await makeTmpBox())])
 => [null,null]
 ```

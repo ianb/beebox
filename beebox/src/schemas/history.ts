@@ -21,5 +21,5 @@ an explicitly empty filter means no filtering. A missing commit
 selects the newest match, while a null commit stays on the timeline. Reset returns
 to the opened card's saved or canonical defaults. A session inside the History
 filter does not select a chat recipient. Restore a removed canonical card from
-Git or with the declared engine migration.`,
+Git.`,
 });

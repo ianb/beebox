@@ -228,7 +228,7 @@ function fakeAnalysis(index: number, imageCount: number): RawScanAnalysis {
 }
 
 /** The failure the fake injects when scripted to fail. */
-export class FakeScanVisionFailureError extends ScanVisionBatchError {
+class FakeScanVisionFailureError extends ScanVisionBatchError {
   constructor({ retry, usage }: { retry: ScanVisionRetry; usage: BatchUsage }) {
     super("fake scan-vision failure (scripted)", { retry, usage, costUsd: 0.01 });
     this.name = "FakeScanVisionFailureError";

@@ -155,7 +155,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   { name: "tricks-guide-v2", content: TRICKS_CLAUDE_MD_V2 },
   // The root briefing seed, installed by `installBriefing`. Unlike the guides
   // it is a card template (`createBriefingTemplate`), but it has the same
-  // rollout problem: when the stock openers change, a box still carrying the
+  // rollout problem: when the seed changes, a box still carrying the
   // untouched previous seed must take the update rather than park it.
   { name: "briefing-seed", content: createBriefingTemplate() },
 ];

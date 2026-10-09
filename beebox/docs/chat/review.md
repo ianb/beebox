@@ -78,6 +78,22 @@ session's parsed transcript at once is the allocation pattern that OOM'd
 `bbx serve`. The quiet-for-30-minutes check is therefore re-run at review time
 too, against the file as it stands then.
 
+## Titles right after a turn
+
+A chat does not wait for the nightly run for its first title. When a root
+chat's turn completes, `core/chat/review/after-turn.ts` runs the title pass for
+that one session, under the same lock and against the same title journal. It
+runs only while the session has no title journal entry. Its gate replaces the
+quiet window and both size gates with a turn count: the second user turn
+qualifies, and so does the first when its message is at least 40 characters
+(about one sentence that names a subject). The pass writes the title, advances
+the title journal, and emits `chat-title-changed`, which updates the open
+chat's label without a reload. A lock held by the nightly run, a `manual`
+title, or two failed attempts skip it; the nightly run then owns the title, and
+it may refresh a generated title as it grows. A turn that completes before the
+session-start bookkeeping has written the husk is skipped. A later turn
+retries; the nightly run titles it only if the chat meets the nightly gates.
+
 ## The freshness check
 
 The title pass's first move is not a model call. When the chat already has a

@@ -7,15 +7,11 @@ model: sonnet
 
 # finish (headless)
 
-Land this worktree's work in `main`. You are **headless**: you cannot ask anything
-mid-run. Wherever this says BLOCKED, stop and return `RESULT: BLOCKED` naming what
-needs a human decision and what you did and did not do; merge only on a fully clean
-happy path. Every return, MERGED or BLOCKED at any step, first writes a
-CODING_FEEDBACK entry: pipe your answers to its four prompts
-(`bin/coding-feedback help`) into `bin/coding-feedback add --checkpoint landed`.
-Two scripts own the mechanics, you own the judgment — never re-derive
-what the sheet states. Why: revision 2026-08-25 of the plan
-`beebox/docs/plans/change-based-test-selection.md`.
+Land this worktree in `main`. You are headless: where this says BLOCKED, stop
+with the reason, completed work, and needed human decision. Before every return,
+write CODING_FEEDBACK using `bin/coding-feedback help` and
+`bin/coding-feedback add --checkpoint landed`. Scripts own classification and
+mechanics; you own review and whether passing verification remains applicable.
 
 ## 1. Preflight — `bin/finish-preflight`
 Confirms the worktree, classifies the private leg, lists stragglers, merges `main`,
@@ -33,24 +29,32 @@ from INSIDE `private-issues/` (a separate repo; `git add` in the worktree root
 cannot see it). Not active → skip every private step below, and report nothing
 about it.
 
-## 3. Verify — `bin/finish-verify`
-Runs what the sheet named, captures output outside the worktree, re-runs each
-failing test file once in isolation, ends with `VERDICT: green|red`. A
-code-related diff (the deploy hook's "deployed paths" rule) also runs
-`bin/smoke`: a real box boots and is walked in a browser, ~30s, no model turns.
-It is not flake-forgiven and there is no way to wave it through — a red smoke
-means the app does not run, which is exactly what the other tiers cannot see.
-If it reports the dev router is not answering, that is BLOCKED for the
-boxholder to start (`pnpm dev` in the main checkout), not something to work
-around. **green** →
-proceed; a named flake (fail, then pass alone at the same content hash) is green
-— name it in the report, and file no flake issue
-(`beebox/test/careful.txt` curation is that channel). **red** → every
-selected test ran because this branch touched what it imports, so it is this
-branch's to answer for; "unrelated", "failing before", "infra broken" are not
-exits. Fix and re-run, or BLOCKED with the output path. Never re-run a suite to
-chase green (read the captured file), and never run one in the main checkout —
-`schedules/full-suite` alone tests `main`.
+## 3. Verify — reuse passing evidence
+Record each completed check's tested revision and result, including evidence
+from the caller. Run `bin/finish-verify` for missing checks; do not repeat a
+passing check just because main advanced, a merge commit exists, or the sheet
+still lists it. Test selection describes coverage, not invalidation of a pass.
+
+Before retesting, inspect the actual delta since the tested revision. Default
+to reuse after a clean merge of independent work. Documentation, issue close-out,
+audit/history records, and non-overlapping changes normally preserve prior passes.
+Name a concrete interaction before rerunning: conflict resolution, overlapping
+behavior, or changes to a shared dependency, schema, build configuration, or test
+fixture that affect this work. Disjoint files can interact; mere possibility
+without a relevant dependency is not a reason to repeat the suite.
+
+Run only checks affected by that interaction (`--only tests|typecheck|lint|smoke|site`
+or named tests for a narrower impact). Reserve a broad rerun for broad effects.
+Docs-only close-out needs its pre-commit doc-check, not application tests. Report
+which evidence was reused, the intervening delta, and why it remains applicable.
+
+The verifier captures output outside the worktree and reruns failing test files
+once in isolation. Green proceeds; a named flake (passes alone at the same
+content hash) is green: report it, no flake issue (`beebox/test/careful.txt` owns
+curation). Red means fix and recheck or BLOCKED with the output path, never a
+suite rerun to chase green. Code changes require a passing smoke: real box/browser,
+no model turns. A red smoke blocks; an unavailable dev router needs the boxholder
+to start it (`pnpm dev` in main). Never run suites in main; its hourly schedule owns them.
 
 ## 4. Diff review (Track O)
 Skip when `trackO.recommended` is false, and say so. Otherwise review **only the
@@ -118,16 +122,15 @@ does not apply — repair private→private links by hand.
 The workstream's isolated test1 clone: if its `keep` branch has commits the
 source test1 lacks, merge them into the source test1's `main` and push. Conflict
 → BLOCKED, both left intact. `test-setup` is disposable and never merged.
-All must hold: `git status --porcelain` empty; every post-green commit re-verified
-(`bin/finish-verify --only tests|typecheck|lint|smoke`, or a full `bin/finish-verify`
-after a semantic code change; a docs-only commit needs only the pre-commit
-`doc-check`); and, private leg only, `git -C private-issues status --porcelain`
+All must hold: `git status --porcelain` empty; passing verification still applies
+under step 3 (recheck only affected coverage); and, private leg only,
+`git -C private-issues status --porcelain`
 empty (deletions count) plus the private PRIMARY checkout (`repo=` in the sheet)
 clean and on `main`. Any failure → BLOCKED, nothing merged.
 Then run `bin/land` bare — no `$(…)`. It enforces the main-checkout preflight and
 refuses with a precise message; treat a refusal as the BLOCKED reason (refused
-because `main` moved → back to step 1, then here). It prints the hash and log the
-report quotes.
+because `main` moved → step 1, assess the delta under step 3, then return here;
+no automatic full rerun). It prints the hash and log the report quotes.
 
 **Private leg**, right after the public merge (skip when the private branch has no
 commits beyond private main → `PRIVATE: no changes`):
@@ -145,15 +148,11 @@ mergeable later — but it MUST appear in `PRIVATE:`. Do not run worktree cleanu
 SessionEnd and the SessionStart sweep own it.
 
 ## 8. Report
-Factual and compact — an internal handoff, not a conversation ending; no advice
-to exit, clean up, or continue. Give: merge hash and commit count, what
-`bin/finish-verify` ran and its verdict (naming any flake), step 5's
-MET/PARTIAL/UNMET tally when there was a plan, Track O findings, and honest scope
-notes (passing tests is not "verified in the app"). When the briefing or branch
-provides multiple screenshots as UI verification, require one labeled exhibit
-URL in the report rather than listing raw screenshot paths; if no exhibit exists,
-create an `fyi` exhibit before landing. Its prose/captions must identify what the
-figures demonstrate, not leave the developer a spot-the-difference puzzle. A
+Report the merge hash/count, checks and reused evidence (including flakes), plan
+MET/PARTIAL/UNMET tally, Track O findings, and scope limits. Passing tests do not
+mean browser-verified. No advice to exit or clean up. For multiple UI screenshots,
+report one labeled exhibit URL, not raw paths; create an `fyi` exhibit before
+landing if missing. Captions must explain what the figures demonstrate. A
 single incidental debug capture does not trigger this. Write the CODING_FEEDBACK
 entry (see the top), then end with the status line the
 caller parses: `RESULT: MERGED`, or `RESULT: BLOCKED` + what blocks, what you

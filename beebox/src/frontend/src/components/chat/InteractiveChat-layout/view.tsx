@@ -10,7 +10,7 @@
  * still has a heading.
  */
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode, type SyntheticEvent } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
 import { type SelectionItem } from "../../../lib/selection/serialize";
@@ -217,8 +217,19 @@ export function ChatView(props: {
   statusBanners: ReactNode;
   composerSection: ReactNode;
   debugLog: ReactNode;
+  /**
+   * A pointer, focus, or key event inside the chat pane (transcript, cards,
+   * composer). The workspace uses it to cancel a pending arrival
+   * (docs/implemented-plans/landmark-arrival.md, Track D).
+   */
+  onPaneInteraction?: () => void;
 }) {
-  const { workspace, barChrome, statusBanners, composerSection, debugLog } = props;
+  const { workspace, barChrome, statusBanners, composerSection, debugLog, onPaneInteraction } = props;
+  // React bubbles portal events through the tree; the app-bar chips are
+  // portals published from `barChrome`, so count only events inside this DOM.
+  const interacted = (event: SyntheticEvent<HTMLDivElement>) => {
+    if (event.target instanceof Node && event.currentTarget.contains(event.target)) onPaneInteraction?.();
+  };
   const composer = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = composer.current;
@@ -231,11 +242,12 @@ export function ChatView(props: {
   }, []);
   return (
     <>
-      <div className="bbx-conversation-desk h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden">
+      <div className="bbx-conversation-desk h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden"
+        onPointerDownCapture={interacted} onFocusCapture={interacted} onKeyDownCapture={interacted}>
         {barChrome}
         {workspace}
         <div ref={composer} className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
-          {props.selectionNotice}
+          <div className="bbx-composer-notices">{props.selectionNotice}</div>
           {props.ambientRegion}
           {props.failedRegion}
           {statusBanners}

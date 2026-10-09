@@ -17,7 +17,7 @@ learner had to know what to type.
 No agent-first turn exists. A chat's openers come only from the briefing card
 in that directory (`beebox/src/webapp/trpc/routers/chat/router.ts:104-131`).
 The attach scope of a course has no briefing, so no openers appear. The
-[fresh-chat reservation bug](../bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
+[fresh-chat reservation bug](../closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
 would hide openers there anyway.
 
 ## Open question

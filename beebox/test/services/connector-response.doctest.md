@@ -48,7 +48,7 @@ personal mail content):
 
 ```ts continue
 JSON.stringify(bad?.issues)
-=> ["id: Invalid input: expected string, received undefined"]
+=> ["id: «*»"]
 ```
 
 ## Enum-ish fields stay drift-tolerant
@@ -111,5 +111,5 @@ here instead of as silent `undefined`s downstream:
 ```ts
 const bad = vErr([{ update_id: "nope" }], { schema: telegramUpdatesSchema, service: "telegram", operation: "getUpdates" });
 JSON.stringify({ service: bad?.service, operation: bad?.operation, issues: bad?.issues })
-=> {"service":"telegram","operation":"getUpdates","issues":["0.update_id: Invalid input: expected number, received string"]}
+=> {"service":"telegram","operation":"getUpdates","issues":["0.update_id: «*»"]}
 ```

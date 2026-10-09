@@ -56,93 +56,163 @@ const authed200 = {
 // `runTailscaleStatus` receives an already-resolved concrete target (the CLI
 // turns `--target`/auto-discovery into a `{ port }` via `resolveTargetOrDiscover`
 // — see tailscale-discovery.doctest.md). This helper mirrors that boundary.
-const state = (deps, port) => runTailscaleStatus(deps, { target: { port } }).then((r) => r.state);
+// Deps with a correct serve config and the given `/auth/me` probe, or with only
+// a status payload.
+const withProbe = (probe) => createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe });
+const withStatus = (status) => createFakeTailscaleDeps({ status });
+const report = (deps) => runTailscaleStatus(deps, { target: { port: 3210 } });
 ```
 
-## State 1: binary absent
+## Every state is its own branch
 
-When `tailscale` is not on PATH, every call is unspawnable — the report points
-at the platform install doc.
+Each input below scripts the fake `tailscale` CLI and lands in exactly one
+state of the machine. Reading the table top to bottom follows the order the
+machine checks things.
+
+- **cli-error:** a `tailscale` call that spawns but exits nonzero (dead daemon,
+  permission error) is a DISTINCT `cli-error` — it must never be read as empty
+  config and trigger a write. An empty serve config is only accepted at exit 0;
+  a nonzero serve exit is cli-error, not "unconfigured".
+- **Schema drift:** invalid JSON, or JSON missing a field the machine depends
+  on (`BackendState`, `Self`, or `CertDomains` renamed/absent), is
+  `unrecognized-status-output`, never undefined-propagation. Running with an
+  empty `Self.DNSName` is drift too: we never build a `:443` URL from an empty
+  host.
+- **Unknown BackendState:** a value outside the known seven (a future Tailscale
+  version) is NOT assumed working — the shape parsed fine, the value is
+  unrecognized, so it reaches the explicit `unknown-backend-state` branch.
+- **Login and not-running states:** `NoState` and `NeedsLogin` both route to
+  login guidance. Each remaining not-running state has its own distinct
+  branch; `InUseOtherUser` (the seventh state) is a real, actionable condition,
+  not "unrecognized".
+- **https-disabled:** `Running` with an empty `CertDomains` means the
+  tailnet-wide HTTPS toggle is off — a real one-time human step.
+- **Serve:** an empty config prints `{}` and means setup hasn't run yet. Serve
+  pointing at a *different* loopback port is drift, not a match. Unparseable
+  serve output is its own state.
+- **Funnel:** a Funnel allowance on the target hostname-port is a FAILING
+  state — "nothing publicly exposed" is a checked invariant. A **foreground**
+  Funnel config (what `tailscale funnel` without `--bg` writes) is caught too:
+  the check inspects every foreground config, not just the top level.
+- **Probe:** with serve correct, a probe that cannot reach the endpoint (box
+  server down) is `probe-failed`. A box that reports open (unauthenticated)
+  mode is `exposed-unauthenticated` because Serve is already fronting an
+  unprotected box. A reachable answer that is not a beebox auth shape is
+  `posture-ambiguous`. None of these is `ready`.
 
 ```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ binaryPresent: false }),
-  { target: { port: 3210 } },
-);
-[report.state, report.ok, report.docLink]
-=> [
-  "binary-absent",
-  false,
-  "https://tailscale.com/download"
-]
+const wrongServe = {
+  Web: { "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:9999" } } } },
+};
+const foregroundFunnel = {
+  ...correctServe,
+  Foreground: { "sess-1": { AllowFunnel: { "box.tail1234.ts.net:443": true } } },
+};
+const rows = [
+  ["status exits nonzero", createFakeTailscaleDeps({ status: "", statusCode: 1 })],
+  ["serve exits nonzero", createFakeTailscaleDeps({ status: runningStatus, serve: "", serveCode: 1 })],
+  ["status is not JSON", withStatus("not json at all")],
+  ["status lacks BackendState", withStatus({ Self: { DNSName: "x." } })],
+  ["unknown BackendState", withStatus(bs("TeleportingSideways"))],
+  ["NoState", withStatus(bs("NoState"))],
+  ["NeedsMachineAuth", withStatus(bs("NeedsMachineAuth"))],
+  ["Stopped", withStatus(bs("Stopped"))],
+  ["Starting", withStatus(bs("Starting"))],
+  ["InUseOtherUser", withStatus(bs("InUseOtherUser"))],
+  ["no CertDomains", withStatus({ ...runningStatus, CertDomains: [] })],
+  ["empty DNSName", withStatus({ BackendState: "Running", Self: { DNSName: "", TailscaleIPs: null }, CertDomains: ["x"] })],
+  ["serve empty", createFakeTailscaleDeps({ status: runningStatus, serve: {} })],
+  ["serve on another port", createFakeTailscaleDeps({ status: runningStatus, serve: wrongServe })],
+  ["serve output garbage", createFakeTailscaleDeps({ status: runningStatus, serve: "<garbage>" })],
+  ["foreground Funnel", createFakeTailscaleDeps({ status: runningStatus, serve: foregroundFunnel, probe: enforced401 })],
+  ["probe unreachable", withProbe({ reachable: false, status: null })],
+  ["probe says open", withProbe({ reachable: true, status: 200, body: JSON.stringify({ open: true }) })],
+  ["probe not a beebox shape", withProbe({ reachable: true, status: 200, body: JSON.stringify({ hello: "world" }) })],
+];
+const lines = [];
+for (const [label, deps] of rows) {
+  lines.push(`${label}: ${(await report(deps)).state}`);
+}
+
+lines.join("\n")
+=>
+status exits nonzero: cli-error
+serve exits nonzero: cli-error
+status is not JSON: unrecognized-status-output
+status lacks BackendState: unrecognized-status-output
+unknown BackendState: unknown-backend-state
+NoState: needs-login
+NeedsMachineAuth: needs-machine-auth
+Stopped: stopped
+Starting: starting
+InUseOtherUser: in-use-other-user
+no CertDomains: https-disabled
+empty DNSName: unrecognized-status-output
+serve empty: serve-unconfigured
+serve on another port: serve-drift
+serve output garbage: unrecognized-serve-output
+foreground Funnel: funnel-enabled
+probe unreachable: probe-failed
+probe says open: exposed-unauthenticated
+probe not a beebox shape: posture-ambiguous
 ```
 
-## CLI error: nonzero exit is its own state, never parsed as config
+## Reports carry more than the state
 
-A `tailscale` call that spawns but exits nonzero (dead daemon, permission
-error) is a DISTINCT `cli-error` — it must never be read as empty config and
-trigger a write.
+Some states also carry fields a caller acts on. The `ok` flag is true only
+for `ready`. Binary absent (`tailscale` not on PATH, so every call is
+unspawnable) points at the platform install doc; `NeedsLogin` points at the
+auth-key doc for the headless path; a Funnel allowance on the target fails
+even when the serve mapping is otherwise correct; `ready` names the working
+URL once serve is correct and `/auth/me` reports enforced auth (a `{error:…}`
+401).
+
+**A served guarded router is ready too.** When Serve fronts the router
+loopback port and the SERVED `/__router/status` denies anonymously (401 +
+header), status is `ready` with `guarded: true` — it proved the gate over the
+real Serve path, not `/auth/me` (the router has none).
 
 ```ts
-await state(createFakeTailscaleDeps({ status: "", statusCode: 1 }), 3210)
-=> cli-error
+const funnelServe = { ...correctServe, AllowFunnel: { "box.tail1234.ts.net:443": true } };
+const rows = [
+  [createFakeTailscaleDeps({ binaryPresent: false }), ["state", "ok", "docLink"]],
+  [withStatus(bs("NeedsLogin")), ["state", "docLink"]],
+  [createFakeTailscaleDeps({ status: runningStatus, serve: funnelServe, probe: enforced401 }), ["state", "ok"]],
+  [withProbe(enforced401), ["state", "ok", "url"]],
+  [createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe }), ["state", "ok", "guarded", "url"]],
+];
+const lines = [];
+for (const [deps, keys] of rows) {
+  const r = await report(deps);
+  lines.push(JSON.stringify(Object.fromEntries(keys.map((k) => [k, r[k] ?? null]))));
+}
+
+lines.join("\n")
+=>
+{"state":"binary-absent","ok":false,"docLink":"https://tailscale.com/download"}
+{"state":"needs-login","docLink":"https://tailscale.com/kb/1085/auth-keys"}
+{"state":"funnel-enabled","ok":false}
+{"state":"ready","ok":true,"url":"https://box.tail1234.ts.net/"}
+{"state":"ready","ok":true,"guarded":true,"url":"https://box.tail1234.ts.net/"}
 ```
 
-An empty serve config is only accepted at exit 0 — a nonzero serve exit is
-cli-error, not "unconfigured":
-
-```ts
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: "", serveCode: 1 }), 3210)
-=> cli-error
-```
-
-## Schema drift: unrecognized status output
-
-Invalid JSON, or JSON missing a field the machine depends on (`BackendState`,
-`Self`, or `CertDomains` renamed/absent), is its own state — never
-undefined-propagation.
-
-```ts
-await state(createFakeTailscaleDeps({ status: "not json at all" }), 3210)
-=> unrecognized-status-output
-```
-
-```ts
-await state(createFakeTailscaleDeps({ status: { Self: { DNSName: "x." } } }), 3210)
-=> unrecognized-status-output
-```
+## Pure parsers
 
 The zod schema rejects the drifted shape at the boundary — including a missing
-`Self` key (an always-emitted status member):
+`Self` key (an always-emitted status member) — while a new *field* the machine
+doesn't read passes through (only a renamed/absent required field is drift):
 
 ```ts
 [
   parseStatusJson(JSON.stringify({ Self: {} })).ok,
   parseStatusJson(JSON.stringify({ BackendState: "Running", CertDomains: null })).ok,
+  parseStatusJson(JSON.stringify({ BackendState: "Running", Self: null, CertDomains: null, BrandNewField: 1 })).ok,
 ]
 => [
   false,
-  false
+  false,
+  true
 ]
-```
-
-A new *field* the machine doesn't read passes through (only a renamed/absent
-required field is drift):
-
-```ts
-parseStatusJson(JSON.stringify({ BackendState: "Running", Self: null, CertDomains: null, BrandNewField: 1 })).ok
-=> true
-```
-
-## Unknown BackendState: fail-closed
-
-A `BackendState` value outside the known seven (a future Tailscale version) is
-NOT assumed working — it reaches the explicit unknown branch. This is distinct
-from schema drift: the shape parsed fine, the value is unrecognized.
-
-```ts
-await state(createFakeTailscaleDeps({ status: bs("TeleportingSideways") }), 3210)
-=> unknown-backend-state
 ```
 
 `toBackendState` maps only the seven known `ipn.State` values; everything else
@@ -157,115 +227,7 @@ is `null`:
 ]
 ```
 
-## States 2-3: each backend state its own branch
-
-`NoState` and `NeedsLogin` both route to the login guidance (with the auth-key
-doc for the headless path):
-
-```ts
-await state(createFakeTailscaleDeps({ status: bs("NoState") }), 3210)
-=> needs-login
-```
-
-```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ status: bs("NeedsLogin") }),
-  { target: { port: 3210 } },
-);
-[report.state, report.docLink]
-=> [
-  "needs-login",
-  "https://tailscale.com/kb/1085/auth-keys"
-]
-```
-
-Each remaining not-running state has its own distinct branch — `InUseOtherUser`
-(the seventh state) is a real, actionable condition, not "unrecognized":
-
-```ts
-const cases = ["NeedsMachineAuth", "Stopped", "Starting", "InUseOtherUser"];
-const states = [];
-for (const b of cases) {
-  states.push(await state(createFakeTailscaleDeps({ status: bs(b) }), 3210));
-};
-states.join(", ")
-=> needs-machine-auth, stopped, starting, in-use-other-user
-```
-
-## State 4: Running but HTTPS certs disabled
-
-`Running` with an empty (or null) `CertDomains` means the tailnet-wide HTTPS
-toggle is off — a real one-time human step, linked to the admin console.
-
-```ts
-await state(createFakeTailscaleDeps({ status: { ...runningStatus, CertDomains: [] } }), 3210)
-=> https-disabled
-```
-
-Running with an empty `Self.DNSName` is drift — we never build a `:443` URL
-from an empty host:
-
-```ts
-await state(
-  createFakeTailscaleDeps({ status: { BackendState: "Running", Self: { DNSName: "", TailscaleIPs: null }, CertDomains: ["x"] } }),
-  3210,
-)
-=> unrecognized-status-output
-```
-
-## State 5: serve drift and the no-Funnel invariant
-
-Serve unconfigured (empty config prints `{}`) means setup hasn't run yet:
-
-```ts
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: {} }), 3210)
-=> serve-unconfigured
-```
-
-Serve pointing at a *different* loopback port is drift, not a match:
-
-```ts
-const wrongServe = {
-  Web: { "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:9999" } } } },
-};
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: wrongServe }), 3210)
-=> serve-drift
-```
-
-**A Funnel allowance on the target hostname-port is a FAILING state** — "nothing
-publicly exposed" is a checked invariant, not an assumption. It fails even when
-the serve mapping is otherwise correct:
-
-```ts
-const funnelServe = {
-  ...correctServe,
-  AllowFunnel: { "box.tail1234.ts.net:443": true },
-};
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ status: runningStatus, serve: funnelServe, probe: enforced401 }),
-  { target: { port: 3210 } },
-);
-[report.state, report.ok]
-=> [
-  "funnel-enabled",
-  false
-]
-```
-
-A **foreground** Funnel config (what `tailscale funnel` without `--bg` writes)
-is caught too — the check inspects every foreground config, not just the top
-level:
-
-```ts
-const foregroundFunnel = {
-  ...correctServe,
-  Foreground: { "sess-1": { AllowFunnel: { "box.tail1234.ts.net:443": true } } },
-};
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: foregroundFunnel, probe: enforced401 }), 3210)
-=> funnel-enabled
-```
-
-`hasFunnelForTarget` checks both levels directly:
+`hasFunnelForTarget` checks both the top level and foreground configs:
 
 ```ts
 [
@@ -278,13 +240,6 @@ await state(createFakeTailscaleDeps({ status: runningStatus, serve: foregroundFu
   true,
   false
 ]
-```
-
-Unparseable serve output is its own drift-distinct state:
-
-```ts
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: "<garbage>" }), 3210)
-=> unrecognized-serve-output
 ```
 
 `loopbackProxyPort` accepts a bare port or a loopback URL, and rejects a
@@ -317,77 +272,13 @@ serve is unconfigured):
 ]
 ```
 
-## State 6: serve correct → strict posture classification
-
-With serve correct and `/auth/me` reporting enforced auth (a `{error:…}` 401),
-the report is `ready` (the only `ok: true` state) and names the working URL.
-
-```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: enforced401 }),
-  { target: { port: 3210 } },
-);
-[report.state, report.ok, report.state === "ready" ? report.url : null]
-=> [
-  "ready",
-  true,
-  "https://box.tail1234.ts.net/"
-]
-```
-
-Serve correct but the probe cannot reach the endpoint (box server down) is a
-distinct failing state, not `ready`:
-
-```ts
-await state(
-  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: { reachable: false, status: null } }),
-  3210,
-)
-=> probe-failed
-```
-
-**Serve is live but the box reports open (unauthenticated) mode** — a serious
-failing state (`exposed-unauthenticated`), never `ready`, because Serve is
-already fronting an unprotected box:
-
-```ts
-await state(
-  createFakeTailscaleDeps({
-    status: runningStatus,
-    serve: correctServe,
-    probe: { reachable: true, status: 200, body: JSON.stringify({ open: true }) },
-  }),
-  3210,
-)
-=> exposed-unauthenticated
-```
-
-An unrecognizable posture (reachable, but not a beebox auth shape) is its
-own failing state, not `ready`:
-
-```ts
-await state(
-  createFakeTailscaleDeps({
-    status: runningStatus,
-    serve: correctServe,
-    probe: { reachable: true, status: 200, body: JSON.stringify({ hello: "world" }) },
-  }),
-  3210,
-)
-=> posture-ambiguous
-```
-
 ## `--json` output shape
 
 `reportToJson` returns the structured report agents consume: `ok`, `state`, and
 the per-state fields.
 
 ```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: authed200 }),
-  { target: { port: 3210 } },
-);
-JSON.stringify(reportToJson(report), null, 2)
+JSON.stringify(reportToJson(await report(withProbe(authed200))), null, 2)
 =>
 {
   "state": "ready",
@@ -402,144 +293,90 @@ JSON.stringify(reportToJson(report), null, 2)
 
 ## Human output: one glyph line, condition, next step, doc link
 
+Only `ready` gets the `✓` glyph. The guarded-router summary names the router
+and the anonymous-denied probe.
+
 ```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ binaryPresent: false }),
-  { target: { port: 3210 } },
-);
-formatReportHuman(report)
+print(formatReportHuman(await report(createFakeTailscaleDeps({ binaryPresent: false }))));
+print(formatReportHuman(await report(withProbe(enforced401))).split("\n")[0]);
+const guarded = createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe });
+formatReportHuman(await report(guarded)).split("\n")[1]
 =>
 ✗ tailscale: binary-absent
   the `tailscale` CLI is not on PATH
   next: Install Tailscale for this platform, then run `tailscale up`.
   docs: https://tailscale.com/download
-```
-
-Only `ready` gets the `✓` glyph:
-
-```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: enforced401 }),
-  { target: { port: 3210 } },
-);
-formatReportHuman(report).split("\n")[0]
-=> ✓ tailscale: ready
+✓ tailscale: ready
+  serve is fronting the guarded dev router; anonymous https://box.tail1234.ts.net/__router/status was denied (401)
 ```
 
 ## Track C: router-guarded target classification
 
 `classifyTargetPosture` reads the loopback `/__router/status` FIRST. A guarded
-router (anonymous 401 + `x-bbx-router-guarded`) is now an ALLOWED posture — its
+router (anonymous 401 + `x-bbx-router-guarded`) is an ALLOWED posture — its
 fail-closed gate is live, so Serve fronting it exposes nothing unauthenticated.
 
-```ts
-const deps = createFakeTailscaleDeps({ routerProbe: guardedRouterProbe });
-(await classifyTargetPosture(deps, 3210)).kind
-=> router-guarded
-```
-
-An UNGATED router (200 + `routerPort`/`worktrees`, a pre-Track-B build) is still
-refused — but the message now says to UPDATE the router so its gate is live,
-not "never a valid target":
-
-```ts
-const deps = createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe });
-const posture = await classifyTargetPosture(deps, 3210);
-[posture.kind, describeRefusal(posture, 3210).includes("Update/rebuild the router")]
-=> [
-  "router",
-  true
-]
-```
+An UNGATED router (200 + `routerPort`/`worktrees`, a pre-Track-B build) is
+still refused, and the message says to UPDATE the router so its gate is live,
+not "never a valid target".
 
 A 401 on `/__router/status` WITHOUT the header is not treated as a guarded
-router — it falls through to the `/auth/me` posture read (here enforced):
+router: it falls through to the `/auth/me` posture read (here enforced), as a
+normal bbx serve/hub with no router shape does.
 
 ```ts
-const deps = createFakeTailscaleDeps({
-  routerProbe: { reachable: true, status: 401, body: "Unauthorized" },
-  probe: enforced401,
-});
-(await classifyTargetPosture(deps, 3210)).kind
-=> enforced
-```
+const cases = [
+  ["guarded router", createFakeTailscaleDeps({ routerProbe: guardedRouterProbe })],
+  ["ungated router", createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe })],
+  ["401 without header", createFakeTailscaleDeps({
+    routerProbe: { reachable: true, status: 401, body: "Unauthorized" },
+    probe: enforced401,
+  })],
+  ["plain serve", createFakeTailscaleDeps({ probe: enforced401 })],
+];
+const lines = [];
+for (const [label, deps] of cases) {
+  lines.push(`${label}: ${(await classifyTargetPosture(deps, 3210)).kind}`);
+}
+const ungated = await classifyTargetPosture(cases[1][1], 3210);
+lines.push(`refusal says update: ${describeRefusal(ungated, 3210).includes("Update/rebuild the router")}`);
 
-A normal bbx serve/hub (no router shape on `/__router/status`) reads its
-`/auth/me` posture as before:
-
-```ts
-(await classifyTargetPosture(createFakeTailscaleDeps({ probe: enforced401 }), 3210)).kind
-=> enforced
-```
-
-## Track C: status reports a served guarded router as ready
-
-When Serve fronts the router loopback port and the SERVED `/__router/status`
-denies anonymously (401 + header), status is `ready` with `guarded: true` — it
-proved the gate over the real Serve path, not `/auth/me` (the router has none).
-
-```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe }),
-  { target: { port: 3210 } },
-);
-[report.state, report.ok, report.state === "ready" ? report.guarded : null, report.state === "ready" ? report.url : null]
-=> [
-  "ready",
-  true,
-  true,
-  "https://box.tail1234.ts.net/"
-]
-```
-
-The human summary names the guarded router and the anonymous-denied probe:
-
-```ts
-const report = await runTailscaleStatus(
-  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe }),
-  { target: { port: 3210 } },
-);
-formatReportHuman(report).split("\n")[1]
-=>   serve is fronting the guarded dev router; anonymous https://box.tail1234.ts.net/__router/status was denied (401)
+lines.join("\n")
+=>
+guarded router: router-guarded
+ungated router: router
+401 without header: enforced
+plain serve: enforced
+refusal says update: true
 ```
 
 ## `deriveTailscaleBaseUrl`: the admin settings page's Tailscale URL
 
 Pure helper behind the `admin.tailscaleBaseUrl` tRPC query — turns a parsed
 `serve status --json` payload into the box's public `https://…` URL, or null
-when there's no `Web` mapping.
-
-No `Web` section at all (not exposed):
-
-```ts
-deriveTailscaleBaseUrl({})
-=> null
-```
-
-A single HTTPS host — the port suffix is dropped:
+when there's no `Web` mapping. The port suffix is dropped. With multiple hosts
+it prefers the one whose handler proxies to loopback (the box's own front) over
+an unrelated non-loopback mapping. A host with no Handlers at all (unusual, but
+the schema allows it) still counts as an exposed HTTPS mapping and falls back
+to "first host".
 
 ```ts
-deriveTailscaleBaseUrl(correctServe)
-=> https://box.tail1234.ts.net
-```
+const inputs = [
+  ["no Web section", {}],
+  ["single HTTPS host", correctServe],
+  ["loopback host preferred", {
+    Web: {
+      "unrelated.example.ts.net:443": { Handlers: { "/": { Proxy: "http://192.168.1.5:9000" } } },
+      "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3210" } } },
+    },
+  }],
+  ["no Handlers", { Web: { "box.tail1234.ts.net:443": {} } }],
+];
 
-Multiple hosts: prefers the one whose handler proxies to loopback (the box's
-own front) over an unrelated non-loopback mapping:
-
-```ts
-deriveTailscaleBaseUrl({
-  Web: {
-    "unrelated.example.ts.net:443": { Handlers: { "/": { Proxy: "http://192.168.1.5:9000" } } },
-    "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3210" } } },
-  },
-})
-=> https://box.tail1234.ts.net
-```
-
-A host with no Handlers at all (unusual, but the schema allows it) still
-counts as an exposed HTTPS mapping and falls back to "first host":
-
-```ts
-deriveTailscaleBaseUrl({ Web: { "box.tail1234.ts.net:443": {} } })
-=> https://box.tail1234.ts.net
+inputs.map(([label, serve]) => `${label}: ${deriveTailscaleBaseUrl(serve)}`).join("\n")
+=>
+no Web section: null
+single HTTPS host: https://box.tail1234.ts.net
+loopback host preferred: https://box.tail1234.ts.net
+no Handlers: https://box.tail1234.ts.net
 ```

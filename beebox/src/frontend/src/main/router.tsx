@@ -295,6 +295,14 @@ const devChatScrollRoute = createRoute({
   component: lazyRouteComponent(() => import("../pages/dev/ChatScrollHarness"), "ChatScrollPage"),
 });
 
+// Deterministic production message rendering against expressive materials.
+const devChatMaterialsRoute = createRoute({
+  staticData: { title: "Chat materials" },
+  getParentRoute: () => devHarnessLayoutRoute,
+  path: DEV_HARNESS_PATHS.chatMaterials,
+  component: lazyRouteComponent(() => import("../pages/dev/ChatMaterialsPage"), "ChatMaterialsPage"),
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   staticData: { title: null },
@@ -340,7 +348,7 @@ const routeTree = rootRoute.addChildren([
     // and the literal `import.meta.env.DEV` shape has to stay intact for Vite's
     // static DCE, ruling out the honest-cast pattern `lib/view-url.ts` uses instead.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see comment above
-    (import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute] : [],
+    (import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute, devChatMaterialsRoute] : [],
     ),
   ]),
 ]);

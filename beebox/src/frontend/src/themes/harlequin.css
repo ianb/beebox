@@ -1,0 +1,174 @@
+/* Pigment wedges carry the composition; quiet, opaque fields carry words.
+   The SVG is original artwork, shared by desk, navigation, and card heading. */
+.bbx-box-presentation[data-chrome-theme="harlequin"],
+.bbx-themed-menu[data-chrome-theme="harlequin"] {
+  --bbx-status-background: #ddd0a8;
+  --bbx-status-ink: #292925;
+  --bbx-status-edge: #8a6c1f;
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-harlequin-art: url("./art/harlequin-pigment.svg");
+  --bbx-scene: var(--bbx-harlequin-art) center / cover no-repeat, #273b2e;
+  --bbx-toolbar-background: #292925;
+  --bbx-toolbar-ink: #fff8e9;
+  --bbx-toolbar-edge: #c6a245;
+  --bbx-toolbar-radius: 0;
+  --bbx-toolbar-shadow: 0 4px 0 #171914;
+  --bbx-composer-background: #eee5d2;
+  --bbx-composer-ink: #292925;
+  --bbx-composer-edge: #292925;
+  --bbx-composer-radius: 0;
+  --bbx-composer-shadow: -5px -5px 0 #bb9635;
+  --bbx-control-background: #eee5d2;
+  --bbx-control-ink: #292925;
+  --bbx-control-radius: 2px;
+  --bbx-control-shape-default: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  --bbx-control-shape-place: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  --bbx-control-shape-send: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  --bbx-control-shape-voice: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
+  --bbx-control-shape-profile: polygon(25% 0, 100% 0, 100% 75%, 75% 100%, 0 100%, 0 25%);
+  --bbx-control-shape-add: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --bbx-control-shape-mic: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  --bbx-control-shape-keyboard: var(--bbx-control-shape-add);
+  --bbx-control-shape-capture: var(--bbx-control-shape-mic);
+  --bbx-send-background: #213d94;
+  --bbx-send-ink: #fff8e9;
+  --bbx-chat-user-paper: #213d94;
+  --bbx-chat-user-ink: #fff8e9;
+  --bbx-chat-user-radius: 2px 2px 2px 20px;
+  --bbx-chat-reply-paper: #f5efdf;
+  --bbx-chat-reply-ink: #292925;
+  --bbx-menu-paper: #f5efdf;
+  --bbx-menu-ink: #292925;
+  --bbx-menu-edge: #292925;
+  --bbx-menu-radius: 2px;
+  --bbx-selection: #bb9635;
+  --bbx-selection-ink: #211e16;
+  --bbx-selection-code: #e8dcc2;
+  --bbx-selection-code-ink: #292925;
+  --bbx-focus-ring: #8a6c1f;
+}
+
+.bbx-card-theme[data-card-theme="harlequin"] {
+  --bbx-harlequin-art: url("./art/harlequin-pigment.svg");
+  --bbx-paper: #f5efdf;
+  --bbx-ink: #292925;
+  --bbx-ink-soft: #625848;
+  --bbx-pen: #213d94;
+  --bbx-edge: #9a8a69;
+  --bbx-underlay: #bb9635;
+  --bbx-font: "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif;
+  --bbx-sheet-radius: 2px;
+  --bbx-sheet-shadow: 5px 6px 0 #292925;
+  --bbx-sheet-decoration: none;
+  --bbx-tab-radius: 2px 2px 0 0;
+  --bbx-quote-paper: #e6ddc8;
+  --bbx-quote-layer-paper: #e6ddc8;
+  --bbx-quote-edge: 4px;
+  --bbx-quote-radius: 0;
+  --bbx-quote-padding-left: 1.1em;
+  --bbx-blockquote-paper: #e6ddc8;
+  --bbx-blockquote-edge: 4px;
+  --bbx-blockquote-padding: 0.75em 1em;
+  --bbx-slip-overhang: 0px;
+  --bbx-selection: #213d94;
+  --bbx-selection-ink: #fff8e9;
+  --bbx-selection-code: #bb9635;
+  --bbx-selection-code-ink: #211e16;
+  --bbx-link-decoration: underline;
+}
+
+/* An irregular painted edge, never a mask on text or interactive controls. */
+.bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-app-nav {
+  border-bottom-width: 0;
+  padding-bottom: 7px;
+  background-image: var(--bbx-harlequin-art);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center 41%;
+}
+.bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-app-nav > div {
+  background: var(--bbx-toolbar-background);
+}
+.bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-composer-material {
+  border-top-width: 3px;
+}
+.bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-chat-user-paper {
+  border-right: 5px solid #bb9635;
+  box-shadow: 3px 3px 0 #292925;
+  --bbx-selection: #e8dcc2;
+  --bbx-selection-ink: #292925;
+}
+.bbx-box-presentation[data-chrome-theme="harlequin"] .bbx-chat-callout {
+  border-left: 5px solid #772d35;
+  border-radius: 0;
+}
+
+.bbx-card-surface[data-card-theme="harlequin"] {
+  border-top: 0;
+  box-shadow: var(--bbx-sheet-shadow);
+}
+.bbx-card-surface[data-card-theme="harlequin"] > .bbx-card-heading {
+  position: relative;
+  padding-top: 2.5rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--bbx-edge);
+}
+.bbx-card-surface[data-card-theme="harlequin"] > .bbx-card-heading::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 44px;
+  height: 20px;
+  background: var(--bbx-harlequin-art) 45% 44% / cover no-repeat;
+  pointer-events: none;
+}
+.bbx-card-surface[data-card-theme="harlequin"] > .bbx-card-heading :is(h1, h2) {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+.bbx-card-surface[data-card-theme="harlequin"] > .bbx-card-properties {
+  border-radius: 0;
+  box-shadow: none;
+}
+.bbx-interface-tab[data-card-theme="harlequin"] {
+  --bbx-tab-top-border: 4px;
+  border-top-color: #772d35;
+}
+.bbx-interface-tab[data-card-theme="harlequin"][data-active="true"] {
+  border-top-color: #213d94;
+}
+.bbx-card-theme[data-card-theme="harlequin"] .bbx-theme-link {
+  text-decoration-thickness: 1.5px;
+}
+.bbx-card-theme[data-card-theme="harlequin"] .bbx-quote-attribution {
+  font-weight: 600;
+}
+.bbx-card-surface[data-card-theme="harlequin"].bbx-theme-swatch {
+  border-top: 9px solid #213d94;
+  border-left: 5px solid #bb9635;
+}
+.bbx-system-theme-preview[data-chrome-theme="harlequin"] .bbx-system-theme-toolbar {
+  background: #292925;
+  border-bottom: 3px solid #bb9635;
+}
+
+@media (max-width: 640px) {
+  .bbx-box-presentation[data-chrome-theme="harlequin"] {
+    --bbx-composer-shadow: -3px -3px 0 #bb9635;
+  }
+  .bbx-card-theme[data-card-theme="harlequin"] {
+    --bbx-sheet-shadow: 3px 4px 0 #292925;
+  }
+}
+@media print {
+  .bbx-card-surface[data-card-theme="harlequin"] {
+    box-shadow: none;
+  }
+  .bbx-card-surface[data-card-theme="harlequin"] > .bbx-card-heading::before {
+    display: none;
+  }
+}

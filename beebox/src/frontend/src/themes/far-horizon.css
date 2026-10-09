@@ -1,0 +1,79 @@
+/* Smooth layered gouache, with quiet cream reading fields. */
+.bbx-box-presentation[data-chrome-theme="far-horizon"],
+.bbx-themed-menu[data-chrome-theme="far-horizon"] {
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-scene: url("./art/far-horizon-satin.webp") center / cover no-repeat, #dba44d;
+  --bbx-toolbar-background: #184a50;
+  --bbx-toolbar-ink: #f6e6c8;
+  --bbx-toolbar-edge: #a44b32;
+  --bbx-toolbar-radius: 0;
+  --bbx-toolbar-shadow: 0 2px 0 #c66b43;
+  --bbx-composer-background: #24585c;
+  --bbx-composer-ink: #f6e6c8;
+  --bbx-composer-edge: #a44b32;
+  --bbx-composer-radius: 5px;
+  --bbx-composer-shadow: 0 2px 0 #a44b32, 0 8px 20px #102f3440;
+  --bbx-control-background: #e6c597;
+  --bbx-control-ink: #243f40;
+  --bbx-control-radius: 6px;
+  --bbx-control-shape-default: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  --bbx-control-shape-send: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%);
+  --bbx-control-shape-profile: ellipse(49% 48% at 50% 50%);
+  --bbx-send-background: #98402c;
+  --bbx-send-ink: #fff8e9;
+  --bbx-status-background: #d3c6ad;
+  --bbx-status-ink: #193e45;
+  --bbx-status-edge: #a44b32;
+  --bbx-input-paper: #f0e5cf;
+  --bbx-input-ink: #193e45;
+  --bbx-input-muted: #42646a;
+  --bbx-chat-user-paper: #205760;
+  --bbx-chat-user-ink: #f0f8e8;
+  --bbx-chat-user-radius: 5px;
+  --bbx-chat-reply-paper: #f0e5cf;
+  --bbx-chat-reply-ink: #193e45;
+  --bbx-menu-paper: #f0e5cf;
+  --bbx-menu-ink: #193e45;
+  --bbx-menu-edge: #a44b32;
+  --bbx-menu-radius: 5px;
+  --bbx-selection: #98402c;
+  --bbx-selection-ink: #fff8e9;
+  --bbx-selection-code: #d3c6ad;
+  --bbx-selection-code-ink: #193e45;
+}
+.bbx-card-theme[data-card-theme="far-horizon"] {
+  --bbx-paper: #f0e5cf;
+  --bbx-ink: #193e45;
+  --bbx-ink-soft: #42646a;
+  --bbx-pen: #98402c;
+  --bbx-edge: #a44b32;
+  --bbx-underlay: #dba44d;
+  --bbx-font: "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif;
+  --bbx-tab-radius: 15px 4px 0 0;
+  --bbx-sheet-radius: 5px;
+  --bbx-sheet-shadow: 0 2px 0 #a44b32, 0 8px 20px #102f3440;
+  --bbx-sheet-decoration: none;
+  --bbx-selection: #98402c;
+  --bbx-selection-ink: #fff8e9;
+  --bbx-selection-code: #d3c6ad;
+  --bbx-selection-code-ink: #193e45;
+  --bbx-quote-paper: #e1d3b9;
+  --bbx-quote-layer-paper: #e1d3b9;
+  --bbx-quote-radius: 4px;
+  --bbx-quote-edge: 0px;
+  --bbx-quote-shadow: 0 3px 0 #a44b32;
+  --bbx-quote-padding-left: 1rem;
+  --bbx-blockquote-paper: #e1d3b9;
+  --bbx-blockquote-padding: 0.75em 1em;
+  --bbx-blockquote-shadow: 0 3px 0 #a44b32;
+  --bbx-blockquote-edge: 0px;
+}
+.bbx-card-theme[data-card-theme="far-horizon"] .bbx-blockquote { border-radius: 4px; }
+@media (max-width: 640px) {
+  .bbx-box-presentation[data-chrome-theme="far-horizon"] { --bbx-composer-radius: 5px; }
+  .bbx-card-theme[data-card-theme="far-horizon"] { --bbx-sheet-radius: 5px; }
+}
+@media print {
+  .bbx-card-theme[data-card-theme="far-horizon"] { --bbx-sheet-shadow: none; }
+}

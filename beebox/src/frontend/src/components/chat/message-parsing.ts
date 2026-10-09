@@ -12,6 +12,7 @@ import { stripChatAppTags } from "@shared/chat-tags";
 import { SESSION_MEDIA_ROUTE } from "@shared/session-media";
 import { getApiBase } from "../../api-core";
 import { entrySelfNotes, type SelfNoteInfo } from "@shared/self-note";
+import { parseCallouts, stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -192,7 +193,7 @@ export function getUserName(entry: SessionEntry): string | null {
  */
 export function stripSpeechTags(content: string): string {
   // Closed forms first.
-  let result = content.replace(/<instructions>[\S\s]*?<\/instructions>/gi, "");
+  let result = content.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/gi, "");
   result = result.replace(/<schedule[\S\s]*?<\/schedule>/gi, "");
   result = result.replace(/<speech[^>]*>/gi, "");
   result = result.replace(/<\/speech>/gi, "");
@@ -200,7 +201,7 @@ export function stripSpeechTags(content: string): string {
   // Streaming: unclosed instructions/schedule body — drop from the opening
   // tag through end-of-text. Safe on finalized text (no unclosed tags
   // expected there).
-  result = result.replace(/<instructions>[\S\s]*$/i, "");
+  result = result.replace(/<instructions\b[^>]*>[\S\s]*$/i, "");
   result = result.replace(/<schedule\b[\S\s]*$/i, "");
   // Streaming: a trailing incomplete tag like `<spee` or `</instr` whose
   // closing `>` hasn't arrived yet. Match `<` (optionally with `/`)
@@ -424,7 +425,7 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Updat
     for (const block of entry.content) {
       if (block.type === "thinking" && block.progressUpdate === true && block.text?.trim()) {
         flat.push({ type: "update", text: block.text.trim() });
-      } else if (block.type === "thinking") {
+      } else if (block.type === "thinking" && block.text?.trim()) {
         flat.push({ type: "thinking", text: block.text });
       } else if (block.type === "text" && block.text?.trim()) {
         flat.push({ type: "text", text: block.text });
@@ -461,6 +462,16 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Updat
   flushActivity();
 
   return grouped;
+}
+
+/** Whether an assistant group will produce visible message content. */
+export function hasRenderableAssistantContent(entries: SessionEntry[], debugView?: boolean): boolean {
+  return groupIntoParts(entries).some((part) => {
+    if (part.kind !== "text") return true;
+    if (debugView) return true;
+    return stripStructuredOutputTags(stripSpeechTags(part.text)).trim().length > 0
+      || parseCallouts(part.text).length > 0;
+  });
 }
 
 /**

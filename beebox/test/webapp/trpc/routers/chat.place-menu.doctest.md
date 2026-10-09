@@ -65,7 +65,7 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
 await box.write("_content/recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
+  "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n\n");
 
 await seedSession(box, { sessionId: "recipe01", contextDir: "_content/recipes", daysAgo: 1 });
 await seedSession(box, { sessionId: "recipe02", contextDir: "_content/recipes", daysAgo: 2 });

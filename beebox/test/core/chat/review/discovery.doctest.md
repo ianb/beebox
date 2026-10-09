@@ -84,7 +84,7 @@ const result = await discover(box);
 const session = result.qualified[0];
 
 Object.keys(session).sort().join(",")
-=> bootstrap,huskPath,logPath,mtime,needsMetadata,sessionId,snippetTitle,spanChars,titleBootstrap,titleSpanChars
+=> bootstrap,huskPath,logPath,mtime,needsMetadata,sessionId,snippetTitle,spanChars,titleBootstrap,titleSpanChars,userTurns
 ```
 
 Named explicitly, because these two fields are the regression: retaining either

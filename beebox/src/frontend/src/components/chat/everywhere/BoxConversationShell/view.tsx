@@ -83,6 +83,7 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
   const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
+    unstarted={conversation.unstarted}
     initial={conversation.initial}
     contextDir={target?.contextDir}
     startEngine={target?.kind === "start" ? target.engine : undefined}

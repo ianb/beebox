@@ -109,7 +109,7 @@ run slug is fixture naming, not a product vocabulary defect. Asking chat still
 produced useful examples and ultimately valued Spanish practice.
 
 Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
-The [concrete reservation regression](../bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
+The [concrete reservation regression](../closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
 is tracked separately from this broader orientation design question.
 
 ## Re-encounter 2026-10-08 (journey walks)

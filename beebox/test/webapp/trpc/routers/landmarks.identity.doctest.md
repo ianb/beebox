@@ -28,7 +28,7 @@ function caller(boxRoot) {
 const box = await makeTmpBox();
 await box.write(
   "_content/recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n",
+  "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n",
 );
 await box.write("_content/recipes/Bread.recipe.card", "---\nprominence: primary\n---\n");
 

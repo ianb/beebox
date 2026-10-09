@@ -52,6 +52,6 @@ JSON.stringify([
 ## Live IDs pass through unchanged
 
 ```ts
-normalizeModelId(MODEL_ID.sonnet)
-=> claude-sonnet-5
+normalizeModelId(MODEL_ID.sonnet) === MODEL_ID.sonnet
+=> true
 ```

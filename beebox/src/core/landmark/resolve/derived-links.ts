@@ -27,6 +27,12 @@ import type { DerivedReadProblem } from "../summaries.js";
 export interface DerivedResolution {
   links: ResolvedLink[];
   problems: DerivedReadProblem[];
+  /**
+   * The derived level of each card the caller already listed (hand-listed
+   * `links:`), by resolved ref. The listed row wins the dedup; this keeps the
+   * card's tier, so the caller can carry it onto that row.
+   */
+  listedLevels: Map<string, ProminenceLevel>;
 }
 
 /**
@@ -42,21 +48,23 @@ export async function resolveDerivedTiers(
 ): Promise<DerivedResolution> {
   const links: ResolvedLink[] = [];
   const problems: DerivedReadProblem[] = [];
+  const listedLevels = new Map<string, ProminenceLevel>();
   for (const level of ["entry-point", "primary"] as const) {
-    await addCardTier({ entries: derived.entries, level, links, seen, options, problems });
+    await addCardTier({ entries: derived.entries, level, links, seen, options, problems, listedLevels });
   }
   await addNestedLandmarkTier(derived, { links, seen, boxRoot: options.boxRoot });
-  return { links, problems };
+  return { links, problems, listedLevels };
 }
 
 async function addCardTier(
-  { entries, level, links, seen, options, problems }: {
+  { entries, level, links, seen, options, problems, listedLevels }: {
     entries: ProminenceEntry[];
     level: ProminenceLevel;
     links: ResolvedLink[];
     seen: Set<string>;
     options: ResolveOptions;
     problems: DerivedReadProblem[];
+    listedLevels: Map<string, ProminenceLevel>;
   },
 ): Promise<void> {
   const tier = entries
@@ -69,7 +77,10 @@ async function addCardTier(
     // before resolving would compare a normalized ref against a raw one and
     // never match.
     const resolved = await buildLink({ rawRef: entry.boxPath, label: null, source: "derived", prominence: entry.level, options });
-    if (seen.has(resolved.ref)) continue;
+    if (seen.has(resolved.ref)) {
+      listedLevels.set(resolved.ref, entry.level);
+      continue;
+    }
     if (!resolved.exists) {
       problems.push({
         kind: "derived-read",
@@ -86,9 +97,9 @@ async function addCardTier(
 
 /**
  * One row per nested landmark. The row opens the nested place's entry-point
- * card — where a reader starts — when its own pruned subtree has one; a
- * landmark card is a place marker whose page shows only its configuration.
- * Without an entry point the row still opens the landmark card.
+ * card — where a reader starts — when its own pruned subtree has one.
+ * Without an entry point the row opens the landmark card, which renders as
+ * the place page.
  */
 async function addNestedLandmarkTier(
   { entries, nested }: PrunedSubtree,
@@ -111,7 +122,7 @@ async function addNestedLandmarkTier(
       label: n.label,
       title: n.label,
       exists: true,
-      source: "derived",
+      source: "place",
       ...(entry?.kind === "landmark" ? { prominence: entry.level } : {}),
     });
   }

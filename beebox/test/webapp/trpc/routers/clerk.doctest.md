@@ -217,9 +217,10 @@ async function seedLandmark(dir, cardBody) {
   await writeFile(path.join(dbox.root, dir, `${path.basename(dir)}.landmark.card`), cardBody, "utf-8");
 }
 await seedLandmark("_content/reading", `---
+symbol:
+  glyph: 📚
 navigation:
   label: Reading
-  symbol: 📚
 destinations:
   - for: [commentary]
     rules: Reading list.

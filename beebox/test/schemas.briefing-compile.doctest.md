@@ -2,19 +2,16 @@
 
 `compileBriefing` produces the markdown that gets `@`-included into
 CLAUDE.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`, prose)
-followed by the frontmatter records (`key-people:`, `properties:`,
-`openers:`) as
-`**Label:** …` lines. The structured records live in frontmatter; only the
-free-text material stays in the body. (Outputs are `JSON.stringify`-ed to
-pin exact whitespace.)
+followed by the frontmatter records (`key-people:`, `properties:`) as
+`**Label:** …` lines, then the root place's openers. The structured records
+live in frontmatter; only the free-text material stays in the body. (Outputs
+are `JSON.stringify`-ed to pin exact whitespace.)
 
 ```ts setup
-import { BriefingSchema, compileBriefing } from "../src/schemas/briefing.js";
-
-/** Does `openers` pass the schema? */
-function opensOk(openers: string[]): boolean {
-  return BriefingSchema.frontmatterSchema.safeParse({ type: "briefing", openers }).success;
-}
+import { compileBriefing } from "../src/schemas/briefing.js";
+import { compileBriefings as compileBoxBriefings } from "../src/core/docs-gen/compile/core.js";
+import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { readFile } from "node:fs/promises";
 ```
 
 ## Frontmatter `key-people` compile to Key Person lines
@@ -66,63 +63,38 @@ JSON.stringify(md)
 => "## Box Briefing\n\n**Purpose:** Learn AI together.\n\n**Key Person:** **Priya**\n"
 ```
 
-## `openers` compile to Opener lines
+## The root place's openers compile to Opener lines
 
-Openers are the suggestions a fresh chat offers; they compile into the
-briefing slice so the agent sees what it is currently suggesting on every
-turn (which is what lets it curate them).
+Openers live on the root landmark (`navigation.openers`), not on the briefing,
+but they still compile into the briefing slice so the agent sees what it is
+currently suggesting on every turn (which is what lets it curate them). The
+caller passes them in.
 
 ```ts
-const md = compileBriefing({
-  type: "briefing",
-  openers: ["Let me tell you what this box is for.", "What can you do?"],
-  body: "",
-});
+const md = compileBriefing({ type: "briefing", body: "" },
+  { openers: ["Let me tell you what this box is for.", "What can you do?"] });
 JSON.stringify(md)
 => "## Box Briefing\n\n**Opener:** Let me tell you what this box is for.\n\n**Opener:** What can you do?\n"
 ```
 
-## Blank openers are dropped, and each is trimmed
-
-A stray empty list entry shouldn't emit a bare `**Opener:**` line.
+Blank openers are dropped and each is trimmed, so a stray empty entry never
+emits a bare `**Opener:**` line.
 
 ```ts
-JSON.stringify(compileBriefing({ type: "briefing", openers: ["  What can you do?  ", "", "   "], body: "" }))
+JSON.stringify(compileBriefing({ type: "briefing", body: "" }, { openers: ["  What can you do?  ", "", "   "] }))
 => "## Box Briefing\n\n**Opener:** What can you do?\n"
 ```
 
-## An opener must be a single short non-blank line
-
-An opener is agent-written text that compiles into CLAUDE.md and renders as a
-button. A blank, multi-line, or essay-length entry is a card validation error
-the boxholder sees, not something quietly normalized away at render time.
+`compileBriefings` reads them from the root landmark under `_content/`, so
+the compiled `_content/briefing.md` names the openers the root chat shows.
 
 ```ts
-opensOk(["What can you do?"])
-=> true
-
-opensOk([""])
-=> false
-
-opensOk(["   "])
-=> false
-
-opensOk(["Tell me about the box.\nAnd the people in it."])
-=> false
-
-opensOk(["x".repeat(120)])
-=> true
-
-opensOk(["x".repeat(121)])
-=> false
-```
-
-Surrounding whitespace doesn't make an otherwise-fine opener fail — the length
-limit is measured on the trimmed text, and `compileBriefing` trims it too.
-
-```ts
-opensOk(["  What can you do?  "])
-=> true
+const box = await makeTmpBox();
+await box.write("_content/briefing.briefing.card", "---\ntype: briefing\n---\n{% purpose %}\nLend things.\n{% /purpose %}\n");
+await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Lending\n  openers:\n    - Who has what right now?\n---\n");
+await compileBoxBriefings(box.root);
+JSON.stringify(await readFile(`${box.root}/_content/briefing.md`, "utf-8").then((t) => t.slice(t.indexOf("## Box Briefing"))))
+=> "## Box Briefing\n\n**Purpose:** Lend things.\n\n**Opener:** Who has what right now?\n"
 ```
 
 ## An empty briefing is just the header
@@ -135,6 +107,6 @@ JSON.stringify(compileBriefing({ type: "briefing", body: "" }))
 ## A directory label changes the header
 
 ```ts
-JSON.stringify(compileBriefing({ type: "briefing", body: "" }, "_bookkeeping/archive/financial"))
+JSON.stringify(compileBriefing({ type: "briefing", body: "" }, { directoryLabel: "_bookkeeping/archive/financial" }))
 => "## Briefing: _bookkeeping/archive/financial\n"
 ```

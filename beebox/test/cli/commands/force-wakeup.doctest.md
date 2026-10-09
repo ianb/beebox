@@ -111,6 +111,12 @@ async function boxWith(result: WakeupRunResult) {
 the connector name is passed through untranslated, because `bbx wakeup` matches
 `Connector.name` exactly (`drive` would match nothing).
 
+The entries survive the wire, so the agent learns what Drive did without
+reading a line of the child's output. For a person that is one line per
+connector, then the reactor — the step a caller waiting on a job actually
+depends on. The child's output is NOT in the result: an agent that had to parse
+prose to learn whether Drive synced is the situation this verb exists to end.
+
 ```ts
 const box = await boxWith({
   ok: true,
@@ -121,28 +127,13 @@ const box = await boxWith({
 const forced = await forceWakeup({ connector: "google-drive" });
 JSON.stringify({ calls: box.calls, ok: forced.ok && forced.value.ok })
 => {"calls":[{"triggeredBy":"force-wakeup","connector":"google-drive"}],"ok":true}
-```
 
-The entries survive the wire, so the agent learns what Drive did without
-reading a line of the child's output:
-
-```ts continue
 JSON.stringify(forced.value.outcome.connectors[0])
 => {"name":"google-drive","success":true,"created":3,"updated":1,"pushed":0,"jobs":2}
-```
 
-For a person that is one line per connector, then the reactor — the step a
-caller waiting on a job actually depends on:
-
-```ts continue
 JSON.stringify(forceWakeupLines(forced.value))
 => ["  google-drive: 3 created, 1 updated, 2 jobs","reactor: ok, 2 jobs processed, 0 remaining"]
-```
 
-The child's output is NOT in the result. An agent that had to parse prose to
-learn whether Drive synced is the situation this verb exists to end.
-
-```ts continue
 "output" in forced.value
 => false
 ```
@@ -239,7 +230,7 @@ JSON.stringify(failed)
 ```
 
 `--json` prints exactly this object, so an agent reads fields rather than the
-lines above.
+lines above:
 
 ```ts continue
 Object.keys(JSON.parse(JSON.stringify(forced.value))).sort().join(",")
@@ -254,18 +245,15 @@ await box.ctx.cleanup();
 
 The refusal points at the spawn site, not at the box. `tooling` is included
 deliberately: unlike a credentialed `bbx drive` verb, this one has no
-in-process path to fall back to, so the marker changes nothing.
+in-process path to fall back to, so the marker changes nothing. The child is
+never asked to run.
 
 ```ts
 const box = await boxWith({ ok: true, detail: "", output: "", outcome: report({}) });
 const refusals = await refusalPerProfile();
 JSON.stringify(refusals)
 => ["agent: BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_AGENT_TOKEN is not set","tooling: BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_AGENT_TOKEN is not set","undefined: BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_AGENT_TOKEN is not set"]
-```
 
-The child was never asked to run:
-
-```ts continue
 box.calls.length
 => 0
 ```

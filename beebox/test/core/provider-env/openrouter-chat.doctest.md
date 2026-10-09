@@ -22,6 +22,14 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 const kimi = { id: "moonshotai/kimi-k2-0905:exacto", label: "Kimi K2" };
 
+// Ids rotate; name first-party models by engine, tier and provider.
+const opus = resolveProcedureModel({ engine: "claude", model: "strong" });
+const sonnet = resolveProcedureModel({ engine: "claude", model: "balanced" });
+const haiku = resolveProcedureModel({ engine: "claude", model: "efficient" });
+const glm = resolveProcedureModel({ engine: "claude", model: "strong", provider: "glm" });
+const sol = resolveProcedureModel({ engine: "codex", model: "strong" });
+const named = (model: string | null) => ({ [opus]: "claude strong", [sonnet]: "claude balanced", [haiku]: "claude efficient" })[model ?? ""] ?? model;
+
 async function boxWith(config: Record<string, unknown>) {
   process.env.BBX_SECRETS_FILE = join(await mkdtemp(join(tmpdir(), "bbx-secrets-")), "secrets.json");
   const box = await makeTmpBox();
@@ -51,7 +59,7 @@ OpenRouter ids are `author/slug`, with an optional `:variant`. No first-party,
 Codex, or GLM id contains a slash, so the slash alone is the provider rule.
 
 ```ts
-JSON.stringify(["deepseek/deepseek-v3.2", kimi.id, "glm-5.3", "claude-opus-5-5", "gpt-6-sol"].map(providerOf))
+JSON.stringify(["deepseek/deepseek-v3.2", kimi.id, glm, opus, sol].map(providerOf))
 => ["openrouter","openrouter","glm","anthropic","openai"]
 
 JSON.stringify([isOpenRouterModelId(kimi.id), isOpenRouterModelId("deepseek"), isOpenRouterModelId("Deep/Seek"), isOpenRouterModelId("a/b:c:d")])
@@ -85,10 +93,10 @@ choosing it; the spawn refuses with the fix (below). A follower is unaffected.
 
 ```ts
 JSON.stringify([
-  resolveEffectiveModel({ engine: "claude", pinned: "claude-sonnet-5", added: [] }, { kind: "explicit", model: kimi.id }),
-  resolveEffectiveModel({ engine: "claude", pinned: "claude-sonnet-5", added: [] }, { kind: "follow" }),
-])
-=> [{"model":"moonshotai/kimi-k2-0905:exacto","source":"explicit"},{"model":"claude-sonnet-5","source":"default"}]
+  resolveEffectiveModel({ engine: "claude", pinned: sonnet, added: [] }, { kind: "explicit", model: kimi.id }),
+  resolveEffectiveModel({ engine: "claude", pinned: sonnet, added: [] }, { kind: "follow" }),
+].map((r) => ({ ...r, model: named(r.model) })))
+=> [{"model":"moonshotai/kimi-k2-0905:exacto","source":"explicit"},{"model":"claude balanced","source":"default"}]
 
 chatModelForEngine("claude", kimi.id)
 => moonshotai/kimi-k2-0905:exacto
@@ -108,8 +116,8 @@ owner chose spends per use.
 JSON.stringify([
   resolveProcedureModel({ engine: "claude", model: "strong", provider: providerOf(kimi.id) }),
   resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: kimi.id }),
-])
-=> ["claude-opus-5-5","claude-haiku-4-5-20251001"]
+].map(named))
+=> ["claude strong","claude efficient"]
 ```
 
 ## Box config: the list, the default, and the small slot
@@ -154,9 +162,9 @@ needs nothing.
 ```ts
 const box = await boxWith({});
 JSON.stringify([
-  await providerEnvAdditions({ boxRoot: box.root, model: "claude-opus-5-5", purpose: "test" }),
+  await providerEnvAdditions({ boxRoot: box.root, model: opus, purpose: "test" }),
   await providerEnvAdditions({ boxRoot: box.root, model: null, purpose: "test" }),
-  isThirdPartyModel("claude-opus-5-5"),
+  isThirdPartyModel(opus),
   isThirdPartyModel(kimi.id),
 ])
 => [null,null,false,true]
@@ -220,7 +228,7 @@ async function flagsByModel(config: Record<string, unknown>) {
   await setSecret({ name: "glm", value: "placeholder-glm-key" });
   await grantSecret({ slug: await boxSlug(box.root), name: "glm", access: "server" });
   const seen: string[] = [];
-  for (const model of [kimi.id, "glm-5.3", "claude-opus-5-5", null]) {
+  for (const model of [kimi.id, glm, opus, null]) {
     const additions = await providerEnvAdditions({ boxRoot: box.root, model, purpose: "test" });
     seen.push(flags.map((f) => additions?.[f] ?? "-").join(","));
   }
@@ -258,7 +266,7 @@ const result = {
   num_turns: 1, stop_reason: "end_turn", total_cost_usd: 0.25, usage: {}, modelUsage: {},
   permission_denials: [], session_id: "s", uuid: "u",
 };
-JSON.stringify([kimi.id, "glm-5.3", "claude-opus-5-5"].map((model) => adaptBackendMessage(result, { model })?.total_cost_usd ?? "none"))
+JSON.stringify([kimi.id, glm, opus].map((model) => adaptBackendMessage(result, { model })?.total_cost_usd ?? "none"))
 => ["none","none",0.25]
 ```
 

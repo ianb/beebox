@@ -28,11 +28,26 @@ export function useConversationSelection(boxSlug: string) {
   useBusSubscription({ onEvent(event) {
     const message = busEventData(event, "chat-user-message");
     if (message?.sessionId) forgetReservation(message.sessionId);
+    const titled = busEventData(event, "chat-title-changed");
+    if (titled) retitle(titled);
   } });
   const restored = useMemo(() => readConversation(storageScope), [storageScope]);
-  const [state, setState] = useState<ResolvedConversation>(() => ({ selection: restored?.kind === "ready" && restored.target.kind === "start" ? restored : { kind: "resolving", requestId: "initial", contextDir: "" } }));
+  // A restored `start` target has had no first send, so it is unstarted.
+  const [state, setState] = useState<ResolvedConversation>(() => restored?.kind === "ready" && restored.target.kind === "start"
+    ? { selection: restored, unstarted: true }
+    : { selection: { kind: "resolving", requestId: "initial", contextDir: "" }, unstarted: false });
   // A stored session is only a pointer: recover/validate it before mounting its history controller.
   const [rendered, setRendered] = useState(() => restored?.kind === "ready" && restored.target.kind === "start" ? restored : null);
+  // A title written in session (after the first exchange or two) replaces the
+  // label the conversation resolved with, so the chip updates without a reload.
+  function retitle({ sessionId, title }: { sessionId: string; title: string }) {
+    function replace(selection: ConversationSelection): ConversationSelection {
+      return selection.kind === "ready" && selection.target.kind === "session" && selection.target.sessionId === sessionId
+        ? { ...selection, label: title } : selection;
+    }
+    setState((old) => ({ ...old, selection: replace(old.selection) }));
+    setRendered((old) => { if (!old) return old; const next = replace(old); return next.kind === "ready" ? next : old; });
+  }
   const gate = useMemo(() => createResolutionGate(), []);
   const lastRequest = useRef<ConversationRequest>({ kind: "default" });
   const select = useCallback(async (request: ConversationRequest) => {

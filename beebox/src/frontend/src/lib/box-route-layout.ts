@@ -3,6 +3,7 @@ export const DEV_HARNESS_PATHS = {
   composerStates: "/dev/composer-states",
   captureMode: "/dev/capture-mode",
   chatScroll: "/dev/chat-scroll",
+  chatMaterials: "/dev/chat-materials",
 } as const;
 const DEV_HARNESS_PATH_SET: ReadonlySet<string> = new Set(Object.values(DEV_HARNESS_PATHS));
 

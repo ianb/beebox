@@ -1,3 +1,4 @@
+import { themeComposition } from "@shared/card-theme/catalog";
 /**
  * The sidecar's tab strip: the row of open documents beside chat.
  *
@@ -135,7 +136,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
           tab.pinned ? "flex-shrink-0 max-w-[7rem]" : "w-56 min-w-[9rem] max-w-[14rem] shrink",
         )}
         data-active={isActive || undefined}
-        data-card-theme={theme.name}
+        data-theme-composition={themeComposition(theme.name)} data-card-theme={theme.name}
         data-card-stock={theme.stock}
       >
         <button

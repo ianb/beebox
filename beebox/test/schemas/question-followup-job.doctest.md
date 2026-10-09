@@ -17,36 +17,23 @@ import {
 ## `learning` is an optional passthrough, same shape as the question's
 
 ```ts
-QuestionFollowupJobSchema.frontmatterSchema.safeParse({
+const accepts = (extra: Record<string, unknown>) => QuestionFollowupJobSchema.frontmatterSchema.safeParse({
   type: "question-followup-job",
   source: "question-answer",
   description: "Follow up",
   "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
   directive: "Do the thing",
   answer: "yes",
-}).success
+  ...extra,
+}).success;
+
+accepts({})
 => true
 
-QuestionFollowupJobSchema.frontmatterSchema.safeParse({
-  type: "question-followup-job",
-  source: "question-answer",
-  description: "Follow up",
-  "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
-  directive: "Do the thing",
-  answer: "yes",
-  learning: { sink: "guide", proposal: "Items like this belong in category A." },
-}).success
+accepts({ learning: { sink: "guide", proposal: "Items like this belong in category A." } })
 => true
 
-QuestionFollowupJobSchema.frontmatterSchema.safeParse({
-  type: "question-followup-job",
-  source: "question-answer",
-  description: "Follow up",
-  "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
-  directive: "Do the thing",
-  answer: "yes",
-  learning: { sink: "guide" },
-}).success
+accepts({ learning: { sink: "guide" } })
 => false
 ```
 

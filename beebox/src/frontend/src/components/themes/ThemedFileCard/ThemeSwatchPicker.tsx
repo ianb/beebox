@@ -1,3 +1,4 @@
+import { themeComposition } from "@shared/card-theme/catalog";
 import { THEME_CATALOG, type ResolvedThemeChoice, type ThemeChoice } from "@shared/card-theme/core";
 import { trpc } from "../../../lib/trpc/client";
 import { useBoxPresentation } from "../BoxPresentationProvider";
@@ -26,7 +27,7 @@ export function ThemeSwatchPicker({ path, choice, hasOverride }: { path: string;
             disabled={mutation.isPending}
             onClick={() => select({ name: theme.name, stock })}
           >
-            <span className="bbx-card-theme bbx-card-surface bbx-theme-swatch" data-card-theme={theme.name} data-card-stock={stock} aria-hidden="true">
+            <span className="bbx-card-theme bbx-card-surface bbx-theme-swatch" data-theme-composition={themeComposition(theme.name)} data-card-theme={theme.name} data-card-stock={stock} aria-hidden="true">
               <span className="bbx-theme-swatch-writing">A small thought</span>
               <span className="bbx-theme-link">worth keeping</span>
             </span>

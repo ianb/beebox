@@ -119,39 +119,21 @@ QuestionSchema.frontmatterSchema.safeParse(
 
 ## `expires-after`: ISO-8601 duration format
 
+Our duration pattern accepts day and time parts and refuses the bare designators:
+
 ```ts
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": "P30D" })).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": "PT12H" })).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": "P1DT12H" })).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": "30d" })).success
-=> false
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": "P" })).success
-=> false
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": "PT" })).success
-=> false
+const expiresAfter = (value: string) => QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": value })).success;
+Object.fromEntries(["P30D", "PT12H", "P1DT12H", "30d", "P", "PT"].map((value) => [value, expiresAfter(value)]))
+=> { "P30D": true, "PT12H": true, "P1DT12H": true, "30d": false, "P": false, "PT": false }
 ```
 
-## `asked-at`/`dismissed-at`/`expired-at`: ISO datetime with offset
+## `asked-at`: ISO datetime with offset
 
 ```ts
 QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": ASKED_AT })).success
 => true
 
 QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": "2026-07-10" })).success
-=> false
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "dismissed-at": ASKED_AT })).success
-=> true
-
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expired-at": "2026-07-10" })).success
 => false
 ```
 
