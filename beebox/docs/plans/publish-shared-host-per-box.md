@@ -23,7 +23,7 @@ Estimated changed lines: 850–1,200 source lines, 400–600 test lines, and 150
 - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve before content becomes live (`beebox/docs/plans/publish-sites-admin.md:10,68`). The shared hostname and public or secret path are part of the candidate revision and approved manifest. Admin configures the shared destination; the box agent cannot change it.
 - **Keep one box sharing granularity.** The identity design says a box has one granularity of sharing (`beebox/docs/design/identity.md:31-36`). This plan therefore gives each box one shared origin; it does not route multiple boxes through one origin or introduce new per-publication origin isolation.
 - **Validate at boundaries.** Manifests, candidate destinations, slug pointers, and hostname configuration remain strict and fail closed (`beebox/docs/engineering-principles.md:37-47`). A shared Worker must verify that a route resolves to a manifest whose approved path matches the request.
-- **Keep changes narrow.** `beebox/CLAUDE.md` says to work only on the requested problem. New publications use the shared hostname; old per-publication URLs remain compatible, while old Cloudflare attachments are never automatically removed.
+- **Keep changes narrow.** `beebox/AGENTS.md` says to work only on the requested problem. New publications use the shared hostname; old per-publication URLs remain compatible, while old Cloudflare attachments are never automatically removed.
 
 ## What already exists
 

@@ -294,11 +294,15 @@ const staleAgentStarted = await readFile(staleObservation).then(() => true, () =
 JSON.stringify({ code: stale.code, superseded: stale.stderr.includes("was superseded"), agentStarted: staleAgentStarted, owner: JSON.parse(await readFile(join(boundaryStateDir, "workstreams/seam.json"), "utf8")).launch.token })
 => {"code":1,"superseded":true,"agentStarted":false,"owner":"newer-token"}
 
-await writeFile(join(validWorktree, "AGENTS.md"), "fixture instructions\n");
+// The Codex launcher builds its preamble from the worktree's own script.
+await mkdir(join(validWorktree, "bin"), { recursive: true });
+await symlink(join(repoRoot, "bin/codex-preamble.ts"), join(validWorktree, "bin/codex-preamble.ts"));
+await symlink(join(repoRoot, "node_modules"), join(validWorktree, "node_modules"), "dir");
 const fakeCodex = join(agentBin, "codex");
 await writeFile(fakeCodex, `#!/usr/bin/env bash
 . "${registryLib}"
 session_registry_launch_status seam > "$AGENT_OBSERVATION"
+printf '%s\n' "$@" > "$AGENT_OBSERVATION.args"
 `);
 await chmod(fakeCodex, 0o755);
 const codexBoundaryScriptPath = join(root, "codex-boundary-launch.sh");
@@ -313,6 +317,12 @@ await execFileAsync(codexBoundaryScriptPath, [], {
 const codexCompletedRecord = JSON.parse(await readFile(join(codexBoundaryStateDir, "workstreams/seam.json"), "utf8"));
 JSON.stringify({ whileRunning: JSON.parse(await readFile(codexObservation, "utf8")).state, afterExit: (await launchState(codexBoundaryStateDir, "seam")).state, agent: codexCompletedRecord.agent })
 => {"whileRunning":"none","afterExit":"none","agent":"codex"}
+
+// Codex gets the session preamble as developer instructions, oriented to the
+// worktree.
+const codexArgs = await readFile(`${codexObservation}.args`, "utf8");
+JSON.stringify({ preamble: codexArgs.includes("developer_instructions=\"# Codex session preamble"), worktree: codexArgs.includes("~/src/box-worktrees/seam/test1") })
+=> {"preamble":true,"worktree":true}
 
 // A tracked Claude subagent without a generated Codex mirror refuses the launch,
 // so a named agent such as `finish` never runs on the session's default model.

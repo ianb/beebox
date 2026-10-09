@@ -42,8 +42,8 @@ implementation diverged from the proposal below:
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md`** — project conventions; doctests are the primary
-  test format (`beebox/CLAUDE.md:101`: *"Doctests are the primary test
+- **`beebox/AGENTS.md`** — project conventions; doctests are the primary
+  test format (`beebox/AGENTS.md:101`: *"Doctests are the primary test
   format."*).
 - **`beebox/code-style.md`** — style preferences; the centralise-a-cast
   pattern (`beebox/code-style.md:55`: *"centralize the cast in a single
@@ -276,7 +276,7 @@ friction).
   pairs is exactly what the subplan must establish — don't assert
   "drifted in error handling" wholesale without the per-endpoint audit. This is
   a real **seam** question (which side is canonical, per
-  `beebox/CLAUDE.md`'s "raw routes are tech debt — migrate when you touch
+  `beebox/AGENTS.md`'s "raw routes are tech debt — migrate when you touch
   the area"), not a mechanical dedup, and warrants its own design step.
 
 **Vocabulary lock-ins.** None new. Consolidated helpers keep their existing
@@ -423,7 +423,7 @@ ships with it only if taken on.
   unification changes the slug that `feedback` cards are named with, so existing
   feedback-card filenames (and any refs to them) must be rewritten to the
   canonical shape. This is a `scripts/migrate/*.ts` pass following the existing
-  migrator pattern (`beebox/CLAUDE.md`: *"`scripts/migrate/*.ts` … are the
+  migrator pattern (`beebox/AGENTS.md`: *"`scripts/migrate/*.ts` … are the
   per-schema migrators with noisy-mode field-loss detection"*), run against
   every box during rollout — **not** avoided by preserving the drifted shape.
   Per the consolidation posture, migrating the data is the correct cost; keeping

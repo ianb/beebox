@@ -11,21 +11,21 @@ doc or command that owns it. What a box contains is in
 - **Boxes live outside any git repository**, normally `~/src/boxes/<name>/`,
   never under this monorepo, `scratch/` included. A box is its own repo:
   nested, its git and annex commands land on the enclosing repo, and its agent
-  inherits this repo's `CLAUDE.md`. `bbx engine init` refuses a nested target
+  inherits this repo's `AGENTS.md`. `bbx engine init` refuses a nested target
   (`NestedBoxError` in `src/cli/commands/init.ts`).
 - **Pass box paths as absolute or `~/` paths.** A bare `test1` resolves against
   the current directory, which is inside the monorepo.
 - **Box content is private.** Nothing from a real box reaches an issue, commit
   message, comment, doc, or fixture without the boxholder's scrub; use
   `private-issues/` or hold the finding and ask
-  ([issues](../../issues/CLAUDE.md#private-issues-private-issues--a-separate-repo)).
+  ([issues](../../issues/AGENTS.md#private-issues-private-issues--a-separate-repo)).
   `test1` is meant to be generic but may still name real people
   ([open issue](../../issues/docs-and-chores/2026-08-01-test1-real-people-data.md)),
   so check before copying its content into a fixture.
 - **Never change credentials to unblock yourself.** `~/.bbx-auth.json` and
   `~/.config/beebox/secrets.json` are machine-wide, shared by every local box,
   and mutating auth commands require `--agent-confirmed`, meaning a human asked
-  for that change ([behavioral notes](../CLAUDE.md#behavioral-notes)). At a
+  for that change ([behavioral notes](../AGENTS.md#behavioral-notes)). At a
   login wall, ask the boxholder.
 - **`bbx` verbs are the box agent's surface, not developer diagnostics.**
   Box-facing verbs find the box by walking up from the current directory (or

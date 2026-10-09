@@ -149,7 +149,7 @@ umbrella; that issue stays open as its own build.
   the resolver boundary), resilient-not-silent (missing secret degrades to
   the existing "not configured" path, loudly), types-are-structure (a named
   secret registry, not stringly-typed paths).
-- `beebox/CLAUDE.md`: "Never change credentials to unblock yourself"
+- `beebox/AGENTS.md`: "Never change credentials to unblock yourself"
   (the `--agent-confirmed` gate pattern in `src/lib/agent-context.ts` extends
   to the new CLI); "Read before writing"; reuse of `src/lib/` primitives
   (`writeFileAtomic`, `file-lock.ts`).

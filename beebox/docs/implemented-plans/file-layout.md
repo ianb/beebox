@@ -127,12 +127,12 @@ every 25-file prefix cluster in the tree started as a pair.
 - `docs/testing/doctests.md:20`: *"Create `test/<area>/<name>.doctest.md`
   mirroring the source path."* The only written test-placement rule. It says
   "path" and the tree applies it as "top-level area".
-- Per-directory instruction files: `src/connectors/CLAUDE.md`,
-  `src/services/CLAUDE.md`, `src/hub/CLAUDE.md`, `src/dev/CLAUDE.md`,
-  `src/core/reactor/CLAUDE.md`, `src/frontend/src/components/chat/CLAUDE.md`,
+- Per-directory instruction files: `src/connectors/AGENTS.md`,
+  `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
+  `src/core/reactor/AGENTS.md`, `src/frontend/src/components/chat/AGENTS.md`,
   each with a generated `AGENTS.md`. These are the source-tree analogue of a
   parent page and are where a directory states its axis (rule 7).
-- `beebox/CLAUDE.md:45`: box code *"imports only public
+- `beebox/AGENTS.md:45`: box code *"imports only public
   `beebox/{cards,schema,view-widgets}` specifiers, never engine internals"*.
   Moves inside the engine do not reach boxes.
 
@@ -565,7 +565,7 @@ the whole) rather than carrying it over: for source, `ls` is the index. A direct
 children are split and what is true of all of them (doc-structure principle
 8); it does not list children (a list drifts). *Measure:* none beyond
 presence. *Judgment:* whether the stated axis matches the listing.
-*Examples:* `src/services/CLAUDE.md` and `src/connectors/CLAUDE.md` already
+*Examples:* `src/services/AGENTS.md` and `src/connectors/AGENTS.md` already
 explain what qualifies as a service or connector; each gains one sentence on
 the axis.
 
@@ -724,7 +724,7 @@ opens those steps; this document is their input.
   choice. If cross-model review finds a case where neither extraction nor
   merging is right, the rule gains a stated exception, not a suppression.
 - **Registry outside the set breaks a package export.** `beebox/schema` and
-  `beebox/cards` are public specifiers (`beebox/CLAUDE.md:45`). The move step
+  `beebox/cards` are public specifiers (`beebox/AGENTS.md:45`). The move step
   keeps the `package.json` `exports` map pointing at the new registry path;
   boxes never import the path.
 - **Path-coupled tooling.** Skills and docs name `src/core/`, `src/lib/`

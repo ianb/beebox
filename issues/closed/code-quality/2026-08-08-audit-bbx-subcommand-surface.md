@@ -16,7 +16,7 @@ call (chat, scheduled script, procedure) stays in `bbx`; the rest moved under
 `src/cli/surface-data.ts` holds the classification with a reason per eviction,
 and `test/cli/surface.doctest.md` (moved to `beebox/test/cli/entry.surface.doctest.md`) fails when a new verb is registered without
 being classified — the drift this issue was filed about. The docs half landed
-as the per-audience statement in `beebox/CLAUDE.md`. Dead surface removed:
+as the per-audience statement in `beebox/AGENTS.md`. Dead surface removed:
 `scenario` and its runner, the five never-implemented stubs (`show`, `log`,
 `diff`, `inject`, `step` — `show --raw` was the stale XML flag below), and the
 deprecated `scheduler add|remove|list` aliases. The original write-up follows.
@@ -119,7 +119,7 @@ for** — and today, an agent working in *this repo* is told nothing, so it trea
 
 The top-line framing invites exactly that:
 
-- `beebox/CLAUDE.md:3` — "the `bbx` CLI is the **universal** interface"
+- `beebox/AGENTS.md:3` — "the `bbx` CLI is the **universal** interface"
 - `README.md:3` — "the `bbx` CLI is the interface"
 
 "Universal interface" reads as *for everyone and everything*. A coding agent
@@ -167,7 +167,7 @@ per-audience, not global:
 
 ### What to audit on the docs side
 
-- The "universal interface" line in `beebox/CLAUDE.md` and its `README.md`
+- The "universal interface" line in `beebox/AGENTS.md` and its `README.md`
   twin — the highest-leverage two sentences here.
 - Whether the repo's agent-facing guidance should state the boundary outright,
   and where it would actually be read.

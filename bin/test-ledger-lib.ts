@@ -100,7 +100,7 @@ export const TEST_FILE_ROOTS = ["test/", "src/frontend/test/", "../bin/test/"] a
 /**
  * Graph paths are repo-relative; the beebox runner takes paths relative to
  * beebox. A root-infrastructure doctest (`bin/test/…`) runs from the package
- * as `../bin/test/…`, so it gets beebox's loaders (bin/CLAUDE.md). Passed
+ * as `../bin/test/…`, so it gets beebox's loaders (bin/AGENTS.md). Passed
  * through unprefixed, it named no file in the package, and the runner refused
  * the whole selection.
  */

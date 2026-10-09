@@ -161,7 +161,7 @@ No new nouns reach code. The manifest and doc-check see only paths.
 **What.** A new section "Organizing principles" in `beebox/docs/README.md`,
 kept to roughly the length below, stating rules an agent can apply
 mechanically. `docs/README.md` is loaded on demand by agents writing docs
-(`beebox/CLAUDE.md:67`), so this is the right altitude.
+(`beebox/AGENTS.md:67`), so this is the right altitude.
 
 **Why this needs to change.** The README says where a doc goes by kind and how
 to name a file. It says nothing about what goes *inside* a doc, when two docs
@@ -374,7 +374,7 @@ Code changes: `site/docs-manifest.ts:63` gains
 `if (source.startsWith("beebox/docs/testing/")) return true;` (and its test in
 `site/docs-manifest.test.ts`). `doc-check` needs nothing (`docs/testing/` is
 already inside the checked area). Link repair: `testing.md` keeps its path,
-so its inbound links (including `beebox/CLAUDE.md:17` and `:67`) need
+so its inbound links (including `beebox/AGENTS.md:17` and `:67`) need
 nothing. `knowledge-audits.md` and `tours.md` move with unique basenames,
 so `doc-check --fix` rewrites their inbound links. `agent-testing.md` (seven
 inbound) and `knowledge-taxonomy.md` (nine inbound) are deleted, which

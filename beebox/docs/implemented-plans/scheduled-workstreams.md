@@ -50,7 +50,7 @@ agent) starts only when the script says there is work or when it fails.
   skill — no harness-specific mechanism; Codex-launched schedules work.
 - `beebox/code-style.md:42` — *"console.log — CLI user-facing output
   ONLY"*; `:88-89` no default parameters, max 2 positional params.
-- `beebox/CLAUDE.md:107` — *"Don't guess file formats … Read the
+- `beebox/AGENTS.md:107` — *"Don't guess file formats … Read the
   schema, read the existing code."*
 - Root `CLAUDE.md`: no `.js`; TypeScript for logic; treat noisy output as a
   bug; never weaken a lint rule.
@@ -195,7 +195,7 @@ script that checks box health) but not a substrate.
   message (one short paragraph), details (Markdown, optional), priority.
   States `open` → `acknowledged`.
 - **Priority** — `important | normal | backlog | fyi`. The first three match
-  `issues/CLAUDE.md` `priority:`; `fyi` means "something new, nothing to do".
+  `issues/AGENTS.md` `priority:`; `fyi` means "something new, nothing to do".
 - **Overdue** — derived: `now - lastRunAt > cadence + grace`. Never stored.
   A never-run schedule is *due* but not overdue (no `lastRunAt` to measure
   from; calling a fresh enrolment overdue on day one would cry wolf).
@@ -427,7 +427,7 @@ default `list` and browser views after 14 days; records are kept.
 readable later.
 
 **Direction.** Zod `alertSchema`; the CLI is the only writer (the comments
-precedent, `bin/CLAUDE.md` "The CLI is the only writer"). Priority guidance
+precedent, `bin/AGENTS.md` "The CLI is the only writer"). Priority guidance
 per schedule lives in its `prompt.md`; the CLI does not validate
 appropriateness, only the enum.
 
@@ -703,12 +703,12 @@ document, and its worked examples are the recall mechanism.
    (the last waits for the `knip-exports` branch to land its noise fix).
 8. Track D chunk 2 — the browser section.
 9. Track G — the skill, with real examples.
-10. `docs/development/maintenance.md` rewrite; `bin/CLAUDE.md` section.
+10. `docs/development/maintenance.md` rewrite; `bin/AGENTS.md` section.
 
 ## Rollout shape
 
 - **Tests first.** `bin/schedules.test.ts` and
-  `bin/scheduled-workstreams-registry.test.ts` (Node test runner; `bin/CLAUDE.md`
+  `bin/scheduled-workstreams-registry.test.ts` (Node test runner; `bin/AGENTS.md`
   prefers doctests for `bin/`, and each file's header records this plan's
   exception — pure functions with injected clocks and fake `run` scripts fit
   the unit tier) are written

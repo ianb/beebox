@@ -21,7 +21,7 @@ The model being verified: **the controller writes `scrollTop` only on a discrete
 user action — open a thread, send, press the button — plus geometric
 compensations for changes the reader cannot see. Content growth below the reader
 never scrolls** (`docs/plans/chat-scroll-model.md`; the nested
-`components/chat/CLAUDE.md` has the invariants).
+`components/chat/AGENTS.md` has the invariants).
 
 ## The harness
 

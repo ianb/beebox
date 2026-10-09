@@ -40,11 +40,11 @@ skip-with-rationale rather than omitted.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:103` — *"Keep source and docs generic — never hardcode
+- `beebox/AGENTS.md:103` — *"Keep source and docs generic — never hardcode
   personal names. This is a generic tool; any box can be adopted by any user."*
   This is the governing principle for the PII-scrub and deploy-genericize tracks;
   every finding there traces here.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"don't add features beyond what
+- `beebox/AGENTS.md` (Behavioral Notes) — *"don't add features beyond what
   the task requires."* Governs the deferrals: source-available first, npm/hosted
   later. Doing the smallest coherent release is the on-preference choice.
 - `beebox/code-style.md` — style rules for any code touched by deploy
@@ -173,7 +173,7 @@ history decision. **No history surgery needed.** The repeatable gate is
 
 - **What.** Replace real personal identifiers in tracked files with the
   boxholder/`example-names` convention.
-- **Why.** `beebox/CLAUDE.md:103` requires generic shared text; these
+- **Why.** `beebox/AGENTS.md:103` requires generic shared text; these
   violate it: `test/schemas/personality-boxholder.doctest.md:20` (moved to `beebox/test/schemas.personality-boxholder.doctest.md`) (real name as
   test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the real
   name), `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) (real email).
@@ -193,7 +193,7 @@ history decision. **No history surgery needed.** The repeatable gate is
   a server becomes a real need.
 - **What.** Parametrize the deploy target (domain, server host/IP, system user)
   and remove `box.example.com` from product-source comments.
-- **Why.** `beebox/CLAUDE.md:103` (generic tool). Hardcoded:
+- **Why.** `beebox/AGENTS.md:103` (generic tool). Hardcoded:
   `deploy/setup-server.sh:5,40,56`, `deploy/add-box.sh:26-27`,
   `deploy/hetzner/create-server.sh`; real IP in
   `docs/implemented-plans/box-migration.subplan.md:162`; domain in source comments

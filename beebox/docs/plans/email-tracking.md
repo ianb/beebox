@@ -39,7 +39,7 @@ These statements are the authority for the plan's user-facing model. The technic
 - Engineering principle 8, **One way to do each thing**: the card set is the single tracking registry; connector-private ledgers must not independently claim that a deleted card is still tracked.
 - Engineering principle 10, **Testability is architectural**: keep automatic synchronization behind the existing typed Gmail service and fake. Keep subprocess execution behind an injected adapter.
 - Engineering principle 12, **The maintainer is usually an agent**: teach the agent that local email cards are a tracked subset and that Gmail search uses the connector's `gws` surface.
-- `beebox/CLAUDE.md` says, *"the filesystem is state, Git is history, the `bbx` CLI is the universal interface."* Tracking therefore uses cards and `bbx`, while remote discovery stays outside Git.
+- `beebox/AGENTS.md` says, *"the filesystem is state, Git is history, the `bbx` CLI is the universal interface."* Tracking therefore uses cards and `bbx`, while remote discovery stays outside Git.
 - `beebox/code-style.md` requires validated boundary data, explicit errors, typed results where callers branch, and no silent fallback from corrupt state.
 
 ## Pre-implementation snapshot

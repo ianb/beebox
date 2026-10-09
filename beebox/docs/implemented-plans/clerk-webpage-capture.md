@@ -110,17 +110,17 @@ extension.
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md:101`** — *"Read before writing. Don't guess file
+- **`beebox/AGENTS.md:101`** — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* Every shape below is cited to a
   file already read; the one unread surface (`CommentaryView` in-box render)
   is flagged as must-verify, not assumed.
-- **`beebox/CLAUDE.md`** (Behavioral Notes) — *"HTTP endpoints go in
+- **`beebox/AGENTS.md`** (Behavioral Notes) — *"HTTP endpoints go in
   tRPC by default … Raw Fastify routes in `src/webapp/routes/` are only for
   things that don't fit … file upload/download, OAuth redirects, webhooks."*
   The clerk routes are an existing raw-Fastify exception (extension CORS +
   cookie auth); this plan extends that exception rather than starting a new
   pattern.
-- **`beebox/CLAUDE.md`** — *"Keep source and docs generic — never
+- **`beebox/AGENTS.md`** — *"Keep source and docs generic — never
   hardcode personal names."* Destination rules, schema instructions, and the
   extension UI copy stay generic ("the boxholder").
 - **`beebox/code-style.md`** — no `any`; no default parameters; max 2

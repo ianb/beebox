@@ -112,7 +112,7 @@ section 5; spec `docs/system/specs/transcript-smooth-scroll.md` in
 `imbue-ai/default-workspace-template`) went through the same bug class and
 settled on three mechanisms that apply to these cases without follow mode or
 intent detection, so they fit the never-follow rule in
-`beebox/src/frontend/src/components/chat/CLAUDE.md`. Designs only; the code
+`beebox/src/frontend/src/components/chat/AGENTS.md`. Designs only; the code
 is Fair Core licensed or unlicensed and is not to be copied.
 
 1. **Anchor by row key, not by DOM node.** Studio's anchor is a stable row id

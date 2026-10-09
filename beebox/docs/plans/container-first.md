@@ -325,7 +325,7 @@ Rebuilt, with reason:
     `docs/install/docker.md`; it leaves the `beebox/docs` tree and the docs
     browser on purpose, since it documents files beside it), and
     `container/CLAUDE.md` (a short map). The root `CLAUDE.md` project list
-    and the `beebox/CLAUDE.md` Guides table gain the new entries in Track E.
+    and the `beebox/AGENTS.md` Guides table gain the new entries in Track E.
   - **The three commands**, exactly as the README will print them:
 
     ```bash
@@ -587,7 +587,7 @@ Rebuilt, with reason:
   repository (or a Docker image built from it)"*; `docs/install/developer.md:1-6`
   presents Docker as an alternative. The docker README table still says
   `bbx serve /data/box/content` (`docker/README.md:11`). The root
-  `CLAUDE.md` project list and the `beebox/CLAUDE.md` Guides table point at
+  `CLAUDE.md` project list and the `beebox/AGENTS.md` Guides table point at
   files this plan moves.
 - **Direction.**
   - Root README, in order: one paragraph in the boxholder's voice (what
@@ -611,7 +611,7 @@ Rebuilt, with reason:
     it, both engines' login commands, `edge` under a contributor heading
     only, the "a box with its own dependencies" limitation, and the
     checklist sections kept.
-  - Root `CLAUDE.md` project list and `beebox/CLAUDE.md` Guides table:
+  - Root `CLAUDE.md` project list and `beebox/AGENTS.md` Guides table:
     `container/` and its README replace the `docs/install/docker.md` row.
   - `src/frontend/src/components/settings/ScanUploaderSection.tsx:82-87`
     tells the user to `git clone` and `pnpm install` the scan uploader. That

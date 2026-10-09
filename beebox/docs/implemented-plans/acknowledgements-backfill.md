@@ -44,7 +44,7 @@ this plan and any helper scripts.
   this plan, cross-model reviewed before the run.
 - Issue threshold: adopted, changed, or used as a direct model gets an entry;
   evaluated-and-rejected does not. Research notes keep the evaluated list.
-- `research/CLAUDE.md`: research corpora carry adopt/adapt/reject dispositions
+- `research/AGENTS.md`: research corpora carry adopt/adapt/reject dispositions
   per idea. A disposition of "adopt" in a research note is a *proposal*, not
   proof of adoption; the proof is the landing file plus the commit or issue.
 - Repo rule: public sources only. `private-issues/` and box content are never
@@ -57,7 +57,7 @@ this plan and any helper scripts.
 - `beebox/docs/attribution.md` — licensed-asset credits (Twemoji). Entry shape:
   package, artwork/author, license, where used, why. Reused as the model for an
   entry; not reused as the file (see Placement).
-- `research/*/README.md` indices with disposition columns (`research/CLAUDE.md`:
+- `research/*/README.md` indices with disposition columns (`research/AGENTS.md`:
   "which idea is adopt/adapt/investigate/reject"). These are the richest
   candidate source: a row marked adopt/integrate names a source and an idea.
 - `research/external-skills-harvest.md`, `research/courseware-external-skills-triage.md`

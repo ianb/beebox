@@ -1,6 +1,6 @@
 # Unknown frontmatter keys are reported, not swallowed
 
-`issues/CLAUDE.md` defines a closed frontmatter schema, but `parseIssueFile` used
+`issues/AGENTS.md` defines a closed frontmatter schema, but `parseIssueFile` used
 to drop anything outside it without a word. Eleven issues were filed carrying a
 `stories:` list — pointing at slugs in the user-story catalog — and it reached no
 tool for two months: not a filter, not a facet, not `--json`. Nobody was told,
@@ -42,7 +42,7 @@ JSON.stringify(parse([
 
 ## Every documented field is recognised
 
-If this list and `issues/CLAUDE.md` drift apart, a legitimate field starts being
+If this list and `issues/AGENTS.md` drift apart, a legitimate field starts being
 reported as unknown on every issue that uses it — which is the failure this whole
 mechanism would otherwise cause.
 

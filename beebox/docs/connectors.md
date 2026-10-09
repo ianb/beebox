@@ -118,7 +118,7 @@ private getTelegram(botToken: string): TelegramService {
 }
 ```
 
-See `src/services/CLAUDE.md` for the full service layer documentation.
+See `src/services/AGENTS.md` for the full service layer documentation.
 
 ## Writing a new connector
 
@@ -130,7 +130,7 @@ See `src/services/CLAUDE.md` for the full service layer documentation.
 4. Stage and commit all file changes with descriptive messages and trailers
 5. Create job cards when new items need processing
 6. Register via `registerConnector()` in the connector registry
-7. Add a service interface if the connector calls external APIs (see `src/services/CLAUDE.md`)
+7. Add a service interface if the connector calls external APIs (see `src/services/AGENTS.md`)
 
 ## Shared utilities
 

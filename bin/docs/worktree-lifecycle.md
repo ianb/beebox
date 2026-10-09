@@ -76,14 +76,16 @@ launch-scoped trust/doc-size overrides, and an explicit default model unless
 supplied. Resume uses only the recorded, shape-validated session ID; missing
 transcripts become a declared fresh session before opening a tab.
 
-`bin/generate-agents-md.ts` mirrors tracked `CLAUDE.md`, embeds nearest scoped
-rules verbatim, symlinks complete skills, adds the root Codex preamble, and
-writes `.codex/agents/<name>.toml` from `.claude/agents/*.md`
+Both agents read the tracked `AGENTS.md` files directly.
+`bin/generate-codex-mirrors.ts` symlinks complete skills into `.agents/skills/`
+and writes `.codex/agents/<name>.toml` from `.claude/agents/*.md`
 (`bin/generate-codex-agents.ts`). A Claude `model:` alias with no Codex mapping
 fails generation, so a named agent never inherits the session model. It
-refuses tracked AGENTS files and non-generated skill or agent collisions. Fresh and
-resumed creation regenerate; Codex launch fails closed without the root mirror.
-Edit CLAUDE/rule/skill sources, never generated AGENTS files.
+refuses non-generated skill or agent collisions. Fresh and resumed creation
+regenerate; Codex launch fails closed without a skill or agent mirror. The Codex
+launcher passes `bin/codex-preamble.ts` output as `developer_instructions`: it
+maps Claude-only features (`@` imports, `.claude/rules/`, skills) onto Codex and
+orients the session in its worktree.
 
 ## Command-state contracts
 

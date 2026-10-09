@@ -19,15 +19,15 @@ repaired through `bbx mv` adoption rather than a one-time scripted rewrite.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes. Read the schema, read the existing
   code, read the test patterns."* — every design choice below cites the code it
   builds on.
-- `beebox/CLAUDE.md` (Validation section) — *"`.git/hooks/pre-commit` —
+- `beebox/AGENTS.md` (Validation section) — *"`.git/hooks/pre-commit` —
   runs `bbx validate --staged`, blocks commits that include cards failing
   validation."* This plan keeps the staged-card **block** intact and adds a
   box-wide link **warning** alongside it; it must not weaken the card gate.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"Leave the repo clean when
+- `beebox/AGENTS.md` (Behavioral Notes) — *"Leave the repo clean when
   committing. Fix any lint/type/test errors you encounter (even pre-existing
   ones)…"* — the data-cleanup track exists because enabling the rule surfaces
   pre-existing breakage that shouldn't be left lying around.
@@ -406,7 +406,7 @@ agent starts to use `bbx mv`."* Building active repair tooling (driving
 `rewriteReferrerRefs` over inferred old→new prefix maps, or redoing each move
 through `bbx mv`) is deliberately **not** done — the box-wide warning is the
 mechanism that gets these noticed and fixed in the normal course of work. This
-trades against *"Leave the repo clean when committing"* (`beebox/CLAUDE.md`)
+trades against *"Leave the repo clean when committing"* (`beebox/AGENTS.md`)
 — accepted explicitly: the broken links persist (as warnings) until an agent
 touches those areas and repairs them with `bbx mv`.
 

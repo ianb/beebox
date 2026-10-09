@@ -27,7 +27,7 @@ The chosen design has four tracks.
 | 2. Web: the box screen | 350 | 150 | replaces the Quick chat page; deletes the client-side send and the draft staging |
 | 3. Web: app bar menus | 250 | 150 | landmark menu, folder menu, landmark search page |
 | 4. iOS: box screen, outbox, launch rule | 1,300 | 400 | replaces the Quick chat button, the sheet, and the "+" menu's box list |
-| Authored docs | 300 | | quick-chat.md, landmarks and navigation docs, mobile-contract.md, ios-app/CLAUDE.md, security report |
+| Authored docs | 300 | | quick-chat.md, landmarks and navigation docs, mobile-contract.md, ios-app/AGENTS.md, security report |
 
 What the size buys: a thought is stored by the server in one request; every caller (web, the phone, later Siri and the share sheet) gets the same routing and the same recovery; the phone shows a composer before any web content loads; box-wide navigation has one home on both platforms.
 
@@ -42,7 +42,7 @@ What the size buys: a thought is stored by the server in one request; every call
 - The boxholder, 2026-10-06, accepted these as stated ("this sounds good"): an unclear thought the person walks away from stays unsent and shows first on the next open; "recently" is under 30 minutes in the background; the posting floor starts near 0.9; voice on the box screen starts with on-device dictation; on web the box screen replaces the Quick chat page.
 - This changes shipped navigation from `beebox/docs/implemented-plans/top-nav-ia.md`: line 296 puts Dashboard, Browse, History, "Other boxes →", and "All landmarks →" in the switch menu, and line 139 puts "Recent files ›" in the menu body with the directory link. The boxholder's statements above replace those placements.
 - This reverses two lines of `beebox/docs/plans/chat-routing.md`: "There is no ask-me outcome" and "Automatic iOS cold-start heuristics: explicit button is the first version". Both were choices for an evaluation surface that the boxholder has now evaluated.
-- `ios-app/CLAUDE.md:160`: "Native must submit an `Emission` to the visible web session; it must not call chat-send APIs behind the webview." The box screen has no visible web session. The plan amends the rule to name the exception: a quick chat submission from a screen with no web chat mounted. Narrow precedent: the share extension already calls the box from native code with the device token, and posts to `chat/send` for a chat the person picked (`beebox/docs/mobile-contract.md:1284`, row S3). It is precedent for native HTTP and auth. It is not precedent for server routing, a new-chat reservation, or an outbox; those are new in this plan.
+- `ios-app/AGENTS.md:160`: "Native must submit an `Emission` to the visible web session; it must not call chat-send APIs behind the webview." The box screen has no visible web session. The plan amends the rule to name the exception: a quick chat submission from a screen with no web chat mounted. Narrow precedent: the share extension already calls the box from native code with the device token, and posts to `chat/send` for a chat the person picked (`beebox/docs/mobile-contract.md:1284`, row S3). It is precedent for native HTTP and auth. It is not precedent for server routing, a new-chat reservation, or an outbox; those are new in this plan.
 - Principle 4, "Resilient AND never silent". A routing failure today ends with "Your message has not been sent." The new operation stores the thought and asks.
 - Principle 8, "One way to do each thing". Delivery reuses the send route's own body. It does not add a third delivery implementation beside the route and `deliverUserMessage`.
 - Principle 13, "A control shows the state the system is in". The box screen shows stored-not-sent, sending, sent, and not-delivered as different faces.
@@ -260,7 +260,7 @@ The percentages, the "Jev's top choices" block, the staged-text correction links
 - **Removed.** The "Quick chat" button above the composer, `QuickChatSheet`, `showingQuickChat`, `ChatWebView`'s `.quickChat` page, and `Section("Boxes")` in the "+" menu.
 - **Box switch and lock.** Selecting a box reloads the box screen for that box. A locked box shows `LockedBoxView` over the box screen, as it does over chat today. `obstructedNativeSurface` (`RootView.swift:580`) gains a case for the box screen.
 - **Native API.** `QuickChatAPI` with `submit`, `choose`, `discard`, `home`, using `BoxRequest.apply` for the bearer token, in the pattern of `ShareExtensionAPI`.
-- **Contract.** `mobile-contract.md` gains a section 5 entry for the four procedures and a section 3 entry for the intercepted `/<box>/box` navigation, with shared fixtures for the procedures under `beebox/test/mobile-contract/fixtures/`. The "Quick chat evaluation entry" section is replaced. `ios-app/CLAUDE.md:160` gains the stated exception.
+- **Contract.** `mobile-contract.md` gains a section 5 entry for the four procedures and a section 3 entry for the intercepted `/<box>/box` navigation, with shared fixtures for the procedures under `beebox/test/mobile-contract/fixtures/`. The "Quick chat evaluation entry" section is replaced. `ios-app/AGENTS.md:160` gains the stated exception.
 
 **Vocabulary lock-ins.** `surface`, `submitTarget`, `QuickChatOutbox`, `BoxScreenView`.
 
@@ -371,7 +371,7 @@ The agent-facing navigation description changes: where Dashboard, Browse, Histor
 6. Mobile-contract fixtures, `QuickChatAPI`, and the navigation interception.
 7. `initialSurface`, `QuickChatOutbox`, the second draft store.
 8. `BoxScreenView`, the composer seam; remove the button, the sheet, and the "+" menu's box list.
-9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.md`, `ios-app/CLAUDE.md`, security report section 3.
+9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.md`, `ios-app/AGENTS.md`, security report section 3.
 10. Browser walk against the test box. Simulator walk with fixtures and against the test box. The test box needs an `openrouter` grant for the sorted path; without one, the walk covers the `routing-unavailable` path only.
 
 ## Rollout shape

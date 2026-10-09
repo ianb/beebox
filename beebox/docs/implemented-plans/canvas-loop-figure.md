@@ -22,7 +22,7 @@ agent runs without a browser — validated in
   validate at boundaries, #4 resilient AND never silent, #8 one way to do
   each thing (the deciding principle for the module-contract choice below),
   #12 the maintainer is usually an agent.
-- `beebox/CLAUDE.md`: "don't add features beyond what the task
+- `beebox/AGENTS.md`: "don't add features beyond what the task
   requires" (drives the persistence deferral); read-before-writing (this
   revision exists because v1 violated it).
 - `code-style.md`: max 2 positional params (the figure contract's

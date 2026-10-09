@@ -48,7 +48,7 @@ MONO_DIR="$(cd "$REPO_DIR/.." && pwd)"     # the invoking tree's monorepo root
 # Surface failures. This usually runs backgrounded from the post-commit hook,
 # with stdout/err going to a per-run log under deploy/.deploy-logs/ (symlinked as
 # deploy/.last-deploy.log) that nobody watches — so on any non-zero exit, echo a
-# "Deploy failed" line (the poll pattern in deploy/CLAUDE.md keys off it) AND
+# "Deploy failed" line (the poll pattern in deploy/AGENTS.md keys off it) AND
 # fire a desktop notification. Skipped when run interactively — you already see
 # the output. The notifier is whatever BBX_DEPLOY_NOTIFY names in target.env
 # (invoked as `<cmd> <title> <message>`); unset means no notification, which is

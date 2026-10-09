@@ -52,7 +52,7 @@ justified by these, not the other way around.
   validate-at-boundaries (attribute enums validated at parse time),
   resilient-not-silent (parse failures must not silently hide todos), and
   types-are-structure (status is a closed union, exhaustively dispatched).
-- `beebox/CLAUDE.md` — the cards format ("YAML frontmatter + markdown
+- `beebox/AGENTS.md` — the cards format ("YAML frontmatter + markdown
   body"), "Read before writing," "keep source and docs generic — never
   hardcode personal names" (examples below use the `docs/example-names.md`
   roster).

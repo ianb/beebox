@@ -3,7 +3,7 @@
 A dated snapshot of Imbue's "personal AI operating system" against Bee Box,
 written one week after launch from public sources and one afternoon running
 it from source ([hands-on.md](hands-on.md)). No waitlist access; the code is
-the primary source. Per [research/CLAUDE.md](../CLAUDE.md) this
+the primary source. Per [research/AGENTS.md](../AGENTS.md) this
 corpus needs no cross-model review.
 
 | Note | Covers | Disposition or status |

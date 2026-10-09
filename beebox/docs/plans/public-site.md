@@ -269,7 +269,7 @@ Ordered by implementation dependency, then surface size.
   output, never a silent stale-serve. The build derives its base path from git
   (branch `worktree-<name>` → `/<name>/site/`, `main` → `/main/site/`);
   `--base` overrides for the deploy/router builds. Router changes ride
-  the usual main-merge-then-restart lifecycle (`bin/CLAUDE.md`).
+  the usual main-merge-then-restart lifecycle (`bin/AGENTS.md`).
 - **First chunk**: the route + auto-build (content-hash staleness,
   serialized, 500-on-failure) + the old-worktree 404 hint + a router test
   alongside the existing router test setup.

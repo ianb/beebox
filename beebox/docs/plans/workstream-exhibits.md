@@ -503,7 +503,7 @@ the lowest-common-denominator contract (principle 12).
 
 **First implementation chunk.** `add`/`url`/`list` with doctests against a
 temp store; the CLAUDE.md paragraph lands in the same commit
-(infrastructure isn't done until discoverable, `beebox/CLAUDE.md`
+(infrastructure isn't done until discoverable, `beebox/AGENTS.md`
 "Improving These Instructions").
 
 ### Track E — The ask queue in the workstreams app
@@ -642,7 +642,7 @@ step.
   `add` (refuse-on-collision); within one exhibit, events are append-safe and
   documents are atomic (Track C). Concurrent edits to one exhibit's content
   files are the same shared-worktree discipline that already governs
-  path-scoped commits (`bin/CLAUDE.md`, "Multiple agents sharing one
+  path-scoped commits (`bin/AGENTS.md`, "Multiple agents sharing one
   worktree") — out of the plan's mechanical scope.
 - **Hand-edit drift** (developer edits `exhibit.json` by hand, malformed) —
   ADDRESSED: Zod error page naming the problem (Track B).

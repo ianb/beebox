@@ -21,18 +21,18 @@ outbound model** ("write an output card → a connector delivers it").
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:Behavioral Notes` — *"Read before writing. Don't
+- `beebox/AGENTS.md:Behavioral Notes` — *"Read before writing. Don't
   guess file formats... read the existing code, read the test patterns."* This
   plan reuses the existing outbound contract rather than inventing a parallel one.
-- `beebox/CLAUDE.md:Behavioral Notes` — *"HTTP endpoints go in tRPC by
+- `beebox/AGENTS.md:Behavioral Notes` — *"HTTP endpoints go in tRPC by
   default... Raw Fastify routes ... are only for things that don't fit the tRPC
   request/response shape: file upload/download, OAuth redirects, webhooks."* The
   manifest/SW asset routes are static-file shaped → raw Fastify; subscribe/
   vapid-key are request/response → tRPC.
-- `beebox/CLAUDE.md:Behavioral Notes` — *"Keep source and docs generic —
+- `beebox/AGENTS.md:Behavioral Notes` — *"Keep source and docs generic —
   never hardcode personal names."* Subscriptions are server-level machine state,
   VAPID is a server secret; no boxholder identity in committed source.
-- `beebox/CLAUDE.md:Cards` — the Phase-2 YAML-frontmatter card format and
+- `beebox/AGENTS.md:Cards` — the Phase-2 YAML-frontmatter card format and
   the `box/output/` outbound contract (`src/schemas/telegram-message.ts`).
 - `beebox/CODE-STYLE.md` — no `any`, no default parameters, max-2
   positional params (named-object beyond), custom error classes, files ≤300 /
@@ -197,7 +197,7 @@ across box files and break 410-pruning + `pushsubscriptionchange` (codex #1).
   Read-modify-write guarded by `src/lib/file-lock.ts` (API subscribe + finalize
   prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
 - **`PushService` interface, real + fake** (mirroring `TelegramService`,
-  `src/services/CLAUDE.md`): `sendNotification(subscription, payload)` →
+  `src/services/AGENTS.md`): `sendNotification(subscription, payload)` →
   `{ ok } | { gone }` (404/410) | throws (transient). Real wraps `web-push`; fake
   records calls in observable state for doctests + the observability sink.
 - `src/core/send-push.ts`: `sendPush(boxSlug, { title, body, url, tag }, { push? })`
@@ -487,7 +487,7 @@ on the boxholder's explicit go — not after any single chunk.
 
 - **Test posture.** Doctests as a design tool (`docs/testing.md`): the load-bearing
   new codepaths get filesystem doctests with the injected `FakePushService`
-  (service-injection pattern, `src/services/CLAUDE.md` / `src/connectors/CLAUDE.md`)
+  (service-injection pattern, `src/services/AGENTS.md` / `src/connectors/AGENTS.md`)
   — Track B's endpoint-keyed store + prune-from-all-boxes, Track C's connector
   delete-on-sent / stamp-failed lifecycle, Track D's per-channel card matrix; Track
   E's subscribe gets a route doctest (`makeTestServer()`). The `FakePushService` +

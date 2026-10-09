@@ -39,5 +39,5 @@ gh release list -R gageml/gage --limit 5
   and offer to rerun the trial. The rerun is the same shape as the original:
   install the new version, `gage init -y`, `gage scan <session-id>` with the
   four scanners above on a real monorepo session, and record what it finds in
-  `research/` as an external-tool review (see `research/CLAUDE.md`). Run it
+  `research/` as an external-tool review (see `research/AGENTS.md`). Run it
   under a pseudo-terminal until the non-TTY report is fixed too.

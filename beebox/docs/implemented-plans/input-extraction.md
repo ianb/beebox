@@ -16,12 +16,12 @@ session switches), voice intents, and emission-keyed audio retention.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:100`: *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:100`: *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* — every seam below is cited to
   current line numbers (re-verified 2026-07-04, post boxes-as-packages-v2).
 - `beebox/CODE-STYLE.md`: no `any`; max 2 positional params; custom
   errors; `as` banned in `.tsx`; files ≤300 lines, functions ≤150.
-- `beebox/CLAUDE.md` (frontend bullets): UI primitives + semantic
+- `beebox/AGENTS.md` (frontend bullets): UI primitives + semantic
   palette; `restrict-component-classes`.
 - `docs/plans/input-widget.md` (the design this implements), especially:
   the serializable-boundary rule ("no React types, no DOM types in any

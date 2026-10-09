@@ -52,7 +52,7 @@ Two need a judgment call rather than an assumption:
 
 - `src/hub/supervisor.ts:432` (moved to `beebox/src/hub/supervisor/core.ts`) spawns `["serve", boxRoot, "--slug", …]` as a
   child process per box. The hub is how prod runs; see
-  `beebox/CLAUDE.md`.
+  `beebox/AGENTS.md`.
 - systemd units in `deploy/setup-server.sh:210` and
   `deploy/migrate-to-callback-user.sh:93` invoke `/usr/local/bin/bbx serve`
   directly (`deploy/README.md:191` says the live server now runs `bbx hub`, so

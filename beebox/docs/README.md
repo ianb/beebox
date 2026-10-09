@@ -81,7 +81,7 @@ resolving `bugs/foo.md` → `closed/bugs/foo.md` is the common case) every
 relative link to it breaks. For a link whose literal target no longer resolves,
 if the target's **basename is unique repo-wide** (across tracked `.md`,
 excluding the intentionally-per-directory `NON_UNIQUE_BASENAMES` —
-`CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
+`AGENTS.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 current location. It never guesses: a basename with no match (a true
 rename/delete) or 2+ matches is reported for manual handling, not rewritten.
 Links inside code spans / fenced blocks (syntax illustrations) and generated
@@ -104,7 +104,7 @@ subsection).
    pointer that carries a value, command, or number is a restatement.
 3. **Restatement is the exception and is marked.** Allowed when the reader
    cannot be expected to follow the link before acting: a rule an always-loaded
-   file (`CLAUDE.md`, the agent guide) must carry, or a contract clause a client
+   file (`AGENTS.md`, the agent guide) must carry, or a contract clause a client
    implementer copies. Each restatement ends with "(restated from [home])" so a
    search finds every copy when the home changes. A parent's one-line
    description of each child is the index, not a restatement.
@@ -144,7 +144,7 @@ subsection).
 
 ## Naming rules
 
-- **kebab-case filenames.** `README.md` and `CLAUDE.md` are exempt (fixed
+- **kebab-case filenames.** `README.md` and `AGENTS.md` are exempt (fixed
   names other tooling/conventions expect); everything else is
   `lowercase-with-hyphens.md`.
 - **Filenames say what the doc IS NOW.** Rename freely when a doc's role

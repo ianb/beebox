@@ -232,7 +232,7 @@ to latest" pill is a listed follow-up, not built (`transcript-smooth-scroll.md`)
 Bee Box's model is the inverse: `useChatScroll` writes `scrollTop` only on a
 discrete user action plus geometric compensations; growth below the reader
 never scrolls; a send anchors the user message to the viewport top; it keeps
-no intent state (`beebox/src/frontend/src/components/chat/CLAUDE.md`;
+no intent state (`beebox/src/frontend/src/components/chat/AGENTS.md`;
 `beebox/docs/chat/scroll.md`). Studio follows and detects intent; Bee Box never
 follows so needs none. Studio virtualizes to 50k events; Bee Box renders a
 200-entry tail plus "load older" (`beebox/src/frontend/src/machines/chat-types.ts`)
@@ -283,7 +283,7 @@ with a 75% coverage floor, browser tests under `-m browser`, and one randomized
    step concept. **Later**, as agent procedure not blocking hooks (memory:
    arrange context, don't automate judgment).
 8. One user-facing vocabulary file (`user-facing-language.md`) vs STE rules in
-   `issues/CLAUDE.md` and the briefing's "Reaching me". **Adapt**: one
+   `issues/AGENTS.md` and the briefing's "Reaching me". **Adapt**: one
    box-side reference the agent guide loads (`bbx-context` territory).
 9. End-of-turn notification skill, explicitly no hook (`notify-user/SKILL.md`,
    P8) vs `bbx notify` (`beebox/docs/notifications.md`). **Adopt** the

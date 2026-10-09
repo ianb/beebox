@@ -13,7 +13,7 @@ While approving the /finish edits (2026-07-29), Ian noted that
 `needs: [manual-testing]` "is probably being overused right now — I don't want
 to do that much manual testing." The flag is load-bearing: the finish agent
 now explicitly refuses to close any issue carrying it (only Ian clears it, per
-`issues/CLAUDE.md`), so every over-applied flag converts into a standing
+`issues/AGENTS.md`), so every over-applied flag converts into a standing
 human-verification chore that no agent can retire.
 
 The tension: the flag exists precisely because some fixes genuinely can only

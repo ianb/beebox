@@ -42,11 +42,11 @@ implementation corrected three points. As shipped:
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` — *"don't add features beyond what the task
+- `beebox/AGENTS.md` — *"don't add features beyond what the task
   requires."* The unification removes a parallel render path rather than adding
   one; the only net-new surface is an `isStreaming` branch inside an existing
   component.
-- `beebox/CLAUDE.md` — *"Frontend uses UI primitives and a semantic
+- `beebox/AGENTS.md` — *"Frontend uses UI primitives and a semantic
   palette. Read frontend.md before writing UI"* and the
   `restrict-component-classes` rule (chat is under `components/`, so exempt).
 - `~/.claude` memory `feedback_components_own_a11y` — the streaming cursor is an
@@ -341,7 +341,7 @@ scenarios are N/A by construction; listed rather than omitted:
 convention, or rule a box agent must recall. This is frontend rendering internal
 to the chat UI. The durable guidance (one stably-keyed assistant turn; don't
 reintroduce a separate streaming bubble) belongs in the chat
-`CLAUDE.md` (`src/frontend/src/components/chat/CLAUDE.md`, shipped with the scroll
+`CLAUDE.md` (`src/frontend/src/components/chat/AGENTS.md`, shipped with the scroll
 work), updated as part of rollout — not in `knowledge-audits.yaml`.
 
 ## Implementation order

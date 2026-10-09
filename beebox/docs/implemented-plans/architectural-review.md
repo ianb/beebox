@@ -151,7 +151,7 @@ output of this plan is deciding where each new principle should live.
   classes, minimal catches), `as`-discipline ("treat `as` like Rust's
   `unsafe`"; centralize in typed helpers), max-2 positional params, only
   export what's needed.
-- `beebox/CLAUDE.md` — validation contract; "all cross-process locks go
+- `beebox/AGENTS.md` — validation contract; "all cross-process locks go
   through `src/lib/file-lock.ts`"; raw-routes-are-debt.
 - Monorepo `CLAUDE.md` — never weaken lint rules; noisy output is a bug;
   issues/ as parking lot.

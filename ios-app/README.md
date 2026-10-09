@@ -5,7 +5,7 @@ at first: the conversation view stays in the box's web chat via `WKWebView`,
 loaded with `?nativeComposer=1`, while native code owns pairing, native input
 controls, and the paired-box shell.
 
-Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
+Agent and contributor build/test guidance lives in [`AGENTS.md`](AGENTS.md).
 
 ## Current Setup
 
@@ -82,7 +82,7 @@ ios-app/scripts/capture-composer-fixtures booted /tmp/composer-fixtures
 ```
 
 The full state list and simulator/device verification boundary are documented
-in [`CLAUDE.md`](CLAUDE.md#native-testing-boundary).
+in [`AGENTS.md`](AGENTS.md#native-testing-boundary).
 
 ## Runtime Diagnostics
 
@@ -92,4 +92,4 @@ Entries tagged `[ios]` came from the native app; `[ios@<timestamp>]` records the
 device event time when an offline queue arrived later. See
 [`client-debug-log.md`](../beebox/docs/client-debug-log.md) for log
 locations and interpretation. Contributor requirements for instrumenting new
-iOS features live in [`CLAUDE.md`](CLAUDE.md#runtime-diagnostics).
+iOS features live in [`AGENTS.md`](AGENTS.md#runtime-diagnostics).

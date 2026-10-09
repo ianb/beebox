@@ -4,16 +4,16 @@
 
 Use the guidance for the area you are changing:
 
-- **Main system:** [beebox/CLAUDE.md](beebox/CLAUDE.md).
-- **Chrome extension:** [beebox-clerk/CLAUDE.md](beebox-clerk/CLAUDE.md).
-- **Native iOS companion:** [ios-app/CLAUDE.md](ios-app/CLAUDE.md). It shares an [HTTP/bridge contract](beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
-- **Stand-alone scan uploader (laptop client):** [scan-uploader/CLAUDE.md](scan-uploader/CLAUDE.md). Zero runtime dependencies and copied as one file; it shares a [wire contract](beebox/docs/scan-upload-contract.md) with beebox's scan routes, versioned by a hand-bumped `SCAN_CONTRACT_VERSION`.
-- **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/CLAUDE.md](personal-vibe-check/CLAUDE.md). Edit it here; the old standalone checkout is stale.
+- **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
+- **Chrome extension:** [beebox-clerk/AGENTS.md](beebox-clerk/AGENTS.md).
+- **Native iOS companion:** [ios-app/AGENTS.md](ios-app/AGENTS.md). It shares an [HTTP/bridge contract](beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
+- **Stand-alone scan uploader (laptop client):** [scan-uploader/AGENTS.md](scan-uploader/AGENTS.md). Zero runtime dependencies and copied as one file; it shares a [wire contract](beebox/docs/scan-upload-contract.md) with beebox's scan routes, versioned by a hand-bumped `SCAN_CONTRACT_VERSION`.
+- **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/AGENTS.md](personal-vibe-check/AGENTS.md). Edit it here; the old standalone checkout is stale.
 - **Doctest framework:** [agent-doctest/README.md](agent-doctest/README.md); application tests live in their packages.
 - **Experimental Mac app (spike):** [mac-app/README.md](mac-app/README.md) — a menu-bar app that runs the beebox image in a VM via Apple's Containerization; findings in [research/installable-app/](research/installable-app/README.md).
-- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); [canvas-loop/CLAUDE.md](canvas-loop/CLAUDE.md) covers the sketch and gallery loop.
-- **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/CLAUDE.md](bin/CLAUDE.md) documents their mechanics.
-- **External-tool research:** [research/CLAUDE.md](research/CLAUDE.md).
+- **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); [canvas-loop/AGENTS.md](canvas-loop/AGENTS.md) covers the sketch and gallery loop.
+- **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/AGENTS.md](bin/AGENTS.md) documents their mechanics.
+- **External-tool research:** [research/AGENTS.md](research/AGENTS.md).
 
 ## Work safely in this checkout
 
@@ -21,13 +21,13 @@ Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo i
 
 When asked to spin off work, use [launch-worktree-session](.claude/skills/launch-worktree-session/SKILL.md). Managed worktrees live at `~/src/beebox-worktrees/<name>/` on `worktree-<name>` branches. Repository hooks own cleanup; do not use native `claude --worktree` for this workflow.
 
-One shared dev router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...`. Use the worktree's short name, without the branch's `worktree-` prefix. HTTP requests wake idle worktrees; WebSockets do not. **Do not restart or `panic` the shared router from a worktree without asking the boxholder.** Lifecycle details: [bin/CLAUDE.md](bin/CLAUDE.md#lifecycle-commands).
+One shared dev router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...`. Use the worktree's short name, without the branch's `worktree-` prefix. HTTP requests wake idle worktrees; WebSockets do not. **Do not restart or `panic` the shared router from a worktree without asking the boxholder.** Lifecycle details: [bin/AGENTS.md](bin/AGENTS.md#lifecycle-commands).
 
 Never search the whole home directory (`find ~`, `grep -r ~`, `rg ~`). It walks iCloud Drive, Photos, Music, and Calendars and raises macOS privacy prompts. Search the specific directory, or ask where a file lives.
 
 Use [browse](.claude/skills/browse/SKILL.md) and `bin/browse` for browser work; `/`-leading paths resolve in this worktree. Tracked HTML and Markdown in `dev/` are served at `/<worktree>/dev/`; the repository doc browser is at `/<worktree>/dev/docs/`. See [dev/README.md](dev/README.md).
 
-For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.claude/skills/bbx-authoring-schedules/SKILL.md). `bin/schedules list` shows the catalog, last runs, and overdue work; [bin/CLAUDE.md](bin/CLAUDE.md#schedules-binschedules) covers scheduling mechanics.
+For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.claude/skills/bbx-authoring-schedules/SKILL.md). `bin/schedules list` shows the catalog, last runs, and overdue work; [bin/AGENTS.md](bin/AGENTS.md#schedules-binschedules) covers scheduling mechanics.
 
 ## How much to do
 
@@ -42,7 +42,7 @@ A bare "go ahead" after a proposal means **do** for that proposal. Destructive o
 
 ## Implement and verify
 
-Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/CLAUDE.md](beebox/CLAUDE.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript. A foreground `sleep` is blocked; to wait on a condition, run an `until` loop in the background or use the Monitor tool.
+Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/AGENTS.md](beebox/AGENTS.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript. A foreground `sleep` is blocked; to wait on a condition, run an `until` loop in the background or use the Monitor tool.
 
 Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys your test box is granted before assuming you cannot, and ask before sending real box content out or spending real money: [real model calls](beebox/docs/testing/real-models.md).
 
@@ -56,18 +56,18 @@ For anything beyond a small-scope bug fix, get [cross-model review](.claude/skil
 
 ## Record and show work
 
-Human document comments live outside git. At pickup run `bin/comments list --workstream <name>`; use `bin/comments show <path>` when opening a document that may have comments. Read, act, then clear. [Comment mechanics](bin/CLAUDE.md#document-comments-bincomments).
+Human document comments live outside git. At pickup run `bin/comments list --workstream <name>`; use `bin/comments show <path>` when opening a document that may have comments. Read, act, then clear. [Comment mechanics](bin/AGENTS.md#document-comments-bincomments).
 
-Use [issues](.claude/skills/issues/SKILL.md) to retain worthwhile out-of-scope finds. Filing does not authorize implementation. Keep track of this workstream's own finds and offer to fix them at natural pauses and finish. Formats and re-encounter rules: [issues/CLAUDE.md](issues/CLAUDE.md).
+Use [issues](.claude/skills/issues/SKILL.md) to retain worthwhile out-of-scope finds. Filing does not authorize implementation. Keep track of this workstream's own finds and offer to fix them at natural pauses and finish. Formats and re-encounter rules: [issues/AGENTS.md](issues/AGENTS.md).
 
-Private box content and personal/operational specifics belong in `private-issues/`, a separate gitignored repository mounted by symlink. Ask when unsure whether content is public-safe. Commit private changes from inside that repository; public files must never link into it. A missing mount means the developer has not opted in. [Privacy rules](issues/CLAUDE.md#private-issues-private-issues--a-separate-repo) and [setup/mechanics](bin/CLAUDE.md#private-issues-shadow-repo-private-issues).
+Private box content and personal/operational specifics belong in `private-issues/`, a separate gitignored repository mounted by symlink. Ask when unsure whether content is public-safe. Commit private changes from inside that repository; public files must never link into it. A missing mount means the developer has not opted in. [Privacy rules](issues/AGENTS.md#private-issues-private-issues--a-separate-repo) and [setup/mechanics](bin/AGENTS.md#private-issues-shadow-repo-private-issues).
 
 Show useful UI screenshot evidence as one labeled exhibit and share its URL. Give it exactly one ask: `decide` (choose), `confirm` (veto if wrong), `react` (impressions), or `fyi` (evidence only). State what the figures demonstrate. A lone incidental debug capture does not need an exhibit. Use `bin/exhibits add` to create one and `bin/exhibits list` to check answers. Exhibits survive worktree culling and do not merge; durable apps belong in `dev/apps/<name>/` (`bin/exhibits add --permanent`). [Exhibit contract and commands](workstreams-app/docs/exhibits.md).
 
 ## Commit and land
 
-Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is that ask). Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](bin/CLAUDE.md).
+Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is that ask). Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](bin/AGENTS.md).
 
-Hooks add `Workstream` and, when exactly one plan matches, `Plan` trailers. An optional `Issue: <bare-basename>` identifies a public issue; omit directories and `.md`, repeat for multiple issues, and never name a private issue. A nonexistent issue name blocks the commit. [Provenance details](bin/CLAUDE.md#commit-provenance-trailers-commit-provenancets).
+Hooks add `Workstream` and, when exactly one plan matches, `Plan` trailers. An optional `Issue: <bare-basename>` identifies a public issue; omit directories and `.md`, repeat for multiple issues, and never name a private issue. A nonexistent issue name blocks the commit. [Provenance details](bin/AGENTS.md#commit-provenance-trailers-commit-provenancets).
 
 When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main` commits/merges touching shipped paths: `beebox/`, `agent-doctest/`, `personal-vibe-check/`, `patches/`, or root pnpm files (development docs under `beebox/docs/` excluded). It is fired by this checkout's own git hooks when the commit lands, not by GitHub: pushing deploys nothing to the server. A push to GitHub's `main` does publish the public site (Cloudflare builds beebox.run from it), and a `v*` tag publishes the container image. Worktree commits do not deploy. [Deployment operations](beebox/deploy/README.md).

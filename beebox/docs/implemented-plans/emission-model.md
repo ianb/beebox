@@ -102,7 +102,7 @@ remaining pending states bounded exits.
 - `docs/engineering-principles.md` — resilient-not-silent (wedges must
   surface, not spin forever); validate-at-boundaries; fewer states over more
   expiry rules.
-- `beebox/CLAUDE.md` — "Read before writing"; mobile-contract is the
+- `beebox/AGENTS.md` — "Read before writing"; mobile-contract is the
   single owner of the bridge vocabulary; time discipline (`awake-timeout` for
   any iOS/web timer this plan adds — plain timers fire wrong across sleep).
 - Boxholder directives from the briefing: never duplicate a turn; never lose
@@ -313,7 +313,7 @@ holds — and stays its own track so the distinction isn't lost.
   when the blocking term is not transient.
 - **Diagnose the real `isSending` wedge**: instrument the three terms
   (`isPreparingSend`, `batchProgress`, `draftStore.isReady`) with `BoxLog`
-  transition entries (per `ios-app/CLAUDE.md` runtime-diagnostics rule) so
+  transition entries (per `ios-app/AGENTS.md` runtime-diagnostics rule) so
   the next field occurrence names its term. The filed issue's assumed
   mechanism (stuck pending emission) is contradicted by the code — see
   diagnosis section — so this needs evidence, not a guess. Candidate
@@ -513,7 +513,7 @@ and contract documentation. Box agents never see emissions or receipts.
   send (existing gate on the receipts issue — post-A the expected behavior
   changes to "clears immediately"), and the Track B long-pending affordance
   on a real device with the box unreachable. Both get `## Manual testing`
-  sections per `issues/CLAUDE.md`.
+  sections per `issues/AGENTS.md`.
 - **No migration of on-disk box data.** The only stored-shape change is
   iOS-local (`PendingEmissionState` decode migration, B1). Server dedup file
   shape is unchanged.

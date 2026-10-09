@@ -98,17 +98,17 @@ the primary entry point and must be reliably invokable — **confirmed: box-leve
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` → **"Read before writing. Don't guess file formats…"** —
+- `beebox/AGENTS.md` → **"Read before writing. Don't guess file formats…"** —
   every schema/registration/attach claim cites the file it was read from.
-- `beebox/CLAUDE.md` → **"Keep source and docs generic — never hardcode personal
+- `beebox/AGENTS.md` → **"Keep source and docs generic — never hardcode personal
   names…"** — instructions and the skill stay generic ("the learner").
-- `beebox/CLAUDE.md` (Cards) → **"Schemas can include `instructions`… injected into
+- `beebox/AGENTS.md` (Cards) → **"Schemas can include `instructions`… injected into
   agent context when processing cards of that type."** — the card-rules surface; **and
   "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
   must not emit `type:`.
 - `beebox/code-style.md` → **"No default parameters"**, **"Max 2 positional
   parameters"**, **"NEVER use `any`"**, double quotes, semicolons.
-- `beebox/CLAUDE.md` → **"don't add features beyond what the task requires."** — the
+- `beebox/AGENTS.md` → **"don't add features beyond what the task requires."** — the
   qualitative, prose-first stances are the scope guardrail; the *new* required fields
   (evidence, edge `kind`) earn their place by closing a named failure mode, not by adding
   rigor for its own sake.

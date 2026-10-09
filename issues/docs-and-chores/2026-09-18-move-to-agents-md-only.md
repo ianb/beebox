@@ -8,6 +8,23 @@ discovered-by: Ian
 discovered-in: main — boxholder wants one authored instruction filename once Claude Code reads AGENTS.md
 ---
 
+**Status 2026-10-09: the repo half is done** in `worktree-agents-md`. Boxes
+remain open (see "What boxes would change" below). Findings from that work,
+checked with headless `claude -p` sessions on Claude Code 2.1.296:
+
+- The mod is on by default. A remote feature gate (`tengu_agents_md_mod`) can
+  still turn it off.
+- A nested `AGENTS.md` loads when the agent **reads** a file below it. A Write
+  into an unread directory does not load it. A nested `CLAUDE.md` loads on
+  Write and Edit too. Box agents write cards often, so this matters for the box
+  half.
+- When a session starts below a directory, `@` imports in that directory's
+  instruction file are not expanded. `CLAUDE.md` behaves the same way.
+- Repo changes: the 20 files were renamed. The generator became
+  `bin/generate-codex-mirrors.ts` (skills, agents, hooks only). The Codex
+  preamble moved to `bin/codex-preamble.ts`, passed as `developer_instructions`.
+  `doc-check` rejects any `CLAUDE.md` in the repo.
+
 Claude Code reads `AGENTS.md` through a built-in mod, `agents-md`
 ([source](https://github.com/anthropics/claude-code/tree/main/mods/agents-md)).
 The boxholder wants one authored instruction filename once that lands, in the

@@ -9,7 +9,7 @@ Choosing work from the open issues is a judgment task with a tooling layer
 under it. The tooling (`bin/issues`) makes surveys cheap; this skill is about
 what to do with the survey, and — above all — **what you are allowed to do at
 each step**. Field semantics (`priority:`, next actions, `needs:`,
-`discovered-in:`) are in `issues/CLAUDE.md`; nothing here overrides it.
+`discovered-in:`) are in `issues/AGENTS.md`; nothing here overrides it.
 
 ## The mode you are in
 
@@ -19,9 +19,9 @@ requires a new instruction from them — you never promote yourself.
 
 | Their words (examples) | Mode | Allowed | Not allowed |
 |---|---|---|---|
-| "look at", "look into", "what's in the queue", "find a cluster", "what's related to X", "what should we work on" | **Investigate** | `bin/issues` queries; read issues in full; check the code for what has since shipped; write up findings; append dated notes to issue *bodies* recording what you verified (found stale, re-encountered — per `issues/CLAUDE.md`) | changing frontmatter (`priority:`, `needs:`, `workstream:`) or next actions, closing, moving or merging issues; launching anything; choosing a model |
+| "look at", "look into", "what's in the queue", "find a cluster", "what's related to X", "what should we work on" | **Investigate** | `bin/issues` queries; read issues in full; check the code for what has since shipped; write up findings; append dated notes to issue *bodies* recording what you verified (found stale, re-encountered — per `issues/AGENTS.md`) | changing frontmatter (`priority:`, `needs:`, `workstream:`) or next actions, closing, moving or merging issues; launching anything; choosing a model |
 | "propose", "what would you do", "make a plan for", "pick one", "which of these" | **Propose** | everything above, plus one ranked recommendation with the issue set, the kind of session it deserves, and a draft briefing | launching; setting `priority:`; closing or merging issues |
-| "do it", "launch", "start a worktree on X", "go" — naming a specific item or approving a specific proposal | **Act** | launch via the `launch-worktree-session` skill (which still asks about model when unsure), passing `--issue <path>` for the issue the workstream takes responsibility for and listing the rest of the cluster in the briefing; amend the chosen issues per `issues/CLAUDE.md` | widening to a second item, cluster, or session without a fresh "go" |
+| "do it", "launch", "start a worktree on X", "go" — naming a specific item or approving a specific proposal | **Act** | launch via the `launch-worktree-session` skill (which still asks about model when unsure), passing `--issue <path>` for the issue the workstream takes responsibility for and listing the rest of the cluster in the briefing; amend the chosen issues per `issues/AGENTS.md` | widening to a second item, cluster, or session without a fresh "go" |
 
 A bare `/bbx-pick-issues` — no words at all — is **Propose**: survey, one
 recommendation, then stop and ask. Silence is never a "go".

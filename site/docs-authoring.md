@@ -4,7 +4,7 @@ This is the content-author's guide to `site/docs/` and `site/docs-manifest.yaml`
 — the corpus published at `/docs/` and indexed by `llms.txt`, read by a general
 chatbot on behalf of someone deciding whether to use Bee Box. Full design and
 rationale: `../beebox/docs/plans/agent-docs.md`. Mechanism: `docs.ts`,
-`docs-html.ts`, and `site/CLAUDE.md`'s Agent docs section.
+`docs-html.ts`, and `site/AGENTS.md`'s Agent docs section.
 
 There is nothing to do here for the HTML side: every page you write gets a
 same-named spartan `.html` rendering beside its `.md` automatically, and
@@ -68,7 +68,7 @@ resolves to a real published file (including a directory's generated
 `index.md`) — a link to something not in the manifest, not yet authored, or
 misspelled fails the build with the exact target that didn't resolve. Once
 validated, the build rewrites it to an absolute URL (`docsOrigin(base)` +
-`base` + the resolved path — see `site/CLAUDE.md`'s Agent docs section) so a
+`base` + the resolved path — see `site/AGENTS.md`'s Agent docs section) so a
 chat agent fetching `llms.txt` can follow it without resolving anything
 itself; you keep writing published-relative links, the absolute form is
 build output.
@@ -76,7 +76,7 @@ build output.
 No links into the repo's `plans/`, `issues/`, `research/`, or similar internal
 material — there is nothing there for this corpus, and an authored link there
 will fail the same way any other unresolvable link does (promoted docs, by
-contrast, get those links flattened automatically — see `site/CLAUDE.md`).
+contrast, get those links flattened automatically — see `site/AGENTS.md`).
 
 ## Adding a new directory
 
@@ -122,11 +122,11 @@ re-writing it:
 Adding that line *is* the review — someone read the source doc and judged it
 fit for a stranger. The loader refuses any `source` outside `beebox/docs/<flat
 file>.md`, `beebox/docs/design/`, `beebox/docs/architecture/`, root
-`README.md`, or the three individually admitted files `beebox/CLAUDE.md`,
+`README.md`, or the three individually admitted files `beebox/AGENTS.md`,
 `beebox/code-style.md`, `beebox/frontend.md`; and any `publish` outside the
 directories above (which also includes `dev/`, for contributor-facing
 promoted docs) — regardless of what's written in the manifest. A promoted
-doc's own internal links are rewritten automatically (see `site/CLAUDE.md`)
+doc's own internal links are rewritten automatically (see `site/AGENTS.md`)
 — you don't need to touch them.
 
 ## What fails the build, and why

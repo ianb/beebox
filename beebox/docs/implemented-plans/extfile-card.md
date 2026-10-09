@@ -31,16 +31,16 @@ each `commentary` card via `defaultHref`.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* Every claim below cites `file:line`.
-- `beebox/CLAUDE.md` (Cards) — *"The current format is YAML frontmatter +
+- `beebox/AGENTS.md` (Cards) — *"The current format is YAML frontmatter +
   markdown body (Phase 2)."* `extfile` is a frontmatter `cardSchema()`,
   registered in `cardSchemas[]` (`src/schemas/registry.ts:65` (moved to `beebox/src/schemas.ts`)).
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"don't add features beyond
+- `beebox/AGENTS.md` (Behavioral Notes) — *"don't add features beyond
   what the task requires."* The NOT-in-scope section is where this is bounded;
   the renderer reuses the existing external-fetch + registry-dispatch path
   rather than inventing one.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"Keep source and docs generic
+- `beebox/AGENTS.md` (Behavioral Notes) — *"Keep source and docs generic
   — never hardcode personal names."* `href` values are per-box card data
   (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
   memory"*), so a `file:/Users/...` literal in an extfile card is fine; no
@@ -308,7 +308,7 @@ metadata must therefore be refreshed by a deliberate command, not a hook.
     touched-but-unchanged file never produces a card diff.
   - **If the hash differs (or the card was never stamped),** rewrite `version`,
     `size`, and `mtime` **together** (parse-mutate-reserialize via `yaml`, per
-    `beebox/CLAUDE.md` Cards).
+    `beebox/AGENTS.md` Cards).
   - Report per-card: `stamped` / `unchanged` / `unresolved`.
 - Runs locally and calls the resolver/marker helpers **directly** (not via the
   dev-only `/api/external` route), so it works without development surfaces.
@@ -542,7 +542,7 @@ codepaths are clear.
 - **Validation error UX** — does a bad extfile card read well to the agent?
   **ADDRESSED** — the lint branch names the offending field (missing/malformed
   `href`, malformed `version`), surfaced through the existing `bbx validate
-  --hook` PostToolUse path (`beebox/CLAUDE.md` Validation).
+  --hook` PostToolUse path (`beebox/AGENTS.md` Validation).
 - **Partial migration / transition state** — Track D removes
   `defaultHref`/`defaultRef`/`targets` in one commit, so an un-migrated card in
   any box would fail validation against the new schema. **ADDRESSED** — the

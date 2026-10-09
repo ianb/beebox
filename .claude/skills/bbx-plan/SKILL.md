@@ -60,8 +60,8 @@ writing and when reviewing.
 
 - **Cite, don't assert.** Any claim about existing code or behaviour quotes
   `file:line` plus verbatim text — including claims of safety ("Y handles this"
-  cites where). "CLAUDE.md says to read before writing" is a paraphrase;
-  `beebox/CLAUDE.md:101`: *"Read before writing…"* is a citation.
+  cites where). "AGENTS.md says to read before writing" is a paraphrase;
+  `beebox/AGENTS.md:101`: *"Read before writing…"* is a citation.
   "Probably" / "likely" / "I think" are guesses: verify or mark unverified.
 - **Explain actual tradeoffs against stated preferences.** Cite the relevant
   human decision, engineering principle, repo rule, or shipped precedent when

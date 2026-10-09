@@ -19,5 +19,5 @@ chats such as Telegram, and everything that serves them. One page per member.
 
 - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
 - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
-- The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend/src/components/chat/CLAUDE.md`.
+- The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend/src/components/chat/AGENTS.md`.
 - Husk cards (`_content/chat/web/*.chat.card`) have no current reference; the design is the [chat husks plan](plans/chat-husks.md).

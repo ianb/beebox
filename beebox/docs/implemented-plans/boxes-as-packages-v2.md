@@ -30,11 +30,11 @@ These are inputs to this plan, not open questions:
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` ("Behavioral Notes"): *"Keep source and docs generic — never
+- `beebox/AGENTS.md` ("Behavioral Notes"): *"Keep source and docs generic — never
   hardcode personal names. This is a generic tool; any box can be adopted by any user."* —
   the onboarding goal is this principle applied to infrastructure: today the *code* is
   generic but the *operations* are hardcoded to one person's machines.
-- `beebox/CLAUDE.md` ("Cards"): *"The filesystem is state, Git is history, the `bbx` CLI
+- `beebox/AGENTS.md` ("Cards"): *"The filesystem is state, Git is history, the `bbx` CLI
   is the universal interface."* — the operational root must stay a plain directory of cards;
   the package wrapper must not leak into it (hence decision 1).
 - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
