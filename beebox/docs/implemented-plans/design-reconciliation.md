@@ -171,7 +171,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   interface - full transparency into the system state. Later it may split
   into a cleaner user-facing view and a debug backend."
 - **Reality/tension** — the web app is the primary product surface
-  (architecture/CLAUDE.md: "Web chat is primary; Telegram is one of several
+  (architecture/AGENTS.md: "Web chat is primary; Telegram is one of several
   additional channels"), with a design system, SSR rendering, capture pages,
   and interface-as-cards is entirely about its future. The split that
   happened is Admin-vs-everything (interface-as-cards.md:291: "Admin stays
@@ -484,7 +484,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - **Claim** — spirit.md:5: "If something in the architecture contradicts
   what's written here, the architecture is wrong. … This document is the
   compass, not the map."
-- **Reality/tension** — architecture/CLAUDE.md scopes spirit.md as a steering
+- **Reality/tension** — architecture/AGENTS.md scopes spirit.md as a steering
   doc for *writing the vignette series* ("Steering docs (not user-facing)");
   design.md, CLAUDE.md, and the glossary never cite it. Yet its content
   (see-the-gears, messy-is-expected, best-stuff-comes-from-the-people,

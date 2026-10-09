@@ -23,10 +23,10 @@ loader) stays centralized in `card-lint.ts`.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* This plan is grounded in the
   actual `card-lint.ts` / `card-schema.ts` source, cited below.
-- `beebox/CLAUDE.md` (Improving These Instructions / Guides table) — the
+- `beebox/AGENTS.md` (Improving These Instructions / Guides table) — the
   schema-authoring doc (`docs/cards/schemas.md`) and schema-module headers are
   the canonical places a future agent learns "where does validation go"; this
   plan must update them or it leaves false guidance behind.
@@ -38,7 +38,7 @@ loader) stays centralized in `card-lint.ts`.
 - `beebox/code-style.md` — *"as type assertions are like Rust's
   unsafe"*; *"No default parameters"*; max-2-positional. The dispatch rewrite
   and the moved validators must not introduce bare `as` or default params.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"don't add features beyond
+- `beebox/AGENTS.md` (Behavioral Notes) — *"don't add features beyond
   what the task requires"* (paraphrase of the project's minimalism). This is
   why context-aware validation is designed-for but **not built** here.
 - Most recent precedent: the commentary/extfile validators themselves

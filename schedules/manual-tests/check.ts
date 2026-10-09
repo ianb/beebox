@@ -126,7 +126,7 @@ async function validate(issuePaths: string[]): Promise<void> {
 }
 
 /**
- * Path-scoped `add`/`commit` (the `bin/CLAUDE.md` convention) so nothing else
+ * Path-scoped `add`/`commit` (the `bin/AGENTS.md` convention) so nothing else
  * in the tree is swept in under this message. Never pushes: landing the week's
  * triage is the boxholder's call.
  */

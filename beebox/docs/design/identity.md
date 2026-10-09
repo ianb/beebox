@@ -2,7 +2,7 @@
 
 A system that Claude Code operates over a **box**: a special place on disk —
 files with defined inputs, outputs, and services. "A personal assistant
-and operating system" (`beebox/CLAUDE.md`) is the identity;
+and operating system" (`beebox/AGENTS.md`) is the identity;
 the OS half is the ambition — a place you inhabit and build within,
 not an app you open (ruling 3; the feel is `../architecture/spirit.md`'s
 "It should feel like a place"). It's not meant to feel like a work tool, even

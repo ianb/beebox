@@ -77,7 +77,7 @@ Approved. Run by an Opus session because the developer wants each moved document
   ("Lint rule suppression"), and the two `beebox/eslint.config.ts` comments
   point there. Git history keeps the full report.
 - **Every line of `docs/README.md` already had a home** in
-  `beebox/docs/README.md`, `beebox/CLAUDE.md`, `research/CLAUDE.md`, or the
+  `beebox/docs/README.md`, `beebox/AGENTS.md`, `research/AGENTS.md`, or the
   root `CLAUDE.md`, so nothing moved into `CLAUDE.md`. The root `README.md`
   now points at `beebox/docs/README.md`.
 - Verified: `bin/schedules run sdk-update --dry-run` reads the baseline

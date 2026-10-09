@@ -1,6 +1,6 @@
 # Reception: what people use it for and where it falls short
 
-*Snapshot dated 2026-10-09. Sources: Hacker News threads via the Algolia API, Google's own help-page caveats, press, and third-party reviews. Reddit was unreachable on the snapshot date (Arctic Shift returned HTTP 522). Per [research/CLAUDE.md](../CLAUDE.md), predictable reactions to the marketing are left out. Part of the [NotebookLM research corpus](README.md).*
+*Snapshot dated 2026-10-09. Sources: Hacker News threads via the Algolia API, Google's own help-page caveats, press, and third-party reviews. Reddit was unreachable on the snapshot date (Arctic Shift returned HTTP 522). Per [research/AGENTS.md](../AGENTS.md), predictable reactions to the marketing are left out. Part of the [NotebookLM research corpus](README.md).*
 
 ## What it is used for
 

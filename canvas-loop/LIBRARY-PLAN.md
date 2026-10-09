@@ -102,7 +102,7 @@ canvas-loop/
 ## Claude plugin (`claude-plugin/`)
 
 **Status (2026-10-07): removed** — the skill's content moved to
-`canvas-loop/CLAUDE.md`. **Earlier status (2026-07-14): shipped** — `claude-plugin/.claude-plugin/plugin.json`
+`canvas-loop/AGENTS.md`. **Earlier status (2026-07-14): shipped** — `claude-plugin/.claude-plugin/plugin.json`
 + `skills/canvas-loop-sketch/SKILL.md`; wired into `.claude/skills/` by copy
 (`pnpm run sync:claude-skill`, source-of-truth banner in the canonical file —
 the harness reads real files, so a symlinked skill dir isn't reliably

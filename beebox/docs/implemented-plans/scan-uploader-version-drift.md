@@ -128,7 +128,7 @@ intends** (`:151`). Relevant to where the report goes: a version the box merely
 *records* shows what the last sweep claimed, which is fine; a version the box
 *acts on* would be a gate this plan does not build.
 
-**The strongest countervailing preference is `beebox/CLAUDE.md`'s "Work only on
+**The strongest countervailing preference is `beebox/AGENTS.md`'s "Work only on
 the requested problem."** Both halves were asked for: the contract version on
 2026-09-14, and the build stamp plus box-side awareness in the same
 conversation (quoted in the budget re-set). What stays out is everything the

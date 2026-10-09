@@ -18,16 +18,16 @@ real violation data); flipping to enforcing is a gated follow-up.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:` *"Read before writing. Don't guess file formats,
+- `beebox/AGENTS.md:` *"Read before writing. Don't guess file formats,
   XML structures, or API shapes."* — every directive below is traced to a
   verified `file:line` where the browser actually contacts an origin, not to a
   guess about what a SPA "probably" needs.
-- `beebox/CLAUDE.md:` the "don't add features beyond what the task
+- `beebox/AGENTS.md:` the "don't add features beyond what the task
   requires" rule — argues for a hand-rolled `onSend` hook over pulling in
   `@fastify/helmet` and its full header suite when the task is specifically a
   CSP (see Open question 1), and for deferring the `img-src` tightening (see
   NOT in scope).
-- `beebox/CLAUDE.md:` *"Treat noisy command output as a bug"* and the
+- `beebox/AGENTS.md:` *"Treat noisy command output as a bug"* and the
   general no-regressions posture — a CSP that breaks figures/box-views/dictation
   in prod would be exactly the kind of silent breakage this repo treats as
   unacceptable; the Report-Only-first rollout is the mitigation.

@@ -60,7 +60,7 @@ and why rather than trusting a silently-patched document.
   - **#12 The maintainer is usually an agent.** "Compaction" already means
     something else in this codebase; reusing it would cost every future agent a
     disambiguation (Track A vocabulary lock-in).
-- **`beebox/CLAUDE.md`** — the "don't add features beyond what the task
+- **`beebox/AGENTS.md`** — the "don't add features beyond what the task
   requires" rule bounds the fan-out (see NOT in scope); the time-discipline
   rule (`getBoxTime`, not `new Date()`) applies to every timestamp written here.
 - **`beebox/code-style.md`** — max 2 positional params, no default
@@ -211,7 +211,7 @@ this design.** Found while checking whether an accumulating `contains` was viabl
   derived ones. **[rev] The mechanism is narrower than the first draft claimed** —
   see Track B.
 - `src/connectors/preserve-agent-fields.ts:15` (moved to `beebox/src/preserve-agent-fields.ts`) — `AGENT_FIELDS = ["contains"]`,
-  re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
+  re-injected before a connector sync rebuilds a card. `src/connectors/AGENTS.md:19`:
   *"Adding a new agent-owned field to a connector-managed card type means adding it
   to that list, not just writing it once and hoping the next sync leaves it alone."*
 - **`src/core/search/contains-update.ts:87` `updateContainsField` — [rev] the
@@ -444,7 +444,7 @@ found no camelCase or snake_case key). Type `z.string().optional()`.
 3. `src/core/search/contains-state.ts:40` `BASIS_EXCLUDED_FIELDS` — add
    `"contains-evidence"`, as correct general policy for a derived field.
 4. `src/connectors/preserve-agent-fields.ts:15` (moved to `beebox/src/preserve-agent-fields.ts`) `AGENT_FIELDS` — add it, per the
-   rule quoted from `src/connectors/CLAUDE.md:19`. Husks are not connector-managed,
+   rule quoted from `src/connectors/AGENTS.md:19`. Husks are not connector-managed,
    so this does not matter today; it is the field's general contract.
 5. A write primitive that can persist evidence — see below.
 

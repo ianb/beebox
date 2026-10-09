@@ -40,7 +40,7 @@ flagged the `webapp/routes/*` ⇄ `webapp/trpc/routers/*` parallel implementatio
 
 ## Stated preferences this plan trades against
 
-- **`beebox/CLAUDE.md`** — the canonical-side decision is already made:
+- **`beebox/AGENTS.md`** — the canonical-side decision is already made:
   *"HTTP endpoints go in tRPC by default … Raw Fastify routes in
   `src/webapp/routes/` are only for things that don't fit the tRPC
   request/response shape: file upload/download, OAuth redirects, webhooks, and

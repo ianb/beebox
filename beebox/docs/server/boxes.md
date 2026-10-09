@@ -27,7 +27,7 @@ deployment (`box.example.com`) rather than something every hub needs.
   semantics the dev router (`workstreams-app/src/router/lifecycle.ts`) uses for
   dev worktrees. `keepRecent: N` (lazy-only) keeps the N most-recently-used boxes alive rather than
   idle-stopping them, and pre-starts that set on a hub restart (recency is
-  persisted to `hub-state.json` beside the config) — see `src/hub/CLAUDE.md`.
+  persisted to `hub-state.json` beside the config) — see `src/hub/AGENTS.md`.
 - **`bbx serve`** (no hub) is still the standalone story for a single box —
   see the root [`README.md`](../../README.md) for that path. This doc is about
   the multi-box case.

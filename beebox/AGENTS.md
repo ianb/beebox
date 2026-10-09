@@ -40,8 +40,8 @@ Open the owner for the area being changed:
 - Generic dependency-light helpers: `src/lib/`; browser/server shared code: `src/shared/`; CLI-domain helpers: `src/cli/lib/`; ambient declarations only: `src/types/`. The dependency rules and exact distinctions are in the [module map](docs/module-map.md).
 - HTTP and tRPC: `src/webapp/`; use the [API guide](docs/adding-api-endpoints.md). tRPC is the default, including WebSocket subscriptions; raw Fastify routes are reserved for transports or authentication distinctions that do not fit tRPC.
 - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source tagging, and the enforced `className` boundary.
-- External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/connectors/`; read [connector guidance](src/connectors/CLAUDE.md).
-- Hub routing: `src/hub/`; read [hub guidance](src/hub/CLAUDE.md). Tests mirror source paths under `test/` and use helpers in `test/helpers/`.
+- External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/connectors/`; read [connector guidance](src/connectors/AGENTS.md).
+- Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpers in `test/helpers/`.
 - Schemas, developer tooling, deployment code, and validator plugins live in `src/schemas/`, `src/dev/`, `deploy/`, and `plugins/` respectively.
 
 Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports only public `beebox/{cards,schema,view-widgets}` specifiers, never engine internals. Read the [box layout](docs/box-layout.md) before changing its on-disk shape, and [box work](docs/box-work.md) before running anything against a box: the test box, a throwaway box, or production.
@@ -62,7 +62,7 @@ Boxes live outside this repository. A box is one package and operational root wi
 
 ## Improving These Instructions
 
-When a correction exposes missing durable guidance, put a short rule at the narrowest accurate owner: this file for package-wide constraints, a nested `CLAUDE.md` for an area, [code-style.md](code-style.md) or [frontend.md](frontend.md) for coding contracts, and `docs/` for conditional reference material. New infrastructure must have a discoverable current owner. Do not use historical plans as live manuals.
+When a correction exposes missing durable guidance, put a short rule at the narrowest accurate owner: this file for package-wide constraints, a nested `AGENTS.md` for an area, [code-style.md](code-style.md) or [frontend.md](frontend.md) for coding contracts, and `docs/` for conditional reference material. New infrastructure must have a discoverable current owner. Do not use historical plans as live manuals.
 
 ## Guides
 

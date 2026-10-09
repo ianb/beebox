@@ -90,7 +90,7 @@ all.
 7. **File an issue for anything the code must account for.** A release that
    needs work here — a deprecation to migrate off, a harness change that breaks
    a script, a new capability worth adopting — becomes an `issues/` item, in the
-   right category per `issues/CLAUDE.md`, with `filed-by: agent` and
+   right category per `issues/AGENTS.md`, with `filed-by: agent` and
    `workstream: sdk-update` in the frontmatter. The ledger records what changed;
    the issue queue is what carries work. Do not implement the change yourself
    beyond the bump below.

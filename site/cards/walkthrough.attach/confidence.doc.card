@@ -11,8 +11,6 @@ authorship:
     drafting: Drafted this explanation from the walkthrough's repository-backed example.
     editing: Separated the explanation from the walkthrough into an attached card.
 unlisted: true
-theme: post-it
-stock: yellow
 kind: generated
 status: ready
 next:

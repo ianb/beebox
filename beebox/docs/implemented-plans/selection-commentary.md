@@ -97,19 +97,19 @@ The principles this plan must be evaluated against, in priority order:
   (banned in `.tsx` by lint…)"*. The new selection-capture, position, and
   serialization helpers obey all of these (the DOM→position helper takes a
   single params object; no bare `as` in the `.tsx` capture component).
-- `beebox/CLAUDE.md` (monorepo) — *"**NEVER disable or weaken a lint
+- `beebox/AGENTS.md` (monorepo) — *"**NEVER disable or weaken a lint
   rule to make code pass. Ask first.**"* If the floating-"+" or selection
   capture trips a rule (e.g. `restrict-component-classes`), fix the code, do
   not suppress.
-- `beebox/CLAUDE.md:101` — *"**Read before writing.** Don't guess file
+- `beebox/AGENTS.md:101` — *"**Read before writing.** Don't guess file
   formats, XML structures, or API shapes."* The `<user-selection>` tag
   shape traces to the existing `<typed>`/`<speech>`/`<attachments>`/`<ack>`
   conventions, not invented defaults.
-- `beebox/CLAUDE.md:105` — *"**Frontend uses UI primitives and a
+- `beebox/AGENTS.md:105` — *"**Frontend uses UI primitives and a
   semantic palette.** Read frontend.md before writing UI."* The pill and
   the floating "+" use existing primitives and the `components/`-directory
   exemption from `restrict-component-classes`.
-- `beebox/CLAUDE.md` "don't add features beyond what the task
+- `beebox/AGENTS.md` "don't add features beyond what the task
   requires" (Behavioral Notes, paraphrased from the project's scope
   discipline) — the NOT-in-scope section below is the gate.
 - Most recent shipped precedent: the **image attachment** flow

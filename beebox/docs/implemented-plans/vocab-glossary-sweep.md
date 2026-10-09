@@ -42,7 +42,7 @@ Related, deliberately not addressed:
   unnamed for users.
 - `bbx-migration` skill: a field rename with data on disk is a migration,
   never a schema-only edit; new entries append to `MIGRATIONS`.
-- `beebox/CLAUDE.md` "Keep source and docs generic": "boxholder" stays an
+- `beebox/AGENTS.md` "Keep source and docs generic": "boxholder" stays an
   internal term, never rendered.
 
 ## What already exists

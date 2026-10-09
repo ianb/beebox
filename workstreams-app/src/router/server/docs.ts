@@ -2,7 +2,7 @@
 // dev shell every page is rendered into. Extracted from router.ts (Track 8,
 // architectural-review-followups — conservative extraction, pure code
 // motion) so router.ts can stay focused on process supervision and
-// proxying. None of the concurrency machinery documented in bin/CLAUDE.md's
+// proxying. None of the concurrency machinery documented in bin/AGENTS.md's
 // "Router protocol" section lives here — this module only renders HTML for
 // an already-resolved worktree root; it never touches the live `worktrees`
 // map, spawns a child, or races another request.

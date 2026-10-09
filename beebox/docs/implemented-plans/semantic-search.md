@@ -35,14 +35,14 @@ triggers the rebuild, vectors are computed by a service-pattern provider
 - `docs/engineering-principles.md` #10 (testability is architectural) — the
   embedder is a service with a deterministic fake, so hybrid ranking,
   degradation, and persistence round-trips are all doctestable offline.
-- `src/services/CLAUDE.md`: *"if a library or function touches external
+- `src/services/AGENTS.md`: *"if a library or function touches external
   things — network… — wrap it in a service"*; interface + real + fake in
   one file, named-params fakes, `describe()`.
 - **Never-implicit-key (bill safety)**: the boxholder's standing rule that
   paid APIs are only ever called with a key the box deliberately
   configured — never an ambient `OPENAI_API_KEY` an SDK would auto-grab.
   `src/core/mistral-key.ts` is the precedent this plan copies.
-- `beebox/CLAUDE.md` § Behavioral Notes: *"Read before writing"* —
+- `beebox/AGENTS.md` § Behavioral Notes: *"Read before writing"* —
   every claim below about Orama 3.1.18 behavior was verified in the
   installed `node_modules` source, not its docs.
 - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — degraded

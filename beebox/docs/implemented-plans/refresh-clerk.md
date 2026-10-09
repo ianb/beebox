@@ -9,7 +9,7 @@ issues: []
 > **Implemented June 2026** (worktree-refresh-clerk). Frozen as the design
 > record. One deviation: the extraction fallback sends a `[title](url)`
 > markdown link rather than empty markdown — the server's savePageSchema
-> requires non-empty markdown. Current docs: `beebox-clerk/CLAUDE.md`.
+> requires non-empty markdown. Current docs: `beebox-clerk/AGENTS.md`.
 
 Revive the dormant beebox-clerk Chrome extension as a thin surface over
 beebox: re-platform it on WXT, bring it into the monorepo workspace with
@@ -24,7 +24,7 @@ content into a box; the box does the thinking.
   pass"**; "Treat noisy command output as a bug." Both are directly implicated:
   clerk's current eslint config is a pile of rule-offs, and its broken `file:`
   dep makes `pnpm install` noisy enough that it was exiled from the workspace.
-- `beebox/CLAUDE.md` — "don't add features beyond what the task
+- `beebox/AGENTS.md` — "don't add features beyond what the task
   requires"; read-before-write; validation contract.
 - `beebox/code-style.md` — no optional chaining, no default params, max
   2 positional params, no `any`.
@@ -92,7 +92,7 @@ content into a box; the box does the thinking.
   message box, save/do buttons) carries over conceptually.
 - **Rebuild, not reuse:** `src/lib/dropbox.ts`, `src/popup/PairingView.tsx`,
   and the polling half of `src/background/index.ts` — all exist only to talk
-  to the deleted Cloudflare Worker (`beebox-clerk/CLAUDE.md:1-16` documents
+  to the deleted Cloudflare Worker (`beebox-clerk/AGENTS.md:1-16` documents
   the dormancy).
 
 **Template for the new shape:**
@@ -149,7 +149,7 @@ wrapper, popup/sidepanel shells, background skeleton), excise everything
 dropbox, join the pnpm workspace, and align lint/TS config with beebox.
 
 **Why this needs to change.** `pnpm install` fails today
-(`beebox-clerk/CLAUDE.md:5`); the package is excluded from the workspace
+(`beebox-clerk/AGENTS.md:5`); the package is excluded from the workspace
 (`pnpm-workspace.yaml:9-11`); and its eslint config turns off seven rules from
 the shared preset (`beebox-clerk/eslint.config.mjs:6-13` — optional
 chaining, default params, max-lines, single-export, ddd/require-spec-file,
@@ -271,7 +271,7 @@ landable before any popup UI.
 page, do page, sync tabs, context-menu save.
 
 **Why this needs to change.** Background and StatusView currently call
-`createDropboxClient()` at 5 sites (`beebox-clerk/CLAUDE.md:11`); none of it
+`createDropboxClient()` at 5 sites (`beebox-clerk/AGENTS.md:11`); none of it
 runs.
 
 **Direction.**
@@ -297,7 +297,7 @@ domain-level test for payload shaping.
 
 ### Track D — Docs and verification
 
-**What.** Rewrite `beebox-clerk/CLAUDE.md` (dormancy notice → living doc:
+**What.** Rewrite `beebox-clerk/AGENTS.md` (dormancy notice → living doc:
 architecture, how to load unpacked, how auth works), delete
 `conventions.md`/`THINKING_CLAUDE.md` if obsolete (they predate the monorepo
 conventions), README with a quickstart, and a manual verification pass against
@@ -403,7 +403,7 @@ Skip, with rationale: this plan introduces no agent-facing concepts. Cards
 created via the clerk routes use existing, already-documented shapes (memo,
 record) and existing inbox conventions; the extension itself is
 infrastructure no box agent needs to recall. The one doc obligation is
-human-facing: the Track D rewrite of `beebox-clerk/CLAUDE.md` so the next
+human-facing: the Track D rewrite of `beebox-clerk/AGENTS.md` so the next
 session doesn't read a stale dormancy notice.
 
 ## Implementation order

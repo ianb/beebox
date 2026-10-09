@@ -187,7 +187,7 @@ failing opaquely.
 ## 5. Recommendations
 
 Ordered as a sequence; each traced to existing plan tracks or filed as an
-issue per `research/CLAUDE.md`.
+issue per `research/AGENTS.md`.
 
 | # | Recommendation | Disposition | Trace |
 |---|----------------|-------------|-------|

@@ -8,7 +8,7 @@ status: snapshot
 
 Dated snapshot, 2026-08-25. Beads examined at commit `62d2119`
 (github.com/steveyegge/beads, now `gastownhall/beads`; `CHANGELOG.md` top is
-`[Unreleased]`, no tag in the shallow clone). Our side is `issues/CLAUDE.md`,
+`[Unreleased]`, no tag in the shallow clone). Our side is `issues/AGENTS.md`,
 `bin/issues`, `bin/commit-provenance`, the `finish` agent, and the
 `bbx-issue-actions` / `bbx-pick-issues` skills as of this date.
 
@@ -25,7 +25,7 @@ is orchestration, not tracking; one paragraph at the end.
 ## 1. Schema, field by field
 
 Beads' `Issue` struct (`internal/types/types.go`) against our closed
-frontmatter schema (`issues/CLAUDE.md`, parser
+frontmatter schema (`issues/AGENTS.md`, parser
 `workstreams-app/src/server/main/issue-domain.ts`).
 
 | Concern | Beads | Ours | Same problem? |
@@ -33,7 +33,7 @@ frontmatter schema (`issues/CLAUDE.md`, parser
 | Identity | hash ID `bd-a1b2` (content-derived, no coordination across branches/agents) | date-slug basename, unique, enforced by `doc-check` | Yes, solved both ways. Our slugs are readable; theirs are typeable. No change. |
 | Kind | `issue_type`: bug, feature, task, epic, chore, decision, spike, story, milestone (+ message/molecule/gate internal, + custom) | category directory: bugs, features, code-quality, docs-and-chores, decisions, exploration, watch | Close. Their `spike` = our `exploration` + `## Research (incomplete)`. Their `epic`/`milestone` have no counterpart — see §2.5. |
 | Status | open, in_progress, blocked, deferred, closed, pinned, hooked; custom statuses with a category (active/wip/done/frozen) that decides `bd ready` visibility | open = in a category dir, closed = under `closed/`; everything else is derived from `needs:`/`next-action:`/`workstream:` | Theirs is a real state machine; ours is two states plus tags. Deliberate on our side (the queue is a parking lot, not a board). See §2.2 for `deferred`. |
-| Priority | P0–P4, agent-settable, default P2 | important / normal / backlog / (omitted = uncategorized); **agents never set it** | Same field, opposite policy. Ours is a decided rule (`issues/CLAUDE.md`, "Agents do not set this field"). Keep. |
+| Priority | P0–P4, agent-settable, default P2 | important / normal / backlog / (omitted = uncategorized); **agents never set it** | Same field, opposite policy. Ours is a decided rule (`issues/AGENTS.md`, "Agents do not set this field"). Keep. |
 | Ownership | `assignee`, `owner`, plus a claim lease: `lease_expires_at`, `heartbeat_at`, `lease_granted_node`; status `hooked` while claimed | `workstream:` (bare name or `unattached`) | Theirs expires; ours doesn't. See §2.3. |
 | Provenance | `created_by`, `discovered-from` edge, `caused-by` edge | `filed-by`, `discovered-by`, `discovered-in: worktree-<name> — context` | Ours is richer as *text* (who found it, who filed it, what they were doing). Theirs is a *link* to the parent issue. §2.4. |
 | Relationships | typed edges: blocks, parent-child, conditional-blocks, waits-for (blocking); related, tracks, discovered-from, caused-by, validates, supersedes, duplicates, replies-to (annotations) | markdown links in the body; `labels:` for grouping; `design:` link to a plan | We have no machine-readable edges at all. §2.5. |
@@ -253,7 +253,7 @@ Beads: `bd prime` emits a workflow reminder from a SessionStart hook (about
 specifically "to prevent agents from forgetting bd workflow after context
 compaction."
 
-Ours: `issues/CLAUDE.md` is loaded through the root `CLAUDE.md` pointer; the
+Ours: `issues/AGENTS.md` is loaded through the root `CLAUDE.md` pointer; the
 skills carry the procedures; `bin/comments list --workstream` is the
 pick-up-work step.
 
@@ -295,8 +295,8 @@ STE-style prose does not want a template.
 |---|---|---|---|
 | 1 | `bin/issues orphans` — open issues cited by `Issue:` trailers on `main`; `Resolves:` trailer driving `/finish` closes | **adopt** | `bin/commit-provenance.ts`; `finish` agent's close step; §2.7 |
 | 2 | Stale-by-last-touch query | **reject** | developer, 2026-08-25: triage by reading + `reconfirm`; §2.2 |
-| 3 | manual-testing and resolution invariants | **adapt** into `doc-check` | `issues/CLAUDE.md` rules that nothing enforces; §2.9 |
-| 4 | `blocked-by:` / `related:` frontmatter lists (bare basenames) | **adapt — decision** | closed schema in `issues/CLAUDE.md` + `KNOWN_FRONTMATTER_KEYS`; `/finish` sibling reconciliation; §2.5 |
+| 3 | manual-testing and resolution invariants | **adapt** into `doc-check` | `issues/AGENTS.md` rules that nothing enforces; §2.9 |
+| 4 | `blocked-by:` / `related:` frontmatter lists (bare basenames) | **adapt — decision** | closed schema in `issues/AGENTS.md` + `KNOWN_FRONTMATTER_KEYS`; `/finish` sibling reconciliation; §2.5 |
 | 5 | `superseded-by:` target on closed items | **adapt — decision** (same issue as 4) | `resolution: superseded` has no target; §2.6 |
 | 6 | Atomic `--issue` claim committed on `main`; sweep dead-workstream ownership → `unattached` + `reconfirm` | **adapt** | `bin/lib/launch-session.sh:52`; `bin/workstreams sweep`; §2.3 |
 | 7 | Dolt / JSONL storage | **reject** | developer, 2026-08-25: "not going to make that change at this moment" |

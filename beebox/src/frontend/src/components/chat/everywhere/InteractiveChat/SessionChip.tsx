@@ -22,7 +22,7 @@
  *
  * `React.memo` is load-bearing, not decoration: this chip is portaled into
  * the bar from the chat's tree, which re-renders on every streaming token
- * (`components/chat/CLAUDE.md`). Every prop must stay referentially stable
+ * (`components/chat/AGENTS.md`). Every prop must stay referentially stable
  * across a streamed turn or the bar ticks per token.
  */
 

@@ -34,7 +34,7 @@ subplan supersedes it.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md` — "The format is **YAML frontmatter + markdown body**
+- `beebox/AGENTS.md` — "The format is **YAML frontmatter + markdown body**
   (Phase 2). Every schema is frontmatter; the legacy XML card format, its loader,
   and the `cardworks` package have been removed." The job-card XML remnant
   directly contradicts this stated reality.

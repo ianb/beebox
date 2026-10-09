@@ -293,7 +293,7 @@ root) is a different target: `bbx tailscale setup --target <router-port>`
 and box it's serving — over the tailnet through one authenticated front door,
 rather than a single box. Setup verifies the router's auth gate is actually
 live (an anonymous request over Serve must get a `401`) before recording the
-exposure, and refuses to expose an ungated router. See `bin/CLAUDE.md` for the
+exposure, and refuses to expose an ungated router. See `bin/AGENTS.md` for the
 router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
 full design.
 

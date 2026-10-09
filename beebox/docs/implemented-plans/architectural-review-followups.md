@@ -142,7 +142,7 @@ attribution. 33 sites enumerated; ~31 are mechanical.
    scope.
 5. **Process fix for multi-agent runs:** document the path-scoped-commit
    convention (`git add <paths> && git commit -- <paths>`, never bare
-   `git commit`) in `bin/CLAUDE.md`'s worktree section — that plus this
+   `git commit`) in `bin/AGENTS.md`'s worktree section — that plus this
    track's code changes closes the parallel-agent issue.
 
 Out of scope (documented, deliberate): cross-process commit *serialization*
@@ -313,7 +313,7 @@ red state).
   `bin/router.ts` into sibling modules (`bin/router-docs.ts` or similar) —
   pure code motion, no behavior change, no state-machine work.
 - Promote the four incident comments guarding the concurrency machinery into
-  `bin/docs/router-protocol.md` (or a section in `bin/CLAUDE.md`), so the
+  `bin/docs/router-protocol.md` (or a section in `bin/AGENTS.md`), so the
   hard-won invariants survive future edits.
 - Update `issues/decisions/2026-07-06-architectural-review-open-decisions.md` item 1:
   conservative phase done, full `WorktreeState` formalization remains open

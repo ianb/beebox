@@ -165,7 +165,7 @@ mutations serialize through the CLI lock. Cleanup removes a private worktree
 only when merged and strictly clean, otherwise preserving and reporting an
 orphan. Never force, auto-commit, or turn the mount into a directory.
 `.gitignore` uses `/private-issues` without a trailing slash. Content rules:
-`issues/CLAUDE.md`; background:
+`issues/AGENTS.md`; background:
 `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 
 The identity check requires both `.beebox-private-issues` and the

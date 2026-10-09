@@ -113,12 +113,12 @@ context exists (Browse inside a landmarked dir), else hides.
 
 - `beebox/docs/engineering-principles.md` — reuse-over-rebuild,
   validate-at-boundaries, resilient-not-silent.
-- `beebox/CLAUDE.md` — "Frontend uses UI primitives and a semantic
+- `beebox/AGENTS.md` — "Frontend uses UI primitives and a semantic
   palette. Read frontend.md before writing UI"; components own their
   appearance under `components/`.
 - `beebox/frontend.md` — `restrict-component-classes`; primitive
   extraction only at 3+ uniform repeats; coral is app-nav-gradient-only.
-- `beebox/src/frontend/src/components/chat/CLAUDE.md` — composer
+- `beebox/src/frontend/src/components/chat/AGENTS.md` — composer
   input store isolation; companion-pane memo stability (the bar mounts
   above both; new bar state must not re-render chat internals per
   keystroke).

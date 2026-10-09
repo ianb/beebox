@@ -52,7 +52,7 @@ Not to re-adopt, but because someone else's phrasing of a rule you already have
 sometimes lands better with an agent:
 
 - **Fewest words for human-facing text** — we have this as Simplified Technical
-  English in `issues/CLAUDE.md`, plus standing feedback about compression.
+  English in `issues/AGENTS.md`, plus standing feedback about compression.
 - **Layered abstraction, each layer talking only to its neighbour; drivers
   encapsulating low-level mechanics** — `docs/module-map.md` and the
   `lib`/`shared`/`core` boundary.

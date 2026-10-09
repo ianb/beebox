@@ -52,7 +52,7 @@ full rationale. The verdict, the auth fix, and an explicit canary remain.
 - **The boxholder's fail-closed / strict-by-default steer** (this session):
   a health check that cannot tell healthy from broken is worse than none; and
   a leaking endpoint gets closed even though the leak predates this plan.
-- **`beebox/CLAUDE.md`'s** "HTTP endpoints go in tRPC by default ... Raw
+- **`beebox/AGENTS.md`'s** "HTTP endpoints go in tRPC by default ... Raw
   Fastify routes ... only for things that don't fit": the canary and `/healthz`
   are hub-server routes, not box tRPC — the hub has no tRPC surface, and these
   are diagnostic endpoints on the router itself.

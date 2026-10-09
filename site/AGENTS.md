@@ -25,7 +25,7 @@ workbench workflow in [card-authoring.md](card-authoring.md).
 beebox.run is published by Cloudflare Pages' Git integration: every push to
 GitHub's `main` rebuilds and publishes it, so landing site or docs changes on
 `main` and pushing is publishing (the server deploy is separate; see the root
-CLAUDE.md). `.github/workflows/pages.yml` runs the site checks on the same
+AGENTS.md). `.github/workflows/pages.yml` runs the site checks on the same
 push. Everything must work as a static build. The build is a plain
 generator over markdown — **no server-side anything, no live/AI wiring, and no
 external requests at view time** (fonts inlined via a system stack, no CDNs, no
@@ -215,7 +215,7 @@ but currently goes unused.
 the published tree, frontmatter `description:` and — under `compared/` only —
 a `compared:` block); promoted (`docs-manifest.yaml`, one line per admitted
 repo file — the loader hard-codes both the admissible source prefixes (plus
-three individually admitted files: `beebox/CLAUDE.md`, `beebox/code-style.md`,
+three individually admitted files: `beebox/AGENTS.md`, `beebox/code-style.md`,
 `beebox/frontend.md`) and the admissible publish directories (including
 `dev/`), so a manifest entry outside either fails the build regardless);
 generated (`beebox/src/scripts/export-box-docs.ts`, run via `pnpm --dir beebox

@@ -196,7 +196,7 @@ async function fileIssues(input: { culprits: Culprit[]; batch: Batch }): Promise
       : `chore(issues): full-suite red across ${String(input.culprits.length)} landings`;
   // `git add` first: these files are new, and a pathspec-scoped `git commit`
   // refuses a path git has never heard of. Path-scoped throughout (bin/
-  // CLAUDE.md) so a commit here cannot sweep up somebody's staged work.
+  // AGENTS.md) so a commit here cannot sweep up somebody's staged work.
   const staged = await execa("git", ["-C", REPO_ROOT, "add", "--", ...paths], {
     reject: false,
     all: true,

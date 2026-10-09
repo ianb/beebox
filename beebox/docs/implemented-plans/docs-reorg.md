@@ -95,7 +95,7 @@ current and load-bearing. Specific defects found:
    from CLAUDE.md's Guides table as "Card examples."
 2. `connectors.md` — Google Calendar row says service-injection "Not yet
    wired"; `createGoogleCalendarConnector` supports it like the others.
-3. `beebox-clerk/CLAUDE.md` — three wrong claims: nonexistent
+3. `beebox-clerk/AGENTS.md` — three wrong claims: nonexistent
    `extract.content.ts` (actual: `commentary-capture.content.ts`), wrong
    extraction library (says Readability; actual: Defuddle + DOMPurify +
    Turndown), stale `src/platform/` file list.
@@ -124,7 +124,7 @@ current and load-bearing. Specific defects found:
   only when debugging the router. Extract to a `docs/dev-router.md`-style
   reference; keep the URL convention, lifecycle commands, and behavioral
   rules. The `bin/browse` paragraph duplicates the `browse` skill.
-- **beebox/CLAUDE.md: ~20 of 149 lines** are move-out candidates — the
+- **beebox/AGENTS.md: ~20 of 149 lines** are move-out candidates — the
   card-validation-hooks mechanics (~12–15 lines) and deploy bundling
   internals (already covered by `deploy/README.md`). Its dev-server section
   near-duplicates root CLAUDE.md's.
@@ -137,7 +137,7 @@ current and load-bearing. Specific defects found:
 - The rest of the instruction surface is healthy: CODE-STYLE.md is tight and
   correctly `@`-imported; FRONTEND.md is the model for load-on-demand
   reference; `.claude/rules/doctest.md` is correctly path-scoped;
-  `feedback-review/CLAUDE.md` is accurate (arguably skill-shaped);
+  `feedback-review/AGENTS.md` is accurate (arguably skill-shaped);
   personal-vibe-check's four docs check out.
 
 ### Skills layer is healthy; the doc↔skill seam has gaps
@@ -173,7 +173,7 @@ current and load-bearing. Specific defects found:
   `chat-schedules.md` (current and load-bearing — the worst case),
   `telegram-setup.md`, `todo-security.md`,
   `knowledge-audit-rerun-2026-07-03.md`, and the two `architecture/` intro
-  chapters — which even their own sibling `architecture/CLAUDE.md` fails to
+  chapters — which even their own sibling `architecture/AGENTS.md` fails to
   link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
   `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
   table.
@@ -229,7 +229,7 @@ hosted in dev docs) may deserve an explicit home.
   recording removed features). Caveat: a banner alone isn't enough when a
   prominent CLAUDE.md link still presents the file as authoritative
   (EXAMPLE_FILES.md).
-- The Guides table in beebox/CLAUDE.md as the load-on-demand index —
+- The Guides table in beebox/AGENTS.md as the load-on-demand index —
   the right destination for content moved out of CLAUDE.md prose.
 - The skill(judgment) ↔ doc(mechanics) layering, where wired.
 - doc-graph as self-healing measurement — needs an enforcement loop and a
@@ -293,7 +293,7 @@ sections below must trace to these.
 ## Stated preferences this plan trades against
 
 *(pending — next section to write; will include the Direction section
-above, `beebox/CLAUDE.md`, CODE-STYLE.md, and the doc-altitude
+above, `beebox/AGENTS.md`, CODE-STYLE.md, and the doc-altitude
 feedback principle)*
 
 ## What already exists
@@ -314,11 +314,11 @@ design sections are written)*
    auto-move shipped plans (still a plans/README TODO).
 2. **Corrections + non-obvious-conventions batch** — DONE (86cc902a).
    38 items: all confirmed-wrong claims fixed; 13 undocumented
-   conventions documented at colocated homes (new `src/hub/CLAUDE.md`,
+   conventions documented at colocated homes (new `src/hub/AGENTS.md`,
    `docs/cards/validation.md`); findability quick wins (Guides rows,
    orphan links, prompt-audits ↔ bbx-prompt-review cross-refs).
 3. **CLAUDE.md slimming** — DONE. Root 47→34 lines (mechanism →
-   `bin/CLAUDE.md`); beebox CLAUDE.md deduped/trimmed with
+   `bin/AGENTS.md`); beebox CLAUDE.md deduped/trimmed with
    pointers. Shared-router caution promoted to a stated rule.
 4. **Instructional skills (`bbx-guide-*`)** — STARTED. Naming decided:
    behavioral skills stay bare `bbx-*`; explanatory/pointer skills are

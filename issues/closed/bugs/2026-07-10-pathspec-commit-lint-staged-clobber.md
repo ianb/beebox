@@ -27,12 +27,12 @@ lint-staged task showed default mode reverting that edit to its
 pre-run committed state on the revert-to-original-state path, while
 `--no-stash` left it untouched. Path-scoped commits
 (`git commit -- <paths>` / `stageAndCommitPaths`) remain the convention for
-the attribution-sweep reason (bin/CLAUDE.md, "Multiple agents sharing one
+the attribution-sweep reason (bin/AGENTS.md, "Multiple agents sharing one
 worktree") — this fix removes the second, independent failure mode
 (lint-staged's reset-hard) rather than replacing pathspec commits.
 
 The multi-agent convention added after the parallel-agent commit-race issue
-(bin/CLAUDE.md: path-scoped commits, `git commit -- <paths>`) turns out to
+(bin/AGENTS.md: path-scoped commits, `git commit -- <paths>`) turns out to
 interact destructively with the lint-staged pre-commit hook when several
 agents share one worktree: lint-staged does a stash/backup-restore cycle
 around the staged files, and with a pathspec commit running concurrently
@@ -48,7 +48,7 @@ lint-staged-safe. Agents should also `git status` before/after committing
 and commit frequently.
 
 To resolve properly, pick one:
-1. Update the bin/CLAUDE.md convention to the stage-then-plain-commit form
+1. Update the bin/AGENTS.md convention to the stage-then-plain-commit form
    (documenting WHY pathspec commits are dangerous here), or
 2. Make lint-staged concurrency-safe / skip its stash dance (e.g.
    `--no-stash`, or restrict the hook to staged-file linting without

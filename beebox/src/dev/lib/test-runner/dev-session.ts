@@ -1,7 +1,7 @@
 /**
  * Dev-guidance knowledge audits: ask a headless Claude Code session in this
  * monorepo checkout what it knows from the dev guidance (root and package
- * CLAUDE.md files, project skills, docs), observed through
+ * AGENTS.md files, project skills, docs), observed through
  * `claude -p --output-format stream-json`.
  *
  * Flags, and why:
@@ -13,7 +13,7 @@
  * - `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` keeps the developer's auto-memory out,
  *   so a pass means tracked guidance taught it. The user-level
  *   `~/.claude/CLAUDE.md` still loads; the CLI has no switch for it short of
- *   `--bare`, which also drops project CLAUDE.md discovery and OAuth.
+ *   `--bare`, which also drops project AGENTS.md discovery and OAuth.
  * - The settings also deny reads of the audit answer key (`ANSWER_KEY_DENY`).
  * - `--tools Read,Grep,Glob,Skill`: read-only, no Bash or Edit, so the audit
  *   cannot change the checkout. A Skill invocation counts as a read of that

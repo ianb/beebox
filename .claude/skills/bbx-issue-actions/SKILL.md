@@ -19,7 +19,7 @@ processing a backlog, and every tag carries the context of the moment they had t
 whole queue in view. Your output goes back to them in the same channel — the note
 you leave on an issue is what they read next time.
 
-The whole discipline for the provisional values is in `issues/CLAUDE.md`:
+The whole discipline for the provisional values is in `issues/AGENTS.md`:
 they are hypotheses, not permission to close blindly. Read every provisional value with the question mark the UI shows — **"fixed?"**,
 **"reconfirm?"**. Nothing there is asserted. It is what the developer thinks is *likely*
 and wants confirmed properly. `discuss` is different: do not investigate toward
@@ -103,7 +103,7 @@ invalid, so confirm before closing — the tag is a question.
 lost.* So **search history first** — the fix commonly landed under a different
 description, inside a larger change, or in a workstream that never closed the
 item. Commits that named the issue carry an `Issue:` trailer (root
-`CLAUDE.md`), so query that first; the `-S` guess is the fallback for
+`AGENTS.md`), so query that first; the `-S` guess is the fallback for
 commits that predate the convention or forgot the trailer:
 
 ```bash
@@ -116,7 +116,7 @@ Then confirm the behavior rather than trusting a commit that reads like the fix.
 Close with `resolution: implemented` naming the resolving commit.
 
 **`manually-confirmed` — the developer confirmed the fix.** An assertion, not a
-request to repeat the manual test; close per `issues/CLAUDE.md`.
+request to repeat the manual test; close per `issues/AGENTS.md`.
 
 **`do-it` — the developer judged this small: fix it.** The only value that
 authorizes implementation by itself. Confirm the issue still holds, then fix it
@@ -181,7 +181,7 @@ investigated twice with no note is worse than one nobody touched.
 
 ## Closing mechanics
 
-Close per `issues/CLAUDE.md` ("Closed items"), run
+Close per `issues/AGENTS.md` ("Closed items"), run
 `pnpm --dir beebox doc-check --fix`, and commit the move with its link repairs.
 
 ## Fixing in place

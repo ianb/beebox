@@ -107,7 +107,7 @@ async function frontmatter(file: string) {
   return { meta: parseYaml(yaml), body };
 }
 
-const body = "1. Lint rules took three rounds.\n2. bin/CLAUDE.md lacked X.\n3. Add X.\n4. A shared seam.\n";
+const body = "1. Lint rules took three rounds.\n2. bin/AGENTS.md lacked X.\n3. Add X.\n4. A shared seam.\n";
 ```
 
 With no session variable, `add` from the worktree attaches the most recently

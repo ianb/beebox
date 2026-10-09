@@ -12,7 +12,7 @@ resolution: implemented
 stage→commit sites onto the path-scoped `stageAndCommitPaths` helper
 (`beebox/src/lib/git.ts` (moved to `beebox/src/lib/git/core.ts`), landed in commit c1e65a22), and this agent's
 non-connector share of that sweep + the process-fix paragraph in
-`bin/CLAUDE.md`'s new "Multiple agents sharing one worktree" section
+`bin/AGENTS.md`'s new "Multiple agents sharing one worktree" section
 document the path-scoped-commit convention (`git add <paths> && git commit
 -- <paths>`, never a bare `git commit`) for future multi-agent runs.
 
@@ -34,6 +34,6 @@ Worth a process fix for future multi-agent runs against one shared worktree:
 either serialize commits (a lock file / turn-taking convention agents check
 before `git add`+`commit`), or give each concurrent task agent its own
 worktree/branch and merge at the end instead of committing straight to a
-shared branch. The current per-worktree isolation (`bin/CLAUDE.md`) already
+shared branch. The current per-worktree isolation (`bin/AGENTS.md`) already
 solves this for a single agent per worktree; it doesn't cover N agents
 sharing one.

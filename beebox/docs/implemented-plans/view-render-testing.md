@@ -18,16 +18,16 @@ syntax/JSX/import errors surface the moment a view `.tsx` is written.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:99` — *"Read before writing. Don't guess file
+- `beebox/AGENTS.md:99` — *"Read before writing. Don't guess file
   formats, XML structures, or API shapes. Read the schema, read the existing
   code, read the test patterns."* The plan reuses the existing compiler and card
   loader rather than inventing parallel ones.
-- `beebox/CLAUDE.md` (Validation section) — the PostToolUse hook contract:
+- `beebox/AGENTS.md` (Validation section) — the PostToolUse hook contract:
   *"On a card path with errors it exits 2 with the error on stderr so Claude
   Code surfaces it to the agent (warning, not blocking)."* Deliverable (b)
   extends this exact contract to view `.tsx` files; it must not change the
   card/CLAUDE.md behavior.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"don't add features beyond what
+- `beebox/AGENTS.md` (Behavioral Notes) — *"don't add features beyond what
   the task requires"* (paraphrased as the "Improving These Instructions" /
   scope-restraint posture throughout). v1 is synchronous render only; the
   heavier async/effect machinery is explicitly out of scope.

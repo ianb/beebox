@@ -28,7 +28,7 @@ every path, including the main checkout. It derives:
 Then the symlink check (`:176-181`) requires the mount to point at `PI_TARGET` on
 branch `PI_BRANCH`. But the **main checkout** correctly symlinks to the private
 repo's **primary tree on `main`** (`~/src/callback-private-issues`), per the design
-("main → the private repo's primary tree" — `bin/CLAUDE.md`, `issues/CLAUDE.md`).
+("main → the private repo's primary tree" — `bin/AGENTS.md`, `issues/AGENTS.md`).
 Primary-tree ≠ `PI_WT_ROOT/beebox`, and `main` ≠ `worktree-beebox`, so
 it falls through to `PI_STATE="invalid"` (`:180`).
 

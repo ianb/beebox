@@ -9,7 +9,7 @@
  * this into `InteractiveChat`'s machine-derived React state: these events
  * arrive rarely (at most a couple of times per session) and target exactly
  * one message, so a plain `useState` at the root would re-render the whole
- * message list on every event for no reason (see components/chat/CLAUDE.md
+ * message list on every event for no reason (see components/chat/AGENTS.md
  * on keeping the root's re-render surface small). Subscriptions are keyed by
  * messageId, so only the one bubble whose overlay changed re-renders.
  */

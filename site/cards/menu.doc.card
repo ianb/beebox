@@ -12,11 +12,6 @@ authorship:
     editing: Organized the links into the site and elsewhere groups.
 navigation: true
 unlisted: true
-theme: paper
-stock: manila
-chrome:
-  theme: paper
-  stock: cream
 ---
 # Around Bee Box
 

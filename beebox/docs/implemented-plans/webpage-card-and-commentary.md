@@ -42,11 +42,11 @@ deep-link from that plan are unchanged and reused here.
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:43` — *"Naming: `Name.type.card` — the type
+- `beebox/AGENTS.md:43` — *"Naming: `Name.type.card` — the type
   determines which schema validates it."* The new type must follow the
   `.webpage.card` convention and register a schema, not special-case the
   parser.
-- `beebox/CLAUDE.md` — *"don't add features beyond what the task
+- `beebox/AGENTS.md` — *"don't add features beyond what the task
   requires."* A new card type is a real cost (schema, renderer, migration,
   agent vocabulary). It earns its place only because the captured page has
   distinct provenance/immutability/rendering that `doc`+frontmatter would

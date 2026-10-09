@@ -8,7 +8,7 @@ discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
 ---
 
-Doctests are this repository's default test form (`beebox/CLAUDE.md`), and
+Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 they hold about 87% of test lines. The monorepo still has 132 `*.test.ts`
 and `*.test.tsx` files, about 18,000 non-blank lines (count on 2026-09-27).
 The developer wants most of them converted to doctests, so that tests are
