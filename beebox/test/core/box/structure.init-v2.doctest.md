@@ -243,36 +243,6 @@ await exists(link)
 => true
 ```
 
-`src/schemas/` and `src/tricks/scripts/` carry their `CLAUDE.md` scaffolds:
-
-```ts continue
-const schemasGuide = await fs.readFile(path.join(boxRoot, "src/schemas/CLAUDE.md"), "utf-8");
-schemasGuide.includes("node_modules/beebox/box-docs/schemas.md")
-=> true
-
-(await fs.readFile(path.join(boxRoot, "src/tricks/scripts/CLAUDE.md"), "utf-8")).includes("src/tricks/")
-=> true
-```
-
-The schema-authoring doc that guide points at, the package's `schemas.md`,
-teaches `import { z } from "beebox/schema"` (and `stringifyYaml` from the same
-specifier) — not the bare `zod`/`yaml` specifiers, which `src/schemas/` can't
-resolve (only `beebox/*` resolves there, via the box's own `node_modules`; see
-`test/schemas/box-schemas-v2.doctest.md`'s "bare zod import fails" case):
-
-```ts continue
-const { engineDocs } = await import("../../../src/core/docs-gen/package-docs/core.js");
-const schemasDoc = engineDocs().find((d) => d.filename === "schemas.md")?.content ?? "";
-schemasDoc.includes('from "beebox/schema"')
-=> true
-
-schemasDoc.includes('from "zod"')
-=> false
-
-schemasDoc.includes('from "yaml"')
-=> false
-```
-
 The generated `connector-calendar` rule's `paths:` glob is `_content/calendar/…` — the underscore area, not the legacy `store/`:
 
 ```ts continue

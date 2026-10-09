@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000">
+<defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".10"/></feComponentTransfer></filter></defs>
+<rect width="1400" height="1000" fill="#183d40"/>
+<path d="M210 1080 -500 -100 -433 -100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 -400 -100 -333 -100Z" fill="#83aaa0" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 -300 -100 -233 -100Z" fill="#e8dba9" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 -200 -100 -133 -100Z" fill="#d85439" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 -100 -100 -33 -100Z" fill="#e3bf38" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 0 -100 67 -100Z" fill="#c07961" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 100 -100 167 -100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 200 -100 267 -100Z" fill="#83aaa0" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 300 -100 367 -100Z" fill="#e8dba9" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 400 -100 467 -100Z" fill="#d85439" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 500 -100 567 -100Z" fill="#e3bf38" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 600 -100 667 -100Z" fill="#c07961" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 700 -100 767 -100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 800 -100 867 -100Z" fill="#83aaa0" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 900 -100 967 -100Z" fill="#e8dba9" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 1000 -100 1067 -100Z" fill="#d85439" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 1100 -100 1167 -100Z" fill="#e3bf38" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 1200 -100 1267 -100Z" fill="#c07961" stroke="#243b35" stroke-width="2.5"/>
+<path d="M210 1080 1300 -100 1367 -100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 100 1100 167 1100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 200 1100 267 1100Z" fill="#83aaa0" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 300 1100 367 1100Z" fill="#e8dba9" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 400 1100 467 1100Z" fill="#d85439" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 500 1100 567 1100Z" fill="#e3bf38" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 600 1100 667 1100Z" fill="#c07961" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 700 1100 767 1100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 800 1100 867 1100Z" fill="#83aaa0" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 900 1100 967 1100Z" fill="#e8dba9" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1000 1100 1067 1100Z" fill="#d85439" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1100 1100 1167 1100Z" fill="#e3bf38" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1200 1100 1267 1100Z" fill="#c07961" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1300 1100 1367 1100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1400 1100 1467 1100Z" fill="#83aaa0" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1500 1100 1567 1100Z" fill="#e8dba9" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1600 1100 1667 1100Z" fill="#d85439" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1700 1100 1767 1100Z" fill="#e3bf38" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1800 1100 1867 1100Z" fill="#c07961" stroke="#243b35" stroke-width="2.5"/>
+<path d="M1290 -180 1900 1100 1967 1100Z" fill="#1a6971" stroke="#243b35" stroke-width="2.5"/>
+<rect x="24" y="24" width="1352" height="952" fill="none" stroke="#e8dba9" stroke-width="2"/>
+<rect width="1400" height="1000" filter="url(#grain)" opacity=".65"/>
+</svg>

@@ -21,7 +21,7 @@ defaults to `--status open`, and `bbx query todos` defaults to open plus parked.
 ## What names the verb
 
 - `beebox/src/cli/commands/todos.ts` and its registration.
-- The smoke entry in `beebox/src/cli/surface-data.ts` and
+- The smoke entry in `beebox/src/cli/entry/surface-data.ts` and
   `beebox/test/cli/entry.surface.doctest.md`.
 - `beebox/test/cli/commands/todos.doctest.md`.
 - Comments in `beebox/src/core/todo/` and `beebox/src/shared/todo-model.ts`.

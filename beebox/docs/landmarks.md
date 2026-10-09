@@ -35,9 +35,10 @@ A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `n
 
 ```yaml
 ---
+symbol:
+  glyph: 🍳
 navigation:
   label: Recipes
-  symbol: 🍳
   links:
     - { ref: /_content/recipes/Bread.recipe.card, label: the bread }
     - { ref: /_content/recipes/techniques/Knife_Skills.doc.card }
@@ -53,14 +54,14 @@ navigation:
 
 ### Fields
 
-All of these live under `navigation`.
+All of these live under `navigation`, except `symbol`, which is a top-level field every card may carry.
 
 **`label`** (one) — short bookmark name. Displayed prominently on the tile. Not a sentence; treat it like a tab name.
 
 **`symbol`** (one) — the iconic mark. Two forms:
 
 ```yaml
-symbol: 🍳                          # emoji or short text
+symbol: { glyph: 🍳 }               # emoji or short text
 symbol: { src: /_content/recipes/images/portrait.webp }   # image
 ```
 

@@ -10,6 +10,7 @@ that discovery.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { MIGRATIONS, isProcedureMigration } from "../../src/core/migrations.js";
+import { runMigrationScript } from "../../src/core/migration-run.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
 
@@ -46,10 +47,20 @@ MIGRATIONS.length === new Set(MIGRATIONS.map((m) => m.name)).size
 
 The list is append-only: a box's `config/migrations.jsonl` records names, so
 reordering or removing an entry changes which migrations a box believes it has
-applied. Retired migrators stay registered as no-ops or hard failures rather
-than disappearing (`src/scripts/migrate/box-packageify.ts`, `bill.ts`).
+applied. Retired migrations stay registered and run the shared no-op
+`src/scripts/migrate/retired.ts` rather than disappearing.
 
 ```ts
 MIGRATIONS[0].name
 => attachments
+```
+
+The tombstone is safe to run on any box: it exits 0 and prints nothing, so a
+box that somehow still has a retired name pending records it quietly.
+
+```ts
+let output = "";
+const code = await runMigrationScript({ script: "src/scripts/migrate/retired.ts", boxRoot: "/nonexistent-box", onOutput: (text) => { output += text; } });
+JSON.stringify({ code, output })
+=> {"code":0,"output":""}
 ```

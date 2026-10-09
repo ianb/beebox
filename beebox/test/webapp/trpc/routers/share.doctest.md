@@ -10,10 +10,6 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { shareDestinationsOutput } from "../../../../src/webapp/trpc/routers/share/contract.js";
-import { parse, stringify } from "yaml";
-import { splitCardContent } from "../../../../src/cards/frontmatter.js";
-import { planSourceFields } from "../../../../src/scripts/migrate/card-fields/source.js";
-import { applyFieldEdits } from "../../../../src/core/card-fields/field-edits.js";
 
 function caller(boxRoot) {
   return appRouter.createCaller({
@@ -43,9 +39,10 @@ shareDestinationsOutput.parse(fixture.result.data).chats[0].sessionId
 const box = await makeTmpBox({ git: true });
 await mkdir(path.join(box.root, "_content/reading"), { recursive: true });
 await writeFile(path.join(box.root, "_content/reading/Reading.landmark.card"), `---
+symbol:
+  glyph: 📚
 navigation:
   label: Reading
-  symbol: 📚
 destinations:
   - for: [share]
 ---
@@ -99,27 +96,29 @@ replay.created[0]
 => _content/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card
 ```
 
-## A retry against a card saved before the `sources` change is idempotent
+## A retry finds a card written in the migrated `sources` shape
 
-A card the share router wrote with the old `source` and `captured` keys is
-rewritten by the `source-fields-2026-09` migration before the new code serves.
-The migrated card is byte-identical to the one the router now generates, so a
-retry of that share still finds it instead of reporting a conflict:
+Boxes carry cards that the retired `source-fields-2026-09` migration rewrote
+from the old `source`/`captured` keys. The router compares an existing card
+with the text it would generate byte for byte, so this fixture pins that shape:
+a retry of such a share finds the card instead of reporting a conflict.
 
 ```ts continue
 const oldRequest = { ...request, shareId: "00000000-0000-4000-8000-000000000003", title: "Before" };
-const oldCard = `---\n${stringify({
-  title: "Before",
-  source: oldRequest.url,
-  captured: oldRequest.capturedAt,
-  "share-id": oldRequest.shareId,
-})}---\n[Before](${oldRequest.url})\n`;
-const split = splitCardContent(oldCard);
-const migrated = `---\n${applyFieldEdits(split.frontmatterText, planSourceFields("webpage", parse(split.frontmatterText)).edits)}---\n${split.body}`;
 const oldRel = "_content/inbox/Before_00000000-0000-4000-8000-000000000003.webpage.card";
-await writeFile(path.join(box.root, oldRel), migrated, "utf-8");
-const retried = await caller(box.root).share.saveTextual(oldRequest);
-retried.created[0] === oldRel
+const migratedCard = [
+  "---",
+  "title: Before",
+  "sources:",
+  "  - href: https://example.com/article",
+  "    retrieved: 2026-08-07T12:00:00.000Z",
+  "share-id: 00000000-0000-4000-8000-000000000003",
+  "---",
+  "[Before](https://example.com/article)",
+  "",
+].join("\n");
+await writeFile(path.join(box.root, oldRel), migratedCard, "utf-8");
+(await caller(box.root).share.saveTextual(oldRequest)).created[0] === oldRel
 => true
 ```
 

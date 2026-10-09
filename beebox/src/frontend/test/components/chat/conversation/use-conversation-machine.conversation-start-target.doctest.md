@@ -18,10 +18,10 @@ import { conversationTargetFor } from "../../../../src/components/chat/conversat
 
 ```ts
 JSON.stringify(conversationTargetFor(
-  { sessionInput: "new", contextDir: "", startEngine: "claude", startModel: "claude-haiku-4-5-20251001" },
+  { sessionInput: "new", contextDir: "", startEngine: "claude", startModel: "pinned-model" },
   "fresh-id",
 ))
-=> {"kind":"start","clientConversationId":"fresh-id","contextDir":"","engine":"claude","model":"claude-haiku-4-5-20251001"}
+=> {"kind":"start","clientConversationId":"fresh-id","contextDir":"","engine":"claude","model":"pinned-model"}
 ```
 
 ## Choosing only an engine leaves the model unset
@@ -44,7 +44,7 @@ conversationTargetFor({ sessionInput: "new", contextDir: "" }, "fresh-id").engin
 => claude
 
 JSON.stringify(conversationTargetFor(
-  { sessionInput: "abc123", contextDir: "notes", startEngine: "codex", startModel: "gpt-6-luna" },
+  { sessionInput: "abc123", contextDir: "notes", startEngine: "codex", startModel: "pinned-model" },
   "fresh-id",
 ))
 => {"kind":"session","sessionId":"abc123","contextDir":"notes"}

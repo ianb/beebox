@@ -1741,6 +1741,9 @@ tests:
 
   # === Scheduled Tasks ===
   #
+  # Status (2026-10-08): 3/3 pass after the switch to the instructions="…"
+  # attribute; agents write the attribute form.
+  #
   # Status (2026-07-03): both pass. add-daily-task answered scheduled-script +
   # _config/schedules/ directly (dropped stale should_read card-scheduled-script.md).
   # Status (2026-08-15, Codex): both pass. Schedule authoring intentionally lives
@@ -2776,21 +2779,24 @@ tests:
 
   # === Chat Voice ===
   #
+  # Status (2026-10-08): 3/3 pass after the switch to the instructions="…"
+  # attribute; agents write the attribute form.
+  #
   # Status (2026-07-03): both pass. chat-voice-per-message-override needed
   # chat_mode: true (mechanism lives in the chat prompt + docs/chat-voice.md) and
-  # now accepts either valid per-message override (voice="…" attr OR nested
-  # <instructions>).
+  # now accepts either valid per-message override (voice="…" attr OR the
+  # instructions="…" attr; renamed from a nested <instructions> child 2026-10-08).
   #
   # Chat-only TTS features. The chat system prompt mentions <speech> tags and
-  # nested <instructions> directly, but per-message voice overrides and the
+  # the instructions attribute directly, but per-message voice overrides and the
   # hard-override mechanism live in docs/chat-voice.md. These tests verify
   # the agent knows what's possible and can navigate to the details.
 
   - id: chat-voice-per-message-override
     prompt: "The user asks you to speak the next sentence in a different voice — something deeper and more dramatic — for emphasis. Is that possible, and how?"
     expected_level: knows_about
-    watch_for: "Knows it's possible for a single message via either a per-message voice attribute (<speech voice=\"onyx\">) or nested <instructions> for delivery — without changing the personality-card default"
-    correct_contains_any: ["voice=", "<instructions>"]
+    watch_for: "Knows it's possible for a single message via either a per-message voice attribute (<speech voice=\"onyx\">) or an instructions attribute (<speech instructions=\"...\">) for delivery — without changing the personality-card default"
+    correct_contains_any: ["voice=", "instructions="]
     chat_mode: true
     tags: [chat, voice]
     notes: >
@@ -2798,23 +2804,36 @@ tests:
       system prompt + docs/chat-voice.md, which the agent can't see without it).
       Two valid per-message mechanisms both satisfy "speak this one sentence
       differently without changing the default": the `voice="..."` attribute (a
-      different voice model) or a nested `<instructions>` tag (delivery style) —
+      different voice model) or the `instructions="..."` attribute (delivery style) —
       accept either. Failure modes: "I can only use my default voice" or editing
       the personality card (which changes the default for all messages).
+
+  - id: chat-voice-delivery-attribute
+    prompt: "In chat, the user asked whether anything is overdue. You found three overdue items and want the spoken reply to sound gentle, not urgent. Write the exact reply you would send, including the markup."
+    expected_level: knows_directly
+    watch_for: "Writes the delivery direction as an instructions attribute on <speech>, not as a nested <instructions> child"
+    correct_contains: ["<speech", "instructions=\""]
+    response_not_contains: ["<instructions>"]
+    chat_mode: true
+    tags: [chat, voice]
+    notes: >
+      Added 2026-10-08 when delivery instructions moved from a nested
+      <instructions> child to the instructions attribute. The parser still
+      reads the child form, so writing it is not broken, only stale.
 
   - id: chat-voice-hard-override
     prompt: "You're replying in chat, and one sentence in your response needs to be spoken with a completely different delivery than your usual warm, unhurried style — sharp, urgent, clipped, for an emergency. You know you can add delivery instructions to a <speech> tag, but those normally combine with the personality card's base speaking instructions, and the warm style would bleed through. How do you fully replace the base speaking instructions for just that one <speech> segment?"
     expected_level: knows_about
-    watch_for: "Reads node_modules/beebox/box-docs/chat-voice.md. Uses override-instructions=\"1\" along with nested <instructions>. Recognizes the distinction between appending (default) and replacing."
+    watch_for: "Reads node_modules/beebox/box-docs/chat-voice.md. Uses override-instructions=\"1\" along with an instructions=\"...\" attribute. Recognizes the distinction between appending (default) and replacing."
     correct_contains: ["override-instructions"]
     should_read: ["node_modules/beebox/box-docs/chat-voice.md"]
     tags: [chat, voice]
     notes: >
       This tests the hard-override distinction vs. simple additive instructions.
-      The default behavior of nested <instructions> is to append to the base
+      The default behavior of the instructions attribute is to append to the base
       speaking instructions — not replace them. The agent must know to use
       override-instructions="1" when the base style actively conflicts.
-      Failure: using just <instructions> (which adds and would leave a
+      Failure: using just instructions="..." (which adds and would leave a
       warm-and-urgent mashup), or inventing a different attribute.
 
   # === Chat Input: document selections ===
@@ -7940,12 +7959,12 @@ tests:
       Right place, right time: is this the moment to act, show, or stay
       quiet, and where (which surface, which card, which tier of attention:
       interrupt, wait to be found, background), with quiet and findable as
-      the default. Points to the bbx-design skill, the only place the
-      question is stated (spirit.md gives examples; interaction-model.md
-      covers proactivity without the question). FAILS if it invents a
-      question with no source or attributes it elsewhere alone.
-    correct_contains: ["bbx-design"]
+      the default. Points to beebox/docs/design/interaction-model.md ("Right
+      place, right time"), the rule's home, or the bbx-design skill that
+      walks a plan through it (spirit.md gives examples only). FAILS if it
+      invents a question with no source or attributes it elsewhere alone.
     correct_matches:
+      - 'interaction-model|bbx-design'
       - 'right (?:place|time|moment)|(?:act|show)[\s\S]{0,40}(?:stay )?quiet'
       - 'surface|tier|interrupt'
     tags: [dev-guidance, design]
@@ -7957,8 +7976,9 @@ tests:
     should_read_any: ["beebox/docs/design/trust.md", ".claude/skills/bbx-design/SKILL.md"]
     watch_for: >
       Question, then confirmation, then automatic, defined in
-      beebox/docs/design/trust.md (trust progression). FAILS on invented
-      rungs or a different source.
+      beebox/docs/design/trust.md ("Trust to act", one of its two axes).
+      FAILS on invented rungs, rungs drawn from the trust-to-keep axis, or a
+      different source.
     correct_contains: ["trust.md"]
     correct_matches:
       - 'question[\s\S]{0,300}confirm[\s\S]{0,300}automatic'
@@ -8026,3 +8046,25 @@ tests:
     response_not_matches:
       - '(?:save|record|write|put|store|add)\s+(?:it\s+|this\s+)?(?:in|to|into)\s+(?:your\s+|my\s+|the\s+)?(?:auto[- ]?)?memory'
     tags: [dev-guidance, workflow]
+
+  - id: expressive-theme-choices
+    # Status (2026-10-08): 1/1 pass, Claude Opus 5.5; read card-themes.md,
+    # chose both IDs/stocks correctly and explained independent scopes.
+    surface: dev
+    prompt: >
+      Using the current theme guide, explain how to give the surrounding
+      interface Electric Playground styling while one memo card uses
+      Daydream. Name the stored theme and stock choices and where each
+      choice belongs. Does changing either one change the other? Do not
+      edit any files.
+    expected_level: knows_about
+    should_read: ["beebox/docs/box/card-themes.md"]
+    watch_for: >
+      The surrounding interface uses presentation.chrome with
+      electric-playground/prism, chosen in Settings System theme; the memo
+      uses its own theme daydream/cloud, chosen in Properties Appearance.
+      System chrome and card materials remain independent choices.
+    correct_contains: ["electric-playground", "prism", "daydream", "cloud", "chrome", "theme"]
+    correct_matches:
+      - 'independent|separate|does not (?:change|affect)|doesn''t (?:change|affect)'
+    tags: [dev-guidance, themes]

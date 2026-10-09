@@ -1,3 +1,4 @@
+import { themeComposition } from "@shared/card-theme/catalog";
 import { createContext, useContext, useEffect, useRef, useMemo, useCallback, type ReactNode } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
@@ -44,7 +45,7 @@ export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string
   const chrome = query.data?.chrome;
   return (
     <PresentationContext.Provider value={state}>
-      <div className="bbx-box-presentation h-full" data-chrome-theme={chrome?.choice.name ?? "plain"} data-chrome-stock={chrome?.choice.stock ?? "neutral"}>
+      <div className="bbx-box-presentation h-full" data-theme-composition={themeComposition(chrome?.choice.name)} data-chrome-theme={chrome?.choice.name ?? "plain"} data-chrome-stock={chrome?.choice.stock ?? "neutral"}>
         {children}
       </div>
     </PresentationContext.Provider>

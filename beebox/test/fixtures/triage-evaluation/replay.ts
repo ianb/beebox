@@ -121,7 +121,7 @@ if (values.agent) {
   for (const [name, rule] of Object.entries(rules)) {
     const directory = path.join(boxRoot, "_content", name);
     await fs.mkdir(directory, { recursive: true });
-    await fs.writeFile(path.join(directory, `${name}.landmark.card`), `---\nnavigation:\n  label: ${name}\n  symbol: 📁\ndestinations:\n  - for: [triage]\n    rules: ${JSON.stringify(rule)}\n---\n`);
+    await fs.writeFile(path.join(directory, `${name}.landmark.card`), `---\nsymbol:\n  glyph: 📁\nnavigation:\n  label: ${name}\ndestinations:\n  - for: [triage]\n    rules: ${JSON.stringify(rule)}\n---\n`);
   }
   const files: Record<string, string> = {};
   for (const [index, sample] of samples.filter((item) => item.variant !== "snippet").entries()) {

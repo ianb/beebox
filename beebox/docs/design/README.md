@@ -17,14 +17,17 @@ code doesn't fill yet — don't read it as description.
 
 - [Interface-as-cards background](interface-as-cards-background.md) — earlier exploration preserved for context; the linked current plan governs implementation.
 
-- [`representation.md`](representation.md) — the anchor principle: the representation mirrors the shape of the idea (Engelbart); strict validation with deliberate, scarce escape valves; cards that aren't domain ideas (husks, landmarks) are still ideas.
+- [`representation.md`](representation.md) — the anchor principle: the representation mirrors the shape of the idea (Engelbart); strict validation with deliberate, scarce escape valves; cards that aren't domain ideas (husks, landmarks) are still ideas; the box acts forward only where the kept record can undo it.
 - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI as the privileged surface, documents as the record, runs on a full computer only (local or remote), never serverless.
 - [`interaction-model.md`](interaction-model.md) — idle-by-default background engine AND definitely also a chatbot; proactivity as active ambition; connectors as the external-service boundary; sync-as-event.
 - [`processing.md`](processing.md) — what `bbx wakeup` and the reactor actually do (verified against code), what "processing" an item means, the question loop, sessions.
 - [`durability-and-provenance.md`](durability-and-provenance.md) — committing makes it durable and real (with the chat-messages exception); the filesystem is the index; provenance as aspiration with `{% source %}`/`{% quote %}` as the current attempts.
-- [`trust.md`](trust.md) — question → confirmation → automatic; paperwork lives on as schema process-fields; the three confidence vocabularies.
+- [`trust.md`](trust.md) — two axes: trust to act (question → confirmation → automatic, question rules) and trust to keep (nothing thrown away; quick chat as a documented compromise); paperwork lives on as schema process-fields; the confidence vocabularies.
+- [`privacy-and-egress.md`](privacy-and-egress.md) — one box, one circle of sharing; nothing leaves the box without a grant; box content stays out of the public repo.
 - [`teaching.md`](teaching.md) — the teaching relationship and what shipped of it (retro, personality/guide cards, briefings, category rules); proposals still ambition.
 - [`extensibility.md`](extensibility.md) — knowledge over plugins (active plan; neither exists yet); composition over new infrastructure; where "modes" vocabulary stands.
+
+The Laws (Saving, Cards, Checking, and Quoting, with its tiebreak: when unsure whether a change is a fix or a reword, it is a reword) govern fidelity to the user's voice and memory; their home is THE_LAWS in `src/core/agent-guide/guide.md`.
 
 Former design.md sections that were pure pointers after reconciliation:
 triage pipeline → [`../triage.md`](../triage.md); calendar →

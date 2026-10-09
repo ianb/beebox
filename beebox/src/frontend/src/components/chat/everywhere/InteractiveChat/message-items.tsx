@@ -9,18 +9,19 @@
 
 import { type ReactNode } from "react";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
-import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
-import { isNoResponseOnly, parseAcks, type AckIndication } from "../../../../lib/structured-output-parsing";
-import type { SessionContentBlock } from "../../../../api";
+import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
+import { isNoResponseOnly, parseAcks, parseCallouts, type AckIndication } from "../../../../lib/structured-output-parsing";
+import { hasAssistantSpeech } from "../../../../lib/audio/speech-parsing/parse";
+import type { SessionContentBlock, SessionEntry } from "../../../../api";
 import { buildStreamEntry } from "../../../../lib/stream-entry";
-import { hasProgressUpdate } from "../../message-parsing";
+import { hasProgressUpdate, hasRenderableAssistantContent } from "../../message-parsing";
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "../../capture-bubble";
 import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../../../machines/speech-segment-states";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
-import { Button } from "../../../ui/Button";
+import { PendingHqMessage } from "../../pending-hq-message";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -48,33 +49,6 @@ function chunkOnParagraphs(text: string): string {
   return text.slice(0, cut);
 }
 
-/**
- * A voice message waiting for its HQ transcript
- * (docs/plans/resilient-voice-recording.md, Track 4): the realtime text as a
- * faded user bubble, the HQ job's status line, and a control to stop waiting
- * and send the live text now (the HQ text then follows as a correction).
- */
-function PendingHqMessage({ pending, onSendLive }: { pending: PendingHq; onSendLive: (id: string) => void }) {
-  return (
-    <div className="flex justify-end pl-12 sm:pl-24 py-1">
-      <div className="flex flex-col items-end gap-1">
-        <div
-          className="rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words opacity-60"
-          title="Waiting for the HQ transcript…"
-        >
-          <div className="text-sm whitespace-pre-wrap">
-            <UserMessageText text={pending.text} />
-          </div>
-        </div>
-        <div role="status" className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
-          {pending.status}
-        </div>
-        <Button size="sm" intent="secondary" onClick={() => onSendLive(pending.id)}>Send live text now</Button>
-      </div>
-    </div>
-  );
-}
 
 export type DataItem =
   | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[] }
@@ -87,6 +61,16 @@ function assistantGroupText(group: MessageGroup): string {
   return group.entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   ).join("\n");
+}
+
+function hasAssistantSurface(entries: SessionEntry[], opts: { debugView: boolean; proseEnabled: boolean }): boolean {
+  const { debugView, proseEnabled } = opts;
+  if (proseEnabled) return hasRenderableAssistantContent(entries, debugView);
+  if (debugView) return false;
+  const text = entries.flatMap((entry) =>
+    entry.content.filter((block) => block.type === "text").map((block) => block.text ?? "")
+  ).join("\n");
+  return hasAssistantSpeech(text) || parseCallouts(text).length > 0;
 }
 
 export function dataItemKey(d: DataItem): string {
@@ -114,13 +98,11 @@ export interface SpeechPlaybackState {
 
 /**
  * Build the interleaved data array: groups + chronological markers, with
- * `<ack>` tags hung off the preceding user message and no-response-only
- * assistant groups suppressed. Pure given its inputs.
+ * `<ack>` tags hung off the preceding user message and assistant groups with
+ * no visible content (or a no-response-only ack) suppressed. Pure given its inputs.
  *
- * When `debugView` is on the suppression is skipped: a no-response-only turn
- * (e.g. the model replying `<ack kind="no-response"/>` to a trivial message)
- * is otherwise invisible except for a faint badge, which reads as "the chat
- * didn't respond." Debug view should show exactly what the model emitted.
+ * Debug view keeps raw text that normal rendering strips (such as an ack),
+ * but an entry with no text or visible activity still has no message body.
  */
 export function buildDataItems(opts: {
   groups: MessageGroup[];
@@ -132,8 +114,9 @@ export function buildDataItems(opts: {
   pendingHq: readonly PendingHq[];
   captureBubbles: CaptureBubbleModel[];
   debugView: boolean;
+  proseEnabled: boolean;
 }): DataItem[] {
-  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView } = opts;
+  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -152,10 +135,9 @@ export function buildDataItems(opts: {
           last.acks = [...(last.acks ?? []), ...groupAcks];
         }
       }
-      if (isNoResponseOnly(allText) && !debugView && !hasProgressUpdate(group.entries)) {
-        // Suppress the empty bubble but still emit markers anchored here
-        // so chronological order is preserved. Skipped in debug view so the
-        // raw no-response ack stays visible.
+      if ((isNoResponseOnly(allText) && !debugView && !hasProgressUpdate(group.entries))
+        || !hasAssistantSurface(group.entries, { debugView, proseEnabled })) {
+        // Keep markers anchored here so chronological order is preserved.
         for (const m of modelMarkers) {
           if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
         }
@@ -179,7 +161,9 @@ export function buildDataItems(opts: {
       streamText: chunkOnParagraphs(streamText),
       streamTools,
     });
-    items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length });
+    if (hasAssistantSurface([entry], { debugView, proseEnabled })) {
+      items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length });
+    }
   }
   return items;
 }
@@ -279,7 +263,7 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
   if (item.kind === "marker") {
     return (
       <div className="flex justify-center py-1">
-        <div className="text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
+        <div className="bbx-chat-meta-material text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
           {item.marker.label}
         </div>
       </div>

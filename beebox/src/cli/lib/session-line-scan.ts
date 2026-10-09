@@ -33,7 +33,7 @@ const CHUNK_BYTES = 256 * 1024;
  * worst allocation a request can ask for by name well clear of the multiplier
  * that made the 2026-08 OOM fatal.
  */
-export const MAX_MEDIA_LINE_BYTES = 8 * 1024 * 1024;
+const MAX_MEDIA_LINE_BYTES = 8 * 1024 * 1024;
 
 const NEWLINE = 0x0a;
 

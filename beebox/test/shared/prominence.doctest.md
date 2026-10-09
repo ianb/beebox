@@ -34,7 +34,7 @@ result.success
 => false
 
 result.error.issues[0].message
-=> Invalid option: expected one of "entry-point"|"primary"|"background"
+=> «*»"entry-point"|"primary"|"background"
 ```
 
 ## Type defaults: `defaultProminence` on `CardSchema`

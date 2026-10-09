@@ -85,7 +85,7 @@ export function assetLargefilesExpression(): string {
  * First line of the managed `.git/info/attributes` block, so a human (or a
  * grep) can tell our file from git-annex's default without diffing it.
  */
-export const ANNEX_ATTRIBUTES_MARKER = "# Managed by beebox — do not edit.";
+const ANNEX_ATTRIBUTES_MARKER = "# Managed by beebox — do not edit.";
 
 /**
  * One glob segment matching `ext` in any case: `heic` → `[hH][eE][iI][cC]`.

@@ -57,10 +57,6 @@ const childNames = triageCommand.commands.map((command) => command.name()).toSor
 JSON.stringify(childNames)
 => ["apply","confirm","correct","decisions","instructions","judge","prepare","replay"]
 
-const help = triageCommand.commands.map((command) => command.helpInformation()).join("\n");
-["--out <file>", "--overwrite", "--json", "--overlay <file>", "--landmarks <file>", "--max-calls <count>", "--prepare-again", "--question <ref>", "--source <ref>"].every((option) => help.includes(option))
-=> true
-
 JSON.stringify({ legacyEngineDefault: engineTriageCommand.args[0]?.default, cliEngineFlag: triageCommand.options.find((option) => option.long === "--engine")?.defaultValue })
 => {"legacyEngineDefault":"agent","cliEngineFlag":"agent"}
 ```

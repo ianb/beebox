@@ -33,21 +33,21 @@ Each section follows the same pattern:
 
 Characters are introduced through how they use the system, not through biographical summaries. The reader meets Diana because she's checking the group chat at the counter. They meet James because he sends schedule photos. Each person's introduction *is* a feature vignette.
 
-**Everyone participates.** Don't make anyone a complete opt-out. Mateo is less interested in household coordination, but he uses the box for his own things — D&D, music, school. Rosa has private uses alongside group participation. Sofia is both a user and an unwitting data source.
+**Everyone participates.** Don't make anyone a complete opt-out. Mateo is less interested in household coordination, but he uses the box for his own things — D&D, music, school. Rosa has her own uses alongside group participation. Sofia is both a user and an unwitting data source.
 
-**Rosa's private uses.** Not everything goes in the group. Rosa records conversation topics for her next call with her sister — that's private to her. The box holds private things alongside shared things.
+**Rosa's own uses.** Not everything goes in the group. Rosa records conversation topics for her next call with her sister — that's for her, not the group. The box holds personal things alongside group things.
 
 **Keep details grounded.** Rosa records a list of things to bring up when she calls her sister. That's more real than "recording messages for her sister." Sofia asks whatever she's curious about this week — don't lock it to one example like "suspension bridges" that feels generic.
 
 ## The system
 
-**Web chat is the primary surface.** Telegram (and potentially SMS, other platforms) are additional channels into the same conversation. Don't lead with Telegram as the main thing.
+**Web chat is the primary surface.** Telegram (and potentially SMS, other platforms) are additional channels; a Telegram group is the one thread where the family talks together. Don't lead with Telegram as the main thing.
 
-**Group-oriented, but not exclusively.** The group conversation is the primary shared surface, but one-on-one chat with the box is also available. Some things naturally belong in the group (schedule changes, grocery list, family logistics). Others are clearly one-on-one (personal goals, private questions, Rosa's call list for her sister). Use whichever fits the example. The group is still the default and the thing that makes the system distinctive — but don't force everything through it.
+**Group-oriented, but not exclusively.** The group conversation is the primary shared surface, but one-on-one chat with the box is also available. Some things naturally belong in the group (schedule changes, grocery list, family logistics). Others are clearly one-on-one (personal goals, personal questions, Rosa's call list for her sister). Use whichever fits the example. The group is still the default and the thing that makes the system distinctive — but don't force everything through it.
 
 **Notifications come from the family's inputs.** When the box reaches out (reminders, alerts, schedule changes), what it's surfacing comes from things the family put in. It's connecting dots, not generating from nothing. This is worth noting explicitly.
 
-**Capture pages are for bulk input.** Walking through the kitchen narrating the pantry. Recording stories one after another. Photographing a posted schedule. They're for getting a lot of stuff in, not for sending a single message.
+**Capture mode is for bulk input.** Walking through the kitchen narrating the pantry. Recording stories one after another. Photographing a posted schedule. They're for getting a lot of stuff in, not for sending a single message.
 
 **Some things are aspirational.** Mark features that don't exist yet but are one step away. Don't present them as working, but don't wall them off either. The reader should understand what's real and what's next.
 

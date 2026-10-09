@@ -72,12 +72,6 @@
     "reason": "The package bin map ships the tombstone under the retired command's name for installed dependencies."
   },
   {
-    "path": "beebox/src/scripts/migrate/schedule-runs-bbx.ts",
-    "occurrenceClass": "standalone-cli-token",
-    "expectedCount": 4,
-    "reason": "The migrator that rewrites boxes' scheduled-script runs: fields off the retired command must name it to explain and match it."
-  },
-  {
     "path": "beebox/src/core/agent-context-mirrors.ts",
     "occurrenceClass": "kebab-name",
     "expectedCount": 1,
@@ -88,18 +82,6 @@
     "occurrenceClass": "kebab-name",
     "expectedCount": 3,
     "reason": "Hook convergence recognizes and replaces the retired managed markers."
-  },
-  {
-    "path": "beebox/src/core/migrations.ts",
-    "occurrenceClass": "standalone-cli-token",
-    "expectedCount": 1,
-    "reason": "The registry comment for schedule-runs-bbx-2026-09 names the retired command the migration retires."
-  },
-  {
-    "path": "beebox/test/scripts/migrate/schedule-engine-verbs.doctest.md",
-    "occurrenceClass": "standalone-cli-token",
-    "expectedCount": 1,
-    "reason": "The migrator must DECLINE a card still naming the retired command; asserting that requires the literal."
   },
   {
     "path": "beebox/src/lib/state-migration.ts",
@@ -136,12 +118,6 @@
     "occurrenceClass": "kebab-name",
     "expectedCount": 6,
     "reason": "The regression fixture proves repeated retired managed hooks are replaced."
-  },
-  {
-    "path": "beebox/test/migration-flows/schedule-runs-bbx.doctest.md",
-    "occurrenceClass": "standalone-cli-token",
-    "expectedCount": 5,
-    "reason": "The regression fixture proves the retired command word is rewritten and nothing else is."
   },
   {
     "path": "bin/test/lib/workstream-box-state.doctest.md",

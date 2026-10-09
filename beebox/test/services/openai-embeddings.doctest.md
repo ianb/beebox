@@ -1,8 +1,7 @@
-# OpenAI embeddings service — fake determinism, call recording, key resolution
+# OpenAI embeddings service — response validation, chunking, key resolution
 
-`EmbeddingsService` wraps OpenAI's `/v1/embeddings` endpoint. The fake
-derives deterministic unit vectors from each text so tests never need a
-real key. `getOpenAiEmbeddingsKey` resolves the box's `openai` grant from the
+`EmbeddingsService` wraps OpenAI's `/v1/embeddings` endpoint.
+`getOpenAiEmbeddingsKey` resolves the box's `openai` grant from the
 machine secret store — the grant semantics are covered in
 `test/core/secrets/lifecycle.keys.doctest.md`; what matters here is that an
 unconfigured box yields `null` rather than throwing, so the search path can
@@ -11,77 +10,11 @@ degrade to text mode.
 ```ts setup
 import {
   EMBEDDING_DIMENSIONS,
-  createFakeEmbeddings,
   parseEmbeddingsResponse,
   chunkTexts,
 } from "../../src/services/openai-embeddings.js";
 import { getOpenAiEmbeddingsKey } from "../../src/core/search/embeddings-key.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-
-function magnitude(vector: number[]): number {
-  return Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0));
-}
-```
-
-## Deterministic unit vectors: identical text → identical vector
-
-```ts
-const fake = createFakeEmbeddings();
-const [a, b, c] = await fake.embed(["the dentist moved to June 17", "the dentist moved to June 17", "plant the tomatoes"]);
-a?.length
-=> 512
-
-JSON.stringify(a) === JSON.stringify(b)
-=> true
-
-JSON.stringify(a) === JSON.stringify(c)
-=> false
-
-Math.abs(magnitude(a ?? []) - 1) < 1e-9
-=> true
-```
-
-## Call recording and describe()
-
-```ts continue
-fake.describe()
-=> calls: 1
-[0] the dentist moved to June 17 | the dentist moved to June 17 | plant the tomatoes
-```
-
-## Empty input returns an empty result
-
-```ts continue
-const emptyFake = createFakeEmbeddings();
-await emptyFake.embed([])
-=> []
-```
-
-## `failTimes` scripts N failures before succeeding
-
-```ts continue
-async function embedErrorName(svc: { embed(texts: string[]): Promise<number[][]> }, texts: string[]): Promise<string> {
-  try {
-    await svc.embed(texts);
-    return "(no error thrown)";
-  } catch (e) {
-    return (e as Error).name;
-  }
-}
-
-const flaky = createFakeEmbeddings({ failTimes: 2 });
-await embedErrorName(flaky, ["a"])
-=> EmbeddingsError
-
-await embedErrorName(flaky, ["a"])
-=> EmbeddingsError
-
-const recovered = await flaky.embed(["a"]);
-recovered.length
-=> 1
-
-flaky.calls.length
-=> 3
 ```
 
 ## Response validation: every malformed shape is a typed EmbeddingsError
@@ -91,7 +24,7 @@ The real service parses untrusted API responses through
 `TypeError` — the refresh and query layers degrade on `EmbeddingsError`
 specifically.
 
-```ts continue
+```ts
 function okVector(): number[] {
   return Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.1);
 }

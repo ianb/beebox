@@ -11,7 +11,8 @@
  *   ---
  *   navigation:
  *     label: Kitchen
- *     symbol: 🍳
+ *   symbol:
+ *     glyph: 🍳
  *   ---
  *
  * `bbx init` guarantees one exists and repairs an inert one (`core/box/

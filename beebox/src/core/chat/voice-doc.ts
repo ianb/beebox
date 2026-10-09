@@ -20,13 +20,13 @@ Overrides apply only to the chat frontend. They have no effect in jobs, procedur
 
 ## Base Behavior
 
-By default, every \`<speech>\` segment uses the voice model and concatenated \`<instruction>\` text from the personality card's \`<speaking-voice>\`. An optional nested \`<instructions>\` tag inside \`<speech>\` *adds* to (not replaces) the base instructions:
+By default, every \`<speech>\` segment uses the voice model and concatenated \`<instruction>\` text from the personality card's \`<speaking-voice>\`. An optional \`instructions\` attribute on \`<speech>\` *adds* to (not replaces) the base instructions:
 
 \`\`\`xml
-<speech>I found three overdue items.
-<instructions>Gentle, not urgent.</instructions>
-</speech>
+<speech instructions="Gentle, not urgent.">I found three overdue items.</speech>
 \`\`\`
+
+Write a double quote inside the value as \`&quot;\` and an ampersand as \`&amp;\`.
 
 The TTS model receives: \`<base instructions from personality> Gentle, not urgent.\`
 
@@ -59,24 +59,22 @@ The label is **display-only** — it changes how the chunk looks (and reads in t
 
 ## Replacing Base Instructions
 
-The nested \`<instructions>\` tag normally appends to the base. To **replace** them entirely for one segment, add \`override-instructions="1"\`:
+The \`instructions\` attribute normally appends to the base. To **replace** them entirely for one segment, add \`override-instructions="1"\`:
 
 \`\`\`xml
-<speech override-instructions="1">
-<instructions>Urgent, sharp, near-whisper. Clipped consonants.</instructions>
+<speech override-instructions="1" instructions="Urgent, sharp, near-whisper. Clipped consonants.">
 The alarm just fired. Check the stove.
 </speech>
 \`\`\`
 
-Use this sparingly — only when the base instructions actively conflict with the mood you want. Most of the time, *adding* context via a plain \`<instructions>\` tag is enough.
+Use this sparingly — only when the base instructions actively conflict with the mood you want. Most of the time, *adding* context via a plain \`instructions\` attribute is enough.
 
 ## Combining Overrides
 
-\`voice\` and \`override-instructions\` combine freely:
+\`voice\`, \`instructions\`, and \`override-instructions\` combine freely:
 
 \`\`\`xml
-<speech voice="ballad" override-instructions="1">
-<instructions>Theatrical, slow, with pauses for effect.</instructions>
+<speech voice="ballad" override-instructions="1" instructions="Theatrical, slow, with pauses for effect.">
 Once upon a time, in a village at the edge of the woods...
 </speech>
 \`\`\`
