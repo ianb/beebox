@@ -31,3 +31,5 @@ Reading it yourself: start at
 [CONTRIBUTING.md](https://github.com/ianb/beebox/blob/main/CONTRIBUTING.md)
 in the repository, or the [contributor entry point](https://beebox.run/llms-dev.txt).
 Bug reports are invited; pull requests are not yet solicited.
+
+A side note from development: [which model listens to voice messages](develop.attach/audio-bakeoff.doc.card).

@@ -74,3 +74,10 @@ of each agent inventing its own.
 
 - [webpage card and commentary](../../beebox/docs/implemented-plans/webpage-card-and-commentary.md)
   — the design the clerk path implements.
+- [Fetching full pages: blocked hosts and rendered pages](2026-10-04-fetch-blocked-pages.md)
+  — the fetch capability this depends on. Capture is extract-and-freeze over
+  a fetched document; whether that document is the pre-JavaScript HTML or a
+  rendered page, and whether a hostile host can be read at all, is that
+  issue's problem. Added 2026-10-09 at the boxholder's request.
+- [Citation conventions and kept copies](2026-10-09-citation-conventions-and-kept-copies-of-sources.md)
+  — the convention that makes a captured page a citable copy.

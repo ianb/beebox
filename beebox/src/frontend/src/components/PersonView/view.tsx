@@ -85,7 +85,7 @@ function RoleLine({ role, boxholder, archived }: Pick<PersonFields, "role" | "bo
   if (role === undefined && !boxholder && !archived) return null;
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {role === undefined ? null : <Text tone="emphasis" size="base">{role}</Text>}
+      {role === undefined ? null : <Text material tone="emphasis" size="base">{role}</Text>}
       {boxholder ? <Badge tone="accent">Boxholder</Badge> : null}
       {archived ? <Badge title="No longer part of the boxholder's life">Archived</Badge> : null}
     </p>
@@ -95,7 +95,7 @@ function RoleLine({ role, boxholder, archived }: Pick<PersonFields, "role" | "bo
 function ContactRow({ label, children }: { label: string; children: ReactNode }): ReactNode {
   return (
     <div className="flex min-w-0 max-w-full flex-wrap gap-x-1.5">
-      <dt className="text-warm-500">{label}</dt>
+      <dt className="text-card-soft">{label}</dt>
       <dd className="min-w-0 [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
@@ -134,10 +134,10 @@ function personSummary(person: PersonFields, embed: boolean): ReactNode {
   if (!rows.some(Boolean)) return null;
   return (
     <div className="mb-4 flex flex-col gap-1.5 text-sm" data-card-section="person">
-      {showName ? <Text weight="semibold">{name}</Text> : null}
+      {showName ? <Text material weight="semibold">{name}</Text> : null}
       <RoleLine role={role} boxholder={boxholder} archived={archived} />
       <ContactList email={email} phone={phone} address={address} />
-      {hasAliases ? <Text tone="muted" as="p">Also: {aliases.join(", ")}</Text> : null}
+      {hasAliases ? <Text material tone="muted" as="p">Also: {aliases.join(", ")}</Text> : null}
     </div>
   );
 }
@@ -156,7 +156,7 @@ export function PersonView({ data, onNavigate, mode }: RendererProps) {
       {summary}
 
       {Object.keys(rest).length > 0 ? (
-        <div className="mb-4 pb-3 border-b border-warm-200" data-card-section="frontmatter">
+        <div className="mb-4 pb-3 border-b border-card-rule" data-card-section="frontmatter">
           <FrontmatterFields fields={rest} onNavigate={onNavigate} basePath={data.path} />
         </div>
       ) : null}
