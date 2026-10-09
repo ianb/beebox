@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { createAgent } from "../../agent/invoke/core.js";
+import { createAgent, type Agent, type AgentInvokeOptions } from "../../agent/invoke/core.js";
 import { loadEffectiveSmallModel } from "../../model-policy.js";
 
 /** Husk titles stay bookmark-sized. Matches TITLE_MAX_LEN in core/chat/husk.ts. */
@@ -205,25 +205,39 @@ function buildTitlePrompt(args: TitleArgs): string {
   return parts.join("\n\n");
 }
 
+/**
+ * SDK options both passes share. The transcript is the whole input, so the
+ * run loads no box context and gets no tools: a title or review pass that
+ * could call `Read` or `Bash` read box files and tutored instead of naming the
+ * chat (issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md).
+ */
+const PASS_OPTIONS: Pick<AgentInvokeOptions, "loadBoxContext" | "tools" | "maxTurns" | "maxBudgetUsd"> = {
+  loadBoxContext: false,
+  tools: [],
+  maxTurns: 4,
+  maxBudgetUsd: MAX_BUDGET_USD,
+};
+
 /** Real reviewer: a fresh single-purpose agent per session, structured output. */
 export function createSdkChatReviewer(options: {
   boxRoot: string;
   model?: string;
+  /** Agent factory; tests pass a fake. Defaults to the box's harness. */
+  createAgent?: (opts: { name: string }) => Agent;
 }): ChatReviewer {
+  const makeAgent = options.createAgent ?? createAgent;
   return {
     async title(args: TitleArgs): Promise<TitleOutput> {
       // Same resolution and budget as the full review — one structured call,
       // just a smaller output contract.
       const model = options.model ?? await loadEffectiveSmallModel(options.boxRoot);
-      const agent = createAgent({ name: `chat-title:${args.sessionId}` });
+      const agent = makeAgent({ name: `chat-title:${args.sessionId}` });
       const result = await agent.invokeStructured(TitleOutputSchema, {
+        ...PASS_OPTIONS,
         boxRoot: options.boxRoot,
         systemPrompt: TITLE_SYSTEM_PROMPT,
         prompt: buildTitlePrompt(args),
         model,
-        loadBoxContext: false,
-        maxTurns: 4,
-        maxBudgetUsd: MAX_BUDGET_USD,
       });
       if (!result.success) {
         throw new ReviewerRunError(args.sessionId, result.error);
@@ -234,17 +248,13 @@ export function createSdkChatReviewer(options: {
       // Resolved per run, not at construction: it is an engine-aware lookup,
       // and the box's small-model slot is the only thing that may name it.
       const model = options.model ?? await loadEffectiveSmallModel(options.boxRoot);
-      const agent = createAgent({ name: `chat-review:${args.sessionId}` });
+      const agent = makeAgent({ name: `chat-review:${args.sessionId}` });
       const result = await agent.invokeStructured(ReviewOutputSchema, {
+        ...PASS_OPTIONS,
         boxRoot: options.boxRoot,
         systemPrompt: REVIEWER_SYSTEM_PROMPT,
         prompt: buildReviewPrompt(args),
         model,
-        // The transcript is in the prompt; the box's CLAUDE.md is not an input
-        // to naming a conversation.
-        loadBoxContext: false,
-        maxTurns: 4,
-        maxBudgetUsd: MAX_BUDGET_USD,
       });
       if (!result.success) {
         throw new ReviewerRunError(args.sessionId, result.error);

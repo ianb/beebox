@@ -1,0 +1,49 @@
+---
+title: "Box chat sessions list Claude Code's schedule and push tools (CronCreate, PushNotification, RemoteTrigger)"
+workstream: unattached
+area: beebox
+labels: [security, privacy]
+filed-by: agent
+discovered-by: agent
+discovered-in: worktree-journey-walks-oct — C-reconnecting journey walks, 2026-10-09
+resolution: implemented
+---
+
+Fixed 2026-10-09: `boxSessionSettings` (`beebox/src/core/agent/box-session-settings.ts`) now sets `disallowedTools` for every box Claude session (chat, agent runs, scan vision): `CronCreate`, `CronDelete`, `CronList`, `ScheduleWakeup`, `RemoteTrigger`, `PushNotification`, `ReadNotifications`, `Artifact`, `Projects`, `ClaudeDesign`, `DesignSync`, `SendFeedback`. Subagent, file, shell and web tools stay; `EnterWorktree`/`ExitWorktree` act on the box's own git and stay. A real chat turn on the test box listed none of the blocked tools.
+
+This finding is tool exposure only: a box chat session lists host Claude Code tools that would act through the host's Claude account. No call was observed, and whether a call would complete in this non-interactive mode was not tested. The C-reconnecting walk's transcripts show them in `deferred_tools_delta`. This is the same class as [the closed connectors issue](../../closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md). That fix removed claude.ai connectors; it did not touch these built-in tools.
+
+## Evidence
+
+In the largest transcript of the C walk (the box agent's Claude transcript for the C walk box), the one `deferred_tools_delta` entry has `addedNames`: `CronCreate`, `CronDelete`, `CronList`, `DesignSync`, `EnterWorktree`, `ExitWorktree`, `Monitor`, `NotebookEdit`, `PushNotification`, `RemoteTrigger`, `SendMessage`, `TaskStop`, `WebFetch`, `WebSearch`. `ScheduleWakeup` is not in that list. Its definition appears in the same file's tool schemas, so it is available too.
+
+Why these matter: if called, `CronCreate` and `RemoteTrigger` could create scheduled or cloud-run routines under the host account, and `PushNotification` could push to the account's devices. A box member's chat could then cause those effects on the host owner's account.
+
+## Not checked
+
+- **No call to these tools was observed.** The finding is that the tools are available to the agent, not that it used them.
+- Production past use was not checked. That needs the boxholder's approval.
+- Whether a box agent can complete a call (the CLI may refuse in non-interactive mode) was not tested.
+
+## Mechanism
+
+`boxSessionSettings` (`beebox/src/core/agent/box-session-settings.ts:46-58`) sets the setting sources, `claudeMdExcludes` and `disableClaudeAiConnectors`. It restricts no built-in tools. The chat backend sets `queryOptions.tools` only when the caller supplies `opts.tools` (`beebox/src/services/claude-chat/core.ts:132-134`). The agent invoke path (`beebox/src/core/agent/invoke/run.ts`) sets none.
+
+## Direction
+
+Block or omit the host-account tools (disallow list, or an explicit tool allowlist) for every box session. Decide per tool: `WebFetch`, `WebSearch` and `Monitor` may be wanted. Check that box features that need scheduling use the box's own scheduler, not these tools.
+
+Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md).
+
+## Production check (2026-10-09)
+
+Read-only scan of the production box transcripts (tool names, dates, and tool
+inputs of the calls only). Every box's sessions list these tools. Calls found:
+
+- `PushNotification`, twice on 2026-09-27, in one box chat. The agent was
+  testing the box's own push ("Test push from your Bee Box: if this reached
+  your phone, push works") and used Claude Code's push instead, which goes to
+  the host Claude account's devices. Wrong channel; no other harm found.
+- `ScheduleWakeup`: set and cancelled within the same minute in one session.
+- `SendMessage`: messages to the session's own subagents. Internal; keep it.
+- No `CronCreate`, `CronDelete`, `CronList`, or `RemoteTrigger` calls.

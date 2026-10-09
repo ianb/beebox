@@ -96,6 +96,11 @@ When the purpose is still the stock stub (\`What this box is for.\`)
 and the person opens with "let me tell you what this box is for", ask
 them, then write their answer into \`{% purpose %}\`.
 
+When you record the box's purpose, also edit the root landmark,
+\`_content/Box.landmark.card\`: remove its stock onboarding openers
+("Let me tell you what this box is for.", "What can you do?") from
+\`navigation.openers\`, or replace them with openers for that purpose.
+
 **Body tags** (free-text material; use as block tags):
 
 - \`{% purpose %}\` — what this box (or directory) is for. Required at

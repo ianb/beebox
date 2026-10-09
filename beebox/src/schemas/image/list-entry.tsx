@@ -31,7 +31,7 @@ function imageSrc(cardPath: string, filenameRef: string): string {
   });
 }
 
-export function ImageCardListEntry({ data, compact }: ListProps<ImageSummaryAttrs>) {
+export function ImageCardListEntry({ data, compact, hidePath }: ListProps<ImageSummaryAttrs>) {
   const filename = data.attrs ? data.attrs.filename : undefined;
 
   return (
@@ -46,7 +46,7 @@ export function ImageCardListEntry({ data, compact }: ListProps<ImageSummaryAttr
       ) : null}
       <div className="min-w-0">
         <div className="truncate text-warm-800 font-medium">{data.title}</div>
-        {compact ? null : (
+        {compact || hidePath ? null : (
           <div className="truncate text-xs text-warm-500" title={data.path}>
             {data.path}
           </div>

@@ -85,8 +85,16 @@ new registration; prepare several journeys first, then cold-start once. A failed
 leaves its evidence intact; it does not restart the shared router. No model turn is
 needed for this check.
 
-Timing currently reads only Claude root-chat transcripts and measures from a user
-message to the first assistant text, not completion. Scoped chats are excluded. Missing timing is unavailable, not zero
+Screenshots need an awake display. With the Mac's display asleep (an
+unattended or overnight run), `bin/browse screenshot` hangs on
+`Page.captureScreenshot` while every other action works, and the walk comes back
+with no screenshots (D-chemistry, 2026-10-09). Hold the display awake for the
+whole run before starting walkers.
+
+Timing reads the Claude transcripts of the box's root chat and place chats and
+measures from a user message to the first assistant text, not completion. Sessions
+in the box's usage manifest (chat-title and other engine agent runs) are not chat
+turns and are skipped. Missing timing is unavailable, not zero
 waiting; Codex waits must be reported separately from observed browser evidence.
 
 ## Assets

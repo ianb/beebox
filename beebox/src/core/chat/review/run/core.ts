@@ -35,6 +35,7 @@ import type { TitleFreshnessChecker } from "../freshness.js";
 import { loadReviewState, saveReviewState, type ReviewState } from "../state.js";
 import { LockHeldError, withChatReviewLock } from "../lock.js";
 import { readCodexSessionUpdatedAt } from "../../session/codex-transcript/core.js";
+import { commitSessionManifest } from "../../../agent/manifest.js";
 
 export interface RunOptions {
   reviewer: ChatReviewer;
@@ -178,7 +179,7 @@ export async function titleOneSession(
  * thrown away.
  */
 export async function runChatReview(boxRoot: string, options: RunOptions): Promise<RunSummary> {
-  return withChatReviewLock(boxRoot, {
+  const result = await withChatReviewLock(boxRoot, {
     holder: "chat-review",
     fn: async () => {
       const state = await loadReviewState(boxRoot);
@@ -224,6 +225,15 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
       return summary;
     },
   });
+  // Each model pass appended its session to the tracked usage manifest, and the
+  // husk writes are not committed here, so the run commits that file itself —
+  // after the review lock is released, since the commit takes the box git lock.
+  try {
+    await commitSessionManifest(boxRoot);
+  } catch (e) {
+    console.warn("chat-review: could not commit the usage manifest after the run:", e);
+  }
+  return result;
 }
 
 export { LockHeldError };

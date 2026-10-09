@@ -110,3 +110,17 @@ JSON.stringify(compileBriefing({ type: "briefing", body: "" }))
 JSON.stringify(compileBriefing({ type: "briefing", body: "" }, { directoryLabel: "_bookkeeping/archive/financial" }))
 => "## Briefing: _bookkeeping/archive/financial\n"
 ```
+
+## The briefing instructions name the root's stock openers
+
+When the agent records the box's purpose it edits the briefing, and only the
+briefing's instructions load then. They tell it to retire the root landmark's
+stock onboarding openers, quoting them; the schemas cannot import each other,
+so this check keeps the quoted text equal to `STOCK_ROOT_OPENERS`.
+
+```ts
+const { BriefingSchema } = await import("../src/schemas/briefing.js");
+const { STOCK_ROOT_OPENERS } = await import("../src/schemas/landmark.js");
+STOCK_ROOT_OPENERS.filter((opener) => !(BriefingSchema.instructions ?? "").includes(`"${opener}"`))
+=> []
+```

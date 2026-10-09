@@ -115,6 +115,7 @@ export function createClaudeAgent(options: {
       onOutput: options.onOutput,
       model,
       loadBoxContext: opts.loadBoxContext,
+      tools: opts.tools,
       maxTurns: opts.maxTurns,
       maxBudgetUsd: opts.maxBudgetUsd,
       dryRun: opts.dryRun,

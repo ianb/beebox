@@ -12,7 +12,7 @@ const OPENERS = ["Who has what right now?", "Log a new loan"];
 const send = () => "accepted" as const;
 
 function chat(contextDir: string | null, showsOwnOpeners: boolean) {
-  return { contextDir, showsOwnOpeners, sendOpener: send };
+  return { contextDir, showsOwnOpeners, busy: false, sendOpener: send };
 }
 ```
 
