@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <rect width="320" height="320" fill="#e9dfc8"/>
+  <defs><path id="ribbon" d="m160 18 42 100 100 42-100 42-42 100-42-100-100-42 100-42z" fill="none" stroke-width="18" stroke-linejoin="miter"/></defs>
+  <use href="#ribbon" stroke="#302c2b" stroke-width="24"/>
+  <use href="#ribbon" stroke="#293f9f"/>
+  <g transform="rotate(45 160 160)">
+    <use href="#ribbon" stroke="#302c2b" stroke-width="24"/>
+    <use href="#ribbon" stroke="#bd685d"/>
+  </g>
+  <path d="m118 118 42-100 42 100M202 202l-42 100-42-100" fill="none" stroke="#e9dfc8" stroke-width="26"/>
+  <path d="m118 118 42-100 42 100M202 202l-42 100-42-100" fill="none" stroke="#293f9f" stroke-width="18"/>
+  <path d="m160 118 42 42-42 42-42-42z" fill="#9c5848" stroke="#302c2b" stroke-width="3"/>
+  <path d="m160 135 25 25-25 25-25-25z" fill="#e9dfc8"/>
+  <g fill="#8b7199" stroke="#302c2b" stroke-width="2">
+    <path d="m0 55 26 25-26 25-26-25zM320 215l26 25-26 25-26-25z"/>
+    <path d="m55 320 25-26 25 26-25 26zM215 0l25-26 25 26-25 26z"/>
+  </g>
+  <g fill="#756078"><path d="m0 215 25 25-25 25zM320 55l-25 25 25 25zM55 0l25 25 25-25zM215 320l25-25 25 25z"/></g>
+  <path d="M0 0 320 320M320 0 0 320" stroke="#302c2b" stroke-opacity=".1" stroke-width="1"/>
+</svg>

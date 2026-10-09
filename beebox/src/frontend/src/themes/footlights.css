@@ -1,0 +1,92 @@
+/* Original theatrical fans and stepped borders; the stage stays outside prose. */
+.bbx-box-presentation[data-chrome-theme="footlights"],
+.bbx-themed-menu[data-chrome-theme="footlights"] {
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-scene: url("./art/footlights-marquee.svg") center / cover no-repeat, #174f50;
+  --bbx-toolbar-background: #122f32;
+  --bbx-toolbar-ink: #f6ecd6;
+  --bbx-toolbar-edge: #be9b59;
+  --bbx-toolbar-radius: 0;
+  --bbx-toolbar-shadow: 0 3px 0 #ba3e2d, 0 6px 0 #e8d9b6;
+  --bbx-composer-background: #f2e8d2;
+  --bbx-composer-ink: #173e40;
+  --bbx-composer-edge: #173e40;
+  --bbx-composer-radius: 0;
+  --bbx-composer-shadow: 4px 4px 0 #ba3e2d, 7px 7px 0 #122f32;
+  --bbx-control-background: #f2e8d2;
+  --bbx-control-ink: #173e40;
+  --bbx-control-radius: 3px;
+  --bbx-control-shape-default: none;
+  --bbx-control-shape-profile: none;
+  --bbx-control-shape-send: none;
+  --bbx-send-background: #a32f23;
+  --bbx-send-ink: #fff6e4;
+  --bbx-input-paper: #fff9ed;
+  --bbx-input-ink: #173e40;
+  --bbx-input-muted: #57625a;
+  --bbx-status-background: #e5d6b4;
+  --bbx-status-ink: #173e40;
+  --bbx-status-edge: #936d39;
+  --bbx-chat-user-paper: #174f50;
+  --bbx-chat-user-ink: #fff6e4;
+  --bbx-chat-user-radius: 0;
+  --bbx-chat-reply-paper: #fff9ed;
+  --bbx-chat-agent-paper: #fff9ed;
+  --bbx-chat-reply-ink: #173e40;
+  --bbx-menu-paper: #fff9ed;
+  --bbx-menu-ink: #173e40;
+  --bbx-menu-edge: #173e40;
+  --bbx-menu-radius: 0;
+  --bbx-selection: #a32f23;
+  --bbx-selection-ink: #fff9ed;
+  --bbx-selection-code: #e5d6b4;
+  --bbx-selection-code-ink: #173e40;
+  --bbx-focus-ring: #a32f23;
+}
+.bbx-card-theme[data-card-theme="footlights"] {
+  --bbx-paper: #fff9ed;
+  --bbx-ink: #173e40;
+  --bbx-ink-soft: #57625a;
+  --bbx-pen: #a32f23;
+  --bbx-edge: #947945;
+  --bbx-underlay: #ba3e2d;
+  --bbx-font: "Avenir Next", Avenir, system-ui, sans-serif;
+  --bbx-sheet-radius: 0;
+  --bbx-sheet-shadow: 4px 4px 0 #174f50, 7px 7px 0 #ba3e2d;
+  --bbx-sheet-decoration: linear-gradient(90deg, #174f50 0 42%, #ba3e2d 42% 58%, #174f50 58%) left bottom / 100% 5px no-repeat;
+  --bbx-tab-radius: 0;
+  --bbx-quote-paper: #eee3c9;
+  --bbx-quote-layer-paper: #eee3c9;
+  --bbx-quote-edge: 3px;
+  --bbx-quote-radius: 0;
+  --bbx-quote-padding-left: 1rem;
+  --bbx-blockquote-paper: #eee3c9;
+  --bbx-blockquote-edge: 3px;
+  --bbx-blockquote-padding: 0.75em 1em;
+  --bbx-slip-overhang: 0px;
+  --bbx-selection: #a32f23;
+  --bbx-selection-ink: #fff9ed;
+  --bbx-selection-code: #e5d6b4;
+  --bbx-selection-code-ink: #173e40;
+  --bbx-link-decoration: underline;
+}
+.bbx-card-surface[data-card-theme="footlights"] > .bbx-card-heading {
+  border-top: 7px double #174f50;
+  border-bottom: 1px solid #947945;
+  margin-top: 10px;
+}
+.bbx-card-surface[data-card-theme="footlights"] > .bbx-card-heading :is(h1, h2) {
+  font-family: "Avenir Next Condensed", "Helvetica Neue", sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.bbx-box-presentation[data-chrome-theme="footlights"] .bbx-chat-user-paper {
+  border-left: 4px solid #ba3e2d;
+  box-shadow: 3px 3px 0 #e5d6b4;
+}
+.bbx-interface-tab[data-card-theme="footlights"] { --bbx-tab-top-border: 3px; border-top-color: #ba3e2d; }
+@media print {
+  .bbx-card-theme[data-card-theme="footlights"] { --bbx-sheet-shadow: none; }
+}

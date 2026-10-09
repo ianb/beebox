@@ -1,0 +1,114 @@
+/* Flat fluorescent poster inks, rounded lobes, and heavy black contours. */
+.bbx-box-presentation[data-chrome-theme="blacklight"],
+.bbx-themed-menu[data-chrome-theme="blacklight"] {
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-scene: url("./art/blacklight-garden.svg") center / cover no-repeat, #273be6;
+  --bbx-toolbar-background: #463078;
+  --bbx-toolbar-ink: #fff0d8;
+  --bbx-toolbar-edge: #17142d;
+  --bbx-toolbar-radius: 0 0 32px 8px;
+  --bbx-toolbar-shadow: 0 5px 0 #17142d, 0 10px 0 #ed53bc;
+  --bbx-composer-background: #bb5aa1;
+  --bbx-composer-ink: #100e20;
+  --bbx-composer-edge: #17142d;
+  --bbx-composer-radius: 35px 13px 35px 13px;
+  --bbx-composer-shadow: inset 0 0 0 3px #17142d, 5px 5px 0 #17142d;
+  --bbx-control-background: #f4a0eb;
+  --bbx-control-ink: #17142d;
+  --bbx-control-radius: 22px 9px 20px 8px;
+  --bbx-control-shape-default: none;
+  --bbx-control-shape-place: none;
+  --bbx-control-shape-session: none;
+  --bbx-control-shape-voice: none;
+  --bbx-control-shape-profile: none;
+  --bbx-control-shape-add: none;
+  --bbx-control-shape-send: none;
+  --bbx-control-shape-mic: none;
+  --bbx-send-background: #2537b9;
+  --bbx-send-ink: #ffffff;
+  --bbx-input-paper: #fff0d8;
+  --bbx-input-ink: #17142d;
+  --bbx-input-muted: #535341;
+  --bbx-status-background: #f6a8df;
+  --bbx-status-ink: #17142d;
+  --bbx-status-edge: #17142d;
+  --bbx-chat-user-paper: #f6a8df;
+  --bbx-chat-user-ink: #17142d;
+  --bbx-chat-user-radius: 28px 13px 28px 6px;
+  --bbx-chat-reply-paper: #fff0d8;
+  --bbx-chat-agent-paper: #fff0d8;
+  --bbx-chat-reply-ink: #17142d;
+  --bbx-menu-paper: #fff0d8;
+  --bbx-menu-ink: #17142d;
+  --bbx-menu-edge: #17142d;
+  --bbx-menu-radius: 26px 11px 26px 11px;
+  --bbx-selection: #4130a0;
+  --bbx-selection-ink: #ffffff;
+  --bbx-selection-code: #d2ff39;
+  --bbx-selection-code-ink: #17142d;
+}
+.bbx-box-presentation[data-chrome-theme="blacklight"] :is(.bbx-place-pill, #bbx-composer-add, #bbx-nav-profile) {
+  --bbx-control-radius: 48% 24% 44% 21% / 34% 48% 27% 43%;
+}
+.bbx-box-presentation[data-chrome-theme="blacklight"] :is(#bbx-nav-session, #bbx-composer-mic) {
+  --bbx-control-radius: 22% 48% 21% 44% / 43% 27% 48% 34%;
+}
+.bbx-box-presentation[data-chrome-theme="blacklight"] :is(#bbx-nav-voice, #bbx-composer-send) {
+  --bbx-control-radius: 45% 45% 18% 45%;
+}
+.bbx-card-theme[data-card-theme="blacklight"] {
+  --bbx-paper: #fff0d8;
+  --bbx-ink: #17142d;
+  --bbx-ink-soft: #535341;
+  --bbx-pen: #4d2899;
+  --bbx-edge: #17142d;
+  --bbx-underlay: #eb76c5;
+  --bbx-font: "Avenir Next", ui-rounded, system-ui, sans-serif;
+  --bbx-sheet-radius: 33px 13px 33px 13px;
+  --bbx-tab-radius: 22px 14px 0 0;
+  --bbx-sheet-shadow: inset 0 0 0 2px #17142d, 5px 6px 0 #17142d, 9px 10px 0 #ed53bc;
+  --bbx-sheet-decoration: radial-gradient(ellipse 35px 14px at 94% 100%, #d2ff39 95%, #17142d 96% 100%, transparent 101%), radial-gradient(ellipse 29px 12px at 8% 100%, #f4a0eb 95%, #17142d 96% 100%, transparent 101%);
+  --bbx-quote-paper: #ead1f5;
+  --bbx-quote-layer-paper: #ead1f5;
+  --bbx-quote-radius: 20px 7px 20px 7px;
+  --bbx-quote-edge: 2px;
+  --bbx-quote-shadow: 3px 3px 0 #17142d;
+  --bbx-quote-padding-left: 1rem;
+  --bbx-blockquote-paper: #ead1f5;
+  --bbx-blockquote-padding: .75em 1em;
+  --bbx-blockquote-edge: 2px;
+  --bbx-blockquote-shadow: 3px 3px 0 #17142d;
+  --bbx-selection: #4130a0;
+  --bbx-selection-ink: #ffffff;
+  --bbx-selection-code: #d2ff39;
+  --bbx-selection-code-ink: #17142d;
+}
+.bbx-card-surface[data-card-theme="blacklight"] .bbx-card-heading :is(h1, h2) {
+  font-weight: 850;
+  letter-spacing: -.04em;
+}
+@media (max-width: 639px) {
+  .bbx-box-presentation[data-chrome-theme="blacklight"] {
+    --bbx-scene: url("./art/blacklight-garden.svg") 67% center / auto 100% no-repeat, #273be6;
+    --bbx-composer-radius: 24px 9px 24px 9px;
+  }
+  .bbx-card-theme[data-card-theme="blacklight"] {
+    --bbx-sheet-radius: 23px 10px 23px 10px;
+  }
+}
+
+.bbx-box-presentation[data-chrome-theme="blacklight"] .bbx-chat-pending-material button.bg-warm-200 {
+  background: var(--bbx-control-background);
+  color: var(--bbx-control-ink);
+}
+.bbx-box-presentation[data-chrome-theme="blacklight"] .bbx-chat-pending-material button:is(.bg-warm-200, .bg-transparent):hover {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
+}
+.bbx-box-presentation[data-chrome-theme="blacklight"] .bbx-chat-reply-material :is(.bg-warm-50, .bg-warm-100) {
+  background: var(--bbx-input-paper);
+  color: var(--bbx-input-ink);
+}
+
+.bbx-box-presentation[data-chrome-theme="blacklight"] #bbx-composer-input { border-radius: 8px; }

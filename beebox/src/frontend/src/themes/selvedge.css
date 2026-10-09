@@ -1,0 +1,100 @@
+/* Uneven yarn panels and sewn labels: the reading cloth has a quieter weave. */
+.bbx-box-presentation[data-chrome-theme="selvedge"],
+.bbx-themed-menu[data-chrome-theme="selvedge"] {
+  --bbx-cloth: url("./art/selvedge-linen.svg");
+  --bbx-scene: url("./art/selvedge-yarn.svg") center / cover no-repeat, #773e50;
+  --bbx-desk-background: transparent;
+  --bbx-desk-pattern: none;
+  --bbx-toolbar-background: var(--bbx-cloth), #65334c;
+  --bbx-toolbar-ink: #fff0d1;
+  --bbx-toolbar-edge: #d8b980;
+  --bbx-toolbar-radius: 0 0 5px 9px;
+  --bbx-toolbar-shadow: 0 4px 0 #292738, 0 7px 0 #d6a451;
+  --bbx-composer-background: var(--bbx-cloth), #303b56;
+  --bbx-composer-ink: #fff0d1;
+  --bbx-composer-edge: #ddbe8d;
+  --bbx-composer-radius: 10px 6px 14px 6px;
+  --bbx-composer-shadow: 0 4px 0 #342438, 0 7px 12px #251d3555;
+  --bbx-status-background: #ddc99f;
+  --bbx-status-ink: #342438;
+  --bbx-status-edge: #79634d;
+  --bbx-control-background: var(--bbx-cloth), #ecdfbd;
+  --bbx-control-ink: #342438;
+  --bbx-control-radius: 5px 7px 4px 6px;
+  --bbx-send-background: var(--bbx-cloth), #eed477;
+  --bbx-send-ink: #342438;
+  --bbx-input-paper: #f4ead3;
+  --bbx-input-ink: #342438;
+  --bbx-input-muted: #71575c;
+  --bbx-chat-user-paper: #5b354b;
+  --bbx-chat-user-ink: #fff2d8;
+  --bbx-chat-user-radius: 8px 8px 2px 8px;
+  --bbx-chat-reply-paper: #f4ead3;
+  --bbx-chat-agent-paper: var(--bbx-cloth), #f4ead3;
+  --bbx-chat-reply-ink: #342438;
+  --bbx-menu-paper: #ecdfbd;
+  --bbx-menu-ink: #342438;
+  --bbx-menu-edge: #6e4357;
+  --bbx-menu-radius: 5px 9px 6px 4px;
+  --bbx-selection: #753a57;
+  --bbx-selection-ink: #fff2d8;
+  --bbx-selection-code: #e3c18b;
+  --bbx-selection-code-ink: #342438;
+}
+.bbx-card-theme[data-card-theme="selvedge"] {
+  --bbx-cloth: url("./art/selvedge-linen.svg");
+  --bbx-paper: #f4ead3;
+  --bbx-ink: #342438;
+  --bbx-ink-soft: #71575c;
+  --bbx-pen: #31584f;
+  --bbx-edge: #6e4357;
+  --bbx-underlay: #b57175;
+  --bbx-font: "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+  --bbx-sheet-radius: 7px 11px 6px 9px;
+  --bbx-sheet-shadow: 4px 5px 0 #69364d, 7px 8px 0 #d8be7d, 0 10px 20px #21152d44;
+  --bbx-sheet-decoration: var(--bbx-cloth);
+  --bbx-tab-radius: 6px 8px 0 0;
+  --bbx-quote-paper: #e5d8b8;
+  --bbx-quote-layer-paper: #e5d8b8;
+  --bbx-quote-edge: 3px;
+  --bbx-quote-radius: 3px;
+  --bbx-quote-padding-left: 1rem;
+  --bbx-blockquote-paper: #e5d8b8;
+  --bbx-blockquote-edge: 3px;
+  --bbx-blockquote-padding: .75em 1em;
+  --bbx-selection: #753a57;
+  --bbx-selection-ink: #fff2d8;
+  --bbx-selection-code: #e3c18b;
+  --bbx-selection-code-ink: #342438;
+}
+.bbx-card-surface[data-card-theme="selvedge"]::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed var(--bbx-edge);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: .65;
+}
+.bbx-card-surface[data-card-theme="selvedge"] > .bbx-card-heading {
+  padding-top: 1.75rem;
+  padding-bottom: 1rem;
+  margin-bottom: .4rem;
+  border-bottom: 2px dashed var(--bbx-edge);
+}
+.bbx-box-presentation[data-chrome-theme="selvedge"] .bbx-app-nav {
+  border-bottom-style: dashed;
+  border-bottom-width: 2px;
+}
+.bbx-box-presentation[data-chrome-theme="selvedge"] :is(.bbx-chat-reply-material, .bbx-chat-user-paper) {
+  outline: 1px dashed var(--bbx-menu-edge);
+  outline-offset: -5px;
+}
+.bbx-box-presentation[data-chrome-theme="selvedge"] .bbx-composer-material {
+  outline: 1px dashed var(--bbx-composer-edge);
+  outline-offset: -4px;
+}
+@media (max-width: 640px) {
+  .bbx-box-presentation[data-chrome-theme="selvedge"] { --bbx-scene: url("./art/selvedge-yarn.svg") 43% center / auto 100% no-repeat, #773e50; }
+  .bbx-card-theme[data-card-theme="selvedge"] { --bbx-sheet-shadow: 2px 3px 0 #69364d, 4px 5px 0 #d8be7d; }
+}
