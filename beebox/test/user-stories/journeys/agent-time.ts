@@ -14,7 +14,12 @@ import { isRecord } from "../../../src/shared/is-record.ts";
 import { parseJsonLine } from "../../../src/scripts/user-stories/json-io.ts";
 
 export interface AgentTiming {
-  /** One entry per observed first-text interval, in seconds. */
+  /**
+   * One entry per observed first-text interval, in seconds, ordered by the time
+   * the turn opened. Transcripts are read directory by directory, so a root-chat
+   * turn and a later place-chat turn arrive out of order; `turns.at(-1)` is the
+   * latest turn only after this sort.
+   */
   turns: number[]
   totalSeconds: number
   medianSeconds: number
@@ -66,7 +71,7 @@ function median(sorted: number[]): number {
 }
 
 export function agentTiming(boxRoot: string): AgentTiming {
-  const turns: number[] = [];
+  const intervals: { openedAt: number, seconds: number }[] = [];
   const agentRuns = agentRunSessions(boxRoot);
 
   for (const dir of transcriptDirs(boxRoot)) {
@@ -95,13 +100,14 @@ export function agentTiming(boxRoot: string): AgentTiming {
         // treating it as a new turn would restart the clock partway through the wait.
         if (entry.type === "user" && entry.isMeta !== true && !kinds.includes("tool_result")) openedAt = at;
         else if (entry.type === "assistant" && openedAt !== null && kinds.includes("text")) {
-          turns.push((at - openedAt) / 1000);
+          intervals.push({ openedAt, seconds: (at - openedAt) / 1000 });
           openedAt = null;
         }
       }
     }
   }
 
+  const turns = intervals.toSorted((a, b) => a.openedAt - b.openedAt).map((i) => i.seconds);
   const sorted = turns.toSorted((a, b) => a - b);
   return {
     turns,
