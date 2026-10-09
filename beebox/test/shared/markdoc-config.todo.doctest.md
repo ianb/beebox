@@ -149,6 +149,15 @@ lintBodyMarkdoc('{% todo assigned="user" %}\n\nCall the vet\n\n{% /todo %}').map
 => ["warning"]
 ```
 
+The frontmatter `todos:` form of a todo gets the same warning.
+
+```ts
+const { lintFrontmatterTodoAssigned } = await import("../../src/core/body-markdoc-lint.js");
+lintFrontmatterTodoAssigned({ todos: [{ text: "Call the vet", assigned: "Dana" }, { text: "Pay the bill", assigned: "me" }] })
+  .map((issue) => ({ severity: issue.severity, entry: issue.message.split(":")[0] }))
+=> [{ severity: "warning", entry: "todos[1]" }]
+```
+
 ## `see-also` nested inside a todo, with a reason and a `ref`
 
 Markdoc's HTML renderer lowercases attribute names (`sourceRef` → `sourceref`)
