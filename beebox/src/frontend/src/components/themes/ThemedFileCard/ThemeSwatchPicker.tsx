@@ -29,14 +29,21 @@ export function ThemeSwatchPicker({ path, choice, hasOverride }: { path: string;
   const chosen = hasOverride && !pairedNames.includes(choice.name) ? CARD_THEMES.filter((theme) => theme.name === choice.name) : [];
   const others = CARD_THEMES.filter((theme) => !pairedNames.includes(theme.name) && !chosen.includes(theme));
   const systemDefault = paired.at(0);
-  const swatches = (themes: readonly ThemeDescriptor[]) => themes.flatMap((theme) => theme.stocks.map((stock: string) => (
-    <Swatch key={`${theme.name}/${stock}`} theme={theme} stock={stock} pressed={choice.name === theme.name && choice.stock === stock}
-      isDefault={theme === systemDefault && stock === theme.defaultStock} disabled={mutation.isPending}
-      onSelect={() => select({ name: theme.name, stock })} />
-  )));
+  const defaultBadge = `${themeLabel(systemTheme)} default`;
+  const swatch = ({ name, label, stock, isDefault }: { name: string; label: string; stock: string; isDefault: boolean }) => (
+    <Swatch key={`${name}/${stock}`} name={name} label={label} stock={stock} pressed={choice.name === name && choice.stock === stock}
+      badge={isDefault ? defaultBadge : null} disabled={mutation.isPending}
+      onSelect={() => select({ name, stock })} />
+  );
+  const swatches = (themes: readonly ThemeDescriptor[]) => themes.flatMap((theme) => theme.stocks.map((stock: string) =>
+    swatch({ name: theme.name, label: theme.label, stock, isDefault: theme === systemDefault && stock === theme.defaultStock })));
+  // Theme names and stocks are open values: a box-authored one has no catalog
+  // swatch, so the card's own choice is drawn as written.
+  const listed = CARD_THEMES.some((theme) => theme.name === choice.name && stocksOf(theme).includes(choice.stock));
+  const unlisted = hasOverride && !listed ? swatch({ name: choice.name, label: themeLabel(choice.name), stock: choice.stock, isDefault: false }) : null;
   return (
     <section className="mt-2" aria-label="Choose card appearance" aria-busy={mutation.isPending}>
-      {chosen.length > 0 ? <SwatchGroup title="This card">{swatches(chosen)}</SwatchGroup> : null}
+      {unlisted !== null || chosen.length > 0 ? <SwatchGroup title="This card">{unlisted}{swatches(chosen)}</SwatchGroup> : null}
       <SwatchGroup title={`Goes with ${themeLabel(systemTheme)}`}>{swatches(paired)}</SwatchGroup>
       {others.length > 0 ? <details className="mt-3">
         <summary className="text-sm cursor-pointer">All card themes</summary>
@@ -53,6 +60,11 @@ export function ThemeSwatchPicker({ path, choice, hasOverride }: { path: string;
   );
 }
 
+/** A catalog theme's stocks as plain strings, to compare against an open stock value. */
+function stocksOf(theme: ThemeDescriptor): readonly string[] {
+  return theme.stocks;
+}
+
 function SwatchGroup({ title, children }: { title: string; children: ReactNode }) {
   return <div role="group" aria-label={title}>
     <h4 className="bbx-theme-swatch-group">{title}</h4>
@@ -60,23 +72,23 @@ function SwatchGroup({ title, children }: { title: string; children: ReactNode }
   </div>;
 }
 
-function Swatch({ theme, stock, pressed, isDefault, disabled, onSelect }: {
-  theme: ThemeDescriptor; stock: string; pressed: boolean; isDefault: boolean; disabled: boolean; onSelect: () => void;
+function Swatch({ name, label, stock, pressed, badge, disabled, onSelect }: {
+  name: string; label: string; stock: string; pressed: boolean; badge: string | null; disabled: boolean; onSelect: () => void;
 }) {
   return (
     <button
       type="button"
       className="bbx-theme-swatch-button"
-      aria-label={`${theme.label} — ${stock}${isDefault ? " (default)" : ""}`}
+      aria-label={`${label} — ${stock}${badge === null ? "" : ` (${badge})`}`}
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onSelect}
     >
-      <span className="bbx-card-theme bbx-card-surface bbx-theme-swatch" data-theme-composition={themeComposition(theme.name)} data-card-theme={theme.name} data-card-stock={stock} aria-hidden="true">
+      <span className="bbx-card-theme bbx-card-surface bbx-theme-swatch" data-theme-composition={themeComposition(name)} data-card-theme={name} data-card-stock={stock} aria-hidden="true">
         <span className="bbx-theme-swatch-writing">A small thought</span>
         <span className="bbx-theme-link">worth keeping</span>
       </span>
-      <span className="bbx-theme-swatch-label">{theme.label}<span>{stock}{isDefault ? " · default" : ""}</span></span>
+      <span className="bbx-theme-swatch-label">{label}<span>{stock}{badge === null ? "" : ` · ${badge}`}</span></span>
     </button>
   );
 }
