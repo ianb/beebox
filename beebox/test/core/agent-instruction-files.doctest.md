@@ -5,7 +5,7 @@ Boxes move from authored `CLAUDE.md` files to authored `AGENTS.md` through the
 runs, so every writer asks `instructionFilePath(boxRoot, dirRel)` which file to
 write. An existing file keeps its name, so an unconverted box behaves as it did
 and a half-converted one keeps each directory's own file. Only a missing file
-takes the box-level name. Plan: `docs/plans/box-agents-md.md`, Track A.
+takes the box-level name. Plan: `docs/implemented-plans/box-agents-md.md`, Track A.
 
 ```ts setup
 import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";

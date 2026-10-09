@@ -3,7 +3,7 @@
  * template-ledger entry and parked update. The whole decision, as a pure
  * function of what the runner scanned, so a doctest reaches every state with
  * no box on disk; `run.ts` is the IO around it
- * (docs/plans/box-agents-md.md, Track B).
+ * (docs/implemented-plans/box-agents-md.md, Track B).
  *
  * **Pre-scan.** Any conflict stops the run before a write. A conflict is a
  * directory holding a real `CLAUDE.md` and a real `AGENTS.md` (not a symlink,

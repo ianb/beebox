@@ -4,7 +4,7 @@ workstream: unattached
 activate-on: 2026-11-06
 category: code-quality
 area: beebox
-design: ../../beebox/docs/plans/box-agents-md.md
+design: ../../beebox/docs/implemented-plans/box-agents-md.md
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agents-md — registering the agents-md-2026-10 migration (plan Track E)

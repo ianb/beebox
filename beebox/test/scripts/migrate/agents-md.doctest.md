@@ -2,7 +2,7 @@
 
 `agents-md-2026-10` renames every box `CLAUDE.md` to `AGENTS.md` and moves its
 template-ledger entry and parked update with it
-(`docs/plans/box-agents-md.md`, Track B). `planAgentsMd` is the whole
+(`docs/implemented-plans/box-agents-md.md`, Track B). `planAgentsMd` is the whole
 decision, as a pure function of what the runner scanned. It fails closed on
 any conflict, orders parents before descendants, and is computed from a fresh
 scan, so a retry after an interruption plans only what is left.
