@@ -82,6 +82,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
   - Plan-review sections from `plan-eng-review`: stated preferences as the review spine, failure modes per codepath, user-flow edge cases, what already exists, and NOT in scope.
 - **Where it landed:** `.claude/skills/cross-model/SKILL.md`, `bin/cross-model-run`, `.claude/skills/bbx-plan/SKILL.md`, `.claude/skills/bbx-plan/TEMPLATE.md`
 
+### Imbue Studio, by Imbue
+
+- **Source:** `.agents/shared/references/user-facing-language.md` in https://github.com/imbue-ai/default-workspace-template (no licence stated for that file; we took its structure and wrote our own text)
+- **What we took:** One reference for everything the person reads: who is reading, a table of "invisible plumbing" words with lay translations, bad/good pairs, and three triggers for switching to technical words.
+- **Where it landed:** `beebox/docs/box/speaking-to-the-person.md`, the SPEAKING section of `beebox/src/core/agent-guide/guide.md`
+
 ### Jupyter, by Project Jupyter
 
 - **Source:** https://jupyter-server.readthedocs.io/en/latest/operators/security.html (BSD 3-Clause)
