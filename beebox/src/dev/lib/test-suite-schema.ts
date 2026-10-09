@@ -79,7 +79,7 @@ const auditTestObjectSchema = z.object({
   context_dir: z.string().optional(),
   /**
    * Files to write before the test (box-relative path → content). Used to
-   * stage a `CLAUDE.md` or other fixture inside `context_dir` without
+   * stage an `AGENTS.md` or other fixture inside `context_dir` without
    * checking it into the box. Cleaned up after the test runs.
    */
   fixture: z.record(z.string(), z.string()).optional(),

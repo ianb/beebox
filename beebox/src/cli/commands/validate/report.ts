@@ -28,7 +28,7 @@ export function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
 
 /** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
 export function printTextResults(results: ValidationResults): void {
-  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors } = results;
+  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, legacyInstructionErrors } = results;
   const colors = useColor();
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors });
@@ -63,7 +63,7 @@ export function printTextResults(results: ValidationResults): void {
   if (viewWarnings.length > 0) {
     console.log(`\n${viewWarnings.join("\n")}`);
   }
-  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors, ...presentationErrors, ...results.systemCardErrors];
+  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors, ...presentationErrors, ...legacyInstructionErrors, ...results.systemCardErrors];
   if (boxWideErrors.length > 0) console.log(`\n${boxWideErrors.join("\n")}`);
   if (results.canonical) {
     console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
@@ -89,7 +89,7 @@ export async function checkCommitted(boxRoot: string, { json }: { json: boolean 
   }
 }
 
-export function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, systemCardErrors }: ValidationResults): number {
+export function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, legacyInstructionErrors, systemCardErrors }: ValidationResults): number {
   return (
     (cardSummary !== null ? cardSummary.totalErrors : 0) +
     (mdSummary !== null ? mdSummary.totalErrors : 0) +
@@ -97,6 +97,6 @@ export function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacyS
     legacySchemaErrors.length +
     rootStrayErrors.length +
     reservedSegmentErrors.length +
-    presentationErrors.length + systemCardErrors.length
+    presentationErrors.length + legacyInstructionErrors.length + systemCardErrors.length
   );
 }

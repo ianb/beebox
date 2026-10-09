@@ -1,4 +1,4 @@
-/** Resolve Claude-style @file context includes for harnesses that do not. */
+/** Resolve Claude-style @file context includes in an instruction file, for harnesses that do not. */
 
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -26,8 +26,9 @@ async function readIfPresent(path: string): Promise<string | null> {
 }
 
 /** Expand include-only lines recursively, bounded to the box package. */
-export async function expandClaudeIncludes(options: {
-  claudePath: string;
+export async function expandInstructionIncludes(options: {
+  /** The root instruction file (`instructionFilePath(boxRoot, "")`, made absolute). */
+  instructionPath: string;
   boxRoot: string;
 }): Promise<string> {
   const seen = new Set<string>();
@@ -50,6 +51,6 @@ export async function expandClaudeIncludes(options: {
       await visit(included);
     }
   };
-  await visit(options.claudePath);
+  await visit(options.instructionPath);
   return sections.join("\n\n");
 }

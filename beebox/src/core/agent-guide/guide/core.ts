@@ -31,6 +31,8 @@ export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
   /** This box's physical layout; decides the BOX_CODE table's paths. */
   shape: BoxShape;
+  /** The box's instruction-file name (`instructionFileName`), named where the guide points at one. */
+  instructionFile: string;
   allCardSchemas?: readonly CardSchema[];
   /** The box-local schemas (a subset of `allCardSchemas`); their docs live in
    *  the box rather than the package. */
@@ -68,6 +70,7 @@ function guideFillers(options: AgentGuideOptions): Record<string, Filler> {
   const {
     procedures,
     shape,
+    instructionFile,
     allCardSchemas = cardSchemas.list,
     boxCardSchemas = [],
     boxTemplates = [],
@@ -81,6 +84,7 @@ function guideFillers(options: AgentGuideOptions): Record<string, Filler> {
     card_types: () => cardTypesList({ allCardSchemas, boxCardSchemas, boxTemplates }),
     directory_layout: () => directoryLayoutRows(),
     box_code_dirs: () => boxCodeRows(shape),
+    instruction_file: () => instructionFile,
     procedures: () => procedureList(procedures),
     guides: () => guideList(guides),
     personality: () => personalityBody(personalitySection),

@@ -50,7 +50,10 @@ excluded by path.
 optionsFor({}).settings
 => {
   disableClaudeAiConnectors: true,
-  claudeMdExcludes: ["/CLAUDE.md", "/CLAUDE.local.md", "/.claude/CLAUDE.md", "/.claude/rules/**"],
+  claudeMdExcludes: [
+    "/CLAUDE.md", "/AGENTS.md", "/CLAUDE.local.md",
+    "/.claude/CLAUDE.md", "/.claude/AGENTS.md", "/.claude/rules/**",
+  ],
 }
 
 optionsFor({ loadBoxContext: false }).settings.disableClaudeAiConnectors

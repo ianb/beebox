@@ -10,8 +10,12 @@
 
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
 
-/** The `build-course` skill: the pedagogical process for building a course. */
-export const BUILD_COURSE_SKILL = `---
+/**
+ * The `build-course` skill: the pedagogical process for building a course.
+ * `instructionFile` is the box's instruction-file name (`instructionFileName`),
+ * which the entry-point step tells the agent to create.
+ */
+export const buildCourseSkill = (instructionFile: string): string => `---
 name: build-course
 description: Build or revise a learning experience (a course) WITH a learner — probe what they understand, map the knowledge, plan how to present it, and track evidence-backed progress. Use when asked to teach a topic, create a course/lesson/tutorial, help someone learn or understand something, or revise/extend an existing course.
 ---
@@ -90,12 +94,12 @@ A \`material\` segment must end up either with its card ref'd or \`planned: true
 
 (If there's a real learner, their progress informs which segments to make concrete first; for a \`generic\` course there's no progress yet, and that's fine — draft for the model learner.)
 
-### 7. Make it runnable — a landmark and a scoped CLAUDE.md
+### 7. Make it runnable — a landmark and a scoped ${instructionFile}
 
-A built course still needs an **entry point** so it can be *taught*. A tutoring session is just a chat **scoped to the course's attach directory** (the folder holding all the components): opening it there makes the exposition rules and a course-local \`CLAUDE.md\` auto-load. Create three files in that attach scope:
+A built course still needs an **entry point** so it can be *taught*. A tutoring session is just a chat **scoped to the course's attach directory** (the folder holding all the components): opening it there makes the exposition rules and a course-local \`${instructionFile}\` auto-load. Create three files in that attach scope:
 
 1. A **landmark card** (\`<Course>.landmark.card\`) with a \`navigation\` role — this is what turns the course into a **chat destination** on the Landmarks page. Give it a short \`label\` (the course name), a \`symbol\`, and \`links\` to the course guide and the lesson-plan, each written as a full box path with a leading \`/\` (the guide is the \`*.course.card\` in the parent directory). (See the landmark card-rule for the fields.)
-2. A thin, **editable \`CLAUDE.md\`** — a line or two naming the course and pointing at \`../<Course>.course.card\` (the guide), then \`@course-runner.md\` to include the generic runner instructions. Keep it minimal so you (or a later session) can amend it with course-specific notes; the boilerplate lives in the included file.
+2. A thin, **editable \`${instructionFile}\`** — a line or two naming the course and pointing at \`../<Course>.course.card\` (the guide), then \`@course-runner.md\` to include the generic runner instructions. Keep it minimal so you (or a later session) can amend it with course-specific notes; the boilerplate lives in the included file.
 3. The **\`course-runner.md\`** it includes — the same for every course, so write it verbatim:
 
 \`\`\`markdown
@@ -120,7 +124,7 @@ rather than reading them out, and amend the course cards when the plan needs to
 change. Material (figures, recaps, sources) lives in \`material/\`.
 \`\`\`
 
-Opening a chat from the landmark scopes it to this directory, so the \`CLAUDE.md\` and the path-globbed exposition rules load automatically — the runner reads the course guide, follows the lesson-plan, and updates progress. You're not teaching in *this* build session; you're setting up so a future tutoring chat can.
+Opening a chat from the landmark scopes it to this directory, so the \`${instructionFile}\` and the path-globbed exposition rules load automatically — the runner reads the course guide, follows the lesson-plan, and updates progress. You're not teaching in *this* build session; you're setting up so a future tutoring chat can.
 
 ### 8. Adapt as you go
 

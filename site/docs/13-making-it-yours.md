@@ -7,7 +7,7 @@ A **box** is your own directory of **cards**, files with a structured header
 that gets checked, and most customization is itself a card or a file in the
 box.
 
-**Rules and context.** A box has standing-instruction files (`CLAUDE.md` and
+**Rules and context.** A box has standing-instruction files (`AGENTS.md` and
 `.claude/rules/`, for the curious) that the agent loads, the same mechanism a
 coding agent already uses on any programming project. Every agent turn also
 carries a hand-written guide that the engine fills in for that box (its card

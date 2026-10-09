@@ -19,7 +19,7 @@ import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { fileExists } from "../../../lib/file-exists.js";
 import { promisify } from "node:util";
-import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { lstat, mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { z } from "zod";
 import { cardSchemas, loadBoxSchemas } from "../../../schemas.js";
 import type { CardSchema } from "../../../exports/cards.js";
@@ -32,6 +32,7 @@ import {
   installSchedules,
 } from "../../box/structure/core.js";
 import { syncBoxGuidance } from "../../box/guidance-sync/core.js";
+import { guidanceSurfaceFor } from "../../box/guidance-surfaces.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../../install-template-file.js";
 import { installValidationHooks } from "../../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../../lib/box-shape.js";
@@ -48,7 +49,8 @@ import {
 } from "../compile/core.js";
 import type { ProcedureSummary } from "../compile/core.js";
 import { compileExpositionRules } from "../../compile-exposition-rules.js";
-import { ensureAgentContext } from "./claude-md.js";
+import { ensureAgentContext } from "./agents-md.js";
+import { AGENTS_MD, instructionFileName } from "../../agent-instruction-files.js";
 
 export type { ProcedureSummary } from "../compile/core.js";
 export type { GuideSummary } from "../config-cards/core.js";
@@ -275,7 +277,9 @@ export async function commitTemplateSyncChanges(
   await withBoxGitLock(repoRoot, async () => {
     const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    const toCommit = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
+    const managed = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
+    const authored = await Promise.all(managed.map((p) => isAuthoredAgentsMd(repoRoot, p)));
+    const toCommit = managed.filter((_p, i) => authored[i] !== true);
     if (toCommit.length === 0) return;
 
     // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
@@ -286,6 +290,24 @@ export async function commitTemplateSyncChanges(
       trailers: { "Triggered-By": "generateDocs" },
     });
   });
+}
+
+/**
+ * A regular-file `AGENTS.md` is the box's own instruction file, not mirror
+ * output. The `**\/AGENTS.md` mirror row still matches it until the legacy
+ * mirror is retired, so the template commit must not sweep it up. The tracked
+ * guides (`src/schemas/AGENTS.md` and the rest) are engine-installed output and
+ * stay in the commit.
+ */
+async function isAuthoredAgentsMd(repoRoot: string, relPath: string): Promise<boolean> {
+  if (relPath !== AGENTS_MD && !relPath.endsWith(`/${AGENTS_MD}`)) return false;
+  if (guidanceSurfaceFor(relPath)?.class === "tracked") return false;
+  try {
+    return (await lstat(join(repoRoot, relPath))).isFile();
+  } catch (_e) {
+    // Deleted or unreadable: a removed mirror symlink, which the commit owns.
+    return false;
+  }
 }
 
 /**
@@ -335,6 +357,7 @@ interface DocWritePlan {
   engineSourcePresent: boolean;
   personalitySection: string | undefined;
   shape: BoxShape;
+  instructionFile: string;
 }
 
 /**
@@ -343,12 +366,12 @@ interface DocWritePlan {
  * package now, `package-docs.ts`).
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape } = plan;
+  const { boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape, instructionFile } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
       withDocId({
         relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
-        content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape }),
+        content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape, instructionFile }),
       })),
     writeBoxCardDocs({ boxRoot, boxCardSchemas, boxTemplates }),
   ]);
@@ -412,11 +435,14 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Decides the paths the agent guide's BOX_CODE table names — see
   // "boxCodeRows" in agent-guide/box-shape.ts.
   const shape = await getBoxShape(boxRoot);
+  // The instruction-file name the guide's text uses: `AGENTS.md` once the box
+  // is converted, `CLAUDE.md` before.
+  const instructionFile = await instructionFileName(boxRoot);
 
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot);
 
-  await writeStaticDocs({ boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape });
+  await writeStaticDocs({ boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape, instructionFile });
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot);
@@ -428,7 +454,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
     withDocId({
       relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
-      content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, guides, shape }),
+      content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, guides, shape, instructionFile }),
     }));
 
   // Compile briefing cards to .md files

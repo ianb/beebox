@@ -34,7 +34,7 @@ doc or command that owns it. What a box contains is in
   fails with "Not in a Bee Box"; run it from the box directory, where
   `node_modules/.bin/bbx` is the engine the box is linked to.
 - **Box guidance is owned elsewhere.** To place or repair what a box agent
-  reads (box `CLAUDE.md`, managed skills, schema instructions), use the
+  reads (box `AGENTS.md`, managed skills, schema instructions), use the
   bbx-context skill; to test it, the knowledge-audit skill.
 
 ## Running against the test box

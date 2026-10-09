@@ -14,6 +14,11 @@ import { withDocId, withoutDocId } from "./docs-gen/shared.js";
  */
 const GENERATED_AGENTS_MARKER = "GENERATED from Claude guidance";
 
+/** Whether `content` is a legacy generated `AGENTS.md` (an old mirror, not authored guidance). */
+export function isLegacyGeneratedAgentsFile(content: string): boolean {
+  return content.includes(GENERATED_AGENTS_MARKER);
+}
+
 async function pathKind(path: string): Promise<"missing" | "symlink" | "file" | "directory"> {
   try {
     const info = await lstat(path);
@@ -40,8 +45,15 @@ async function ensureRelativeSymlink(linkPath: string, targetPath: string): Prom
   return true;
 }
 
-/** Basename of `_config/_template-updates` (install-template-file.ts owns the full path). */
-const TEMPLATE_UPDATES_DIR_NAME = "_template-updates";
+/**
+ * Directory names the instruction-file walk never enters. `_template-updates`
+ * (the basename of `_config/_template-updates`, which install-template-file.ts
+ * owns) holds parked copies of templates awaiting review, not active guidance.
+ * Mirroring a parked CLAUDE.md offers a Codex session a guide the box has not
+ * adopted, and the mirror dangles once the parked copy is accepted or
+ * discarded.
+ */
+export const INSTRUCTION_WALK_SKIP_DIRS: ReadonlySet<string> = new Set([".git", "node_modules", ".agents", "_template-updates"]);
 
 interface ClaudeDocScan {
   claudeDocs: string[];
@@ -54,12 +66,7 @@ async function findClaudeDocs(root: string): Promise<ClaudeDocScan> {
   const dangling: string[] = [];
   const visit = async (dir: string): Promise<void> => {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
-      // `_template-updates` holds parked copies of templates awaiting review,
-      // not active guidance. Mirroring a parked CLAUDE.md offers a Codex
-      // session a guide the box has not adopted, and the mirror dangles once
-      // the parked copy is accepted or discarded.
-      if (entry.name === ".git" || entry.name === "node_modules" || entry.name === ".agents"
-        || entry.name === TEMPLATE_UPDATES_DIR_NAME) continue;
+      if (INSTRUCTION_WALK_SKIP_DIRS.has(entry.name)) continue;
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await visit(path);
       else if (entry.isFile() && entry.name === CLAUDE_MD) found.push(path);
@@ -92,7 +99,7 @@ export async function ensureAgentsMirror(claudePath: string): Promise<string | n
   const agentsPath = join(dirname(claudePath), AGENTS_MD);
   if (await pathKind(agentsPath) === "file") {
     const content = await readFile(agentsPath, "utf8");
-    if (content.includes(GENERATED_AGENTS_MARKER)) await rm(agentsPath);
+    if (isLegacyGeneratedAgentsFile(content)) await rm(agentsPath);
   }
   return await ensureRelativeSymlink(agentsPath, claudePath) ? agentsPath : null;
 }

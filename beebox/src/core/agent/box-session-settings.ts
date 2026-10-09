@@ -14,6 +14,7 @@
 
 import { dirname, join, resolve } from "node:path";
 import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import { AGENTS_MD, CLAUDE_MD } from "../agent-instruction-files.js";
 
 type BoxSessionSettings = Required<Pick<Options, "settingSources" | "settings" | "disallowedTools">>;
 
@@ -45,18 +46,21 @@ const HOST_ACCOUNT_TOOLS = [
 
 /**
  * Instruction files in every directory above the box. The CLI walks up from
- * its working directory and loads each `CLAUDE.md` it finds as project memory,
- * so a box under the host's home directory loads `~/.claude/CLAUDE.md` even
- * without the `user` source.
+ * its working directory and loads each `CLAUDE.md` (and, when the box has no
+ * `CLAUDE.md` of its own, an `AGENTS.md`) it finds as project memory, so a box
+ * under the host's home directory loads `~/.claude/CLAUDE.md` even without the
+ * `user` source. Both names are excluded.
  */
 function ancestorInstructionFiles(boxRoot: string): string[] {
   const out: string[] = [];
   let dir = resolve(boxRoot);
   for (let parent = dirname(dir); parent !== dir; dir = parent, parent = dirname(dir)) {
     out.push(
-      join(parent, "CLAUDE.md"),
+      join(parent, CLAUDE_MD),
+      join(parent, AGENTS_MD),
       join(parent, "CLAUDE.local.md"),
-      join(parent, ".claude", "CLAUDE.md"),
+      join(parent, ".claude", CLAUDE_MD),
+      join(parent, ".claude", AGENTS_MD),
       join(parent, ".claude", "rules", "**"),
     );
   }

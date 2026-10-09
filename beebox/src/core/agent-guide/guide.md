@@ -369,7 +369,7 @@ This box root also holds `package.json`, `node_modules/`, and the box's source c
 {{box_code_dirs}}
 
 <!-- rules: box-code.where -->
-**Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart. A `CLAUDE.md` under each says what to read before writing there.
+**Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart. Each has its own `{{instruction_file}}` that says what to read before writing there.
 
 <!-- rules: box-code.not-yours -->
 **Not yours to edit.** `package.json`, `node_modules/`, lockfiles, `tsconfig.json`, and anything else at the box root outside the underscore-prefixed content areas (`_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `_tmp/`) and `src/` belong to the boxholder, not to you. Upgrading the engine — bumping the `beebox` dependency and everything that comes with it — is done with `bbx engine upgrade`, run by the boxholder from outside this session. Don't run `bbx engine upgrade` yourself unless explicitly asked to.

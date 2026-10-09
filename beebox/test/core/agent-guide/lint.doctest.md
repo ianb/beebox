@@ -199,7 +199,7 @@ tinyLint(`## ALPHA\n\n<!-- rules: alpha.one, alpha.two -->\n${"word ".repeat(250
 `generateAgentGuide` is the stripped render of the shipped `guide.md`.
 
 ```ts
-const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" } });
+const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, instructionFile: "CLAUDE.md" });
 [guide.startsWith("# Bee Box Agent Guide\n"), guide.includes("<!--"), guide.includes("{{")].join(",")
 => true,false,false
 ```
