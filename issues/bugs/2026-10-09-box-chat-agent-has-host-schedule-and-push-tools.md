@@ -31,3 +31,16 @@ Why these matter: if called, `CronCreate` and `RemoteTrigger` could create sched
 Block or omit the host-account tools (disallow list, or an explicit tool allowlist) for every box session. Decide per tool: `WebFetch`, `WebSearch` and `Monitor` may be wanted. Check that box features that need scheduling use the box's own scheduler, not these tools.
 
 Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md).
+
+## Production check (2026-10-09)
+
+Read-only scan of the production box transcripts (tool names, dates, and tool
+inputs of the calls only). Every box's sessions list these tools. Calls found:
+
+- `PushNotification`, twice on 2026-09-27, in one box chat. The agent was
+  testing the box's own push ("Test push from your Bee Box: if this reached
+  your phone, push works") and used Claude Code's push instead, which goes to
+  the host Claude account's devices. Wrong channel; no other harm found.
+- `ScheduleWakeup`: set and cancelled within the same minute in one session.
+- `SendMessage`: messages to the session's own subagents. Internal; keep it.
+- No `CronCreate`, `CronDelete`, `CronList`, or `RemoteTrigger` calls.
