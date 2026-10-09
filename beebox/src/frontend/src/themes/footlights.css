@@ -73,7 +73,6 @@
 }
 .bbx-card-surface[data-card-theme="footlights"] > .bbx-card-heading {
   position: relative;
-  padding-top: 1rem;
   border-bottom: 1px solid #947945;
   margin-top: 10px;
 }
@@ -107,4 +106,8 @@
 }
 .bbx-card-surface[data-card-theme="footlights"] > .bbx-card-properties {
   border-radius: 0;
+}
+
+.bbx-card-surface[data-card-theme="footlights"][data-card-side="front"] > .bbx-card-heading {
+  padding-top: 1rem;
 }
