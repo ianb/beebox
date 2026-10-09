@@ -41,7 +41,7 @@ owner.
   injection points, a pure decision core extracted from an IO shell — are built
   into production code deliberately."* Tests will isolate credentials with
   `BBX_AUTH_FILE` and exercise both legal file states.
-- `beebox/CLAUDE.md` requires typecheck, lint, and tests before deployment.
+- `beebox/AGENTS.md` requires typecheck, lint, and tests before deployment.
   This plan extends the auth doctests before changing behavior.
 - The shipped invite and reset capability design remains the precedent. This
   change does not change token entropy, hash-at-rest storage, TTL, single-use

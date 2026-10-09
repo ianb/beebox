@@ -45,13 +45,13 @@ and then run end-to-end on this worktree branch.
 
 The docs this plan must be evaluated against:
 
-- **`beebox/CLAUDE.md`** — the cards format contract and the
-  loader contract. `beebox/CLAUDE.md:28`: *"a handful of schemas
+- **`beebox/AGENTS.md`** — the cards format contract and the
+  loader contract. `beebox/AGENTS.md:28`: *"a handful of schemas
   with inline-attributed structure (guide, recipe, procedure,
   procedure-run, capture-session, landmark) remain on the older XML
   body until cardworks grows Markdoc-style body tags."* This plan is
   the thing that lets that sentence be deleted.
-  `beebox/CLAUDE.md:101`: *"Read before writing. Don't guess file
+  `beebox/AGENTS.md:101`: *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* — every migrator in this
   plan reads the real card before rewriting it.
 - **`beebox/code-style.md`** — `code-style.md:25`: *"NEVER use
@@ -117,7 +117,7 @@ five schemas and removes the scaffolding. Concretely:
   (`markdoc-tags-plan.md:35` — any tag with a `ref` attr renames it
   before React render) is a hard constraint this plan inherits.
 - **The migrator harness.** `scripts/migrate/*.ts` per schema, plus
-  `scripts/migrate/_warnings.ts` (moved to `beebox/src/scripts/migrate/_warnings.ts`) (`beebox/CLAUDE.md:52`) which
+  `scripts/migrate/_warnings.ts` (moved to `beebox/src/scripts/migrate/_warnings.ts`) (`beebox/AGENTS.md:52`) which
   declares known attrs/children per element and surfaces anything
   outside the allow-list — it *"Surfaced real data loss during the
   production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
@@ -266,7 +266,7 @@ its git diffs small.
 each phase result is `{status?, session-id?, git-ref?, review?,
 stdout-file?}`. `engine-run-card.ts` is rewritten from
 `createElement`/`serialize` to YAML parse-mutate-stringify (the existing
-frontmatter mutation idiom, `beebox/CLAUDE.md:41`). `gc.ts` reads
+frontmatter mutation idiom, `beebox/AGENTS.md:41`). `gc.ts` reads
 the same fields from frontmatter instead of element attrs.
 
 **Vocabulary lock-ins.** None (no body tags).
@@ -419,7 +419,7 @@ type errors that cascade; rewrite the two system prompts.
 `src/core/card-schema.ts`). Decide the fate of the ~1,812 LOC shared
 layer (refs/fs/loader/lint-format). Delete the `cardworks` package, the
 `node_modules/cardworks` symlink, the `workspace:*` dependency, and the
-pnpm-workspace entry. Update `beebox/CLAUDE.md`, root `CLAUDE.md`,
+pnpm-workspace entry. Update `beebox/AGENTS.md`, root `CLAUDE.md`,
 `docs/cards/format.md`, `docs/cards/schemas.md`.
 
 **Why this needs to change.** The whole point — no cardworks.

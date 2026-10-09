@@ -67,7 +67,7 @@ Notable consequences:
   `router-docs.ts` 908 → 429, `workstreams-app-supervisor.ts` 779 → 256,
   `agent-quotas.ts` 663 → 40, `issues.ts` 417 → 205, plus `smoke-lib.ts`,
   `doctor.ts`, `schedules.ts`, `test-ledger.ts` and four oversized test files.
-  `bin/docs/router-protocol.md` and `bin/CLAUDE.md` were re-pointed at the new
+  `bin/docs/router-protocol.md` and `bin/AGENTS.md` were re-pointed at the new
   modules.
 - One deliberate behavior change, flagged rather than hidden: the router's WS
   `upgrade` listener used to leave its rejection floating (an unhandled

@@ -19,7 +19,7 @@
  * `../../../archive/…` — outside the box, so `/api/files` 404s. An `attach/` ref
  * fails differently: resolved against the landmark's directory instead of the
  * card's attach scope. Only `parseRef` + `resolveRefPath` know the 3-form rule
- * (`beebox/CLAUDE.md` requires every ref go through them for exactly this
+ * (`beebox/AGENTS.md` requires every ref go through them for exactly this
  * reason).
  */
 

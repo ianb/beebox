@@ -3,7 +3,7 @@
 // IT SHELLS OUT RATHER THAN REACHING INTO THE STORE. `bin/comments` owns where
 // a comment lives — the root derivation, the two namespaces, containment, the
 // YAML, the locking — and this invokes it, following the precedent
-// `bin/CLAUDE.md` records for this very app: "the app invokes the stable
+// `bin/AGENTS.md` records for this very app: "the app invokes the stable
 // bin/workstreams CLI instead of reimplementing lifecycle guards."
 //
 // The alternative was a second implementation of the same write protocol on the

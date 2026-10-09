@@ -12,7 +12,7 @@ export function createTelegramConnector(boxRoot: string, telegram?: TelegramServ
 
 When no service is provided, connectors create real implementations from config files at sync time. When a fake service is injected (in tests), all API calls go through the fake instead.
 
-See `src/services/CLAUDE.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patterns.
+See `src/services/AGENTS.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patterns.
 
 ## Sync rebuilds destroy agent-added fields
 

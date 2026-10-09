@@ -53,11 +53,11 @@ or to the `{% quote %}` precedent the plan invokes.
 
 - **`{% quote %}` precedent: minimum first step, dogfood, then tweak.**
   Plan invokes this explicitly at `markdoc-tags-plan.md:3-6`.
-- **"Read before writing. Don't guess file formats"** — `beebox/CLAUDE.md`:
+- **"Read before writing. Don't guess file formats"** — `beebox/AGENTS.md`:
   *"Read before writing. Don't guess file formats, XML structures, or
   API shapes."* Tag-authoring agents need enough schema-level guidance
   that they don't invent attribute names.
-- **Validation-on-load** — `beebox/CLAUDE.md`:
+- **Validation-on-load** — `beebox/AGENTS.md`:
   *"Cards validate on load. `bbx validate` checks all cards..."* Tag
   misuse must produce a useful agent-facing error via the existing
   PostToolUse hook and `Markdoc.validate(ast, config)` (per the

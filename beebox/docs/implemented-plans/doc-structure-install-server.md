@@ -111,7 +111,7 @@ Stale ref: `doc-check`. Hand-edit drift: periodic review.
 
 `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
 daemon), `secrets.md`, `publishing.md`, `google-setup.md` and the connector
-setup docs (next cluster). The scripts themselves. `deploy/CLAUDE.md`.
+setup docs (next cluster). The scripts themselves. `deploy/AGENTS.md`.
 
 ## Open design questions
 
@@ -157,7 +157,7 @@ Questions (protocol as in the pilot; the allowed area adds
 | 2 | yes | 8 | adding-a-box.md#4 | 4 agreeing plus 1 conflicting (deploy README "Adding connector secrets") |
 | 3 | yes | 5 | adding-a-box.md#3 | 3 (also deploy README, security-overview) |
 | 4 | yes | 3 | adding-a-box.md#2 | 3 (also deploy README Systemd, server-operations) |
-| 5 | yes | 3 | server-operations.md#Rolling back | 3 (also deploy README, deploy/CLAUDE.md) |
+| 5 | yes | 3 | server-operations.md#Rolling back | 3 (also deploy README, deploy/AGENTS.md) |
 | 6 | yes | 3 | deploy/README.md#Git-drain | 1 |
 | 7 | yes | 3 | docker-install.md#Public domain | 1 |
 | 8 | yes | 3 | server-operations.md#Claude Code credentials | 2, conflicting (deploy README env section) |
@@ -175,7 +175,7 @@ see a contradiction. The location column is what records them.
 | 2 | yes | 5 | server/boxes.md#Connector secrets | 1 plus secrets.md as the store's home |
 | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the security docs are outside this cluster |
 | 4 | yes | 3 | server/boxes.md#Register it with the hub | 1 |
-| 5 | yes | 5 | server/deploying.md#Rolling back | 1 (deploy/CLAUDE.md, an agent file, restates it) |
+| 5 | yes | 5 | server/deploying.md#Rolling back | 1 (deploy/AGENTS.md, an agent file, restates it) |
 | 6 | yes | 4 | server/provisioning.md#Git-drain drop-in | 1 |
 | 7 | yes | 5 | install/docker.md#Public domain | 1 |
 | 8 | yes | 12 | server/configuration.md#Service-user logins | 1 |

@@ -40,10 +40,10 @@ the header carries the same text and is checkable from this machine.
 - `beebox/docs/engineering-principles.md:23` — **2. Exhaustiveness is
   enforced.** The session has a small set of roles. A Swift enum with an
   exhaustive `switch` is the right shape.
-- `ios-app/CLAUDE.md:36` — *"The deployment target is iOS 17; newer APIs
+- `ios-app/AGENTS.md:36` — *"The deployment target is iOS 17; newer APIs
   require availability checks and an older-system fallback."* One option in
   this plan is iOS 26.0 only.
-- `ios-app/CLAUDE.md:213` — *"A change is not fully verified when it depends
+- `ios-app/AGENTS.md:213` — *"A change is not fully verified when it depends
   on camera hardware, iCloud Photos, microphone/speech models, audio
   interruptions, background execution, QR pairing, signing, or physical
   keyboard/safe-area behavior until it passes on a real phone."* This plan
@@ -301,7 +301,7 @@ Each option, with its reason:
   because the latter is deprecated in this SDK and would add a build warning;
   the constants are identical (`:468-487`).
 - **`.bluetoothHighQualityRecording` when available (iOS 26+).** Behind
-  `if #available(iOS 26.0, *)`, per `ios-app/CLAUDE.md:36`. On supporting
+  `if #available(iOS 26.0, *)`, per `ios-app/AGENTS.md:36`. On supporting
   AirPods it keeps full-bandwidth audio in both directions; elsewhere the
   header specifies HFP fallback (`:594`), which is the pre-iOS-26
   behaviour. There is no downside branch to write.
@@ -325,7 +325,7 @@ not two.
 
 **First implementation chunk.** The new file plus
 `ios-app/BeeBoxTests/AudioSessionRoutingTests.swift`, plus the four
-`project.pbxproj` entries each new file needs (`ios-app/CLAUDE.md:120-133`).
+`project.pbxproj` entries each new file needs (`ios-app/AGENTS.md:120-133`).
 No call site changes yet. No open questions inside this chunk.
 
 ### Track 2 — install the idle configuration, and restore it on every stop

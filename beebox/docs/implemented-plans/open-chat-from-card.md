@@ -42,13 +42,13 @@ A cross-model (codex) review ran against the real source. What changed, and why:
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess file formats, XML
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess file formats, XML
   structures, or API shapes."* The plan reuses verified shapes (`?card=` param,
   `lastSessionForDirectory`) rather than inventing parallel ones.
-- `beebox/CLAUDE.md` (HTTP endpoints) — *"HTTP endpoints go in tRPC by default.
+- `beebox/AGENTS.md` (HTTP endpoints) — *"HTTP endpoints go in tRPC by default.
   Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod."* The new
   resolver is a tRPC query on the existing `chat` router.
-- `beebox/CLAUDE.md` ("don't add features beyond what the task requires"). The
+- `beebox/AGENTS.md` ("don't add features beyond what the task requires"). The
   user chose navigate-to-chat over a second sidebar surface specifically to avoid net-new
   layout; the plan honors that — no new panel component.
 - `beebox/code-style.md` — no default parameters, max 2 positional params (the new

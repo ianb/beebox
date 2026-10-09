@@ -70,7 +70,7 @@ When time has passed since I shared the tabs, I want Apply to stop before it cha
 - Engineering principle 9, **Formal structure for essential complexity**, applies to the multi-step apply and undo state machines. `beebox/docs/engineering-principles.md:108`: *"Where hard code can't be made simple, make it explicit rather than implicit."*
 - Engineering principle 10, **Testability is architectural**, requires a pure snapshot comparator and a pure operation compiler around a small Chrome API shell. `beebox/docs/engineering-principles.md:118`: *"Seams — clock injection, fs/agent injection points, a pure decision core extracted from an IO shell — are built into production code deliberately."*
 - The card schema is the validation contract. `beebox/src/cards/schema.ts:192`: *"A parse-time cross-field refinement applied to the whole frontmatter object"* is *"fail-closed for invariants that must never reach interior code."*
-- Clerk remains a surface, not an engine. `beebox-clerk/CLAUDE.md:3`: *"Clerk is a surface, not an engine: it routes content ... into a box's clerk API; the box does the thinking."* The extension owns browser identity and safe execution. The box owns the proposed organization.
+- Clerk remains a surface, not an engine. `beebox-clerk/AGENTS.md:3`: *"Clerk is a surface, not an engine: it routes content ... into a box's clerk API; the box does the thinking."* The extension owns browser identity and safe execution. The box owns the proposed organization.
 - This is an experiment. Prefer an explicit user step and an honest limitation over durable orchestration or extra box writes. The box-side addition is one card schema, one Clerk intake mutation, one renderer, and extensions to the existing relay vocabulary. Apply and Undo state stays local to Clerk.
 - Scope stays narrow. This plan adds explicit sharing, normal Chrome windows, Apply, and a limited Undo. It does not add tab-group support, background synchronization, live collaboration, or general browser automation.
 
@@ -96,7 +96,7 @@ This reuse follows principles 8 and 10.
 
 `beebox-clerk/src/entrypoints/box-relay.content.ts:48`: *"Full gate: URL under an enabled box AND a valid same-origin identity meta."* `beebox-clerk/src/entrypoints/background.ts:121`: *"Re-reads the live tab record."* The following comment says never to trust `sender.tab.url` for authorization. Reuse both authorization checks for Apply and Undo.
 
-`beebox-clerk/CLAUDE.md:77`: *"It holds no authority"* describes the content script. Keep that rule. The background service worker remains the only component that can read the local transfer record or call mutating Chrome APIs.
+`beebox-clerk/AGENTS.md:77`: *"It holds no authority"* describes the content script. Keep that rule. The background service worker remains the only component that can read the local transfer record or call mutating Chrome APIs.
 
 This reuse follows principles 3 and 8.
 

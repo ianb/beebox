@@ -44,11 +44,11 @@ they are direction, not open questions:
 
 ## Stated preferences this plan trades against
 
-- `beebox/CLAUDE.md:101` — *"Read before writing. Don't guess
+- `beebox/AGENTS.md:101` — *"Read before writing. Don't guess
   file formats... This project has specific conventions that differ
   from defaults."* This plan reuses existing state-file, route, and
   guide patterns rather than inventing new ones.
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"HTTP endpoints go in
+- `beebox/AGENTS.md` (Behavioral Notes) — *"HTTP endpoints go in
   tRPC by default... Raw Fastify routes ... are only for things that
   don't fit the tRPC request/response shape: file upload/download,
   OAuth redirects, webhooks, and the `/chat/send` POST (it needs the
@@ -57,10 +57,10 @@ they are direction, not open questions:
   the request user, so it goes in **tRPC** — the default. (An earlier
   draft proposed a raw route citing a `getSessionUser` need; that need
   doesn't exist in v1 — see What already exists.)
-- `beebox/CLAUDE.md` (Behavioral Notes) — *"Keep source and docs
+- `beebox/AGENTS.md` (Behavioral Notes) — *"Keep source and docs
   generic — never hardcode personal names ... Refer to 'the user' or
   'the boxholder'."* All prose/guide text stays generic.
-- `beebox/CLAUDE.md` (Cards) — the don't-build-beyond-the-task
+- `beebox/AGENTS.md` (Cards) — the don't-build-beyond-the-task
   rule. v1 is coords + get only; geocoding, history, and per-user keying
   are explicitly out of scope.
 - `beebox/code-style.md` — no default parameters, max 2 positional

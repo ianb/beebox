@@ -64,7 +64,7 @@ build automatically the next time the extension reloads.
 
 Lint/style comes from `@ianbicking/personal-vibe-check` (workspace package) —
 the eslint config is `vibeCheck({ react: true })` with **no overrides**; fix
-code, never weaken rules (see monorepo CLAUDE.md). Monorepo root owns git
+code, never weaken rules (see monorepo AGENTS.md). Monorepo root owns git
 hooks; this package has no husky setup.
 
 ## Box relay (Track C — silent captureVisibleTab)

@@ -55,7 +55,7 @@ is that `workstream: elixir-skills-review` may mean *actively owned by a live
 session* or *touched once by something collected weeks ago*, and nothing marks
 which.
 
-`issues/CLAUDE.md` already separates `workstream:` (ownership) from
+`issues/AGENTS.md` already separates `workstream:` (ownership) from
 `discovered-in:` (provenance), which is the right distinction — but neither
 field carries liveness, and ownership by a workstream that no longer exists is
 not really ownership.

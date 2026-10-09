@@ -19,7 +19,7 @@
  * checkout that HAS a deploy target — see {@link prodAuditGate}'s refusal when
  * it's missing outside a dry run.
  *
- * A watch that cannot watch must refuse (root CLAUDE.md / the authoring
+ * A watch that cannot watch must refuse (root AGENTS.md / the authoring
  * skill): an ssh failure is a run failure (non-zero exit), not a skipped
  * check.
  *

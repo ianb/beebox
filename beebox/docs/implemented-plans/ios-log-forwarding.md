@@ -29,7 +29,7 @@ upload, the boxholder wants the box itself to hold a trace of why — the error,
 the file counts and sizes, the network condition — so the failure can be
 diagnosed later without the phone attached to Xcode. Second situation: the
 boxholder reports "the app did something weird yesterday"; an agent reads
-`client-debug.log` (as `beebox/CLAUDE.md` already instructs for web
+`client-debug.log` (as `beebox/AGENTS.md` already instructs for web
 issues) and sees the native-side story too, tagged so iOS and web entries are
 distinguishable.
 
@@ -50,7 +50,7 @@ undiagnosable. Related filed issue:
   human needs to investigate… carries enough context to debug from the line
   alone"); "Never silently ignore errors — at minimum log them"; no default
   parameters / max-2-positional conventions apply to the TS side.
-- `beebox/CLAUDE.md` — "Check client debug logs when debugging frontend
+- `beebox/AGENTS.md` — "Check client debug logs when debugging frontend
   issues" (this plan extends that one debugging surface to native);
   "don't add features beyond what the task requires" (bounds the queue/retry
   machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
@@ -395,7 +395,7 @@ Most of the template's seven target card-vocabulary work; the ones that apply:
 ## Knowledge audits
 
 No new agent-facing *concept*: agents already know "check
-`.beebox/client-debug.log`" from `beebox/CLAUDE.md`; iOS entries
+`.beebox/client-debug.log`" from `beebox/AGENTS.md`; iOS entries
 appear in the same place with a `[ios]` tag, and `docs/client-debug-log.md` is
 updated in chunk 1. Skip a knowledge-audit entry with that rationale — the
 convention being audited (read the client debug log) already exists and is

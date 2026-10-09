@@ -44,11 +44,11 @@ same Admin component becomes the invite-minting surface.
   lock, and auth-route registration rather than adding competing mechanisms.
 - `docs/engineering-principles.md:116-125`: expiry, contention, and injected
   storage failures need deliberate seams and deterministic tests.
-- `beebox/CLAUDE.md`: ordinary APIs use tRPC, while OAuth-like root auth
+- `beebox/AGENTS.md`: ordinary APIs use tRPC, while OAuth-like root auth
   pages and cookie-setting browser responses may use raw Fastify routes. Invite
   GET/POST and password-change POST are deliberate raw auth routes. Owner invite
   minting remains an ordinary tRPC mutation.
-- `beebox/CLAUDE.md`: the credential file is global. No existing `bbx auth`
+- `beebox/AGENTS.md`: the credential file is global. No existing `bbx auth`
   behavior or `--agent-confirmed` guard changes. The first cut adds no new CLI
   command.
 - `code-style.md:24-51`: use typed failures, minimal catches, and the shared

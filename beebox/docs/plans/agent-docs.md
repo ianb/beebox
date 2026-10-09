@@ -227,7 +227,7 @@ would truncate in most fetchers and is the flat dump the framing rules out.
 **Generated.** A new export-only script, `beebox/scripts/export-box-docs.ts` (moved to `beebox/src/scripts/export-box-docs.ts`),
 prints the engine doc set (`engineDocs()` from `package-docs.ts`) as JSON on
 stdout with no filesystem side effect. The site build shells out to it
-(site/ stays free of beebox imports, as `site/CLAUDE.md` requires) and
+(site/ stays free of beebox imports, as `site/AGENTS.md` requires) and
 rewrites the set into `dist/docs/reference/`. The README becomes
 `reference/index.md`; the 55 `card-*.md` rows are split into
 `reference/cards/index.md`. Cost: one tsx invocation per build.
@@ -241,7 +241,7 @@ always current. The dev router decides whether to rebuild from the manifest
 without running the export, so it can serve a reference set that lags an
 engine edit until the next explicit `pnpm --dir site build` or any
 `generateDocs` run refreshes `beebox/box-docs/.hash` (which the manifest
-also folds in). Accepted as dev-only staleness; noted in `site/CLAUDE.md`.
+also folds in). Accepted as dev-only staleness; noted in `site/AGENTS.md`.
 
 **Promoted.** A single reviewable list, `site/docs-manifest.yaml`, one entry
 per published doc: repo path, published path, section, one-line description
@@ -395,7 +395,7 @@ tests, how a change lands), a `## Start here` list in reading order, then
 every doc under `docs/dev/`, then the directories a contributor also needs.
 `llms.txt` links it under `## Contributing`. The dev set is the formerly
 held-back process docs plus the engine's own agent instruction files
-(`beebox/CLAUDE.md`, `code-style.md`, `frontend.md`), which are the most
+(`beebox/AGENTS.md`, `code-style.md`, `frontend.md`), which are the most
 useful contributor pages of all. Anything authored for contributors that a
 repo agent could also use lives in the repo and is promoted, not authored on
 the site: the contributing page is the root `CONTRIBUTING.md`. Excluded

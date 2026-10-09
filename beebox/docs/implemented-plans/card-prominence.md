@@ -80,7 +80,7 @@ Grep of the queue for `prominen`, `featured`, `entry point`, `landmark`,
 - **#12 The maintainer is usually an agent**: the level names and the agent
   guidance are written for an agent deciding on one card with no memory of
   this plan.
-- `beebox/CLAUDE.md` migration rule and the `bbx-migration` boundary: a
+- `beebox/AGENTS.md` migration rule and the `bbx-migration` boundary: a
   landmark's `links:` gains a derived counterpart on real boxes; the
   migration is additive and idempotent.
 - Boxholder direction, this session: "We'll probably have more than one

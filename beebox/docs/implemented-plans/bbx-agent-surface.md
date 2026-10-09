@@ -84,7 +84,7 @@ rename over an alias window. Recorded here rather than re-asked.
   a whole family on one side — puts either a daemon-lifecycle verb on the agent
   surface or a read the agent legitimately wants behind the engine namespace.
   The name stays the same in both places, so there is still one name per act.
-- **`beebox/CLAUDE.md:5`**: "Work only on the requested problem. Do not expand
+- **`beebox/AGENTS.md:5`**: "Work only on the requested problem. Do not expand
   scope into adjacent cleanup." The audit turned up dead surface (`scenario`,
   five stub verbs, three deprecated aliases). Those are removed because the
   boxholder asked for them to be, verb by verb, not swept up on the plan's own
@@ -398,13 +398,13 @@ agent entries.
 statement, and add the consistency check between the generated reference and the
 table.
 
-**Why this needs to change.** `beebox/CLAUDE.md:3` says "`bbx` is the
+**Why this needs to change.** `beebox/AGENTS.md:3` says "`bbx` is the
 command-line interface" and `README.md:5` says "the `bbx` CLI is the interface".
 The audit issue records a live instance: a main-session agent ran `bbx health`
 and `bbx scheduler status` against real boxes as ordinary diagnostics, and
 nothing in the repo told it not to.
 
-**Direction.** A short paragraph in `beebox/CLAUDE.md`, which
+**Direction.** A short paragraph in `beebox/AGENTS.md`, which
 `bin/generate-agents-md.ts` mirrors into `AGENTS.md`, so it reaches both agent
 families from one place. The four audiences, per the issue: box agents get the
 everyday surface; operators and unit files get `bbx engine`; **coding agents
@@ -563,7 +563,7 @@ check is what stops the drift this issue was filed about.
 **Does `field-test` belong in `bin/` instead?** The boxholder raised this. Lean:
 no. It is 4,088 lines under `src/field-test/` importing beebox internals
 throughout, with its own design doc (`docs/plans/agent-field-tests.md`); `bin/`
-is the monorepo's thin-launcher area (`bin/CLAUDE.md`). `bbx engine field-test`
+is the monorepo's thin-launcher area (`bin/AGENTS.md`). `bbx engine field-test`
 keeps it where its code is while taking it off the agent surface. Recorded as a
 question because the boxholder asked it, not because the plan is unsure.
 

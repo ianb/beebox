@@ -210,7 +210,7 @@ and an nginx file that reaches the live server at all.
   `INTERRUPTED_BY` and exits 128+n. `deploy_exit` branches on
   `INTERRUPTED_BY`, not on `rc >= 128`. Exit 255 prints
   `Deploy failed (exit 255: the server could not be reached over ssh)` —
-  keeping the `Deploy failed` prefix that `deploy/CLAUDE.md`'s poll matches —
+  keeping the `Deploy failed` prefix that `deploy/AGENTS.md`'s poll matches —
   notifies "❌ beebox deploy FAILED — server unreachable", and chains like any
   other failure.
 - **First chunk:** the trap change and a doctest that runs `deploy_exit`'s
@@ -310,7 +310,7 @@ Skip: purely operational infrastructure; no box agent sees any of it.
 3. Track B page module, build script, page doctest.
 4. Track B helper + helper doctest.
 5. Track C wiring in `deploy.sh`, phase timestamps, `deploys.jsonl`; docs in
-   `deploy/README.md` and `deploy/CLAUDE.md`.
+   `deploy/README.md` and `deploy/AGENTS.md`.
 6. Cross-model review; fixes.
 
 ## Rollout shape

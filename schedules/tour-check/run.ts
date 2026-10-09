@@ -9,7 +9,7 @@
  *
  * 1. Confirms the dev router is answering. Tours drive the running app through
  *    it; with the router down there is nothing to walk, and the boxholder is
- *    the only one who may start it (it is shared — see the root CLAUDE.md). That
+ *    the only one who may start it (it is shared — see the root AGENTS.md). That
  *    is a complete finding on its own, so it alerts rather than handing off.
  * 2. Lists what landed on `main` in the last two cadences, restricted to the
  *    paths a tour walks. Those landings are the session's evidence of

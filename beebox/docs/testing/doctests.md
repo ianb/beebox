@@ -75,7 +75,7 @@ The files themselves are the catalog: `ls test/**/*.doctest.md`.
 
 ### Service fakes
 
-External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full service layer docs: `src/services/CLAUDE.md`.
+External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full service layer docs: `src/services/AGENTS.md`.
 
 ### Pattern
 

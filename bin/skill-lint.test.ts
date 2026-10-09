@@ -1,7 +1,7 @@
 /**
  * Tests for `bin/skill-lint.ts` against throwaway `.claude/` trees.
  *
- * Note on tier: bin/CLAUDE.md prefers doctests for new `bin/` tooling; the
+ * Note on tier: bin/AGENTS.md prefers doctests for new `bin/` tooling; the
  * boxholder asked for this file beside the lint, as `bin/schedules-lint.test.ts`
  * sits beside `bin/schedules lint`, and root `pnpm test` runs `bin/*.test.ts`.
  *

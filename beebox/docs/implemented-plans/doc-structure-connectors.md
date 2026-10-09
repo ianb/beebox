@@ -47,7 +47,7 @@ Stale facts found by reading against the code (2026-09-25), fixed in chunk 2:
 | Page | Says | Code |
 |---|---|---|
 | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connectors/google-calendar.secret.json` | `google-calendar-state.ts:62`: `_bookkeeping/connectors/google-calendar-state.json`; tokens in the central store (`google-token-store.ts`) |
-| calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setup.md`, `src/connectors/CLAUDE.md`) |
+| calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setup.md`, `src/connectors/AGENTS.md`) |
 | connectors.md inventory | Drive card types: `sheet` | `gsheet`, `gdoc` (handlers), `gfolder`, `glink` |
 
 Target tree:
@@ -83,7 +83,7 @@ Stale ref: `doc-check`. Hand-edit drift: periodic review.
 
 ## NOT in scope
 
-`secrets.md` (the store is its own subject), `src/connectors/CLAUDE.md`,
+`secrets.md` (the store is its own subject), `src/connectors/AGENTS.md`,
 `server/configuration.md`'s Google OAuth env vars.
 
 ## Open design questions

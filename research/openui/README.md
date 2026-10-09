@@ -4,7 +4,7 @@ Research date: 2026-10-08. OpenUI ([openui.com](https://www.openui.com/),
 [thesysdev/openui](https://github.com/thesysdev/openui)) is Thesys Inc.'s
 "open standard for intelligent UI": a model streams UI in a line DSL
 (OpenUI Lang) that a renderer composes from host-registered components.
-Snapshot, not a living doc; see [research/CLAUDE.md](../CLAUDE.md).
+Snapshot, not a living doc; see [research/AGENTS.md](../AGENTS.md).
 
 ## Documents
 

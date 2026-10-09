@@ -42,7 +42,7 @@ retries. Not a duplicate; noted so the two don't grow into each other.
 - **Boxholder ruling, 2026 (recorded in session memory): nothing retries
   forever** — bound retries in time, then strand into a visible terminal state.
   This plan's first track is that rule applied to a place that violates it.
-- **`beebox/CLAUDE.md` — no features beyond the task.** Track 3's smallest
+- **`beebox/AGENTS.md` — no features beyond the task.** Track 3's smallest
   version is one boolean; the plan says explicitly what more would buy.
 
 ## What already exists

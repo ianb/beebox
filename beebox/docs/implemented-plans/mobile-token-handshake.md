@@ -27,9 +27,9 @@ box-scoped signed cookie (`bbx_mobile`) carries navigations and WebSocket upgrad
   `issues/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md`'s first bullet.
 - **#11 (enforcement beats convention)** — no lint suppressions; the existing
   `max-params`/`no-restricted-syntax` discipline holds.
-- **`beebox/CLAUDE.md`** — the mobile wire contract is documented in
+- **`beebox/AGENTS.md`** — the mobile wire contract is documented in
   `docs/mobile-contract.md` and mirrored in Swift + shared fixtures; a wire change updates
-  all of them in the same commit (per `ios-app/CLAUDE.md`'s "Architecture boundary").
+  all of them in the same commit (per `ios-app/AGENTS.md`'s "Architecture boundary").
 - **Boxholder standing preference:** bias toward strict/fail-closed on anything
   auth-adjacent; consolidate duplicates even when it means touching more callers.
 
@@ -76,7 +76,7 @@ the cookie verification helper.
 **Why the cookie cannot be `bbx_session`.** `auth.ts:276` is explicit: *"the session-cookie
 secret is symmetric (HMAC), so any box that can VERIFY a cookie could also FORGE one for a
 sibling box. Under the plan's trust model (hub trusted, boxes mutually untrusting) that is
-unacceptable."* `src/hub/CLAUDE.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
+unacceptable."* `src/hub/AGENTS.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
 withholds `BBX_SESSION_SECRET` from boxes. So `bbx_mobile` must be signed with a **per-box**
 secret that a box may legitimately hold, because forging it only ever grants access to the
 box that already owns it.
@@ -492,7 +492,7 @@ part a future reader most needs.
   `Authorization: Bearer <token>` and that its URL has no `mobileToken` query item, plus the
   nil-token case. Note this is a **new test file** — there is no existing `ChatWebView` or
   `PairedBoxStore` coverage in `BeeBoxTests`, so it needs the full four-entry
-  `project.pbxproj` treatment described in `ios-app/CLAUDE.md`.
+  `project.pbxproj` treatment described in `ios-app/AGENTS.md`.
 
 Not chasing coverage — these track the Failure-modes table's "Test exists?" column and the
 substantial new codepaths, per `docs/testing.md`.

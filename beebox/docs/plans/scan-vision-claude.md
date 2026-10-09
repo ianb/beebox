@@ -27,11 +27,11 @@ The numbers cited below are from that report.
   resilient-not-silent (a misaligned batch must fail loudly, not
   misattach cards), and types-are-structure (one Zod schema as the
   source of truth for the wire shape).
-- `beebox/CLAUDE.md` — "Services — every external dependency is
+- `beebox/AGENTS.md` — "Services — every external dependency is
   wrapped in a typed interface with real + fake implementations"; "Read
   before writing"; the box-generic rule (no personal names in shared
   text).
-- `beebox/src/services/CLAUDE.md` — the interface/real/fake pattern,
+- `beebox/src/services/AGENTS.md` — the interface/real/fake pattern,
   named-params rule, `describe()` on fakes.
 - `beebox/code-style.md` — custom error classes; fail-closed
   ("bias toward strict"); no third hand-written schema (DRY on the wire
@@ -358,7 +358,7 @@ export interface ScanVisionService {
   `imagePaths` (default: alternating photo/back with mutual pairing;
   overridable per-call script), `calls` array, `failWith`/`failTimes`
   knobs for retry-path tests, `describe()`. Follows
-  `src/services/CLAUDE.md` named-params + describe rules.
+  `src/services/AGENTS.md` named-params + describe rules.
 
 ### Backend selection
 

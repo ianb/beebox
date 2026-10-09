@@ -1,12 +1,12 @@
 ---
 name: bbx-context
-description: Design or troubleshoot durable guidance loaded by box agents, including box CLAUDE.md files, path rules, schema instructions, and box docs. Use to place, trim, or repair box-agent context; not for the dev repo's own CLAUDE.md.
+description: Design or troubleshoot durable guidance loaded by box agents, including box CLAUDE.md files, path rules, schema instructions, and box docs. Use to place, trim, or repair box-agent context; not for the dev repo's own AGENTS.md.
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
 # bbx-context
 
-Route one durable piece of box-agent guidance to the right surface. Scope: a box's surfaces (`CLAUDE.md`, nested `CLAUDE.md`, `.claude/rules/`, schema `instructions`, box docs), not the dev repo's `CLAUDE.md`. The full prompt-stack review is `beebox/docs/prompts/review.md`.
+Route one durable piece of box-agent guidance to the right surface. Scope: a box's surfaces (`CLAUDE.md`, nested `CLAUDE.md`, `.claude/rules/`, schema `instructions`, box docs), not the dev repo's AGENTS.md. The full prompt-stack review is `beebox/docs/prompts/review.md`.
 
 ## Attention budget
 

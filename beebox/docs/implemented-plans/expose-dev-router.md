@@ -29,7 +29,7 @@ password (owner); and the paired **iOS app must work** through it.
   becomes the identity layer; **validate-at-boundaries** (auth resolved at the
   router edge with current code); **don't-be-resilient-to-the-impossible**
   (the local channel is a real capability, not a spoofable header).
-- `beebox/CLAUDE.md` — "Read before writing"; the "don't add features
+- `beebox/AGENTS.md` — "Read before writing"; the "don't add features
   beyond the task" rule bounds this to exposure + its auth, not tailnet-identity
   SSO.
 - `code-style.md` — no default params, max-2-positional, no `any`, blessed cast
@@ -434,7 +434,7 @@ Verified by C's anonymous-denial probe over Serve.
 
 Skip, with rationale: no box-agent-facing concept (no card tag/schema/rule an
 agent must recall). New surface is operator/CLI + dev-infra, documented in
-`bin/CLAUDE.md` (the "Dev auth is always-on / login broken behind prefix" section
+`bin/AGENTS.md` (the "Dev auth is always-on / login broken behind prefix" section
 gets rewritten: login works behind the prefix; the router authenticates and is
 exposable; local CLI uses the socket) and the tailscale docs.
 
@@ -528,7 +528,7 @@ exposable; local CLI uses the socket) and the tailscale docs.
    served proof — its record is teardown-bookkeeping, not a startup guard, so
    record-only-proven is correct; a hand-rolled *ungated* served router falls to
    fail-closed `posture-ambiguous`.)
-9. **Docs** `bin/CLAUDE.md`, tailscale docs, admin `TailscaleSection`
+9. **Docs** `bin/AGENTS.md`, tailscale docs, admin `TailscaleSection`
    ("on a dev machine, `bbx tailscale setup` exposes the whole authenticated
    router"). Close the login-prefix bug + the expose-dev-checkout issue.
 

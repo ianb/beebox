@@ -215,7 +215,7 @@ export function useEmissionPersistence(opts: {
   }, [emissionStore, boxSlug]);
 
   // Debounced persist on every emission change, matching the keystroke-
-  // isolation invariant (components/chat/CLAUDE.md): this subscribes to the
+  // isolation invariant (components/chat/AGENTS.md): this subscribes to the
   // store directly, not via React state, so a keystroke never re-renders
   // this hook's owner.
   useEffect(() => {

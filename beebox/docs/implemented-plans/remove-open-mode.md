@@ -54,7 +54,7 @@ removed.
 
 None needed — purely internal surface removal. (The pattern "test-only
 capability via constructor injection instead of env" is the codebase's own
-services convention, `src/services/CLAUDE.md`.)
+services convention, `src/services/AGENTS.md`.)
 
 ## Direction
 

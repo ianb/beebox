@@ -45,7 +45,7 @@ becomes a cluster query; `/finish` notes in B when it closes an A that B is
 ## Against
 
 329 open items, most with nothing worth linking; agents will pad the field;
-it is a schema change (`issues/CLAUDE.md` + `KNOWN_FRONTMATTER_KEYS` in
+it is a schema change (`issues/AGENTS.md` + `KNOWN_FRONTMATTER_KEYS` in
 `workstreams-app/src/server/main/issue-domain.ts`) and a parser/browser change.
 `superseded-by` alone is the cheap, clearly useful half if the rest is rejected.
 

@@ -11,7 +11,7 @@ import Foundation
 /// `<upload>` message.
 ///
 /// Deliberately NOT built on `CaptureAPI`: composer attachments must not route
-/// through capture staging (`ios-app/CLAUDE.md`), and the bulk plan chose a
+/// through capture staging (`ios-app/AGENTS.md`), and the bulk plan chose a
 /// dedicated uploader over a parameterized capture coordinator
 /// (`docs/implemented-plans/bulk-file-upload.md` §4). It does reuse capture's
 /// HTTP outcome vocabulary — `CaptureRequestOutcome` / `CaptureRejection` /

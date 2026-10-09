@@ -38,7 +38,7 @@ two are untouched).
   a second credential or a checkout heuristic.
 - #10 *Testability is architectural* — the decision "what does this credential
   mean for this box" becomes a pure-ish function with a `makeTmpBox` doctest.
-- `beebox/CLAUDE.md` "Never change credentials to unblock yourself":
+- `beebox/AGENTS.md` "Never change credentials to unblock yourself":
   the plan adds no credential and mints no session.
 - Precedent: `core/browse-key.ts` (the last credential added; its header
   explains why the agent token must not be widened — this plan keeps that).

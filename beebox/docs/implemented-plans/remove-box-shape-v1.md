@@ -97,7 +97,7 @@ skill becomes a static constant.
   to do each thing** (collapse the two-arm `boxCodePaths` and the tricks-skill
   fork to a single form), **#1 Types are structure** (drop `LEGACY_SHAPE_VERSION`
   and the shape-note fields that only encoded the v1/v2 difference).
-- `beebox/CLAUDE.md` — "don't add features beyond what the task requires";
+- `beebox/AGENTS.md` — "don't add features beyond what the task requires";
   the migration-manifest append-only invariant (`docs/cards/migrations.md`).
 - `beebox/code-style.md` — no default params, exhaustiveness, strict casts.
 - Boxholder decisions in-thread (2026-07-11): "remove the migration entirely,

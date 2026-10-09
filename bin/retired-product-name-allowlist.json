@@ -228,7 +228,7 @@
     "reason": "The exploration records the former repository name as historical context."
   },
   {
-    "path": "site/CLAUDE.md",
+    "path": "site/AGENTS.md",
     "occurrenceClass": "kebab-name",
     "expectedCount": 1,
     "reason": "The site authoring guidance names the former repository only to describe source provenance."

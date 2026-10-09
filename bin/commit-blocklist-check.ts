@@ -30,11 +30,11 @@
  *                      matches by basename at any depth, so `file:package.json`
  *                      exempts every package.json). Coarse: it blinds the guard to
  *                      the whole file, so prefer a `!` allow for a specific token.
- * See bin/CLAUDE.md.
+ * See bin/AGENTS.md.
  *
  * Note: a local hook is bypassable (`git commit --no-verify`); pair it with a
  * server-side check (GitHub push protection / CI) if that matters — see
- * bin/CLAUDE.md.
+ * bin/AGENTS.md.
  */
 
 import { execFileSync } from "node:child_process";
@@ -92,7 +92,7 @@ function literalSpans(needle: string): SpanFn {
 function regexSpans(pattern: string, line: number): SpanFn {
   let re: RegExp;
   try {
-    // eslint-disable-next-line security/detect-non-literal-regexp -- a `re:` entry IS a user-authored regex by contract (bin/CLAUDE.md); escaping it would change the feature's meaning. The source is the developer's own gitignored .commit-blocklist, read locally.
+    // eslint-disable-next-line security/detect-non-literal-regexp -- a `re:` entry IS a user-authored regex by contract (bin/AGENTS.md); escaping it would change the feature's meaning. The source is the developer's own gitignored .commit-blocklist, read locally.
     re = new RegExp(pattern, "gi");
   } catch (e) {
     throw new InvalidBlocklistRegexError(line, errorMessage(e));

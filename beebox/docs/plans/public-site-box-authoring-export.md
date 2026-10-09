@@ -206,7 +206,7 @@ only the expected `site/cards/` diff. No automatic commit or deployment.
 
 **Status: partial.** The repository-side authoring guide is done —
 `site/card-authoring.md`'s "Authoring in a box workbench" section and
-`site/CLAUDE.md` document the bootstrap/export loop and the `box-export`
+`site/AGENTS.md` document the bootstrap/export loop and the `box-export`
 report shape. The box-side `CLAUDE.md` guidance is reported done in the
 companion authoring box, not verifiable from this repository's diff.
 

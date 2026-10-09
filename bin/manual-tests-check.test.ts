@@ -8,7 +8,7 @@
  * commit an unattended agent's edits at all, so it is tested rather than
  * trusted.
  *
- * Node's test runner rather than a doctest (`bin/CLAUDE.md` prefers doctests
+ * Node's test runner rather than a doctest (`bin/AGENTS.md` prefers doctests
  * for `bin/`): the subject is a script driven by a git fixture and two
  * environment variables, which is the unit tier's shape
  * (scheduled-workstreams.md, "Rollout shape").

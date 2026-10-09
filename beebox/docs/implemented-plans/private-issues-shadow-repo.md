@@ -86,7 +86,7 @@ absent. Nothing about the mechanism is specific to the boxholder:
 - The path is derived from the checkout location (see "Location derivation"),
   so it works identically for anyone, wherever they keep their checkout, and
   the tracked hooks never embed a personal path.
-- Bootstrap is documented for everyone (issues/CLAUDE.md +
+- Bootstrap is documented for everyone (issues/AGENTS.md +
   `bin/private-issues init <checkout>`, which does the `git init` + category
   dirs + README + main-checkout symlink, so opt-in is one command). Each developer
   wires their own remote (or none — a local-only private repo is fine).
@@ -95,7 +95,7 @@ absent. Nothing about the mechanism is specific to the boxholder:
 
 ## What goes in the private repo (routing rule + agent check-in)
 
-`issues/CLAUDE.md` gains a routing rule, since the public repo is
+`issues/AGENTS.md` gains a routing rule, since the public repo is
 source-available and its issues are world-readable:
 
 - **Private repo:** anything about a person's own boxes or their content,
@@ -370,7 +370,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
 
 ### I. One-way link rule (public must never link private)
 
-- **Documented** in `issues/CLAUDE.md` (new section) and the private README:
+- **Documented** in `issues/AGENTS.md` (new section) and the private README:
   private→public links are fine; public→private links are forbidden — a
   dangling ref for anyone without the private repo.
 - **Enforced:** `doc-check` would PASS a tracked `private-issues/…` link on
@@ -386,7 +386,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
 
 ### J. Docs
 
-- `issues/CLAUDE.md`: new "Private issues" section — separate repo,
+- `issues/AGENTS.md`: new "Private issues" section — separate repo,
   per-developer opt-in (`bin/private-issues init`), mount topology,
   commit-from-inside rule ("an agent that edits a private issue and runs
   `git add -A` in beebox sees nothing staged — that is the leak guard
@@ -394,7 +394,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
   preserved branch), and the **routing rule +
   ask-the-developer check** from the section above (what belongs private,
   when to ask, the sanitized-public + detailed-private split pattern).
-- `bin/CLAUDE.md`: lifecycle additions (create-mount state machine,
+- `bin/AGENTS.md`: lifecycle additions (create-mount state machine,
   remove-if-safe/orphan-if-not in session-end/sweep/worktree-remove, the
   private mutation lock, sweep's orphan report).
 - Private repo `README.md`: everything above from the private side.

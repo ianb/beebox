@@ -13,7 +13,7 @@ resolution: implemented
 `--git-common-dir` and targets it explicitly, so the harness permits it from
 inside a worktree. Run bare from a worktree it lands that worktree's own
 branch. `/finish` steps 8-9 call it instead of the bare `git -C`
-(`.claude/agents/finish.md:449,463-469,505`), and `bin/CLAUDE.md` documents it
+(`.claude/agents/finish.md:449,463-469,505`), and `bin/AGENTS.md` documents it
 ("Landing a worktree branch"), so all three items the issue asked for are done.
 
 One thing the issue could not have predicted, worth recording: a second,
@@ -80,7 +80,7 @@ that is not worktree-isolated (the main checkout itself):
 - Or have `/finish` hand the final merge back to the main
   (non-worktree) session by design, rather than attempting it from the
   worktree.
-- Either way, update `.claude/agents/finish.md` step 8 and `bin/CLAUDE.md`
+- Either way, update `.claude/agents/finish.md` step 8 and `bin/AGENTS.md`
   so the documented flow matches what the harness actually allows.
 
 Until then, every worktree `/finish` will BLOCK at the public merge and

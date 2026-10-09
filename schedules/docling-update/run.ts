@@ -16,7 +16,7 @@
  * stored card content where they are expensive to notice.
  *
  * A run with nothing to say exits 0 in silence: routine-success chatter is a
- * bug (root CLAUDE.md), and the store's `lastRunAt` is the record that it ran.
+ * bug (root AGENTS.md), and the store's `lastRunAt` is the record that it ran.
  *
  * Was `bin/check-docling-update.ts`, which piggybacked the SDK job's launchd
  * plist and printed into its log.

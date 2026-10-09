@@ -2705,7 +2705,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   fullscreen renderer?" prompt restarting the session without its permission
   mode** (e.g. `--dangerously-skip-permissions`), tool allow/deny rules, model
   or effort flags. That is the flag every worker session in this repo launches
-  with (`bin/CLAUDE.md`), so pre-fix a worker that accepted that prompt would
+  with (`bin/AGENTS.md`), so pre-fix a worker that accepted that prompt would
   silently drop to a permission-prompting session it cannot answer — the
   2.1.218 failure shape. Fixed upstream; no repo change needed. Also: session
   titles now read as short names, `/permissions` and `/add-dir` work mid-turn,
@@ -3102,7 +3102,7 @@ outstanding work — it is durable evidence.
 - **2.1.224 — sandbox filesystem deny entries with a trailing slash silently
   bypassable.** Not applicable: `.claude/settings.json` configures only
   `statusLine` and hooks — no sandbox permission rules — and worker sessions run
-  unsandboxed by design (`bin/CLAUDE.md`).
+  unsandboxed by design (`bin/AGENTS.md`).
 - **2.1.224 — plugin install records corrupted when the same plugin is installed
   in multiple projects.** Worth noting because this monorepo ships plugins
   (`beebox/plugins/`, the canvas-loop Claude plugin). No corruption has

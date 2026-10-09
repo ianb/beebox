@@ -7959,14 +7959,14 @@ tests:
   # === Dev-guidance audits (surface: dev) ===
   # A headless Claude Code session in the monorepo checkout, not a box agent:
   # `pnpm knowledge-audit run --dev`. Tests what the root and package
-  # CLAUDE.md files, project skills, and docs teach a dev session. The first
+  # AGENTS.md files, project skills, and docs teach a dev session. The first
   # set covers the product spirit and design docs (boxholder, 2026-10-08).
   # Status (2026-10-07, Claude claude-opus-5-5, --dev): 8/8 pass, first run,
-  # with the bbx-design skill and the beebox/CLAUDE.md spirit.md pointer
+  # with the bbx-design skill and the beebox/AGENTS.md spirit.md pointer
   # present (uncommitted in the skills-review worktree). 14k always-on context.
   # Design entries reached spirit.md and the right-time question through
   # bbx-design; the session noted docs/design/ itself does not state the
-  # right-place-right-time question. checkpoint answered from root CLAUDE.md
+  # right-place-right-time question. checkpoint answered from root AGENTS.md
   # with no reads.
   - id: dev-spirit-doc
     surface: dev
@@ -8075,7 +8075,7 @@ tests:
     tags: [dev-guidance, boxes]
 
   - id: dev-autonomy-go-ahead
-    # status 2026-10-08: added with the "How much to do" vocabulary in the root CLAUDE.md.
+    # status 2026-10-08: added with the "How much to do" vocabulary in the root AGENTS.md.
     surface: dev
     prompt: "You proposed a fix in chat and the human replied 'go ahead'. What level of work does that authorize, and what does it not?"
     expected_level: knows_directly
@@ -8111,12 +8111,12 @@ tests:
     expected_level: knows_about
     watch_for: >
       Into tracked guidance at the narrowest accurate owner: a package or
-      directory CLAUDE.md, a skill, code-style.md/frontend.md, or a doc under
+      directory AGENTS.md, a skill, code-style.md/frontend.md, or a doc under
       docs/; worthwhile out-of-scope finds go to issues/. Not the session's
       private memory, which other sessions and Codex never see. FAILS if it
       saves the lesson to memory.
     correct_matches:
-      - 'CLAUDE\.md|skill|docs/'
+      - 'AGENTS\.md|skill|docs/'
       - 'narrow|nearest|closest|owner'
     response_not_matches:
       - '(?:save|record|write|put|store|add)\s+(?:it\s+|this\s+)?(?:in|to|into)\s+(?:your\s+|my\s+|the\s+)?(?:auto[- ]?)?memory'

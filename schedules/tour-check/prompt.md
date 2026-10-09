@@ -82,7 +82,7 @@ Three rules on edits:
   where content should be, a mobile layout that does not hold.
 
 File each distinct finding as its own issue under `issues/` per
-`issues/CLAUDE.md` (read it — the frontmatter conventions are there), with
+`issues/AGENTS.md` (read it — the frontmatter conventions are there), with
 `workstream: tour-check`. **Check for an existing issue first**; a weekly job
 that re-files the same standing finding is noise on a cadence. Put the tour, the
 checkpoint and the artifact path in the body so a reader can look at the same

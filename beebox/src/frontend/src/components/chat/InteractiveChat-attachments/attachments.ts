@@ -29,7 +29,7 @@
  * (called at the `InteractiveChat` root) is a thin, NON-reactive binding —
  * action methods only, closing over `emissionStore.get()` for their
  * point-in-time reads. It deliberately does NOT subscribe to the store: like
- * composer text (components/chat/CLAUDE.md, "Composer input lives in a store,
+ * composer text (components/chat/AGENTS.md, "Composer input lives in a store,
  * not root state"), a root-level subscription here would re-render the whole
  * chat subtree — including the companion view pane — on every paste. The
  * reactive read lives in {@link useChatAttachmentValues}, called instead from
