@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — D-chemistry, C-reconnecting, A-lending, B-inventory, F-newcomer journey walks, 2026-10-09
+resolution: implemented
 ---
+
+Fixed 2026-10-09: the title and review passes run with `tools: []` and no box settings (`PASS_OPTIONS` in `beebox/src/core/chat/review/reviewer.ts`, threaded through `AgentInvokeOptions.tools`). A real title run on the test box made one `StructuredOutput` call and no other tool call, with no `[structured-output-enforce]` retry.
 
 The chat title run (and the nightly chat review) is a full Claude Code session. Only one sentence in the prompt says not to use tools. Two symptoms follow from this one cause.
 
@@ -26,6 +29,6 @@ The chat title run (and the nightly chat review) is a full Claude Code session. 
 
 Smallest change: run the title and review calls with no tools (`tools: []`) and no box access. A plain completion call would also remove the tool list from the prompt. Unverified: whether `tools: []` also removes the structured-output retries. Measure the retry rate before and after.
 
-Related: [conversation-keeps-placeholder-title](../closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md) (the title job these runs belong to).
+Related: [conversation-keeps-placeholder-title](../../closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md) (the title job these runs belong to).
 
-Reports: [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (R1), [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md), [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md), [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R3), [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (R1).
+Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (R1), [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md), [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md), [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R3), [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (R1).
