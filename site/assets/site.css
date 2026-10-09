@@ -18,6 +18,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .site-menu-panel ul { list-style: none; padding: 0; margin: 0; }
 .site-menu-panel a { display: block; padding: 8px 12px; color: #6b5d4b; text-decoration: none; }
 .site-menu-panel a:hover { background: #faf7f2; }
+.site-menu-panel .menu-icon { width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px; fill: currentColor; }
 .site-menu-panel a[aria-current] { background: #f8f2e9; color: #2e2720; font-weight: 500; }
 .site-menu-panel .menu-label, .site-menu-panel h2 { padding: 8px 12px 4px; margin: 0; font-size: 12px; font-weight: 400; text-transform: uppercase; color: #8b7358; }
 #site-workspace { display: grid; grid-template-columns: 1fr 1fr; height: calc(100dvh - 60px); max-width: 1500px; margin: auto; }
@@ -26,7 +27,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .pane + .pane { border-left: 1px solid #c8c1b7; }
 .pane-label { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-bottom: 8px; font-size: 12px; color: #62584c; }
 .pane-label a { color: inherit; padding: 8px 0; }
-.pane-label span { margin-left: auto; }
 .bbx-card-surface { min-height: 260px; }
 .card-fold { position: absolute; top: 0; right: 0; width: 44px; height: 44px; border-radius: 0 8px 0 6px; background: linear-gradient(225deg, var(--bbx-underlay) 49%, var(--bbx-quote-layer-paper) 51%); box-shadow: -2px 2px 3px #493c2825; z-index: 2; }
 .site-enhanced .card-fold { display: none; }
