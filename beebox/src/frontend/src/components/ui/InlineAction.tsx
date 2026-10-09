@@ -22,6 +22,8 @@ export interface InlineActionProps {
   expanded?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
+  /** Take the subtle/emphatic colours from the enclosing card's material. */
+  material?: boolean;
 }
 
 const INTENT_CLASSES: Record<InlineActionIntent, string> = {
@@ -29,6 +31,11 @@ const INTENT_CLASSES: Record<InlineActionIntent, string> = {
   subtle: "text-warm-600 hover:text-warm-900 underline",
   danger: "text-danger hover:text-danger-dark underline",
   quiet: "text-left hover:underline",
+};
+
+const MATERIAL_INTENT_CLASSES: Partial<Record<InlineActionIntent, string>> = {
+  emphatic: "text-card-pen hover:text-card-ink underline",
+  subtle: "text-card-soft hover:text-card-ink underline",
 };
 
 export function InlineAction({
@@ -41,6 +48,7 @@ export function InlineAction({
   flash,
   expanded,
   className,
+  material,
 }: InlineActionProps) {
   const intent = intentArg ?? "emphatic";
   const disabled = disabledArg ?? false;
@@ -90,7 +98,7 @@ export function InlineAction({
       title={title}
       aria-expanded={expanded}
       className={cn(
-        INTENT_CLASSES[intent],
+        (material === true ? MATERIAL_INTENT_CLASSES[intent] : undefined) ?? INTENT_CLASSES[intent],
         "cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm",
         className,
       )}

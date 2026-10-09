@@ -8,6 +8,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "plain",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["plain", "paper", "post-it"],
   },
   {
     name: "spectrum",
@@ -18,6 +19,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "plain",
     chrome: true,
     systemOnly: true,
+    cardThemes: ["plain", "electric-playground", "daydream", "post-it"],
   },
   {
     name: "paper",
@@ -28,6 +30,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "layered",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["paper", "post-it", "letter-set", "selvedge"],
   },
   {
     name: "post-it",
@@ -48,6 +51,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "plain",
     chrome: true,
     systemOnly: true,
+    cardThemes: ["letter-set", "post-it", "daydream"],
   },
   {
     name: "letter-set",
@@ -69,6 +73,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["harlequin", "paper", "far-horizon"],
   },
   {
     name: "electric-playground",
@@ -80,6 +85,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["electric-playground", "blacklight", "post-it"],
   },
   {
     name: "daydream",
@@ -91,6 +97,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["daydream", "letter-set", "plain"],
   },
   {
     name: "selvedge",
@@ -102,6 +109,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["selvedge", "paper", "golden-hour"],
   },
   {
     name: "footlights",
@@ -113,6 +121,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["footlights", "paper", "harlequin"],
   },
   {
     name: "overpass",
@@ -124,6 +133,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["overpass", "post-it", "far-horizon"],
   },
   {
     name: "golden-hour",
@@ -135,6 +145,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["golden-hour", "far-horizon", "paper"],
   },
   {
     name: "blacklight",
@@ -146,6 +157,7 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["blacklight", "electric-playground", "post-it"],
   },
   {
     name: "far-horizon",
@@ -157,12 +169,23 @@ export const THEME_CATALOG = [
     blockquoteTreatment: "inset",
     chrome: true,
     systemOnly: false,
+    cardThemes: ["far-horizon", "golden-hour", "paper"],
   },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];
 export type ThemeName = ThemeDescriptor["name"];
 export type ThemeStock = ThemeDescriptor["stocks"][number];
+
+/**
+ * The card themes that go with a system theme, its default first. A card with
+ * no authored theme takes the default of the system theme it is shown on; the
+ * picker lists the rest first. A card theme may go with several system themes.
+ */
+export function systemCardThemes(systemTheme: string | undefined): readonly string[] {
+  const theme = THEME_CATALOG.find((item) => item.name === systemTheme);
+  return theme !== undefined && "cardThemes" in theme ? theme.cardThemes : ["plain"];
+}
 
 /** Opt in to scene, control, and sheet composition tokens. */
 export function themeComposition(name: string | undefined): "expressive" | undefined {

@@ -68,6 +68,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
     cardChoice: isCard ? data.frontmatter?.theme : undefined,
     typeDefault: presentation?.data?.typeDefaults[presentationType],
     presentation: presentation?.data?.presentation ?? { status: "absent" },
+    systemTheme: presentation?.data?.chrome.choice.name,
   });
   const title = cardTitle(data);
   const symbol = isCard ? readCardSymbol(data.frontmatter?.symbol, { cardPath: data.path.replace(/^\//, "") }) : null;

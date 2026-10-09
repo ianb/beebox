@@ -19,11 +19,18 @@ export interface TextLinkProps {
   title?: string;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
+  /** Take the colours from the enclosing card's material. */
+  material?: boolean;
 }
 
 const TONE_CLASSES: Record<TextLinkTone, string> = {
   default: "text-primary hover:text-primary-dark",
   subtle: "text-warm-600 hover:text-warm-900",
+};
+
+const MATERIAL_TONE_CLASSES: Record<TextLinkTone, string> = {
+  default: "text-card-pen hover:text-card-ink",
+  subtle: "text-card-soft hover:text-card-ink",
 };
 
 export function TextLink({
@@ -36,10 +43,11 @@ export function TextLink({
   onClick,
   title,
   className,
+  material,
 }: TextLinkProps) {
   const tone = toneArg ?? "default";
   const underline = underlineArg ?? true;
-  const classes = cn(TONE_CLASSES[tone], underline ? "hover:underline" : "", className);
+  const classes = cn(material === true ? MATERIAL_TONE_CLASSES[tone] : TONE_CLASSES[tone], underline ? "hover:underline" : "", className);
   return (
     <Link id={id} to={to} search={search} onClick={onClick} title={title} className={classes}>
       {children}
