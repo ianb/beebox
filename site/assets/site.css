@@ -26,7 +26,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .pane { min-width: 0; overflow: auto; padding: 16px 24px 48px; scrollbar-gutter: stable; }
 .pane + .pane { border-left: 1px solid #c8c1b7; }
 .pane-label { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-bottom: 8px; font-size: 12px; color: #62584c; }
-.pane-label a { color: inherit; padding: 8px 0; }
+/* The label sits on the scene, which may be dark or busy; a light chip keeps it legible. */
+.pane-label a { color: #3a342c; padding: 6px 12px; border-radius: 999px; background: #fffaf0e6; box-shadow: 0 1px 2px #0002; text-decoration: none; }
+.pane-label a:hover { text-decoration: underline; }
 .bbx-card-surface { min-height: 260px; }
 .card-fold { position: absolute; top: 0; right: 0; width: 44px; height: 44px; border-radius: 0 8px 0 6px; background: linear-gradient(225deg, var(--bbx-underlay) 49%, var(--bbx-quote-layer-paper) 51%); box-shadow: -2px 2px 3px #493c2825; z-index: 2; }
 .site-enhanced .card-fold { display: none; }
