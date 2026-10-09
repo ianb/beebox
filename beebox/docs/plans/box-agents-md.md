@@ -8,9 +8,10 @@ issues:
 # Boxes author AGENTS.md instead of CLAUDE.md
 
 Box agent instructions move from `CLAUDE.md` files (with `AGENTS.md` symlinks
-for Codex) to authored `AGENTS.md` files. Claude Code and Codex both read
-`AGENTS.md`, so one file serves both and the symlink mirror goes away. The dev
-repo made the same move on 2026-10-09 (merge `bee88d5d6`).
+for Codex) to authored `AGENTS.md` files, through one registered migration.
+Claude Code and Codex both read `AGENTS.md`, so one file serves both and the
+symlink mirror goes away. The dev repo made the same move on 2026-10-09
+(merge `bee88d5d6`).
 
 **Issues addressed:** `issues/docs-and-chores/2026-09-18-move-to-agents-md-only.md`
 (the box half; the repo half is done). Related, not resolved here:
@@ -30,100 +31,126 @@ change the name they tell people to use.
 
 ## Smallest fix and budget
 
-**Smallest fix:** rename every box `CLAUDE.md` to `AGENTS.md` once, and change
-the engine's writers to write `AGENTS.md`. That fails on two cases: a
-`CLAUDE.md` an agent or boxholder makes later (models write `CLAUDE.md` by
-habit, and one at or above a session's `cwd` turns off every `AGENTS.md`), and
-boxes whose data lags the engine. So the rename runs as a repeating
-normalization pass, replacing the mirror pass that already runs on every
-`generateDocs`.
+**Smallest fix:** a registered migration renames every box `CLAUDE.md` to
+`AGENTS.md`, the engine's writers write `AGENTS.md`, and a lint rejects a new
+`CLAUDE.md`. That is the dev repo's shape (rename, remove the mirror, lint).
+Two additions make it safe for boxes, which update engine and data at
+different times:
 
-Tracks (below): A engine writers and recognizers; B the normalization pass;
-C session settings; D guidance text, docs, and audits.
+- Until a box's migration runs, engine writers write to whichever instruction
+  file already exists, so an unconverted box behaves exactly as it does today.
+- The migration pre-scans and fails closed on any conflict, so a box is never
+  left half converted.
 
-Estimate (additions plus deletions): source about 500 lines, tests about 600
-(roughly 25 doctests rename fixtures, one new normalizer doctest), knowledge
-audits about 80, authored docs about 250. Total about 1,400. Not a BIG CHANGE.
-Generated output (`agent-guide/guide.md` regeneration, `doc-graph`) is
-separate.
+Tracks (below): A writers, the pre-migration name resolver, and the lint;
+B the migration; C session settings; D guidance text, docs, and audits;
+E the deferred removal of pre-migration support.
+
+Estimate (additions plus deletions): source about 600 lines (migration about
+220, resolver and writers about 200, lint and settings about 80, mirror-pass
+reduction later in Track E), tests about 650 (one migration doctest with
+interrupted states, one resolver doctest, one integration doctest, about 25
+doctests renaming fixtures), knowledge audits about 80, authored docs about
+250. Total about 1,600. Not a BIG CHANGE. Generated output (agent guide
+regeneration, `doc-graph`) is separate.
 
 ## Stated preferences this plan trades against
 
 - **Human decision (2026-10-09):** *"Seperately we should do the same thing to
-  boxes"*, after the repo moved to AGENTS.md only, with *"remove the Codex
-  workaround"*. So no `CLAUDE.md` stays in a box, not even as a stub.
-- **The originating issue's lean** (`2026-09-18-move-to-agents-md-only.md`):
-  *"A migration changes files inside every box, so it is a registered
-  migration, not an edit."* This plan does not use a registered migration;
-  see Track B and *Could this be simpler?* for why. The precedent it follows
-  instead is the mirror itself: `agent-context-mirrors.ts:15` replaced legacy
-  generated `AGENTS.md` files inside the repeating pass
-  (*"GENERATED_AGENTS_MARKER … Kept only to recognize and replace those
-  files"*), with no migration.
-- **"Arrange context, don't automate judgment"** (boxholder memory): when a
-  directory holds both a real `CLAUDE.md` and a real `AGENTS.md`, the engine
-  does not merge them. It reports the conflict and leaves it.
-- **Minimal concepts:** the pass reuses the existing walk, skip list, and
-  commit; no new registry or tier.
+  boxes"*, after the repo's move with *"remove the Codex workaround"* and *"We
+  should have a CLAUDE.md lint to avoid accidentally creating one"*. So: no
+  `CLAUDE.md` stays in a converted box, the symlink mirror goes, and a lint
+  rejects new ones.
+- **The originating issue** (`2026-09-18-move-to-agents-md-only.md`): *"A
+  migration changes files inside every box, so it is a registered migration,
+  not an edit."* Followed.
+- **Migration conventions** (`docs/cards/migrations.md` "Writing a new
+  migration"): idempotent, appended to `MIGRATIONS`, and step 7, *"Defer
+  removal of the legacy support"* with a deferred cleanup issue. Followed
+  (Track E).
+- **"Arrange context, don't automate judgment"** (boxholder memory): two real
+  instruction files in one directory are reported, never merged.
+- **Minimal concepts:** no new registry, flag, or tier. The migration manifest
+  is the only state. One resolver function carries the pre-migration behavior
+  and Track E deletes it.
 
 ## What already exists
 
 - **Mirror pass** — `beebox/src/core/agent-context-mirrors.ts:100`
   `mirrorClaudeDocs` walks the box (skips at :61: *".git" … "node_modules" …
   ".agents"*, and `_template-updates` at :44) and plants
-  `AGENTS.md → CLAUDE.md` symlinks; `ensureAgentsMirror` (:91) is called by
-  maps finalize. **Rebuild** in place as the normalization pass (same walk).
-  The `.agents/skills`, rule-skill, and `.codex/hooks.json` mirrors in the same
-  file (:118, :202, `generateAgentContextMirrors` :248) **stay**: Codex still
-  cannot read `.claude/`.
+  `AGENTS.md → CLAUDE.md` symlinks. `ensureAgentsMirror` (:91) is called by
+  maps finalize and replaces legacy generated regular `AGENTS.md` files marked
+  `GENERATED from Claude guidance` (:15, :95). **Keep** until Track E as
+  pre-migration support (Codex in an unconverted box still needs it). The
+  migration reuses its walk and its marker test. The `.agents/skills`,
+  rule-skill, and `.codex/hooks.json` mirrors in the same file (:118, :202,
+  `generateAgentContextMirrors` :248) **stay** for good: Codex cannot read
+  `.claude/`.
 - **Name constants** — `beebox/src/core/agent-instruction-files.ts:20`
   `CLAUDE_MD`, :23 `AGENTS_MD` (*"Always a symlink to the sibling CLAUDE.md"*),
-  :26 `AGENT_INSTRUCTION_FILES`, :29 `isAgentInstructionsFile`. **Reuse**;
-  flip which name is authored. Keep both names in the recognition list, since
-  a `CLAUDE.md` can exist until the next pass.
+  :26 `AGENT_INSTRUCTION_FILES`, :29 `isAgentInstructionsFile`. **Reuse**; the
+  resolver joins them.
 - **Root file writer** — `beebox/src/core/docs-gen/generate/claude-md.ts:15`
   `ensureAgentContext` → `ensureClaudeMdIncludes` (:26) keeps the root file's
   `@.beebox/agent-guide.md` and briefing includes, *"Never overwrite
-  hand-edited content"*. **Reuse**, pointed at `AGENTS.md`.
+  hand-edited content"*. **Reuse** through the resolver.
 - **Generation order** — `beebox/src/core/docs-gen/generate/core.ts:397`
   `syncTemplatesFromSource` (template installs, including the four tracked
-  guides) runs before :437 `ensureAgentContext`. `generateDocs` runs at chat
-  start (`chat/session/run/start-run.ts:117`) and every reactor cycle
-  (`reactor/engine/cycle.ts:106`); deploy convergence runs
-  `bbx migrate --sweep`, which *"handles deterministic migrations and generated
-  guidance"* (`beebox/docs/server/deploying.md:21`).
+  guides through `syncBoxGuidance`, `guidance-sync/core.ts:74`) runs before
+  :437 `ensureAgentContext`. `generateDocs` runs at chat start
+  (`chat/session/run/start-run.ts:117`) and every reactor cycle
+  (`reactor/engine/cycle.ts:106`).
+- **Migration framework** — `beebox/src/core/migrations.ts` (append-only
+  `MIGRATIONS`; last live entry `briefing-openers-2026-10`, a `run.ts` +
+  `plan.ts` script). Scripts run as `<script> <boxRoot> --apply`; exit 1
+  records nothing (`migration-run.ts`). Deploy convergence and the hourly
+  `box-convergence` schedule run the sweep, which then refreshes generated
+  guidance (`cli/commands/migrate.ts:142`, `migration-sweep.ts:130`). Migration
+  runs inside box maintenance, which closes admission and drains accepted work;
+  dirty input is accepted and preserved in Git recovery
+  (`docs/cards/migrations.md` "Admission, snapshots, and failures",
+  "Automatic convergence"). A box whose convergence fails *"stays closed only
+  until the controller exits"*, then reopens unconverted. **Reuse.** Precedent
+  for moving instruction files: `publication-cards-2026-10` (commit
+  `1bdd7e011`): *"Stock CLAUDE.md/NOTES.md are deleted on a shipped hash;
+  edited ones are parked or moved and linked."*
 - **Guidance registry** — `beebox/src/core/box/guidance-surfaces.ts:85` root
   row (`owned`), :92-95 the four `tracked` guides (`src/schemas/`,
   `src/views/`, `src/tricks/scripts/`, `_config/feedback/`), and the mirror row
   `**/AGENTS.md` (`generated`, `gitTracked: true`). Generated, tracked rows
   feed `TEMPLATE_MANAGED_PATTERNS` (`install-template-file.ts:102`), which
   `generateDocs` auto-commits.
-- **Template ledger** — `_config/template-versions.json` keyed by box path
-  (test box has `src/schemas/CLAUDE.md`, `src/views/CLAUDE.md`,
-  `src/tricks/scripts/CLAUDE.md`, `_config/feedback/CLAUDE.md` keys); parked
-  copies at `_config/_template-updates/<relPath>`
-  (`install-template-file.ts:62` `parkedUpdatePath`). Stock content in
-  `box/templates.ts:34,53,84,96`, hashed in `template-stock-hashes.ts`
-  (`pnpm template-stock:update`).
+- **Template ledger** — `_config/template-versions.json`, keyed by box path
+  (the test box has `src/schemas/CLAUDE.md`, `src/views/CLAUDE.md`,
+  `src/tricks/scripts/CLAUDE.md`, `_config/feedback/CLAUDE.md` keys), each
+  entry `{sha256, installed-at, stock, pending}`. Parked copies at
+  `_config/_template-updates/<relPath>` (`install-template-file.ts:62`
+  `parkedUpdatePath`). `installTemplateFile` (:325) writes stock when the
+  destination is absent (:348) and merges an edited copy against the recorded
+  `stock` before parking. Stock content in `box/templates.ts:34,53,84,96`,
+  hashed in `template-stock-hashes.ts` (`pnpm template-stock:update`).
 - **Maps** — `beebox/src/core/maps/finalize/core.ts:104`
-  `ensureClaudeMdInDir` writes the `MAP_INCLUDE_LINE` include (`maps/include-line.ts:8`) into each
-  mapped directory's `CLAUDE.md`, skipping tracked guides; `maps/orphans.ts`
-  removes emptied ones; `maps/precheck-ignore.ts:94` excludes both names from
-  listings. **Reuse**, retargeted.
+  `ensureClaudeMdInDir` writes the `MAP_INCLUDE_LINE` include
+  (`maps/include-line.ts:8`) into each mapped directory's `CLAUDE.md`, skipping
+  tracked guides; `maps/orphans.ts` removes emptied ones;
+  `maps/precheck-ignore.ts:94` excludes both names from listings. **Reuse**
+  through the resolver.
 - **Codex includes** — `agent-context-includes.ts` `expandClaudeIncludes`,
   called with the root `CLAUDE.md` path from `cli/commands/agent-context.ts:23`,
   `agent/codex-run/core.ts:78`, `services/claude-chat/codex-chat.ts:102`.
-  **Reuse**, pointed at `AGENTS.md`.
+  **Reuse** through the resolver.
 - **Session settings** — `beebox/src/core/agent/box-session-settings.ts:52`
   `ancestorInstructionFiles` lists `CLAUDE.md`, `CLAUDE.local.md`,
   `.claude/CLAUDE.md`, `.claude/rules/**` above the box; :80 `settingSources`.
-  **Extend** with `AGENTS.md` and `.claude/AGENTS.md`.
+  **Extend.**
 - **Lints** — `claude-md-lint.ts:94` sizes files named `CLAUDE_MD`;
-  `cli/validate-hook/command.ts:177` sizes either name on write. **Reuse**.
+  `cli/validate-hook/command.ts:177` sizes either name on write, as a warning
+  only. **Extend** with the filename check.
 - **Audit plumbing** — `dev/lib/test-runner/runner/run-test.ts:129-138` stages
   `CLAUDE.md` fixtures and, for Codex, mirrors; `codex-audit.ts:30`
-  *"command.replaceAll(AGENTS_MD, CLAUDE_MD)"*. **Rebuild** (delete the
-  normalization, rename fixtures).
+  *"command.replaceAll(AGENTS_MD, CLAUDE_MD)"*. **Rebuild**: delete the
+  replacement, rename fixtures.
 - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
   (*"A `CLAUDE.md` under each says what to read before writing there"*),
   `box/guidance-sync/skills-content.ts:98` (course skill: *"A thin, editable
@@ -146,17 +173,17 @@ at `beebox/package.json:119`) with box settings (`settingSources: ["project"]`,
   default is true.
 - Probe results:
   - AGENTS-only box, `cwd` = box root: root `AGENTS.md`, its `@` includes, and a
-    nested `AGENTS.md` after a Read all load.
+    nested `AGENTS.md` after a Read all load (s1).
   - A nested `AGENTS.md` does **not** load when the agent only Writes into its
-    directory. (`CLAUDE.md` loads on Write and Edit too, per the docs.)
+    directory (s4). (`CLAUDE.md` loads on Write and Edit too, per the docs.)
   - An ancestor `CLAUDE.md` listed in `claudeMdExcludes` does not turn
-    AGENTS.md mode off.
+    AGENTS.md mode off (s3).
   - An ancestor `AGENTS.md` above the box **loads** unless excluded; adding it
-    to `claudeMdExcludes` stops it.
+    to `claudeMdExcludes` stops it (s6).
   - A `CLAUDE.md` inside the box below `cwd` loads in addition when read; a
-    `CLAUDE.md` **at** `cwd` makes the session ignore every `AGENTS.md`.
+    `CLAUDE.md` **at** `cwd` makes the session ignore every `AGENTS.md` (s5).
   - With `cwd` below a directory, that directory's file's `@` includes are not
-    expanded. `CLAUDE.md` behaves the same (control run), so this is not a
+    expanded. `CLAUDE.md` behaves the same (control run s0), so this is not a
     regression.
 - Codex 0.160 reads `AGENTS.md` natively (unchanged from today, where it reads
   the symlink).
@@ -172,119 +199,153 @@ No ACKNOWLEDGEMENTS entry: nothing is copied or adapted.
   instructions. After this plan its authored name is `AGENTS.md`
   (`AGENTS_MD`, `agent-instruction-files.ts:23`). Not a card;
   `list-cards.ts:62` already excludes it.
-- **Legacy instruction file** — a `CLAUDE.md` (`CLAUDE_MD`, :20) in a box. Only
-  the normalization pass and the recognizers name it after this plan.
-- **Normalization pass** — new name for what `mirrorClaudeDocs` does: per
-  directory, turn a legacy instruction file into an `AGENTS.md`, or report a
-  conflict. Function: `normalizeInstructionFiles(boxRoot)`. Not a registered
-  migration; not recorded in `_config/migrations.jsonl`.
+- **Legacy instruction file** — a `CLAUDE.md` (`CLAUDE_MD`, :20) in a box.
+  Normal before the box's migration; a lint error after it.
+- **Converted box** — a box whose `_config/migrations.jsonl` records
+  `agents-md-2026-10`. The existing manifest is the only state; no new flag.
+- **Instruction-file name resolver** — `instructionFilePath(boxRoot, dirRel)`:
+  the path engine writers use. Returns the directory's existing `CLAUDE.md` if
+  there is one, else its existing `AGENTS.md`; for a missing file it returns
+  `CLAUDE.md` in an unconverted box and `AGENTS.md` in a converted one.
+  Pre-migration support; Track E deletes its legacy branches.
 - **Instruction-file conflict** — a directory holding a real `CLAUDE.md` and a
-  real (non-symlink) `AGENTS.md`. Reported, never merged.
+  real `AGENTS.md` that is not a marked generated mirror, or a box holding a
+  `CLAUDE.local.md` or `.claude/CLAUDE.md`. Reported, never merged.
 - Existing names kept: guidance surface / `GUIDANCE_SURFACES`, tracked guide,
-  template ledger, parked update, `MAP.md` include, `claudeMdExcludes`.
+  template ledger, parked update, map include, `claudeMdExcludes`, mirror pass.
 
 ## Tracks / scope
 
-### Track B — the normalization pass (first: everything else assumes it)
+### Track A — writers, the pre-migration resolver, and the lint (first)
 
-- **What.** Replace `mirrorClaudeDocs` with `normalizeInstructionFiles`, and run
-  it at the start of `generateDocs`, after the skip check and before
-  `syncTemplatesFromSource` (`generate/core.ts:397`).
-- **Why.** The template sync installs the tracked guides at their new
-  `AGENTS.md` paths. If the legacy `CLAUDE.md` is still there, the sync writes
-  a stock `AGENTS.md` beside an edited `CLAUDE.md`, and the box ends up with a
-  conflict the engine made itself. Running first prevents that. Running on
-  every pass also catches a `CLAUDE.md` made later.
-- **Direction.** For each directory in the existing walk:
-  1. `CLAUDE.md` is a regular file and `AGENTS.md` is absent or a symlink:
-     skip if `CLAUDE.md` has uncommitted changes (it is someone's work in
-     progress; retry next pass). `generateDocs` already reads that set before
-     its first write (`dirtyBefore`, `generate/core.ts:391`). Otherwise `rename(CLAUDE.md, AGENTS.md)`,
-     which replaces the symlink. If the path is a template-ledger key, rekey
-     the ledger entry (hash unchanged, so the sync then reads it as installed)
-     and move a parked copy under `_config/_template-updates/`.
-  2. Both are regular files: record an instruction-file conflict; change
-     nothing.
-  3. A dangling `AGENTS.md` symlink: remove (existing behavior).
-  4. `CLAUDE.local.md` or `.claude/CLAUDE.md`: record a conflict (both disable
-     AGENTS.md mode; neither is created by the engine).
-  Return `{ renamed: string[], conflicts: string[] }`. `generateDocs` adds
-  `renamed` (both sides of each rename) to the paths its single commit takes:
-  `commitTemplateSyncChanges` (`generate/core.ts:265`, today
-  `{ keepUncommitted }` only) gains an `alsoCommit` path list, so the rename
-  lands as a git rename.
-  Conflicts surface through `bbx validate` (Track A).
-- **Vocabulary lock-ins.** `normalizeInstructionFiles`; conflict message text.
-- **First chunk.** The pure decision per directory
-  (`instructionFileAction({claude, agents, dirty, ledgerKey})` → rename / skip /
-  conflict / remove-link) with a doctest of every case, then the walk and the
-  `generateDocs` call.
-
-### Track A — engine writers and recognizers
-
-- **What.** Every engine writer writes `AGENTS.md`; recognizers keep both names.
-- **Why.** Otherwise the engine recreates `CLAUDE.md` after the pass renames it.
+- **What.** Engine writers resolve their target through
+  `instructionFilePath`; registry rows name `AGENTS.md`; a lint rejects
+  `CLAUDE.md` in converted boxes.
+- **Why.** The engine updates before a box's migration runs: dev boxes and
+  worktree clones run the new engine's `generateDocs` at chat start, and a
+  production box whose convergence fails reopens unconverted. Without the
+  resolver, the template sync writes a stock `src/schemas/AGENTS.md` beside an
+  edited `src/schemas/CLAUDE.md` (destination absent → stock install,
+  `install-template-file.ts:348`), and the root writer creates an `AGENTS.md`
+  that Claude ignores because the root `CLAUDE.md` wins. The box gets a
+  conflict the engine made.
 - **Direction.**
-  - `docs-gen/generate/claude-md.ts`: rename file to `agents-md.ts`,
-    `ensureClaudeMdIncludes` → `ensureAgentsMdIncludes`, path `AGENTS.md`.
-  - `guidance-surfaces.ts`: root row and the four tracked rows to `AGENTS.md`;
-    delete the `**/AGENTS.md` mirror row (an authored file must not be swept
-    into template commits).
-  - `maps/finalize/core.ts`: `ensureClaudeMdInDir` → `ensureAgentsMdInDir`;
-    drop the `ensureAgentsMirror` call. `maps/orphans.ts`: operate on
-    `AGENTS.md`; drop symlink cleanup.
-  - `agent-context-includes.ts` callers (3 sites) read root `AGENTS.md`;
-    rename `expandClaudeIncludes` → `expandInstructionIncludes`.
-  - `claude-md-lint.ts`: size-lint `AGENTS.md` (keep thresholds).
-  - `cli/validate-hook/command.ts`: a Write of a file named `CLAUDE.md` gets
-    the message *"Name instruction files AGENTS.md; a CLAUDE.md turns off every
-    AGENTS.md in this session."* `bbx validate` reports instruction-file
-    conflicts from Track B.
-  - `agent-instruction-files.ts`: doc comments flip; constants stay.
-- **First chunk.** The root writer and registry rows, with their doctests.
+  - `agent-instruction-files.ts`: add `instructionFilePath`; doc comments flip.
+  - `docs-gen/generate/claude-md.ts` → `agents-md.ts`;
+    `ensureClaudeMdIncludes` → `ensureInstructionIncludes`, root path from the
+    resolver.
+  - `guidance-surfaces.ts`: root and the four tracked rows name `AGENTS.md`.
+    `installTracked` resolves the row path through the resolver, so an
+    unconverted box keeps installing (and ledger-keying) its legacy path. The
+    `**/AGENTS.md` mirror row stays until Track E.
+  - `maps/finalize/core.ts` `ensureClaudeMdInDir` →
+    `ensureInstructionMapInclude` through the resolver; `maps/orphans.ts` the
+    same.
+  - `agent-context-includes.ts` callers (3 sites) take the root path from the
+    resolver; rename `expandClaudeIncludes` → `expandInstructionIncludes`.
+  - **Lint.** `bbx validate` (full) and the validate hook
+    (`cli/validate-hook/command.ts:177`) report an **error** for any
+    `CLAUDE.md`, `CLAUDE.local.md`, or `.claude/CLAUDE.md` in a converted box:
+    *"Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code
+    ignore every AGENTS.md."* Unconverted boxes get no finding.
+  - `claude-md-lint.ts`: size-lint the resolver's name.
+- **Vocabulary lock-ins.** `instructionFilePath`, `expandInstructionIncludes`,
+  the lint message.
+- **First chunk.** `instructionFilePath` and its doctest (legacy present;
+  `AGENTS.md` present; neither, converted; neither, unconverted; both), then
+  the root writer through it.
+
+### Track B — the migration `agents-md-2026-10`
+
+- **What.** A script migration at `src/scripts/migrate/agents-md/run.ts` with
+  a pure `plan.ts` (the `briefing-openers` shape), appended to `MIGRATIONS`.
+- **Direction.**
+  1. **Pre-scan, fail closed.** Walk the box with the mirror pass's walk and
+     skip list. If any instruction-file conflict exists, print each path with
+     the fix and exit 1 before writing anything. Nothing is recorded; the box
+     stays unconverted and fully working through the resolver; the migration
+     health check (`webapp/trpc/routers/health/checks/migrations.ts`) and
+     `box-convergence` report it pending.
+  2. **Per directory, idempotent.** States and actions:
+     - `CLAUDE.md` real; `AGENTS.md` absent, a symlink, or a marked generated
+       file: rename `CLAUDE.md` onto `AGENTS.md`.
+     - Ledger key `<dir>/CLAUDE.md` present: move the **whole** entry
+       (`sha256`, `installed-at`, `stock`, `pending`) to `<dir>/AGENTS.md`.
+       If both keys exist (an interrupted earlier run, or a sync between
+       runs), keep the entry whose `sha256` matches the file on disk; if
+       neither matches, keep the old key's entry, which carries the box's
+       `stock`.
+     - Parked copy `_config/_template-updates/<dir>/CLAUDE.md`: move to
+       `.../AGENTS.md`, unless a park already exists there.
+     - Only `AGENTS.md`, no old ledger key, no old park: already done.
+     Every action checks its target state first, so an interruption between
+     the file rename, the ledger write, and the park move is repaired on retry.
+  3. Exit 0. The sweep then refreshes generated guidance; the resolver now
+     returns `AGENTS.md` everywhere, and the mirror pass finds no `CLAUDE.md`.
+  Dirty files are renamed like clean ones, under the framework's existing
+  dirty-input policy.
+- **First chunk.** `plan.ts`: the per-directory decision, the ledger merge
+  rule, and the pre-scan conflict list, doctested with every state including
+  each interruption point.
 
 ### Track C — session settings
 
 - **What.** `ancestorInstructionFiles` (`box-session-settings.ts:52`) also
   lists `AGENTS.md` and `.claude/AGENTS.md` in each ancestor.
-- **Why.** Probe: an `AGENTS.md` above the box loads into box sessions once the
-  box itself has no `CLAUDE.md`. Today a box's own `CLAUDE.md` masks that.
+- **Why.** Probe s6: an `AGENTS.md` above the box loads into box sessions once
+  the box has no `CLAUDE.md`. Today a box's own `CLAUDE.md` masks that.
 - **First chunk.** The list change and the existing doctest's expectation.
 
 ### Track D — text, docs, audits
 
-- **What.** Template texts (`templates.ts`) and the agent guide
-  (`guide.md:372`, `ledger.yaml:717,720`), the course skill
-  (`skills-content.ts:98`), box docs (`docs/box-guidance.md`,
-  `docs/box-layout.md`, `docs/box/tricks.md`), the `bbx-context` skill, the two
-  `site/docs` pages, knowledge-audit fixtures (`CLAUDE.md:` keys at
-  `knowledge-audits.yaml:118,149,243,3601,3634`), `run-test.ts:129-138`, and
-  `codex-audit.ts:30` (delete the normalization).
+- **What.** Template texts (`templates.ts`), the agent guide (`guide.md:372`,
+  `ledger.yaml:717,720`), the course skill (`skills-content.ts:98`), box docs
+  (`docs/box-guidance.md`, `docs/box-layout.md`, `docs/box/tricks.md`), the
+  `bbx-context` skill, the two `site/docs` pages, knowledge-audit fixtures
+  (`CLAUDE.md:` keys at `knowledge-audits.yaml:118,149,243,3601,3634`),
+  `run-test.ts:129-138`, `codex-audit.ts:30`, and one line in the `sdk-update`
+  schedule prompt: re-run the AGENTS.md probe on every SDK bump.
 - **Why.** Text that says `CLAUDE.md` teaches agents to make one.
 - **Direction.** Template text changes need `pnpm template-stock:update`; the
-  old hash joins `superseded`, so stock copies upgrade and edited copies park
-  (existing behavior, `installTemplateFile`, `install-template-file.ts:325`).
+  old hash joins `superseded`, so stock copies upgrade, and edited copies merge
+  against their recorded `stock` or park. The migration preserves `stock`, so
+  that path survives the rename. The agent guide and course skill name
+  `AGENTS.md` unconditionally; in an unconverted box a new course file named
+  `AGENTS.md` beside a root `CLAUDE.md` is ignored by Claude until conversion,
+  which the pre-scan does not treat as a conflict (different directories).
+
+### Track E — deferred removal of pre-migration support
+
+- **What.** A deferred issue (`issues/deferred/`, `activate-on` about four
+  weeks after ship, `category: code-quality`) naming, with `file:line`: the
+  resolver's legacy branches, the mirror pass's `CLAUDE.md → AGENTS.md`
+  symlinks and `ensureAgentsMirror`, the `**/AGENTS.md` registry row, the
+  legacy-marker test, and `CLAUDE_MD` in recognizers that no longer need it.
+  Safe to remove when every box that matters, production included, has
+  `agents-md-2026-10` in its manifest.
+- **First chunk.** File the issue in the same commit that registers the
+  migration.
 
 ## Could this be simpler?
 
-The simplest version is a registered one-shot migration that renames every
-`CLAUDE.md`, plus the writer changes. It gets snapshots and a manifest record
-from the migration framework. It fails on three cases:
-- a `CLAUDE.md` made after the migration (course skill habit, model habit), which
-  silently turns off every `AGENTS.md` for sessions started at or below it;
-- a dev or local box that runs the new engine's `generateDocs` before anyone
-  runs `bbx migrate`, where the template sync then installs stock `AGENTS.md`
-  guides beside edited `CLAUDE.md` guides;
-- it is a second mechanism next to a repeating pass that must exist anyway for
-  the first case.
-The repeating pass covers all three with one mechanism, and the rename is
-lossless (content moves; git records a rename), so the migration framework's
-recovery snapshot buys little. The cost: no per-box manifest record that the
-conversion happened. `bbx validate` conflicts plus "no `CLAUDE.md` left" are
-the observable end state instead.
+The simplest version renames every `CLAUDE.md` in one migration, changes the
+writers to `AGENTS.md`, and adds the lint, with no resolver. It fails on one
+case: a box that runs the new engine before its migration has run (dev boxes
+and worktree clones at chat start; a production box whose convergence failed
+and reopened). In that window the template sync writes stock `AGENTS.md`
+guides beside edited `CLAUDE.md` guides, and the root writer creates an
+`AGENTS.md` that Claude ignores. The resolver is one function that keeps the
+old behavior until the migration runs, and Track E deletes its legacy branches.
+
+Cut from the first draft: a repeating rename pass inside `generateDocs` with no
+registered migration. The cross-model review showed it renamed dirty files on
+the deploy path (where `commit: false` empties the dirty set,
+`generate/core.ts:391`), never re-ran behind the generation cache
+(`generate/core.ts:385`), and could not keep the ledger consistent across
+interruptions. The lint replaces its job of catching later `CLAUDE.md` files.
 
 Considered and cut: a `PreToolUse` hook that injects a directory's `AGENTS.md`
-on Write, to close the Write-does-not-load gap. See Open design questions.
+on Write. See Open design questions.
 
 ## Subplans
 
@@ -294,121 +355,135 @@ None.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Template sync runs before the pass and installs stock `AGENTS.md` beside an edited `CLAUDE.md` guide | New: normalizer doctest on a box with an edited legacy guide | Pass runs first (Track B) | Would be clear (conflict reported) |
-| Pass renames a `CLAUDE.md` with uncommitted edits, and the commit sweeps up work in progress | New doctest | Skip dirty files | Silent if missed; covered by test |
-| Ledger key not rekeyed: sync treats the renamed guide as unknown and parks a stock copy | New doctest (ledger before/after) | Rekey in pass | Clear (a park appears) |
-| A `CLAUDE.md` at a landmark chat's `cwd` turns off all `AGENTS.md` | Validate-hook doctest for the message | Pass renames it on next `generateDocs`; validate hook warns at write | Clear at write; silent until next pass otherwise |
-| Remote flag `tengu_agents_md_mod` turned off: no instructions load | No | None | **Silent** |
-| A future SDK bump changes the default mode | No | `schedules/sdk-update` reviews changelogs | Silent until noticed |
-| Engine downgrade on a migrated box: old engine writes a root `CLAUDE.md`, which wins over every `AGENTS.md` | No | None | Silent |
-| Nested `AGENTS.md` not loaded when the agent writes without reading | Knowledge audit (Rollout) | None (accepted, see Open questions) | Silent |
+| New engine, unconverted box: sync installs a stock `AGENTS.md` guide beside an edited `CLAUDE.md` | New: resolver doctest; sync on an unconverted fixture | Resolver keeps legacy paths | Covered by test |
+| Migration interrupted between rename, ledger move, and park move | New: `plan.ts` doctest per interruption point | Each action checks target state; retry repairs | Clear (migration stays pending) |
+| Ledger entry moved without `stock`: later template updates park instead of merging | New: doctest asserts the whole entry moves | Move whole entry | Covered by test |
+| A real `CLAUDE.md` and a real `AGENTS.md` in one directory | New: pre-scan doctest | Exit 1, write nothing, report paths | Clear (health check, `box-convergence` alert) |
+| A legacy generated regular `AGENTS.md` (marker) is mistaken for authored | New doctest | Marker test reused | Clear if it fails (migration exits 1) |
+| An agent writes `CLAUDE.md` in a converted box | New: validate-hook doctest | Lint error at write and in `bbx validate` | Clear |
+| An `AGENTS.md` above the box leaks into box sessions | Updated `box-session-settings` doctest | Track C excludes it | Covered by test |
+| Remote flag `tengu_agents_md_mod` turned off: no instructions load in converted boxes | No | None | **Silent** |
+| A future SDK bump changes the default mode | No | `sdk-update` prompt line re-runs the probe | Silent until the bump review |
+| Engine downgrade on a converted box: old engine writes a root `CLAUDE.md`, which wins over every `AGENTS.md` | No | None | Silent |
+| Nested `AGENTS.md` not loaded when the agent writes without reading | Knowledge audit asserting tool order | Depends on Open question | Silent |
 
-> **Critical gap:** remote flag or SDK default change — box agents would run
-> with no instructions and nothing would say so. Accepted as a documented risk
-> with one mitigation: Track D adds a line to the `sdk-update` schedule prompt
-> to re-run the AGENTS.md probe on every SDK bump. A runtime check (start of
-> session, assert the guide loaded) was considered and not chosen: the SDK
-> exposes no "instructions loaded" signal short of an `InstructionsLoaded`
-> hook, which is a new box hook for a remote-flag risk.
+> **Critical gap:** remote flag or SDK default change — box agents in
+> converted boxes would run with no instructions. Accepted as a documented
+> risk with one mitigation (the `sdk-update` probe line). A runtime check
+> would need a new box hook (`InstructionsLoaded`) for a remote-flag risk.
 
 Engine downgrade is accepted: downgrades are manual and rare
 (`bbx engine upgrade` is boxholder-run, `guide.md` "Not yours to edit").
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong name.** An agent writes `CLAUDE.md`. ADDRESSED: validate-hook message
-  at write (Track A); rename on the next pass (Track B).
+- **Wrong name.** An agent writes `CLAUDE.md` in a converted box. ADDRESSED:
+  lint error at write and in `bbx validate` (Track A). Before conversion,
+  `CLAUDE.md` is still correct and gets no finding.
 - **Stale ref.** A card or doc links to `.../CLAUDE.md`. GAP, small: links into
   instruction files are rare (`list-cards.ts:62` excludes them from
-  linkables). `bbx validate` reports broken links as it does today.
-- **Two agents.** The chat agent edits `CLAUDE.md` while the reactor's pass
-  renames it. ADDRESSED partly: a dirty file is skipped; a race inside one
-  pass can leave both names, which becomes a reported conflict. No loss.
-- **Hand-edit drift.** The boxholder creates `CLAUDE.md` in a folder. ADDRESSED
-  by the pass. If they also made `AGENTS.md` there: reported conflict.
+  linkables); `bbx validate` reports broken links as today.
+- **Two agents.** A chat agent edits `CLAUDE.md` while the migration runs.
+  ADDRESSED by the framework: migration runs inside box maintenance, which
+  closes admission and drains accepted work.
+- **Hand-edit drift.** The boxholder creates `AGENTS.md` in a directory that
+  already has `CLAUDE.md`, before conversion. ADDRESSED: pre-scan conflict,
+  exit 1, report; they choose.
 - **Fabricated value.** Not applicable: no free-form field.
-- **Validation error UX.** The conflict and write messages name the fix in one
-  sentence each (Track A text).
-- **Partial migration.** A box with some `CLAUDE.md` left: in Claude Code's
-  default mode a `CLAUDE.md` at or above `cwd` turns `AGENTS.md` off for that
-  session, and one below `cwd` only replaces that directory's file. The pass
-  runs on the first `generateDocs` after the engine update (chat start,
-  reactor, or deploy convergence), before any session of that chat starts.
+- **Validation error UX.** The lint and conflict messages each name the fix in
+  one sentence (Track A, Track B).
+- **Partial migration.** ADDRESSED: the pre-scan makes the migration all or
+  nothing per box; the resolver keeps an unconverted box on today's behavior.
 
 ## NOT in scope
 
 - **The landmark-chat exclude regression**
   (`issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md`).
-  Track C touches the same function, but changing what landmark chats load is
-  a product decision; fix it separately.
-- **Ancestor `@` includes not expanded when `cwd` is below** (probe s0/s2). This
-  is pre-existing Claude Code behavior for both names; it affects landmark
-  chats, which are blocked by the regression above anyway.
+  Track C touches the same function, but what landmark chats load is a product
+  decision; fix it separately.
+- **Ancestor `@` includes not expanded when `cwd` is below** (probe s0/s2).
+  Pre-existing Claude Code behavior for both names.
 - **Renaming `.claude/rules`, skills, or the Codex skill mirror.** Unchanged;
   Codex still needs `.agents/skills`.
-- **A registered migration.** See *Could this be simpler?*
+- **Merging conflicting instruction files.** Reported for a person or agent to
+  resolve.
 - **Renaming `templates.ts` constants** (`SCHEMAS_CLAUDE_MD_V2` …) and the
-  `claude-md-lint.ts` file name. Cosmetic; do it only if the touched lines are
-  already changing.
+  `claude-md-lint.ts` file name. Cosmetic; only if the lines already change.
 
 ## Open design questions
 
-- **The Write-without-Read gap.** Lean: accept it. Map stubs (one-line map includes) and
-  the four tracked guides load when an agent reads in that directory, which
-  agents almost always do before writing. Measure with the audit below; if it
-  fails, add a `PreToolUse` Write hook that emits the directory's `AGENTS.md`
-  (Codex already has `bbx agent-context --hook`, `cli/commands/agent-context.ts`).
-- **Should the boxholder be told?** Lean: no notice. Nothing they see changes,
-  and their edited instruction files keep their content.
+- **The Write-without-Read gap — human decision required.** In a converted
+  box, a nested `AGENTS.md` loads when the agent reads in that directory, not
+  when it only writes there (probe s4). Today a nested `CLAUDE.md` loads on
+  Write too. Affected: map includes and the four tracked guides, for example
+  the schemas guide's instruction to read the docs before writing
+  (`templates.ts:36`). Options: (a) accept, and measure with the audit below;
+  (b) add a box `PreToolUse` Write/Edit hook that emits the target
+  directory's instruction chain. `bbx agent-context --hook` emits only the
+  root's includes (`cli/commands/agent-context.ts:23`), so (b) is new code.
+  Lean: (a), with the audit; (b) if the audit fails.
+- **Should the boxholder be told?** Lean: no notice. Nothing they see changes;
+  their edited instruction files keep their content.
 
 ## Knowledge audits
 
 - New: `agents-md-course-entry` — an agent asked to set up a course's entry
   point names the editable file `AGENTS.md`. Exercises the course skill text.
-- New: `agents-md-write-only-dir` — an agent asked to add a card to a
-  directory whose `AGENTS.md` carries a distinctive rule, with a task that does
-  not need reading, follows the rule. Measures the Write gap.
+- New: `agents-md-write-only-dir` — an agent adds a card to a directory whose
+  `AGENTS.md` carries a distinctive rule. The audit asserts the first tool call
+  touching that directory is a Write (so the gap is exercised) and records
+  separately whether the rule was followed. A run where the agent reads first
+  is inconclusive, not a pass.
 - Existing fixtures move from `CLAUDE.md:` to `AGENTS.md:` keys and are re-run
   (`pnpm knowledge-audit run --box ~/src/boxes/test1 --filter <id>`) for both
   engines, with the status comment recorded.
 
 ## What will hold this after it ships
 
-- Doctest tier (pure decision function): `instructionFileAction` covers every
-  directory case; one integration doctest runs `normalizeInstructionFiles` on a
-  temp box with a ledger and a parked copy.
+- Doctest tier, pure functions: `instructionFilePath` (resolver states) and the
+  migration's `plan.ts` (directory states, ledger merge rule, pre-scan
+  conflicts, every interruption point).
+- One integration doctest: on a temp box with a ledger, a parked copy, an
+  edited tracked guide, and a map include, run the migration, then
+  `syncBoxGuidance`; assert no new park, no stock overwrite, `stock` preserved,
+  and no `CLAUDE.md` left. A second case runs `syncBoxGuidance` on the same box
+  **before** the migration and asserts nothing is written at `AGENTS.md`.
 - Existing doctests (`guidance-sync`, `maps/finalize`, `maps/orphans`,
   `agent-context-mirrors`, `claude-md-lint`, `run.box-context`,
-  `cli/commands/agent-context`, `codex-audit`) change fixtures from `CLAUDE.md`
-  to `AGENTS.md`.
+  `cli/commands/agent-context`, `codex-audit`) change fixtures and gain an
+  unconverted-box case where behavior differs.
 - `template-stock-hashes.doctest.md` enforces the stock-hash update.
-- The SDK behavior (native loading) is not covered by a doctest; the
-  `sdk-update` schedule probe line holds it. No new test tier.
+- Native SDK loading is not a doctest; the `sdk-update` probe line holds it.
+  No new test tier.
 
 ## Implementation order
 
-1. Track B decision function + doctest.
-2. Track B walk, ledger rekey, parked-copy move, `generateDocs` placement and
-   commit paths; integration doctest.
-3. Track A writers and registry rows (root, maps, orphans, includes callers,
-   lint, validate hook); update their doctests.
-4. Track C exclude list.
-5. Track D template texts + `pnpm template-stock:update`; agent guide; course
-   skill; box docs; `bbx-context` skill; site docs; `sdk-update` prompt line.
-6. Audit plumbing (`run-test.ts`, `codex-audit.ts`), fixture renames, the two
-   new audits, runs on `~/src/box-worktrees/agents-md/test1` for Claude and
-   Codex.
-7. End-to-end on the worktree's test box clone: run `bbx docs refresh` (or
-   start a chat) and confirm every `CLAUDE.md` became `AGENTS.md` in one commit,
-   template ledger keys moved, no parks, and a chat session loads the guide.
+1. Track A resolver + doctest; root writer through it.
+2. Track A remaining writers (tracked rows, maps, orphans, includes callers,
+   size lint) with unconverted-box cases in their doctests.
+3. Track B `plan.ts` + doctest; `run.ts`; registry entry; integration doctest;
+   Track E deferred issue in the same commit.
+4. Track A lint (validate hook and `bbx validate`), keyed on the manifest.
+5. Track C exclude list.
+6. Track D template texts + `pnpm template-stock:update`; agent guide; course
+   skill; box docs; `bbx-context` skill; site docs; `sdk-update` line.
+7. Audit plumbing, fixture renames, the two new audits, runs for Claude and
+   Codex on `~/src/box-worktrees/agents-md/test1`.
+8. End-to-end on that clone: run `bbx engine migrate`; confirm every
+   `CLAUDE.md` became `AGENTS.md`, ledger keys moved with `stock` intact, no
+   new parks, a chat session loads the guide, and `bbx validate` is clean.
+   Then add a `CLAUDE.md` and confirm the lint error.
 
 ## Rollout shape
 
-Tests first per chunk (the decision doctest before the walk). Done when: the
-normalizer doctests pass, the renamed fixture doctests pass, the two new audits
-run green on both engines, and step 7 shows a clean converted test box.
+Tests first per chunk (each pure function's doctest before its caller). Done
+when: the resolver and migration doctests pass, the integration doctest
+passes, renamed fixture doctests pass, the two new audits are run on both
+engines, and step 8 shows a clean converted test box.
 
-Migration approach: scripted and repeating (the normalization pass), atomic per
-directory (one `rename`), gradual per box (each box converts on its first
-`generateDocs` after the engine update; production boxes convert during deploy
-convergence). The plan ships as one piece, only when the boxholder says so.
+Migration approach: a scripted, registered migration, all or nothing per box
+(pre-scan), idempotent with repair on retry. Production boxes convert during
+deploy convergence; local boxes through `box-convergence` or
+`bbx engine migrate`; worktree clones by hand. Unconverted boxes keep today's
+behavior through the resolver until Track E. The plan ships as one piece, only
+when the boxholder says so.
