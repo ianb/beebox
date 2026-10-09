@@ -1,6 +1,7 @@
 ---
 title: "Agents write \"the user\" and \"the boxholder\" on pages the person reads"
 workstream: user-facing-language
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -31,10 +32,12 @@ how the seed briefing is already written in the person's voice (see
 [seed briefing speaks agent commands](2026-10-08-seed-briefing-reaching-me-speaks-agent-commands.md)).
 
 Reports:
-[walk 1](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 42),
-[walk 2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
+[walk 1](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 42),
+[walk 2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
 
 ## Resolution (user-facing-language, 2026-10-09)
+
+Closed by the user-facing-language merge to main.
 
 A check, not more guide text: the card-write hook (`sdk-hooks.ts`,
 `card-lint/third-person.ts`) flags "the user" / "the boxholder" in text the agent

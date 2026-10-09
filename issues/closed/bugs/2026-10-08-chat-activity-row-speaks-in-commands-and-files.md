@@ -1,6 +1,7 @@
 ---
 title: "The chat activity row says \"ran 2 commands\" and \"Wrote schemas/loan.ts\""
 workstream: user-facing-language
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -12,11 +13,11 @@ The collapsed row above an agent reply reads "thinking, ran 2 commands",
 it lists `grep`, `sed`, `ls`, `python3` and `git add` lines. Four walkers
 reacted. The D-chemistry walker: "I didn't ask it to run anything". The
 A-lending walker wondered what the agent was doing to the computer. Reports:
-[A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 7, 19),
-[C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 7, which also
+[A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 7, 19),
+[C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 7, which also
 saw "Ran script: Look at box content, doc card docs, and notification reach"),
-[D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 15),
-[F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 9, 73).
+[D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 15),
+[F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 9, 73).
 
 ## Mechanism
 
@@ -37,12 +38,14 @@ want it.
 
 ## Related
 
-[Implementation vocabulary leaks into the UI](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
+[Implementation vocabulary leaks into the UI](2026-08-08-implementation-vocab-leaks-into-ui.md)
 (closed) did not cover this surface.
 [The chat agent narrates implementation steps](2026-10-08-chat-agent-narrates-implementation-steps.md)
 is the text side of the same problem.
 
 ## Resolution (user-facing-language, 2026-10-09)
+
+Closed by the user-facing-language merge to main.
 
 The row now speaks in lay words (`ChatMessages/activity-wording.ts`):
 collapsed "thought it over, looked up 2 things, made a change, took a step";
