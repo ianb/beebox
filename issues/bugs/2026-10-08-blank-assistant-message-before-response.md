@@ -1,6 +1,6 @@
 ---
 title: "Chat shows a blank assistant message before the response or tool activity appears"
-workstream: unattached
+workstream: blank-assistant-message
 area: beebox
 labels: [chat]
 filed-by: agent

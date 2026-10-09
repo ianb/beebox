@@ -121,15 +121,14 @@ undefined: false
 ## History: the failing turn now shows both updates
 
 Each update is a visible line before the tool call it introduces. The empty
-reasoning blocks stay in activity groups and render nothing. The bare ack is
+reasoning blocks do not enter activity groups. The bare ack is
 the only text; the chat hangs it on the user's message as a badge.
 
 ```ts
 describe(await historyOf(failingTurn("claude-fable-5-1")));
 =>
-activity: thinking(empty)
 update: I've laid out the setup.
-activity: tools(1), thinking(empty)
+activity: tools(1)
 update: I've resent the summary.
 activity: tools(1)
 text: <ack kind="appended" ref="/_content/plan.doc.card"/>
