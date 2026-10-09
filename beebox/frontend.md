@@ -85,6 +85,7 @@ Components reach for **semantic color roles**, not brand names. Defined in `src/
 | `warning` | Caution, dirty state, notes | DEFAULT, dark, light, 50, 100 |
 | `coral` | App-nav gradient only (no semantic role) | DEFAULT, dark, light, 50 |
 | `warm-50`..`warm-900` | Neutral surface + text scale (backgrounds, body text, borders) | Self-documenting scale |
+| `card` | In-card surfaces and text that follow the card theme's material; app palette outside a card. CSS variables, so no opacity modifiers | paper, sheet, tint, ink, soft, pen, rule |
 
 **Rules:**
 - **Never** use Tailwind defaults (`red-*`, `green-*`, `yellow-*`, `amber-*`, `purple-*`, `gray-*`, `blue-*`, etc.) for appearance. They're not part of the brand palette. The one exception is `gray-*` in dark-overlay UI (CapturePage, CommandRunner) that's intentionally Tailwind-default dark-theme.

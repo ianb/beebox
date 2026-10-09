@@ -26,17 +26,17 @@ function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | und
   const cardHref = boxSlug === undefined ? undefined : href(`/${boxSlug}/browse/${dated.cardPath}`);
   // In a workspace pane the card opens in the other pane (`docs/plans/todos-ui.md`, Track 5).
   const openBeside = useOpenBeside();
-  const name = <Text size="xs" tone="muted">{dated.cardTitle}</Text>;
+  const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;
   return (
     <Row gap="sm" wrap align="baseline">
       <Badge size="sm" tone={dated.kind === "due" ? "warning" : "info"} title={dated.kind === "due" ? "Due" : "Starts"}>
         {dated.kind === "due" ? "due" : "starts"} <FriendlyDate iso={dated.date} mode="date" />
       </Badge>
-      <Text size="sm">{dated.item.text}</Text>
+      <Text material size="sm">{dated.item.text}</Text>
       {openBeside !== null ? (
-        <InlineAction intent="quiet" onClick={() => openBeside(cardTarget(dated.cardPath))}>{name}</InlineAction>
+        <InlineAction material intent="quiet" onClick={() => openBeside(cardTarget(dated.cardPath))}>{name}</InlineAction>
       ) : cardHref === undefined ? name : (
-        <TextLink to={cardHref} tone="subtle">{name}</TextLink>
+        <TextLink material to={cardHref} tone="subtle">{name}</TextLink>
       )}
     </Row>
   );
@@ -46,7 +46,7 @@ export function DatedStrip({ dated, boxSlug }: { dated: DatedTodo[]; boxSlug: st
   if (dated.length === 0) return null;
   return (
     <Stack gap="xs">
-      <Text size="xs" tone="muted" uppercase weight="semibold">Dated</Text>
+      <Text material size="xs" tone="muted" uppercase weight="semibold">Dated</Text>
       {dated.map((entry) => (
         <DatedLine key={entry.key} dated={entry} boxSlug={boxSlug} />
       ))}

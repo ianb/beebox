@@ -8,6 +8,8 @@ import {
   parsePresentationConfig,
   resolveCardTheme,
   resolveChromeTheme,
+  systemCardThemes,
+  THEME_CATALOG,
   themePatternMatches,
   validateThemePattern,
   validateSystemThemeChoice,
@@ -84,6 +86,49 @@ JSON.stringify(resolveCardTheme({
   presentation: { status: "absent" },
 }))
 => {"choice":{"name":"plain","stock":"neutral"},"origin":{"kind":"engine"},"problem":null}
+```
+
+Shown on a system theme, a card with no authored choice takes that system
+theme's default card theme. Every authored source still wins over it, the box
+default included. An unknown system theme falls back to plain.
+
+```ts
+JSON.stringify(resolveCardTheme({
+  path: "_content/One.memo.card",
+  type: "memo",
+  presentation: { status: "absent" },
+  systemTheme: "harlequin",
+}))
+=> {"choice":{"name":"harlequin","stock":"pigment"},"problem":null,"origin":{"kind":"system","theme":"harlequin"}}
+
+JSON.stringify(resolveCardTheme({
+  path: "_content/One.memo.card",
+  type: "memo",
+  presentation: parsePresentationConfig({ default: { name: "post-it" } }),
+  systemTheme: "harlequin",
+}).origin.kind)
+=> "box-default"
+
+JSON.stringify(resolveCardTheme({
+  path: "_content/One.memo.card",
+  type: "memo",
+  presentation: { status: "absent" },
+  systemTheme: "a-box-authored-theme",
+}).choice.name)
+=> "plain"
+
+systemCardThemes("paper")
+=> ["paper","post-it","letter-set","selvedge"]
+```
+
+Each system theme's default card theme is a card theme, and every theme it
+pairs with exists in the catalog.
+
+```ts
+THEME_CATALOG.filter((theme) => theme.chrome).flatMap((theme) => systemCardThemes(theme.name)
+  .filter((name) => THEME_CATALOG.find((item) => item.name === name)?.systemOnly !== false)
+  .map((name) => `${theme.name}: ${name}`))
+=> []
 ```
 
 Themes are an OPEN set. A stock the catalog does not list is the author's

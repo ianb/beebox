@@ -9,7 +9,7 @@ runbook is [card migrations](../cards/migrations.md). Do not update in place.
 
 For reference. May 23–24, 2026.
 
-1. Pushed migrators + `bbx migrate` to GitHub; post-commit hook deploys to `/opt/beebox/beebox/`.
+1. Committed migrators + `bbx migrate` on `main`; the local post-commit hook deployed to `/opt/beebox/beebox/` (the push to GitHub was separate and deployed nothing).
 2. Stopped `beebox-serve` + `beebox-scheduler` to avoid races.
 3. Per-box backup: pre-migration commit SHA + a compact tar (text-only) into `/home/beebox/backups/pre-migration-<timestamp>/`. The card data is already in git; the tar is belt-and-suspenders for non-git state.
 4. For each box: seeded the manifest (sometimes partially for legacy boxes), ran `bbx migrate --apply`, committed.
