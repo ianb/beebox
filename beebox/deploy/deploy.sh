@@ -1122,22 +1122,22 @@ source /home/beebox/.env
 set +a
 maintenance_rc=0
 node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
-# A box whose convergence failed stays closed for recovery. Start the bounded
-# repair now instead of leaving the box closed until the hourly box-convergence
-# pass: the same `--sweep --repair --yield` command, run per box outside the
-# deploy's shared downtime. It is detached (a transient systemd unit), so the
-# deploy still ends and reports its failure; a box with nothing pending returns
-# at once without closing. Output: `journalctl -u bbx-repair-<box>-<time>`.
+# A box whose convergence failed stays closed for recovery. Repair it now
+# instead of waiting for the hourly box-convergence pass: the same bounded
+# `--sweep --repair` and 25-minute limit that pass uses, run only for boxes that
+# still have a pending migration. It runs after the controller has released the
+# boxes, so the other boxes are already serving; it runs in this script rather
+# than detached so a chained deploy waits for it instead of finding the box
+# held. No `--yield`: the box is closed, and the bounded drain covers work that
+# entered since. The deploy still reports its failure.
 if [[ $maintenance_rc -ne 0 ]]; then
-  stamp=$(date +%s)
   for box in /home/beebox/boxes/*/; do
     [[ -e "$box/.git" ]] || continue
-    unit="bbx-repair-$(basename "$box")-$stamp"
-    systemd-run --quiet --collect --unit "$unit" --uid=beebox --gid=beebox \
-      --setenv=HOME=/home/beebox --working-directory="$box" \
-      bash -lc 'set -a; source /home/beebox/.env; set +a; bbx engine migrate --sweep --repair --yield --json' \
-      && echo "  repair started for $box (journalctl -u $unit)" \
-      || echo "  could not start repair for $box; the hourly box-convergence pass retries" >&2
+    status=$(sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; cd "$1" && node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$box" 2>/dev/null) || continue
+    [[ "$status" == *'"pending":[]'* ]] && continue
+    echo "  $box: migration pending after a failed convergence; running bounded repair now..."
+    sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$1" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$box" \
+      || echo "  $box: repair did not converge; the hourly box-convergence pass retries" >&2
   done
 fi
 exit "$maintenance_rc"

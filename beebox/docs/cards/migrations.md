@@ -166,9 +166,9 @@ The deployment controller holds affected boxes across activation, migration,
 service replacement, and readiness checks. It runs the shared script-only sweep
 with a separate ten-minute command limit. A failing box is reported and stays
 closed only until the controller exits; a successful process restart alone does
-not make its data current. The deploy then starts a bounded repair
-(`--sweep --repair --yield`) for each box at once, detached, instead of waiting
-for the next hourly pass. See [deployment operations](../server/deploying.md).
+not make its data current. The deploy then runs a bounded repair
+(`--sweep --repair`) at once for each box that still has a pending migration,
+instead of waiting for the next hourly pass. See [deployment operations](../server/deploying.md).
 
 `schedules/box-convergence/` retries hourly and may invoke bounded agent repair.
 It runs only from the main checkout on `main`. Local targets come from that
