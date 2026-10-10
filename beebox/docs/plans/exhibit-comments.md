@@ -282,10 +282,10 @@ reading behaviour and must not open a composer unless asked.
 **First implementation chunk.** The component plus
 `workstreams-app/test/frontend/exhibits/boot.comment-requests.doctest.md` for
 the pure functions; the static render in `boot.container.doctest.md` shows the
-toggle for a store scope and not for `apps/`; a `selection-anchor.doctest.md`
-case for a heading that is not in the sibling chain. There is no DOM test tier
-in this package and this plan does not add one; the click path is checked by
-hand (see What will hold this).
+toggle for a store scope and not for `apps/`. There is no DOM
+implementation available to this package's tests (`linkedom` is declared only
+by `canvas-loop`), so the heading lookup and the click path are checked by hand
+(see What will hold this).
 
 ### Track 4 — Docs
 
@@ -330,7 +330,7 @@ none
 | Mic permission denied | none (browser prompt) | `startRecording` throws → shown as `recordingProblem` | Clear |
 | Composer closed while the permission prompt is open | none (browser prompt) | late-resolve cancel in Track 3 | Clear by the indicator light going off |
 | `MediaRecorder` constructor throws | none (browser) | stream released, error shown | Clear |
-| Selection has no preceding heading | `selection-anchor` doctest | `section` omitted; quoted text intact | Silent by design |
+| Selection has no preceding heading | hand check (no DOM tier) | `section` omitted; quoted text intact | Silent by design |
 | Selection spans outside the content root | `captureSelection` returns null | yes | Silent by design: nothing to comment on |
 | Comment left on an exhibit whose workstream is later culled | none | same as the orphan issue: the store keeps it, `list` shows it | Silent until read; accepted, filed already |
 | Exhibit page served by the main-checkout app while a worktree's listener has the new routes | none | the old frame has no panel; nothing posts | Silent, transition only, ends at merge |
@@ -397,9 +397,9 @@ documented in root `AGENTS.md`.
   style: the fake transcribe service exists, and the comments fake is a
   recording `add` behind the `Pick<CommentsService, "add">` interface.
 - Panel: the pure request and message functions in their own doctest; the
-  static render in `boot.container.doctest.md`. The heading lookup is held by
-  `selection-anchor.doctest.md`. No DOM tier is added: the event wiring is a
-  few lines copied from `CommentLayer.tsx`, and the hand check exercises it.
+  static render in `boot.container.doctest.md`. No DOM tier is added: the
+  heading lookup and the event wiring are a few lines each, and the hand check
+  exercises them.
 - The whole path by hand once: a standalone listener with
   `BBX_EXHIBITS_ROOT` and `BBX_COMMENTS_ROOT` pointed at temp roots, a typed
   comment and a spoken one, then `bin/comments list --workstream`.

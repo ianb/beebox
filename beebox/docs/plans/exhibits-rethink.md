@@ -27,7 +27,8 @@ traversal segment; the browser button reaches the route; the workstream list
 API carries each workstream's exhibits and surfaces an unreadable store as a
 warning. The Stop hook edit (Track 3) is in `~/.claude/hooks/notify.sh`.
 Codex (gpt-6-sol) reviewed the plan twice and the diff once; every finding
-was applied. Not merged.
+was applied. Not merged. A follow-on on the same branch adds commenting with
+dictation to the page: [exhibit comments](exhibit-comments.md).
 
 **Issues addressed:** none filed directly. Related, not addressed:
 [orphaned comment namespaces after a cull](../../../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md)

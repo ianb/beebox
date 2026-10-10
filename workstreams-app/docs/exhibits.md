@@ -161,7 +161,8 @@ app list.
 
 The exhibits surface is a second origin on `http://127.0.0.1:<EXHIBITS_PORT>/`
 (default 3230), loopback only, and the router does not proxy it. It is not the
-workstreams origin: pages here script freely and hold one workstreams authority, the focus route.
+workstreams origin: pages here script freely and hold two narrow authorities,
+the focus route and the comment routes ([Comments](#comments)).
 
 A request needs the machine-scoped token, once, as `?token=<t>`; the origin
 exchanges it for a session cookie and redirects to the clean URL. The token is
@@ -180,12 +181,44 @@ this origin need do nothing: their own `fetch` carries the right `Origin`.
 The focus route is `POST /api/<ws>/<exhibit>/focus`, with no body. It runs
 `bin/workstreams focus <ws>` and brings that workstream's live terminal tab
 forward. It answers 204, or 409 `{ message, detail }` when there is no live
-session (`detail` is the CLI's last stderr line). This is the one authority the
-exhibits origin holds, granted 2026-10-10. It cannot resume, close, or archive a
-workstream and takes no text. The `Origin` check keeps other origins out but
+session (`detail` is the CLI's last stderr line). Granted 2026-10-10, with the
+comment routes. It cannot resume, close, or archive a workstream and takes no
+text. The `Origin` check keeps other origins out but
 cannot tell a click from a page's own script, so an agent-written page can
 trigger it. The container button uses it; raw `index.html` pages get no button
 and may call the route themselves.
+
+## Comments
+
+A person reading an exhibit can leave a remark on it, typed or spoken, from
+the page: the **Comment** control above the title turns commenting on; a
+selection anywhere in the title, prose, or page opens a composer carrying the
+selected text and the nearest heading above it, and "comment on the whole
+exhibit" opens one with no selection. **Speak** records a short dictation and
+transcribes it into the box (it needs `BBX_OPENAI_API_KEY` in the app's
+environment; without it the page says so and the remark can still be typed).
+
+The remark goes to the same store as document comments, addressed to the
+exhibit's workstream (`main` for a main-checkout exhibit). Read it as you read
+any comment at pickup:
+
+```bash
+bin/comments list --workstream <workstream>
+bin/comments show exhibit:<workstream>/<exhibit>
+bin/comments clear exhibit:<workstream>/<exhibit> [--id <id>]
+```
+
+`exhibit:<workstream>/<exhibit>` is the address `bin/comments` prints and
+accepts for an exhibit wherever it takes a path. Nothing is read back on the
+page: a comment is a message, and the agent clears it.
+
+The control appears on the default and `index.tsx` tiers, which the container
+renders. A raw `index.html` page shows no control and gives no hint; its author
+may call the routes directly: `POST /api/<ws>/<exhibit>/comments` with
+`{ body, origin?, quoted?, section?, fragment? }` answers 201 `{ id, workstream }`,
+and `POST /api/transcribe` with `{ audio: <base64>, mimeType? }` answers
+`{ text }`. Committed apps have no workstream and are refused with 409.
+Design: [exhibit comments](../../beebox/docs/plans/exhibit-comments.md).
 
 ## Writing pages the checks will not see
 
