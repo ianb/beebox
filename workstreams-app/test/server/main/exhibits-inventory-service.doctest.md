@@ -374,8 +374,9 @@ JSON.stringify([
   liftLegacyManifest({ ...base, prose: "Kept", ask: { type: "fyi", prose: "Dropped" } }),
   liftLegacyManifest({ ...base, ask: "garbage" }),
   liftLegacyManifest({ ...base, ask: { type: "nonsense", prose: 4 } }),
+  liftLegacyManifest({ ...base, prose: "", ask: { type: "fyi", prose: "Lifted over empty" } }),
 ])
-=> [{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Which layout?"},{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Kept"},{"title":"Old","created":"2026-08-01T00:00:00Z"},{"title":"Old","created":"2026-08-01T00:00:00Z"}]
+=> [{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Which layout?"},{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Kept"},{"title":"Old","created":"2026-08-01T00:00:00Z"},{"title":"Old","created":"2026-08-01T00:00:00Z"},{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Lifted over empty"}]
 ```
 
 Through `readManifest`, a legacy file reads as the new shape, and a legacy

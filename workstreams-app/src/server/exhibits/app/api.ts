@@ -70,10 +70,10 @@ export interface ExhibitsApiOptions {
 }
 
 /** Workstream names that have no session registry row to focus. */
-const NO_SESSION_REASONS: Record<string, string> = {
-  [APPS_SEGMENT]: "Committed apps belong to no workstream, so there is no session to bring forward.",
-  main: "The main checkout has no workstream session to bring forward.",
-};
+const NO_SESSION_REASONS = new Map<string, string>([
+  [APPS_SEGMENT, "Committed apps belong to no workstream, so there is no session to bring forward."],
+  ["main", "The main checkout has no workstream session to bring forward."],
+]);
 
 function lastLine(text: string): string {
   return text.split("\n").map((line) => line.trim()).findLast((line) => line !== "") ?? "";
@@ -283,7 +283,7 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
     json.post<{ Params: ScopeParams }>("/:ws/:exhibit/focus", async (request, reply) => {
       const workstream = requireSegment(request.params.ws, "workstream");
       requireSegment(request.params.exhibit, "exhibit name");
-      const noSession = NO_SESSION_REASONS[workstream];
+      const noSession = NO_SESSION_REASONS.get(workstream);
       if (noSession !== undefined) {
         return reply.code(409).send({ message: "No session to focus.", detail: noSession });
       }

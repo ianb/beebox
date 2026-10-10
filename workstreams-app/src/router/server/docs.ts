@@ -45,8 +45,8 @@ const devToolSchema = z
 // once granted scripting under the since-removed /dev/ sandbox CSP, and a stale
 // copy should degrade loudly rather than be silently half-honored
 // (issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md).
-// Interactive apps with an ask still belong on the exhibits origin — that
-// separation is about lifecycle (surviving culls) and the ask workflow, not CSP.
+// Interactive apps still belong on the exhibits origin — that separation is
+// about lifecycle (surviving culls), not CSP.
 const devToolsFileSchema = z.object({ tools: z.array(devToolSchema) }).strict();
 type DevTools = z.infer<typeof devToolsFileSchema>;
 

@@ -1,7 +1,8 @@
 // The exhibits listener: a second Fastify instance, a second origin.
 //
 // Agent-written pages script freely here, so this origin holds no
-// router/workstreams authority: its cookie grants exhibit routes only. Route =
+// router/workstreams authority: its cookie grants exhibit routes plus one
+// bounded action, bringing a workstream's terminal tab forward (api.ts). Route =
 // store path (filesystem routing), with two roots on one contract —
 // /<ws>/<exhibit>/ in the persistent store, /apps/<name>/ in the main
 // checkout's tracked dev/apps.

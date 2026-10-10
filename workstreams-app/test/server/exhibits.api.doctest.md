@@ -176,6 +176,16 @@ JSON.stringify({
 => {"focused":[204,""],"noSession":[409,{"message":"Could not bring the session forward.","detail":"workstreams focus: no live session for demo-ws — use resume"}],"apps":[409,true],"main":409,"unknown":404,"foreign":403,"anonymous":401,"calls":["focus demo-ws","focus demo-ws"],"refusalsSpawnedNothing":true,"noAppsDirectoryMade":true}
 ```
 
+A workstream named like an `Object.prototype` member is an ordinary workstream:
+it reaches the runner rather than hitting an inherited property.
+
+```ts continue
+await fs.mkdir(path.join(store, "constructor/page"), { recursive: true });
+const inherited = await app.inject({ method: "POST", url: "/api/constructor/page/focus", headers: authorized });
+JSON.stringify({ status: inherited.statusCode, called: focusCalls.at(-1) })
+=> {"status":204,"called":"focus constructor"}
+```
+
 ## Documents round-trip
 
 `PUT` replaces a whole JSON document; `GET` hands it back. The key names the

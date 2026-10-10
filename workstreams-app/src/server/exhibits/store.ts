@@ -158,9 +158,11 @@ export function liftLegacyManifest(raw: unknown): unknown {
   const object = z.record(z.string(), z.unknown()).safeParse(raw);
   if (!object.success || !("ask" in object.data)) return raw;
   const { ask, ...rest } = object.data;
-  if ("prose" in rest) return rest;
+  if (typeof rest.prose === "string" && rest.prose !== "") return rest;
   const prose = z.object({ prose: z.string() }).safeParse(ask);
-  return prose.success ? { ...rest, prose: prose.data.prose } : rest;
+  if (prose.success) return { ...rest, prose: prose.data.prose };
+  // No usable ask.prose: an empty top-level prose stays and fails validation as before.
+  return rest;
 }
 
 /**
