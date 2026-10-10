@@ -42,12 +42,12 @@ notes "Markdoc tags", **DECIDED**).
 
 | Track | Source | Tests | Docs |
 |---|---|---|---|
-| 1 Scoped tags in the engine | ~110 | ~100 | ~30 |
+| 1 Scoped tags in the engine, with the `unknown-tag` fallback | ~170 | ~130 | ~40 |
 | 2 Recipes as a plugin (delete core ~715, add plugin ~650) | ~1,365 | ~160 | ~130 |
 | 3 Conventions guide and its doctest | ~10 | ~80 | ~60 |
-| **Total** | **~1,485** | **~340** | **~220** |
+| **Total** | **~1,545** | **~370** | **~230** |
 
-About 2,050 changed lines in all (additions plus deletions), of which ~715 are
+About 2,150 changed lines in all (additions plus deletions), of which ~715 are
 deletions of core recipe code. **BIG CHANGE**, by a small margin, and slice 1
 ran 2.2× its estimate. What drives it: the recipe view and its seven tag
 components (394 lines today) move across a boundary that forbids their current
@@ -95,9 +95,15 @@ Reuse unless marked:
   The caller has `parsed.schema` in hand; the lint does not take it.
 - Markdoc with no schema for a tag: validation emits `Undefined tag:
   '<name>'` at level `critical` (`dist/index.js:8533-8539`); transform
-  renders the tag's children and drops the tag
+  renders the tag's children and drops the tag and its attributes
   (`dist/index.js:7031-7036`: `const schema = this.findSchema(node2, config) ?? {}; ... if (!schema || !schema.render) return children;`).
-  So a scoped tag on a generic surface degrades to its text.
+  So `{% ingredient amount="2" unit="cups" %}flour{% /ingredient %}` on a
+  surface without the recipe tags shows only "flour". Track 1 adds the
+  fallback that keeps the attributes visible.
+- The generic card page renders a body with no type knowledge:
+  `src/frontend/src/components/MarkdownCardView/CardBody.tsx:110` calls
+  `<Markdown prose="block" ... components={components}>` with the core
+  table only.
 - Markdoc `Tag` identity is a string check, `tag?.$$mdtype === "Tag"`
   (`dist/index.js:6814-6815`), so a `Tag` built by a second Markdoc copy
   renders in the host.
@@ -120,8 +126,10 @@ Reuse unless marked:
   `createRecipeTemplate` :117; registered `src/schemas.ts:40,108`; template
   `src/templates/builtins/templates.ts:78-95`.
 - Box-local templates: a schema module exports `template`
-  (`docs/box/schemas.md:236-262`), picked up by the box schema loader. A
-  stub can re-export one.
+  (`docs/box/schemas.md:236-262`); the loader reads it at
+  `src/schemas.ts:356-358` (`const rawTemplate: unknown = mod.template; ...
+  if (template) registerBoxTemplate(template, boxRoot);`). A stub can
+  re-export one.
 - Emitter: `src/core/markdoc/emit-tags.ts:69-80` tries universal, briefing,
   recipe, markup groups, then `console.warn(... unknown tag ...)` and emits
   inner content. Its only caller is `compileBriefing`
@@ -244,6 +252,21 @@ tags?: Readonly<Record<string, Schema>>;
 ```
 
 `buildRenderConfig` takes `tags` and spreads them after the core table.
+
+**Undefined tags render their authored form.** Before `transform`, the widget
+walks the AST (`ast.walk()`, as `body-refs.ts:320` does) and replaces every
+`tag` node whose name is not in the merged table with a core `unknown-tag`
+node carrying `name` and the authored attributes; its component renders the
+opening tag as muted code, `{% ingredient amount="2" unit="cups" %}`,
+followed by the children. Nothing authored disappears from a render, and a
+type's scoped tags on a surface that lacks them read as what the author wrote.
+The rewrite lives in `src/shared/markdoc-config/scoped.ts` beside
+`withScopedTags` so the server-side emitter can share it later. Validation
+is unchanged: the authored tag is still `Undefined tag` where it does not
+belong. This is the rendering contract: **scoped tags render as components
+only through a view that passes the type's `tags`; everywhere else they
+render as authored text.** `docs/box/schemas.md` says so beside
+`markdocTags`.
 `ViewMarkdown` passes `tags` and `components` through; both
 `view-widgets.d.ts` files add
 `tags?: Readonly<Record<string, Schema>>; components?: Partial<Record<string, ComponentType<Record<string, unknown>>>>`.
@@ -279,13 +302,17 @@ built-in template, and `registerFileType({ type: "recipe" })`.
 
 **Direction.**
 
+- `recipe.ts` imports `LabeledSourcesEntrySchema` today from
+  `src/cards/sources-entry.ts` (`recipe.tsx:19`), which the import boundary
+  forbids (`plugin-imports.ts:26`). `beebox/cards` exports it; the base
+  imports it through `../../exports/cards.js` as the courseware bases do.
 - Stubs the README names:
   - `_config/box.json`: `"plugins": ["recipe"]`.
   - `src/schemas/recipe.ts`:
     ```ts
     import { cardSchema } from "beebox/cards";
     import recipe from "beebox/plugins/recipe";
-    export const template = recipe.template;
+    export { template } from "beebox/plugins/recipe";
     export default cardSchema("recipe", recipe.schemas["recipe"]);
     ```
     A box extends with `extendSchema(recipe.schemas["recipe"], { fields: { rating: ... } })`.
@@ -295,24 +322,33 @@ built-in template, and `registerFileType({ type: "recipe" })`.
     export const rendersCardTypes = ["recipe"];
     export const dependencies = ["**/*.recipe.card"];
     ```
-- `PluginDefinition` gains `template?: TemplateDefinition`? **No.** The
-  template is an export of the plugin module (`recipe.template`) that the
-  stub re-exports; the engine reads templates from the stub as it reads any
-  box schema module's `template`. No new hook.
+- `PluginDefinition` gains `template?: TemplateDefinition`? **No.**
+  `plugin.ts` exports `template` by name beside its default
+  (`definePlugin` returns `PluginDefinition<S>`, which has no such field);
+  the stub re-exports it, and the loader reads it as it reads any box schema
+  module's `template` (`schemas.ts:356-358`). `beebox/cards` exports
+  `type TemplateDefinition` (today only `TemplateMergePolicy` is public,
+  `exports/cards.ts:25`) so the plugin can type it.
 - The view finds its card by `params["path"]` as courseware does
   (`courseware/view.tsx:20`), reads `frontmatter` and `body` from `ViewCard`
   (`src/core/views/types.ts:91-103`), keeps `SCALE_OPTIONS` and the scale
   control, and renders
   `<Markdown card={card} tags={recipeTags} components={components}>{body}</Markdown>`
   inside `RecipeScaleContext.Provider`. `Subrecipe` renders a `CardLink`
-  (`beebox/view-widgets`) instead of `onNavigate`. `fraction.js` stays a
-  dependency of the view and is bundled into `dist/plugins/recipe/view.js`.
+  (`beebox/view-widgets`) instead of `onNavigate`. `fraction.js` is bundled
+  into `dist/plugins/recipe/view.js`; it is declared only in
+  `src/frontend/package.json:27` today, and the plugin build resolves from
+  the package root, so it moves to `package.json` `dependencies` beside
+  `@xyflow/react` (courseware's precedent).
 - `view.tsx` and `tags.ts` both import `@markdoc/markdoc` (`Tag` for the
   transforms); the view bundle carries its own copy. `recipe.ts` imports
   `./tags.js`; `plugin.ts` stays Node-safe.
-- `emit-tags.ts`: delete `emitRecipeTag` and its dispatch line. A recipe tag
-  in a briefing body falls to the unknown-tag path (inner content plus a
-  stderr warning), which is correct: it is undefined there.
+- `emit-tags.ts`: move the `task` case out of `emitRecipeTag`
+  (`emit-tags.ts:176-183`, the GFM checkbox the `item` node injects, not a
+  recipe tag) into `emitMarkupTag`, then delete `emitRecipeTag` and its
+  dispatch line. A recipe tag in a briefing body falls to the unknown-tag
+  path (inner content plus a stderr warning), which is correct: it is
+  undefined there. The emit doctest keeps a `- [x] done` checklist case.
 - `src/frontend/src/file-types/builtins.tsx:35`: delete the recipe row; the
   list icon falls back to the default for stubbed types, as concept-map's
   does.
@@ -325,12 +361,18 @@ built-in template, and `registerFileType({ type: "recipe" })`.
 `recipe`; CSS prefix `bbx-recipe-`; the six tag names and seven render names
 unchanged.
 
-**First chunk.** The plugin directory with base, tags, template, README,
-registry member and `test/plugins/recipe/plugin.setup.doctest.md`
-(stubs written into a temp box; a recipe card with every tag validates clean;
-a memo with `{% yield %}` warns). Core deletions of the schema, template and
-tag rows in the same commit so the type never exists twice. The view moves
-in the second chunk.
+**First chunk.** The plugin directory with base (no `markdocTags` yet),
+template, README, registry member and
+`test/plugins/recipe/plugin.setup.doctest.md` (stubs written into a temp
+box; a recipe card with every tag validates clean; `bbx create` finds the
+template). Core deletions of `RecipeSchema`, its registration and the
+built-in template in the same commit so the type never exists twice. The
+six tags stay in the core table through this checkpoint, so the still-core
+`RecipeView` renders them. The second chunk moves the tags and the view
+together: `tags.ts`, `markdocTags` on the base, the plugin view, and the
+deletions of the core rows, `RecipeView`, `RecipeTags`, renderer
+registration, body.tsx entries, CSS and file-type row. Neither checkpoint
+renders a recipe without its tags.
 
 ### Track 3: conventions guide and its doctest
 
@@ -354,11 +396,11 @@ equals the directory.
   `view.tsx` entry.
 - Scoped tag keys are kebab-case and not in the core table (also enforced at
   load by `RedeclaredTagError`).
-- Render names of a plugin's tags are prefixed with the plugin's PascalCase
-  name or otherwise unique against the widget's component map; the doctest
-  checks a transform of each tag on a synthetic node does not return a core
-  render name. Core render names are read from `buildRenderConfig`'s map
-  through a small exported `coreRenderNames()`.
+- Render names of a plugin's tags are unique against the widget's component
+  map (`body.tsx:254`); the guide lists the core names. Convention only: a
+  synthetic-node check would miss `ingredient`'s inline form
+  (`core.ts:242`), and the view doctest renders both forms through the real
+  widget, where a shadowed core name would show as the wrong element.
 - CSS classes are prefixed `bbx-<plugin>-`.
 - A trick a plugin's README asks the agent to write is named `<plugin>-<verb>`.
 - Skill body lives in `skill.ts`; the Layout table and `package.json` `files`
@@ -404,8 +446,8 @@ none
 |---|---|---|---|
 | A plugin declares a scoped tag with a core name (`quote`) | new: schema doctest | new: `RedeclaredTagError` at `cardSchema()` | clear: load error names the tag |
 | A scoped tag is used in another type's body | new: card-lint doctest | existing: Markdoc `tag-undefined`, kept by `lintBodyMarkdoc` | clear: warning with line and tag |
-| A scoped tag renders on a generic surface (search, chat excerpt) | new: frontend doctest renders a memo body with `{% ingredient %}` | existing: transform drops the tag, keeps children (`dist/index.js:7031-7036`) | silent by design: text shows; the card page uses the view |
-| A plugin tag's render name shadows a core component (`Link`) | new: conventions doctest | new: rule and check | clear at test time; at runtime the merge is per render |
+| A scoped tag renders on a generic surface (generic card page, chat excerpt, inactive plugin) | new: frontend doctest renders `{% ingredient amount="2" unit="cups" %}flour{% /ingredient %}` and a `subrecipe` without the recipe tags and asserts the amount, unit and ref are in the output | new: `unknown-tag` rewrite renders the authored opening tag plus children | clear: the authored tag is visible |
+| A plugin tag's render name shadows a core component (`Link`) | new: the recipe view doctest renders every form through the real widget | convention in the guide; the merge is per render, so the damage is one card's render | clear in the doctest for the shipped plugin; convention for the next |
 | Recipe cards in a box that has not activated the plugin | existing: coverage doctest | existing: `plugin-type-unprovided` error; unknown-type validation | clear: health and validate name the type |
 | Box with an old `recipe` stub shape after a base change | existing: `plugin-stub-missing`, typecheck in `bbx upgrade` | existing | clear |
 | A briefing body contains a recipe tag after the emitter case is removed | new: emit doctest case | existing: unknown-tag fallback | clear: stderr warning, content kept |
@@ -421,7 +463,9 @@ No critical gap: every row has a test and a handler.
   warns with the tag name (Track 1 chunk 1 test). A recipe-ish tag the agent
   invents (`{% ing %}`) warns the same way, as today.
 - **Stale ref.** Unchanged: `subrecipe.ref` keeps its `required` attribute;
-  ref resolution is the generic body-refs walk (`lint-cards.ts:403`).
+  body refs are collected from the raw AST by attribute name
+  (`src/core/body-refs.ts:320-326`, `if (attrName !== "ref") continue;`)
+  and checked at `lint-cards.ts:190`, independent of the tag table.
 - **Two agents touching the same card.** Not affected: no new writes.
 - **Hand-edit drift.** ADDRESSED: a stub with the wrong type name is
   `plugin-declared-missing` with reason `defines no recipe schema`
@@ -460,6 +504,15 @@ No critical gap: every row has a test and a handler.
 
 ## Open design questions
 
+- **Scope briefing's `purpose`/`correction` and capture-session's
+  `image`/`silence` in this slice?** The decision says the global table
+  shrinks to the core vocabulary. With the `unknown-tag` fallback the move
+  is safe, but a briefing on the generic card page would then show
+  `{% purpose %}` as authored text instead of the styled block, unless the
+  generic page passes built-in types' tags from a frontend map keyed by card
+  type (about 60 lines; the same shared tag objects the schemas declare).
+  Lean: defer to a follow-up with that map, and keep this slice to the
+  plugin consumer. Boxholder's call; *NOT in scope* records the deferral.
 - Whether `RecipeScaleContext` should become a widget the host provides so a
   box's own recipe view could reuse scaling. Lean: no; it is the plugin
   view's internal state and a box that wants its own view imports the
@@ -502,12 +555,16 @@ No critical gap: every row has a test and a handler.
    doctests. Commit.
 2. Track 1 chunk 2: widget `tags` prop, `ViewMarkdown` pass-through, both
    `view-widgets.d.ts`, frontend doctest. Commit.
-3. Track 2 chunk 1: plugin directory (base, tags, template, README, registry
-   member), core deletions of schema, template, tag rows, emitter case; setup
-   doctest. Commit. Depends on 1.
-4. Track 2 chunk 2: plugin view and components and CSS; core deletions of
-   `RecipeView`, `RecipeTags`, renderer registration, body.tsx entries,
-   `index.css` rules, file-type row; view doctest. Commit. Depends on 2 and 3.
+3. Track 2 chunk 1: plugin directory (base without tags, template, README,
+   registry member), `beebox/cards` exports (`LabeledSourcesEntrySchema`,
+   `type TemplateDefinition`), `fraction.js` at the package root; core
+   deletions of `RecipeSchema`, its registration and the built-in template;
+   setup doctest. Commit. Depends on 1.
+4. Track 2 chunk 2: `tags.ts` and `markdocTags` on the base; plugin view,
+   components and CSS; core deletions of the six tag rows and schemas,
+   `emitRecipeTag` (after moving `task`), `RecipeView`, `RecipeTags`,
+   renderer registration, body.tsx entries, `index.css` rules, file-type row;
+   view doctest and emit doctest case. Commit. Depends on 2 and 3.
 5. Track 3: helper move, enumerating doctest, guide rewrite, `package.json`
    glob. Commit. Depends on 3 (two plugins to enumerate).
 6. Activate in test1 and the worktree clone; run the knowledge audits;
