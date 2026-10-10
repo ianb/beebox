@@ -50,6 +50,12 @@ Three hooks are installed per box:
   synchronous lint never touches the network — only this pass does. See
   `docs/implemented-plans/external-url-validation.md`.
 
+## Body Markdoc
+
+Every card body is parsed and validated against the core Markdoc tags plus the card type's
+`markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
+declare is `Undefined tag`.
+
 ## Canonical ref form (`--canonical`)
 
 Refs should be written from the box root (`/_content/notes/Plan.doc.card`); the one

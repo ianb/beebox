@@ -19,8 +19,8 @@
 
 import Markdoc from "@markdoc/markdoc";
 import { parseMarkdown } from "../shared/markdoc-config/parse/core.js";
-import type { Node } from "@markdoc/markdoc";
-import { markdocConfig } from "../shared/markdoc-config/tags/core.js";
+import type { Node, Schema } from "@markdoc/markdoc";
+import { withScopedTags } from "../shared/markdoc-config/scoped.js";
 import { TODO_ASSIGNED_PLACEHOLDER_ID, todoAssignedWarning } from "../shared/todo-model.js";
 import { isRecord } from "../shared/is-record.js";
 import type { LintIssue } from "../exports/cards.js";
@@ -42,7 +42,7 @@ const { validate } = Markdoc;
  * commentary) THIS is that separate path, so it can't itself swallow the
  * failure.
  */
-export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
+export function lintBodyMarkdoc(bodyText: string, scopedTags?: Readonly<Record<string, Schema>>): LintIssue[] {
   if (bodyText === "") return [];
   let ast: Node;
   try {
@@ -57,7 +57,7 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
     ];
   }
   const tagSpans = collectTagSpans(ast);
-  return validate(ast, markdocConfig)
+  return validate(ast, withScopedTags(scopedTags))
     // `html-unsupported` warnings come from the raw-HTML rewrite
     // (`shared/markdoc-config/parse/html-tokens.ts`): markup that was clearly meant
     // as HTML but renders as text or loses an attribute. A todo `assigned` to

@@ -282,8 +282,8 @@ steps:
             STEP 1 — READ THE SESSION:
             1. Read the session card (the .capture-session.card file). Its markdown body is the
                assembled transcript — a timeline of transcribed speech interleaved with
-               `{% image ref="photo-NNN.image.card" /%}` markers (where a photo was taken) and
-               `{% silence duration="15s" /%}` markers (gaps). Its frontmatter has `time.start`
+               `[photo-NNN](attach/photo-NNN.image.card)` links (where a photo was taken) and
+               `— 15s silence —` lines (gaps). Its frontmatter has `time.start`
                and the `images:` / `audio-clips:` / `files:` manifests.
             2. Read the image cards in the session's attach scope
                (`box/inbox/<basename>.attach/*.image.card`) to understand what was photographed —

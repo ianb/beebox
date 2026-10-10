@@ -1,8 +1,8 @@
 # Briefing compile
 
 `compileBriefing` produces the markdown that gets `@`-included into
-AGENTS.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`, prose)
-followed by the frontmatter records (`key-people:`, `properties:`) as
+AGENTS.md: the `purpose:` field as a `**Purpose:**` line, the body's markdown,
+then the frontmatter records (`key-people:`, `properties:`) as
 `**Label:** …` lines, then the root place's openers. The structured records
 live in frontmatter; only the free-text material stays in the body. (Outputs
 are `JSON.stringify`-ed to pin exact whitespace.)
@@ -56,8 +56,9 @@ JSON.stringify(md)
 ```ts
 const md = compileBriefing({
   type: "briefing",
+  purpose: "Learn AI together.",
   "key-people": [{ called: "Priya" }],
-  body: "{% purpose %}\nLearn AI together.\n{% /purpose %}\n",
+  body: "",
 });
 JSON.stringify(md)
 => "## Box Briefing\n\n**Purpose:** Learn AI together.\n\n**Key Person:** **Priya**\n"
@@ -90,7 +91,7 @@ the compiled `_content/briefing.md` names the openers the root chat shows.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/briefing.briefing.card", "---\ntype: briefing\n---\n{% purpose %}\nLend things.\n{% /purpose %}\n");
+await box.write("_content/briefing.briefing.card", "---\ntype: briefing\npurpose: Lend things.\n---\n");
 await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Lending\n  openers:\n    - Who has what right now?\n---\n");
 await compileBoxBriefings(box.root);
 JSON.stringify(await readFile(`${box.root}/_content/briefing.md`, "utf-8").then((t) => t.slice(t.indexOf("## Box Briefing"))))

@@ -70,7 +70,7 @@ const server2 = await makeTestServer();
 // `_content/recipes/`, and macOS's case-insensitive filesystem would
 // collide a same-named-but-cased directory into it.
 await server2.seed("_content/Cookbook/Cookbook.landmark.card", "---\nnavigation:\n  label: Cookbook\n---\n");
-await server2.seed("_content/Cookbook/Soup.recipe.card", "---\nprominence: primary\n---\n");
+await server2.seed("_content/Cookbook/Soup.memo.card", "---\nprominence: primary\n---\n");
 await server2.seed("_content/Plain/Notes.memo.card", "---\n---\n");
 
 const listing2 = await statusRouter.createCaller(ctxFor(server2.boxRoot)).browse({ path: "_content" });

@@ -65,6 +65,32 @@ JSON.stringify(keys)
 => {"tracked":"tracked/beebox/docs/plans/foo.md.comments.yaml","scratch":"worktree/dev-comments/scratch/notes.md.comments.yaml"}
 ```
 
+## An exhibit is named, not pathed
+
+An exhibit page lives in the exhibits store outside every checkout, so its
+subject is a workstream and an exhibit name. The exhibit segment follows
+`bin/exhibits add`'s rule, dots included; a leading dot is refused so no
+traversal or hidden file can be spelled.
+
+```ts
+const page: Subject = { scope: "exhibit", workstream: "exhibits-rethink", exhibit: "review.v2" };
+const refused = (subject: Subject): string => {
+  try {
+    subjectKey(subject);
+    return "accepted";
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+};
+JSON.stringify({
+  key: subjectKey(page),
+  hidden: refused({ scope: "exhibit", workstream: "ws", exhibit: ".hidden" }),
+  traversal: refused({ scope: "exhibit", workstream: "ws", exhibit: ".." }),
+  badWorkstream: refused({ scope: "exhibit", workstream: "a/b", exhibit: "x" }),
+})
+=> {"key":"exhibit/exhibits-rethink/review.v2.comments.yaml","hidden":"invalid comment path: not an exhibit name: .hidden","traversal":"invalid comment path: not an exhibit name: ..","badWorkstream":"invalid comment path: not a worktree name: a/b"}
+```
+
 ## Paths cannot escape the store
 
 Every shape below is a write outside the store if the guard is missing. The `..`
@@ -315,23 +341,33 @@ await appendComment(store, {
   comment: comment({ id: "c-ws", workstream: "scanner-ingest", body: "For scanner." }),
 });
 
+// An exhibit comment is listed by its named subject, round-tripped from its path.
+await appendComment(store, {
+  subject: { scope: "exhibit", workstream: "exhibits-rethink", exhibit: "after" },
+  comment: comment({ id: "c-ex", workstream: "exhibits-rethink", body: "The caption is wrong." }),
+});
+
 // A hand-created file whose path is not a valid subject is REPORTED and skipped,
-// not allowed to take the whole listing down with it.
+// not allowed to take the whole listing down with it. Two such files: a tracked
+// one with no path, and an exhibit one with no workstream segment.
 await writeFile(join(store, "tracked", COMMENTS_SUFFIX), "version: 1\ncomments: []\n");
+await writeFile(join(store, "exhibit", `stray${COMMENTS_SUFFIX}`), "version: 1\ncomments: []\n");
 
 const entries = await listAll(store);
 const forScanner = entries.flatMap((entry) =>
   entry.comments.filter((c) => c.workstream === "scanner-ingest").map((c) => c.body),
 );
 const malformed = entries.filter((entry) => entry.subject === null);
+const exhibitEntry = entries.find((entry) => entry.subject?.scope === "exhibit");
 const listing = {
   withComments: entries.filter((e) => e.comments.length > 0).length,
   forScanner,
-  malformedReported: malformed.length === 1,
-  malformedNamed: malformed[0]?.problem?.includes("not a valid comment-store path") ?? false,
+  exhibit: exhibitEntry?.subject,
+  malformedReported: malformed.length === 2,
+  malformedNamed: malformed.every((entry) => entry.problem?.includes("not a valid comment-store path") ?? false),
 };
 JSON.stringify(listing)
-=> {"withComments":5,"forScanner":["For scanner."],"malformedReported":true,"malformedNamed":true}
+=> {"withComments":6,"forScanner":["For scanner."],"exhibit":{"scope":"exhibit","workstream":"exhibits-rethink","exhibit":"after"},"malformedReported":true,"malformedNamed":true}
 ```
 
 ## Clearing is how a comment stops waiting

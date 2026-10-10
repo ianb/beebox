@@ -28,7 +28,7 @@ design.
 The exhibits store reached the same place and answered by **reporting** rather
 than deleting: `bin/workstreams sweep` *"gains a report line for store
 directories whose workstream is neither registered nor a live worktree"*
-([workstream-exhibits](../../beebox/docs/plans/workstream-exhibits.md):265).
+([workstream-exhibits](../../beebox/docs/implemented-plans/workstream-exhibits.md):265).
 The same treatment fits here, plus a marker in `bin/comments list` so an orphan
 is visibly an orphan rather than a live remark.
 

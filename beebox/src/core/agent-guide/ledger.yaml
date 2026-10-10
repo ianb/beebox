@@ -176,7 +176,7 @@ registry:
       - THE_LAW_OF_QUOTING
       - ABOUT_CARDS
       - src/core/chat/session/prompts.ts
-      - src/schemas/recipe.tsx
+      - src/plugins/recipe/base.ts
       - docs/box/provenance.md
       - docs/box-guidance.md
       - docs/prompts/review.md

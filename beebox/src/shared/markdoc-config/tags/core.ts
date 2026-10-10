@@ -11,7 +11,7 @@
  *
  * Markdoc replaces the previous react-markdown + remark/rehype stack. All
  * markdown bodies in the box render through this config: doc cards, memos,
- * chat narration, recipe notes, commit bodies — everything that previously
+ * chat narration, commit bodies — everything that previously
  * went through react-markdown.
  *
  * Tag library so far:
@@ -26,23 +26,6 @@
  *    `usage` — natural-language description of the derivation
  *    ("verbatim", "summary", "inferred from the address", …). Inline/
  *    block split same as `quote`.
- *  - `purpose` / `correction` — briefing vocabulary. Each replaces a
- *    YAML frontmatter field that briefings used to carry as structured
- *    data; now they're authored as body tags. Each rendered both by
- *    the frontend React renderer (per-tag component) and by the
- *    backend `compileBriefing` emitter that produces the markdown
- *    embedded in AGENTS.md. (`key-people` and `properties` stayed
- *    frontmatter — there are no tags for them.)
- *  - `image` / `silence` — capture-session timeline vocabulary, emitted
- *    by the capture preparation worker into a session card's generated
- *    body: `image` refs a child image card in the session's attach
- *    scope, `silence` marks a gap of 10+ seconds.
- *  - `ingredient` / `step` / `yield` / `substitution` / `subrecipe` /
- *    `recipe-section` — recipe vocabulary. Replaces the old XML
- *    `<ing>`, `<step>`, etc. shape with body Markdoc tags. The
- *    `ingredient` tag works inline (within a step's prose) or block
- *    (as a list item) — the recipe view's scaling logic reads the
- *    `amount` attribute.
  *  - `redacted` — agent-authored spoiler/reveal. Inline or block (same
  *    `node.inline` split as `quote`). Rendered as blurred text behind an
  *    animated noise overlay; click/tap reveals. Agent-only — there's no
@@ -79,6 +62,7 @@ import { validateSourceAttributes } from "./source-model.js";
 import { TODO_STATUSES, todoAssignedWarning, validateTodoAttributes } from "../../todo-model.js";
 import { stampedLocator } from "../../todo-locators.js";
 import { flattenNodes } from "../../todo-text.js";
+import { unknownTag } from "./unknown-tag.js";
 import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
@@ -205,99 +189,6 @@ const source: Schema = {
   },
 };
 
-/**
- * Briefing body vocabulary: `purpose` and `correction` — the free-text
- * material. Both are block-shaped (paragraph-or-larger; inline variants
- * aren't meaningful). The structured records (key-people, properties) live
- * in briefing frontmatter, not as body tags. The backend `compileBriefing`
- * emitter walks the parsed body and emits a "**Label:** …" markdown shape.
- */
-
-const purpose: Schema = {
-  transform(node, config) {
-    return new Tag("Purpose", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-const correction: Schema = {
-  attributes: {
-    test: { type: String },
-  },
-  transform(node, config) {
-    return new Tag("Correction", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-/**
- * Recipe vocabulary. Replaces the legacy XML recipe schema's
- * `<ing>`, `<step>`, etc. — recipes are now frontmatter+body cards
- * whose body is Markdoc-annotated prose.
- */
-
-const ingredient: Schema = {
-  attributes: {
-    amount: { type: String },
-    unit: { type: String },
-  },
-  transform(node, config) {
-    const attrs = node.transformAttributes(config);
-    return new Tag(
-      node.inline ? "IngredientInline" : "IngredientBlock",
-      attrs,
-      node.transformChildren(config),
-    );
-  },
-};
-
-const step: Schema = {
-  transform(node, config) {
-    return new Tag("Step", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-const recipeYield: Schema = {
-  attributes: {
-    amount: { type: String },
-  },
-  transform(node, config) {
-    return new Tag("RecipeYield", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-const substitution: Schema = {
-  attributes: {
-    for: { type: String },
-  },
-  transform(node, config) {
-    // `for` is also a reserved-ish prop in some React contexts (label's
-    // `htmlFor`); rename to `forIngredient` to keep the React side clean.
-    const { for: forAttr, ...rest }: { for?: string; [key: string]: unknown } = node.transformAttributes(config);
-    const renamed = forAttr === undefined ? rest : { ...rest, forIngredient: forAttr };
-    return new Tag("Substitution", renamed, node.transformChildren(config));
-  },
-};
-
-const subrecipe: Schema = {
-  attributes: {
-    ref: { type: String, required: true },
-  },
-  transform(node, config) {
-    // Same `ref` → `sourceRef` rename as `source` / `key-person`.
-    const { ref, ...rest }: { ref?: string; [key: string]: unknown } = node.transformAttributes(config);
-    const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
-    return new Tag("Subrecipe", renamed, node.transformChildren(config));
-  },
-};
-
-const recipeSection: Schema = {
-  attributes: {
-    name: { type: String },
-  },
-  transform(node, config) {
-    return new Tag("RecipeSection", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
 const redacted: Schema = {
   transform(node, config) {
     return new Tag(
@@ -315,31 +206,6 @@ const task: Schema = {
   },
   transform(node, config) {
     return new Tag("Task", node.transformAttributes(config), []);
-  },
-};
-
-// Capture-session transcript markers. `{% image %}` points at a child image
-// card (description/filename come from that card); `{% silence %}` marks a gap.
-const captureImage: Schema = {
-  selfClosing: true,
-  attributes: {
-    ref: { type: String, required: true },
-  },
-  transform(node, config) {
-    // `ref` → `sourceRef` rename (React reserves `ref`), as with `source`.
-    const { ref, ...rest }: { ref?: string; [key: string]: unknown } = node.transformAttributes(config);
-    const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
-    return new Tag("CaptureImage", renamed, []);
-  },
-};
-
-const silence: Schema = {
-  selfClosing: true,
-  attributes: {
-    duration: { type: String, required: true },
-  },
-  transform(node, config) {
-    return new Tag("Silence", node.transformAttributes(config), []);
   },
 };
 
@@ -464,18 +330,9 @@ export const markdocConfig: Config = {
   tags: {
     quote,
     source,
-    purpose,
-    correction,
-    ingredient,
-    step,
-    yield: recipeYield,
-    substitution,
-    subrecipe,
-    "recipe-section": recipeSection,
     redacted,
     task,
-    image: captureImage,
-    silence,
+    "unknown-tag": unknownTag,
     todo,
     "see-also": seeAlso,
     html: makeHtmlTag({ paragraph: "p" }),

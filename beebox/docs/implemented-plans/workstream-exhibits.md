@@ -1,6 +1,6 @@
 ---
 title: "Workstream exhibits: a persistent presentation medium with asks"
-status: partial
+status: implemented
 workstream: dev-docs-workflow
 issues:
   - ../../../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md
@@ -9,6 +9,11 @@ issues:
 # Workstream exhibits
 
 ## Implementation status
+
+Moved to implemented-plans on 2026-10-10. The boxholder's acceptance pass
+below never ran; after 52 days with no answer recorded through the page,
+[exhibits-rethink](exhibits-rethink.md) removed Track E (the ask
+queue) and the disposition form. Tracks A through D and F stand.
 
 Tracks A through F are implemented on this branch, through the fix round
 that resolved every finding from the cross-model (Codex) review of the

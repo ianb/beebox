@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { AllExhibitsLink, ExhibitLinks } from "./ExhibitLinks.js";
 import { ScheduleAlerts } from "./ScheduleAlerts.js";
 import { WorkstreamActions } from "./WorkstreamActions.js";
 import { WorkstreamIssueSummary } from "./WorkstreamIssueSummary.js";
 import { Button, Pill } from "./ui.js";
 import { relativeTime } from "../lib/format.js";
-import type { Issue, Workstream } from "../types.js";
+import type { Issue, Workstream, WorkstreamListItem } from "../types.js";
 
 /** A tick older than this is a dead scheduler, not a quiet one. */
 const HEARTBEAT_STALE_MS = 60 * 60 * 1000;
@@ -54,7 +55,7 @@ export function ScheduleFacts({ schedule, now }: { schedule: NonNullable<Workstr
   );
 }
 
-function ScheduledRow({ row, issues, now }: { row: Workstream; issues: Issue[]; now?: Date | undefined }) {
+function ScheduledRow({ row, issues, exhibitsOrigin, now }: { row: WorkstreamListItem; issues: Issue[]; exhibitsOrigin: string; now?: Date | undefined }) {
   const [open, setOpen] = useState(false);
   const related = issues.filter((issue) =>
     issue.frontmatter.workstream === row.name || issue.frontmatter.discoveredIn === row.name);
@@ -75,6 +76,12 @@ function ScheduledRow({ row, issues, now }: { row: Workstream; issues: Issue[]; 
         </WorkstreamActions>
       </div>
       {open ? <ScheduleAlerts name={row.name} /> : null}
+      {row.exhibits.length > 0 ? (
+        <div className="workstream-exhibits">
+          <ExhibitLinks entries={row.exhibits} origin={exhibitsOrigin} />
+          <AllExhibitsLink workstream={row.name} origin={exhibitsOrigin} />
+        </div>
+      ) : null}
       {related.length > 0 ? (
         <div className="workstream-issues">
           {related.map((issue) => (
@@ -96,7 +103,7 @@ function ScheduledRow({ row, issues, now }: { row: Workstream; issues: Issue[]; 
  * its own heading, heartbeat included: a section of schedules whose scheduler
  * is dead is exactly the state the plan exists to make visible.
  */
-export function ScheduledSection({ rows, issues, now }: { rows: Workstream[]; issues: Issue[]; now?: Date }) {
+export function ScheduledSection({ rows, issues, exhibitsOrigin, now }: { rows: WorkstreamListItem[]; issues: Issue[]; exhibitsOrigin: string; now?: Date }) {
   const heartbeat = scheduleHeartbeatStatus(rows, now);
   return (
     <section className="workstream-section">
@@ -108,7 +115,7 @@ export function ScheduledSection({ rows, issues, now }: { rows: Workstream[]; is
         <Link to="/alerts" className="schedule-all-alerts">all alerts</Link>
       </h2>
       <ul>
-        {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} now={now} />)}
+        {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} exhibitsOrigin={exhibitsOrigin} now={now} />)}
       </ul>
     </section>
   );

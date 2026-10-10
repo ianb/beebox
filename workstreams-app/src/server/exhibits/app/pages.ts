@@ -18,12 +18,6 @@ li { display: flex; align-items: baseline; gap: .75rem; padding: .7rem .2rem; bo
 a { color: #315ba8; font-weight: 650; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .badge { padding: .14rem .5rem; border-radius: 999px; background: #edf0f4; color: #586678; font-size: .76rem; font-weight: 650; }
-.badge-decide { background: #dbe7fa; color: #294f99; }
-.badge-confirm { background: #fbeab8; color: #765300; }
-.badge-react { background: #eee4fb; color: #6543ac; }
-.badge-fyi { background: #edf0f4; color: #586678; }
-.state { color: #8a3a24; font-size: .78rem; font-weight: 650; text-transform: uppercase; letter-spacing: .03em; }
-.state-answered { color: #28633b; }
 .problem { color: #84351f; }
 pre { padding: 1rem; overflow: auto; border: 1px solid #e4c5bd; border-radius: .4rem; background: #fff5f2; color: #84351f; }
 code { font-size: .95em; }
@@ -73,23 +67,11 @@ export function renderExhibitList(options: { heading: string; basePath: string; 
   const rows = options.exhibits
     .map((exhibit) => {
       const href = `${options.basePath}${encodeURIComponent(exhibit.name)}/`;
-      const badge =
-        exhibit.askType === null
-          ? ""
-          : ` <span class="badge badge-${escapeHtml(exhibit.askType)}">${escapeHtml(exhibit.askType)}</span>`;
       const detail =
         exhibit.error === null
           ? escapeHtml(exhibit.title ?? exhibit.name)
           : `<span class="problem">${escapeHtml(exhibit.error)}</span>`;
-      // Answered state is the reason to open the list at all: it says which
-      // asks are still costing the developer something.
-      const state =
-        exhibit.answered === null
-          ? ""
-          : ` <span class="state${exhibit.answered ? " state-answered" : ""}">${exhibit.answered ? "answered" : "waiting"}</span>`;
-      const problem =
-        exhibit.problem === null ? "" : ` <span class="problem">${escapeHtml(exhibit.problem)}</span>`;
-      return `<li><a href="${escapeHtml(href)}">${escapeHtml(exhibit.name)}</a>${badge}${state} <span>${detail}</span>${problem}</li>`;
+      return `<li><a href="${escapeHtml(href)}">${escapeHtml(exhibit.name)}</a> <span>${detail}</span></li>`;
     })
     .join("\n      ");
   const body =
@@ -113,12 +95,12 @@ export function renderManifestError(options: { scope: string; manifestPath: stri
     `Invalid manifest: ${options.scope}`,
     `
     <h1 class="problem">This exhibit has no usable manifest</h1>
-    <p>Every exhibit states its ask. Fix <code>${escapeHtml(options.manifestPath)}</code>:</p>
+    <p>Every exhibit needs a manifest. Fix <code>${escapeHtml(options.manifestPath)}</code>:</p>
     <ul>
       ${issues}
     </ul>
-    <p>Manifest shape: <code>{ "title", "ask": { "type", "prose", "options"? }, "created", "figures"? }</code>
-    — ask types are <code>decide</code>, <code>confirm</code>, <code>react</code>, <code>fyi</code>.</p>`,
+    <p>Manifest shape: <code>{ "title", "created", "prose"?, "figures"? }</code>
+    — <code>prose</code> is a short Markdown paragraph shown above the figures.</p>`,
   );
 }
 
@@ -168,7 +150,7 @@ export function renderNotFound(what: string): string {
 
 /**
  * The container shell. Vite dev serves a direct .css request as a JS module, so
- * there is no <link rel="stylesheet"> here — boot.tsx imports the stylesheet.
+ * there is no <link rel="stylesheet"> here — boot/mount.tsx imports the stylesheet.
  */
 export function renderShell(boot: ExhibitBoot): string {
   const payload = JSON.stringify(boot).replace(/</gu, "\\u003c");
@@ -182,7 +164,7 @@ export function renderShell(boot: ExhibitBoot): string {
   <body>
     <div id="root"></div>
     <script>window.__EXHIBIT__ = ${payload};</script>
-    <script type="module" src="/boot.tsx"></script>
+    <script type="module" src="/boot/mount.tsx"></script>
   </body>
 </html>
 `;

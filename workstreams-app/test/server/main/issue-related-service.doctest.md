@@ -166,7 +166,7 @@ const app = await buildApp({
     workstreams: { list: async () => ({ items: [], warnings: [] }) },
     documents: { listIssues: async () => [] },
     quotas: { get: async () => [] },
-    exhibits: { askQueue: async () => ({ origin: "", storeProblem: null, entries: [] }) },
+    exhibits: { inventory: async () => ({ origin: "", storeProblem: null, entries: [] }) },
     actions: { run: async () => ({ status: "complete" }), job: () => null, activeJobs: () => 0 },
     related: service,
   },

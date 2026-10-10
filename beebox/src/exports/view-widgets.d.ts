@@ -8,6 +8,7 @@
  * that one; keep the two in sync).
  */
 import type { ComponentType, ReactNode } from "react";
+import type { Schema } from "@markdoc/markdoc";
 
 /**
  * The props a view's default export receives, and the card/file shapes in
@@ -36,6 +37,13 @@ export const CardRef: ComponentType<{
  * todos their card path and file lines. The view check rejects other ways of
  * rendering card text.
  */
-export const Markdown: ComponentType<{ children: string; card: { path: string; bodyLineOffset: number } }>;
+export const Markdown: ComponentType<{
+  children: string;
+  card: { path: string; bodyLineOffset: number };
+  /** The type's scoped tags (`CardSchemaConfig.markdocTags`). */
+  tags?: Readonly<Record<string, Schema>>;
+  /** Components by the name a scoped tag's transform emits. */
+  components?: Partial<Record<string, ComponentType<Record<string, unknown>>>>;
+}>;
 /** Supplies the node view host (and the box slug) so widgets resolve their context in `bbx view test`. */
 export const NodeViewHostProvider: ComponentType<{ boxSlug?: string; children: ReactNode }>;

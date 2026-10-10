@@ -106,6 +106,21 @@ docs[0].content
 => Quarterly planning notes for the project.
 ```
 
+## A briefing's purpose is folded in from frontmatter
+
+The purpose statement lives in the briefing's `purpose:` field, not its body,
+so the extractor folds it into the document; a directory briefing with no body
+text is still found by what it says the directory is for.
+
+```ts
+const docs = await docsFor(
+  "_content/garden/briefing.briefing.card",
+  "---\ntype: briefing\npurpose: Plans and records for the vegetable garden.\n---\n"
+);
+docs[0].content.includes("vegetable garden")
+=> true
+```
+
 ## An image's description doubles as its contains fallback; OCR text indexes
 
 ```ts
