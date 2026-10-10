@@ -8,6 +8,7 @@
 
 import { body, LabeledSourcesEntrySchema, type CardSchemaConfig } from "../../exports/cards.js";
 import { z } from "../../exports/schema.js";
+import { recipeTags } from "./tags.js";
 
 /**
  * A representative image — exactly one of `ref` (into the recipe's attach scope,
@@ -37,6 +38,7 @@ export const recipeBase: CardSchemaConfig<string, typeof recipeFields> = {
   description: "A recipe with scaling-aware ingredients, steps, and substitutions via the recipe Markdoc tags",
   category: "authored",
   fields: recipeFields,
+  markdocTags: recipeTags,
   instructions: `# Recipe Cards
 
 Recipes live in \`_content/recipes/\`. Organize with subdirectories only if

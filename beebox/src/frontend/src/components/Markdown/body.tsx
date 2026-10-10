@@ -31,7 +31,6 @@ import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";
-import { makeRecipeComponents } from "../RecipeTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
@@ -199,7 +198,6 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
   const briefing = makeBriefingComponents();
-  const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
   const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath });
   const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
   const Task = ({ done }: { done?: boolean }) => (
@@ -266,13 +264,6 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
     SourceBlock: cast(SourceBlock),
     Purpose: cast(briefing.Purpose),
     Correction: cast(briefing.Correction),
-    IngredientInline: cast(recipe.IngredientInline),
-    IngredientBlock: cast(recipe.IngredientBlock),
-    Step: cast(recipe.Step),
-    RecipeYield: cast(recipe.RecipeYield),
-    Substitution: cast(recipe.Substitution),
-    Subrecipe: cast(recipe.Subrecipe),
-    RecipeSection: cast(recipe.RecipeSection),
     Task: cast(Task),
     CaptureImage: cast(CaptureImage),
     Silence: cast(Silence),

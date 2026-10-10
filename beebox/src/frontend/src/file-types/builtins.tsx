@@ -32,7 +32,6 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "question" }, { listUI: { icon: QuestionIcon } });
   registerFileType({ type: "email-message" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "email-thread" }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ type: "recipe" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "record" }, { listUI: { icon: CardIcon } });
   registerFileType({ type: "gsheet" }, { listUI: { icon: CardIcon } });
   registerFileType({ type: "doc" }, { listUI: { icon: DocumentIcon } });

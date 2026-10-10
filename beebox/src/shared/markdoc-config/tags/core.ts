@@ -11,7 +11,7 @@
  *
  * Markdoc replaces the previous react-markdown + remark/rehype stack. All
  * markdown bodies in the box render through this config: doc cards, memos,
- * chat narration, recipe notes, commit bodies — everything that previously
+ * chat narration, commit bodies — everything that previously
  * went through react-markdown.
  *
  * Tag library so far:
@@ -37,12 +37,6 @@
  *    by the capture preparation worker into a session card's generated
  *    body: `image` refs a child image card in the session's attach
  *    scope, `silence` marks a gap of 10+ seconds.
- *  - `ingredient` / `step` / `yield` / `substitution` / `subrecipe` /
- *    `recipe-section` — recipe vocabulary. Replaces the old XML
- *    `<ing>`, `<step>`, etc. shape with body Markdoc tags. The
- *    `ingredient` tag works inline (within a step's prose) or block
- *    (as a list item) — the recipe view's scaling logic reads the
- *    `amount` attribute.
  *  - `redacted` — agent-authored spoiler/reveal. Inline or block (same
  *    `node.inline` split as `quote`). Rendered as blurred text behind an
  *    animated noise overlay; click/tap reveals. Agent-only — there's no
@@ -229,76 +223,6 @@ const correction: Schema = {
   },
 };
 
-/**
- * Recipe vocabulary. Replaces the legacy XML recipe schema's
- * `<ing>`, `<step>`, etc. — recipes are now frontmatter+body cards
- * whose body is Markdoc-annotated prose.
- */
-
-const ingredient: Schema = {
-  attributes: {
-    amount: { type: String },
-    unit: { type: String },
-  },
-  transform(node, config) {
-    const attrs = node.transformAttributes(config);
-    return new Tag(
-      node.inline ? "IngredientInline" : "IngredientBlock",
-      attrs,
-      node.transformChildren(config),
-    );
-  },
-};
-
-const step: Schema = {
-  transform(node, config) {
-    return new Tag("Step", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-const recipeYield: Schema = {
-  attributes: {
-    amount: { type: String },
-  },
-  transform(node, config) {
-    return new Tag("RecipeYield", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-const substitution: Schema = {
-  attributes: {
-    for: { type: String },
-  },
-  transform(node, config) {
-    // `for` is also a reserved-ish prop in some React contexts (label's
-    // `htmlFor`); rename to `forIngredient` to keep the React side clean.
-    const { for: forAttr, ...rest }: { for?: string; [key: string]: unknown } = node.transformAttributes(config);
-    const renamed = forAttr === undefined ? rest : { ...rest, forIngredient: forAttr };
-    return new Tag("Substitution", renamed, node.transformChildren(config));
-  },
-};
-
-const subrecipe: Schema = {
-  attributes: {
-    ref: { type: String, required: true },
-  },
-  transform(node, config) {
-    // Same `ref` → `sourceRef` rename as `source` / `key-person`.
-    const { ref, ...rest }: { ref?: string; [key: string]: unknown } = node.transformAttributes(config);
-    const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
-    return new Tag("Subrecipe", renamed, node.transformChildren(config));
-  },
-};
-
-const recipeSection: Schema = {
-  attributes: {
-    name: { type: String },
-  },
-  transform(node, config) {
-    return new Tag("RecipeSection", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
 const redacted: Schema = {
   transform(node, config) {
     return new Tag(
@@ -467,12 +391,6 @@ export const markdocConfig: Config = {
     source,
     purpose,
     correction,
-    ingredient,
-    step,
-    yield: recipeYield,
-    substitution,
-    subrecipe,
-    "recipe-section": recipeSection,
     redacted,
     task,
     "unknown-tag": unknownTag,

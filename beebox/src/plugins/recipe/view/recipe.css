@@ -1,0 +1,21 @@
+/* Recipe step auto-numbering via CSS counter. The recipe view wraps the body
+   in `.bbx-recipe-body`, which resets the counter; each `{% step %}` carries
+   the `.bbx-recipe-step` class and renders its number via ::before. Outside
+   a recipe-body container, the counter doesn't reset and the ::before
+   counter is undefined — falls back to nothing gracefully. */
+.bbx-recipe-body {
+  counter-reset: recipe-step;
+}
+.bbx-recipe-body .bbx-recipe-step {
+  counter-increment: recipe-step;
+  display: flex;
+  gap: 0.75rem;
+}
+.bbx-recipe-body .bbx-recipe-step::before {
+  content: counter(recipe-step) ".";
+  color: rgb(115 100 90);
+  font-weight: 500;
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  text-align: right;
+}
