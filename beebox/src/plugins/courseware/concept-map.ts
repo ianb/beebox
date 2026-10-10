@@ -1,5 +1,6 @@
 /**
- * Concept-map card schema — a module-scale knowledge graph.
+ * Concept-map base (the courseware plugin) — a module-scale knowledge graph.
+ * A box completes it as `cardSchema("concept-map", courseware.schemas["concept-map"])`.
  *
  * One card holds the whole graph for one bounded topic: concepts are in-card
  * NODES (not separate cards), and edges reference other nodes by their `id`
@@ -12,8 +13,8 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type LintIssue } from "../exports/cards.js";
-import { z } from "zod";
+import { body, type CardSchemaConfig, type FieldDecl, type LintIssue } from "../../exports/cards.js";
+import { z } from "../../exports/schema.js";
 
 /** Knowledge-component type — a strong hint to *how* a node is taught. */
 const ConceptKind = z.enum(["fact", "concept", "procedure", "principle"]);
@@ -93,9 +94,10 @@ function conceptMapErrors(fields: Record<string, unknown>): LintIssue[] {
  * Self-contained SHAPE warnings (advisory, not errors): an orphan node — one
  * with no edge in or out — is usually a modeling smell (it doesn't belong, or a
  * real relation went unstated). Returned as warnings so they surface without
- * blocking; card-lint.ts dispatches this for `concept-map` cards. A map of 0–1
- * nodes can't have edges, so it's never flagged. Re-parsing yields typed data;
- * a shape failure is already reported by the main frontmatter parse, so skip.
+ * blocking. A map of 0–1
+ * nodes can't have edges, so it's never flagged. The plugin's `lintCards`
+ * dispatches this for `concept-map` cards. Re-parsing yields typed data; a shape
+ * failure is already reported by the main frontmatter parse, so skip.
  */
 export function conceptMapShapeWarnings(fields: Record<string, unknown>): LintIssue[] {
   const parsed = z.array(ConceptNode).safeParse(fields["concepts"]);
@@ -123,15 +125,17 @@ export function conceptMapShapeWarnings(fields: Record<string, unknown>): LintIs
   return warnings;
 }
 
-export const ConceptMapSchema: CardSchema = cardSchema("concept-map", {
+const conceptMapFields = {
+  concepts: z.array(ConceptNode),
+  body: body(z.string()),
+};
+
+export const conceptMapBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
   brief: "Knowledge graph for one topic",
   description: "A module-scale knowledge graph for one bounded topic — concepts as in-card nodes with typed edges; a course component",
   category: "authored",
   validate: ({ fields }) => conceptMapErrors(fields),
-  fields: {
-    concepts: z.array(ConceptNode),
-    body: body(z.string()),
-  },
+  fields: conceptMapFields,
   instructions: `# Concept-Map Cards
 
 A concept-map is a **module-scale knowledge graph**: one card holds the whole graph for one bounded topic. Concepts are **nodes inside this card** (not separate cards), and edges reference other nodes **by their \`id\` within this same card** — they are *not* file refs. The graph is self-contained, so moving or renaming the card never breaks an edge.
@@ -209,26 +213,4 @@ An edge is optional, but if you draw one it **must** carry a \`kind\` from this 
 ## Body
 
 The body is the framing: what this map covers, where concepts spiral together, and the design rationale. The actual teaching material lives in a course's \`material/\`, not here.`,
-});
-
-/**
- * Starter concept-map for \`bbx create\`: one example node and a framing body, so
- * a freshly created map parses and is ready to extend.
- */
-export function createConceptMapTemplate(options: { title?: string | undefined }): string {
-  const fields: Record<string, unknown> = {
-    concepts: [
-      {
-        id: "first-concept",
-        name: "First concept",
-        kind: "concept",
-        gloss: "One-line description of this concept.",
-      },
-    ],
-  };
-  if (options.title !== undefined && options.title !== "") {
-    fields["title"] = options.title;
-  }
-  const bodyText = "Describe what this map covers and how the concepts spiral together.\n";
-  return renderFrontmatterBlock(fields, bodyText);
-}
+};

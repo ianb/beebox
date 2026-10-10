@@ -11,7 +11,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { syncBoxGuidance } from "../../../src/core/box/guidance-sync/core.js";
-import { generateSkills } from "../../../src/core/box/guidance-sync/skills.js";
 import { ensureInstructionMapInclude } from "../../../src/core/maps/finalize/core.js";
 import { ensureAgentContext } from "../../../src/core/docs-gen/generate/agents-md.js";
 
@@ -102,33 +101,21 @@ await ensureAgentContext(box.root, []);
 => { agents: "file", legacy: "absent", content: "@.beebox/agent-guide.md\n" }
 ```
 
-The course skill tells the agent to make a course-local `AGENTS.md`:
-
-```ts continue
-await generateSkills(box.root);
-const skill = await box.read(".claude/skills/build-course/SKILL.md");
-({ agents: skill.includes("editable `AGENTS.md`"), legacy: skill.includes("CLAUDE.md") })
-=> { agents: true, legacy: false }
-```
-
 ```ts cleanup
 await box.cleanup();
 ```
 
-## The unconverted root writer and course skill keep CLAUDE.md
+## The unconverted root writer keeps CLAUDE.md
 
 ```ts
 const box = await makeTmpBox({ git: "none", legacyInstructions: true });
 await fs.rm(box.path("CLAUDE.md"), { force: true });
 await ensureAgentContext(box.root, []);
-await generateSkills(box.root);
-const skill = await box.read(".claude/skills/build-course/SKILL.md");
 ({
   root: await kind(box, "CLAUDE.md"),
   mirror: await kind(box, "AGENTS.md"),
-  skill: skill.includes("editable `CLAUDE.md`"),
 })
-=> { root: "file", mirror: "symlink", skill: true }
+=> { root: "file", mirror: "symlink" }
 ```
 
 ```ts cleanup

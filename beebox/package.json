@@ -17,7 +17,15 @@
       "types": "./dist/view-widgets/index.d.ts",
       "default": "./dist/view-widgets/index.js"
     },
-    "./tsconfig.base.json": "./tsconfig.base.json"
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./plugins/*": {
+      "types": "./dist/plugins/*/plugin.d.ts",
+      "default": "./dist/plugins/*/plugin.js"
+    },
+    "./plugins/*/view": {
+      "types": "./dist/plugins/*/view.d.ts",
+      "default": "./dist/plugins/*/view.js"
+    }
   },
   "bin": {
     "bbx": "./bin/bbx",
@@ -34,7 +42,10 @@
     "src/frontend/dist",
     "src/frontend/package.json",
     "src/types",
+    "src/plugins/*/README.md",
+    "src/plugins/*/SKILL.md",
     "src/core/views/types.ts",
+    "src/shared/view-state.ts",
     "src/core/chat/card-activity.ts",
     "src/shared/card-activity-kinds.ts",
     "src/core/agent-guide/ledger.yaml",
@@ -43,7 +54,7 @@
     "tsconfig.base.json"
   ],
   "scripts": {
-    "build": "tsc && node src/scripts/build-cli/build/pub-worker.mjs",
+    "build": "tsc && node src/scripts/build-cli/build/pub-worker.mjs && node src/scripts/build-cli/build/plugins.ts",
     "build:frontend": "cd src/frontend && pnpm build",
     "build:all": "pnpm build && pnpm build:frontend",
     "build:cli": "node src/scripts/build-cli/build/bundle.ts && tsc -p tsconfig.declarations.json",
@@ -101,11 +112,14 @@
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/chokidar": "^1.7.5",
+    "@types/dagre": "^0.7.54",
     "@types/node": "^24.0.0",
     "@types/proper-lockfile": "^4.1.4",
     "@types/web-push": "^3.6.4",
+    "@xyflow/react": "^12.11.0",
     "agent-doctest": "workspace:*",
     "axe-core": "^4.11.4",
+    "dagre": "^0.8.5",
     "eslint": "^9.39.2",
     "eslint-import-resolver-typescript": "^4.4.4",
     "knip": "^5.83.1",

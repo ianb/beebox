@@ -18,6 +18,10 @@ import type { DeclEntry } from "./decls.js";
 export function registryImportedFindings(layout: PackageLayout, decls: DeclEntry[]): Finding[] {
   const findings: Finding[] = [];
   for (const { module, decl } of decls) {
+    // An empty registry (`members: {}`) enumerates nothing yet, so there is
+    // no second list a consumer could prove honest; the finding waits for
+    // the first member.
+    if (decl.members.length === 0) continue;
     const imported = modules(layout).some((candidate) => {
       if (candidate.path === module.path) return false;
       return candidate.imports.some((edge) => !edge.typeOnly && edge.target === module.path);

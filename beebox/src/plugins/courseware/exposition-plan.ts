@@ -1,14 +1,16 @@
 /**
- * Exposition-plan card schema — a worked process for how to *present* a subject,
- * producing a compiled set of rules.
+ * Exposition-plan base (the courseware plugin) — a worked process for how to
+ * *present* a subject, ending in a set of presentation rules. A box completes it
+ * as `cardSchema("exposition-plan", courseware.schemas["exposition-plan"])`.
  *
  * It is NOT a fixed lesson script. It guides the agent to (1) translate what's
  * known about the learner into concrete style implications, (2) enumerate and
  * *rate* candidate ways to present — deliberately breaking the default reach for
- * plain prose — and (3) distill the result into concrete `rules` that guide
- * later material-authoring and teaching without re-deriving. Those `rules` are
- * compiled to a path-loaded box rule (see `compileExpositionRules`) so they're
- * in context while working in the course.
+ * plain prose — and (3) distill the result into concrete rules that guide later
+ * material-authoring and teaching without re-deriving. The rules live in the
+ * course directory's nested `AGENTS.md`, which loads for any agent working
+ * there. The `rules` field stays so existing cards validate; the
+ * `legacy-exposition-rules` health check names each card still carrying one.
  *
  * A single-file card, usually embedded in a course's attach scope. General
  * beyond courseware — any deliberate presentation could use it.
@@ -16,8 +18,8 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
-import { z } from "zod";
+import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { z } from "../../exports/schema.js";
 
 /** One candidate way to present, with an honest rating of its fit here. */
 const Approach = z.object({
@@ -33,9 +35,9 @@ const expositionPlanFields = {
   body: body(z.string()),
 };
 
-export const ExpositionPlanSchema: CardSchema = cardSchema("exposition-plan", {
+export const expositionPlanBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
   brief: "How to present a subject",
-  description: "A worked plan for how to present a subject — learner translation, rated approaches, and compiled presentation rules",
+  description: "A worked plan for how to present a subject — learner translation, rated approaches, and the presentation rules they produce",
   category: "authored",
   fields: expositionPlanFields,
   instructions: `# Exposition-Plan Cards
@@ -65,36 +67,23 @@ approaches:
 
 **But never use a technique just because it exists.** Each one must earn its place for this subject and learner. Different domains and learners call for different techniques. **If mostly-textual is genuinely the right answer here, say so** — variety is not the goal, fit is.
 
-## 3. \`rules\` — the compiled output
+## 3. The rules — written into the course directory's \`AGENTS.md\`
 
-Distill the above into a short list of **concrete, standalone rules** that will guide you later — while you're authoring material or mid-conversation, focused on other things — *without* re-reading this whole card:
+Distill the above into a short list of **concrete, standalone rules** that will guide you later — while you're authoring material or mid-conversation, focused on other things — *without* re-reading this whole card. Write them into a nested \`AGENTS.md\` in the course directory (the attach scope holding the course components), under a heading such as "Presentation rules":
 
-\`\`\`yaml
-rules:
-  - Open each concept from a phenomenon the learner already has; pull the idea out of it.
-  - Use dialog to surface the learner's model before correcting it; never lead with a definition.
-  - Reserve prose for framing and transitions, not for carrying a mechanism.
+\`\`\`markdown
+## Presentation rules
+
+- Open each concept from a phenomenon the learner already has; pull the idea out of it.
+- Use dialog to surface the learner's model before correcting it; never lead with a definition.
+- Reserve prose for framing and transitions, not for carrying a mechanism.
 \`\`\`
 
-These \`rules\` are **compiled to a box rule that auto-loads while you work in this course**, so write them to stand on their own. Keep the *reasoning* behind them here (and in the body); the rules themselves should be terse and actionable.
+That file loads for any agent working in the course directory, so write the rules to stand on their own. Keep the *reasoning* behind them here (in \`approaches\` and the body); the rules themselves should be terse and actionable.
+
+The \`rules\` frontmatter field is **legacy**: earlier engines compiled it into a generated box rule. It still validates, but nothing reads it any more. Move its contents into the course directory's \`AGENTS.md\` and remove the field; the \`legacy-exposition-rules\` health check lists every exposition-plan that still carries one.
 
 ## Body
 
 The reasoning narrative — why this shape, and how it should adapt. Living. **Use neutral pronouns (they/them) for the learner** regardless of who they are.`,
-});
-
-/**
- * Starter exposition-plan for \`bbx create\`: prompts for the learner-translation
- * first, then approaches and rules. The agent fills these in.
- */
-export function createExpositionPlanTemplate(options: { title?: string | undefined }): string {
-  const fields: Record<string, unknown> = {
-    "learner-translation": ["What's known about the learner → concrete implications for how to present."],
-    rules: ["The concrete expositional rules to follow later — filled in once approaches are rated."],
-  };
-  if (options.title !== undefined && options.title !== "") {
-    fields["title"] = options.title;
-  }
-  const bodyText = "The reasoning behind the presentation choices, and how it should adapt. Use neutral pronouns for the learner.\n";
-  return renderFrontmatterBlock(fields, bodyText);
-}
+};

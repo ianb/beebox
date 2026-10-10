@@ -1,5 +1,6 @@
 /**
- * Course card schema — the manifest for one learning experience.
+ * Course base (the courseware plugin) — the manifest for one learning experience.
+ * A box completes it as `cardSchema("course", courseware.schemas.course)`.
  *
  * A course is a container that binds its components: an embedded concept-map
  * (the knowledge graph) and exposition-plan (how to present it), a `material/`
@@ -11,8 +12,8 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
-import { z } from "zod";
+import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { z } from "../../exports/schema.js";
 
 /** A reference to a component card (the `ref` key is validated by card-lint). */
 const ComponentRef = z.object({ ref: z.string() });
@@ -29,7 +30,7 @@ const courseFields = {
   body: body(z.string()),
 };
 
-export const CourseSchema: CardSchema = cardSchema("course", {
+export const courseBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
   brief: "The manifest for one course",
   description: "The manifest for one learning experience — binds a concept-map, exposition-plan, lesson-plan, material, and per-learner progress",
   category: "authored",
@@ -46,7 +47,7 @@ A course is the **manifest** for one learning experience on a bounded topic. It 
 
 The structured components (concept-map, exposition-plan, lesson-plan) live as attached cards in the course's \`<basename>.attach/\` scope, so they move and validate with the course. Reuse an existing component by \`ref\` rather than duplicating it.
 
-**Give each component a distinct basename** — \`<Course>_Concept_Map\`, \`<Course>_Exposition_Plan\`, \`<Course>_Lesson_Plan\`, and so on — never reuse the course's own basename for a sibling card. No two cards in the same directory may share a basename (lint error), and the course's basename is already spoken for by the attach scope itself (\`<Course>.attach/\`) and by the landmark that anchors it (\`<Course>.landmark.card\`, see the \`build-course\` skill).
+**Give each component a distinct basename** — \`<Course>_Concept_Map\`, \`<Course>_Exposition_Plan\`, \`<Course>_Lesson_Plan\`, and so on — never reuse the course's own basename for a sibling card. No two cards in the same directory may share a basename (lint error), and the course's basename is already spoken for by the attach scope itself (\`<Course>.attach/\`) and by the landmark that anchors it (\`<Course>.landmark.card\`, see the \`courseware\` skill).
 
 ## Frontmatter
 
@@ -70,21 +71,5 @@ progress: { ref: /people/learner/Acids_Bases_Progress.progress.card }   # option
 ## Body
 
 The framing: the learner's goal and motivation, the gap, and the design rationale. Living — amend it as the course adapts.`,
-});
+};
 
-/**
- * Starter course for \`bbx create\`: goal/success-criteria placeholders and a
- * framing body. Components (concept-map, exposition-plan) are added later as
- * attached cards, so the starter omits them.
- */
-export function createCourseTemplate(options: { title?: string | undefined }): string {
-  const fields: Record<string, unknown> = {
-    goals: ["What the learner wants out of this — refined through probing."],
-    "success-criteria": ["What would count as understanding this, for this learner."],
-  };
-  if (options.title !== undefined && options.title !== "") {
-    fields["title"] = options.title;
-  }
-  const bodyText = "Framing: the learner's goal and motivation, the gap, and the design rationale.\n";
-  return renderFrontmatterBlock(fields, bodyText);
-}

@@ -9,6 +9,7 @@ import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../../lib/package-root.js";
+import type { HealthCheck } from "../../../../shared/health-check.js";
 import type { ClaudeCliService } from "../../../../services/claude-cli.js";
 import { claudeAuthCheck } from "./checks/claude-auth.js";
 import { router, publicProcedure } from "../../procedures.js";
@@ -47,13 +48,7 @@ import { notificationHealthChecks } from "../../../../core/notification/health.j
 import { engineQuotaChecks, scheduledTasksCheck } from "./checks/schedules.js";
 import { boxEngineUnavailability } from "../../../../core/schedule/engine-wait.js";
 
-export interface HealthCheck {
-  name: string;
-  ok: boolean;
-  message: string;
-  severity: "error" | "warning";
-  actions?: Array<"acknowledge-box-growth" | "expect-box-growth-rates" | "dismiss-connector-episode">;
-}
+export type { HealthCheck };
 
 export interface CommitInfo {
   hash: string;

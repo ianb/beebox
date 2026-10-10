@@ -1,5 +1,6 @@
 /**
- * Lesson-plan card schema — the ordered DELIVERY FLOW of a course.
+ * Lesson-plan base (the courseware plugin) — the ordered DELIVERY FLOW of a course.
+ * A box completes it as `cardSchema("lesson-plan", courseware.schemas["lesson-plan"])`.
  *
  * Where the concept-map says *what* to learn and the exposition-plan says *how*
  * to present it, the lesson-plan is the missing *what-to-do, in order*: a
@@ -10,7 +11,7 @@
  *
  * Incompleteness is visible, not silent: a `material` segment either refs its
  * card or is explicitly deferred (`planned: true`). The
- * box-aware lint (card-lint.ts → lint-node-refs.ts) warns on a material segment
+ * plugin's box-aware lint (`../lint.ts`) warns on a material segment
  * that is neither, and on a `concepts` id that names no node in the course's
  * concept-map.
  *
@@ -22,8 +23,8 @@
  * See docs/plans/courseware-lesson-plan.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
-import { z } from "zod";
+import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { z } from "../../exports/schema.js";
 
 /** Whether a segment plays out live in chat or leans on a pre-made material card. */
 const SegmentMode = z.enum(["interactive", "material"]);
@@ -44,7 +45,7 @@ const lessonPlanFields = {
   body: body(z.string()),
 };
 
-export const LessonPlanSchema: CardSchema = cardSchema("lesson-plan", {
+export const lessonPlanBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
   brief: "A course's ordered delivery flow",
   description: "A course's ordered delivery flow — segments tagged interactive (live in chat) or material (pre-made card), tied to concept-map nodes",
   category: "authored",
@@ -100,31 +101,4 @@ The lint **warns** on a \`material\` segment that has neither a \`material\` ref
 ## Body
 
 The framing: the arc of the course, where it goes live vs material-backed, and why this ordering. Living — amend it as the course adapts. Use **neutral pronouns** (they/them) for the learner.`,
-});
-
-/**
- * Starter lesson-plan for \`bbx create\`: one interactive and one material segment
- * showing both modes and the \`planned\` convention, plus a framing body.
- */
-export function createLessonPlanTemplate(options: { title?: string | undefined }): string {
-  const fields: Record<string, unknown> = {
-    segments: [
-      {
-        do: "Elicit the learner's current model of the first concept.",
-        mode: "interactive",
-        concepts: ["first-concept"],
-      },
-      {
-        do: "A made artifact (figure/doc) for the part that earns one.",
-        mode: "material",
-        planned: true,
-        concepts: ["first-concept"],
-      },
-    ],
-  };
-  if (options.title !== undefined && options.title !== "") {
-    fields["title"] = options.title;
-  }
-  const bodyText = "The arc of the course: where it goes live vs material-backed, and why. Use neutral pronouns for the learner.\n";
-  return renderFrontmatterBlock(fields, bodyText);
-}
+};

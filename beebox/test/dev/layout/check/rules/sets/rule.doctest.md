@@ -356,6 +356,25 @@ unimportedFindings[0]?.message
 => pkg/src/commands.ts declares pkg/src/commands but nothing imports it; the set's consumers must enumerate it through the registry, or the directory is not a set (delete the registry)
 ```
 
+## An empty registry is not yet held to the import check
+
+`members: {}` enumerates nothing, so there is no second list a consumer
+could keep honest; the finding arrives with the first member. The directory
+may hold data (a README) and stay clean.
+
+```ts
+const emptyLayout = layout({
+  files: {
+    "src/plugins.ts": {
+      registry: { directory: "src/plugins", entry: "plugin", ordered: false, form: "record", members: [] },
+    },
+    "src/plugins/README.md": "data",
+  },
+});
+summary(setsRule.check(emptyLayout)) === ""
+=> true
+```
+
 ## A type-only import of a registry does not count
 
 `entry.ts` imports `commands.ts` for its type only, same as no importer at
