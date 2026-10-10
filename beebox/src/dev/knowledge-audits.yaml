@@ -6099,7 +6099,7 @@ tests:
 
   # === Plugins (discover, activate, extend) ===
   #
-  # Plan: docs/plans/plugins.md, "Knowledge audits". Not yet run.
+  # Plan: docs/implemented-plans/plugins.md, "Knowledge audits". Not yet run.
   # Run against ~/src/boxes/test1 with `--filter plugins-`.
   # 2026-10-10: all three pass against the plugins-planning test1 clone with
   # courseware installed and inactive (report audit-report-claude-2026-10-10T06-04-46).
@@ -6174,7 +6174,7 @@ tests:
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + courseware plugin skill) ===
   #
   # Status (2026-10-10): revised for the courseware plugin move
-  # (docs/plans/plugins.md, Track 5) and not rerun since. The skill is now
+  # (docs/implemented-plans/plugins.md, Track 5) and not rerun since. The skill is now
   # `courseware` (mirrored to .claude/skills/courseware/ while the plugin is
   # active); the card docs are box-local generated docs under
   # _content/docs/generated/ once the box has the schema stubs, with the plugin

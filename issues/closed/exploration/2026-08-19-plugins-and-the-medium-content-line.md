@@ -8,7 +8,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder thinking about what belongs in core
 priority: important
+resolution: implemented
 ---
+
+**Closed (implemented):** slice 1 of [the plugins plan](../../../beebox/docs/implemented-plans/plugins.md) ships the design (courseware as the first plugin, reached through stubs). Scoped Markdoc tags, recipes and connectors are later slices, not yet planned.
 
 Much of what ships in beebox could be a plugin — the educational
 material, various card schemas, domain-shaped features. The boxholder's
@@ -171,6 +174,6 @@ finished conversation, or a prompt added to chat. Notion and Zapier connectors
 were the only code apps with real payouts. The data is small and stale, but
 it points the same way as the TiddlyWiki finding: the extension people use is
 a prompt at a hook, and code is the escalation. The review
-([research/omi-review.md](../../research/omi-review.md), finding 6) lists the
+([research/omi-review.md](../../../research/omi-review.md), finding 6) lists the
 parts of Omi's model to avoid: uid-as-identity auth, unsandboxed webhooks that
 get the full conversation, and one consent dialog at enable time.

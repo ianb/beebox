@@ -1,6 +1,6 @@
 /**
  * The contract an in-repo plugin (`src/plugins/<name>/plugin.ts`) exports and
- * the engine reads: `docs/plans/plugins.md`, "Ontology". A plugin is a
+ * the engine reads: `docs/implemented-plans/plugins.md`, "Ontology". A plugin is a
  * library a box completes through stubs, not a runtime registration; its
  * declarative fields are read without running the hooks.
  *

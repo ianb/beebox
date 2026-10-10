@@ -1,6 +1,6 @@
 # Deep dive: how OpenClaw defines a plugin (2026-10-09)
 
-*Snapshot of `openclaw/openclaw@23b8ffe` (version `2026.9.9`, cloned 2026-10-09), its `docs/plugins/` and `docs/tools/` trees, ClawHub listing pages, and public GitHub issues. Paths are into the OpenClaw repo unless prefixed `research/` or `beebox/`. Written for one Bee Box question: should Bee Box have a plugin system, and is a plugin a bundle of existing pieces, a new kind of thing, or a distribution mechanism ([issue](../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md)).*
+*Snapshot of `openclaw/openclaw@23b8ffe` (version `2026.9.9`, cloned 2026-10-09), its `docs/plugins/` and `docs/tools/` trees, ClawHub listing pages, and public GitHub issues. Paths are into the OpenClaw repo unless prefixed `research/` or `beebox/`. Written for one Bee Box question: should Bee Box have a plugin system, and is a plugin a bundle of existing pieces, a new kind of thing, or a distribution mechanism ([issue](../../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md)).*
 
 ## 0. What changed since the 2026-07 notes
 

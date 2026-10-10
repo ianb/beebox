@@ -3,7 +3,7 @@
 A plugin exports a *base*: a `CardSchemaConfig` with no type name. A box stub
 completes it with `cardSchema(type, extendSchema(base, delta))`
 (`src/cards/extend-schema.ts`, exported through `beebox/cards`;
-`docs/plans/plugins.md`, Track 4). The delta is typed on its own, so adding one
+`docs/implemented-plans/plugins.md`, Track 4). The delta is typed on its own, so adding one
 field does not restate the base's, and the merged field map is what
 `summarize` and `InferCardFields` see.
 

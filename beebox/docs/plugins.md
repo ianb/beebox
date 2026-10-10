@@ -5,8 +5,8 @@ through the public subpath `beebox/plugins/<name>`. A box uses a plugin by
 listing it in `_config/box.json` and writing small stubs that import and
 extend it. Nothing new runs at runtime: a stub is an ordinary box schema,
 view or trick, loaded by the mechanisms that load every other one. The design
-and its decisions: [plugins plan](plans/plugins.md),
-[design notes](plans/plugins-design-notes.md). The standing position
+and its decisions: [plugins plan](implemented-plans/plugins.md),
+[design notes](implemented-plans/plugins-design-notes.md). The standing position
 ("knowledge, not plugins": no registry service, no marketplace, no lifecycle
 framework) is in [extensibility](design/extensibility.md) and still holds.
 

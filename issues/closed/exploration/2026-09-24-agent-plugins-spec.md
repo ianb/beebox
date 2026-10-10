@@ -1,13 +1,16 @@
 ---
 title: "Learn from the Agent Plugins spec (agent-plugins.org) for box plugins"
-workstream: unattached
+workstream: plugins-planning
 area: beebox
 labels: [plugins, architecture]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder found agent-plugins.org, 2026-09-24
 priority: backlog
+resolution: implemented
 ---
+
+**Closed (implemented as evaluation):** the spec was evaluated; its rules are borrowed and its format is not. See the Prior art section of [the plugins plan](../../../beebox/docs/implemented-plans/plugins.md).
 
 The boxholder found [Agent Plugins](https://agent-plugins.org/), an open,
 vendor-neutral format for packaging agent extensions. The boxholder doubts
@@ -19,10 +22,10 @@ Related plugin issues:
 - [Plugins and the medium/content line](2026-08-19-plugins-and-the-medium-content-line.md):
   the design this informs, including the idea that every box starts with its
   own plugin.
-- [Canonical wisdom corpus (in lieu of plugins)](2026-05-11-canonical-wisdom-corpus.md):
+- [Canonical wisdom corpus (in lieu of plugins)](../../exploration/2026-05-11-canonical-wisdom-corpus.md):
   the counter-position that an agentic system needs shared knowledge more
   than installable code.
-- [Claude Code Mods](2026-09-18-claude-code-mods.md): Claude Code's own plugin
+- [Claude Code Mods](../../exploration/2026-09-18-claude-code-mods.md): Claude Code's own plugin
   format (`.claude-plugin/plugin.json` plus hooks), which is a different
   layout from this spec's root `plugin.json`.
 

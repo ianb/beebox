@@ -4,7 +4,7 @@
 behind the `plugin-type-unprovided` and `plugin-declared-missing` health
 checks. It reads three things: the card types on disk, the effective schema
 map's type names, and the registry with the active list. The active list alone
-decides nothing (`docs/plans/plugins.md`, Track 3). A declared schema type is
+decides nothing (`docs/implemented-plans/plugins.md`, Track 3). A declared schema type is
 missing when the effective map lacks it; the stub file's presence only sets the
 `reason`, `no-file` or `no-schema`.
 

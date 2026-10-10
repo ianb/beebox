@@ -1,10 +1,10 @@
 ---
 title: "Plugins: typed in-repo libraries a box uses through stubs"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues:
-  - ../../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md
-  - ../../../issues/exploration/2026-09-24-agent-plugins-spec.md
+  - ../../../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md
+  - ../../../issues/closed/exploration/2026-09-24-agent-plugins-spec.md
 ---
 # Plugins: typed in-repo libraries a box uses through stubs
 
@@ -15,8 +15,8 @@ runtime: stubs are ordinary box schemas, views and tricks. The first plugin is
 courseware; the decisions behind the shape are in
 [plugins-design-notes.md](plugins-design-notes.md).
 
-**Issues addressed:** [plugins and the medium/content line](../../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md)
-(the design this implements), [Agent Plugins spec](../../../issues/exploration/2026-09-24-agent-plugins-spec.md)
+**Issues addressed:** [plugins and the medium/content line](../../../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md)
+(the design this implements), [Agent Plugins spec](../../../issues/closed/exploration/2026-09-24-agent-plugins-spec.md)
 (evaluated; rules borrowed, format not). Related, not closed by this plan:
 [canonical wisdom corpus](../../../issues/exploration/2026-05-11-canonical-wisdom-corpus.md)
 (the instruction tier's frontend), [starter manifest](../../../issues/features/2026-10-08-starter-manifest-and-scripted-first-turn.md)

@@ -1,5 +1,5 @@
 /**
- * Rule plugin-imports (`docs/plans/plugins.md`, Track 1): a file under
+ * Rule plugin-imports (`docs/implemented-plans/plugins.md`, Track 1): a file under
  * `src/plugins/<name>/` may import only `src/exports/*`,
  * `src/cards/plugin-definition.ts`, its own directory, and packages, type
  * imports included (the plugin's emitted `.d.ts` would otherwise name

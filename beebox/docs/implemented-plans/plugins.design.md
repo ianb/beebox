@@ -1,6 +1,6 @@
 ---
 title: "Plugins: design"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues: []
 ---
