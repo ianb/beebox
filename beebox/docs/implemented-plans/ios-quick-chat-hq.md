@@ -1,6 +1,6 @@
 ---
 title: "On-device HQ for iOS quick chat thoughts"
-status: active
+status: implemented
 workstream: hq-always
 issues:
   - ../../../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md

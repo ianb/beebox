@@ -1,6 +1,6 @@
 ---
 title: "HQ transcription for every dictated message"
-status: active
+status: implemented
 workstream: hq-always
 issues:
   - ../../../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md

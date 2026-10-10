@@ -64,7 +64,7 @@ Not combined with the `ios-on-device-hq` workstream, which is nearly finished. T
 
 ## Implementation (2026-10-09, hq-always)
 
-Built on `worktree-hq-always` per [the plan](../../beebox/docs/plans/hq-always.md).
+Built on `worktree-hq-always` per [the plan](../../beebox/docs/implemented-plans/hq-always.md).
 Answers to "What to work out":
 
 1. **Where the default lives.** Nowhere: there is no setting. Every voice send

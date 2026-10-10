@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-10T13:56:17Z
-Total documents: 510
+Generated: 2026-10-10T16:34:51Z
+Total documents: 513
 
 ## Issues
 
@@ -290,7 +290,6 @@ Referenced by:
 - ../issues/bugs/2026-10-09-codex-title-runs-keep-tools-and-box-context.md:20 (mention) — - `runCodexAgent` always expands the box `AGENTS.md` into the system prompt
 - ../issues/bugs/2026-10-09-knowledge-audit-read-matcher-misses-cd-and-variable-paths.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 - ../issues/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
-- ../issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:2 (mention) — title: "Landmark chats exclude the box's own root AGENTS.md and rules since the host-isolation fix"
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -308,6 +307,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-09-27-file-watcher-doctest-stale-box-listing.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:42 (mention) — - `ensureAgentContext` (`:411`), which writes `AGENTS.md`, the
+- ../issues/closed/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:2 (mention) — title: "Landmark chats exclude the box's own root AGENTS.md and rules since the host-isolation fix"
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -1503,7 +1503,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1713 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1719 lines | current reference
 
 Referenced by:
 - AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1516,6 +1516,7 @@ Referenced by:
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
 - docs/implemented-plans/ios-log-forwarding.md:56 (mention) — machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
 - docs/implemented-plans/ios-per-box-device-lock.md:265 (mention) — no `docs/mobile-contract.md` change because nothing crosses the wire. Commits
+- docs/implemented-plans/ios-quick-chat-hq.md:121 (mention) — `docs/mobile-contract.md` §4.2): the engine that produced HQ text. New on
 - docs/implemented-plans/mobile-parity-sync.md:37 (mention) — ### 1. `docs/mobile-contract.md` — the canonical contract (exists)
 - docs/implemented-plans/mobile-token-handshake.md:34 (mention) — `docs/mobile-contract.md` and mirrored in Swift + shared fixtures; a wire change updates
 - docs/implemented-plans/native-hq-fallback-resilience.md:41 (mention) — - `ChatAPI.transcribeAudio` already logs transport, HTTP, and decode failures, but its thrown server error keeps only th
@@ -1588,12 +1589,13 @@ References:
 - → docs/implemented-plans/mobile-parity-sync.md (mention)
 - → docs/implemented-plans/one-root-box-layout.md (mention)
 - → docs/plans/android-companion-app.md (mention)
-- → docs/plans/hq-always.md (mention)
+- → docs/implemented-plans/hq-always.md (mention)
 - → docs/plans/agent-points-at-ui.md (mention)
 - → docs/implemented-plans/ios-audio-retranscription.md (mention)
 - → docs/model-policy.md (mention)
 - → docs/plans/chat-photo-batch-upload.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
+- → docs/implemented-plans/ios-quick-chat-hq.md (mention)
 - → docs/plans/ios-companion-review-2026-07-17.md (mention)
 - → docs/implemented-plans/mobile-token-handshake.md (mention)
 
@@ -1631,7 +1633,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:48 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:387 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
-- docs/mobile-contract.md:981 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:982 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:76 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
 - ../issues/closed/bugs/2026-10-06-third-party-engine-privacy-telemetry-and-security-report.md:45 (mention) — `beebox/docs/model-policy.md:175-177`). Host choice, training, and retention
@@ -2301,6 +2303,7 @@ Referenced by:
 - docs/development/workflow.md:89 (link) — [spirit.md](../architecture/spirit.md) it serves and risks.
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
+- docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
@@ -2433,6 +2436,13 @@ Referenced by:
 
 References:
 - → docs/box/tricks.md (mention)
+
+#### docs/box/siri-shortcuts.md
+
+Title: "Use Bee Box with Siri and Shortcuts" | 32 lines | current reference
+
+Referenced by:
+- docs/plans/ios-app-intent-capture.md:217 (mention) — The `external-input-arrival-tag` audit verifies direct understanding of the wrapper: real human text, box-level routing,
 
 #### docs/box/speaking-to-the-person.md
 
@@ -2674,7 +2684,7 @@ References:
 
 #### docs/chat/composer.md
 
-Title: "Composer" | 358 lines | current reference
+Title: "Composer" | 364 lines | current reference
 
 Referenced by:
 - docs/chat.md:15 (link) — | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |
@@ -2682,13 +2692,15 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:184 (mention) — docs in sync (`docs/chat/composer.md`). xstate's home; not to be
 - docs/implemented-plans/doc-structure-chat.md:73 (mention) — | `composer-input-machine.md` + `composer-states.md` (+ `composer-states/` images) | `chat/composer.md` (+ `chat/compose
 - docs/implemented-plans/docs-reorg.gap-analysis.md:121 (mention) — 10. `docs/chat/composer.md` leads with an unshipped 5-state
+- docs/implemented-plans/live-gap-marker.md:105 (mention) — `docs/chat/composer.md`.
 - docs/plans/composer-child-actors.md:10 (link) — [current composer guide](../chat/composer.md). It is not authorized runtime work. The
 - docs/testing/dev-stubs.md:18 (link) — [composer states](../chat/composer.md)), `/dev/chat-scroll`. Tours walk the
 - ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md:81 (mention) — 3. **Cost.** Noted in the plan, `docs/chat/composer.md`, and contract §4.4a:
 
 References:
 - → docs/plans/composer-child-actors.md (link)
-- → docs/plans/hq-always.md (mention)
+- → docs/implemented-plans/hq-always.md (mention)
+- → docs/implemented-plans/live-gap-marker.md (mention)
 
 #### docs/chat/history.md
 
@@ -3706,7 +3718,7 @@ Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
 - docs/box-layout.md:136 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:1011 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:1012 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:34 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -4858,6 +4870,26 @@ References:
 - → docs/connectors/google-auth.md (mention)
 - → docs/server/health-checks.md (mention)
 
+#### docs/implemented-plans/hq-always.md
+
+Title: "HQ transcription for every dictated message" | 109 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/composer.md:67 (mention) — Every voice send with a recording requests the HQ pass (`docs/implemented-plans/hq-always.md`);
+- docs/implemented-plans/ios-quick-chat-hq.md:11 (link) — ([hq-always](hq-always.md)). The iOS box-screen quick chat composer is the one
+- docs/mobile-contract.md:406 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
+- docs/unimplemented-plans/sticky-hq-ios-parity.md:4 (frontmatter) — superseded-by: ../implemented-plans/hq-always.md
+- docs/unimplemented-plans/sticky-hq-ios-parity.md:11 (link) — > **Superseded 2026-10-09** by [hq-always](../implemented-plans/hq-always.md): every
+- ../issues/bugs/2026-09-21-typed-text-lost-when-hq-lands-after-a-recording-error.md:13 (mention) — > the HQ pass (`beebox/docs/plans/hq-always.md`), so the HQ wait this bug lives
+- ../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md:14 (mention) — > (`beebox/docs/plans/hq-always.md`): the HQ dictation setting and its chat,
+- ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md:67 (link) — Built on `worktree-hq-always` per [the plan](../../beebox/docs/implemented-plans/hq-always.md).
+- ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:13 (mention) — (`beebox/docs/plans/hq-always.md`). The iOS quick chat composer on the box
+
+References:
+- → ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md (frontmatter)
+- → ../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md (frontmatter)
+- → docs/implemented-plans/ios-quick-chat-hq.md (link)
+
 #### docs/implemented-plans/hq-dictation-switch.md
 
 Title: "An always-HQ dictation switch, separate from narration mode" | 228 lines | shipped history | implemented
@@ -4908,7 +4940,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:763 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:764 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -4973,6 +5005,20 @@ References:
 - → docs/testing.md (mention)
 - → docs/implemented-plans/mobile-parity-sync.md (mention)
 - → docs/mobile-parity.md (mention)
+- → docs/mobile-contract.md (mention)
+
+#### docs/implemented-plans/ios-quick-chat-hq.md
+
+Title: "On-device HQ for iOS quick chat thoughts" | 236 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/hq-always.md:83 (link) — | iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reache
+- docs/mobile-contract.md:1285 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+- ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:40 (link) — should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
+
+References:
+- → ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md (frontmatter)
+- → docs/implemented-plans/hq-always.md (link)
 - → docs/mobile-contract.md (mention)
 
 #### docs/implemented-plans/jev-document-triage.md
@@ -5080,6 +5126,17 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 - → /store/foo/bar.md (link) **[BROKEN]**
+
+#### docs/implemented-plans/live-gap-marker.md
+
+Title: "Mark gaps in the live transcript" | 293 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/composer.md:74 (mention) — words are missing (`docs/implemented-plans/live-gap-marker.md`). A reconnect that replays
+
+References:
+- → docs/architecture/spirit.md (mention)
+- → docs/chat/composer.md (mention)
 
 #### docs/implemented-plans/local-password-auth.md
 
@@ -5190,7 +5247,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1550 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1556 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -5425,7 +5482,7 @@ References:
 
 #### docs/implemented-plans/plugins-design-notes.md
 
-Title: "Plugins — design notes" | 215 lines | shipped history | draft
+Title: "Plugins — design notes" | 215 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/plugins.md:16 (link) — [plugins-design-notes.md](plugins-design-notes.md).
@@ -5446,7 +5503,7 @@ References:
 
 #### docs/implemented-plans/plugins.design.md
 
-Title: "Plugins: design" | 128 lines | shipped history | draft
+Title: "Plugins: design" | 128 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/plugins.md:29 (link) — Design subplan: [plugins.design.md](plugins.design.md). It covers the two
@@ -6849,7 +6906,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1306 lines | proposal | partial
 
 Referenced by:
-- docs/mobile-contract.md:647 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:648 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:15 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../beebox/docs/plans/agent-points-at-ui.md
@@ -7081,7 +7138,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 513 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1010 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:1011 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -7398,24 +7455,6 @@ References:
 - → ../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md (link)
 - → docs/engineering-principles.md (mention)
 
-#### docs/plans/hq-always.md
-
-Title: "HQ transcription for every dictated message" | 109 lines | proposal | active
-
-Referenced by:
-- docs/chat/composer.md:67 (mention) — Every voice send with a recording requests the HQ pass (`docs/plans/hq-always.md`);
-- docs/mobile-contract.md:406 (mention) — `<speech stt="live">` (`docs/plans/hq-always.md`). `hqFallback:true` is still accepted and
-- docs/unimplemented-plans/sticky-hq-ios-parity.md:4 (frontmatter) — superseded-by: ../plans/hq-always.md
-- docs/unimplemented-plans/sticky-hq-ios-parity.md:11 (link) — > **Superseded 2026-10-09** by [hq-always](../plans/hq-always.md): every
-- ../issues/bugs/2026-09-21-typed-text-lost-when-hq-lands-after-a-recording-error.md:13 (mention) — > the HQ pass (`beebox/docs/plans/hq-always.md`), so the HQ wait this bug lives
-- ../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md:14 (mention) — > (`beebox/docs/plans/hq-always.md`): the HQ dictation setting and its chat,
-- ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md:67 (link) — Built on `worktree-hq-always` per [the plan](../../beebox/docs/plans/hq-always.md).
-- ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:12 (mention) — (`beebox/docs/plans/hq-always.md`). The iOS quick chat composer on the box
-
-References:
-- → ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md (frontmatter)
-- → ../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md (frontmatter)
-
 #### docs/plans/input-widget.md
 
 Title: "The input — interface design" | 682 lines | proposal | active
@@ -7574,6 +7613,7 @@ References:
 - → docs/engineering-principles.md (mention)
 - → docs/design/trust.md (mention)
 - → docs/mobile-contract.md (mention)
+- → docs/box/siri-shortcuts.md (mention)
 
 #### docs/plans/ios-app-intent-capture.review.md **[ORPHAN]**
 
@@ -7615,7 +7655,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1544 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1550 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -8994,9 +9034,9 @@ References:
 Title: "Sticky HQ dictation on iOS" | 105 lines | past proposal | superseded
 
 References:
-- → docs/plans/hq-always.md (frontmatter)
+- → docs/implemented-plans/hq-always.md (frontmatter)
 - → ../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md (frontmatter)
-- → docs/plans/hq-always.md (link)
+- → docs/implemented-plans/hq-always.md (link)
 - → docs/mobile-contract.md (mention)
 
 ### docs/user-stories/
