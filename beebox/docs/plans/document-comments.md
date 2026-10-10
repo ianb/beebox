@@ -77,7 +77,7 @@ three adjacent items exist and none is resolved by this plan:
   `lint:backend`, `lint:frontend`, `typecheck:backend`, `typecheck:frontend`).
 - `beebox/code-style.md` — the mechanical rules (max 2 positional
   parameters, no `any`, no default parameters).
-- **Precedent: the exhibits store** — `beebox/docs/plans/workstream-exhibits.md:236`:
+- **Precedent: the exhibits store** — `beebox/docs/implemented-plans/workstream-exhibits.md:236`:
   *"There are only two persistence classes today: committed (merges to main) and
   disposable (dies with the cull). Exhibits are a third class — workstream-persistent,
   never merged — and nothing provides it."* This plan uses that third class and

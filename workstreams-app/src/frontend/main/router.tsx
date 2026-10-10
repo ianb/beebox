@@ -1,7 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { z } from "zod";
 import { AppLayout } from "./App.js";
-import { AsksPage } from "../pages/AsksPage.js";
 import { BrowsePage } from "../pages/BrowsePage.js";
 import { RecentPage } from "../pages/RecentPage.js";
 import { IssuesPage } from "../pages/IssuesPage.js";
@@ -56,7 +55,6 @@ const recentRoute = createRoute({
   },
 });
 const testingRoute = createRoute({ getParentRoute: () => appRoute, path: "/testing", component: TestingPage });
-const asksRoute = createRoute({ getParentRoute: () => appRoute, path: "/asks", component: AsksPage });
-const routeTree = rootRoute.addChildren([appRoute.addChildren([indexRoute, workstreamsRoute, detailRoute, scheduleAlertRoute, allAlertsRoute, issuesRoute, plansRoute, browseRoute, recentRoute, testingRoute, asksRoute])]);
+const routeTree = rootRoute.addChildren([appRoute.addChildren([indexRoute, workstreamsRoute, detailRoute, scheduleAlertRoute, allAlertsRoute, issuesRoute, plansRoute, browseRoute, recentRoute, testingRoute])]);
 export const router = createRouter({ routeTree, basepath: "/workstreams" });
 declare module "@tanstack/react-router" { interface Register { router: typeof router } }

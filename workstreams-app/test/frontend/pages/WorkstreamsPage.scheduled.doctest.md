@@ -25,7 +25,7 @@ import type { CommandRequest } from "../../../src/server/main/workstreams-comman
 import type { ScheduleAlert } from "../../../src/shared/schedules.js";
 import { router } from "../../../src/frontend/main/router.js";
 import { WorkstreamsApiProvider } from "../../../src/frontend/trpc.js";
-import type { Workstream } from "../../../src/frontend/types.js";
+import type { Workstream, WorkstreamListItem } from "../../../src/frontend/types.js";
 
 // A row links to its detail page, and TanStack's <Link> needs a router in
 // context to build an href; the routes themselves are not exercised here. The
@@ -52,7 +52,7 @@ function scheduleRow(overrides: Partial<NonNullable<Workstream["schedule"]>>): N
   };
 }
 
-function row(name: string, schedule: Workstream["schedule"], routingState: Workstream["routing"]["state"]): Workstream {
+function row(name: string, schedule: Workstream["schedule"], routingState: Workstream["routing"]["state"]): WorkstreamListItem {
   return {
     name,
     branch: `worktree-${name}`,
@@ -73,6 +73,7 @@ function row(name: string, schedule: Workstream["schedule"], routingState: Works
     routing: { state: routingState, action: "resume-with-briefing", lastActivityAt: null },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
     schedule,
+    exhibits: [],
   };
 }
 
@@ -126,6 +127,7 @@ const markup = render(createElement(ScheduledSection, {
     row("sdk-update", scheduleRow({ enabled: false }), "scheduled"),
   ],
   issues: [],
+  exhibitsOrigin: "http://127.0.0.1:3230",
   now,
 }));
 JSON.stringify({
@@ -141,6 +143,25 @@ JSON.stringify({
 => {"named":true,"cadence":true,"lastRun":true,"overdueBadge":true,"alertCount":true,"disabled":true,"heartbeat":true,"heartbeatCalm":true}
 ```
 
+## A scheduled row with an exhibit links to it
+
+```ts
+const withExhibit = render(createElement(ScheduledSection, {
+  rows: [{
+    ...row("knip-sweep", scheduleRow({}), "scheduled"),
+    exhibits: [{ workstream: "knip-sweep", slug: "report", path: "/knip-sweep/report/", title: "Sweep report", created: "2026-08-23T00:00:00Z", problem: null }],
+  }],
+  issues: [],
+  exhibitsOrigin: "http://127.0.0.1:3230",
+  now,
+}));
+JSON.stringify({
+  link: withExhibit.includes('href="http://127.0.0.1:3230/knip-sweep/report/"') && withExhibit.includes("Sweep report"),
+  all: withExhibit.includes('href="http://127.0.0.1:3230/knip-sweep/"'),
+})
+=> {"link":true,"all":true}
+```
+
 ## A resting schedule offers Resume, a running one Focus
 
 The boxholder's way into a schedule is to go into the workstream and chat, so a
@@ -154,11 +175,13 @@ toggle stays either way.
 const resting = render(createElement(ScheduledSection, {
   rows: [row("knip-sweep", scheduleRow({}), "scheduled")],
   issues: [],
+  exhibitsOrigin: "http://127.0.0.1:3230",
   now,
 }));
 const running = render(createElement(ScheduledSection, {
   rows: [row("manual-tests", scheduleRow({}), "live")],
   issues: [],
+  exhibitsOrigin: "http://127.0.0.1:3230",
   now,
 }));
 JSON.stringify({
@@ -184,6 +207,7 @@ const never = scheduleHeartbeatStatus([row("knip-sweep", scheduleRow({ heartbeat
 const staleMarkup = render(createElement(ScheduledSection, {
   rows: [row("knip-sweep", scheduleRow({ heartbeat: null }), "scheduled")],
   issues: [],
+  exhibitsOrigin: "http://127.0.0.1:3230",
   now,
 }));
 JSON.stringify({

@@ -10,6 +10,12 @@
 // the same onRequest auth hook as every page (auth.ts). A second Fastify
 // instance would be an unauthenticated surface, which is why this is a plugin.
 //
+// Three more routes are not storage: POST /api/<ws>/<exhibit>/focus brings
+// the workstream's terminal tab forward, and the comment and transcribe routes
+// in api-comments.ts write the boxholder's remarks to the comment store
+// (docs/implemented-plans/exhibit-comments.md). Those are the origin's only grants of
+// authority beyond the store.
+//
 // Committed apps (/apps/<name>/) write to the reserved store namespace
 // store/apps/<name>/: their code is tracked, their runtime data is not, so
 // using an app can never dirty a checkout.
@@ -22,9 +28,10 @@ import type { FastifyError, FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { exhibitSegmentSchema } from "../../../shared/exhibits.js";
-import { DATA_DIR } from "../disposition.js";
+import { exhibitCommentRoutes, type ExhibitCommentOptions } from "./api-comments.js";
 import {
   APPS_SEGMENT,
+  DATA_DIR,
   InvalidExhibitPathError,
   STORE_MARKER,
   UninitializedStoreError,
@@ -53,8 +60,26 @@ const CAPTURE_EXTENSION_SET = new Set<string>(CAPTURE_EXTENSIONS);
 export const DOCUMENT_BODY_LIMIT = 1024 * 1024;
 export const CAPTURE_BODY_LIMIT = 25 * 1024 * 1024;
 
-export interface ExhibitsApiOptions {
+/**
+ * Brings a workstream's terminal tab forward (`bin/workstreams focus <name>`).
+ * Structurally the workstreams origin's ActionCommandRunner, which the backend
+ * passes in; a rejection's message is the CLI's last stderr line.
+ */
+export type FocusRunner = (request: { verb: "focus"; name: string }) => Promise<void>;
+
+export interface ExhibitsApiOptions extends ExhibitCommentOptions {
   storeRoot: string;
+  runFocus: FocusRunner;
+}
+
+/** Workstream names that have no session registry row to focus. */
+const NO_SESSION_REASONS = new Map<string, string>([
+  [APPS_SEGMENT, "Committed apps belong to no workstream, so there is no session to bring forward."],
+  ["main", "The main checkout has no workstream session to bring forward."],
+]);
+
+export function lastLine(text: string): string {
+  return text.split("\n").map((line) => line.trim()).findLast((line) => line !== "") ?? "";
 }
 
 /** One JSONL line, as the client posts it; the server adds `at`. */
@@ -64,7 +89,7 @@ const eventEnvelopeSchema = z.object({
 });
 
 /** A refusal the developer (or the page author) must be able to act on. */
-class ExhibitRequestError extends Error {
+export class ExhibitRequestError extends Error {
   /** Zod-style detail, when the refusal has more than one part. */
   issues: string[] = [];
 
@@ -117,7 +142,7 @@ async function ensureDirUnderRoot(root: string, segments: string[]): Promise<str
   return base;
 }
 
-function requireSegment(value: string, what: string): string {
+export function requireSegment(value: string, what: string): string {
   if (!exhibitSegmentSchema.safeParse(value).success) {
     throw new ExhibitRequestError(
       400,
@@ -151,7 +176,7 @@ function captureFile(name: string): string {
   return name;
 }
 
-function parseJsonBody(body: string, what: string): unknown {
+export function parseJsonBody(body: string, what: string): unknown {
   try {
     // eslint-disable-next-line no-restricted-syntax -- JSON.parse is the parse boundary; callers treat the result as unknown.
     return JSON.parse(body) as unknown;
@@ -163,7 +188,7 @@ function parseJsonBody(body: string, what: string): unknown {
   }
 }
 
-interface ScopeParams {
+export interface ScopeParams {
   ws: string;
   exhibit: string;
 }
@@ -173,7 +198,7 @@ interface ScopeParams {
  * is the directory the page is served from — while an app's store directory is
  * created on first write, because an app's code lives in the checkout instead.
  */
-async function scopeDir(storeRoot: string, params: ScopeParams): Promise<string> {
+export async function scopeDir(storeRoot: string, params: ScopeParams): Promise<string> {
   try {
     await assertStoreInitialized(storeRoot);
   } catch (error) {
@@ -210,7 +235,7 @@ async function readIfPresent(file: string): Promise<string | null> {
  * content-type parsers are encapsulated per plugin.
  */
 export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (api, options) => {
-  const { storeRoot } = options;
+  const { storeRoot, runFocus, comments, transcribe } = options;
 
   // eslint-disable-next-line max-params -- Fastify's setErrorHandler signature is fixed (the hub-http-error.ts precedent).
   api.setErrorHandler<FastifyError>((error, request, reply) => {
@@ -231,7 +256,7 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
 
   api.setNotFoundHandler((request, reply) =>
     reply.code(404).send({
-      error: `No exhibit API route for ${request.method} ${request.url}. The API is /api/<scope>/data/<key>, /api/<scope>/events, and /api/<scope>/captures/<name>.`,
+      error: `No exhibit API route for ${request.method} ${request.url}. The API is /api/<scope>/data/<key>, /api/<scope>/events, /api/<scope>/captures/<name>, POST /api/<scope>/focus, POST /api/<scope>/comments, and POST /api/transcribe.`,
     }));
 
   await api.register(async (json) => {
@@ -255,6 +280,28 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
         return reply.type("application/json; charset=utf-8").send(content);
       },
     );
+
+    // Bounded authority: bring a workstream's terminal tab forward. No body, no
+    // text reaches the CLI, and the workstream name is a validated segment.
+    json.post<{ Params: ScopeParams }>("/:ws/:exhibit/focus", async (request, reply) => {
+      const workstream = requireSegment(request.params.ws, "workstream");
+      requireSegment(request.params.exhibit, "exhibit name");
+      const noSession = NO_SESSION_REASONS.get(workstream);
+      if (noSession !== undefined) {
+        return reply.code(409).send({ message: "No session to focus.", detail: noSession });
+      }
+      await scopeDir(storeRoot, request.params);
+      try {
+        await runFocus({ verb: "focus", name: workstream });
+      } catch (error) {
+        const detail = lastLine(error instanceof Error ? error.message : String(error));
+        return reply.code(409).send({ message: "Could not bring the session forward.", detail });
+      }
+      return reply.code(204).send();
+    });
+
+    // Nested so the comment routes share this parser and the error handler above.
+    await json.register(exhibitCommentRoutes, { storeRoot, comments, transcribe });
 
     json.put<{ Params: ScopeParams & { key: string }; Body: string }>(
       "/:ws/:exhibit/data/:key",

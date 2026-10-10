@@ -91,8 +91,10 @@ survive culls, mount read-only in worktrees, and have one CLI writer. Comments
 on untracked files can outlive a culled workstream and reappear when its name is
 reused; report those orphans rather than deleting them.
 
-The external store has `tracked/<path>` namespaces that follow tracked files
-and `worktree/<name>/<path>` namespaces for worktree-local files; do not merge
+The external store has `tracked/<path>` namespaces that follow tracked files,
+`worktree/<name>/<path>` namespaces for worktree-local files, and
+`exhibit/<workstream>/<exhibit>` for remarks left on an exhibit page, addressed
+as `exhibit:<workstream>/<exhibit>` wherever a path is accepted; do not merge
 those identities. It lives beside main at `<parent>/dev-comments/` (override
 `BBX_COMMENTS_ROOT`). Nothing expires until explicitly cleared. When resolving
 a comment into prose, quote the boxholder's stored words rather than
