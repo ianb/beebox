@@ -44,9 +44,5 @@ you provide.
 
 **Go deeper**
 
-[../reference/cards/course.md](../reference/cards/course.md),
-[../reference/cards/concept-map.md](../reference/cards/concept-map.md),
-[../reference/cards/exposition-plan.md](../reference/cards/exposition-plan.md),
-[../reference/cards/lesson-plan.md](../reference/cards/lesson-plan.md),
-[../reference/cards/progress.md](../reference/cards/progress.md),
-[../reference/cards/figure.md](../reference/cards/figure.md)
+[Learning a subject](../uses/learning-a-subject.md),
+[the card format](../concepts/cards.md)

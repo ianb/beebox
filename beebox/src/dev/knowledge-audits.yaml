@@ -182,6 +182,8 @@ tests:
 
   # External assistant input is addressed to the box, but has no recording or
   # guaranteed spoken reply. See the iOS App Intent capture plan.
+  # Status (2026-10-10, Claude): 1/1 passed on test1; the agent explained box routing,
+  # no attached audio, and the short Siri confirmation without assuming the reply is heard.
   - id: external-input-arrival-tag
     prompt: >
       A user message is wrapped in
@@ -197,10 +199,33 @@ tests:
     correct_matches:
       - 'external assistant|external-input|assistant integration'
       - '(?:box|quick chat)[\s\S]{0,200}(?:chose|routed|selected|picked)'
-      - 'no (?:audio )?recording|without (?:an )?audio'
-      - '(?:may not hear|may not see|not guaranteed|only.*(?:capture|Siri).*result)'
+      - 'no (?:audio )?(?:recording|attached)|without (?:an )?audio|there (?:isn.t|is not) one|text only'
+      - '(?:may not hear|may not see|not guaranteed|only.*(?:capture|Siri).*result|probably not|may be hands-free|shouldn.t assume.{0,40}(?:see|hear))'
     response_not_contains: ["should answer with <speech", "always use <speech>"]
     tags: [quick-chat, chat, external-input]
+
+  # Siri capture details live in an on-demand box doc, not the always-loaded prompt.
+  # Status (2026-10-10, Claude): 1/1 passed on a fresh box; the agent read the
+  # package reference, then answered the Siri and Shortcut questions correctly.
+  - id: siri-capture-how-to
+    prompt: >
+      How can I use you in Siri? Give me the phrases to say and explain how I
+      can pass text from a Shortcut. Also tell me which box receives it and
+      whether you'll read your reply aloud. Read the usage guide before
+      answering; do not change anything.
+    expected_level: knows_about
+    chat_mode: true
+    should_read: [node_modules/beebox/box-docs/siri-shortcuts.md]
+    watch_for: >
+      Gives at least one exact supported Siri phrase, explains the Bee Box Add
+      a Thought Shortcut action, says capture goes to the selected box, and
+      does not promise to read the box reply aloud.
+    correct_matches:
+      - 'Add a thought to Bee Box|Save a thought in Bee Box'
+      - 'Shortcut[s]?[\s\S]{0,200}(?:Add a Thought|pass|text)'
+      - 'box currently selected|currently selected box|selected in the Bee Box app'
+      - '(?:read (?:my|your) reply aloud)[\s\S]{0,80}(?:no|don.t|do not|won.t|will not)|(?:doesn.t|does not) read (?:my|your) reply aloud|(?:No|I don.t)[\s\S]{0,40}Siri only tells'
+    tags: [quick-chat, chat, external-input, siri]
 
   # === Engine docs are searchable ===
   # Status (2026-09-26, Claude): 1/1 passed on test1; ran `bbx search`, read
