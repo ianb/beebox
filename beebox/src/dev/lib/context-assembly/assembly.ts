@@ -3,7 +3,7 @@
  * given situation, layer by layer, so the whole stack can be reviewed as one
  * document (see `pnpm agent-context`, src/dev/agent-context.ts).
  *
- * Box-generated layers (CLAUDE.md files, skills, rules, the memory index) are
+ * Box-generated layers (AGENTS.md files, skills, rules, the memory index) are
  * read from the box's disk — that is what the agent actually loads, so a stale
  * `bbx init` shows up honestly here rather than being papered over; the layer
  * builders live in context-layers.ts. System prompts come from source.
@@ -109,7 +109,7 @@ export async function assembleContext(
   }
   if (options.landmarkDir !== undefined) {
     notRendered.push(
-      `Landmark cwd: this chat runs with its working directory set to the landmark directory (\`${options.landmarkDir}\`), so any directory-local CLAUDE.md / MAP.md there (and in its ancestors up to the box root) also loads into context. Those are not rendered here — only the box-root CLAUDE.md above is.`,
+      `Landmark cwd: this chat runs with its working directory set to the landmark directory (\`${options.landmarkDir}\`), so any directory-local AGENTS.md / MAP.md there (and in its ancestors up to the box root) also loads into context. Those are not rendered here — only the box-root CLAUDE.md above is.`,
     );
   }
 

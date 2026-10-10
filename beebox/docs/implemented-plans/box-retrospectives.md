@@ -6,6 +6,9 @@ issues: []
 ---
 # Box Retrospectives
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A periodic sweep over a box's chat sessions that mines what the boxholder
 implicitly taught the agent — corrections, preferences, register, recurring
 asks, context gaps — and integrates it into the box's existing belief

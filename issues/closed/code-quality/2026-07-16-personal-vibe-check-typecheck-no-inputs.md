@@ -4,6 +4,8 @@ workstream: unknown
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 Resolved 2026-07-19 by taking the issue's **second** option (drop the script),
 after establishing the first was infeasible. The package has **zero** TypeScript
 files — it's entirely `.mjs` — so there are no "real TypeScript sources" to point

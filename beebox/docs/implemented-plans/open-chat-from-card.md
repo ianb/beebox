@@ -6,6 +6,9 @@ issues: []
 ---
 # Open chat from a card browse page
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Add an "open chat" affordance to the full-page card viewer (`/:boxSlug/card/<splat>`).
 Clicking it navigates to the existing chat layout with this card pre-attached as the
 companion document, bound to the chat for the nearest enclosing landmark directory.

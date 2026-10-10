@@ -10,6 +10,8 @@ priority: important
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed** by `c7336dffb, 7dbb79f33`. Implemented the fresh-vs-re-init split as proposed: a re-init that changed nothing now prints nothing; fresh init keeps its full report. Also fixed along the way (per the issue's own follow-on note): a fresh `--docid-debug` run printed both "Initialized" and "Updated", and `--no-docid-debug` was documented in help text but never declared as a flag.
 
 

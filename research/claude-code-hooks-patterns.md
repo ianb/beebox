@@ -1,5 +1,8 @@
 # Claude Code hook patterns (reference note)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Source: https://buildingbetter.tech/p/i-read-the-claude-code-source-code
 (a walkthrough of Claude Code's hook types from its source, read 2026-09).
 

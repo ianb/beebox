@@ -1,5 +1,8 @@
 # /design-shotgun — visual design variant exploration
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Generates N visually distinct design mockups for a screen, opens them side-by-side in a real browser comparison board, lets the user rate/comment/remix/pick, iterates on feedback, and persists the chosen direction plus taste signals for future sessions.
 
 The infrastructure is heavy (requires a `$D` design binary that wraps an image-generation API, a `$B` browse daemon, an HTTP comparison board server, a `gstack-taste-update` CLI for the persistent taste profile). Same conclusion as scrape/skillify and pair-agent: the mechanics are great, the infrastructure isn't portable. But a handful of the mechanics are gold regardless of whether we ever adopt the skill.

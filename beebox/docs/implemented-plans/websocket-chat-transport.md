@@ -6,6 +6,9 @@ issues: []
 ---
 # WebSocket chat transport
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status: implemented** (2026-06). Frozen historical record. Deviations from
 > the plan as written:
 > - `POST /api/chat/send` stayed a raw Fastify route returning `{turnId}` JSON

@@ -7,6 +7,8 @@ filed-by: agent
 discovered-in: worktree-user-stories-refresh — writing a plan doc and validating it before committing
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed:** This commit checks untracked Markdown for frontmatter and broken references while keeping orphan detection tracked-only.
 
 `doc-check` discovers its inputs with `git ls-files` (`src/dev/doc-check.ts:76` (moved to `beebox/src/dev/doc-check/check.ts`)),

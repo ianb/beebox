@@ -8,7 +8,7 @@ description: |-
 
   A first shell-only step removes MAP.md files from directories that no
   longer get one (hidden by an ignore pattern, or no longer meeting the
-  map rules), along with their CLAUDE.md imports.
+  map rules), along with their AGENTS.md imports.
 
   Each precheck exits CHECK_SKIP when it has nothing to do, so on quiet
   days this procedure does no work and invokes no agent.
@@ -24,7 +24,7 @@ steps:
       whys:
         - |-
           A directory hidden by an ignore pattern, or no longer meeting the
-          map rules, never gets a refresh task, but its CLAUDE.md keeps
+          map rules, never gets a refresh task, but its AGENTS.md keeps
           loading the stale MAP.md into agent context.
     run:
       shells:
@@ -49,7 +49,7 @@ steps:
             You are refreshing the box's MAP.md index files.
 
             Each directory in the box has (or should have) a MAP.md that lists
-            its immediate children with one-line annotations. CLAUDE.md
+            its immediate children with one-line annotations. AGENTS.md
             @-imports MAP.md so agents working in the box see the listing.
 
             STEP 1 - GET THE BRIEF:

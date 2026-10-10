@@ -20,7 +20,7 @@ The task:
    narrow allowlist for CLI user-facing output, which is stdout product
    surface, not logging).
 
-Related: the noisy-output policy in the root CLAUDE.md (routine-success
+Related: the noisy-output policy in the root AGENTS.md (routine-success
 diagnostics shouldn't print at all) — the migration is the moment to delete
 logs rather than convert them.
 

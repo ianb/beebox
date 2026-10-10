@@ -9,6 +9,9 @@ issues:
 ---
 # refresh-maps: one source of truth, stampable correct maps, no reviewer without a criterion
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 refresh-maps cannot tell correct work from incomplete work. It lists a
 directory from disk on one branch and from git on another. It cannot stamp a
 MAP.md that is already correct. Its validate step asks a review model a

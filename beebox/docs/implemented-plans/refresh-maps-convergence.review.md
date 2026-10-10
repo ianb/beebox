@@ -1,5 +1,8 @@
 # Plan Engineering Review — refresh-maps convergence
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status (2026-07-19):** this review covers the plan's *first* draft. Its
 > findings were accepted and the plan was rewritten against them — the diff
 > baseline was corrected to a working-tree comparison, the `gitBoxPrefix`

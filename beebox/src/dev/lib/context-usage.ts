@@ -9,7 +9,7 @@
  * undercounts. `output_tokens` is generated, not loaded, so it's excluded.
  *
  * The first assistant turn's loaded context ≈ the always-on baseline (system
- * prompt + agent-guide + box CLAUDE.md + tool schemas + the prompt itself).
+ * prompt + agent-guide + box AGENTS.md + tool schemas + the prompt itself).
  * The peak across turns = baseline + whatever tool-reads accumulated answering.
  */
 

@@ -65,7 +65,7 @@ function originalFilename(fields: Record<string, unknown>): string | null {
  * Turn the `card` argument into a contained box-relative path, or null.
  *
  * The argument is user-supplied, so it goes through `shared/ref-path.ts` like
- * every other box path (CLAUDE.md): a `..` that climbs out of the box, or an
+ * every other box path (AGENTS.md): a `..` that climbs out of the box, or an
  * absolute path naming something outside it, resolves to `null` and becomes a
  * clean error here rather than a file read somewhere it shouldn't be. An
  * absolute path is relativized first so both forms meet the same check.

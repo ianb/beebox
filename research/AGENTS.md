@@ -3,7 +3,7 @@
 Competitive/comparative research written to inform beebox planning — not
 beebox's own documentation. Reviews of other systems (OpenClaw, Hermes,
 Letta, PAI, gstack, comparables scouted along the way) done to steal good
-ideas and validate or challenge our own bets.
+ideas and validate or challenge our own bets. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note.
 
 ## Shape
 

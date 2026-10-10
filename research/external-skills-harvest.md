@@ -1,5 +1,8 @@
 # External skills harvest — evaluation backlog
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A worklist for evaluating five external Claude Code skill repos and deciding,
 per item, what (if anything) to bring into beebox. This is a backlog of
 independent compare/decide tasks — not a single implementation plan. Work

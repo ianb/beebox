@@ -11,7 +11,7 @@ Cross-joined against the doc-graph in `src/dev/doc-graph-html.ts` (moved to `bee
 
 - **High-read + always-loaded** → over-served. The doc is already in context, so re-reads mean the agent either didn't trust the context or couldn't absorb the doc at length. Candidate for trim.
 - **High-read + partial-only (offset/limit always set)** → chapter-grazing. The agent only wants section X. Candidate for split — each section becomes its own file, no agent loads the irrelevant 80%.
-- **High-read + outer-ring** → mis-classified by the rings. Should be promoted closer to always-loaded, or linked from a nearby `CLAUDE.md` so the agent stops having to discover it.
+- **High-read + outer-ring** → mis-classified by the rings. Should be promoted closer to always-loaded, or linked from a nearby `AGENTS.md` so the agent stops having to discover it.
 - **Zero-read + linked prominently** → the link is misleading or the doc is dead weight. Candidate for delete or rewrite.
 - **Read-then-edited vs. read-then-ignored** → distinguishes reference docs from working surfaces — useful when deciding what to maintain vs. what to freeze.
 

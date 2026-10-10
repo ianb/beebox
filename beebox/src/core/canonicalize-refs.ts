@@ -23,7 +23,7 @@
  * **Text-surgical, never parse-reserialize.** Cards are rewritten through `bbx
  * mv`'s scan machinery (`rewrite-card-refs.ts`), which splices a replacement
  * into the matched span of the raw text. Parsing and reserializing a card would
- * reorder its frontmatter keys to schema order (see CLAUDE.md) — an
+ * reorder its frontmatter keys to schema order (see beebox/AGENTS.md) — an
  * unacceptable diff for a tool whose whole job is a mechanical one-line-per-ref
  * change. Dossier links are patched in place on their own line.
  *

@@ -57,7 +57,7 @@ none of it says when to keep a copy or how to cite one.
    archive and the box is not. This stays the rule for a quick fact, a chat
    answer, a recipe link, a product page.
 3. **Keep a copy when any of these holds:** the box is in a research
-   context (a landmark or course whose `CLAUDE.md` says so, a research
+   context (a landmark or course whose `AGENTS.md` says so, a research
    procedure, or the person asked for it); the claim matters enough that
    someone will want to re-verify it later; the source is likely to change,
    vanish, or be hard to fetch again (paywall, login, a page that already
@@ -88,7 +88,7 @@ agent guide's PROVENANCE section pointing at it, the when-to-keep-a-copy
 trigger in the research write-up paragraph of
 `beebox/docs/box/what-you-could-do.md`, and the courseware skill's existing
 "bring material into the box" line made to use the same words. The root
-`CLAUDE.md` gets nothing: this is not relevant on every turn.
+`AGENTS.md` gets nothing: this is not relevant on every turn.
 
 ## What blocks a full version
 
@@ -104,7 +104,7 @@ provenance primitive would make step 4 one command.
   reference material that should rank below the person's own cards? Courses
   put material under the course; a research landmark would do the same.
 - Whether "research context" is a landmark flag the agent reads, or only
-  words in a `CLAUDE.md`. A flag is one more concept; words are enough to
+  words in a `AGENTS.md`. A flag is one more concept; words are enough to
   start.
 - Size: a frozen page can be megabytes; the annex handles binaries, but a
   guideline on when a copy is too big belongs in the same section.

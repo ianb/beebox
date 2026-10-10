@@ -2,7 +2,7 @@
  * The frontmatter half of the ref scan (`rewrite-card-refs.ts` owns the body
  * half and the public entry points). It is deliberately line-based rather than
  * a YAML parse: parsing and reserializing a card reorders its frontmatter keys
- * to schema order (see CLAUDE.md), which is an unacceptable diff for a tool
+ * to schema order (see beebox/AGENTS.md), which is an unacceptable diff for a tool
  * whose whole job is a mechanical one-line-per-ref change.
  *
  * Being line-based, it must recognize the YAML constructs where a ref-shaped

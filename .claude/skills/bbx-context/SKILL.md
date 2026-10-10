@@ -29,7 +29,7 @@ Box instruction files are named `AGENTS.md`: Claude Code and Codex both read the
 
 **Default suspicion:** before adding a paragraph to the root `AGENTS.md`, ask whether it is relevant on every turn. Most guidance belongs one tier lazier, loaded only when it applies.
 
-To trim an oversized root file (the `claude-md-size` lint warns at 12,000 chars), follow `beebox/box-docs/reducing-claude-md.md`, generated from `beebox/src/core/docs-gen/package-docs/reducing-claude-md-doc.ts`.
+To trim an oversized root file (the `instruction-file-size` lint warns at 12,000 chars), follow `beebox/box-docs/reducing-instruction-file.md`, generated from `beebox/src/core/docs-gen/package-docs/reducing-instruction-file-doc.ts`.
 
 For wording that agents follow, and for a written rule that still gets ignored, see "Writing rules that get followed" in `beebox/docs/prompts/review.md`.
 

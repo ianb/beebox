@@ -1,5 +1,8 @@
 # Permissions, provider switching, integrations, and the sandbox (read 2026-10-08)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 What the code shows against the launch claims. Read from clones of the public repos; see [sources.md](sources.md). Paths are relative to each repo root. Written by a reading agent and edited by the research session.
 
 

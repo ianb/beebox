@@ -10,7 +10,7 @@
  * for things like "Legal" and "Finances" that were always free-form.
  *
  * `compileBriefing` emits the frontmatter records, the root place's openers,
- * and the body's Markdoc as markdown for inclusion in CLAUDE.md (via `@`-include). The body
+ * and the body's Markdoc as markdown for inclusion in AGENTS.md (via `@`-include). The body
  * emitter lives at `src/core/markdoc/emit/core.ts`. The frontend renders the
  * records from frontmatter (default card viewer's field table) and the
  * body's `{% purpose %}`/`{% correction %}` tags as styled blocks via
@@ -173,7 +173,7 @@ function openerLine(opener: string): string {
 
 /**
  * Compile a briefing into the markdown form that gets `@`-included into
- * CLAUDE.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`,
+ * AGENTS.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`,
  * prose) followed by the frontmatter records (`key-people:`,
  * `properties:`) and the place's `openers` as `**Label:** …` lines. Prepends
  * a section header. `directoryLabel` is used for directory briefings (e.g.,

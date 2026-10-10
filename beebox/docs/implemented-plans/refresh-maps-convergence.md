@@ -6,6 +6,9 @@ issues: []
 ---
 # refresh-maps convergence
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 `bbx refresh-maps` banks its progress only if the agent reaches the last step of
 its prompt. When the agent runs out of turns first, nothing is recorded and the
 next run produces an identical brief — the procedure never converges. When the

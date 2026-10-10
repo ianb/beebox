@@ -6,6 +6,9 @@ issues: []
 ---
 # Mobile parity & contract-sync discipline
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Two native apps against one web/server contract will drift unless drift is made
 mechanically visible. This plan layers five mechanisms, cheapest-first: a
 canonical contract document, shared golden test fixtures, a parity matrix, a

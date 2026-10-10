@@ -378,7 +378,7 @@ over a symbolic `wt:<name>:` scheme. An absolute path already distinguishes
 worktrees (each is a distinct directory), so no worktree-name registry or
 `main`-resolution is needed — the earlier `wt:main` question dissolves. The
 generic-source rule doesn't fight this: commentary cards are **per-box data**
-(CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
+(AGENTS.md exempts "per-box config, throwaway replies, and personal memory"),
 not shared source/docs/prompts, so a `/Users/...` literal in a commentary card
 is fine.
 
@@ -398,7 +398,7 @@ is fine.
   error classes, no bare catch). Read-only. Per the threat model this guard is
   hygiene, not a hardened boundary.
 - **Route.** A raw Fastify route (file-download shape, per the tRPC-vs-raw
-  rule in CLAUDE.md): `GET /api/external?href=<url-encoded file: URL>` — the
+  rule in AGENTS.md): `GET /api/external?href=<url-encoded file: URL>` — the
   href goes in a **URL-encoded query param, not a `:ref` path segment** (a
   `file:/Users/...` URL has slashes and a scheme; it can't sit in one path
   segment — codex #6). It returns a **JSON envelope**
@@ -780,5 +780,5 @@ explicit signal, per bbx-plan's no-partial-ship rule.
   rename is code+test only (the tag isn't persisted). The `commentary` card
   type is net-new. The dev-only external route is additive and unmounted in
   prod.
-- **No lint-rule changes.** Per CLAUDE.md/memory, the new renderer and route
+- **No lint-rule changes.** Per AGENTS.md/memory, the new renderer and route
   conform to the rules; if a rule fights the code, raise it, don't disable it.

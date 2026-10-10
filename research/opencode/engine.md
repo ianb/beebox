@@ -1,5 +1,8 @@
 # OpenCode as a third box engine
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 *2026-08-25, v1.18.23. Scored against the contract the Codex engine met —
 `beebox/docs/implemented-plans/codex-box-engine.md` (its capability-probe table and
 tracks). Evidence is from source; no live probe was run. Paths are inside the OpenCode

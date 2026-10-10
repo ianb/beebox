@@ -1,7 +1,7 @@
 /**
  * Shared `[imageN]` token-parsing algorithm for chat message content blocks.
  * Pure TypeScript — no React, no Node-only APIs (fs, child_process), no DOM
- * types (see src/shared/CLAUDE.md convention, established for
+ * types (the src/shared convention, established for
  * markdoc-config.ts).
  *
  * Two callers build near-identical block sequences from a text + image-

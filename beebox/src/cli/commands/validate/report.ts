@@ -28,7 +28,7 @@ export function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
 
 /** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
 export function printTextResults(results: ValidationResults): void {
-  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, legacyInstructionErrors } = results;
+  const { cardSummary, mdSummary, attachErrors, instructionFileWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, legacyInstructionErrors } = results;
   const colors = useColor();
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors });
@@ -57,8 +57,8 @@ export function printTextResults(results: ValidationResults): void {
   if (results.boxSchemaFields !== undefined && results.boxSchemaFields.length > 0) {
     console.log(`\nBox-local schemas declare reserved field names (rename them with a field map and \`bbx migrate-fields\`; see the box schema doc):\n${results.boxSchemaFields.map((w) => `  ${w}`).join("\n")}`);
   }
-  if (claudeMdWarnings.length > 0) {
-    console.log(`\n${claudeMdWarnings.join("\n")}`);
+  if (instructionFileWarnings.length > 0) {
+    console.log(`\n${instructionFileWarnings.join("\n")}`);
   }
   if (viewWarnings.length > 0) {
     console.log(`\n${viewWarnings.join("\n")}`);

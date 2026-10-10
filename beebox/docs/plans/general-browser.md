@@ -75,7 +75,7 @@ None resolved outright. Related, and worth reading before designing:
 - Principle **8** is the spine of this plan: several reading surfaces for one job
   is the violation, and consolidating them onto the pattern the issues browser
   already uses is the fix.
-- `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
+- `AGENTS.md` (monorepo root) — the dev-page casualness carve-out applies to
   *pages*, not to app code. Everything here is workstreams-app code and is
   linted and typechecked.
 - **Boxholder posture, 2026-08-22:** consolidation is wanted even where it

@@ -9,6 +9,8 @@ resolution: implemented
 design: ../../../beebox/docs/implemented-plans/bbx-agent-surface.md
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Resolved 2026-09-16** — see `beebox/docs/implemented-plans/bbx-agent-surface.md`.
 The criterion the issue asked for is the boxholder's: only what an agent can
 call (chat, scheduled script, procedure) stays in `bbx`; the rest moved under

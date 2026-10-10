@@ -6,6 +6,9 @@ issues: []
 ---
 # iOS audio-session routing
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 The iOS app configures `AVAudioSession` in two record paths and never
 configures it for playback. The result is audio that leaves Bluetooth and
 plays quietly. This plan gives the app one owner for the audio session, one

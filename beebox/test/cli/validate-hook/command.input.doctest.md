@@ -72,7 +72,7 @@ const box = await makeTmpBox();
 await writeFile(`${box.root}/AGENTS.md`, "x".repeat(13000));
 const warning = await validateHookPathsResult([`${box.root}/AGENTS.md`]);
 await box.cleanup();
-JSON.stringify({ hasFeedback: warning.feedback?.includes("claude-md-size"), hasErrors: warning.hasErrors })
+JSON.stringify({ hasFeedback: warning.feedback?.includes("instruction-file-size"), hasErrors: warning.hasErrors })
 => {"hasFeedback":true,"hasErrors":false}
 ```
 

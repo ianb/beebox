@@ -18,8 +18,8 @@ Bee Box production cannot start a Codex chat because the service account has no 
 - Engineering principle 6 concentrates defenses at real boundaries. This plan probes the CLI and credentials, not interior SDK states already promised by types.
 - Engineering principle 8 requires one way to perform each operation. Chat and batch Codex runs must share one readiness check.
 - Engineering principle 10 requires a red-capable seam before the fix. The existing injected Codex command seam is reused.
-- `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, browser, physical-device, deployed-runtime, reload, and production verification."* The rollout therefore separates packed/deployment-shaped verification from a production chat canary.
-- `CLAUDE.md` says: *"NEVER disable or weaken a lint rule to make code pass."* No lint configuration changes are part of this work.
+- `AGENTS.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, browser, physical-device, deployed-runtime, reload, and production verification."* The rollout therefore separates packed/deployment-shaped verification from a production chat canary.
+- `AGENTS.md` says: *"NEVER disable or weaken a lint rule to make code pass."* No lint configuration changes are part of this work.
 
 ## What already exists
 

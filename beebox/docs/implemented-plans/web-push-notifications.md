@@ -6,6 +6,9 @@ issues: []
 ---
 # Web Push notifications
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status: implemented and merged** (Tracks A–E). All doctests + the full suite
 > pass; the Admin "Enable notifications" UI is browser-verified on desktop.
 > Remaining verification + the prod VAPID-keys ops step are tracked in

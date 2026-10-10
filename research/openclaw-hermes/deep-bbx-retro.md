@@ -1,5 +1,8 @@
 # Deep dive: `bbx retro` retrospective pipeline
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Source tree: `beebox/src/core/retro/` (`discovery.ts`, `state.ts`,
 `registries.ts`, `render.ts`, `observer.ts`, `observations.ts`, `ledger.ts`,
 `scan.ts`, `report.ts`), CLI surface `beebox/src/cli/commands/retro.ts`,

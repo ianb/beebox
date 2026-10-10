@@ -1,5 +1,8 @@
 # Activities — Design Proposal
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Archived here on 2026-09-13 from the earlier design record; this is not a new
 assessment of current behavior. Current extensibility rationale:
 [feature composition](../design/extensibility.md).

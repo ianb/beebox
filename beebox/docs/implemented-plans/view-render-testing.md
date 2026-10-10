@@ -6,6 +6,9 @@ issues: []
 ---
 # Plan: testing agent-authored views
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Box agents can author custom `.tsx` views in a box's `views/` directory, but
 today there is no way to *test* one outside a browser. A view is only ever
 compiled and run when the frontend dynamically imports it; the only feedback an
