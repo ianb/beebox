@@ -14,7 +14,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { body, type CardSchemaConfig } from "../../exports/cards.js";
 import { z } from "../../exports/schema.js";
 
 /** Qualitative mastery level for a node — judged against the course's success-criteria. */
@@ -48,7 +48,7 @@ const progressFields = {
   body: body(z.string()),
 };
 
-export const progressBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
+export const progressBase: CardSchemaConfig<string, typeof progressFields> = {
   brief: "A learner's evidence of understanding",
   description: "A per-learner, evidence-backed record of understanding against a course's concept-map nodes",
   category: "authored",

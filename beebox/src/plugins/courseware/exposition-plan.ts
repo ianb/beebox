@@ -18,7 +18,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { body, type CardSchemaConfig } from "../../exports/cards.js";
 import { z } from "../../exports/schema.js";
 
 /** One candidate way to present, with an honest rating of its fit here. */
@@ -35,7 +35,7 @@ const expositionPlanFields = {
   body: body(z.string()),
 };
 
-export const expositionPlanBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
+export const expositionPlanBase: CardSchemaConfig<string, typeof expositionPlanFields> = {
   brief: "How to present a subject",
   description: "A worked plan for how to present a subject — learner translation, rated approaches, and the presentation rules they produce",
   category: "authored",

@@ -23,7 +23,28 @@ export interface LintContext {
   readonly listSiblingCards: (dir: string) => Promise<string[]>;
 }
 
-export interface PluginDefinition {
+/**
+ * A base of any field map. `CardSchemaConfig` is contravariant in its fields
+ * through `summarize`'s parameter, so no one field map accepts every base;
+ * this type holds `summarize` as `unknown` instead, and every
+ * `CardSchemaConfig<string, F>` is assignable to it. The engine reads bases
+ * through it (it needs only their keys); a box's stub sees the precise
+ * `CardSchemaConfig` through `PluginDefinition<S>`.
+ */
+type AnySchemaBase = Omit<CardSchemaConfig<string, Record<string, FieldDecl>>, "summarize"> & {
+  readonly summarize?: unknown;
+};
+
+/** Bases keyed by their default type name. */
+type SchemasMap = Readonly<Record<string, AnySchemaBase>>;
+
+/**
+ * `S` is the plugin's precise schemas map, inferred by `definePlugin` so the
+ * published `plugin.d.ts` keeps each base's field types for `extendSchema`.
+ * The default is the erased form the registry and engine hold; every
+ * `PluginDefinition<S>` is assignable to it.
+ */
+export interface PluginDefinition<S extends SchemasMap | undefined = SchemasMap | undefined> {
   /** Equals the directory name under `src/plugins/`; kebab-case. */
   readonly name: string;
   /** One line; passes the brief lint. */
@@ -32,8 +53,8 @@ export interface PluginDefinition {
   readonly docs: string;
   /** SKILL.md body; the engine writes the frontmatter. */
   readonly skill?: string;
-  /** Bases (a `CardSchemaConfig` with no type name) keyed by their default type name. */
-  readonly schemas?: Readonly<Record<string, CardSchemaConfig<string, Record<string, FieldDecl>>>>;
+  /** Bases (a `CardSchemaConfig` with no type name) keyed by their default type name; `undefined` when the plugin has none. */
+  readonly schemas: S;
   readonly views?: ReadonlyArray<{ readonly name: string; readonly rendersCardTypes: ReadonlyArray<string> }>;
   readonly healthChecks?: (boxRoot: string) => Promise<HealthCheck[]>;
   readonly lintCards?: (
@@ -42,7 +63,12 @@ export interface PluginDefinition {
   ) => Promise<LintIssue[]>;
 }
 
-/** Identity with a type check: a plugin's `plugin.ts` default-exports `definePlugin({...})`. */
-export function definePlugin(def: PluginDefinition): PluginDefinition {
+/**
+ * A plugin's `plugin.ts` default-exports `definePlugin({...})`. `S` is inferred
+ * from the `schemas` literal, so `plugin.schemas.<type>` is the base's precise
+ * config in the published declaration; a plugin without bases writes
+ * `schemas: undefined`.
+ */
+export function definePlugin<const S extends SchemasMap | undefined>(def: PluginDefinition<S>): PluginDefinition<S> {
   return def;
 }

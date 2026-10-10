@@ -291,12 +291,12 @@ export interface LintContext {
   readonly resolveContainedRef: (from: string, ref: string) => Promise<string | null>; // wraps src/core/ref-exists.ts
   readonly listSiblingCards: (dir: string) => Promise<string[]>;                       // contained readdir
 }
-export interface PluginDefinition {
+export interface PluginDefinition<S extends SchemasMap | undefined = SchemasMap | undefined> {
   readonly name: string;                 // equals directory name
   readonly description: string;          // one line; passes the brief lint
   readonly docs: string;                 // path under the package, e.g. "src/plugins/courseware/README.md"
   readonly skill?: string;               // SKILL.md body; engine writes frontmatter
-  readonly schemas?: Readonly<Record<string, CardSchemaConfig<string, Record<string, FieldDecl>>>>; // key = default type
+  readonly schemas: S;                   // key = default type; S is inferred by definePlugin<const S> so bases keep concrete field types (2026-10-10)
   readonly views?: ReadonlyArray<{ readonly name: string; readonly rendersCardTypes: ReadonlyArray<string> }>; // none in slice 1
   readonly healthChecks?: (boxRoot: string) => Promise<HealthCheck[]>;
   readonly lintCards?: (input: { path: string; type: string; fields: Record<string, unknown> }, ctx: LintContext) => Promise<LintIssue[]>;

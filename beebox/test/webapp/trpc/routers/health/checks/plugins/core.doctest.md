@@ -40,6 +40,7 @@ const quiet = await makeTmpBox();
 const checks = await pluginHealthChecks(quiet.root);
 checks.map((c) => `${c.name}:${c.ok ? "ok" : "FAIL"}`)
 => [
+  "plugin-config:ok",
   "plugin-type-unprovided:ok",
   "plugin-declared-missing:ok",
   "plugin-stub-inactive:ok",
@@ -97,6 +98,52 @@ failing(await pluginHealthChecks(bare.root))
 
 ```ts cleanup
 await bare.cleanup();
+```
+
+## A present stub that defines no schema of the declared type
+
+The box has `src/schemas/progress.ts`, but it registers `other`, so the
+effective map has no `progress` schema. File presence is not completion: the
+row fires with a message that says the file exists and what it lacks, unlike
+the "no stub" wording above. The stub needs `beebox/cards`, which
+`makeTmpBox({ deps: true })` resolves.
+
+```ts
+const wrongType = await makeTmpBox({ deps: true });
+await wrongType.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }));
+await wrongType.write("src/schemas/progress.ts", 'import { cardSchema } from "beebox/cards";\nimport { z } from "beebox/schema";\n\nexport default cardSchema("other", { fields: { size: z.number() } });\n');
+failing(await pluginHealthChecks(wrongType.root)).filter((c) => c.name === "plugin-declared-missing" && c.message.includes("progress"))
+=> [{
+  name: "plugin-declared-missing",
+  severity: "error",
+  message: "The courseware plugin is active but its stub src/schemas/progress.ts is present and defines no schema named progress. Write it from node_modules/beebox/src/plugins/courseware/README.md, Setup.",
+}]
+```
+
+```ts cleanup
+await wrongType.cleanup();
+```
+
+## Invalid `plugins` entries are `plugin-config` rows
+
+Each problem `activePluginNames` reports is one failing row, worded as `bbx
+status` and `bbx plugins list` word it. An unknown name leaves the known ones
+active; a malformed field activates nothing and is one row.
+
+```ts
+const typo = await boxWithPlugins(["coursware"]);
+failing(await pluginHealthChecks(typo.root)).filter((c) => c.name === "plugin-config")
+=> [{ name: "plugin-config", severity: "error", message: "box.json names an unknown plugin: coursware" }]
+```
+
+```ts continue
+await typo.write("_config/box.json", JSON.stringify({ plugins: "courseware" }));
+failing(await pluginHealthChecks(typo.root)).filter((c) => c.name === "plugin-config")
+=> [{ name: "plugin-config", severity: "error", message: "box.json \"plugins\" must be an array of plugin names; found \"courseware\"" }]
+```
+
+```ts cleanup
+await typo.cleanup();
 ```
 
 ## A box skill under the plugin's name

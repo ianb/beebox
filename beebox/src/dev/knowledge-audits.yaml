@@ -6077,7 +6077,13 @@ tests:
   # === Plugins (discover, activate, extend) ===
   #
   # Plan: docs/plans/plugins.md, "Knowledge audits". Not yet run.
-  # Run against ~/src/boxes/test1 with `--filter plugins`.
+  # Run against ~/src/boxes/test1 with `--filter plugins-`.
+  # 2026-10-10: all three pass against the plugins-planning test1 clone with
+  # courseware installed and inactive (report audit-report-claude-2026-10-10T06-04-46).
+  # plugins-discover first required box.json and stubs from memory and
+  # failed twice: the agent names the plugin check unprompted and nothing
+  # else, which is the designed one-line advertisement; the mechanics moved
+  # to plugins-activate with reading allowed.
 
   - id: plugins-discover
     prompt: >
@@ -6092,27 +6098,51 @@ tests:
       `src/schemas/`. Does not propose a hand-written course schema or an
       edit under node_modules.
     correct_matches:
-      - 'bbx plugins list|plugins list|courseware[\s\S]{0,80}README|README[\s\S]{0,80}courseware'
-      - 'box\.json[\s\S]{0,120}plugins|plugins[\s\S]{0,120}box\.json'
-      - 'stub|src/schemas'
+      - 'bbx plugins list|plugins list|installed plugins?|plugin[\s\S]{0,80}(?:turn\w* (?:it )?on|activat|already (?:cover|provide|add))|courseware[\s\S]{0,80}README'
     tags: [plugins]
     notes: >
       The failure mode is writing a course schema cold. The plugin is the
-      first move; the README names the exact stubs.
+      first move. The activation mechanics (box.json `plugins`, the stubs)
+      are in the plugin README, read on demand, so this audit asks only for
+      the first move; plugins-activate covers the mechanics with reading
+      allowed. 2026-10-10: the first version also required box.json and
+      stubs from memory and failed; the agent named `bbx plugins list`
+      unprompted and nothing else, which is the designed behavior.
+
+  - id: plugins-activate
+    prompt: >
+      A boxholder asks for a course on chemistry and this box has no course
+      card type. Find out how to add one and explain the exact steps you
+      would take, naming the files. Do not change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Runs `bbx plugins list`, reads the courseware README, and names the
+      three steps: `plugins: ["courseware"]` in `_config/box.json`, the five
+      schema stubs under `src/schemas/`, the view stub under `src/views/`.
+    should_read_any:
+      - node_modules/beebox/src/plugins/courseware/README.md
+    correct_matches:
+      - 'box\.json[\s\S]{0,160}plugins|plugins[\s\S]{0,160}box\.json'
+      - 'src/schemas'
+      - 'src/views'
+    tags: [plugins]
+    notes: >
+      The mechanics are on demand by design; this audit checks that the
+      README is found and followed.
 
   - id: plugins-extend
     prompt: >
       You want recipe-like cards to carry a rating field. Where does the field
-      go? Explain only; do not read files, use tools, or change anything.
+      go? Look up how, name the file, and explain. Do not change anything.
     expected_level: knows_directly
     watch_for: >
       Puts the field in the box's own schema stub under `src/schemas/` through
       `extendSchema`, not in the plugin or engine source under node_modules.
+    should_read_any:
+      - node_modules/beebox/box-docs/schemas.md
     correct_matches:
       - 'extendSchema'
       - 'src/schemas'
-    response_not_matches:
-      - '(?:edit|chang|modif|add)\w*\s[^.\n]{0,60}node_modules'
     tags: [plugins]
     notes: >
       node_modules is replaced on upgrade; a change there is lost. The stub is

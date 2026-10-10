@@ -13,7 +13,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, type CardSchemaConfig, type FieldDecl, type LintIssue } from "../../exports/cards.js";
+import { body, type CardSchemaConfig, type LintIssue } from "../../exports/cards.js";
 import { z } from "../../exports/schema.js";
 
 /** Knowledge-component type — a strong hint to *how* a node is taught. */
@@ -130,7 +130,7 @@ const conceptMapFields = {
   body: body(z.string()),
 };
 
-export const conceptMapBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
+export const conceptMapBase: CardSchemaConfig<string, typeof conceptMapFields> = {
   brief: "Knowledge graph for one topic",
   description: "A module-scale knowledge graph for one bounded topic — concepts as in-card nodes with typed edges; a course component",
   category: "authored",
