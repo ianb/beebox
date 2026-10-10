@@ -77,7 +77,8 @@ export async function expandInstructionIncludes(options: {
       const real = await realpathIfPresent(included);
       if (real === null) continue;
       if (!realRoots.some((root) => isInside(root, real))) throw new UnsafeAgentContextIncludeError(specifier);
-      const includedContent = await readIfPresent(included);
+      // Read the path that was checked, so a swapped link cannot redirect the read.
+      const includedContent = await readIfPresent(real);
       if (includedContent === null) continue;
       sections.push(`<!-- beebox include: ${rel} -->\n${includedContent.trim()}`);
       await visit(included);
