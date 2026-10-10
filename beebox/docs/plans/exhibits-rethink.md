@@ -10,8 +10,10 @@ An exhibit is a page an agent builds to show the developer rendered work:
 labeled screenshots, a document, or a small interactive page. Today every
 exhibit also carries an **ask** with an answer form, and the dashboard keeps a
 queue of unanswered asks. This plan removes the ask, writes the rule for
-phrasing an exhibit in terms the developer can read without the plan, and
-makes the session-finished desktop notification open the exhibit page.
+phrasing an exhibit in terms the developer can read without the plan, makes
+the session-finished desktop notification open the exhibit page, gives the
+page a button that brings up the session's terminal tab so a reaction is one
+click away, and lists each workstream's exhibits on the dashboard.
 
 **Issues addressed:** none filed directly. Related, not addressed:
 [orphaned comment namespaces after a cull](../../../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md)
@@ -45,7 +47,9 @@ All four answers were written by an agent after the developer replied in chat
 The two interactive pages in `tiling-backgrounds/` logged 194 and 347 events,
 so the instrument tier is used. The developer's statement, 2026-10-10: they do
 open exhibits, almost always answer in chat, often miss that an exhibit exists,
-and find opening a link out of terminal text annoying. The ask prose is written
+find opening a link out of terminal text annoying, still want to react to
+exhibits with several choices, and would like the dashboard's workstream list
+to show each workstream's exhibits. The ask prose is written
 in plan vocabulary they have not read ("one global card field, prominence:
 entry-point | primary | background"; "Slice 1 of the plugins plan").
 
@@ -64,6 +68,8 @@ link-in-text delivery the developer finds annoying.
 | 1. Remove the ask, the answer form, and the queue | about 1,250, mostly deletions |
 | 2. Phrasing rule, `--caption` | about 80 |
 | 3. Notification opens the exhibit | about 30 (outside git, `~/.claude/hooks/notify.sh`) |
+| 4. "Reply in the session" button on the page | about 120 |
+| 5. Exhibits on the workstream list and detail pages | about 200, half reused from the queue scan |
 
 Authored docs: `workstreams-app/docs/exhibits.md` loses its ask sections
 (about 90 lines) and gains the phrasing section (about 25); root `AGENTS.md`
@@ -74,7 +80,10 @@ What the fuller version buys: the concept count drops by three (ask type,
 disposition, ask queue), which removes the surface that rots, per the
 boxholder preference for fewer invented concepts (memory
 `minimal-concepts-prefer-primitives`). Track 3 puts the page one click from the
-notification the developer already acts on.
+notification the developer already acts on; Track 4 puts the chat one click
+from the page, so reacting costs look, click, type. Track 5 reuses the queue's
+store scan as a plain inventory, so an exhibit is findable from the workstream
+it belongs to rather than from a queue of questions.
 
 ## Stated preferences this plan trades against
 
@@ -127,6 +136,27 @@ notification the developer already acts on.
   open that URL as printed; no new auth path.
 - Orphan reporting: `bin/workstreams:1029-1041` reports store directories with
   no live worktree and never deletes. Unchanged.
+- Focusing a session's terminal tab: `bin/workstreams focus <name>`
+  (`bin/workstreams:283-306`) reads the session registry's `tty` and runs
+  `terminal_focus_tty` (`bin/lib/terminal-tabs.sh:22-43`, AppleScript against
+  Terminal.app). The dashboard already exposes it as the `focus` action
+  (`shared/actions.ts:7`; `frontend/components/WorkstreamActions.tsx:47-54`
+  offers it when the agent is live) through `createActionCommandRunner`
+  (`server/main/actions-service.ts:66-80`), which spawns `bin/workstreams`.
+  Track 4 reuses the CLI; it does not re-implement the AppleScript.
+- The session registry records the tty at SessionStart
+  (`.claude/hooks/session-start-registry.sh`, via
+  `wt_session_from_claude_ancestor` in `bin/lib/session-workstream.sh`);
+  Codex sessions have `agent: "codex"` rows (`bin/lib/session-registry.sh:131`).
+- Per-workstream exhibit listing already exists on the exhibits origin:
+  `GET /:ws/` renders `renderExhibitList` over `listExhibits`
+  (`app/handler.ts:280-291`). Track 5 links there and reuses the store scan
+  (`store.ts:listWorkstreams`, `readManifest`) that the queue service
+  (`exhibits-queue-service.ts:53-66`) wraps today.
+- The workstream list and detail pages: `frontend/pages/WorkstreamsPage.tsx`
+  rows and `WorkstreamDetailPage.tsx`, fed by `workstreams.list` and
+  `workstreams.detail` (`server/api/router.ts:36-45`); the detail procedure
+  joins issues onto the row and is the model for joining exhibits.
 - Phrasing guidance for decisions already exists as a boxholder memory
   (`ask-decisions-with-context`, 2026-10-09). Track 2 moves its substance into
   the exhibits doc, where agents load it.
@@ -151,6 +181,9 @@ No decision here depends on an external premise. The notification tool
   `index.html`. Keeps its event log and documents.
 - **Committed app** (exists, `dev/apps/`): unchanged. Its manifest already
   omits `ask` (`dev/apps/story-eval/exhibit.json`).
+- **Exhibit inventory** (replaces the ask queue's scan): per workstream, the
+  list of `{ slug, title, created, path }` read from the store. No state
+  beyond what the manifest holds.
 - Removed nouns: **ask type**, **disposition**, **ask queue**.
 
 ## Tracks / scope
@@ -175,9 +208,9 @@ disposition. It competes with the surfaces the developer does use.
   writes `ask` again. The 138 existing exhibits keep rendering their title,
   prose, figures, and documents. The old `ask.type` and `ask.options` (the
   choice labels the form showed, `DispositionForm.tsx:29-32`) are not shown
-  anywhere after this lands. Accepted loss: no decision was ever recorded
+  anywhere after this lands. Proposed as an accepted loss: no decision was ever recorded
   through those labels, and the choices that were made live in chat and in
-  the plans. The boxholder confirms this in the review of this plan.
+  the plans. Open until the boxholder answers (see Open design questions).
 - `readManifest(dir, { requireAsk })` loses its option; `requireAsk` is threaded through `store.ts:154,181,235,252` and `app/handler.ts:86,131,248,261,289,303`.
 - The container renders `prose` as a paragraph under the title, with no badge
   and no form. Instruments keep `EventLog`, `Storage`, `postCapture`.
@@ -193,10 +226,14 @@ disposition. It competes with the surfaces the developer does use.
   and exits non-zero after printing, so an incomplete inventory is never
   mistaken for a complete one.
 - Delete: `DispositionForm.tsx`, `AsksPage.tsx`, `lib/ask-queue.ts`,
-  `exhibits-queue-service.ts`, `disposition.ts` (move `DATA_DIR` to
-  `store.ts`), the nav link, the route, the tRPC procedure, the service
-  method, the two queue doctests, and the ask scenarios in the CLI and
-  container doctests.
+  `disposition.ts` (move `DATA_DIR` to `store.ts`), the nav link, the route,
+  the tRPC procedure `exhibits.askQueue`, the `ask-queue` doctest, and the
+  ask scenarios in the CLI and container doctests.
+- `exhibits-queue-service.ts` becomes `exhibits-inventory-service.ts`: the
+  same store scan (`scanTarget`, `listWorkstreams`, `readManifest`) minus
+  disposition and ask fields, returning `{ workstream, slug, title, created,
+  path, problem }` rows for Track 5. Its doctest is rewritten to the new rows,
+  keeping the broken-manifest and missing-store cases.
 - `pages.ts:116-121` (the broken-manifest page) describes the new shape.
 - Docs: `workstreams-app/docs/exhibits.md` loses "Ask types", "The ask
   queue", and the disposition paragraphs. Root `AGENTS.md` "Record and show
@@ -313,12 +350,112 @@ git; the change is recorded here and in the developer's hook file only.
 add` from this worktree, the URL on the first line of the final message, the
 click opens the page.
 
+### Track 4: a "Reply in the session" button on the page
+
+**What.** The container shows one button under the title. Clicking it brings
+the workstream's live terminal tab to the front, so the developer can type a
+reaction where the agent is listening.
+
+**Why this needs to change.** The developer answers in chat. After reading a
+page with several figures, the next step today is finding the right tab among
+many. The dashboard already has a Focus button per workstream; the exhibit
+page is where the developer is when they want it.
+
+**Direction.**
+
+- The exhibits origin gains `POST /api/:ws/:exhibit/focus` (no body). The
+  handler resolves `ws` as it does for any scope, then spawns
+  `bin/workstreams focus <ws>` through the same runner the workstreams
+  origin uses (`createActionCommandRunner`, moved or imported so both
+  listeners share it). Stdout is ignored; a non-zero exit returns 409 with the
+  CLI's last stderr line as `detail` ("no live session for <ws> — use
+  resume").
+- Committed apps (`apps/<name>`) and the `main` workstream have no registry
+  row; the route returns 409 with that message and the button shows it.
+- The container renders the button for store exhibits only, labeled
+  "Reply in the session". On 409 it shows the detail inline, with a link to
+  the dashboard's workstream list, where the row's Resume button lives
+  (`WorkstreamActions.tsx:65-71`; the detail page has no actions).
+- Raw `index.html` exhibits are served unchanged with no container
+  (`app/handler.ts:143-148`), so they get no button. The doc says so; a raw
+  page that wants one calls the route itself.
+- This is a new, bounded authority on the exhibits origin. Today that origin
+  holds none (`app/handler.ts:1-7`; `docs/exhibits.md`, "Access"). After this
+  track it holds exactly one: bring any live workstream's terminal tab to the
+  front. The `Origin` check (`app/auth.ts:85-109`) keeps other origins out; it
+  does not tell a developer's click from a store page's own script, so an
+  agent-written page can trigger a focus, for its own workstream or another
+  named one. The worst effect is a terminal tab coming forward. It cannot
+  resume, close, or archive a workstream, and the route takes no text. The
+  doc's "Access" section states this grant. The boxholder decides whether to
+  grant it (Open design questions).
+
+**Vocabulary lock-ins.** Route name `focus`, matching the action verb.
+
+**First implementation chunk.** The route with its doctest (a stub runner:
+success, CLI failure with stderr detail, unknown workstream), the button,
+and the container doctest case. Hand check: open a store exhibit from this
+worktree, click, the tab comes forward.
+
+### Track 5: exhibits on the workstream list and detail
+
+**What.** Each workstream row on the dashboard lists its exhibits by title,
+each a link to the page, newest first, with a link to the per-workstream
+index on the exhibits origin. The workstream detail page shows the same list
+with dates.
+
+**Why this needs to change.** Today the only index of exhibits is the ask
+queue, organized by question type. The developer thinks in workstreams; a
+workstream's page should show what its agent has put up.
+
+**Direction.**
+
+- `ExhibitsService` (renamed from the queue's interface) gains
+  `inventory(): Promise<ExhibitInventory>` with
+  `{ origin, storeProblem, entries: ExhibitInventoryEntry[] }`, where an entry
+  is `{ workstream, slug, path, title: string | null, created: string | null,
+  problem: string | null }`. A broken manifest yields a row with null title
+  and date and the parse problem, as the queue scan does today
+  (`exhibits-queue-service.ts:46-66`). Committed apps are not included (they
+  belong to no workstream).
+- `workstreams.list` returns, per row, `exhibits: ExhibitInventoryEntry[]`
+  sorted by `created` descending with broken rows last; the result's existing
+  `warnings` list gains the inventory's `storeProblem` when set, so an
+  unreadable store reads as a warning, not as zero exhibits everywhere.
+  `workstreams.detail` returns the same rows for its name. The join is by
+  directory name, as the issue join is today.
+- `WorkstreamsPage` rows show the titles as links (slug and problem for a
+  broken row), and one "all" link to the exhibits origin's index for the
+  workstream; `WorkstreamDetailPage` gets an "Exhibits" section after Issues
+  with title, date, and link per entry.
+- Links to the exhibits origin carry no token, as the asks page's links did
+  (`AsksPage.tsx:23-26`): the browser holds the cookie after one visit, and
+  the 401 page names `bin/exhibits url`.
+- A workstream with store content but no live worktree (an orphan) still has
+  rows in the inventory, but the dashboard shows only registered or live
+  workstreams, so orphan exhibits stay reachable only through the exhibits
+  origin's own index and the sweep report. Accepted; it matches today.
+
+**Vocabulary lock-ins.** `exhibits` as the row field; `inventory` as the
+service method; `title` and `created` nullable on an inventory row.
+
+**First implementation chunk.** The inventory service and its doctest
+(renamed from the queue doctest), the two tRPC additions, and the two page
+changes.
+
 ## Could this be simpler?
 
 Simplest: Track 2's guidance alone, no code. It fails on the two stated
 problems that are mechanical: the notification still focuses the terminal, so
 the link-in-text delivery stays, and the queue keeps collecting unanswered
 rows nobody clears. The developer named both as the problem.
+
+Tracks 4 and 5 could be skipped: the dashboard's Focus button and the
+exhibits origin's own per-workstream index exist. They fail on the stated
+problem: the developer is on the page when they want the terminal, and in the
+workstream list when they want to know what an agent showed. Each track reuses
+the mechanism that exists (the focus CLI; the store scan) and adds one route or
+one join.
 
 Next simplest: Tracks 2 and 3, keep the ask as an optional label. This keeps
 three concepts (ask type, disposition, queue) with zero use, and the `fyi`
@@ -340,13 +477,19 @@ none
 | A legacy manifest has `ask` but no `prose`; the page shows no intro | Track 1 doctest: legacy manifest renders `ask.prose` | lift in `readManifest` | clear |
 | A legacy manifest has `ask` with a `type` the new schema does not know | same doctest (`ask` is stripped, not validated) | strip | clear |
 | An old agent session runs `bin/exhibits add --ask` after landing | CLI doctest: `--ask` is refused with the new message | yes | clear |
-| A store page's `index.tsx` imports `DispositionForm` or `askTypeLabels` | none (store pages are untracked) | the import-time catch in `boot.tsx:48-63` renders "This page failed to load" with the error | clear |
+| A store page's `index.tsx` imports `DispositionForm` or `askTypeLabels` | none (store pages are untracked; the catch itself is untested) | the import-time catch in `boot.tsx:48-63` renders "This page failed to load" with the error | clear by reading the code, not verified |
 | The final message has a tokenless exhibits URL (token file unreadable) | none | falls back to tab focus; the CLI already warned on stderr when it printed that URL | clear at creation, silent at click; accepted |
 | The final message carries two exhibit URLs | none | first wins by rule | clear (Track 2 rule) |
 | `open` is unavailable or the browser is closed | none | `open` launches the default browser; a failure exits silently in the detached subshell | silent, accepted: the terminal tab still has the URL |
 | A `--caption` count exceeds the figure count | CLI doctest | error | clear |
 | `bin/exhibits list --json` consumers read `answered` | searched: no reader in the repo besides the doctest | removed | clear (field absent) |
 | A manifest in the store does not parse and no queue shows it | CLI doctest: `list` prints the row with `problem` and exits non-zero | yes | clear |
+| Focus clicked for a workstream whose session ended; the registry tty is stale | route doctest with a failing runner | `bin/workstreams focus` checks `terminal_agent_on_tty` and exits 1 with a message; the page shows it | clear |
+| Focus clicked from an `apps/` page or a `main` exhibit | route doctest | 409 before spawning | clear |
+| Terminal.app is not the terminal (iTerm) | none | the CLI's AppleScript fails; the page shows "Terminal has no tab" | clear, accepted: same limit as the dashboard's Focus |
+| The inventory scan hits a broken manifest | inventory doctest | row with null title and date and `problem`, sorted last; both pages show the slug and problem | clear |
+| The store root is missing or unmarked | inventory doctest (kept from the queue doctest) | `storeProblem` becomes a `workstreams.list` warning | clear |
+| Two workstreams share a store directory name with different case | none | the store rejects names outside the segment schema; the join is exact | clear |
 
 No critical gap.
 
@@ -357,6 +500,8 @@ No critical gap.
 - **Stale ref:** ADDRESSED. Exhibit directories are never deleted by this plan;
   URLs stay valid.
 - **Two agents touching the same card:** not applicable; no shared writes.
+  A double click on the focus button spawns two `bin/workstreams focus`
+  runs; both focus the same tab.
 - **Hand-edit drift:** ADDRESSED. A hand-written manifest with `ask` still
   renders through the lift; a manifest with neither `prose` nor `ask` renders
   figures only.
@@ -384,9 +529,21 @@ No critical gap.
   written.
 - **A `--open` default at creation.** Considered; the developer chose the
   notification path instead (2026-10-10).
+- **Typing a reply into the terminal from the page.** The focus button
+  brings the tab forward; it never injects text. Sending keystrokes to a
+  session is a different trust level.
+- **Showing exhibits for orphan workstreams on the dashboard.** The dashboard
+  lists workstreams, not store directories.
 
 ## Open design questions
 
+- Whether the 12 old `decide` exhibits should keep showing their option
+  labels as read-only text, or lose them. Lean: lose them; none was ever
+  answered on the page.
+- Whether the exhibits origin may hold the one bounded authority Track 4
+  gives it (bring a live workstream's terminal tab forward). Lean: yes; the
+  effect is which tab is in front, and the alternative is a second click on
+  the dashboard.
 - Whether `bin/exhibits list` should drop rows whose workstream has no live
   worktree, or show the age. Lean: leave `list` as a plain inventory; the
   orphan report covers lifecycle.
@@ -400,8 +557,12 @@ implemented plan.
 
 ## What will hold this after it ships
 
-- Doctests already reach the manifest schema, the container, the CLI, and the
-  exhibits API. The legacy lift gets one case in `exhibits.api.doctest.md` or
+- Doctests already reach the manifest schema, the container, the CLI, the
+  exhibits API, and the queue scan (which becomes the inventory). The focus
+  route gets a doctest with a stubbed runner; `createActionsService` already
+  takes `runCommand` as an injected dependency (`server/main/backend.ts:72`),
+  so the stub is a function, not a mock of `spawn`. No existing doctest
+  exercises the real runner; none is added. The legacy lift gets one case in `exhibits.api.doctest.md` or
   a new `store.doctest.md`; the CLI changes get cases in
   `bin/test/exhibits.cli.doctest.md`.
 - Track 3 has no automated test; it is a 20-line edit to a personal hook,
@@ -413,11 +574,15 @@ implemented plan.
    `--ask`, doctests. Commit.
 2. Track 1, chunk 2: remove the queue (service, route, page, nav, tests), move
    `DATA_DIR`, update `pages.ts`, docs. Commit.
-3. Track 2: doc section, `--caption`, CLI doctests, root `AGENTS.md`.
+3. Track 5: rename the queue service to the inventory, add the joins and
+   the page sections. Commit. (Before Track 2, because it finishes the
+   removal in `workstreams-app`.)
+4. Track 4: the focus route, shared runner, button. Commit.
+5. Track 2: doc section, `--caption`, CLI doctests, root `AGENTS.md`.
    Commit.
-4. Move `workstream-exhibits.md` to `implemented-plans/`. Commit.
-5. Track 3: edit `~/.claude/hooks/notify.sh` (outside git), verify by hand.
-6. Cross-model review of the diff; adjudicate; report.
+6. Move `workstream-exhibits.md` to `implemented-plans/`. Commit.
+7. Track 3: edit `~/.claude/hooks/notify.sh` (outside git), verify by hand.
+8. Cross-model review of the diff; adjudicate; report.
 
 ## Rollout shape
 
@@ -425,5 +590,7 @@ Done when: `pnpm --filter workstreams-app test` and the `bin/test` doctests
 pass with no reference to `ask`, `disposition`, or `askQueue` left in
 `workstreams-app/src` or `bin/exhibits`; one legacy exhibit from the store
 renders with its old prose; one new exhibit created from this worktree renders
-with captions; and a click on the Stop notification opens that page. No data
+with captions; its "Reply in the session" button brings this worktree's tab
+forward; the dashboard row for this workstream lists it by title; and a click on the
+Stop notification opens that page. No data
 migration: the store is read-compatible.
