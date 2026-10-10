@@ -220,6 +220,22 @@ case "$cmd" in
         doc_source="$f"
       fi
     done
+    # Destination names, computed up front so a collision is refused before the
+    # exhibit directory exists.
+    seen_names=$'\n'
+    for f in ${files[@]+"${files[@]}"}; do
+      base="$(basename "$f")"
+      if [ -n "$doc_source" ] && [ "$f" = "$doc_source" ]; then
+        safe="doc.md"
+      else
+        safe="$(sanitize_basename "$base")" \
+          || die "add: '$base' has no characters a URL segment can carry — rename it and retry"
+      fi
+      case "$seen_names" in
+        *$'\n'"$safe"$'\n'*) die "add: '$base' becomes '$safe', which is already in this exhibit — rename one of them" ;;
+      esac
+      seen_names="$seen_names$safe"$'\n'
+    done
     # Every argument check runs before the exhibit directory exists, so a
     # refusal never leaves a half-made exhibit occupying the slug.
     [ "${#captions[@]}" -le "$figure_count" ] \
@@ -264,10 +280,8 @@ case "$cmd" in
         safe="doc.md"
         document=true
       else
-        safe="$(sanitize_basename "$base")" \
-          || die "add: '$base' has no characters a URL segment can carry — rename it and retry"
+        safe="$(sanitize_basename "$base")"
       fi
-      [ ! -e "$dest/$safe" ] || die "add: '$base' becomes '$safe', which is already in this exhibit — rename one of them"
       cp "$f" "$dest/$safe"
       if [ "$safe" != "$base" ]; then
         if [ "$safe" = "doc.md" ]; then
@@ -334,15 +348,21 @@ HTML
       local ws="$1" name="$2" dir="$3" permanent="$4"
       local manifest
       manifest="$dir/exhibit.json"
-      [ -f "$manifest" ] || return 0
-      if jq -e 'type == "object"' "$manifest" >/dev/null 2>&1; then
+      if [ ! -f "$manifest" ]; then
+        rows="$(jq -c \
+          --arg workstream "$ws" --arg name "$name" --argjson permanent "$permanent" \
+          '. + [{workstream: $workstream, name: $name, title: null, created: null,
+                 permanent: $permanent, problem: "exhibit.json is missing"}]' <<<"$rows")"
+      elif jq -e 'type == "object"' "$manifest" >/dev/null 2>&1; then
         rows="$(jq -c \
           --arg workstream "$ws" --arg name "$name" --argjson permanent "$permanent" \
           --slurpfile m "$manifest" \
           '. + [{workstream: $workstream, name: $name,
                  title: ($m[0].title | if type == "string" then . else null end),
                  created: ($m[0].created | if type == "string" then . else null end),
-                 permanent: $permanent}]' <<<"$rows")"
+                 permanent: $permanent}
+                | if (.title == null or .created == null)
+                  then .problem = "exhibit.json lacks a title or created string" else . end]' <<<"$rows")"
       else
         rows="$(jq -c \
           --arg workstream "$ws" --arg name "$name" --argjson permanent "$permanent" \
@@ -359,6 +379,8 @@ HTML
         [ -z "$workstream" ] || [ "$ws" = "$workstream" ] || continue
         for ex_dir in "$ws_dir"/*; do
           [ -d "$ex_dir" ] || continue
+          # Reserved: bin/coding-feedback notes, never an exhibit.
+          [ "$(basename "$ex_dir")" != "coding-feedback" ] || continue
           add_row "$ws" "$(basename "$ex_dir")" "$ex_dir" false
         done
       done

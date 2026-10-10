@@ -316,6 +316,45 @@ JSON.stringify({
 => {"code":1,"stillListsOthers":true,"row":{"workstream":"demo","name":"named-files","title":null,"created":null,"permanent":false,"problem":"exhibit.json does not parse"},"tableCode":1,"tableProblem":true}
 ```
 
+A directory with no `exhibit.json`, or a manifest that is valid JSON but lacks a
+string `title` or `created`, is also a problem row (the app rejects both), and
+`list` exits 1.
+
+```ts
+await writeFile(join(store, "demo/named-files/exhibit.json"), '{"title":"T"}');
+await mkdir(join(store, "demo/no-manifest"), { recursive: true });
+const incomplete = await run(["list", "--json", "--workstream", "demo"]);
+const incompleteRows = JSON.parse(incomplete.stdout);
+const pick = (n: string) => {
+  const r = incompleteRows.find((x: { name: string }) => x.name === n);
+  return { title: r.title, created: r.created, problem: r.problem };
+};
+JSON.stringify({
+  code: incomplete.code,
+  lacking: pick("named-files"),
+  missing: pick("no-manifest"),
+})
+=> {"code":1,"lacking":{"title":"T","created":null,"problem":"exhibit.json lacks a title or created string"},"missing":{"title":null,"created":null,"problem":"exhibit.json is missing"}}
+```
+
+Two inputs that sanitize to the same name are refused before the exhibit
+directory is created, so the slug stays free.
+
+```ts
+await mkdir(join(root, "a"), { recursive: true });
+await writeFile(join(root, "a/Shot One.png"), "a");
+await writeFile(join(root, "shot-one.png"), "b");
+const clash = await run([
+  "add", "--workstream", "demo", "--title", "Clashing Names",
+  join(root, "a/Shot One.png"), join(root, "shot-one.png"),
+]);
+JSON.stringify({
+  refused: clash.code !== 0 && clash.stderr.includes("becomes 'shot-one.png', which is already in this exhibit"),
+  leftNothing: await lstat(join(store, "demo/clashing-names")).then(() => false, () => true),
+})
+=> {"refused":true,"leftNothing":true}
+```
+
 The URL always carries a token. The supervisor mints one and reuses whatever it
 finds, so the CLI mints it too when the app has never run — a URL without
 `?token=` is a URL that 401s, which reads as a broken exhibit.

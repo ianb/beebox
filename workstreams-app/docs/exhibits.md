@@ -3,7 +3,9 @@
 An **exhibit** is a directory you create; the app renders it. It is how an agent
 shows work to the developer — rendered documents, labeled screenshots, small
 interactive pages. An exhibit shows; it asks nothing. Questions go in chat.
-Design and vocabulary: `beebox/docs/implemented-plans/workstream-exhibits.md`.
+History and the original design (which still describes asks, dispositions, and the queue):
+`beebox/docs/implemented-plans/workstream-exhibits.md`. The current contract is
+this document and `beebox/docs/plans/exhibits-rethink.md`.
 
 ## Create one
 
