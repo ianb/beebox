@@ -43,7 +43,6 @@
     "src/frontend/package.json",
     "src/types",
     "src/plugins/*/README.md",
-    "src/plugins/*/SKILL.md",
     "src/core/views/types.ts",
     "src/shared/view-state.ts",
     "src/core/chat/card-activity.ts",

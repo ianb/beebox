@@ -19,19 +19,12 @@ import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { isRecord } from "../../../src/shared/is-record.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
+import { readmeStubs as readPluginStubs } from "../../helpers/plugin-readme.js";
 
 const exec = promisify(execFile);
+const readmeStubs = () => readPluginStubs("recipe");
 await buildPluginBundlesIntoDist();
 const CLI = join(PACKAGE_ROOT, "src/cli/entry/run.ts");
-
-/** The README's Setup section, parsed: each fenced block labelled with the path on the line before it. */
-async function readmeStubs(): Promise<Map<string, string>> {
-  const readme = await readFile(join(PACKAGE_ROOT, "src/plugins/recipe/README.md"), "utf8");
-  const stubs = new Map<string, string>();
-  const fence = /`<box>\/([^`\n]+)`:\n\n```(?:ts|tsx|json)\n([\s\S]*?)```/g;
-  for (const match of readme.matchAll(fence)) stubs.set(match[1]!, match[2]!);
-  return stubs;
-}
 
 /** A box with the README's stubs written and the plugin active. */
 async function stubbedBox(): Promise<TmpBox> {

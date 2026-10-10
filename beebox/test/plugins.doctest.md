@@ -32,3 +32,59 @@ const def = definePlugin({ name: "example", description: "An example plugin", do
 def
 => { name: "example", description: "An example plugin", docs: "src/plugins/example/README.md" }
 ```
+
+## Every plugin follows the mechanical conventions
+
+`docs/plugins.md` (Conventions) names the rules. This loop checks each
+registered plugin against the ones a machine can check; a failure names the
+plugin and the rule.
+
+```ts setup
+import { access } from "node:fs/promises";
+import { join } from "node:path";
+import { PACKAGE_ROOT } from "../src/lib/package-root.js";
+import { markdocConfig } from "../src/shared/markdoc-config/tags/core.js";
+import { readmeStubs, readmeText } from "./helpers/plugin-readme.js";
+
+const KEBAB = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+const SECTIONS = ["## What it is", "## Setup", "## Conventions", "## Migration", "## Uninstall"];
+const exists = (path: string) => access(join(PACKAGE_ROOT, path)).then(() => true, () => false);
+
+async function conventionProblems(): Promise<string[]> {
+  const problems: string[] = [];
+  const coreTags = new Set(Object.keys(markdocConfig.tags ?? {}));
+  for (const name of pluginNames()) {
+    const def = pluginByName(name);
+    if (def === undefined) { problems.push(`${name}: registry lists it but pluginByName is undefined`); continue; }
+    const fail = (rule: string, detail: string) => problems.push(`${name}: ${rule}: ${detail}`);
+    if (def.name !== name) fail("name-is-directory", `name "${def.name}" differs from registry key "${name}"`);
+    if (!(await exists(`src/plugins/${name}/plugin.ts`))) fail("name-is-directory", `src/plugins/${name}/plugin.ts is missing`);
+    if (!KEBAB.test(def.name)) fail("name-kebab-case", `"${def.name}"`);
+    if (def.description.includes("\n")) fail("description-single-line", JSON.stringify(def.description));
+    if (def.docs !== `src/plugins/${name}/README.md`) fail("docs-names-readme", `docs is "${def.docs}"`);
+    if (!(await exists(`src/plugins/${name}/README.md`))) { fail("docs-names-readme", "README.md does not exist"); continue; }
+    const readme = await readmeText(name);
+    const headings = new Set(readme.split("\n"));
+    for (const section of SECTIONS) if (!headings.has(section)) fail("readme-sections", `missing "${section}"`);
+    const stubs = await readmeStubs(name);
+    for (const [key, base] of Object.entries(def.schemas ?? {})) {
+      if (!stubs.has(`src/schemas/${key}.ts`)) fail("schema-stub", `README has no stub src/schemas/${key}.ts`);
+      for (const tag of Object.keys(base.markdocTags ?? {})) {
+        if (!KEBAB.test(tag)) fail("tag-kebab-case", `${key}: "${tag}"`);
+        if (coreTags.has(tag)) fail("tag-not-in-core", `${key}: "${tag}" is a core tag`);
+      }
+    }
+    for (const view of def.views ?? []) {
+      if (!stubs.has(`src/views/${view.name}.tsx`)) fail("view-stub", `README has no stub src/views/${view.name}.tsx`);
+      if (!(await exists(`src/plugins/${name}/view.tsx`))) fail("view-entry", `src/plugins/${name}/view.tsx is missing`);
+    }
+  }
+  return problems;
+}
+```
+
+```ts
+const problems = await conventionProblems();
+problems
+=> []
+```
