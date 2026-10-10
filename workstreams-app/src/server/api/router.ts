@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   dashboardSchema,
   workstreamDetailSchema,
-  workstreamListResultSchema,
+  workstreamListOutputSchema,
 } from "../../shared/workstreams.js";
 import {
   issueChangeSchema,
@@ -27,24 +27,30 @@ import {
   actionVerbSchema,
   lifecycleJobSchema,
 } from "../../shared/actions.js";
+import { exhibitsFor, withExhibits } from "./workstream-exhibits.js";
 import { procedure, router } from "./trpc.js";
 import { commentsRouter } from "./comments-router.js";
 import { documentsRouter } from "./documents-router.js";
 
 const workstreamsRouter = router({
   list: procedure
-    .output(workstreamListResultSchema)
-    .query(async ({ ctx }) => ctx.services.workstreams.list()),
+    .output(workstreamListOutputSchema)
+    .query(async ({ ctx }) => {
+      const [result, inventory] = await Promise.all([ctx.services.workstreams.list(), ctx.services.exhibits.inventory()]);
+      return withExhibits(result, inventory);
+    }),
   detail: procedure
     .input(z.object({ name: z.string().regex(/^[a-zA-Z0-9_-]+$/u) }))
     .output(workstreamDetailSchema)
     .query(async ({ input, ctx }) => {
-      const workstreams = await ctx.services.workstreams.list();
+      const [workstreams, inventory] = await Promise.all([ctx.services.workstreams.list(), ctx.services.exhibits.inventory()]);
       const workstream = workstreams.items.find((candidate) => candidate.name === input.name);
       if (!workstream) throw new TRPCError({ code: "NOT_FOUND", message: "Workstream not found" });
       return {
         workstream,
         issues: await ctx.services.documents.issuesForWorkstream(input.name),
+        exhibits: exhibitsFor(inventory, input.name),
+        exhibitsOrigin: inventory.origin,
       };
     }),
 });
