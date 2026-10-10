@@ -109,10 +109,10 @@ Priya, in chat: "Can you set up a chemistry course for Wren?"
    lesson plans, learner progress. Docs: node_modules/beebox/src/plugins/courseware/README.md`.
 2. It reads the README's Setup section: add `"plugins": ["courseware"]` to
    `_config/box.json`; write `src/schemas/course.ts` and four siblings from
-   the shown stubs. The concept map renders with the built-in renderer.
+   the shown stubs; write `src/views/concept-map.tsx`.
 3. It tells Priya: *"This box has a courseware plugin that isn't on yet. I'll
    turn it on, which adds course, lesson plan, progress and concept map card
-   types. Then I'll draft the course."* It does so and commits: box.json, five
+   types. Then I'll draft the course."* It does so and commits: box.json, six
    stubs. `bbx validate` passes; `bbx view typecheck` passes.
 4. The next guidance sync mirrors the `courseware` skill into
    `.claude/skills/courseware/SKILL.md`. The agent guide's card-type list now
@@ -123,5 +123,5 @@ Priya, in chat: "Can you set up a chemistry course for Wren?"
    every health check passing. `git log` shows one commit "Activate
    courseware plugin" and one for the course.
 
-Record left behind: one line in box.json, five stub files, one skill
+Record left behind: one line in box.json, six stub files, one skill
 directory the engine owns, the course cards.
