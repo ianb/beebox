@@ -77,13 +77,24 @@ JSON.stringify({ code: other.code, bodies: JSON.parse(forRouter.stdout).entries.
 => {"code":0,"bodies":["For the router owner."]}
 ```
 
+An explicit empty `--workstream` still means unrouted, as it does for a file:
+the exhibit's workstream is the default for an absent flag, not a rule.
+
+```ts continue
+const unrouted = await comments(["add", "exhibit:demo-ws/after", "--body", "For nobody yet.", "--workstream", "", "--json"]);
+const everything = await comments(["list", "--json"]);
+const routes = JSON.parse(everything.stdout).entries.flatMap((e: { comments: Array<{ body: string; workstream: string | null }> }) => e.comments.map((c) => [c.body, c.workstream]));
+JSON.stringify({ code: unrouted.code, routes: routes.sort() })
+=> {"code":0,"routes":[["For nobody yet.",null],["For the router owner.","router"],["The caption is wrong.","demo-ws"]]}
+```
+
 ## Clearing by address
 
 ```ts continue
 const cleared = await comments(["clear", "exhibit:demo-ws/after"]);
 const after = await comments(["list", "--workstream", "demo-ws"]);
 JSON.stringify({ cleared: cleared.stdout, after: after.stdout })
-=> {"cleared":"Cleared 2 on exhibit:demo-ws/after.","after":"Nothing waiting for demo-ws."}
+=> {"cleared":"Cleared 3 on exhibit:demo-ws/after.","after":"Nothing waiting for demo-ws."}
 ```
 
 ## A bad address is refused in one sentence

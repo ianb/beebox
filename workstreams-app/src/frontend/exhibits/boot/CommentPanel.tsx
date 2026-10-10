@@ -46,6 +46,9 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   const [body, setBody] = useState("");
   const [origin, setOrigin] = useState<CommentOrigin>("typed");
   const [session, setSession] = useState<Session | null>(null);
+  // Between the Speak click and the permission answer: a second click must not
+  // open a second microphone that nothing holds a handle to.
+  const [starting, setStarting] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const mic = recorderAvailability();
@@ -87,6 +90,8 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
       }
       return;
     }
+    if (starting) return;
+    setStarting(true);
     try {
       const started = await startRecording(MAX_AUDIO_BYTES);
       if (!wanted.current) {
@@ -97,6 +102,8 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
       setSession(started);
     } catch (error) {
       setProblem(error instanceof Error ? error.message : String(error));
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -132,11 +139,11 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
           ? (
             <button
               className={session === null ? BUTTON : `${BUTTON} border-red-700 text-red-800`}
-              disabled={transcribing}
+              disabled={transcribing || starting}
               onClick={() => { void toggleRecording(); }}
               type="button"
             >
-              {session !== null ? "Stop" : transcribing ? "Transcribing…" : "Speak"}
+              {session !== null ? "Stop" : transcribing ? "Transcribing…" : starting ? "Starting…" : "Speak"}
             </button>
           )
           : <button className={BUTTON} disabled title={mic.reason} type="button">Speak</button>}

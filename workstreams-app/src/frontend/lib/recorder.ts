@@ -95,6 +95,25 @@ export async function startRecording(maxBytes: number): Promise<{
   let bytes = 0;
   let truncated = false;
 
+  // Installed BEFORE recording starts, so the track is released the moment the
+  // recorder stops for any reason — the byte cap, Stop, or Cancel — and never
+  // waits for a later `stop()` call. The result is kept for `stop()` to hand
+  // back, because the cap can fire before the person presses Stop.
+  let finished: Promise<Recording> | null = null;
+  const onStopped = new Promise<Recording>((resolve, reject) => {
+    recorder.onstop = () => {
+      release();
+      const mimeType = recorder.mimeType === "" ? "audio/webm" : recorder.mimeType;
+      const blob = new Blob(chunks, { type: mimeType });
+      toBase64(blob).then(
+        (base64) => { resolve({ base64, mimeType, bytes: blob.size, truncated }); },
+        reject,
+      );
+    };
+  });
+  // A cancelled recording is never read, so its rejection is nobody's error.
+  onStopped.catch(() => {});
+
   recorder.ondataavailable = (event) => {
     if (event.data.size === 0) return;
     chunks.push(event.data);
@@ -105,28 +124,24 @@ export async function startRecording(maxBytes: number): Promise<{
       recorder.stop();
     }
   };
-  recorder.start(1000);
+  try {
+    recorder.start(1000);
+  } catch (error) {
+    release();
+    throw error;
+  }
 
   return {
     cancel: () => {
       if (recorder.state !== "inactive") recorder.stop();
       release();
     },
-    stop: () =>
-      new Promise<Recording>((resolve, reject) => {
-        recorder.onstop = () => {
-          release();
-          const mimeType = recorder.mimeType === "" ? "audio/webm" : recorder.mimeType;
-          const blob = new Blob(chunks, { type: mimeType });
-          toBase64(blob).then(
-            (base64) => { resolve({ base64, mimeType, bytes: blob.size, truncated }); },
-            reject,
-          );
-        };
-        // A recorder that already stopped (the byte cap fired mid-chunk) will
-        // not emit another `stop`, so finish from here instead of waiting.
-        if (recorder.state === "inactive") recorder.onstop(new Event("stop"));
-        else recorder.stop();
-      }),
+    stop: () => {
+      if (finished === null) {
+        if (recorder.state !== "inactive") recorder.stop();
+        finished = onStopped;
+      }
+      return finished;
+    },
   };
 }

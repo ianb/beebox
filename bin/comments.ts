@@ -145,11 +145,12 @@ async function commandAdd(context: Context, args: string[]): Promise<number> {
     return 2;
   }
   // An exhibit belongs to one workstream, so a comment on it is for that
-  // workstream unless the caller says otherwise. A file belongs to nobody.
+  // workstream when the flag is ABSENT. A file belongs to nobody. An explicit
+  // empty value means unrouted on both, as it always has.
   const given = options.get("workstream");
-  const workstream = given === undefined || given === ""
+  const workstream = given === undefined
     ? (subject.scope === "exhibit" ? subject.workstream : null)
-    : given;
+    : (given === "" ? null : given);
   const comment = commentSchema.parse({
     id: newCommentId(),
     at: new Date().toISOString(),
