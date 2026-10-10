@@ -44,3 +44,8 @@ and makes it the default Haiku on the Anthropic API. The `haiku` alias in
 `beebox/src/shared/model-ids.ts` still pins `claude-haiku-4-5-20251001`. Check
 that `claude-haiku-5-5` runs on the pin before moving the alias; the Agent SDK
 pin reaches 2.1.293 no earlier than 2026-10-09.
+
+**2026-10-09:** `claude-haiku-5-5` verified on Agent SDK `0.3.293` (bundled
+Claude Code 2.1.293): a `query()` with `model: "claude-haiku-5-5"` answered
+from that model with a `success` result. Codex `0.161.0`, now pinned, makes
+GPT-6.1 Sol its bundled default.

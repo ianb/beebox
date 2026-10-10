@@ -9,6 +9,9 @@ issues:
 
 # The /workstreams/ app and disposable sessions
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A new top-level router app at `/workstreams/` — a development control surface
 that is not worktree-bound — plus the lifecycle machinery it fronts: a
 workstream registry, terminal focus/resume/close commands, cull records that

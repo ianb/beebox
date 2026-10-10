@@ -63,11 +63,9 @@ const emissionSchema = z.object({
     anchor: z.string().nullable().optional(), spokenWords: z.number().nullable().optional(),
   })),
   words: z.array(z.object({ word: z.string(), confidence: z.number().optional() })).optional(),
+  // A legacy row's `hqFallback` is stripped with the other unknown keys: a
+  // voice emission without `hqText` is live text either way.
   spokenStart: z.number().optional(), hqText: z.literal(true).optional(), hqService: z.string().optional(),
-  // Legacy rows from before late correction was removed stored "pending" or
-  // "failed" (which message follows); both now collapse to the one-value
-  // provenance bit.
-  hqFallback: z.union([z.literal(true), z.enum(["pending", "failed"]).transform((): true => true)]).optional(),
 });
 // PendingConversationSend is also the live store API; bind its storage schema
 // to that domain type so either side fails typecheck if their fields drift.

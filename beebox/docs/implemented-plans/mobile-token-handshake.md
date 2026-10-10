@@ -6,6 +6,9 @@ issues: []
 ---
 # Mobile device token: replace `?mobileToken=` with a box-scoped session cookie
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 The durable mobile device token currently travels in a URL query parameter on both the
 iOS webview's initial `/chat` navigation and the web frontend's tRPC WebSocket URL. Because
 `MobileDevice` has no expiry, a token captured from an access log, `Referer`, or WebKit

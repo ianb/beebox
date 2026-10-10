@@ -6,6 +6,9 @@ issues: []
 ---
 # Private issues: a shadow repo mounted at `<checkout>/private-issues/`
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 ## Problem
 
 The boxholder has follow-up work (migrating his own boxes, personal/operational

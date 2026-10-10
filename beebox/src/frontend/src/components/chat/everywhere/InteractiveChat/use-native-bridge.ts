@@ -82,16 +82,21 @@ function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: bo
  * reads true while the config query is loading or refetching (fail closed: a
  * send in that window, including right after the HQ service is switched, keeps
  * the server path), and the state is re-posted when it answers.
+ *
+ * `enabled` is always true: every dictated message gets the HQ pass
+ * (docs/plans/hq-always.md). Current native builds ignore it; it is still sent
+ * so builds from before that change, which read it, keep running HQ. Native
+ * resets this state on session change, so it is re-posted per session.
  */
-function useNativeHqDictationBridge(opts: { enabled: boolean; hqDictationEnabled: boolean; sessionId: string | null }) {
-  const { enabled, hqDictationEnabled, sessionId } = opts;
+function useNativeHqDictationBridge(opts: { enabled: boolean; sessionId: string | null }) {
+  const { enabled, sessionId } = opts;
   const configQuery = trpc.transcription.config.useQuery(undefined, { enabled });
   const hqService = configQuery.data?.hqService;
   const diarized = configQuery.isFetching || hqService === undefined || isDiarizedHqService(hqService);
   useEffect(() => {
     if (!enabled) return;
-    postNativeHqDictationState({ enabled: hqDictationEnabled, diarized }, window);
-  }, [enabled, hqDictationEnabled, diarized, sessionId]);
+    postNativeHqDictationState({ diarized }, window);
+  }, [enabled, diarized, sessionId]);
 }
 
 function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing: boolean }) {
@@ -145,16 +150,15 @@ export function useNativeBridges(opts: {
   boxSlug: string | undefined;
   sessionId: string | null;
   narrationEnabled: boolean;
-  hqDictationEnabled: boolean;
   responseActive: boolean;
   speechPlaying: boolean;
   stopSpeech: () => void;
 }) {
-  const { enabled, dispatchEmission, boxSlug, sessionId, narrationEnabled, hqDictationEnabled, responseActive, speechPlaying, stopSpeech } = opts;
+  const { enabled, dispatchEmission, boxSlug, sessionId, narrationEnabled, responseActive, speechPlaying, stopSpeech } = opts;
   useNativeEmissionBridge({ enabled, dispatchEmission });
   useNativeLocationBridge({ enabled, boxSlug });
   useNativeNarrationBridge({ enabled, narrationEnabled });
-  useNativeHqDictationBridge({ enabled, hqDictationEnabled, sessionId });
+  useNativeHqDictationBridge({ enabled, sessionId });
   useNativeResponseBridge({ enabled, active: responseActive });
   useNativeSpeechPlaybackBridge({ enabled, playing: speechPlaying });
   useNativeSpeechCommandBridge({ enabled, stopSpeech });
@@ -282,11 +286,12 @@ export function postNativeNarrationState(enabled: boolean, shell: NativeShellWin
   postNativeMessage(shell, { channel: "beeboxNarrationState", payload: { enabled } });
 }
 
+/** `enabled` is always true; it is still sent for native builds that read it (contract §4.4a). */
 export function postNativeHqDictationState(
-  state: { enabled: boolean; diarized: boolean },
+  state: { diarized: boolean },
   shell: NativeShellWindow,
 ): void {
-  postNativeMessage(shell, { channel: "beeboxHqDictationState", payload: state });
+  postNativeMessage(shell, { channel: "beeboxHqDictationState", payload: { enabled: true, diarized: state.diarized } });
 }
 
 export function postNativeSpeechPlaybackState(playing: boolean, shell: NativeShellWindow): void {

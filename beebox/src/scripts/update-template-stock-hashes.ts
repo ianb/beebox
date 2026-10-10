@@ -50,7 +50,7 @@ const LEDGER_PATH = path.join(
 
 const HEADER = `/**
  * Stock-hash ledger for template files that ship via \`installTemplateFile\` with
- * a \`priorStockHashes\` allowlist (the box-local CLAUDE.md guides).
+ * a \`priorStockHashes\` allowlist (the box-local AGENTS.md guides).
  *
  * GENERATED DATA — do not hand-edit. Run \`pnpm template-stock:update\` after
  * changing one of these template constants; it moves the superseded hash into

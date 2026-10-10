@@ -83,7 +83,7 @@ notable difference.
   (oracles over our existing docs) may beat adopting the tool.
 - **Cost of adoption is real**: a dev dependency, Node ≥22, host hook
   installation, and a `*.spec.md` tree that becomes a second documentation
-  system alongside CLAUDE.md, `docs/`, plans, and the generated box docs. This
+  system alongside AGENTS.md, `docs/`, plans, and the generated box docs. This
   repo already has a lot of agent-facing surface; a fourth one needs to earn it.
 - **Note the host-hooks angle.** It installs per host (`--host claude` /
   `--host codex`), which is the same problem the AGENTS.md mirror generator

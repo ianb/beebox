@@ -9,6 +9,8 @@ labels: [soft-launch, field-test-findings, ui-error]
 priority: important
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Closed 2026-09-02 (vocab-sweep).** Both remaining symptoms resolved: the
 > todo-view `**` glob fix landed earlier; the `[→ …]` guidance already
 > existed in `src/core/agent-guide/source.ts` (audit `source-no-bracket-form`

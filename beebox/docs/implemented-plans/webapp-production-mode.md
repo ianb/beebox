@@ -8,6 +8,9 @@ issues:
 
 # Fail-closed webapp development surfaces and tRPC errors
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 This plan removes beebox security decisions from ambient `NODE_ENV`.
 tRPC responses never include server stacks or raw internal-error messages.
 Production omits development-only routes and test behavior by default. The two

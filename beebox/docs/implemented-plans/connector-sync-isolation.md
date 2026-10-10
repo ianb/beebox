@@ -8,6 +8,9 @@ issues:
 ---
 # Connector sync isolation and Drive untracking
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Make Google Calendar sync continue useful work after one configured calendar
 fails, while still reporting the completed wakeup as failed. Make `bbx rm` /
 trashing a Google Drive card the supported durable untracking action, including

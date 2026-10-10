@@ -23,9 +23,6 @@ export interface RunKeywordSendOpts {
   transcription: { start: () => void };
   stopTickRef: React.MutableRefObject<(() => void) | null>;
   composerSend: (event: ComposerEvent) => void;
-  narrationEnabledRef: React.MutableRefObject<boolean>;
-  /** docs/implemented-plans/hq-dictation-switch.md, chunk 1 — read at fire time, same pattern as narrationEnabledRef. */
-  hqDictationEnabledRef: React.MutableRefObject<boolean>;
   selectionsRef: React.MutableRefObject<SelectionItem[]>;
   resetSelections: () => void;
   /** Pending images/files are read at fire time (`get()`), like the text store. */
@@ -45,12 +42,12 @@ export interface RunKeywordSendOpts {
  * it (`closeMic`, the "send and close" sign-off). The intent carries the
  * segment's staged recording; every exit below seals it exactly once.
  *
- * With HQ wanted (narration mode, the HQ dictation switch, or "clean up and
- * send"), the recording is sealed with an HQ request and the send waits for
- * the box's HQ job (docs/plans/resilient-voice-recording.md, Track 4): the HQ
- * text if it arrives within the budget, otherwise the live text marked
- * `hq="failed"`. The mic re-arms at once; waits run concurrently and dispatch
- * in segment order.
+ * Every segment with a recording is sealed with an HQ request and the send
+ * waits for the box's HQ job (docs/plans/hq-always.md;
+ * docs/implemented-plans/resilient-voice-recording.md, Track 4): the HQ text if it
+ * arrives within the budget, otherwise the live text. A box with no usable HQ
+ * key fails the job at once, so its sends fall back without a long wait. The
+ * mic re-arms at once; waits run concurrently and dispatch in segment order.
  */
 export async function runKeywordSend(opts: RunKeywordSendOpts): Promise<void> {
   // Reserved before the first await, so dispatch order is segment-end order.
@@ -63,7 +60,7 @@ export async function runKeywordSend(opts: RunKeywordSendOpts): Promise<void> {
 }
 
 async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): Promise<void> {
-  const { intent, transcription, stopTickRef, composerSend, narrationEnabledRef, hqDictationEnabledRef, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, awaitPendingUploads } = opts;
+  const { intent, transcription, stopTickRef, composerSend, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, awaitPendingUploads } = opts;
   const { text, recording, closeMic } = intent;
   // Restart the mic for a continuous conversation, or — for "send and close" —
   // end dictation (STOP_DICTATION clears turnTaking, suppressing the
@@ -72,15 +69,12 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
     if (closeMic) composerSend({ type: "STOP_DICTATION" });
     else transcription.start();
   };
-  const wantsHq = hqDictationEnabledRef.current || narrationEnabledRef.current || intent.hq;
-  // A segment recorded while live text was paused has no text of its own;
-  // with HQ wanted it still becomes a message (its text comes from HQ).
-  const hqRecording = wantsHq ? recording : null;
+  // A segment recorded while live text was paused has no text of its own; it
+  // still becomes a message (its text comes from HQ).
   // Any text already in the composer (a prior stopped segment, or typing)
   // continues into this utterance rather than being discarded.
   let priorInput = inputStore.get().trim();
-  if (!priorInput && !text.trim() && hqRecording === null) {
-    recording?.seal({ emissionId: null, hq: null });
+  if (!priorInput && !text.trim() && recording === null) {
     settleMic();
     return;
   }
@@ -100,7 +94,7 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
   const { images: imagesSnapshot, files: filesSnapshot } = captured.attachments;
   const prepared = buildVoiceSubmitEmission({ priorInput, finalText: text, selectionsSnapshot: captured.draft.selections,
     imagesSnapshot, filesSnapshot, diarized: false, words: intent.words });
-  try { dispatchCaptured.stage(prepared, hqRecording === null ? {} : { recordingId: hqRecording.recordingId }); }
+  try { dispatchCaptured.stage(prepared, recording === null ? {} : { recordingId: recording.recordingId }); }
   catch (error) {
     dispatchCaptured.release();
     inputStore.set(prepared.text);
@@ -118,20 +112,18 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
   // widget doesn't resurface the text we just sent.
   clearDraftRef.current();
 
-  if (hqRecording === null) {
-    // A message WAS produced (`prepared`, dispatched below) even without HQ,
-    // so the emission id is recorded — it's how a non-HQ send's recording is
-    // still found by `get-last-audio`.
-    recording?.seal({ emissionId: prepared.id, hq: null });
+  if (recording === null) {
+    // No recording (a send tapped before the mic started): no HQ pass, and
+    // the live text is sent as it is.
     settleMic();
     await slot.turn();
     dispatchVoice(dispatchCaptured, prepared);
     return;
   }
-  hqRecording.seal({ emissionId: prepared.id, hq: { emissionId: prepared.id, sessionId: dispatchCaptured.currentSessionId() } });
+  recording.seal({ emissionId: prepared.id, hq: { emissionId: prepared.id, sessionId: dispatchCaptured.currentSessionId() } });
   composerSend({ type: "START_HQ", id: prepared.id, text: prepared.text || "Recording without live text" });
   settleMic();
-  const outcome = await waitForHq({ recording: hqRecording, emission: prepared, composerSend });
+  const outcome = await waitForHq({ recording, emission: prepared, composerSend });
   const final = prepareVoiceSubmitEmission({ realtime: prepared, outcome, keyword: sendKeywordOf(intent) });
   await slot.turn();
   composerSend({ type: "HQ_DONE", id: prepared.id });

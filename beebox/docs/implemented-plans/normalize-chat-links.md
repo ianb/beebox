@@ -6,6 +6,9 @@ issues: []
 ---
 # Normalize chat/card links
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Superseded in part (2026-07-30).** This plan's `contextDir`-relative chat
 > resolution is gone: chat message links, embeds, and images now all resolve
 > from the box root, and the React context that carried the chat cwd into the

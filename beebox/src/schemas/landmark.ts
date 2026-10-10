@@ -76,19 +76,19 @@ export type LandmarkExpandData = z.infer<typeof LandmarkExpand>;
 
 /**
  * Chat-feature seed for chats opened from this landmark. Each key is a
- * feature name; only applied at session open.
+ * feature name; only applied at session open. A retired `hq-dictation` key
+ * on an older card is stripped by the lenient parse and ignored.
  */
 const LandmarkChatApp = z.object({
   narration: z.enum(["on", "off"]).optional(),
   prose: z.enum(["on", "off"]).optional(),
-  "hq-dictation": z.enum(["on", "off"]).optional(),
 });
 export type LandmarkChatAppData = z.infer<typeof LandmarkChatApp>;
 
 /**
  * One opener: a single short line the person sees as a button and sends
  * verbatim. Validated rather than silently normalized — an opener is agent-
- * written text that compiles into CLAUDE.md and renders as a button, so a
+ * written text that compiles into AGENTS.md and renders as a button, so a
  * paragraph or a blank entry is a card error the boxholder should see, not
  * something to quietly trim away.
  */

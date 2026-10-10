@@ -10,6 +10,8 @@ discovered-by: Ian
 discovered-in: main session — boxholder wanting a codex chat on a claude box, or the reverse
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track F, commits `1a2092900`/`0ad98c7e4`/`23871ea80`): a new chat's start picker offers engine and model together before the first message. Mid-chat engine conversion is explicitly out of scope, per the issue's own framing.
 
 > There's no way to convert a chat between engines. Old chats still use the old

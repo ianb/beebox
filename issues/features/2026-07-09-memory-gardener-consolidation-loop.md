@@ -33,7 +33,7 @@ cards, plus a maintenance loop we don't have.
   surface*, not note content.
 - **Distill-into-`rules`** (`box/skills-content.ts`, `schemas/exposition-plan.ts`) —
   compiles material into rules, scoped to authoring, not a standing pass.
-- **CLAUDE.md lint / reducing** (`core/claude-md-lint.ts`) — doc hygiene.
+- **Instruction-file size lint / reducing** (`core/claude-md-lint.ts`) — doc hygiene.
 
 None of these is a **scheduled pass over the box's own accumulated cards/notes** that
 summarizes the old, promotes the recurring, and retires the stale to fight rot over

@@ -86,8 +86,6 @@ export function useChatVoice(opts: {
   sessionId: string | null;
   muted: boolean;
   narrationEnabled: boolean;
-  /** docs/implemented-plans/hq-dictation-switch.md — persistent HQ, independent of narration mode. */
-  hqDictationEnabled: boolean;
   selections: SelectionItem[];
   resetSelections: () => void;
   /** Pending images/files sweep into keyword sends (read at fire time, like the text store). */
@@ -103,7 +101,7 @@ export function useChatVoice(opts: {
   /** Resolves once no file attachment is still uploading; a voice send waits on it. */
   awaitPendingUploads: () => Promise<void>;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, hqDictationEnabled, selections, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, nativeComposer, awaitPendingUploads } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, nativeComposer, awaitPendingUploads } = opts;
 
   // Live device handles, in a ref the command subscriber reads at emit time
   // (never during render). Effects below keep its fields current.
@@ -134,14 +132,7 @@ export function useChatVoice(opts: {
     devicesRef.current.speechPlayback = speechPlayback;
   });
 
-  // `narrationEnabledRef` is read at keyword-fire time so a mid-session
-  // narration toggle takes effect on the next send. Selections likewise read
-  // at fire time.
-  const narrationEnabledRef = useRef(narrationEnabled);
-  useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
-  // Same pattern for the always-HQ switch (docs/implemented-plans/hq-dictation-switch.md).
-  const hqDictationEnabledRef = useRef(hqDictationEnabled);
-  useEffect(() => { hqDictationEnabledRef.current = hqDictationEnabled; });
+  // Selections are read at keyword-fire time.
   const selectionsRef = useRef(selections);
   useEffect(() => { selectionsRef.current = selections; });
   // Read when a segment starts: the chat its staged recording belongs to.
@@ -161,7 +152,7 @@ export function useChatVoice(opts: {
           // its own outcomes through the composer machine.
           void runKeywordSend({
             intent, transcription, stopTickRef, composerSend,
-            narrationEnabledRef, hqDictationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments,
+            selectionsRef, resetSelections, emissionStore, resetAttachments,
             captureEmissionDispatch: opts.captureEmissionDispatch, clearDraftRef, inputStore, awaitPendingUploads,
           }).catch((error: unknown) => toastError("Voice message kept for recovery", { cause: error }));
           break;

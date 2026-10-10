@@ -1,5 +1,8 @@
 # Community reception of OpenClaw's identity/personality onboarding
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 *Web research 2026-08-02.*
 
 Reporting only: what people outside the project have said about OpenClaw's bootstrap ritual,

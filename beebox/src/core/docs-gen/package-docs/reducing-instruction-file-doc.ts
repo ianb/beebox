@@ -1,8 +1,8 @@
 /**
  * Generate the "reducing an oversized AGENTS.md" reference doc for agents.
  *
- * Emitted into the package docs as reducing-claude-md.md (docs-gen/package-docs/core.ts).
- * The `claude-md-size` lint warning (src/core/claude-md-lint.ts) points here so
+ * Emitted into the package docs as reducing-instruction-file.md (docs-gen/package-docs/core.ts).
+ * The `instruction-file-size` lint warning (src/core/instruction-file-lint.ts) points here so
  * an agent that trips it has concrete strategies to fix it, not just "it's big."
  *
  * Content is synthesized from Anthropic's Claude Code best-practices guidance
@@ -12,7 +12,7 @@
  * box's surfaces (nested AGENTS.md, .claude/rules/ globs, skills, docs/).
  */
 
-export function generateReducingClaudeMdDoc(): string {
+export function generateReducingInstructionFileDoc(): string {
   return `# Reducing an oversized AGENTS.md
 
 A box \`AGENTS.md\` loads into the assistant's context on **every single turn**,

@@ -10,6 +10,8 @@ discovered-by: Ian
 discovered-in: main session — refresh-maps still failing after the AGENTS.md fix landed
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed — implemented in `8a7dced6`.** Procedure cards now express portable intent with
 `efficient`, `balanced`, `strong`, and `strongest`. The single engine-aware map
 resolves those tiers as follows:

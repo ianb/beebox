@@ -28,7 +28,7 @@ exploration.
   Markdoc/frontmatter machinery rather than a second parser), **11**
   (enforcement beats convention — the AI-words rule is enforced by the
   generator, not hoped for), **12** (the maintainer is usually an agent).
-- Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
+- Root `AGENTS.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
   and only for deployed paths"), path-leak-check ("docs are the main leak
   surface"), the lint-rule prohibition, "Treat noisy command output as a bug."
 - `issues/features/2026-07-05-writing-skill.md` — the governing rule

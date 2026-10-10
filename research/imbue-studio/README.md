@@ -1,5 +1,8 @@
 # Imbue Studio (announced 2026-10-01), read 2026-10-08
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A dated snapshot of Imbue's "personal AI operating system" against Bee Box,
 written one week after launch from public sources and one afternoon running
 it from source ([hands-on.md](hands-on.md)). No waitlist access; the code is

@@ -329,14 +329,14 @@ const coinedSession = codexRegistry.getOrCreate(coined);
 // accepted start choice; a feature toggle cannot mint a competing history row.
 clock += 7 * 60 * 60 * 1_000;
 const reservationExpired = codexRegistry.getReservation(coined) === null;
-await coinedSession.setFeature("hq-dictation", "on");
+await coinedSession.setFeature("narration", "on");
 await coinedSession.send("hi");
 await tick();
 const { loadHistoryEntries } = await import("../../../../src/core/chat/session/history.js");
 const { findChatHuskEntry } = await import("../../../../src/core/chat/husk-read.js");
 await waitFor(async () => {
   const entry = (await loadHistoryEntries(codexBox.root)).find((candidate) => candidate.id === coined);
-  return entry?.features?.["hq-dictation"] === "on"
+  return entry?.features?.narration === "on"
     && (await findChatHuskEntry(codexBox.root, coined))?.engine === "claude";
 });
 const historyEntry = (await loadHistoryEntries(codexBox.root)).find((entry) => entry.id === coined);
@@ -349,7 +349,7 @@ JSON.stringify({
   history: historyEntry?.engine,
   features: historyEntry?.features,
 })
-=> {"reserved":"reserved","reservationExpired":true,"backend":"claude","husk":"claude","history":"claude","features":{"hq-dictation":"on"}}
+=> {"reserved":"reserved","reservationExpired":true,"backend":"claude","husk":"claude","history":"claude","features":{"narration":"on"}}
 ```
 
 ```ts continue

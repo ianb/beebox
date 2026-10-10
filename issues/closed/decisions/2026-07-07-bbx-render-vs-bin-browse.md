@@ -7,6 +7,8 @@ discovered-in: main session — after fixing bbx render's SSR crash and building
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Resolved 2026-08-01: removed.** `bbx render` and its SSR entry graph are
 > gone (commits `45c36049`, `45c9aa7c`, `0ee5b6e8`; five call sites rewired
 > off `useSSRMachine` to `useMachine` in `45c9aa7c`). See

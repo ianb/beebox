@@ -2,7 +2,7 @@
  * Generate agent documentation for a Bee Box.
  *
  * Produces two categories of docs in the box:
- * 1. `.beebox/agent-guide.md` — compact, always-loaded via @-include in CLAUDE.md
+ * 1. `.beebox/agent-guide.md` — compact, always-loaded via @-include in AGENTS.md
  * 2. `_content/docs/generated/*.md` — docs compiled from THIS box's content
  *    (guides, personality, box-local card types), read on demand by agents
  *

@@ -708,7 +708,7 @@ empty is a stronger one.
 **Location in plan:** Track B, Direction (Layout); Implementation order 4.
 **Citation:** *"`git mv beebox/docker container` with path fixes and the guide
 moved to `container/README.md` (doc-check clean)"*.
-**Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
+**Issue:** The monorepo root `AGENTS.md` enumerates the projects that live in
 the repository; a new top-level `container/` is not in that list and the plan
 does not say it will be added. `beebox/AGENTS.md`'s Guides table row
 *"Docker install (local + VPS) | `docs/install/docker.md`"* points at the file
@@ -719,8 +719,8 @@ named.
 **Why it matters:** Principle 7 (hierarchy is a discoverability contract) is one
 of the plan's own justifications for the move; a new root project that the root
 map does not mention is the same defect one level up.
-**Suggested action:** Add root `CLAUDE.md` and `beebox/AGENTS.md` Guides-table
-updates to Track E's file list (Track B mentions `container/CLAUDE.md` but not
+**Suggested action:** Add root `AGENTS.md` and `beebox/AGENTS.md` Guides-table
+updates to Track E's file list (Track B mentions `container/AGENTS.md` but not
 the two maps that point at it).
 **Traces to preference:** `docs/engineering-principles.md` 7; and
 `beebox/AGENTS.md` — "new infrastructure isn't done until it's discoverable".

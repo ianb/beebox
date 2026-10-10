@@ -159,9 +159,9 @@ async function readEngineVersions(): Promise<EngineVersions> {
  * `package.json` would silently clobber someone else's package, so a
  * pre-existing `package.json` is a hard conflict; `tsconfig.json` is only
  * written when absent, so a directory that already has its own is left
- * alone. `CLAUDE.md` and `.gitignore` are NOT written here — `initBox`
+ * alone. `AGENTS.md` and `.gitignore` are NOT written here — `initBox`
  * (`./index.js`, run right after on the same root) owns both, since they
- * cover the operational half too (the CLAUDE.md `@`-includes, the merged
+ * cover the operational half too (the AGENTS.md `@`-includes, the merged
  * ignore rules).
  * @param options.symlinkBeeBox - Whether to symlink
  *   `node_modules/beebox` at the running engine's `PACKAGE_ROOT`.

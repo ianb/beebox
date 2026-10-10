@@ -1,5 +1,8 @@
 # /review + /ship + /land-and-deploy
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Three skills that form gstack's shipping pipeline. Reading them as a set because the boundaries between them are deliberate and worth understanding.
 
 ## The split

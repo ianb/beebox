@@ -84,12 +84,12 @@ Those closed issues remain precedent. This plan does not reopen them.
   `docs/engineering-principles.md:116-125` requires deliberate seams for clock,
   storage, and decision logic. Store migration, expiry, races, and post-consume
   failures need deterministic doctests.
-- **HTTP route boundary.** `CLAUDE.md:110` says: *“HTTP endpoints go in tRPC by
+- **HTTP route boundary.** `AGENTS.md` says: *“HTTP endpoints go in tRPC by
   default,”* while raw Fastify routes are for flows such as OAuth redirects that
   do not fit an ordinary request/response procedure. Owner minting is an ordinary
   Admin tRPC mutation. The public, scriptless, cookie-independent reset GET/POST
   is a root auth route beside invite acceptance.
-- **Credential safety.** `CLAUDE.md:117` says the credential store is global and
+- **Credential safety.** `AGENTS.md` says the credential store is global and
   `bbx auth set-password` *“revokes the user's live sessions.”* Tests use an
   isolated `BBX_AUTH_FILE`. Manual verification must also isolate the sibling
   capability store because it derives from that path. No test or browser check
@@ -103,7 +103,7 @@ Those closed issues remain precedent. This plan does not reopen them.
   `AllowedEmailsSection` predates that convention and still uses raw Tailwind
   rows. Track D migrates this one component to the existing primitives while it
   adds the reset action. `InviteSection` supplies the link-copy precedent.
-- **Tests as design.** `CLAUDE.md:11-17` says doctests are the primary test
+- **Tests as design.** `AGENTS.md` says doctests are the primary test
   format and tests must pass before commit. Each substantial track starts with a
   focused failing doctest.
 - **Shipped precedent.** `docs/plans/invite-links-and-password-change.md:59-123`

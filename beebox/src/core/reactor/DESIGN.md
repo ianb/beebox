@@ -85,7 +85,7 @@ Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup an
 
 The reactor builds two prompts for the agent:
 
-- **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions, rules files) so it doesn't waste turns re-reading things. This is important because Claude Code auto-loads CLAUDE.md and rules files — the agent needs to know it already has this information.
+- **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions, rules files) so it doesn't waste turns re-reading things. This is important because Claude Code auto-loads AGENTS.md and rules files — the agent needs to know it already has this information.
 
 - **User prompt** lists the actual jobs to process with their card content (frontmatter + body), inlined referenced files (threads, items), and schema-specific processing instructions.
 

@@ -6,6 +6,9 @@ status: snapshot
 
 # Beads vs. our `issues/` queue
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Dated snapshot, 2026-08-25. Beads examined at commit `62d2119`
 (github.com/steveyegge/beads, now `gastownhall/beads`; `CHANGELOG.md` top is
 `[Unreleased]`, no tag in the shallow clone). Our side is `issues/AGENTS.md`,

@@ -106,7 +106,7 @@ JSON.stringify(emitBodyAsMarkdown('{% source ref="_content/recipes/stew.recipe.c
 
 ## Raw HTML and footnotes go back out as written
 
-A body's allow-listed HTML reaches CLAUDE.md as HTML (Claude reads it as
+A body's allow-listed HTML reaches AGENTS.md as HTML (Claude reads it as
 written), comments disappear, and footnotes return to GFM `[^n]` syntax.
 
 ```ts

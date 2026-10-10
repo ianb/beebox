@@ -6,6 +6,9 @@ issues: []
 ---
 # `{% todo %}` — universal todo annotation
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A universal Markdoc annotation that marks any content in any card body (or a
 card's frontmatter) as an open todo, plus the machinery that makes such
 annotations trustworthy: a collector/query command, human-facing surfaces, and

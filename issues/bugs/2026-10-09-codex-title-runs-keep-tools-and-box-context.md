@@ -17,7 +17,7 @@ options do not reach the run:
 - `createCodexAgent` builds its run options at
   `beebox/src/core/agent/codex-agent.ts:35` and copies neither `tools` nor
   `loadBoxContext`.
-- `runCodexAgent` always expands the box `CLAUDE.md` into the system prompt
+- `runCodexAgent` always expands the box `AGENTS.md` into the system prompt
   (`beebox/src/core/agent/codex-run/core.ts:78`).
 - Every Codex thread runs with `sandboxMode: "danger-full-access"` and
   `approvalPolicy: "never"`
@@ -33,7 +33,7 @@ added `loadBoxContext` without a Codex path.
 
 Smallest remedy (from the review): give the Codex adapter an enforced
 prompt-only mode for these passes, and honor `loadBoxContext: false` by
-skipping the `CLAUDE.md` expansion. The prompt-only mode must be enforced by the
+skipping the `AGENTS.md` expansion. The prompt-only mode must be enforced by the
 Codex session (a sandbox or tool setting), not by the prompt. Which Codex SDK
 setting removes shell access is not checked here.
 

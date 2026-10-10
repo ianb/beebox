@@ -13,7 +13,8 @@ final class BoxScreenStoreTests: XCTestCase {
         var homeAnswer = QuickChatHome(open: [], recentlySent: [], recentChats: [], shortcuts: [])
         var homeFails = false
         var submitted: [(UUID, String)] = []
-        var submittedOrigins: [NativeChatEmission.Origin?] = []
+        var submittedOrigins: [QuickChatOrigin?] = []
+        var submittedSources: [String?] = []
         var chosen: [String] = []
         /// Runs inside `home`, before it answers, so a test can land an answer
         /// while a refresh is in flight.
@@ -22,9 +23,10 @@ final class BoxScreenStoreTests: XCTestCase {
         /// box screen while the request is out.
         var duringSubmit: (@MainActor () async -> Void)?
 
-        func submit(id: UUID, message: String, origin: NativeChatEmission.Origin?) async throws -> QuickChatView {
+        func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String? = nil) async throws -> QuickChatView {
             submitted.append((id, message))
             submittedOrigins.append(origin)
+            submittedSources.append(source)
             await duringSubmit?()
             if offline {
                 throw URLError(.notConnectedToInternet)
@@ -114,6 +116,43 @@ final class BoxScreenStoreTests: XCTestCase {
             return XCTFail("expected a waiting outbox row")
         }
         XCTAssertEqual(entry.text, "Ask Dana about the 14th")
+    }
+
+    func testExternalCaptureRestoresOlderEntriesAndSubmitsOnlyTheNewThought() async throws {
+        let client = FakeClient()
+        client.submitAnswer = .sent
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let old = QuickChatOutboxEntry(id: UUID(), boxID: box.id, text: "older offline thought", origin: .typed,
+            createdAt: Date(), attempts: 1, lastAttemptAt: Date())
+        try await repository.saveQuickChatOutbox([old])
+        let store = BoxScreenStore(repository: repository, client: { _ in client })
+        store.updateBoxes([box])
+
+        let result = await store.captureExternalThought("Save this", box: box)
+
+        guard case .submitted(let view) = result else { return XCTFail("expected a server answer") }
+        XCTAssertEqual(view.state, .sent)
+        XCTAssertEqual(client.submitted.map(\.1), ["Save this"])
+        XCTAssertEqual(client.submittedOrigins, [.external])
+        XCTAssertEqual(client.submittedSources, ["apple-app-intents"])
+        let remaining = try await repository.loadQuickChatOutbox()
+        XCTAssertEqual(remaining.map(\.text), ["older offline thought"])
+    }
+
+    func testExternalCaptureRefusesABoxThatRequiresDeviceUnlock() async throws {
+        let client = FakeClient()
+        var lockedBox = box
+        lockedBox.requiresDeviceUnlock = true
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = BoxScreenStore(repository: repository, client: { _ in client })
+        store.updateBoxes([lockedBox])
+
+        let result = await store.captureExternalThought("Do not save this", box: lockedBox)
+
+        guard case .persistenceFailed = result else { return XCTFail("a protected box must be refused") }
+        XCTAssertTrue(client.submitted.isEmpty)
+        let entries = try await repository.loadQuickChatOutbox()
+        XCTAssertTrue(entries.isEmpty)
     }
 
     func testOutboxRowsComeBeforeServerRowsAndSentAnswersAreSeparate() async throws {

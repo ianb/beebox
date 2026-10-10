@@ -6,6 +6,9 @@ issues: []
 ---
 # Refresh beebox-clerk
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Implemented June 2026** (worktree-refresh-clerk). Frozen as the design
 > record. One deviation: the extraction fallback sends a `[title](url)`
 > markdown link rather than empty markdown — the server's savePageSchema

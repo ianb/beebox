@@ -18,7 +18,7 @@ reports nothing:
 const box = await makeTmpBox();
 await box.write("_content/inbox/x.memo.card", "---\nstatus: new\n---\n");
 await box.write("package.json", "{}");
-await box.write("CLAUDE.md", "# Box\n");
+await box.write("AGENTS.md", "# Box\n");
 JSON.stringify(await checkBoxRoot(box.root))
 => []
 ```

@@ -6,6 +6,9 @@ issues: []
 ---
 # Remove cardworks and all XML from beebox
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 This plan retires the XML card format and the `cardworks` package. It
 migrates the five remaining XML-bodied schemas to YAML-frontmatter +
 Markdoc body tags (a per-schema mix), removes the dual-format loader and

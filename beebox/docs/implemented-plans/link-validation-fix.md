@@ -6,6 +6,9 @@ issues: []
 ---
 # Markdown link validation — turn it on, make it correct, close the commit-time hole
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 The box's broken-internal-link rule (CB002) has never run: it's disabled in
 config, and the one place it *would* fire has a path-resolution bug that would
 false-positive every valid box-root link. As a result a `git mv` of store

@@ -1,5 +1,8 @@
 # Stack Decisions
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > Historical. Frozen as of 2026-09-04 and moved out of the live reference area: it records why the stack was chosen, not how the system works now. Current rationale lives in [`../design/`](../design/README.md).
 
 Technology choices for Bee Box. Each decision includes reasoning and alternatives considered. The status table below tracks what's actually implemented vs. planned.

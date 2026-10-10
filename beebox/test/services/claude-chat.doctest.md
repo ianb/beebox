@@ -29,7 +29,7 @@ JSON.stringify(built.queryOptions.env)
 => {"PATH":"/repo/beebox/bin:/usr/bin","BBX_SERVER_URL":"http://127.0.0.1:3210","BBX_AGENT_TOKEN":"agent-token"}
 ```
 
-A chat session loads the box's project settings (`CLAUDE.md`, rules, skills,
+A chat session loads the box's project settings (`AGENTS.md`, rules, skills,
 hooks) and nothing from the host user's `~/.claude` or any directory above the
 box. It also turns off the
 claude.ai connectors of the server's Claude login, which belong to one person

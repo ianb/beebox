@@ -22,7 +22,7 @@ would hide openers there anyway.
 
 ## Open question
 
-Options: let the course's `CLAUDE.md` or landmark name a first message the
+Options: let the course's `AGENTS.md` or landmark name a first message the
 chat sends on open, or let the course build a briefing in its attach scope.
 Either needs a rule for who may start a turn without the person typing.
 Related: [course study home](2026-09-21-course-study-home-last-next-uncertain.md).

@@ -1,5 +1,8 @@
 # An installable beebox with Tailscale reachability (2026-09-29)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Question from the boxholder: could beebox ship as an installable app that
 runs everything, packaged, with Tailscale making the box reachable from
 anywhere?

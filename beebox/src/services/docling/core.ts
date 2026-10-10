@@ -143,7 +143,7 @@ export function doclingArgs(sourcePath: string, options: DoclingExtractOptions):
     "--device", "cpu",
     "--document-timeout", String(DOCUMENT_TIMEOUT_SECONDS),
     "--output", options.workDir,
-    // Routine-success chatter is a bug (CLAUDE.md); warnings/errors still print.
+    // Routine-success chatter is a bug (AGENTS.md); warnings/errors still print.
     "-q",
   ];
   if (options.ocr === "off") {
@@ -286,7 +286,7 @@ export function createDoclingService(): DoclingService {
     async extract(sourcePath, options): Promise<Result<DoclingExtraction>> {
       const controller = new AbortController();
       // A plain multi-minute `setTimeout` fires the instant a sleeping laptop wakes
-      // (CLAUDE.md, time discipline), which would kill a healthy extraction.
+      // (beebox/AGENTS.md, startAwakeTimeout), which would kill a healthy extraction.
       const budget = startAwakeTimeout({
         timeoutMs: PROCESS_TIMEOUT_MS,
         onTimeout: () => controller.abort(),

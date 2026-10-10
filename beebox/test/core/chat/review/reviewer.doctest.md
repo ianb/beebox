@@ -43,7 +43,7 @@ function sdkAccess(agent) {
 ```
 
 The title pass gets an empty tool list and loads no filesystem settings: no
-box `CLAUDE.md`, rules, skills, or hooks.
+box `AGENTS.md`, rules, skills, or hooks.
 
 ```ts
 await reviewer.title({ sessionId: "s1", currentTitle: null, span: "**User**\nHow do I balance this?" })

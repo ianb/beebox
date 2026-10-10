@@ -6,6 +6,9 @@ issues: []
 ---
 # Architectural Review — Findings and Improvement Plan
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A whole-monorepo architectural review (2026-07-05), run as ~17 parallel scan
 agents plus direct tooling (knip, madge), synthesized into an improvement plan.
 This document is both the review's record and the plan for acting on it —

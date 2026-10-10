@@ -21,7 +21,7 @@ import type { HqWaitOutcome } from "../lib/audio/hq-wait";
 import type { SelectionItem } from "../lib/selection/serialize";
 import type { FinalWord } from "../machines/transcription-events";
 import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
-import { appendSendKeywordTag, detectKeyword, sendKeywordIn, type SendKeywordAction } from "../lib/audio/speech-keywords";
+import { appendSendKeywordTag, detectKeyword, sameKeywordTag, sendKeywordIn, type SendKeywordAction } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
 import { resolveEmissionWords } from "./unsure-words/mark";
 
@@ -42,8 +42,6 @@ export type VoiceIntent =
       recording: PendingRecording | null;
       /** "Send and close": after commit, leave the mic closed (no re-arm). */
       closeMic: boolean;
-      /** This keyword explicitly requests HQ cleanup, independently of narration mode. */
-      hq: boolean;
       /**
        * Realtime words backing `text` at commit time (Track 3, docs/plans/
        * transcript-confidence.md) — the machine's `finalWords` read at its
@@ -135,13 +133,18 @@ export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>):
  * composer context (typed prefix, selections, attachments) never change;
  * composer input added during the wait belongs to the next message.
  *
- * - `hq`: the HQ text replaces the spoken part, with the send keyword
- *   restored when the HQ pass did not reproduce it. The realtime words are
- *   dropped — they describe replaced text (Track 3 HQ-drop rule).
- * - `fallback`: the realtime text, marked `hq="failed"` — the budget ran
- *   out, the user chose to send it, or the HQ pass failed outright. A
- *   segment with no live text at all sends {@link UNTRANSCRIBED_PLACEHOLDER},
- *   so the message exists and its kept recording stays retranscribable.
+ * - `hq`: the HQ text replaces the spoken part. The send keyword the live
+ *   pass heard decides the tag: when the HQ text holds the same command, its
+ *   words become the tag; otherwise the HQ text is kept as it came back and
+ *   the live tag is appended with `heard="live"` (a different command in the
+ *   HQ text never replaces the one that fired). The realtime words are
+ *   dropped — they describe replaced text (Track 3 HQ-drop rule). A blank HQ
+ *   result is treated as a fallback, so it never erases the spoken words.
+ * - `fallback`: the realtime text, which the assembler marks `stt="live"` —
+ *   the budget ran out, the user chose to send it, or the HQ pass failed
+ *   outright (no key included). A segment with no live text at all sends
+ *   {@link UNTRANSCRIBED_PLACEHOLDER}, so the message exists and its kept
+ *   recording stays retranscribable.
  */
 export function prepareVoiceSubmitEmission(opts: {
   realtime: Emission;
@@ -151,19 +154,21 @@ export function prepareVoiceSubmitEmission(opts: {
   const { realtime, outcome, keyword } = opts;
   const spokenStart = realtime.spokenStart ?? 0;
   const priorInput = realtime.text.slice(0, spokenStart).trim();
-  if (outcome.kind === "hq") {
+  if (outcome.kind === "hq" && outcome.result.text.trim() !== "") {
     const { result } = outcome;
-    const detected = detectKeyword(result.text);
-    const finalText = detected
-      ? detected.processedTranscript
-      : keyword === null ? result.text : appendSendKeywordTag(result.text, keyword);
+    const finalText = keyword === null ? result.text : hqTextWithKeyword(result.text, keyword);
     const hq = buildVoiceSubmitEmission({
       priorInput, finalText, selectionsSnapshot: realtime.selections, imagesSnapshot: realtime.images,
       filesSnapshot: realtime.files, diarized: result.diarized, hqText: true, hqService: result.service,
     });
     return { ...hq, id: realtime.id };
   }
-  const hqFallback = true;
-  if (realtime.text.slice(spokenStart).trim() !== "") return { ...realtime, hqFallback };
-  return { ...realtime, text: joinTranscript(priorInput, UNTRANSCRIBED_PLACEHOLDER), words: undefined, hqFallback };
+  if (realtime.text.slice(spokenStart).trim() !== "") return realtime;
+  return { ...realtime, text: joinTranscript(priorInput, UNTRANSCRIBED_PLACEHOLDER), words: undefined };
+}
+
+function hqTextWithKeyword(text: string, keyword: VoiceSendKeyword): string {
+  const detected = detectKeyword(text);
+  if (detected !== null && sameKeywordTag(detected.action, keyword.action)) return detected.processedTranscript;
+  return appendSendKeywordTag(text, keyword);
 }

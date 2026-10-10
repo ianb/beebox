@@ -1,5 +1,8 @@
 # OpenClaw & Hermes vs Bee Box — Comparison & Idea Triage
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 *2026-07-03. Method: shallow clones of [`openclaw/openclaw`](https://github.com/openclaw/openclaw) (TypeScript, ex-Clawdbot/Moltbot, 15k+ stars) and [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) (Python) analyzed by 16 dimension-dive agents against real source; 3 agents mapped Bee Box as the baseline; 8 comparison agents wrote the per-dimension chapters below. Raw dive docs (with file:line citations into both codebases) were session-scratch artifacts and are not committed.*
 
 **Chapters:** [agent core](compare-agent-core.md) · [context/memory](compare-context-memory.md) · [skills/tools](compare-skills-tools.md) · [scheduling](compare-scheduling.md) · [channels](compare-channels.md) · [storage](compare-storage.md) · [security](compare-security.md) · [UX/prompt](compare-ux-prompt.md)
