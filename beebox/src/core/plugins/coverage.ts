@@ -5,7 +5,7 @@
  * `plugin-type-unprovided` and `plugin-declared-missing` health checks
  * (`docs/plugins.md`, "Health").
  *
- * Pure over the three inputs the plan names (`docs/plans/plugins.md`, Track
+ * Pure over the three inputs the plan names (`docs/implemented-plans/plugins.md`, Track
  * 3): the effective schema map's type names, the card types on disk, and the
  * registry with the active list. The active list alone decides nothing: an
  * inactive plugin with cards of its type on disk is reported the same as an

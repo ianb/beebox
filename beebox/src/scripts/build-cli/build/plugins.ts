@@ -1,5 +1,5 @@
 /**
- * Plugin bundles (`docs/plans/plugins.md`, Track 1). Every
+ * Plugin bundles (`docs/implemented-plans/plugins.md`, Track 1). Every
  * `src/plugins/<name>/plugin.ts` becomes `dist/plugins/<name>/plugin.js` (the
  * `beebox/plugins/<name>` export: Node, packages external, like `cards`; its
  * imports of `src/exports/{cards,schema}.ts` become the public `beebox/cards`

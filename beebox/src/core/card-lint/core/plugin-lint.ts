@@ -1,5 +1,5 @@
 /**
- * Plugin lint dispatch (`docs/plans/plugins.md`, Track 3): every active
+ * Plugin lint dispatch (`docs/implemented-plans/plugins.md`, Track 3): every active
  * plugin's `lintCards` hook runs over each card, with a `LintContext` built
  * from the engine's ref resolver and containment helpers so a plugin never
  * imports them. The hooks' issues are warnings in the card's lint result,

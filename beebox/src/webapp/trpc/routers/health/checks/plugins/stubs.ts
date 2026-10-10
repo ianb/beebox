@@ -13,7 +13,7 @@
  * Detection is a regex over static import specifiers, read without executing
  * the file, the same approach as `readDescription` in `cli/commands/trick.ts`.
  * The courseware README says stubs use static imports; a dynamic import is
- * not seen (accepted, `docs/plans/plugins.md` failure modes).
+ * not seen (accepted, `docs/implemented-plans/plugins.md` failure modes).
  */
 
 import { readFile } from "node:fs/promises";

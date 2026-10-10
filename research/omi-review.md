@@ -256,7 +256,7 @@ Nothing to do until the boxholder wants a wearable.
 ### 6. App ecosystem — **adapt one observation, reject the model**
 
 The payout data is stale and small. Still, it points the same way as the
-[medium/content line](../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md):
+[medium/content line](../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md):
 the extensions people used were *prompts run at a hook* (over each finished
 conversation, or added to chat), not code. That supports "a box's plugin is
 authorable in the box's own materials, with code as the escalation". The
@@ -300,7 +300,7 @@ category. Nothing to adopt.
 - **Filed:** [transcript-to-structure fidelity rules](../issues/features/2026-09-29-transcript-to-structure-fidelity-rules.md) (item 1).
 - **Filed:** [Omi pendant as a capture source](../issues/exploration/2026-09-29-omi-pendant-as-a-capture-source.md) (item 5).
 - **Amended:** [listening/note mode](../issues/features/2026-08-29-listening-note-mode.md) (items 3, 4).
-- **Amended:** [plugins and the medium/content line](../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md) (item 6).
+- **Amended:** [plugins and the medium/content line](../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md) (item 6).
 
 ## Sources
 

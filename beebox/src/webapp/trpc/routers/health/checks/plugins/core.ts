@@ -2,7 +2,7 @@
  * Plugin health (`docs/plugins.md`, "Health"): every check derives from the
  * effective schema map and the active list together, never from the active
  * list alone, so deactivation, a missing stub, and engine-side removal all
- * surface (`docs/plans/plugins.md`, Track 3).
+ * surface (`docs/implemented-plans/plugins.md`, Track 3).
  *
  * - `plugin-config` (error): one row per invalid `plugins` entry in
  *   `_config/box.json`, worded as `bbx status` words it

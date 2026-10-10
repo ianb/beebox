@@ -1,4 +1,4 @@
-<!-- Cross-model review of docs/plans/plugins.md, round 1. Reviewer: codex gpt-6-astra,
+<!-- Cross-model review of docs/implemented-plans/plugins.md, round 1. Reviewer: codex gpt-6-astra,
      2026-10-09, read-only, via bin/cross-model-run. Adjudication by the planning
      session follows the reviewer's text; plan edits are in the same commit. -->
 
@@ -132,7 +132,7 @@ For configuration, `beebox/src/core/box/config.ts:391` explicitly delegates fiel
 
 ### 1. [P1] Active-but-incomplete plugins escape all four checks
 
-**Location in plan:** `beebox/docs/plans/plugins.md:338`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:338`
 
 **Citation:** “cards whose type matches a default type key of an inactive plugin's `schemas` and no box schema defines it.”
 
@@ -148,7 +148,7 @@ Likewise, `plugin-stub-missing` checks registry membership, not whether the refe
 
 ### 2. [P1] Removing exposition compilation silently removes guidance
 
-**Location in plan:** `beebox/docs/plans/plugins.md:402`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:402`
 
 **Citation:** “field kept one release; README migration; prune-only surface | clear via health”
 
@@ -166,7 +166,7 @@ The compiler scans exposition cards independently of course cards (`beebox/src/c
 
 ### 3. [P1] Skill mirroring can overwrite box-owned work
 
-**Location in plan:** `beebox/docs/plans/plugins.md:318`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:318`
 
 **Citation:** “Marked and pruned like the rest.”
 
@@ -182,7 +182,7 @@ Activation overwrites the file and marks it engine-owned. Later deactivation can
 
 ### 4. [P1] Export-map entries do not produce the shipped library
 
-**Location in plan:** `beebox/docs/plans/plugins.md:271`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:271`
 
 **Citation:** `"./plugins/*": { types: "./dist/plugins/*/index.d.ts", default: "./dist/plugins/*/index.js" }`
 
@@ -198,7 +198,7 @@ A clean `build:cli` therefore cannot satisfy either proposed public subpath mere
 
 ### 5. [P1] The concept-map renderer is not directly usable as a box view
 
-**Location in plan:** `beebox/docs/plans/plugins.md:405`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:405`
 
 **Citation:** “importing only `beebox/view-widgets` and its own files.”
 
@@ -216,7 +216,7 @@ The graph imports CSS and React Flow at `ConceptGraph.tsx:8`, and dagre at `grap
 
 ### 6. [P1] Courseware lint cannot move unchanged
 
-**Location in plan:** `beebox/docs/plans/plugins.md:354`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:354`
 
 **Citation:** “the node-refs lint moves unchanged”
 
@@ -235,7 +235,7 @@ Dispatching every box-schema card to every active plugin also supplies no bindin
 
 ### 7. [P1] `extendSchema` does not yet express its promised operation
 
-**Location in plan:** `beebox/docs/plans/plugins.md:376`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:376`
 
 **Citation:** `D extends Partial<B>`
 
@@ -251,7 +251,7 @@ The merge contract also omits `superRefine`, an existing parse-time invariant ho
 
 ### 8. [P1] Upgrade validation misses unchanged incompatible cards
 
-**Location in plan:** `beebox/docs/plans/plugins.md:478`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:478`
 
 **Citation:** “upgrade typecheck does not catch data; validation does”
 
@@ -267,7 +267,7 @@ Commit hooks do run. However, their new-engine validation checks staged cards on
 
 ### 9. [P2] Keep-last-good is not removal recovery across restarts
 
-**Location in plan:** `beebox/docs/plans/plugins.md:474`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:474`
 
 **Citation:** “schema loader keep-last-good (`schemas.ts:333`)”
 
@@ -283,7 +283,7 @@ The citation correctly describes incomplete saves within one process, but does n
 
 ### 10. [P2] A no-op procedure is not a migration notice
 
-**Location in plan:** `beebox/docs/plans/plugins.md:423`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:423`
 
 **Citation:** “a procedure migration that … writes nothing and records a health-visible note”
 
@@ -299,7 +299,7 @@ The migration manifest contains only name and application time (`beebox/src/core
 
 ### 11. [P2] The proposed registry violates the rules it claims to reuse
 
-**Location in plan:** `beebox/docs/plans/plugins.md:269`
+**Location in plan:** `beebox/docs/implemented-plans/plugins.md:269`
 
 **Citation:** “The existing `registry-location` and `member-imports` layout rules apply.”
 

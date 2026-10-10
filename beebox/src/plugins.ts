@@ -1,5 +1,5 @@
 /**
- * The closed set of in-repo plugins (`docs/plans/plugins.md`): libraries a
+ * The closed set of in-repo plugins (`docs/implemented-plans/plugins.md`): libraries a
  * box completes through stubs, each `src/plugins/<name>/plugin.ts` exporting
  * a `PluginDefinition`. Installed means present here; active means named in
  * the box's config.

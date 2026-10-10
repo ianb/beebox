@@ -1,10 +1,10 @@
 ---
 title: "Plugins — design notes: a typed library the box extends through stubs"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues:
-  - ../../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md
-  - ../../../issues/exploration/2026-09-24-agent-plugins-spec.md
+  - ../../../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md
+  - ../../../issues/closed/exploration/2026-09-24-agent-plugins-spec.md
   - ../../../issues/exploration/2026-05-11-canonical-wisdom-corpus.md
 ---
 # Plugins — design notes
@@ -13,8 +13,8 @@ issues:
 marked **DECIDED** record a boxholder statement. Items marked **OPEN** wait
 for one. The plan is [plugins.md](plugins.md).
 
-Sources: the [medium/content issue](../../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md),
-the [Agent Plugins spec review](../../../issues/exploration/2026-09-24-agent-plugins-spec.md),
+Sources: the [medium/content issue](../../../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md),
+the [Agent Plugins spec review](../../../issues/closed/exploration/2026-09-24-agent-plugins-spec.md),
 the research notes on [OpenClaw plugins](../../../research/openclaw-hermes/deep-openclaw-plugins.md)
 and [Hermes plugins](../../../research/openclaw-hermes/deep-hermes-plugins.md),
 the [Imbue Studio templates](../../../research/imbue-studio/starter-templates.md),

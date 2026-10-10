@@ -1,6 +1,6 @@
 # Plugin imports rule
 
-`pluginImportsRule` fences `src/plugins/<name>/` (`docs/plans/plugins.md`,
+`pluginImportsRule` fences `src/plugins/<name>/` (`docs/implemented-plans/plugins.md`,
 Track 1): a plugin file imports only `src/exports/*`,
 `src/cards/plugin-definition.ts`, its own directory, and packages; the view
 module (`view.tsx`) and every own module it reaches import no Node builtin.

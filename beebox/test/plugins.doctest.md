@@ -1,6 +1,6 @@
 # Plugin registry
 
-`src/plugins.ts` is the closed set of in-repo plugins (`docs/plans/plugins.md`):
+`src/plugins.ts` is the closed set of in-repo plugins (`docs/implemented-plans/plugins.md`):
 each `src/plugins/<name>/plugin.ts` default-exports a `PluginDefinition`, and
 the registry lists them by name. `pluginNames` and `pluginByName` are the
 engine's two reads.
