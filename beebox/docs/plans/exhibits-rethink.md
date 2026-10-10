@@ -210,10 +210,14 @@ disposition. It competes with the surfaces the developer does use.
   choice labels the form showed, `DispositionForm.tsx:29-32`) are not shown
   anywhere after this lands. Proposed as an accepted loss: no decision was ever recorded
   through those labels, and the choices that were made live in chat and in
-  the plans. Open until the boxholder answers (see Open design questions).
+  the plans. Accepted by the boxholder, 2026-10-10.
 - `readManifest(dir, { requireAsk })` loses its option; `requireAsk` is threaded through `store.ts:154,181,235,252` and `app/handler.ts:86,131,248,261,289,303`.
-- The container renders `prose` as a paragraph under the title, with no badge
-  and no form. Instruments keep `EventLog`, `Storage`, `postCapture`.
+- The container renders `prose` as Markdown under the title, through the
+  `Markdown` component the default renderer already uses for `doc.md`
+  (`frontend/exhibits/DefaultExhibit.tsx:51`, `components/Markdown.tsx`). Today
+  the ask prose is a plain `<p>` (`Container.tsx:79`), so a list or emphasis
+  an agent wrote came out as one run-on paragraph (boxholder, 2026-10-10). No
+  badge and no form. Instruments keep `EventLog`, `Storage`, `postCapture`.
 - The default renderer's figure block shows `caption` under each image, as it
   does today.
 - `bin/exhibits add`: `--prose` stays, optional. `--ask` and `--option` are
@@ -387,8 +391,7 @@ page is where the developer is when they want it.
   agent-written page can trigger a focus, for its own workstream or another
   named one. The worst effect is a terminal tab coming forward. It cannot
   resume, close, or archive a workstream, and the route takes no text. The
-  doc's "Access" section states this grant. The boxholder decides whether to
-  grant it (Open design questions).
+  doc's "Access" section states this grant. Granted by the boxholder, 2026-10-10.
 
 **Vocabulary lock-ins.** Route name `focus`, matching the action verb.
 
@@ -537,13 +540,9 @@ No critical gap.
 
 ## Open design questions
 
-- Whether the 12 old `decide` exhibits should keep showing their option
-  labels as read-only text, or lose them. Lean: lose them; none was ever
-  answered on the page.
-- Whether the exhibits origin may hold the one bounded authority Track 4
-  gives it (bring a live workstream's terminal tab forward). Lean: yes; the
-  effect is which tab is in front, and the alternative is a second click on
-  the dashboard.
+None. Decided 2026-10-10 by the boxholder: the exhibits origin holds the
+focus authority ("yeah, of course"); the old `decide` exhibits lose their
+option labels ("not concerned about old exhibits now").
 - Whether `bin/exhibits list` should drop rows whose workstream has no live
   worktree, or show the age. Lean: leave `list` as a plain inventory; the
   orphan report covers lifecycle.
