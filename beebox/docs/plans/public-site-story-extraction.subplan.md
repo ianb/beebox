@@ -56,7 +56,7 @@ content at scale comes after the rubric earns trust.
   app as `.html` and run data as JSON beside it, viewable at
   `/<worktree>/dev/story-eval/` with zero router changes.
 - **Subagent machinery**: the Agent tool with parallel dispatch; model choice
-  per CLAUDE.md ("Sonnet 5 is good at subagent work"; extraction is
+  per AGENTS.md ("Sonnet 5 is good at subagent work"; extraction is
   judgment-heavy, so first runs use Opus and we can test whether Sonnet
   matches).
 - **Span verification precedent**: the parent plan's span-identity rule

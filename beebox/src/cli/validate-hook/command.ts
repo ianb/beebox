@@ -60,7 +60,7 @@ const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "packag
  *
  * Returns `null` — never a "clean" result — when there's nothing to
  * surface, so a clean root falls through to the edited file's own per-type
- * handling (a root-level CLAUDE.md edit still gets its usual size lint, say)
+ * handling (a root-level AGENTS.md edit still gets its usual size lint, say)
  * rather than short-circuiting it.
  */
 async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<HookValidationResult | null> {

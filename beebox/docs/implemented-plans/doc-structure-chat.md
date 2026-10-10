@@ -6,6 +6,9 @@ issues: []
 ---
 # Documentation structured like code: the chat cluster
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Second cluster under the [organizing principles](../README.md#organizing-principles)
 that the [testing pilot](../implemented-plans/doc-structure.md) established.
 Seven flat reference docs about chat move into `docs/chat/` under a parent

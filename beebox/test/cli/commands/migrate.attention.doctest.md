@@ -22,7 +22,7 @@ const questionPath = "_bookkeeping/questions/Migration_partial.question.card";
 async function fixture() {
   const box = await makeTmpBox({ git: true });
   await box.write(".gitignore", ".beebox/\n_content/docs/generated/\n");
-  await box.write("CLAUDE.md", "# Box\n");
+  await box.write("AGENTS.md", "# Box\n");
   await box.write(MANIFEST_PATH, MIGRATIONS.map(m => JSON.stringify({ name: m.name, "applied-at": "2026-01-01T00:00:00Z" })).join("\n") + "\n");
   await box.write(questionPath, createTextQuestionTemplate({ memo: "Migration follow-up", prompt: "Which recovered value should be kept?", askedAt: "2026-09-01T00:00:00Z" }));
   await box.commitAll("seed current box with migration question");

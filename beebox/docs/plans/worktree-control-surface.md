@@ -632,7 +632,7 @@ shape.
 
 **Skip, with rationale.** Knowledge audits
 (`beebox/src/dev/knowledge-audits.yaml`) test what a *box* agent knows from
-box CLAUDE.md, the generated agent guide, and schema instructions. Everything in
+box AGENTS.md, the generated agent guide, and schema instructions. Everything in
 this plan is dev-repo tooling, which is invisible to box agents — an audit cannot
 test it, and writing one would produce a test that passes or fails for reasons
 unrelated to the change.
@@ -670,7 +670,7 @@ Each chunk is a commit or a few related commits. All land before the plan ships.
 7. ~~**`bin/workstreams resume`**~~ — deferred, see "What this plan builds now."
 8. ~~**Session hint file**~~ — dropped with chunk 7; it existed only to serve it.
 9. **Docs** — `bin/AGENTS.md` gains the command contract and the `agent.state`
-   tri-state rule; root `CLAUDE.md`'s worktree paragraph points at it.
+   tri-state rule; root `AGENTS.md`'s worktree paragraph points at it.
 
 ## Rollout shape
 
@@ -700,4 +700,4 @@ file, which is created-on-write with no back-fill: absent means "ask for
 forever. Nothing needs to be migrated at all.
 
 **Cross-model review.** This plan defines a contract every session depends on, so
-`/cross-model` runs before it is called done, per the root CLAUDE.md rule.
+`/cross-model` runs before it is called done, per the root AGENTS.md rule.

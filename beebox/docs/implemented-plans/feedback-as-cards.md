@@ -8,6 +8,9 @@ issues:
 ---
 # Agent feedback as doc cards
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 When a box agent notices friction in Bee Box tooling, it writes an ordinary doc card in `_config/feedback/`. The card carries a title, evidence, and relevant context. Review still treats the directory as an inbox.
 
 **Issues addressed:** `2026-09-16-feedback-as-a-card-location`; `2026-08-12-bbx-feedback-rejects-its-own-transcript` (the transcript embedding path ends). The collection-cadence and introspectable-storage issues remain separate.

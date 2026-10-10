@@ -19,7 +19,7 @@ could keep a short prose line (the reason) with a lint behind it.
 ## Where to look
 
 - `beebox/AGENTS.md` and `beebox/code-style.md`;
-- the root `CLAUDE.md`, nested `CLAUDE.md` files, and `frontend.md`;
+- the root `AGENTS.md`, nested `AGENTS.md` files, and `frontend.md`;
 - skills under `.claude/skills/`;
 - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side
   rules could become checks in card validation or the box's pre-commit hook.

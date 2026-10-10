@@ -4,6 +4,8 @@ workstream: unknown
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed (2026-07-14): resolved via a scoped rule exception, not a split.** The
 file's 5 exports are ONE cohesive test fixture — the `createFakeAgent` factory
 plus the fixture's own types (`FakeAgent`, `FakeAgentOptions`,

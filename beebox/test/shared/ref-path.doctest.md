@@ -215,7 +215,7 @@ JSON.stringify([
   resolveRefPath({ fromPath: undefined, ref: "/node_modules/x/index.js", kind: "card" }),
   resolveRefPath({ fromPath: undefined, ref: "/.git/config", kind: "card" }),
   resolveRefPath({ fromPath: undefined, ref: "/package.json", kind: "card" }),
-  resolveRefPath({ fromPath: undefined, ref: "/CLAUDE.md", kind: "card" }),
+  resolveRefPath({ fromPath: undefined, ref: "/AGENTS.md", kind: "card" }),
   resolveRefPath({ fromPath: undefined, ref: "/.claude/settings.json", kind: "card" }),
   resolveRefPath({ fromPath: undefined, ref: "/some-unlisted-root-name/x", kind: "card" }),
 ])
@@ -225,6 +225,6 @@ JSON.stringify([
 The fence applies uniformly across all three forms — a relative ref that would otherwise resolve fine still fails if the result lands outside the namespace (e.g. a card at the box root, addressed relative to itself, reaching for a sibling that isn't under an area):
 
 ```ts
-JSON.stringify(resolveRefPath({ fromPath: "package.json", ref: "CLAUDE.md", kind: "write-target" }))
+JSON.stringify(resolveRefPath({ fromPath: "package.json", ref: "AGENTS.md", kind: "write-target" }))
 => null
 ```

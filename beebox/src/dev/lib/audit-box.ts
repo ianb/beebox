@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { resolveBoxRoot, getBoxShapeIfPresent } from "../../lib/box-shape.js";
 
 export interface ResolvedAuditBox {
-  /** The box root — where `.beebox/box.json`, cards, CLAUDE.md live. */
+  /** The box root — where `.beebox/box.json`, cards, AGENTS.md live. */
   operationalRoot: string;
   /** Ledger + report identity: the box root's basename (e.g. `test1`). */
   boxName: string;

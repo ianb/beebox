@@ -214,7 +214,7 @@ is the way to get the boxholder's actual traces; the trace pipeline exists.
    testing-doc corrections. Scenarios for rules 2 and 4 fail against the current
    controller (it follows); that is the before-state.
 2. **Controller rewrite** — `useChatScroll` per the model, registered in the
-   harness, all scenarios green, `decideScroll` deleted, nested CLAUDE.md and
+   harness, all scenarios green, `decideScroll` deleted, nested AGENTS.md and
    `docs/chat/scroll.md` rewritten to the new model.
 3. **Wire into `MessageList`** — send anchors the user message; last-turn
    min-height; button semantics unchanged. `bin/browse` procedure run; iOS

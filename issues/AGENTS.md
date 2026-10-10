@@ -247,7 +247,7 @@ Close with `git mv` into `closed/<category>/`, preserving the category. Add
 `resolution: implemented`, `wontfix`, or `superseded`, plus a short opening note
 naming the resolving commit, plan, or reason. Open issues must not carry
 `resolution:`. Git history is the archive; periodic maintenance may delete
-long-closed files.
+long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note.
 
 ## Re-encountering an issue
 

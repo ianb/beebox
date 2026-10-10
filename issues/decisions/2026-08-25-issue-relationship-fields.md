@@ -38,7 +38,7 @@ becomes a cluster query; `/finish` notes in B when it closes an A that B is
   an issue whose `blocked-by:` lists its members; it closes when they all
   close. A use of the field.
 - `pinned` (persistent, protected from close/stale) is standing agent
-  context, which lives in CLAUDE.md/docs here. Not needed.
+  context, which lives in AGENTS.md/docs here. Not needed.
 - `message` (inter-agent mail as beads) is a mailbox; `bin/comments` and
   schedule reports already cover it. Not needed.
 

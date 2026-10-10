@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 // Classify the result into a stable tier label so these tests assert *which*
 // tier fires, not the exact wording (which is free to evolve).
 function tier(chars: number): string {
-  const warning = lintClaudeMdSize("CLAUDE.md", "x".repeat(chars));
+  const warning = lintClaudeMdSize("AGENTS.md", "x".repeat(chars));
   if (warning === null) return "ok";
   if (warning.includes("too large")) return "firm";
   if (warning.includes("getting large")) return "soft";
@@ -69,9 +69,9 @@ The message is a lint-style `warning <path> [claude-md-size] …` line carrying
 the character count, so the agent (or boxholder) sees which file and how big.
 
 ```ts
-warningLead("config/CLAUDE.md", 25000)
+warningLead("config/AGENTS.md", 25000)
 =>
-warning  config/CLAUDE.md  [claude-md-size] 25000 chars
+warning  config/AGENTS.md  [claude-md-size] 25000 chars
 ```
 
 ## Both instruction-file names are linted, mirrors once

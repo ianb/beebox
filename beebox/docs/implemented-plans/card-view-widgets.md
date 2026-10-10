@@ -6,6 +6,9 @@ issues: []
 ---
 # Card-aware widgets for box-authored views
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A reusable widget set — `<CardLink>` and `<CardRef>` — that box-authored JSX
 views import to point at another card, rendering the *right* affordance for
 **the surface they are displayed in**: opening a card from a view in the chat

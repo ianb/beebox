@@ -1,5 +1,8 @@
 # Backend pluggability for beebox: deep-pass synthesis
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 *2026-07-18. Supersedes the first-pass [README](README.md) analysis (kept as a record
 with its flaws flagged). Method: a code-reading
 [coupling audit](2026-07-18-sdk-coupling-audit.md) plus five empirical research passes —

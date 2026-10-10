@@ -55,10 +55,10 @@ summary(setsRule.check(commandsLayout)) === ""
 
 ## A set directory holding a data file is clean; a stray module is still a finding
 
-Data files (a directory's `CLAUDE.md`, `AGENTS.md`, fixtures, assets) are
+Data files (a directory's `AGENTS.md`, fixtures, assets) are
 opaque to the rules (Ontology, "Scope of the rules"): the completeness check
 counts only `module`, `test`, and `declaration` files (and subdirectories) as
-candidate members, so `CLAUDE.md` is never unclaimed. `stray.ts` is a module,
+candidate members, so `AGENTS.md` is never unclaimed. `stray.ts` is a module,
 so it still is.
 
 ```ts
@@ -73,7 +73,7 @@ const assetsLayout = layout({
       },
     },
     "src/assets/logo.ts": {},
-    "src/assets/CLAUDE.md": "data",
+    "src/assets/AGENTS.md": "data",
     "src/assets/stray.ts": {},
     "src/entry.ts": { imports: ["src/assets.ts"] },
   },

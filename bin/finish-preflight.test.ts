@@ -39,7 +39,7 @@ test("docsOnly is an iff over every path, and a .doctest.md is not a doc", () =>
   assert.equal(isDocsOnly(["beebox/docs/a.md", "beebox/src/x.ts"]), false);
   assert.equal(isDocsOnly(["beebox/docs/a.doctest.md"]), false);
   // Any non-doctest .md counts, wherever it lives; doc assets under docs/ too.
-  assert.equal(isDocsOnly(["CLAUDE.md"]), true);
+  assert.equal(isDocsOnly(["AGENTS.md"]), true);
   assert.equal(isDocsOnly(["issues/features/x.md", "README.md", "beebox/docs/architecture/images/a.png"]), true);
   assert.equal(isDocsOnly(["site/docs-manifest.yaml"]), false);
   assert.equal(isDocsOnly([]), false);

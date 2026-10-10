@@ -1,5 +1,8 @@
 # Comparison: UX Surfaces & Prompt Surface
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Bee Box (bbx) vs. OpenClaw vs. Hermes Agent. Sources: `bbx-data-model.md`,
 `bbx-agent-core.md`, `bbx-proactivity-context.md`, `openclaw-ux-prompt.md`,
 `hermes-ux-prompt.md`, `hermes-onboarding-voice-detail.md`.

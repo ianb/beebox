@@ -8,6 +8,9 @@ issues:
 
 # Box git lock — serialize our writers on the repo-wide git index
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A box's git index is one repo-wide mutex. Our code treats commits as
 independent per-path operations and handles collision with a single retry.
 This plan puts a cross-process lock around every span in which our code holds

@@ -9,6 +9,9 @@ issues:
 ---
 # Todos in the UI — one experience of what is open here and what to do about it
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 When I read a card, I want to see its open todos where they are written, tick
 one off, or drop it into chat with a note. When I open a project directory, I
 want one line that says how many things are open there. When I open the

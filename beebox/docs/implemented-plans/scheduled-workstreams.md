@@ -9,6 +9,9 @@ issues:
 
 # Scheduled workstreams
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Recurring jobs in this repo (SDK release monitor, weekly manual tests, the
 knip sweep, Docling currency) each hand-roll a launchd plist, a log location,
 and a way to tell the developer something. This plan replaces that with one

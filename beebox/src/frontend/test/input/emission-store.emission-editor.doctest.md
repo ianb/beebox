@@ -253,7 +253,7 @@ store.editor.nextImageId()
 
 ## Unrelated slices keep their reference across a mutation
 
-The keystroke-isolation invariant (components/chat/CLAUDE.md) depends on a
+The keystroke-isolation invariant (components/chat/AGENTS.md) depends on a
 selector-based subscriber bailing out of a re-render when its slice didn't
 change; that only works if unrelated fields keep the same reference across
 a `patch`:

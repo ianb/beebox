@@ -9,6 +9,9 @@ issues:
 
 # Codex as an optional box engine
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 When the boxholder disagrees with one vendor's harness direction or output quality, he
 wants a box to use another complete native harness, so box chat, wakeups, and procedures
 do not depend on Claude Code alone.

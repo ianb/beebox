@@ -391,7 +391,7 @@ introduces none, so they don't apply. The two that do:
 - **npm publish / turnkey install.** Deferred: source-available first; a stranger
   builds from source. Publishing is its own release with versioning + distribution
   concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
-  it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
+  it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
 - **Hosted / multi-tenant service.** Deferred: largest scope (auth, ops, support);
   not part of a source drop.
 - **History rewrite as a track.** Only triggered *if* Track A finds a committed
@@ -487,8 +487,8 @@ introduces none, so they don't apply. The two that do:
 
 Skip with rationale: this plan is release-preparation and introduces no
 agent-facing concept (no new tag, card shape, convention, or "how you do X"
-rule) that an agent would need to recall from CLAUDE.md. The one convention it
-*enforces* — generic-names — already exists (`CLAUDE.md:103`) and is not new. No
+rule) that an agent would need to recall from AGENTS.md. The one convention it
+*enforces* — generic-names — already exists (`AGENTS.md`) and is not new. No
 new audit entries in `src/dev/knowledge-audits.yaml`.
 
 ## Implementation order

@@ -1,5 +1,8 @@
 # Studio against Bee Box, with dispositions (2026-10-08)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Each row traces to a Bee Box file, plan, or decision. Dispositions: **adopt**,
 **adapt**, **reject**, **later**. Studio facts come from the code notes in this
 directory; Bee Box facts from the docs named. No hands-on Studio use.

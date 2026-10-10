@@ -9,6 +9,8 @@ discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed (implemented).** Commit `8ee48c4b6` delivers warning-only feedback as
 PostToolUse JSON context with exit 0, keeps real errors on exit 2, and suppresses
 repeated CLAUDE.md size warnings per session and size tier. This follows the

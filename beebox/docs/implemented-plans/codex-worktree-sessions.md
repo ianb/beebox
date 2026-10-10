@@ -6,6 +6,9 @@ issues: []
 ---
 # Codex worktree sessions
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Let `bin/launch-worktree-session` spin up an OpenAI Codex CLI session in a fresh
 worktree the same way it spins up Claude Code sessions today: new worktree,
 cloned test box, installs, a briefing as the opening prompt — but `exec codex`

@@ -6,6 +6,9 @@ issues: []
 ---
 # Skill bodies and operational guidance
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. Cross-model and bin restructuring, the launch rewrite, targeted issue-workflow changes, and security-report compression have landed through `64930f05e`. The follow-on sections record those changes. The final issue-contract grouping and [bounded four-model pilot](../reports/prompt-calibration-pilot-2026-09-12.md) complete the approved editorial scope.
 
 **Recommendation:** split only the two alternative runners in `cross-model`; keep launch decisions together with an inline briefing template; reorganize the bin manual around distinct operations; retain issues as one contract and security-report as one audit rubric. Smaller entrypoints should expose the right material, not make every task read more files.

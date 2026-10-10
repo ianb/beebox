@@ -32,10 +32,10 @@ readers are agents and people.
 - **Files where they apply.** An `ONTOLOGY.md` can exist in any directory
   whose subtree holds concepts local to it. Not every directory has one.
   Add one only when the directory has its own concepts.
-- **Always referenced, from the same directory.** The `CLAUDE.md` in the
+- **Always referenced, from the same directory.** The `AGENTS.md` in the
   same directory as an `ONTOLOGY.md` links to it with a line such as
   "See also `path/from/root/ONTOLOGY.md`". If the directory has no
-  `CLAUDE.md`, create one; a one-line `CLAUDE.md` is acceptable. An agent
+  `AGENTS.md`, create one; a one-line `AGENTS.md` is acceptable. An agent
   then knows where each ontology is without searching.
 - **Placement by coverage.** A concept lives in the ontology of the lowest
   directory that covers every area that uses it. When a new area starts to
@@ -67,7 +67,7 @@ readers are agents and people.
   alongside the agent guide. No source found in the research below keeps a
   separate end-user ontology, so this part has no precedent.
 - **Check.** A script can verify mechanically that every `ONTOLOGY.md` is
-  linked from the `CLAUDE.md` in its directory, and that no term is defined
+  linked from the `AGENTS.md` in its directory, and that no term is defined
   in two ontology files. It cannot judge placement or meaning.
 - **Pilot.** Start with two or three areas that already have strong plan
   ontologies (notifications, publications, chat). Measure whether later
@@ -86,7 +86,7 @@ single source file for the whole repository.
 What it makes possible:
 
 - **Placement is a field.** Each entry names the directory it applies to,
-  and the generator writes each `ONTOLOGY.md` and its `CLAUDE.md` link. A
+  and the generator writes each `ONTOLOGY.md` and its `AGENTS.md` link. A
   concept that moves up changes one field.
 - **Both audiences from one entry, where the entry allows it.** An entry can
   carry codebase text, box text, or both. This keeps the decision that the

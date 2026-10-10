@@ -1,5 +1,8 @@
 # PAI review — comparison substrate for Bee Box planning
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A review of Daniel Miessler's **Personal AI Infrastructure** (PAI), written to inform
 Bee Box planning. Checkout: `~/src/Personal_AI_Infrastructure`. The runtime under
 review is release v5.0.0; throughout these docs:

@@ -34,7 +34,7 @@ function run(boxesDir: string, ...args: string[]) {
 test("lists doc cards, excluding directory docs and resolved items", () => {
   const { boxesDir, feedbackDir } = fixture();
   fs.writeFileSync(path.join(feedbackDir, "agent-observation.doc.card"), "---\ntitle: Agent observation\n---\nBody\n");
-  fs.writeFileSync(path.join(feedbackDir, "CLAUDE.md"), "Directory guidance\n");
+  fs.writeFileSync(path.join(feedbackDir, "AGENTS.md"), "Directory guidance\n");
   fs.mkdirSync(path.join(feedbackDir, "resolved"));
   fs.writeFileSync(path.join(feedbackDir, "resolved", "done.doc.card"), "Done\n");
 

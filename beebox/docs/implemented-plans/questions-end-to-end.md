@@ -6,6 +6,9 @@ issues: []
 ---
 # Questions, end-to-end
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Redesign of the questions subsystem so that it does the job it exists for:
 the box asks the boxholder things it cannot decide alone, the boxholder
 answers with minimal friction, the answer both acts and **teaches** — every

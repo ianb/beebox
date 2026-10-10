@@ -6,6 +6,9 @@ issues: []
 ---
 # Courseware Phase 1 — the course: cards, rules, and the authoring skill
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **⚠ One stale citation** (full-embrace-annex, 2026-09-14): the reference
 > below to `asset-manifest-scan.ts:90` points at a deleted file. Asset manifests
 > are gone; git-annex is the only asset scheme. The courseware content is

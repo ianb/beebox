@@ -5,7 +5,7 @@
  *
  * Stored as YAML keyed by box basename → audit id → entries (oldest first).
  * Each entry stamps the date and both git commits that determine the size: the
- * box's own HEAD (its CLAUDE.md and box-side docs) and the monorepo HEAD (the
+ * box's own HEAD (its AGENTS.md and box-side docs) and the monorepo HEAD (the
  * system prompt, agent-guide generator, and tool schemas). Uncommitted edits
  * to either don't move the hash — commit the trim, then re-run.
  */

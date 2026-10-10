@@ -109,7 +109,7 @@ export function buildQueryOptions(
       preset: "claude_code" as const,
       append: opts.systemPrompt,
     },
-    // The box's project settings (CLAUDE.md, rules, skills, hooks); never the
+    // The box's project settings (AGENTS.md, rules, skills, hooks); never the
     // host user's ~/.claude settings or the host account's claude.ai connectors.
     ...boxSessionSettings({ boxRoot: opts.cwd, loadBoxContext: true }),
   };

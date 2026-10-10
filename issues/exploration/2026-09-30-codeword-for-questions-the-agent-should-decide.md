@@ -24,7 +24,7 @@ The developer wants one short reply that means all of this:
 ## The missing principles
 
 There is no written rule for what deserves a question. Fragments exist:
-the root `CLAUDE.md` asks for confirmation before hard-to-reverse or
+the root `AGENTS.md` asks for confirmation before hard-to-reverse or
 outward-facing actions, the finish skill says not to ask "close-out vs
 checkpoint" because the answer changes nothing, and `beebox/AGENTS.md` says
 to ask at a login wall. Nothing states the general test. A first draft to
@@ -52,7 +52,7 @@ The codeword is the feedback loop that grows this list from real misses.
   say what it chose; then name the kind of question it should not have
   asked; then propose the principle change (a line in a named file) and make
   it, or file it, per the developer's standing permission for docs edits.
-- **Where the principles live.** The root `CLAUDE.md` (every session reads
+- **Where the principles live.** The root `AGENTS.md` (every session reads
   it), a dedicated doc it links to, or the agent's memory directory. Memory
   is per-agent and invisible to Codex sessions; a tracked doc is shared.
 - **Scope.** Dev-repo sessions first. Box agents ask the boxholder questions

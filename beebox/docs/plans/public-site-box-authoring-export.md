@@ -68,7 +68,7 @@ only the reviewed public cards and a readable editorial history.
   (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
   The authoring box currently has an empty `_config/schemas/` legacy directory; the
   new schema must use its `src/schemas/` location.
-- **The box workbench spaces now exist.** The authoring box's `CLAUDE.md` defines
+- **The box workbench spaces now exist.** The authoring box's `AGENTS.md` defines
   `_publish/public-site/` as export staging and
   `_content/public-site-work/` as private drafts and source material. This
   plan turns that convention into a tested export operation.
@@ -207,11 +207,11 @@ only the expected `site/cards/` diff. No automatic commit or deployment.
 **Status: partial.** The repository-side authoring guide is done —
 `site/card-authoring.md`'s "Authoring in a box workbench" section and
 `site/AGENTS.md` document the bootstrap/export loop and the `box-export`
-report shape. The box-side `CLAUDE.md` guidance is reported done in the
+report shape. The box-side `AGENTS.md` guidance is reported done in the
 companion authoring box, not verifiable from this repository's diff.
 
 **What:** Document the bootstrap/edit/export loop in the public-site authoring
-guide and the authoring box's `CLAUDE.md`. Add a short export report that names the box,
+guide and the authoring box's `AGENTS.md`. Add a short export report that names the box,
 source staging root, destination root, cards changed, and validation failures.
 
 **Why this needs to change:** The workflow spans two repositories and two
@@ -335,7 +335,7 @@ until discovery, path checks, card validation, and attachment validation pass.
 ## Knowledge audits
 
 None for the first chunk. The box-specific guidance lives in the authoring box's
-CLAUDE.md and is validated through the box's normal schema/document generation;
+AGENTS.md and is validated through the box's normal schema/document generation;
 adding private workbench vocabulary to the repository-wide audit suite would
 make the audit less portable. If the workflow becomes a durable box feature,
 that feature's plan should add a targeted audit.

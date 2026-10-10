@@ -7,6 +7,9 @@ issues:
 ---
 # bbx is the box agent's surface; everything else moves under `bbx engine`
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 `bbx` registers 61 top-level verbs. A box agent reads all of them, and the list
 is the agent's mental model of what a box is. Some of those verbs cannot be run
 by an agent at all: they start daemons, edit a machine-wide manifest, drive a

@@ -7,6 +7,8 @@ discovered-in: worktree-mobile-token-handshake — cross-model review of the bbx
 resolution: wontfix
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Resolved 2026-08-06 — option 3 (accept + say so), boxholder call.** Per-box
 > browser isolation (options 1/2) is a NON-GOAL, not a gap: a beebox instance
 > is single-operator — every box on an origin belongs to one operator running content
