@@ -3,5 +3,7 @@
     "enabled": "yes",
     "diarized": false
   },
-  "expected": null
+  "expected": {
+    "diarized": false
+  }
 }

@@ -211,8 +211,10 @@ await box.cleanup();
 ## Voice, typed, and external thoughts retain their input source
 
 `origin` says how the thought was entered. A `voice` thought is delivered as
-`<speech source="box-screen">`, a `typed` one as `<typed source="box-screen">`.
-An external input requires a source and is framed as `<external-input>`.
+`<speech source="box-screen" stt="live">` — it is the phone's live transcript,
+since no recording reaches the box for an HQ pass — and a `typed` one as
+`<typed source="box-screen">`. An external input requires a source and is framed
+as `<external-input source="…">`.
 A client built before `origin` existed sends none, and its thought is typed.
 The record keeps the origin, so a thought that waited for the person's choice
 is delivered by `choose` in the same wrapper.
@@ -231,9 +233,9 @@ await unsure.choose({ id: external.id, candidateId: "c1" });
 const retriedExternal = await unsure.submit({ id: external.id, message: external.message });
 runtime.sends.map((send) => send.message)
 => [
-  "<speech source=\"box-screen\">Call the plumber</speech>",
+  "<speech source=\"box-screen\" stt=\"live\">Call the plumber</speech>",
   "<typed source=\"box-screen\">Buy stamps</typed>",
-  "<speech source=\"box-screen\">Something about the beds</speech>",
+  "<speech source=\"box-screen\" stt=\"live\">Something about the beds</speech>",
   "<external-input source=\"apple-app-intents\">Renew my passport</external-input>",
 ]
 retriedExternal.state

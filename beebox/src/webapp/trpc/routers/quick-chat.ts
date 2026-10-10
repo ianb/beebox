@@ -54,10 +54,14 @@ function quickChatChat(ctx: TrpcContext, channel: ChatChannel | undefined): Quic
       // 410 is a deleted or deleting chat; 404 an exact session that no longer resumes. Both are gone.
       if (!resolved.ok) return resolved.code === "CHAT_SESSION_UNAVAILABLE" || resolved.status === 404 ? { kind: "gone" } : { kind: "failed", error: resolved.error };
       // Framed as the composer frames a message, so the sender is attributed, and tagged with how it arrived.
+      // A dictated thought is the phone's live transcript: no recording reaches the box for an HQ pass,
+      // so it carries the live marker (docs/plans/hq-always.md).
       const tag = origin === "voice" ? "speech" : "typed";
       const framedMessage = origin === "external"
         ? `<external-input source="${source}">${message}</external-input>`
-        : `<${tag} source="box-screen">${message}</${tag}>`;
+        : origin === "voice"
+          ? `<speech source="box-screen" stt="live">${message}</speech>`
+          : `<${tag} source="box-screen">${message}</${tag}>`;
       return deliveryOutcome(await runtime.sendUserMessage({ target: resolved.target, message: framedMessage, messageId, user: ctx.user, channel }));
     },
   };

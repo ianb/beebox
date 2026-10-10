@@ -5596,6 +5596,7 @@ tests:
   # passes, 0 reads, 0 searches, 54k ctx — unaffected by the change.
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 0 reads, 0 searches, 50k ctx.
+  # Status (2026-10-09, hq-always): retranscribe clause now keys on `stt="live"`; 1/1 pass, 0 reads, 0 searches, 40k ctx.
   - id: chat-last-audio-when
     prompt: >
       My dictated messages sometimes come out mangled. If a transcription
@@ -7070,10 +7071,13 @@ tests:
   # one retranscribe-clause exception to the prompt. 1/1 passes, 0 reads, 0
   # searches, 54k ctx — the new clause didn't disturb this audit's existing
   # `stt="deepgram"` scenario.
+  #
+  # Status (2026-10-09, hq-always): wrapper is now `stt="live"` (marks live
+  # text; HQ is unmarked). 1/1 pass, 0 reads, 0 searches, 40k ctx.
 
   - id: chat-unsure-word-semantics
     prompt: >
-      A voice message arrives as `<speech stt="deepgram"
+      A voice message arrives as `<speech stt="live"
       message-id="msg-7f2a">I <unsure>can</unsure> make the 3 PM meeting
       tomorrow</speech>` and the user is asking you to update their
       schedule. What does the markup around "can" tell you, and what
@@ -7097,10 +7101,43 @@ tests:
     notes: >
       Also worth watching in the transcript: the agent should know absence of
       marks is not verification (confident mishearings get no mark) and that
-      messages without stt= carry no confidence data at all — still true now
-      that `stt="hq"` exists (docs/implemented-plans/hq-dictation-switch.md): an HQ pass
-      carries no per-word confidence either, so an hq-stamped message has no
-      marks for the same "no data" reason, not a different one.
+      a message without marks may simply have no confidence data. Marks only
+      ever appear on live text (`stt="live"`, docs/plans/hq-always.md): the HQ
+      pass every other voice message gets carries no per-word confidence.
+
+  # HQ is every voice message's pass (docs/plans/hq-always.md); `stt="live"`
+  # marks the exception, and `heard="live"` on a send tag marks a command the
+  # HQ text did not reproduce. The failure this guards against is the agent
+  # treating the trailing command words as content, or retranscribing an
+  # unmarked (already HQ) message.
+  #
+  # Status (2026-10-09): 1/1 pass, 0 reads, 0 searches, 40k ctx. Read the
+  # unmarked message as HQ, `stt="live"` as the only retranscribable kind,
+  # chose not to retranscribe "bye milk" (context settles it), and dropped
+  # "sent the message" as the misheard command.
+  - id: chat-live-transcript-marker
+    prompt: >
+      Two voice messages arrive. First: `<speech message-id="msg-1">Move the
+      dentist to Thursday at four.</speech>`. Second: `<speech stt="live"
+      message-id="msg-2">Add bye milk to the list sent the message <send-message
+      phrase="send the message" heard="live" /></speech>`. What does each
+      wrapper tell you about how the text was transcribed, which one (if
+      either) is worth retranscribing, and what do you do with "sent the
+      message" in the second?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Reads the unmarked message as already HQ (retranscribing it adds
+      nothing) and `stt="live"` as rougher live text that retranscribe may
+      improve, targeted with `--message msg-2`. Treats "sent the message" as
+      the send command transcribed in other words, not content: the list item
+      is "milk" ("bye" is a mishearing of "buy"), and "sent the message" is not
+      added to the list.
+    correct_matches:
+      - "msg-2"
+      - "retranscrib"
+    response_not_contains: ["--message msg-1"]
+    tags: [chat, voice, transcription]
 
   # === Secrets (machine-level store) ===
   #
@@ -7539,10 +7576,12 @@ tests:
   # Resilient voice recording (docs/plans/resilient-voice-recording.md):
   # long diarized recordings are transcribed in parts with fresh speaker
   # letters per part.
+  # Status (2026-10-09, hq-always): wrapper lost `stt="hq"` (HQ is unmarked
+  # now); 1/1 pass, 1 read, 0 searches, 40k ctx.
   - id: voice-diarized-parts
     prompt: |
       <chat-app narration="off" prose="on" time="2026-09-10T18:20:00Z"/>
-      <speech stt="hq" stt-service="mai-diarized" diarized="1" message-id="rec-kitchen-1" user="Priya Marlowe">— part 1 of 2 —
+      <speech stt-service="mai-diarized" diarized="1" message-id="rec-kitchen-1" user="Priya Marlowe">— part 1 of 2 —
       Speaker 1A: I think we should repaint the kitchen before the holidays.
       Speaker 2A: Fine, but not green again.
 

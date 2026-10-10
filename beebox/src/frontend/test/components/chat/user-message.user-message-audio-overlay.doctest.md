@@ -161,6 +161,27 @@ render([voiceEntry("msg-realtime", "fast words")]).includes('aria-label="HQ tran
 => false
 ```
 
+Current messages mark the exception instead (docs/plans/hq-always.md): HQ
+text carries only `stt-service`, and live text carries `stt="live"`, which
+renders the live-text status line. The legacy wrappers above still read the
+same way.
+
+```ts
+function wrapped(attrs: string, id: string): SessionEntry {
+  return { uuid: id, type: "user", timestamp: "2026-10-09T12:00:00Z", content: [{ type: "text", text: `<speech ${attrs} message-id="${id}">words</speech>` }] };
+}
+const currentHq = wrapped('stt-service="apple-speech-transcriber"', "msg-cur-hq");
+const currentLive = wrapped('stt="live"', "msg-cur-live");
+JSON.stringify([resolveTranscriptionProvenance(currentHq), resolveTranscriptionProvenance(currentLive)])
+=> [{"kind":"hq","service":"apple-speech-transcriber"},{"kind":"realtime"}]
+
+render([currentLive]).includes("Live text — HQ transcript unavailable")
+=> true
+
+render([currentHq]).includes("Live text — HQ transcript unavailable")
+=> false
+```
+
 ## Full render: a matching retranscription swaps the displayed text and shows a badge
 
 ```ts
