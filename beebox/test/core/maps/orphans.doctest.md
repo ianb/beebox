@@ -103,6 +103,34 @@ old: CLAUDE=false AGENTS=true
 work
 ```
 
+In a converted box the instruction file is `AGENTS.md`, pruned the same way: a
+file that held only the import is deleted, and one with other content keeps it.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("_content/chat/MAP.md", "# Map: store/chat\n");
+await box.write("_content/chat/AGENTS.md", "@MAP.md\n");
+await box.write("solo/only/a.md", "a");
+await box.write("solo/MAP.md", "# Map: solo\n");
+await box.write("solo/AGENTS.md", "@MAP.md\n\nKeep solo notes short.\n");
+box.commitAll("seed");
+const head = await getHead(box.root);
+await saveMapState({ boxRoot: box.root, state: { maps: {
+  "solo": { asOf: head, generatedAt: "t" },
+  "work": { asOf: head, generatedAt: "t" },
+} } });
+box.commitAll("state");
+
+const scan = await findOrphanMaps(box.root);
+await pruneOrphanMaps(box.root, scan.ok ? scan.dirs : []);
+
+print(`chat: MAP=${await exists(box, "_content/chat/MAP.md")} AGENTS=${await exists(box, "_content/chat/AGENTS.md")}`);
+print(`solo: MAP=${await exists(box, "solo/MAP.md")} AGENTS=${JSON.stringify(await box.read("solo/AGENTS.md"))}`);
+=>
+chat: MAP=false AGENTS=false
+solo: MAP=false AGENTS="\nKeep solo notes short.\n"
+```
+
 After the engine commits the step, nothing is left to prune:
 
 ```ts continue
