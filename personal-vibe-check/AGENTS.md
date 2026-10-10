@@ -16,7 +16,7 @@ If you landed in this repo but the task is actually to **install or configure th
 Relevant files to read, in priority order:
 
 - [`install.md`](./install.md) — step-by-step instructions for installing the preset into a downstream project (preferred `vibe-init` path, manual path, hook setup, verification, common failure modes).
-- [`conventions.md`](./conventions.md) — the prose coding rules that get copied into the downstream project's `CLAUDE.md`.
+- [`conventions.md`](./conventions.md) — the prose coding rules that `vibe-init` imports into the downstream project's instruction file (an existing `CLAUDE.md`, else `AGENTS.md`).
 - [`README.md`](./README.md) — human-oriented overview of what's bundled and why.
 
 If a rule in this package isn't behaving the way you want for a downstream project, do not edit this repo to fix it — either disable the rule in the consuming project's eslint config, or (if the rule is wrong in general) return here under the **Changing the library** workflow.
@@ -35,7 +35,7 @@ Everything below is for contributors modifying this repo (adding rules, adjustin
 - `plugin.ts` — ESLint plugin bundling this repo's own rules. Every rule in `rules/` must be registered here.
 - `rules/<rule-name>.ts` — custom rule implementations. One rule per file, typed as `Rule.RuleModule`.
 - `rules/test/<rule-name>.test.ts` — tests for each rule. **Required**, not optional.
-- `conventions.md` — downstream-facing conventions. Consuming projects paste relevant sections into their own CLAUDE.md / AGENTS.md.
+- `conventions.md` — downstream-facing conventions. Consuming projects paste relevant sections into their own AGENTS.md (or CLAUDE.md).
 - `tsconfig.base.json`, `prettier.config.ts`, `knip-base.json` — other shared configs.
 - `types/plugin-shims.d.ts` — ambient declarations for the upstream ESLint plugins that ship no types. Package-internal; consumers never see them.
 
