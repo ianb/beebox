@@ -1,20 +1,24 @@
 /**
  * Builds React Flow nodes + edges from parsed concepts, laid out top-down with
  * dagre (the `prerequisite`/relation edges drive the layering; dagre breaks the
- * deliberate `complements` cycles automatically). Imports the graph libs, so it
- * lives in the code-split chunk with ConceptGraph — never reached from the main
- * bundle.
+ * deliberate `complements` cycles automatically).
  */
 
 import dagre from "dagre";
 import type { Edge, Node } from "@xyflow/react";
-import { EDGE_META, type ParsedConcept } from "./concept-data";
+import { EDGE_META, type ParsedConcept } from "../concept-data.js";
 
 const NODE_W = 210;
 const NODE_H = 66;
 
+/**
+ * The one node type this graph uses. Typing `data` here is what lets
+ * `ConceptNode` read the concept back without a cast.
+ */
+export type ConceptFlowNode = Node<{ concept: ParsedConcept }, "concept">;
+
 export interface BuiltGraph {
-  nodes: Node[];
+  nodes: ConceptFlowNode[];
   edges: Edge[];
 }
 
@@ -29,14 +33,14 @@ export function buildGraph(concepts: ParsedConcept[]): BuiltGraph {
   const edges: Edge[] = [];
   for (const c of concepts) {
     for (const rel of c.related) {
-      if (!ids.has(rel.to)) continue; // dangling edge — card-lint warns separately
+      if (!ids.has(rel.to)) continue; // dangling edge: card-lint warns separately
       g.setEdge(c.id, rel.to);
       const meta = EDGE_META[rel.kind];
       edges.push({
         id: `${c.id}__${rel.kind}__${rel.to}`,
         source: c.id,
         target: rel.to,
-        className: meta.textClass,
+        className: meta.className,
         style: {
           stroke: "currentColor",
           strokeWidth: 1.5,
@@ -48,7 +52,7 @@ export function buildGraph(concepts: ParsedConcept[]): BuiltGraph {
 
   dagre.layout(g);
 
-  const nodes: Node[] = concepts.map((c) => {
+  const nodes: ConceptFlowNode[] = concepts.map((c) => {
     const laid = g.node(c.id);
     return {
       id: c.id,

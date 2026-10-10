@@ -70,11 +70,6 @@ import { LandmarkSchema } from "./schemas/landmark.js";
 import { NavSchema } from "./schemas/nav.js";
 import { ViewSchema } from "./schemas/view.js";
 import { FigureSchema } from "./schemas/figure.js";
-import { ConceptMapSchema } from "./schemas/concept-map.js";
-import { CourseSchema } from "./schemas/course.js";
-import { ExpositionPlanSchema } from "./schemas/exposition-plan.js";
-import { LessonPlanSchema } from "./schemas/lesson-plan.js";
-import { ProgressSchema } from "./schemas/progress.js";
 import { TabArrangementSchema } from "./schemas/tab-arrangement.js";
 import { BrowserTaskSchema } from "./schemas/browser-task.js";
 import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } from "./templates-registry.js";
@@ -122,12 +117,6 @@ export const cardSchemas = defineRegistry<CardSchema>({
     ScheduledScriptSchema,
     JudgmentSchema,
     EmailOutboundSchema,
-    // authored — the course family
-    CourseSchema,
-    ConceptMapSchema,
-    ExpositionPlanSchema,
-    LessonPlanSchema,
-    ProgressSchema,
     FigureSchema,
     // synced & captured
     EmailThreadSchema,

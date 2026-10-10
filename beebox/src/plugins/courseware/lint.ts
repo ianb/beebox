@@ -1,14 +1,15 @@
 /**
- * Box-aware integrity check for cross-card concept-map node references. Two
- * courseware card types name concept-map nodes by their `id`, and those ids must
- * exist in the course's concept-map:
+ * The courseware plugin's `lintCards` hook: box-aware integrity checks the
+ * engine runs for every card when the plugin is active. Two card types name
+ * concept-map nodes by their `id`, and those ids must exist in the course's
+ * concept-map:
  *
  *   - **progress** — `entries[].node`
  *   - **lesson-plan** — `segments[].concepts[]`
  *
  * This is genuinely cross-card, so it can't live on a self-contained schema
  * `validate` hook; and it's type-specific, so it doesn't belong in the generic
- * ref-existence walk. `card-lint.ts` invokes the right adapter by type.
+ * ref-existence walk.
  *
  * The two types resolve the concept-map DIFFERENTLY:
  *   - progress walks its `course` ref → the course's `concept-map` ref;
@@ -22,27 +23,28 @@
  * id the resolved map doesn't define. If the map doesn't resolve, both stay
  * silent (the generic broken-ref walk already reports the missing link). The
  * lesson-plan adapter additionally emits the self-contained deferral warning (a
- * `material` segment with neither a card nor `planned: true`).
+ * `material` segment with neither a card nor `planned: true`), and a
+ * concept-map card gets the orphan-node shape warnings.
  *
- * Cards' frontmatter YAML is read directly (not via the schema modules) to keep
- * the lint layer decoupled from specific card types.
+ * Box access goes through the `LintContext` the engine passes in: refs resolve
+ * with `ctx.resolveContainedRef`, siblings come from `ctx.listSiblingCards`, so
+ * this module imports nothing from the engine. Cards' frontmatter YAML is read
+ * directly (not via the schema modules).
  */
 
-import { readdir, readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { splitCardContent, type LintIssue } from "../../../exports/cards.js";
-import { parse as parseYaml } from "yaml";
-import { resolveContainedRef } from "../../ref-exists.js";
-import { realpathContained } from "../../../lib/box-containment.js";
-import { isRecord } from "../../card-io.js";
+import { readFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { splitCardContent, type LintContext, type LintIssue } from "../../exports/cards.js";
+import { parseYaml } from "../../exports/schema.js";
+import { conceptMapShapeWarnings } from "./concept-map.js";
 
-export interface NodeRefLintInput {
+interface LintInput {
   /** Absolute path of the card being linted. */
   path: string;
+  /** Its filename type. */
+  type: string;
   /** Its parsed frontmatter fields. */
   fields: Record<string, unknown>;
-  /** Box root, for resolving box-root-absolute (`/…`) refs. */
-  boxRoot: string;
 }
 
 /** A concept-map node reference found in a card, with where it sits. */
@@ -52,17 +54,31 @@ interface NodeRef {
   path: string;
 }
 
+/** Dispatch by default type name; a renamed type gets no check (README, Conventions). */
+export async function lintCards(input: LintInput, ctx: LintContext): Promise<LintIssue[]> {
+  switch (input.type) {
+    case "progress":
+      return lintProgressNodeRefs(input, ctx);
+    case "lesson-plan":
+      return lintLessonPlanNodeRefs(input, ctx);
+    case "concept-map":
+      return conceptMapShapeWarnings(input.fields);
+    default:
+      return [];
+  }
+}
+
 /**
  * Warn for each progress entry whose `node` is not a concept-map node id. Walks
  * progress → `course` ref → course's `concept-map` ref → node ids. Silent if any
  * hop is missing/unreadable, or there are no entries.
  */
-export async function lintProgressNodeRefs(input: NodeRefLintInput): Promise<LintIssue[]> {
-  const { path, fields, boxRoot } = input;
+async function lintProgressNodeRefs(input: LintInput, ctx: LintContext): Promise<LintIssue[]> {
+  const { path, fields } = input;
   const refs = progressNodeRefs(fields["entries"]);
   if (refs.length === 0) return [];
 
-  const nodeIds = await conceptMapViaCourse({ fromPath: path, courseRef: refValue(fields["course"]), boxRoot });
+  const nodeIds = await conceptMapViaCourse({ fromPath: path, courseRef: refValue(fields["course"]), ctx });
   if (nodeIds === null) return [];
   return checkNodeRefs({ nodeIds, refs });
 }
@@ -74,14 +90,14 @@ export async function lintProgressNodeRefs(input: NodeRefLintInput): Promise<Lin
  * deferral check is self-contained; the node check resolves the sibling map and
  * stays silent if it's missing.
  */
-export async function lintLessonPlanNodeRefs(input: NodeRefLintInput): Promise<LintIssue[]> {
+async function lintLessonPlanNodeRefs(input: LintInput, ctx: LintContext): Promise<LintIssue[]> {
   const { path, fields } = input;
   const segments = Array.isArray(fields["segments"]) ? fields["segments"] : [];
   const issues = lessonPlanDeferralWarnings(segments);
 
   const refs = lessonPlanNodeRefs(segments);
   if (refs.length > 0) {
-    const nodeIds = await conceptMapViaSibling(path);
+    const nodeIds = await conceptMapViaSibling(path, ctx);
     if (nodeIds !== null) issues.push(...checkNodeRefs({ nodeIds, refs }));
   }
   return issues;
@@ -107,37 +123,19 @@ function checkNodeRefs(input: { nodeIds: Set<string>; refs: NodeRef[] }): LintIs
 async function conceptMapViaCourse(input: {
   fromPath: string;
   courseRef: string | null;
-  boxRoot: string;
+  ctx: LintContext;
 }): Promise<Set<string> | null> {
-  const { fromPath, courseRef, boxRoot } = input;
+  const { fromPath, courseRef, ctx } = input;
   if (courseRef === null) return null;
-  const containedCourse = resolveContainedRef({ ref: courseRef, fromPath, boxRoot });
-  if (containedCourse === null) {
-    console.warn(`conceptMapViaCourse: course ref "${courseRef}" in ${fromPath} escapes the box`);
-    return null;
-  }
-  const safeCourse = await realpathContained(boxRoot, containedCourse);
-  if (safeCourse === null) {
-    console.warn(`conceptMapViaCourse: course ref "${courseRef}" in ${fromPath} resolves outside the box via symlink`);
-    return null;
-  }
-  const coursePath = join(boxRoot, safeCourse);
+  const coursePath = await ctx.resolveContainedRef(fromPath, courseRef);
+  if (coursePath === null) return null;
   const courseFields = await readCardYaml(coursePath);
   if (courseFields === null) return null;
 
   const mapRef = refValue(courseFields["concept-map"]);
   if (mapRef === null) return null;
-  const containedMap = resolveContainedRef({ ref: mapRef, fromPath: coursePath, boxRoot });
-  if (containedMap === null) {
-    console.warn(`conceptMapViaCourse: concept-map ref "${mapRef}" in ${coursePath} escapes the box`);
-    return null;
-  }
-  const safeMap = await realpathContained(boxRoot, containedMap);
-  if (safeMap === null) {
-    console.warn(`conceptMapViaCourse: concept-map ref "${mapRef}" in ${coursePath} resolves outside the box via symlink`);
-    return null;
-  }
-  const mapPath = join(boxRoot, safeMap);
+  const mapPath = await ctx.resolveContainedRef(coursePath, mapRef);
+  if (mapPath === null) return null;
   const mapFields = await readCardYaml(mapPath);
   if (mapFields === null) return null;
 
@@ -145,17 +143,11 @@ async function conceptMapViaCourse(input: {
 }
 
 /** Resolve the sibling concept-map's node ids: the `*.concept-map.card` in the card's own dir. */
-async function conceptMapViaSibling(fromPath: string): Promise<Set<string> | null> {
-  const dir = dirname(fromPath);
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch (_e) {
-    return null;
-  }
-  const mapFile = entries.find(f => f.endsWith(".concept-map.card"));
+async function conceptMapViaSibling(fromPath: string, ctx: LintContext): Promise<Set<string> | null> {
+  const siblings = await ctx.listSiblingCards(dirname(fromPath));
+  const mapFile = siblings.find((f) => f.endsWith(".concept-map.card"));
   if (mapFile === undefined) return null;
-  const mapFields = await readCardYaml(join(dir, mapFile));
+  const mapFields = await readCardYaml(mapFile);
   if (mapFields === null) return null;
   return conceptNodeIds(mapFields["concepts"]);
 }
@@ -228,6 +220,7 @@ async function readCardYaml(absPath: string): Promise<Record<string, unknown> | 
   try {
     content = await readFile(absPath, "utf8");
   } catch (_e) {
+    /* ignore: a missing or unreadable card is the generic broken-ref walk's to report */
     return null;
   }
   const split = splitCardContent(content);
@@ -236,8 +229,13 @@ async function readCardYaml(absPath: string): Promise<Record<string, unknown> | 
   try {
     fm = parseYaml(split.frontmatterText);
   } catch (_e) {
+    /* ignore: malformed frontmatter is reported when that card itself is linted */
     return null;
   }
-  if (!isRecord(fm)) return null;
-  return fm;
+  return isRecord(fm) ? fm : null;
+}
+
+/** Plain string-keyed object guard (the engine's `isRecord` is not on the public surface). */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }

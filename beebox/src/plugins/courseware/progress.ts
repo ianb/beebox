@@ -1,5 +1,6 @@
 /**
- * Progress card schema — a per-learner, evidence-backed record of understanding.
+ * Progress base (the courseware plugin) — a per-learner, evidence-backed record of
+ * understanding. A box completes it as `cardSchema("progress", courseware.schemas.progress)`.
  *
  * Tracked SEPARATELY from a course's content (its own card; may live in another
  * tree), so one learner's progress can be kept apart from shared material. Each
@@ -13,8 +14,8 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
-import { z } from "zod";
+import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { z } from "../../exports/schema.js";
 
 /** Qualitative mastery level for a node — judged against the course's success-criteria. */
 const NodeLevel = z.enum(["unfamiliar", "partial", "working", "solid"]);
@@ -47,7 +48,7 @@ const progressFields = {
   body: body(z.string()),
 };
 
-export const ProgressSchema: CardSchema = cardSchema("progress", {
+export const progressBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
   brief: "A learner's evidence of understanding",
   description: "A per-learner, evidence-backed record of understanding against a course's concept-map nodes",
   category: "authored",
@@ -88,27 +89,4 @@ entries:
 ## Session log
 
 The running narrative of each sitting — what was covered, notable utterances, ratings changed and why — lives as a plain file in this card's \`<basename>.attach/\` scope, **not** in the card body. The body is a short running summary.`,
-});
-
-/**
- * Starter progress card for \`bbx create\`: one example entry showing the required
- * evidence contract, plus a summary body. The agent sets the \`course\` ref and
- * seeds real entries from the probe.
- */
-export function createProgressTemplate(options: { title?: string | undefined }): string {
-  const fields: Record<string, unknown> = {
-    entries: [
-      {
-        node: "some-concept-id",
-        level: "partial",
-        basis: "observed",
-        evidence: ["What the learner said or did that supports this level."],
-      },
-    ],
-  };
-  if (options.title !== undefined && options.title !== "") {
-    fields["title"] = options.title;
-  }
-  const bodyText = "A short running summary of where the learner is. The blow-by-blow session log is an attachment.\n";
-  return renderFrontmatterBlock(fields, bodyText);
-}
+};

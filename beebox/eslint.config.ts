@@ -5,6 +5,7 @@
 // how this config ended up lying about our style for months. If a rule is
 // genuinely wrong, raise it — don't quietly switch it off. code-style.md
 // ("Lint rule suppression") has the rules and that history.
+import { builtinModules } from "node:module";
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 
 // Session creation has one owner. Four call sites used to reach
@@ -43,6 +44,46 @@ const noDirectCreateNew = {
 // alias without opening the alias for anything else.
 const LIST_ENTRY_GLOB = "src/schemas/*/list-entry.tsx";
 const LIST_ENTRY_IMPORT_PATTERNS = ["**/list-entry", "**/list-entry.js", "**/list-entry.tsx"];
+// A plugin (`src/plugins/<name>/`, docs/plans/plugins.md) is a library a box
+// completes through stubs, published as `beebox/plugins/<name>`. Its files
+// import only `src/exports/*`, `src/cards/plugin-definition.ts`, their own
+// directory, and packages — the editor-side mirror of the `plugin-imports`
+// layout rule (`src/dev/layout/check/rules/plugin-imports.ts`), which is the
+// enforcement (it resolves paths; this regex matches the written specifier
+// of a file directly in the plugin directory: any `../` import except
+// `../../exports/<module>` and `../../cards/plugin-definition.js`. A
+// gitignore `group` cannot say this, since `../*` matches `..` and an
+// excluded directory's children cannot be re-included). `view.tsx` is the
+// plugin's browser view module: frontend code in a backend tree, fenced like
+// a list component (React profile, frontend tsconfig), and it may not import
+// a Node builtin.
+const PLUGIN_GLOB = "src/plugins/**/*.{ts,tsx}";
+const PLUGIN_VIEW_GLOB = "src/plugins/*/view.tsx";
+const PLUGIN_IMPORT_MESSAGE =
+  "A plugin file imports only beebox/src/exports/*, src/cards/plugin-definition.ts, its own directory, and packages (layout rule plugin-imports).";
+/**
+ * A relative import that climbs out of the plugin directory (`depth` `../`
+ * segments from a file that deep inside it) is allowed only when it lands on
+ * the public export surface or the plugin contract. Shallower climbs stay
+ * inside the plugin and are fine.
+ */
+function pluginImportRegex(depth: number): string {
+  return String.raw`^(?:\.\./){${String(depth)}}(?!\.\./(?:exports/[^/]+|cards/plugin-definition\.js)$)`;
+}
+/** Files directly in `src/plugins/<name>/`, one level down, two levels down. */
+const PLUGIN_DEPTH_GLOBS: ReadonlyArray<{ files: string[]; depth: number }> = [
+  { files: ["src/plugins/*/*.{ts,tsx}"], depth: 1 },
+  { files: ["src/plugins/*/*/*.{ts,tsx}"], depth: 2 },
+  { files: ["src/plugins/*/*/*/*.{ts,tsx}"], depth: 3 },
+];
+function pluginImportPatterns(depth: number): Array<{ group?: string[]; regex?: string; message: string }> {
+  return [
+    { group: LIST_ENTRY_IMPORT_PATTERNS, message: PLUGIN_IMPORT_MESSAGE },
+    { regex: pluginImportRegex(depth), message: PLUGIN_IMPORT_MESSAGE },
+  ];
+}
+const PLUGIN_IMPORT_PATTERNS = pluginImportPatterns(1);
+const NODE_BUILTIN_PATTERNS = ["node:*", ...builtinModules.filter((name) => !name.startsWith("_"))];
 
 export default [
   // `roots` extends the reviewed ruleset to first-party tooling under scripts/
@@ -204,6 +245,48 @@ export default [
               group: LIST_ENTRY_IMPORT_PATTERNS,
               message:
                 "A *.list-entry.tsx file is frontend code: React, the DOM, and the frontend's own modules. Only src/frontend/src/file-types/builtins.tsx imports one.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // The React profile and the frontend program for plugin view modules (see
+  // PLUGIN_VIEW_GLOB above), the same fencing list components get.
+  ...vibeCheck({ react: true }).map(config => ({ ...config, files: [PLUGIN_VIEW_GLOB] })),
+  {
+    files: [PLUGIN_VIEW_GLOB],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ["./src/frontend/tsconfig.json"],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    files: [PLUGIN_GLOB],
+    rules: { "no-restricted-imports": "off" },
+  },
+  ...PLUGIN_DEPTH_GLOBS.map(({ files, depth }) => ({
+    files,
+    rules: {
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: pluginImportPatterns(depth) }],
+    },
+  })),
+  {
+    // Repeated because this block REPLACES the rule for the view module.
+    files: [PLUGIN_VIEW_GLOB],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...PLUGIN_IMPORT_PATTERNS,
+            {
+              group: NODE_BUILTIN_PATTERNS,
+              message: "A plugin view.tsx is bundled for the browser; it may not import a Node builtin.",
             },
           ],
         },

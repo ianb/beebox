@@ -16,7 +16,7 @@ function skillFile(box, rel) {
 }
 ```
 
-It installs the managed skills and returns their names:
+It installs the managed skills and returns their names. A plugin's skill (courseware's, for one) is not among them: the engine mirrors it only while the plugin is active (`docs/plugins.md`):
 
 ```ts
 const box = await makeTmpBox();
@@ -25,7 +25,6 @@ written
 => [
   "beebox-system-feedback",
   "browser-task",
-  "build-course",
   "calendar",
   "drive",
   "email",
@@ -43,8 +42,8 @@ Each lands at `.claude/skills/<name>/SKILL.md` with well-formed frontmatter (the
 ```ts
 const box = await makeTmpBox();
 await generateSkills(box.root);
-const text = await readFile(skillFile(box, "build-course/SKILL.md"), "utf8");
-text.startsWith("---\nname: build-course\n") && text.includes("description:")
+const text = await readFile(skillFile(box, "calendar/SKILL.md"), "utf8");
+text.startsWith("---\nname: calendar\n") && text.includes("description:")
 => true
 ```
 

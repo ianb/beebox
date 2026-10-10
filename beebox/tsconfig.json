@@ -36,13 +36,20 @@
     // (see src/frontend/tsconfig.json's note on the same aliases).
     "paths": {
       "@shared/*": ["./src/shared/*"]
-    }
+    },
+    // `src/scripts/build-cli/build/bundle.ts` runs under plain `node` (native
+    // type stripping, which resolves `./x.ts` literally and never remaps
+    // `./x.js`), so it imports its TypeScript siblings with the `.ts`
+    // extension; tsc rewrites those to `.js` on emit.
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*"],
   // `src/schemas/*/list-entry.tsx` is a card type's LIST COMPONENT: frontend
   // code that lives beside its schema. It belongs to the frontend program (DOM
   // lib, JSX runtime, the frontend's own modules), not this one, and nothing
   // here may import it — see src/schemas/image/list-entry.tsx and
-  // eslint.config.ts.
-  "exclude": ["node_modules", "dist", "src/frontend", "src/schemas/*/list-entry.tsx"]
+  // eslint.config.ts. `src/plugins/*/view.tsx` is a plugin's browser view
+  // module, excluded for the same reason: the frontend program and
+  // tsconfig.declarations.json (which emits its `.d.ts`) cover it.
+  "exclude": ["node_modules", "dist", "src/frontend", "src/schemas/*/list-entry.tsx", "src/plugins/*/view.tsx"]
 }

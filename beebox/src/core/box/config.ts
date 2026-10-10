@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { getBoxDir } from "../../lib/paths/core.js";
+import { pluginNames } from "../../plugins.js";
 import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 import { ADDED_MODEL_LABEL_MAX, isOpenRouterModelId, type AddedModel } from "../../shared/chat-models.js";
@@ -95,6 +96,12 @@ export interface BoxConfig {
    * is nobody. A box a person actually uses must not set this.
    */
   agentBrowsing?: "owner";
+  /**
+   * The in-repo plugins this box has activated, by registry name
+   * (`src/plugins.ts`; `docs/plugins.md`). Missing means none. Read through
+   * {@link activePluginNames}, which rejects entries that name no plugin.
+   */
+  plugins?: string[];
 }
 
 /** Validated HQ-dictation default for newly created chats. */
@@ -208,6 +215,30 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   if (engine === undefined) return "claude";
   if (engine === "claude" || engine === "codex") return engine;
   throw new InvalidAgentEngineError(engine);
+}
+
+/**
+ * The active plugins: `plugins` entries that name a registry member, in config
+ * order, deduplicated. `invalid` carries every other entry (a non-string, an
+ * unknown name) so the caller can report it; a `plugins` value that is not an
+ * array is one invalid entry. Hand-edited JSON is the boundary here, so a bad
+ * entry disables that one plugin and nothing else.
+ */
+export async function activePluginNames(boxRoot: string): Promise<{ active: string[]; invalid: unknown[] }> {
+  const raw: unknown = (await loadBoxConfig(boxRoot)).plugins;
+  if (raw === undefined) return { active: [], invalid: [] };
+  if (!Array.isArray(raw)) return { active: [], invalid: [raw] };
+  const known = new Set(pluginNames());
+  const active: string[] = [];
+  const invalid: unknown[] = [];
+  for (const entry of raw) {
+    if (typeof entry === "string" && known.has(entry)) {
+      if (!active.includes(entry)) active.push(entry);
+    } else {
+      invalid.push(entry);
+    }
+  }
+  return { active, invalid };
 }
 
 /**
