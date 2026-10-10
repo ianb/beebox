@@ -50,22 +50,24 @@ deletions, like-for-like):
 | `extendSchema` helper | 110 | 100 |
 | Upgrade: new-engine whole-box validate step | 40 | 40 |
 | Courseware move (five schemas, skill, docs, lint): mostly moves | 600 | 200 |
+| Concept-map view into the plugin: ViewProps adapter, CSS inlining, dependency move, frontend renderer removal | 450 | 120 |
 | Drop exposition rules compiler; rewrite its instructions; legacy `rules` warning | 200 | 80 |
-| **Total** | **1,750** | **1,010** |
+| **Total** | **2,200** | **1,130** |
 
 Authored docs separately: `docs/plugins.md` authoring guide (~150 lines),
 courseware README and SKILL.md (~120, mostly moved from `skills-content.ts`),
 `extensibility.md` revision (~20).
 
-**BIG CHANGE.** Source plus tests is about 2,750 changed lines. About 600 of
+**BIG CHANGE.** Source plus tests is about 3,300 changed lines. Approved by the boxholder 2026-10-10 with the two decisions below. About 600 of
 that is courseware files moving with import rewrites, counted as deletions
 plus additions. The boxholder agreed the direction and the first slice on
 2026-10-09; this label asks for approval of the size. Slices 2 (scoped
 Markdoc tags, the view-stub path with recipes and the concept-map view,
 conventions enforcement) and 3 (connectors) are separate plans. Revised after
 the cross-model review ([plugins.review.md](plugins.review.md)): the
-concept-map view move and the harness-directory rename came out; the build
-pipeline, skill conflict handling, and the upgrade validate step went in.
+harness-directory rename came out; the build pipeline, skill conflict
+handling, and the upgrade validate step went in. The concept-map view move
+came out and went back in on the boxholder's decision.
 
 What the fuller design buys over the smallest fix: a box can hold a course
 type without the engine shipping it as always-on (principle 7: absence means
@@ -490,25 +492,44 @@ after extension.
 ### Track 5: courseware onto the mechanism
 
 **What.** Move `course`, `lesson-plan`, `exposition-plan`, `progress`,
-`concept-map`, the build-course skill, the node-refs lint, and the templates
-into `src/plugins/courseware/`. Drop the exposition rules compiler. The
-concept-map renderer stays in core for slice 1.
+`concept-map`, the concept-map view, the build-course skill, the node-refs
+lint, and the templates into `src/plugins/courseware/`. Drop the exposition
+rules compiler.
 
-**Why.** Courseware is content a box is about, not medium; it exercises the
-schema, skill, docs, and lint parts of the mechanism. Its one renderer takes
-`RendererProps`, imports private UI primitives and `@xyflow/react` with CSS,
-and the view compiler has no CSS path, so moving it is an adapter and a
-packaging change, not a move. That work belongs with recipes in slice 2,
-where the view-stub path is designed once for both.
+**Why.** Courseware is content a box is about, not medium; it exercises every
+part of the mechanism: schemas, a view, a skill, docs, a lint hook.
+**DECIDED (boxholder, 2026-10-10):** the concept-map view moves in slice 1.
+Its renderer takes `RendererProps`, imports private UI primitives and
+`@xyflow/react` with its stylesheet, and the view compiler has no CSS path,
+so the move is an adapter and a packaging change:
+
+- `src/plugins/courseware/view.tsx` exports a `ViewProps` component. It
+  reads the anchor concept-map card from `ViewProps`, renders the body with
+  the `Markdown` widget, and replaces the private `Text`, `Card`, `Hint` and
+  `cn` imports with plain elements and its own class names. `ViewProps` is
+  exported as a type from `beebox/view-widgets` (add to
+  `src/exports/view-widgets.d.ts` and the ambient twin).
+- CSS: the plugin view bundle inlines imported stylesheets as a
+  `<style>` element appended once at module load (an esbuild loader plugin
+  in `bundle.ts`), so the stub's compiled module is self-contained and the
+  view compiler needs no CSS path.
+- Dependencies: `@xyflow/react` and `dagre` move from
+  `src/frontend/package.json` to `beebox/package.json` devDependencies; they
+  are bundled into `dist/plugins/courseware/view.js` at build time with
+  `react` and `beebox/view-widgets` external, like the view-widgets bundle.
+  The frontend bundle loses React Flow.
+- The box stub is `src/views/concept-map.tsx`: re-export the plugin view as
+  default, `export const rendersCardTypes = ["concept-map"]`.
 
 **Direction.**
 
 - `index.ts`: `definePlugin({ name: "courseware", description: "Courses, lesson plans, learner progress", docs: "src/plugins/courseware/README.md", skill: BUILD_COURSE_SKILL, schemas: { course: courseBase, "lesson-plan": lessonPlanBase, "exposition-plan": expositionPlanBase, progress: progressBase, "concept-map": conceptMapBase }, lintCards })`.
 - Remove the five registrations from `src/schemas.ts:74-77,125-131` and the
   imports in `src/core/system-cards.ts` are untouched (inventory stays).
-- The built-in concept-map renderer (`renderers/concept-map.tsx`,
-  `renderers.ts`) stays, keyed on the type name `concept-map`. A box that
-  renames the type gets the Card and Source renderers, which the README says.
+- Remove the built-in renderer (`renderers/concept-map.tsx`, its entry in
+  `renderers.ts`, `components/concept-map/*`). A box without the view stub
+  gets the Card and Source renderers for concept-map cards; the README's
+  Setup lists the view stub.
 - `exposition-plan` keeps its `rules` field so existing cards validate. Its
   `instructions` (`exposition-plan.ts:66-70`, *"compiled output"*) and the
   skill text (`skills-content.ts:79`, *"compiled into a box rule that
@@ -543,8 +564,8 @@ where the view-stub path is designed once for both.
   repair instruction.
 
 **Vocabulary lock-ins.** Plugin name `courseware`; default type names
-unchanged; stub file names `src/schemas/<type>.ts`; check name
-`legacy-exposition-rules`.
+unchanged; stub file names `src/schemas/<type>.ts`, `src/views/concept-map.tsx`;
+check name `legacy-exposition-rules`.
 
 **First chunk.** Move the five schema configs to bases and the plugin
 `index.ts`; rewrite the exposition instructions and skill text;
@@ -569,8 +590,7 @@ fails on three cases, each traced:
 What the plan does not include, by the same gate: no `templates` hook (one
 caller, and the README covers it), no `scripts` declaration (no slice-1
 plugin ships a script), no scoped tags (slice 2, no consumer in courseware),
-no view stub in slice 1 (the only candidate needs an adapter, CSS delivery
-and dependency ownership; designed once with recipes), no `bbx plugins
+no `bbx plugins
 activate` verb (the agent edits box.json and writes stubs from the README; a
 verb would hide which stubs were written), no per-plugin version (versioned
 with the engine), no migration ledger entry (the health checks compute the
@@ -614,6 +634,9 @@ harness `plugins/` directory (the paths do not collide), no connectors hook
 | `exposition-plan.rules` populated after the compiler is gone | new doctest | `legacy-exposition-rules` warning per card; rewritten instructions stop new ones | clear via health |
 | Old `exposition-*.md` rule files linger | new doctest | marked-file cleanup in `generateDocs`, kept across releases | clear |
 | Box renames `concept-map` and expects the node-refs lint | README | documented convention; lint finds no map and reports nothing | silent by design; documented |
+| Plugin `view.tsx` imports a Node built-in or an engine internal | layout doctest | `plugin-imports` rule forbids it; the browser-target bundle in `bundle.ts` fails on `node:*` | clear at build |
+| Stylesheet injected twice when two views import the same plugin | new doctest | the inliner guards on a data attribute per stylesheet hash | clear |
+| Concept-map card with no view stub | README | Card and Source renderers show the card; `plugin-declared-missing` names the view | clear |
 | Import regex misses a dynamic import in a stub | new doctest | documented: stubs use static imports (README) | silent for exotic stubs; accepted |
 
 ## Agent-flow / user-flow edge cases
@@ -651,10 +674,6 @@ harness `plugins/` directory (the paths do not collide), no connectors hook
   accepting tag components: slice 2, when recipes move.
 - Connectors as plugins, Gmail and Drive, a generic calendar type: slice 3.
 - Exporting core built-in configs as bases: when a box needs to extend one.
-- The concept-map view as a plugin view stub: slice 2, with recipes, once
-  the view-stub path has an adapter from `RendererProps` to `ViewProps`, a
-  CSS delivery path in the view compiler, and dependency ownership for
-  `@xyflow/react` and `dagre`.
 - Renamed-type support for cross-card lints (a mapping from a box type name
   to the base it came from): a boxholder decision if a box ever needs it.
 - Renaming the harness `plugins/` directory: no path collision.
@@ -670,16 +689,11 @@ harness `plugins/` directory (the paths do not collide), no connectors hook
 
 ## Open design questions
 
-- **Boxholder decision:** slice 1 keeps the built-in concept-map renderer
-  and ships no view stub, so the view-stub path is first exercised in slice
-  2 with recipes. Alternative: build the adapter, CSS path, and dependency
-  move now, about 400 more lines. Lean: defer; one design for both views.
-- **Boxholder decision:** when the new-engine whole-box validate in
-  `bbx upgrade` finds cards made invalid by a base change, block the
-  upgrade commit or report and continue? Lean: report and continue. The
-  agent needs the new engine's README to do the manual migration, so a
-  blocking upgrade is a deadlock; the health check keeps the failure
-  visible.
+- **DECIDED (boxholder, 2026-10-10):** the concept-map view moves into the
+  plugin in slice 1 (Track 5).
+- **DECIDED (boxholder, 2026-10-10):** the new-engine whole-box validate in
+  `bbx upgrade` reports failures and the upgrade finishes; it never blocks
+  on card validity. The health checks keep the failures visible.
 - Whether `bbx plugins list` should also print the active plugins' stub
   status (which README stubs exist). Lean: yes, it is the agent's
   declared-versus-present view and costs one glob per plugin.
