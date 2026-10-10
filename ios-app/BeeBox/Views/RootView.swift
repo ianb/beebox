@@ -3,6 +3,7 @@ import UIKit
 
 struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
+    @EnvironmentObject private var boxScreenStore: BoxScreenStore
     @EnvironmentObject private var boxLockManager: BoxLockManager
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var composerDraftStore = ComposerDraftStore(scope: .conversation)
@@ -12,7 +13,6 @@ struct RootView: View {
     /// The box screen's composer requires a pending store; a quick chat send
     /// never touches it, so this one is never activated.
     @StateObject private var boxScreenPendingStore = PendingEmissionStore()
-    @StateObject private var boxScreenStore = BoxScreenStore()
     /// What the person sees, and whether `ChatWebView` exists behind it.
     @State private var surfaceState = RootSurfaceState.launching
     /// The last stay in the background, until the foreground event or a
@@ -882,6 +882,7 @@ private struct EmptyBoxView: View {
 #Preview {
     RootView()
         .environmentObject(PairedBoxStore())
+        .environmentObject(BoxScreenStore())
         .environmentObject(BoxLockManager())
 }
 

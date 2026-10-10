@@ -117,4 +117,3 @@ iOS (iOS 26 device):
    with the "Live text" line.
 8. On the box screen, dictate a quick chat thought. Expected: it sends at once
    (live), as before.
-

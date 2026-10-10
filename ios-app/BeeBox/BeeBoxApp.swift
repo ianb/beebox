@@ -1,16 +1,30 @@
 import SwiftUI
+import AppIntents
+
+@MainActor
+private enum AppRuntime {
+    static let pairedBoxStore = PairedBoxStore()
+    static let boxScreenStore = BoxScreenStore()
+}
 
 @main
 struct BeeBoxApp: App {
     @UIApplicationDelegateAdaptor(BeeBoxAppDelegate.self) private var appDelegate
-    @StateObject private var store = PairedBoxStore()
+    @StateObject private var store = AppRuntime.pairedBoxStore
+    @StateObject private var boxScreenStore = AppRuntime.boxScreenStore
     @StateObject private var boxLockManager = BoxLockManager()
     @StateObject private var pairingURLInbox = PairingURLInbox.shared
+
+    init() {
+        AppDependencyManager.shared.add(dependency: { await AppRuntime.pairedBoxStore })
+        AppDependencyManager.shared.add(dependency: { await AppRuntime.boxScreenStore })
+    }
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(store)
+                .environmentObject(boxScreenStore)
                 .environmentObject(boxLockManager)
                 .task {
                     // The registrar observes pairings from here on; the app

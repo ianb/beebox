@@ -23,6 +23,7 @@
 		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
 		B0C500032F00000100000002 /* QuickChatOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500032F00000100000001 /* QuickChatOutbox.swift */; };
 		B0C500132F00000100000002 /* BoxScreenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500132F00000100000001 /* BoxScreenStore.swift */; };
+		FA1100012F00000100000002 /* CaptureThoughtIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA1100012F00000100000001 /* CaptureThoughtIntent.swift */; };
 		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
 		B72000F22C3C000100000001 /* NativeControlRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000F32C3C000100000001 /* NativeControlRegistryTests.swift */; };
 		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
@@ -160,6 +161,7 @@
 		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
 		B0C500032F00000100000001 /* QuickChatOutbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatOutbox.swift; sourceTree = "<group>"; };
 		B0C500132F00000100000001 /* BoxScreenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxScreenStore.swift; sourceTree = "<group>"; };
+		FA1100012F00000100000001 /* CaptureThoughtIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureThoughtIntent.swift; sourceTree = "<group>"; };
 		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
 		B72000F32C3C000100000001 /* NativeControlRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeControlRegistryTests.swift; sourceTree = "<group>"; };
 		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
@@ -288,6 +290,7 @@
 				5A1000402C3C000100000001 /* Models */,
 				5A1000412C3C000100000001 /* Storage */,
 				5A1000432C3C000100000001 /* Services */,
+				FA1100022F00000100000001 /* Intents */,
 				5A1000422C3C000100000001 /* Views */,
 				5A1000182C3C000100000001 /* Assets.xcassets */,
 				D94000202C3C000100000001 /* ../../beebox/src/frontend/public/earcons */,
@@ -390,6 +393,14 @@
 				D94000112C3C000100000001 /* NativeEarcons.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		FA1100022F00000100000001 /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				FA1100012F00000100000001 /* CaptureThoughtIntent.swift */,
+			);
+			path = Intents;
 			sourceTree = "<group>";
 		};
 		5A1001122C3C000100000001 /* BeeBoxTests */ = {
@@ -624,6 +635,7 @@
 				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
 				B0C500032F00000100000002 /* QuickChatOutbox.swift in Sources */,
 				B0C500132F00000100000002 /* BoxScreenStore.swift in Sources */,
+				FA1100012F00000100000002 /* CaptureThoughtIntent.swift in Sources */,
 				B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */,
 				B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */,
 				C83000012C3C000100000001 /* BoxLockManager.swift in Sources */,
