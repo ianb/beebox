@@ -61,8 +61,14 @@ first `START_HQ` enters `inFlight`; later requests append to `pendingHq`.
 and `HQ_DONE` removes one row. The region returns to `idle` after the last
 pending request completes.
 
-HQ request work stays in `InteractiveChat/voice.ts`; the machine owns visible
-coordination state and emitted commands.
+HQ request work stays in `InteractiveChat/voice-keyword-send.ts`; the machine
+owns visible coordination state and emitted commands.
+
+Every voice send with a recording requests the HQ pass (`docs/plans/hq-always.md`);
+there is no setting. The box decides availability: with no usable HQ key the
+job fails at once and the live text is sent, marked `<speech stt="live">`. A
+box pass costs about $0.006 per dictated minute on `whisper` or `whisper-llm`
+and $0.003 on `whisper-llm-mini` (OpenAI list prices).
 
 ### Mobile keyboard coordination
 
@@ -104,7 +110,7 @@ machines that own them:
 | TTS playback | playing / not | `speechPlaybackMachine` (→ `speechPlaying`) |
 | agent turn | streaming / not | `chatMachine` (→ `isStreaming`) |
 | narration | on / off | model hook (→ header badge, mic icon) |
-| narration HQ | in flight / not | `composerMachine.hq` (→ badge sub-label) |
+| HQ pass | in flight / not | `composerMachine.hq` (→ voice chip sub-label) |
 | muted | on / off | mute hook (→ header mute icon) |
 | typed input | empty / non-empty | component state (→ Send enabled) |
 | mobile keyboard | closed / open.unlocked / open.locked | `typingMode` / `typingLocked` |
@@ -154,11 +160,12 @@ newline.
 
 Header gains the `🎙️ narration ×` badge; the mic swaps to the
 **mic-with-speech-bubble** icon ("Voice input (narration mode)"). Narration
-means silent/structured replies and an HQ transcription pass on send.
+means silent/structured replies. (Every voice send gets the HQ pass, narration
+or not.)
 
 ![desktop narration](composer/desktop-narration.png)
 
-→ while an HQ pass is in flight after a voice send, the badge gains a
+→ while an HQ pass is in flight after a voice send, the voice chip gains a
 `· transcribing…` sub-label (`composerMachine.hq === inFlight`) — *capture
 pending, see below*.
 
@@ -263,10 +270,10 @@ mid-stream speech (speaker-x + stop circle, one per concern):
 
 ![desktop speaking + streaming](composer/desktop-speaking-streaming.png)
 
-#### Narration HQ in flight (`hq === inFlight`)
+#### HQ in flight (`hq === inFlight`)
 
-The narration badge gains a `· transcribing…` sub-label while the HQ round-trip
-runs after a voice send; the mic has usually already reopened.
+The voice chip gains a `transcribing…` sub-label while the HQ round-trip runs
+after a voice send; the mic has usually already reopened.
 
 ![desktop narration HQ](composer/desktop-narration-hq.png)
 

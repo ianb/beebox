@@ -35,7 +35,7 @@ The initial registry has three features. All are toggle-shaped with
 
 ```ts
 listFeatures().map((f) => f.name).join(",")
-=> narration,prose,hq-dictation
+=> narration,prose
 
 getFeature("nope")
 => null
@@ -62,7 +62,7 @@ isValidValue("nope", "on")
 
 ```ts
 JSON.stringify(getDefaults())
-=> {"narration":"off","prose":"on","hq-dictation":"off"}
+=> {"narration":"off","prose":"on"}
 ```
 
 `resolveFeatures()` merges stored values over defaults, dropping
@@ -71,28 +71,36 @@ caller can ignore).
 
 ```ts
 JSON.stringify(resolveFeatures())
-=> {"narration":"off","prose":"on","hq-dictation":"off"}
+=> {"narration":"off","prose":"on"}
 
 JSON.stringify(resolveFeatures({ narration: "on" }))
-=> {"narration":"on","prose":"on","hq-dictation":"off"}
+=> {"narration":"on","prose":"on"}
 
 JSON.stringify(resolveFeatures({ narration: "on", bogus: "yes", prose: "wrong" }))
-=> {"narration":"on","prose":"on","hq-dictation":"off"}
+=> {"narration":"on","prose":"on"}
+```
+
+A retired feature still stored by older sessions — `hq-dictation`, from before
+every dictated message got the HQ pass (docs/plans/hq-always.md) — is dropped
+without a warning:
+
+```ts
+JSON.stringify(resolveFeatures({ narration: "on", "hq-dictation": "on" }))
+=> {"narration":"on","prose":"on"}
 ```
 
 ## Seeding a new session
 
 `mergeSeedFeatures` builds the initial feature map for a brand-new chat by
-layering box, landmark, then client pre-session choices. The most local value
-wins on conflict.
+layering landmark, then client pre-session choices. The more local value wins
+on conflict.
 
 ```ts
 JSON.stringify(mergeSeedFeatures({
-  box: { narration: "on", "hq-dictation": "on" },
   landmark: { narration: "off", prose: "off" },
   request: { narration: "on" },
 }))
-=> {"narration":"on","hq-dictation":"on","prose":"off"}
+=> {"narration":"on","prose":"off"}
 ```
 
 A source may be absent (no landmark, or no pre-session toggles) and
@@ -124,7 +132,7 @@ Attributes are emitted in registry order.
 composeChatAppSnapshot({
   features: { narration: "on", prose: "off" },
 })
-=> <chat-app narration="on" prose="off" hq-dictation="off"/>
+=> <chat-app narration="on" prose="off"/>
 ```
 
 Missing keys fall back to defaults — the snapshot always carries every
@@ -134,7 +142,7 @@ registered feature, never a partial map.
 composeChatAppSnapshot({
   features: {},
 })
-=> <chat-app narration="off" prose="on" hq-dictation="off"/>
+=> <chat-app narration="off" prose="on"/>
 ```
 
 The optional context attributes (computed by `session-context.ts`)
@@ -150,7 +158,7 @@ composeChatAppSnapshot({
   channel: "web-mobile",
   lastActivity: "3 days ago",
 })
-=> <chat-app narration="off" prose="on" hq-dictation="off" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago"/>
+=> <chat-app narration="off" prose="on" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago"/>
 ```
 
 `channel` is a closed union (`shared/chat-channel.ts`), and its third member
@@ -163,7 +171,7 @@ composeChatAppSnapshot({
   localTime: "Wednesday 2026-05-13 10:00 (morning)",
   channel: "ios-native",
 })
-=> <chat-app narration="off" prose="on" hq-dictation="off" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="ios-native"/>
+=> <chat-app narration="off" prose="on" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="ios-native"/>
 ```
 
 The companion-pane `open-card` attribute (box-relative path) rides on every send
@@ -176,7 +184,7 @@ composeChatAppSnapshot({
   features: {},
   openCard: "_content/notes/Trip.memo.card",
 })
-=> <chat-app narration="off" prose="on" hq-dictation="off" open-card="_content/notes/Trip.memo.card"/>
+=> <chat-app narration="off" prose="on" open-card="_content/notes/Trip.memo.card"/>
 ```
 
 Companion-pane activity rides as `<card-activity>` child elements (rendered by
@@ -189,7 +197,7 @@ composeChatAppSnapshot({
   openCard: "_content/notes/Trip.memo.card",
   activityChildren: '<card-activity kind="scrolled"/>\n<card-activity kind="explored">boat-water+road -> boats</card-activity>',
 })
-=> <chat-app narration="off" prose="on" hq-dictation="off" open-card="_content/notes/Trip.memo.card">
+=> <chat-app narration="off" prose="on" open-card="_content/notes/Trip.memo.card">
 <card-activity kind="scrolled"/>
 <card-activity kind="explored">boat-water+road -> boats</card-activity>
 </chat-app>

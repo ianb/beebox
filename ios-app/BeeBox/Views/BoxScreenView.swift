@@ -214,8 +214,6 @@ struct BoxScreenView: View {
                 draftStore: draftStore,
                 pendingStore: pendingStore,
                 captureAvailable: false,
-                narrationEnabled: false,
-                hqDictationEnabled: false,
                 speechPlaybackActive: false,
                 responseActive: false,
                 locationSharingEnabled: false,

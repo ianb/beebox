@@ -161,25 +161,29 @@ open(storage).getSnapshot().map((row) => `${row.emission.id}:${row.status}:${row
 ```
 
 The user's choice may still replace the realtime snapshot once — here with the
-fallback marked `hq="failed"` — and the fallback marker survives storage:
+HQ text — and the provenance survives storage:
 
 ```ts continue
 const reloaded = open(storage);
-reloaded.stage({ ...voice("waiting"), hqFallback: true }, chatBinding);
-open(storage).getSnapshot().find((row) => row.emission.id === "waiting")?.emission.hqFallback
-=> true
+reloaded.stage({ ...voice("waiting"), hqText: true, hqService: "whisper" }, chatBinding);
+const staged = open(storage).getSnapshot().find((row) => row.emission.id === "waiting")?.emission;
+JSON.stringify({ hqText: staged?.hqText, hqService: staged?.hqService })
+=> {"hqText":true,"hqService":"whisper"}
 ```
 
-A row saved before late correction was removed may still hold the legacy
-`"pending"`/`"failed"` marker on disk; loading normalizes it to `true`:
+A row saved before every send got the HQ pass (docs/plans/hq-always.md) may
+still hold an `hqFallback` marker on disk, `true` or the older
+`"pending"`/`"failed"`. It loads, and the marker is dropped: a voice emission
+without `hqText` is live text either way.
 
 ```ts continue
 storage.data.set("bbx-pending-web-sends:test", JSON.stringify({
   version: 1,
   rows: [{ emission: { ...voice("legacy"), hqFallback: "pending" }, binding: chatBinding, status: "pending" }],
 }));
-open(storage).getSnapshot().find((row) => row.emission.id === "legacy")?.emission.hqFallback
-=> true
+const legacy = open(storage).getSnapshot().find((row) => row.emission.id === "legacy");
+JSON.stringify({ status: legacy?.status, keptMarker: "hqFallback" in (legacy?.emission ?? {}) })
+=> {"status":"recovered","keptMarker":false}
 ```
 
 Dismissing an `awaitingHq` item removes it; its recording stays on the box:

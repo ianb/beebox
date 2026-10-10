@@ -102,12 +102,3 @@ export function FloorIcon({ floor, diarizationEnabled }: { floor: ConversationFl
     </svg>
   );
 }
-
-/** Sparkle icon representing HQ (high-quality) dictation mode. */
-export function HqIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15zM19 14l.9 2.4L22 17.3l-2.1.9L19 20.6l-.9-2.4L16 17.3l2.1-.9L19 14z" />
-    </svg>
-  );
-}

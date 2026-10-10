@@ -1,6 +1,5 @@
 {
   "input": {
-    "enabled": true,
     "diarized": true
   },
   "expected": {
