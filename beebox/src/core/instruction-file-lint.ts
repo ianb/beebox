@@ -25,7 +25,7 @@
  *  - https://www.humanlayer.dev/blog/writing-a-good-claude-md
  *
  * Concrete fixing strategies for an oversized file are documented in the package
- * docs, reducing-claude-md.md (src/core/docs-gen/package-docs/reducing-claude-md-doc.ts),
+ * docs, reducing-instruction-file.md (src/core/docs-gen/package-docs/reducing-instruction-file-doc.ts),
  * which the warning below points to.
  */
 
@@ -35,42 +35,42 @@ import * as path from "node:path";
 import { AGENT_INSTRUCTION_FILES } from "./agent-instruction-files.js";
 
 /** Soft "getting large" tier — ~200-line target, roughly 3k tokens. */
-export const CLAUDE_MD_WARN_CHARS = 12_000;
+export const INSTRUCTION_FILE_WARN_CHARS = 12_000;
 /** Firm "too large" tier — ~300-line ceiling, roughly 5k tokens. */
-export const CLAUDE_MD_FIRM_CHARS = 20_000;
+export const INSTRUCTION_FILE_FIRM_CHARS = 20_000;
 
 const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 
 const MOVE_ADVICE =
   "Trim it, consolidate duplication, or move detail onto a lazier surface " +
   "(a sibling doc, a nested instruction file, a .claude/rules/ glob, or a skill). " +
-  `See ${BOX_PACKAGE_DOCS}/reducing-claude-md.md for concrete strategies.`;
+  `See ${BOX_PACKAGE_DOCS}/reducing-instruction-file.md for concrete strategies.`;
 
 /**
  * Return a soft warning line if the instruction file is large, else null. Two tiers:
- * a gentle nudge at {@link CLAUDE_MD_WARN_CHARS}, firmer language at
- * {@link CLAUDE_MD_FIRM_CHARS}. `relPath` is used only to label the message.
+ * a gentle nudge at {@link INSTRUCTION_FILE_WARN_CHARS}, firmer language at
+ * {@link INSTRUCTION_FILE_FIRM_CHARS}. `relPath` is used only to label the message.
  */
-export function lintClaudeMdSize(relPath: string, content: string): string | null {
+export function lintInstructionFileSize(relPath: string, content: string): string | null {
   const chars = content.length;
-  if (chars < CLAUDE_MD_WARN_CHARS) return null;
+  if (chars < INSTRUCTION_FILE_WARN_CHARS) return null;
   const kb = Math.round(Buffer.byteLength(content, "utf-8") / 1024);
   const size = `${String(chars)} chars (~${String(kb)} KB)`;
-  if (chars >= CLAUDE_MD_FIRM_CHARS) {
+  if (chars >= INSTRUCTION_FILE_FIRM_CHARS) {
     return (
-      `warning  ${relPath}  [claude-md-size] ${size} — too large. This file loads into agent context ` +
-      `every turn, and past ~${String(CLAUDE_MD_FIRM_CHARS)} chars Claude reliably drops instructions. ` +
+      `warning  ${relPath}  [instruction-file-size] ${size} — too large. This file loads into agent context ` +
+      `every turn, and past ~${String(INSTRUCTION_FILE_FIRM_CHARS)} chars Claude reliably drops instructions. ` +
       `Fix it now: ${MOVE_ADVICE}`
     );
   }
   return (
-    `warning  ${relPath}  [claude-md-size] ${size} — getting large for a file loaded into context every ` +
-    `turn; aim to stay under ~${String(CLAUDE_MD_WARN_CHARS)} chars (~200 lines). ${MOVE_ADVICE}`
+    `warning  ${relPath}  [instruction-file-size] ${size} — getting large for a file loaded into context every ` +
+    `turn; aim to stay under ~${String(INSTRUCTION_FILE_WARN_CHARS)} chars (~200 lines). ${MOVE_ADVICE}`
   );
 }
 
 /** Read and size-lint one instruction file. Missing/unreadable → null. */
-export async function lintClaudeMdFile(boxRoot: string, absPath: string): Promise<string | null> {
+export async function lintInstructionFile(boxRoot: string, absPath: string): Promise<string | null> {
   let content: string;
   try {
     content = await fs.readFile(absPath, "utf-8");
@@ -79,7 +79,7 @@ export async function lintClaudeMdFile(boxRoot: string, absPath: string): Promis
     // actionable to warn about, so treat it as clean.
     return null;
   }
-  return lintClaudeMdSize(path.relative(boxRoot, absPath), content);
+  return lintInstructionFileSize(path.relative(boxRoot, absPath), content);
 }
 
 /** Recursively find every real instruction file in the box, skipping vendored/infra dirs. */
@@ -101,11 +101,11 @@ async function findClaudeMdFiles(dir: string): Promise<string[]> {
 }
 
 /** Size-lint every instruction file in the box; returns one warning line per oversized file. */
-export async function lintAllClaudeMd(boxRoot: string): Promise<string[]> {
+export async function lintAllInstructionFiles(boxRoot: string): Promise<string[]> {
   const files = await findClaudeMdFiles(boxRoot);
   const warnings: string[] = [];
   for (const file of files) {
-    const warning = await lintClaudeMdFile(boxRoot, file);
+    const warning = await lintInstructionFile(boxRoot, file);
     if (warning !== null) warnings.push(warning);
   }
   return warnings;
