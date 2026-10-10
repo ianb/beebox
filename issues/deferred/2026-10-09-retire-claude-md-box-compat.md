@@ -53,10 +53,10 @@ Resolver and name helpers (`src/core/agent-instruction-files.ts`):
 - `:89-91` `instructionFileName`: the `CLAUDE.md` branch. Its callers
   (`src/core/docs-gen/generate/core.ts:419`,
   `src/core/agent-guide/box-inputs.ts:24`,
-  `src/core/box/guidance-sync/skills.ts:100`) and the `instructionFile`
+  `src/core/box/guidance-sync/skills/core.ts:100`) and the `instructionFile`
   parameters they feed (`src/core/agent-guide/guide/core.ts:34,87`,
   `{{instruction_file}}` at `src/core/agent-guide/guide.md:372`,
-  `src/core/box/guidance-sync/skills-content.ts:15`) can become the literal
+  `src/core/box/guidance-sync/skills/content.ts:15`) can become the literal
   `AGENTS.md`.
 - `:53-60` `instructionSiblingPath`; `:62` `isAgentsMdBox` (keep it only if
   the lint below still needs it).

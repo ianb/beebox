@@ -9,11 +9,22 @@
   "compilerOptions": {
     "declaration": true,
     "emitDeclarationOnly": true,
-    "noEmit": false
+    "noEmit": false,
+    // Plugin view modules (`src/plugins/*/view.tsx`) are browser code and may
+    // use DOM types; the backend tsconfig excludes them, this one emits their
+    // `view.d.ts`. The extra libs are additive for the other entries.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
   },
-  "include": [],
+  // `files` takes no globs: every plugin's `plugin.ts` and `view.tsx` emit to
+  // dist/plugins/<name>/{plugin,view}.d.ts, the `types` targets of the
+  // `./plugins/*` and `./plugins/*/view` exports. `src/types/view-widgets.d.ts`
+  // is the ambient `beebox/view-widgets` a view imports.
+  "include": ["src/plugins/*/plugin.ts", "src/plugins/*/view.tsx", "src/types/view-widgets.d.ts"],
+  // `exclude` is inherited from tsconfig.json unless restated; the base
+  // excludes `src/plugins/*/view.tsx`, which this program emits.
+  "exclude": ["node_modules", "dist", "src/frontend", "src/schemas/*/list-entry.tsx"],
   // server.ts is absent: its graph pulls the tRPC routers and hits TS2742
   // (verified 2026-07-03) — /server ships untyped until those routers get
   // explicit type annotations.
-  "files": ["src/exports/cards.ts", "src/exports/schema.ts"]
+  "files": ["src/exports/cards.ts", "src/exports/schema.ts", "src/cards/plugin-definition.ts"]
 }

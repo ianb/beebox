@@ -35,8 +35,16 @@ export interface FixtureSpec {
   files: Record<string, FixtureModule | { test: string[] } | "data" | "declaration">;
   extraSourceRoots?: string[];
   nestedPackages?: string[];
-  publicSurfaces?: Array<{ specifier: string; target: string; source: string | null }>;
-  enclosingSurfaces?: Array<{ specifier: string; target: string; source: string | null }>;
+  publicSurfaces?: FixtureSurface[];
+  enclosingSurfaces?: FixtureSurface[];
+}
+
+interface FixtureSurface {
+  specifier: string;
+  target: string;
+  source: string | null;
+  /** The wildcard `exports` key this surface expands (`./plugins/*`). */
+  pattern?: string;
 }
 
 const abs = (p: string): string => `${ROOT}/${p}`;
@@ -88,10 +96,11 @@ export function layout(spec: FixtureSpec): PackageLayout {
       });
     }
   }
-  const toSurface = (s: { specifier: string; target: string; source: string | null }): PublicSurface => ({
+  const toSurface = (s: FixtureSurface): PublicSurface => ({
     specifier: s.specifier,
     target: abs(s.target),
     source: s.source === null ? null : abs(s.source),
+    ...(s.pattern === undefined ? {} : { pattern: s.pattern }),
   });
   const publicSurfaces: PublicSurface[] = (spec.publicSurfaces ?? []).map(toSurface);
   const enclosingSurfaces: PublicSurface[] = (spec.enclosingSurfaces ?? []).map(toSurface);

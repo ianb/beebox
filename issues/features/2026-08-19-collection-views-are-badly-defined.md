@@ -362,7 +362,7 @@ by whatever knows how.
   "so long as any exist" phrasing suggests hide — which is a real behavioral
   choice, and different from how single-card views work.
 
-Related: [plugins and the medium/content line](../exploration/2026-08-19-plugins-and-the-medium-content-line.md),
+Related: [plugins and the medium/content line](../closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md),
 which is where this came up and which is blocked on it for the "views" half.
 
 ## Read: TiddlyWiki, in full (2026-08-19)

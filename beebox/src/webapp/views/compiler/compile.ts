@@ -1,12 +1,16 @@
 /**
  * Server-side compiler for agent-generated view .tsx files.
  *
- * Uses esbuild to bundle each view into an ES module with React
- * externalized via a shim that delegates to window.__bbxReact.
+ * Uses esbuild to bundle each view into an ES module with React and
+ * `react-dom` externalized via shims that delegate to `window.__bbxReact` and
+ * `window.__bbxReactDOM`.
  * Caches compiled output keyed by file mtime.
  */
 
 import * as esbuild from "esbuild";
+import React from "react";
+import ReactDOM from "react-dom";
+import ReactDOMClient from "react-dom/client";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
@@ -18,11 +22,12 @@ import { boxPackageHost, type ViewHostContext } from "../node-view-runtime.js";
 
 /**
  * Where the compiled view will run:
- * - "browser" (default) — React externalized to the `window.__bbxReact` shim, as
- *   the running app's frontend dynamically imports it.
- * - "node" — React externalized to the bare `react`/`react/jsx-runtime`
- *   specifiers so a Node renderer (`bbx view test`) resolves the real React from
- *   node_modules and shares one instance with `react-dom/server`. Emits an inline
+ * - "browser" (default) — React and `react-dom` externalized to the
+ *   `window.__bbxReact`/`window.__bbxReactDOM` shims, as the running app's
+ *   frontend dynamically imports it.
+ * - "node" — React and `react-dom` externalized to the bare specifiers so a Node
+ *   renderer (`bbx view test`) resolves the real React from node_modules and
+ *   shares one instance with `react-dom/server`. Emits an inline
  *   source map and a box-relative source name so render-time stack traces map
  *   back to the `.tsx`.
  */
@@ -59,24 +64,39 @@ class EmptyEsbuildOutputError extends Error {
 const cache = new Map<string, CacheEntry>();
 const metaCache = new Map<string, MetaCacheEntry>();
 
-const reactExternalPlugin: esbuild.Plugin = {
-  name: "react-external",
-  setup(build) {
-    build.onResolve({ filter: /^react(\/.*)?$/ }, (args) => ({
-      path: args.path,
-      namespace: "react-shim",
-    }));
-    build.onLoad({ filter: /.*/, namespace: "react-shim" }, (args) => {
-      if (args.path === "react/jsx-runtime" || args.path === "react/jsx-dev-runtime") {
-        // Translate the automatic-runtime calling convention to createElement:
-        // jsx/jsxs/jsxDEV pass children *inside* props and `key` as a separate
-        // arg, while createElement reads children from its rest params and `key`
-        // from config. Aliasing them directly (the old shim) passed a static
-        // children array as a single child — triggering React's spurious
-        // "unique key" dev warning for every multi-child view — and dropped
-        // `key`. Spreading the children array as positional args restores both.
-        return {
-          contents: `const React = window.__bbxReact;
+/**
+ * The public export names of a host module, read from the engine's own copy
+ * (the frontend ships the same version). A hand list went stale: it lacked
+ * `useSyncExternalStore`, `useLayoutEffect`, `useId` and
+ * `useImperativeHandle`, so a bundled dependency (React Flow's zustand) found
+ * `undefined` where the hook should be. `__SECRET_INTERNALS…` is not public.
+ */
+function hostExportNames(hostModule: object): string[] {
+  return Object.keys(hostModule).filter((name) => name !== "default" && !name.startsWith("__"));
+}
+
+/**
+ * A browser module that reads the host's copy from `window.<global>`: the
+ * whole object as the default export (a plugin view bundle reaches React only
+ * that way; see `hostModuleShim` in `src/scripts/build-cli/build/plugins.ts`)
+ * plus one named export per public name.
+ */
+function hostGlobalShim(global: string, names: string[]): string {
+  return [
+    `const Host = window.${global};`,
+    "export default Host;",
+    ...names.map((name) => `export const ${name} = Host.${name};`),
+    "",
+  ].join("\n");
+}
+
+const REACT_SHIM = hostGlobalShim("__bbxReact", hostExportNames(React));
+const REACT_DOM_SHIM = hostGlobalShim("__bbxReactDOM", hostExportNames(ReactDOM));
+// Under React 18 the `react-dom` object carries `createRoot`/`hydrateRoot`
+// too, so one host global serves both specifiers.
+const REACT_DOM_CLIENT_SHIM = hostGlobalShim("__bbxReactDOM", hostExportNames(ReactDOMClient));
+
+const JSX_RUNTIME_SHIM = `const React = window.__bbxReact;
 function jsx(type, props, key) {
   const { children, ...rest } = props;
   if (key !== undefined) rest.key = key;
@@ -88,16 +108,47 @@ function jsx(type, props, key) {
 export { jsx };
 export const jsxs = jsx;
 export const jsxDEV = jsx;
-export const Fragment = React.Fragment;`,
-          loader: "js",
-        };
+export const Fragment = React.Fragment;
+export default { jsx, jsxs, jsxDEV, Fragment };`;
+
+/**
+ * Browser shims for the host modules a view shares with the running app:
+ * `react` and its JSX runtimes read `window.__bbxReact`, `react-dom` and
+ * `react-dom/client` read `window.__bbxReactDOM` (AgentViewRenderer installs
+ * both before any view loads). A view that bundles a plugin view
+ * (`beebox/plugins/<name>/view`) brings React Flow's portals, which need the
+ * host's `react-dom`, not a second copy.
+ */
+const reactExternalPlugin: esbuild.Plugin = {
+  name: "react-external",
+  setup(build) {
+    build.onResolve({ filter: /^react(-dom)?(\/.*)?$/ }, (args) => ({
+      path: args.path,
+      namespace: "react-shim",
+    }));
+    build.onLoad({ filter: /.*/, namespace: "react-shim" }, (args) => {
+      switch (args.path) {
+        case "react":
+          return { contents: REACT_SHIM, loader: "js" };
+        case "react/jsx-runtime":
+        case "react/jsx-dev-runtime":
+          // Translate the automatic-runtime calling convention to createElement:
+          // jsx/jsxs/jsxDEV pass children *inside* props and `key` as a separate
+          // arg, while createElement reads children from its rest params and `key`
+          // from config. Aliasing them directly (the old shim) passed a static
+          // children array as a single child — triggering React's spurious
+          // "unique key" dev warning for every multi-child view — and dropped
+          // `key`. Spreading the children array as positional args restores both.
+          return { contents: JSX_RUNTIME_SHIM, loader: "js" };
+        case "react-dom":
+          return { contents: REACT_DOM_SHIM, loader: "js" };
+        case "react-dom/client":
+          return { contents: REACT_DOM_CLIENT_SHIM, loader: "js" };
+        default:
+          return {
+            errors: [{ text: `${args.path} is not available to a view; views import react, react/jsx-runtime, react-dom and react-dom/client` }],
+          };
       }
-      return {
-        contents: `const React = window.__bbxReact;
-export default React;
-export const { useState, useEffect, useMemo, useCallback, useRef, useContext, useReducer, memo, forwardRef, createContext, createElement, Fragment, lazy, Suspense } = React;`,
-        loader: "js",
-      };
     });
   },
 };
@@ -185,6 +236,10 @@ export async function bundleView(
             "react",
             "react/jsx-runtime",
             "react/jsx-dev-runtime",
+            // A box ships `react-dom` beside `react` (src/core/box/package.ts);
+            // a plugin view's React Flow portals import it.
+            "react-dom",
+            "react-dom/client",
             // Resolved from a real box package's node_modules (box-package host)
             // or the engine's own (engine-hosted, via a temp symlink) — see
             // node-view-runtime.ts.

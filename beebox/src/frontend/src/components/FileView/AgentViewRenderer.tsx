@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
+import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
 import type { ActivityKind } from "@core/chat/card-activity.js";
@@ -86,11 +87,15 @@ function withModifiedReporting(
   };
 }
 
-// Expose React globally so agent-generated views can use it
-// via the esbuild shim that references window.__bbxReact
+// Expose React and react-dom globally so agent-generated views can use them
+// via the esbuild shims that reference window.__bbxReact and
+// window.__bbxReactDOM (src/webapp/views/compiler/compile.ts). A view that
+// bundles a plugin view (`beebox/plugins/<name>/view`) carries React Flow,
+// whose portals need the host's react-dom, not a second copy.
 declare global {
   interface Window {
     __bbxReact?: typeof React;
+    __bbxReactDOM?: typeof ReactDOM;
   }
 }
 
@@ -102,6 +107,9 @@ declare global {
 // hits it again. Mirrors the guard on `__bbxViewWidgets` (view-widgets/index.tsx).
 if (typeof window !== "undefined" && !window.__bbxReact) {
   window.__bbxReact = React;
+}
+if (typeof window !== "undefined" && !window.__bbxReactDOM) {
+  window.__bbxReactDOM = ReactDOM;
 }
 
 interface AgentViewRendererProps {

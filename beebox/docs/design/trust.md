@@ -76,7 +76,7 @@ Three scales answer "how sure/authorized is the agent," each domain-specific:
 belief basis `user-stated > feedback > inferred > default`; guide confidence
 `confirmed|high|medium|low|hypothesis`, with `hypothesis` excluded from
 compiled guidance; progress evidence `observed|inferred|self-report`, with no
-level recorded without evidence (`src/schemas/progress.ts`); procedure-run
+level recorded without evidence (`src/plugins/courseware/progress.ts`); procedure-run
 outcome `completed|failed|inconclusive` (`src/schemas/procedure-run.ts`);
 question states `pending|answered|dismissed|expired`; notification loudness
 `dot|quiet|loud` (`src/core/notification/intent.ts`).)

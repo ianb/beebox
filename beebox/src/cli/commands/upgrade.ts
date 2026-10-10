@@ -1,7 +1,12 @@
 /**
  * `bbx upgrade --to <spec>` — upgrade a v2 (package-layout) box's beebox
- * engine dependency, run pending data migrations, sync templates, and
- * typecheck, committing the result as one reviewable commit.
+ * engine dependency, run pending data migrations, sync templates, typecheck,
+ * validate the whole box under the new engine, and run its plugin health
+ * checks, committing the result as one reviewable commit. Validation issues
+ * (errors and warnings) and failing plugin health rows are reported in the
+ * summary and never block the commit (boxholder decision 2026-10-10): a card a
+ * base change made invalid, or a course type with no stub, is the agent's work
+ * to fix, under the new engine.
  *
  * See "Upgrade lifecycle (decision 4)" in
  * `docs/implemented-plans/boxes-as-packages-v2.md` — the step list there is this file's
@@ -19,7 +24,7 @@
  * boxholder invoked. Steps 0-2 (preflight, snapshot, dependency bump + `pnpm
  * install`) are fine under the old engine — they don't touch box-shape-aware
  * logic that could differ between versions. But steps 3+ (migrate, template
- * sync, typecheck) MUST run under the version being upgraded TO, since a
+ * sync, typecheck, validate) MUST run under the version being upgraded TO, since a
  * migration or template registered in the new version doesn't exist in the
  * old engine's in-process code. After `pnpm install` completes,
  * `boxRoot/node_modules/.bin/bbx` on disk IS the new engine, so those
@@ -92,6 +97,8 @@ const UPGRADE_STEPS = {
   bbxMigrate: "bbx-migrate",
   bbxInit: "bbx-init",
   tsc: "tsc",
+  bbxValidate: "bbx-validate",
+  bbxHealth: "bbx-health",
   pnpmInstallRestore: "pnpm-install-restore",
 } as const;
 
@@ -229,6 +236,46 @@ export interface UpgradeDeps {
 export interface UpgradeResult {
   installedVersion: string;
   commitHash: string;
+  /** `bbx validate` output under the new engine when it exited nonzero or printed a warning; null when the box is clean. */
+  validationIssues: string | null;
+  /** Failing plugin rows of `bbx health --json` under the new engine, one line each; empty when none fail. */
+  pluginHealth: string[];
+}
+
+/** A `bbx validate` report with a warning line; the exit code alone misses these (an unknown card type is a warning). */
+function hasValidateWarnings(output: string): boolean {
+  return /^\s*warning: /m.test(output);
+}
+
+/** The health rows the plugin system owns (`docs/plugins.md`, "Health"); a plugin's own `<name>/...` rows are not among them. */
+function isPluginHealthRow(name: string): boolean {
+  return name.startsWith("plugin-") || name === "legacy-exposition-rules" || name === "skill-name-conflict";
+}
+
+/**
+ * The failing plugin rows of `bbx health --json`, one line each. Output that is
+ * not the health JSON (the new engine crashed, or printed something else) is
+ * reported as one line rather than dropped: the point of the step is to show
+ * what the old engine could not know.
+ */
+function failingPluginHealthRows(health: RunCommandResult): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(health.output);
+  } catch (e) {
+    const head = health.output.trim().split("\n")[0] ?? "";
+    return [`bbx health --json exited ${String(health.code)} without a JSON report (${errorMessage(e)}): ${head}`];
+  }
+  const rows = isRecord(parsed) ? parsed["boxChecks"] : undefined;
+  if (!Array.isArray(rows)) return [`bbx health --json exited ${String(health.code)} with no boxChecks array`];
+  const lines: string[] = [];
+  for (const row of rows) {
+    if (!isRecord(row)) continue;
+    const { name, ok, severity, message } = row;
+    if (typeof name !== "string" || typeof message !== "string" || ok !== false || !isPluginHealthRow(name)) continue;
+    lines.push(`${name} (${typeof severity === "string" ? severity : "error"}): ${message}`);
+  }
+  return lines;
 }
 
 /**
@@ -305,6 +352,20 @@ async function upgradeUnderMaintenance(
     });
     if (tsc.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.tsc, tsc.output);
 
+    // Step 6a: validate the whole box under the new engine, so cards a base
+    // change made invalid are listed by file. Report-only: a nonzero exit
+    // is carried into the result, never thrown, so it cannot revert the
+    // upgrade (boxholder decision 2026-10-10). Warnings count too: a card
+    // whose type lost its schema is a warning, and validate exits 0 on it.
+    const validate = await runCommand({ label: UPGRADE_STEPS.bbxValidate, command: newBbxBin, args: ["validate"], cwd: boxRoot });
+    const validationIssues = validate.code === 0 && !hasValidateWarnings(validate.output) ? null : validate.output;
+
+    // Step 6b: the new engine's plugin health (`docs/plugins.md`, "Health"),
+    // for what validate cannot say: which plugin provides the orphaned type,
+    // which stub is missing, which legacy field remains. Report-only as well.
+    const health = await runCommand({ label: UPGRADE_STEPS.bbxHealth, command: newBbxBin, args: ["health", "--json"], cwd: boxRoot });
+    const pluginHealth = failingPluginHealthRows(health);
+
     // Step 7: commit everything as one unit.
     const installedVersion = await readInstalledVersion(boxRoot);
     await stageAll(boxRoot);
@@ -313,7 +374,7 @@ async function upgradeUnderMaintenance(
       trailers: { "Upgraded-To": `beebox@${installedVersion}` },
     });
 
-    return { installedVersion, commitHash };
+    return { installedVersion, commitHash, validationIssues, pluginHealth };
   } catch (e) {
     await revertUpgrade({ boxRoot, snapshotSha, runCommand, failure: toError(e) });
     throw e;
@@ -321,12 +382,18 @@ async function upgradeUnderMaintenance(
 }
 
 export const upgradeCommand = new Command("upgrade")
-  .description("Upgrade a box's beebox engine: bump the dependency, migrate data, sync templates, typecheck, commit")
+  .description("Upgrade a box's beebox engine: bump the dependency, migrate data, sync templates, typecheck, validate, check plugin health, commit")
   .requiredOption("--to <spec>", "beebox dependency spec to upgrade to (a semver range, or a file:<path>/<path>.tgz tarball)")
   .action(async (options: { to: string }) => {
     try {
       const result = await runUpgrade({ to: options.to });
       console.log(`Upgraded to beebox@${result.installedVersion} (commit ${result.commitHash}).`);
+      if (result.validationIssues !== null) {
+        console.log(`\nCards with validation errors or warnings under beebox@${result.installedVersion}:\n${result.validationIssues.trimEnd()}`);
+      }
+      if (result.pluginHealth.length > 0) {
+        console.log(`\nPlugin health after upgrade:\n${result.pluginHealth.join("\n")}`);
+      }
     } catch (error) {
       console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
