@@ -13,6 +13,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
 import { GENERATE_MARKER } from "../../src/core/docs-gen/generate/core.js";
+import { withDocId } from "../../src/core/docs-gen/shared.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
 // This runs a real, executable `.git/hooks/pre-commit`. In a linked worktree,
@@ -113,14 +114,19 @@ await box.cleanup();
 
 What the deploy step exists for: the engine moved, so the generated guidance the
 box carries is wrong. Dropping the marker stands in for the version bump the
-deploy stamp gives on the real path.
+deploy stamp gives on the real path. The stale skill carries its DOCID marker,
+as every file the engine wrote does; a `SKILL.md` without one is the
+boxholder's and is left alone (`test/core/box/guidance-sync/skills/core.doctest.md`).
 
 ```ts
 const box = await makeCleanBox();
 await refreshGeneratedDocs({ boxRoot: box.root });
 
 await writeFile(box.path(".claude/rules/card-pdf.md"), "stale rule\n");
-await writeFile(box.path(".claude/skills/views/SKILL.md"), "stale skill\n");
+await writeFile(
+  box.path(".claude/skills/views/SKILL.md"),
+  withDocId({ relativePath: ".claude/skills/views/SKILL.md", content: "stale skill\n" }),
+);
 await rm(box.path(GENERATE_MARKER));
 box.commitAll("box carries stale generated guidance");
 
@@ -130,7 +136,7 @@ const skill = await box.read(".claude/skills/views/SKILL.md");
 JSON.stringify({
   status: result.status,
   rule: rule.startsWith("stale"),
-  skill: skill.startsWith("stale"),
+  skill: skill.includes("stale skill"),
   clean: git(box, "status", "--porcelain") === "",
 })
 => {"status":"refreshed","rule":false,"skill":false,"clean":true}

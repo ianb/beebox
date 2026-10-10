@@ -165,5 +165,5 @@ const box = await coursewareBox(["coursware"]);
 await box.write("_content/store/Bonds.concept-map.card", MAP);
 const result = await lintCardsDispatch([box.path("_content/store/Bonds.concept-map.card")], { boxRoot: box.root, ctx });
 result.results[0]!.warnings.map((w) => w.message)
-=> ["_config/box.json plugins entry \"coursware\" names no installed plugin — card not linted by it"]
+=> ["_config/box.json names an unknown plugin: coursware; the card is not linted by that plugin"]
 ```

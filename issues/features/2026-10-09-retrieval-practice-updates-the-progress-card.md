@@ -31,7 +31,7 @@ is the practice that feeds it.
   level is the stronger one and should stay the only record.
 - **A miss gets a cited explanation.** The `build-course` skill already
   demands sources for answer keys
-  (`beebox/src/core/box/guidance-sync/skills-content.ts:134`); the tutor's
+  (`beebox/src/core/box/guidance-sync/skills/content.ts:134`); the tutor's
   correction should carry a `{% source %}` anchor into the material. This is
   a check for the journey reader as much as a feature.
 - **"How am I doing" is a question to the progress card.** The learner-facing

@@ -1,7 +1,10 @@
 /**
  * `bbx upgrade --to <spec>` — upgrade a v2 (package-layout) box's beebox
- * engine dependency, run pending data migrations, sync templates, and
- * typecheck, committing the result as one reviewable commit.
+ * engine dependency, run pending data migrations, sync templates, typecheck,
+ * and validate the whole box under the new engine, committing the result as
+ * one reviewable commit. Validation failures are reported in the summary and
+ * never block the commit (boxholder decision 2026-10-10): a card a base change
+ * made invalid is the agent's work to fix, under the new engine.
  *
  * See "Upgrade lifecycle (decision 4)" in
  * `docs/implemented-plans/boxes-as-packages-v2.md` — the step list there is this file's
@@ -19,7 +22,7 @@
  * boxholder invoked. Steps 0-2 (preflight, snapshot, dependency bump + `pnpm
  * install`) are fine under the old engine — they don't touch box-shape-aware
  * logic that could differ between versions. But steps 3+ (migrate, template
- * sync, typecheck) MUST run under the version being upgraded TO, since a
+ * sync, typecheck, validate) MUST run under the version being upgraded TO, since a
  * migration or template registered in the new version doesn't exist in the
  * old engine's in-process code. After `pnpm install` completes,
  * `boxRoot/node_modules/.bin/bbx` on disk IS the new engine, so those
@@ -92,6 +95,7 @@ const UPGRADE_STEPS = {
   bbxMigrate: "bbx-migrate",
   bbxInit: "bbx-init",
   tsc: "tsc",
+  bbxValidate: "bbx-validate",
   pnpmInstallRestore: "pnpm-install-restore",
 } as const;
 
@@ -229,6 +233,8 @@ export interface UpgradeDeps {
 export interface UpgradeResult {
   installedVersion: string;
   commitHash: string;
+  /** `bbx validate` output under the new engine when it exited nonzero; null when the box validates. */
+  validationFailures: string | null;
 }
 
 /**
@@ -305,6 +311,13 @@ async function upgradeUnderMaintenance(
     });
     if (tsc.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.tsc, tsc.output);
 
+    // Step 6a: validate the whole box under the new engine, so cards a base
+    // change made invalid are listed by file. Report-only: a nonzero exit
+    // is carried into the result, never thrown, so it cannot revert the
+    // upgrade (boxholder decision 2026-10-10).
+    const validate = await runCommand({ label: UPGRADE_STEPS.bbxValidate, command: newBbxBin, args: ["validate"], cwd: boxRoot });
+    const validationFailures = validate.code === 0 ? null : validate.output;
+
     // Step 7: commit everything as one unit.
     const installedVersion = await readInstalledVersion(boxRoot);
     await stageAll(boxRoot);
@@ -313,7 +326,7 @@ async function upgradeUnderMaintenance(
       trailers: { "Upgraded-To": `beebox@${installedVersion}` },
     });
 
-    return { installedVersion, commitHash };
+    return { installedVersion, commitHash, validationFailures };
   } catch (e) {
     await revertUpgrade({ boxRoot, snapshotSha, runCommand, failure: toError(e) });
     throw e;
@@ -321,12 +334,15 @@ async function upgradeUnderMaintenance(
 }
 
 export const upgradeCommand = new Command("upgrade")
-  .description("Upgrade a box's beebox engine: bump the dependency, migrate data, sync templates, typecheck, commit")
+  .description("Upgrade a box's beebox engine: bump the dependency, migrate data, sync templates, typecheck, validate, commit")
   .requiredOption("--to <spec>", "beebox dependency spec to upgrade to (a semver range, or a file:<path>/<path>.tgz tarball)")
   .action(async (options: { to: string }) => {
     try {
       const result = await runUpgrade({ to: options.to });
       console.log(`Upgraded to beebox@${result.installedVersion} (commit ${result.commitHash}).`);
+      if (result.validationFailures !== null) {
+        console.log(`\nCards that no longer validate under beebox@${result.installedVersion}:\n${result.validationFailures.trimEnd()}`);
+      }
     } catch (error) {
       console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);

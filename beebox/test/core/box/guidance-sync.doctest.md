@@ -390,6 +390,25 @@ JSON.stringify({
 => {"gone":false,"hand":true}
 ```
 
+## A retired family's marked files go on the next sync
+
+The engine wrote `.claude/rules/exposition-<course>.md` until the courseware
+plugin moved presentation rules into the course's `AGENTS.md`. The family has
+no registry row, so the rule generator's marked-orphan prune removes what the
+old compiler left; a boxholder's own rule under the same name pattern stays.
+
+```ts continue
+await plant(box.root, { rel: ".claude/rules/exposition-courses-chemistry.md", content: withDocId({ relativePath: ".claude/rules/exposition-courses-chemistry.md", content: "---\npaths:\n  - \"courses/chemistry/**\"\n---\nold\n" }) });
+await plant(box.root, { rel: ".claude/rules/exposition-mine.md", content: "a boxholder's own rule\n" });
+await syncBoxGuidance(box.root, { generators: true });
+
+JSON.stringify({
+  marked: await exists(box.root, ".claude/rules/exposition-courses-chemistry.md"),
+  own: await exists(box.root, ".claude/rules/exposition-mine.md"),
+})
+=> {"marked":false,"own":true}
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

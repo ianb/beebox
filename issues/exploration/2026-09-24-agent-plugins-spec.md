@@ -66,7 +66,7 @@ audit events, inter-plugin dependencies, and a validator.
 A box already holds extension pieces in several places: box-local schemas
 (`src/schemas/`, `_config/schemas/`), views (`src/views/`), procedures
 (`_config/procedures/`), tricks (`src/tricks/`), and managed box skills
-written to `<box>/.claude/skills/` (`beebox/src/core/box/guidance-sync/skills.ts`). Only
+written to `<box>/.claude/skills/` (`beebox/src/core/box/guidance-sync/skills/core.ts`). Only
 skills and MCP servers are portable in this spec. Everything that makes a box
 plugin a beebox plugin (schemas, views, procedures, templates, guidance) would
 live in a reverse-domain extension directory that only beebox reads.

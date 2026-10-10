@@ -7,7 +7,7 @@
  * A plugin's skill lives with the plugin (`src/plugins/<name>/skill.ts`), not here.
  */
 
-import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
+import { BOX_PACKAGE_DOCS } from "../../../docs-gen/shared.js";
 
 /**
  * The `calendar` skill: authoring `.ics` events for two-way Google Calendar

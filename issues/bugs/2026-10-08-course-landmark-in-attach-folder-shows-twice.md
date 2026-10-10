@@ -18,7 +18,7 @@ Two symptoms in the D-chemistry walk share one cause.
 ## Mechanism
 
 The build-course skill puts the course's landmark card inside the course's
-`.attach` folder (`beebox/src/core/box/guidance-sync/skills-content.ts:97`,
+`.attach` folder (`beebox/src/core/box/guidance-sync/skills/content.ts:97`,
 step 7). Then:
 
 - `beebox/src/frontend/src/components/AppNav/PlacePill.tsx:230` shows

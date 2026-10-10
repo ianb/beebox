@@ -82,6 +82,8 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "finalize", audience: "agent", smoke: MUTATES },
   { name: "procedure", audience: "agent", smoke: { run: ["procedure", "list"] } },
   { name: "trick", audience: "agent", smoke: { run: ["trick"] } },
+  // Installed plugins, active or not, and the stubs an active one still lacks.
+  { name: "plugins", audience: "agent", smoke: { run: ["plugins", "list"] } },
   { name: "host", audience: "agent", smoke: { skip: "installs system packages as root through sudo" } },
 
   // ---- Reading the box's own state -------------------------------------

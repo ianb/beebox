@@ -118,7 +118,39 @@ result.installedVersion
 => 0.2.0
 
 calls
-=> ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc"]
+=> ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc","bbx-validate"]
+
+(await getLog(boxRoot, 1))[0].trailers
+=> {"Upgraded-To":"beebox@0.2.0"}
+```
+
+A box that validates under the new engine reports no failures:
+
+```ts continue
+result.validationFailures
+=> null
+```
+
+```ts cleanup
+await fs.rm(boxRoot, { recursive: true, force: true });
+```
+
+## Validation failures are reported, never a revert
+
+`bbx validate` under the new engine runs after typecheck so cards a plugin base
+change made invalid are listed by file. Its exit code does not decide anything:
+the upgrade commits and the result carries the output for the summary
+(boxholder decision 2026-10-10; `docs/plugins.md`, "Health").
+
+```ts
+const boxRoot = await makeV3Fixture();
+const calls = [];
+const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls, failLabel: "bbx-validate", failOutput: "content/Acids.course.card: missing required field learner" }));
+result.validationFailures
+=> content/Acids.course.card: missing required field learner
+
+calls
+=> ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc","bbx-validate"]
 
 (await getLog(boxRoot, 1))[0].trailers
 => {"Upgraded-To":"beebox@0.2.0"}
