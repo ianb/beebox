@@ -273,7 +273,7 @@ async function lintFrontmatterCard(input: {
   // which sets `ownMarkdocValidation` so the same violation isn't reported
   // twice at two severities.
   if (parsed.schema.ownMarkdocValidation !== true && typeof bodyField === "string") {
-    warnings.push(...lintBodyMarkdoc(bodyField));
+    warnings.push(...lintBodyMarkdoc(bodyField, parsed.schema.markdocTags));
   }
   warnings.push(...bodyTitleWarnings(parsed.fields));
   warnings.push(...lintFrontmatterTodoAssigned(parsed.fields));

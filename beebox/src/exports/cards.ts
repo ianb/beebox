@@ -28,7 +28,7 @@ export {
   type CardSubmissionResult,
   type SubmissionIssue,
 } from "../cards/schema.js";
-export { extendSchema, RedeclaredFieldError, type SchemaDelta } from "../cards/extend-schema.js";
+export { extendSchema, RedeclaredFieldError, RedeclaredTagError, type SchemaDelta } from "../cards/extend-schema.js";
 export { definePlugin, type LintContext, type PluginDefinition } from "../cards/plugin-definition.js";
 export { extractRefs } from "../cards/extract-refs.js";
 

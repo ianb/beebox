@@ -1106,3 +1106,33 @@ const fine = await lintCardsDispatch([box4.path("_content/store/notes/Fine.doc.c
 fine.totalErrors
 => 0
 ```
+
+## A type's scoped Markdoc tags validate in that type's cards only
+
+A schema's `markdocTags` extend the core table for cards of that type. The
+same tag in a card of another type is still `Undefined tag`.
+
+```ts
+const dishSchema: CardSchema = cardSchema("dish", {
+  fields: { title: z.string(), body: body(z.string()) },
+  markdocTags: { garnish: { render: "Garnish", attributes: { amount: { type: String } } } },
+});
+const scopedCtx: LoadCardContext = {
+  cardSchemas: new Map<string, CardSchema>([["dish", dishSchema], ["doc", docSchema]]),
+};
+const scopedBox = await makeTmpBox();
+await scopedBox.write(
+  "_content/box/Soup.dish.card",
+  "---\ntype: dish\ntitle: Soup\n---\nAdd {% garnish amount=\"2\" %}parsley{% /garnish %}.\n",
+);
+await scopedBox.write(
+  "_content/box/Memo.doc.card",
+  "---\ntype: doc\ntitle: Memo\n---\nAdd {% garnish amount=\"2\" %}parsley{% /garnish %}.\n",
+);
+const scopedResult = await lintCardsDispatch(
+  [scopedBox.path("_content/box/Soup.dish.card"), scopedBox.path("_content/box/Memo.doc.card")],
+  { boxRoot: scopedBox.root, ctx: scopedCtx },
+);
+scopedResult.results.map((r) => r.warnings.filter((w) => w.message.includes("Undefined tag")).length)
+=> [0, 1]
+```
