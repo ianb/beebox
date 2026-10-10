@@ -48,7 +48,6 @@ two differ. `<name>` stands for one path segment, and `**/` for any directory.
 | `.claude/rules/bbx-validate-ignore.md` | situational | generated | `installValidationHooks` | yes |
 | `.claude/rules/guides-for-<type>.md` | situational | generated | `compileGuides` | yes |
 | `.claude/rules/guide-for-chat-<chat>.md` | situational | generated | `compileGuides` | yes |
-| `.claude/rules/exposition-<course>.md` | situational | generated | `compileExpositionRules` | yes |
 | `.claude/skills/<skill>/<file>` | invoked | generated | walk (`generateSkills`) | yes |
 | `_config/procedures/<name>.procedure.card` | invoked | tracked | `installProcedures` | yes |
 | `_config/<domain>.guide.card` | invoked | tracked | `installGuides` | yes |
@@ -95,10 +94,14 @@ says so in its `description` field instead, and a symlink has no marker.
 
 A generator's return value is its manifest. The rule and skill generators
 remove a file that carries the marker naming its own path and is not in the
-manifest, so a retired rule or skill does not linger. A file without the
+manifest, so a retired rule or skill does not linger. A retired family needs
+no row of its own: the engine stopped writing `exposition-<course>.md` rules
+in 2026-10 (the courseware plugin puts presentation rules in the course's
+`AGENTS.md`), and the marked files it left go on the next sync, while a
+boxholder's own file under that name stays. A file without the
 marker, such as a boxholder's own rule or skill, is left alone, with one
 exception: the name families the engine has always owned. Any
-`card-<type>.md`, `connector-<name>.md`, or `exposition-<course>.md` rule and
+`card-<type>.md` or `connector-<name>.md` rule and
 any `.agents/skills/beebox-rule-*` directory the current run did not write is
 removed whether or not it carries the marker, because those names were engine
 output before the marker existed and a box must not shadow a generated rule

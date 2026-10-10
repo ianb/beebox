@@ -19,6 +19,7 @@
 // partly written export.
 import { build } from "esbuild";
 import { buildPublicationWorker } from "./pub-worker.mjs";
+import { buildPluginBundles } from "./plugins.ts";
 import { copyFile, mkdir, readdir, rename, rm } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
@@ -130,6 +131,10 @@ await copyFile(
   join(root, "src/exports/view-widgets.d.ts"),
   join(tmpDir, "view-widgets", "index.d.ts"),
 );
+
+// Every plugin's `beebox/plugins/<name>` and `beebox/plugins/<name>/view`
+// export (dist/plugins/<name>/{index,view}.js); see plugins.ts.
+await buildPluginBundles({ root, outDir: tmpDir });
 
 // Package the exact module Worker uploaded by server-managed publications.
 await buildPublicationWorker(join(tmpDir, "pub-worker.js"));

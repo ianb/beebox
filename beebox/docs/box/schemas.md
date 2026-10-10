@@ -201,7 +201,27 @@ export default cardSchema("plant", {
 
 ## Available Imports
 
-**Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox library surface: `beebox/cards` (card/schema primitives), `beebox/schema` (Zod and YAML, version-pinned to the engine), and `beebox/view-widgets` (view components). Don't add other dependencies to `package.json` — that file isn't yours to edit.
+**Extending a plugin's type.** A plugin (`bbx plugins list`) ships card
+types as bases. Your stub completes one: `cardSchema("progress",
+courseware.schemas["progress"])`. To add a field, wrap the base with
+`extendSchema` from `beebox/cards`:
+
+```ts
+import { cardSchema, extendSchema } from "beebox/cards";
+import { z } from "beebox/schema";
+import courseware from "beebox/plugins/courseware";
+
+export default cardSchema("progress", extendSchema(courseware.schemas["progress"], {
+  fields: { mood: z.string().optional() },
+}));
+```
+
+Fields merge; a field the base already declares is an error. Both the base's
+and your `validate` run. The field lives in your stub, never under
+`node_modules`, which an upgrade replaces. The plugin's README under
+`node_modules/beebox/src/plugins/<name>/README.md` shows every stub it needs.
+
+**Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox library surface: `beebox/cards` (card/schema primitives), `beebox/schema` (Zod and YAML, version-pinned to the engine), `beebox/view-widgets` (view components), and `beebox/plugins/<name>` or `beebox/plugins/<name>/view` for a plugin this box has activated (`bbx plugins list`; the plugin's README shows the stub). Don't add other dependencies to `package.json` — that file isn't yours to edit.
 
 From `beebox/cards` (`validate` and `summarize` are config hooks on `cardSchema`, not imports):
 - `cardSchema(type, config)` — define a frontmatter card schema
