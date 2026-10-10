@@ -11,7 +11,7 @@
 
 **Comparables roundup** (2026-07-04): [roundup chapter](scout-roundup.md) · scouts: [Claude Code Channels](scout-claude-code-channels.md) · [Khoj](scout-khoj.md) · [Goose](scout-goose.md) · [Agent Zero](scout-agent-zero.md) · [nanobot](scout-nanobot.md)
 
-**Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](deep-transcript-mining.md) · [bbx retro](deep-bbx-retro.md) · [OpenClaw dreaming](deep-openclaw-dreaming.md) · [Hermes learning loop](deep-hermes-learning.md) · [OpenClaw commitments](deep-openclaw-commitments.md) · [Canvas/A2UI](deep-openclaw-canvas-a2ui.md) · [retrieval internals](deep-retrieval-internals.md) · [bbx search](deep-bbx-search.md) · [channel affordances & vague input](deep-channel-affordances.md) · [installation & distribution](deep-installation.md)
+**Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](deep-transcript-mining.md) · [bbx retro](deep-bbx-retro.md) · [OpenClaw dreaming](deep-openclaw-dreaming.md) · [Hermes learning loop](deep-hermes-learning.md) · [OpenClaw commitments](deep-openclaw-commitments.md) · [Canvas/A2UI](deep-openclaw-canvas-a2ui.md) · [retrieval internals](deep-retrieval-internals.md) · [bbx search](deep-bbx-search.md) · [channel affordances & vague input](deep-channel-affordances.md) · [installation & distribution](deep-installation.md) · [OpenClaw plugins (2026-10)](deep-openclaw-plugins.md) · [Hermes plugins (2026-10)](deep-hermes-plugins.md)
 
 ## 1. The two systems in a nutshell
 

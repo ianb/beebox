@@ -175,6 +175,52 @@ function sourceFor(params: {
   return params.target.endsWith(".js") ? null : params.target;
 }
 
+/**
+ * A wildcard export (an `exports` key holding one `*`, e.g. `./plugins/<*>`
+ * mapped to `./dist/plugins/<*>/index.js`) names a family of surfaces, one
+ * per directory the `*` stands for. The `*` is a single directory name under
+ * `src/`, expanded against the source tree (`src/plugins/<name>/index.ts`,
+ * or `.tsx`), so each expansion carries its
+ * resolved source and the pattern it came from; a directory without the
+ * named module is not a surface (the sets rule reports it if it is a
+ * stray member).
+ */
+function expandWildcardSurface(params: {
+  specifier: string;
+  target: string;
+  packageRoot: string;
+  repoRoot: string;
+}): PublicSurface[] {
+  const distPrefix = `${params.packageRoot}/dist/`;
+  if (!params.target.startsWith(distPrefix) || !params.target.endsWith(".js")) return [];
+  const distSuffix = params.target.slice(distPrefix.length, -".js".length);
+  const star = distSuffix.indexOf("*");
+  if (star === -1 || distSuffix.lastIndexOf("*") !== star) return [];
+  const before = distSuffix.slice(0, star);
+  const after = distSuffix.slice(star + 1);
+  const parentDir = join(params.repoRoot, params.packageRoot, "src", before);
+  if (!existsSync(parentDir)) return [];
+  const surfaces: PublicSurface[] = [];
+  for (const dirent of readdirSync(parentDir, { withFileTypes: true })) {
+    if (!dirent.isDirectory()) continue;
+    for (const ext of [".ts", ".tsx"]) {
+      const source = resolveRepoRelative({
+        fromDir: params.packageRoot,
+        relative: `src/${before}${dirent.name}${after}${ext}`,
+      });
+      if (!isRepoFile(join(params.repoRoot, source))) continue;
+      surfaces.push({
+        specifier: params.specifier.replace("*", dirent.name),
+        target: params.target.replace("*", dirent.name),
+        source,
+        pattern: params.specifier,
+      });
+      break;
+    }
+  }
+  return surfaces;
+}
+
 export function scanPublicSurfaces(params: {
   repoRoot: string;
   packageRoot: string;
@@ -191,6 +237,10 @@ export function scanPublicSurfaces(params: {
     const chosen = chooseExportTarget(value);
     if (chosen === null) continue;
     const target = resolveRepoRelative({ fromDir: params.packageRoot, relative: chosen });
+    if (specifier.includes("*")) {
+      surfaces.push(...expandWildcardSurface({ specifier, target, packageRoot: params.packageRoot, repoRoot: params.repoRoot }));
+      continue;
+    }
     const source = sourceFor({
       target,
       packageRoot: params.packageRoot,

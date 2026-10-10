@@ -72,7 +72,7 @@ await box.cleanup();
 ## One generation commits all of its tracked output
 
 `generateDocs` writes tracked output after the template sync: the guide
-rules, the exposition rules, `_content/briefing.md`, `AGENTS.md`, the
+rules, `_content/briefing.md`, `AGENTS.md`, the
 `.agents/skills/` mirrors, and `.codex/hooks.json`. The commit runs once, after
 the last of these, so none is left dirty or untracked
 (`issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md`).

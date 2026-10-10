@@ -40,8 +40,5 @@ agent's judgement recorded with its evidence, not a test score.
 - **Views** ([views](../capabilities/views.md)): a display built for a kind of card, which is what lets the concept map be browsed as a diagram instead of read as a list.
 - **The chat-thread card** ([chat](../capabilities/chat.md)): a conversation is a durable card in the box, so a lesson taught in chat stays material you can reopen.
 
-**Read next.** [Course](../reference/cards/course.md),
-[concept-map](../reference/cards/concept-map.md),
-[exposition-plan](../reference/cards/exposition-plan.md),
-[lesson-plan](../reference/cards/lesson-plan.md),
-[progress](../reference/cards/progress.md).
+**Read next.** [Courses](../capabilities/courses.md),
+[the card format](../concepts/cards.md).

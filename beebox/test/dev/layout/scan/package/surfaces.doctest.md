@@ -32,9 +32,15 @@ await write(
       "./widgets": { import: "./dist/widgets/index.js" },
       "./other": { node: "./dist/other/index.js", types: "./dist/other/index.d.ts" },
       "./tsconfig.base.json": "./tsconfig.base.json",
+      "./plugins/*": { types: "./dist/plugins/*/plugin.d.ts", default: "./dist/plugins/*/plugin.js" },
+      "./plugins/*/view": { types: "./dist/plugins/*/view.d.ts", default: "./dist/plugins/*/view.js" },
     },
   }),
 );
+await write("pkg/src/plugins/alpha/plugin.ts", "export {};\n");
+await write("pkg/src/plugins/alpha/view.tsx", "export {};\n");
+await write("pkg/src/plugins/beta/plugin.ts", "export {};\n");
+await write("pkg/src/plugins/docs-only/README.md", "# docs\n");
 // The build entry lives in an ordinary `src/` module, not a `scripts/`
 // directory — the scanner finds a `build({...})` call in any module of the
 // package, the same way `beebox/src/scripts/build-cli/build/bundle.ts` (not
@@ -107,6 +113,22 @@ JSON.stringify(surfaces.find((s) => s.specifier === "./tsconfig.base.json"))
 => {"specifier":"./tsconfig.base.json","target":"pkg/tsconfig.base.json","source":"pkg/tsconfig.base.json"}
 ```
 
+## A wildcard key expands to one surface per matching directory
+
+`./plugins/*` stands for every `src/plugins/<name>/plugin.ts`; `./plugins/*/view`
+for every `view.tsx`. Each expansion carries the pattern it came from, and a
+directory without the named module (`docs-only`) is no surface.
+
+```ts
+surfaces.filter((s) => s.pattern !== undefined).map((s) => `${s.pattern} ${s.specifier} ${s.target} ${s.source}`)
+=>
+[
+  "./plugins/* ./plugins/alpha pkg/dist/plugins/alpha/plugin.js pkg/src/plugins/alpha/plugin.ts",
+  "./plugins/* ./plugins/beta pkg/dist/plugins/beta/plugin.js pkg/src/plugins/beta/plugin.ts",
+  "./plugins/*/view ./plugins/alpha/view pkg/dist/plugins/alpha/view.js pkg/src/plugins/alpha/view.tsx",
+]
+```
+
 ## No `package.json`
 
 ```ts
@@ -131,7 +153,7 @@ await write("package.json", JSON.stringify({ exports: { "./root-thing": "./dist/
 
 const enclosing = scanEnclosingSurfaces({ repoRoot, packageRoot: "pkg/nested" });
 JSON.stringify(enclosing.map((s) => s.specifier))
-=> ["./cards","./schema","./server","./widgets","./other","./tsconfig.base.json","./root-thing"]
+=> ["./cards","./schema","./server","./widgets","./other","./tsconfig.base.json","./plugins/alpha","./plugins/beta","./plugins/alpha/view","./root-thing"]
 
 enclosing.find((s) => s.specifier === "./cards")?.source
 => pkg/src/cards/index.ts

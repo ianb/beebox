@@ -2,7 +2,7 @@
 
 **Written 2026-08-19**, from the TiddlyWiki5 repository at `master`
 (`5.5.0-prerelease`). Context for
-[plugins and the medium/content line](../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md);
+[plugins and the medium/content line](../../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md);
 the main note is [expressing-content.md](expressing-content.md).
 
 ---

@@ -366,6 +366,11 @@ chroot/jail → VMs. Two design consequences land *now* so the later layers stay
 4. Template sync — park-on-divergence machinery (exists).
 5. Regenerate rules, skills, generated docs, search index (the tail of `bbx init`, exists).
 6. Typecheck the box's `src/` (new, cheap, catches library-surface breaks).
+   6a. (added 2026-10-10) `bbx validate` over the whole box under the new engine, so cards a
+   plugin base change made invalid are listed by file. Report-only: errors and warnings
+   print in the upgrade summary and never block the commit (boxholder decision 2026-10-10).
+   6b. (added 2026-10-10) `bbx health --json` under the new engine; the failing plugin rows
+   (`docs/plugins.md`, "Health") print under `Plugin health after upgrade:`. Report-only too.
 7. Commit with trailer `Upgraded-To: beebox@x.y.z`. On any failure: `git reset --hard`
    to the snapshot SHA (reverting migrations *and* the dep bump together), reinstall the
    previous version, log to `.beebox/logs/upgrade.log`, exit nonzero.
