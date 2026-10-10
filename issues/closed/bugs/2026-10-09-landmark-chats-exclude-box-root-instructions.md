@@ -1,11 +1,13 @@
 ---
 title: "Landmark chats exclude the box's own root AGENTS.md and rules since the host-isolation fix"
-workstream: unattached
+workstream: agents-md
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agents-md — while planning the box AGENTS.md migration
 ---
+**Closed (implemented).** Resolved by 2eb6dc739, b6ff23681, b59c118d0, 4792b639e: landmark chats pass `boxRoot` so the exclude list starts above the box root, and append the box root's expanded @-includes as BOX CONTEXT (degrading only on unsafe includes).
 
 A chat bound to a landmark runs the SDK with `cwd` set to the landmark
 directory. `beebox/src/core/chat/session/run/start.ts:122`:
