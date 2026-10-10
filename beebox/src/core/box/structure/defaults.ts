@@ -393,8 +393,8 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     onWakeup: false,
     // Seeded ENABLED. The quota worry that had this off doesn't hold: retro
     // only spawns an agent once a HUMAN chat session has gone quiet — retro
-    // discovery counts a session only when its transcript carries `<typed>`/
-    // `<speech>`-tagged messages or the session is in the chat registry, so
+    // discovery counts a session only when its transcript carries human-input
+    // tags (`<typed>`, `<speech>`, or `<external-input>`) or is in the registry, so
     // wakeup, job, and procedure transcripts classify as nonChat — and with
     // nothing qualifying, the scan step's precheck exits CHECK_SKIP and no
     // agent runs. On a box nobody chats with, this costs nothing. `enabled` is

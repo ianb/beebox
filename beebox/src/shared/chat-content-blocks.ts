@@ -58,7 +58,7 @@ export interface BuildChatContentBlocksOptions<TBlock extends { type: string }> 
    * marker off it in the meantime, so it passes `false`. Before this was
    * unified, the frontend copy silently omitted this step entirely — a
    * latent divergence from the "mirrors the server" comment, though inert
-   * in practice since messages are always wrapped in `<typed>`/`<speech>`
+   * in practice since messages are wrapped in `<typed>`, `<speech>`, or `<external-input>`
    * tags before reaching either copy.
    */
   ensureTrailingTextBlock: boolean;

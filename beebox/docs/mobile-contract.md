@@ -1274,14 +1274,16 @@ See §1.3 (full request/response/errors).
 ### 5.11 Quick chat — `quickChat.submit`, `choose`, `discard`, `home`
 
 - **Direction:** native → box, bearer-authenticated tRPC (not batched). `POST
-  /api/trpc/quickChat.submit` `{id,message,origin?,channel?}`, `POST /api/trpc/quickChat.choose`
+  /api/trpc/quickChat.submit` `{id,message,origin?,source?,channel?}`, `POST /api/trpc/quickChat.choose`
   `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
-  /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. `origin` is `"typed"` or
-  `"voice"`, how the person entered the thought; an absent `origin` (a build from before it) is
-  `"typed"`. The record keeps it, and delivery, by `submit` or a later `choose`, wraps the thought
-  as `<typed source="box-screen">` or `<speech source="box-screen" stt="live">` (a dictated
-  thought is the phone's live transcript; no recording reaches the box). A repeated `submit` of a
-  stored id keeps the stored origin. Each mutation answers a
+  /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. `origin` is `"typed"`,
+  `"voice"`, or `"external"`, how the person entered the thought; an absent `origin` (a build from
+  before it) is `"typed"`. External input requires a source; other origins reject `source`. The
+  record keeps origin and source, and delivery, by `submit` or a later `choose`, wraps typed thoughts
+  as `<typed source="box-screen">`, voice thoughts as `<speech source="box-screen" stt="live">`
+  (the phone's live transcript; no recording reaches the box), and external thoughts as
+  `<external-input source="apple-app-intents">`. A repeated `submit` of a stored id keeps its
+  stored origin and source. Each mutation answers a
   `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Each
   `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
   first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
@@ -1292,12 +1294,16 @@ See §1.3 (full request/response/errors).
   `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md` and by
   `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the three request bodies
   against `submit-request.json`, `choose-request.json`, and `discard-request.json`.
-- **Native caller:** the box screen, which has no web session mounted, so this is the one native
+- **Native caller:** the box screen and the App Intent, which have no web session mounted, so this is the native
   path that sends a chat message without the web view (`ios-app/AGENTS.md`, bridge discipline).
-  The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
+  The App Intent uses `origin: "external"` and `source: "apple-app-intents"`; a locked selected box
+  is refused before persistence. The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
   repeated `submit` of one id returns one record and posts once. A `sending` view with
   `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.
-- **Outbox:** the phone stores `{id,boxID,text,origin,createdAt,attempts,lastAttemptAt}` in
+- **Request deadline:** the App Intent's initial `quickChat.submit` request has a 20-second timeout
+  so Siri can return an honest local-queue result inside its execution window. Other quick-chat
+  mutations retain the normal 60-second request timeout.
+- **Outbox:** the phone stores `{id,boxID,text,origin,source?,createdAt,attempts,lastAttemptAt}` in
   `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
   answers. A failed request keeps it; retries follow a backoff while the app is in the
   foreground, and once per launch, for seven days, then the row reads "Not sent". An entry for a
@@ -1380,7 +1386,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
-| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,source?,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; external requires `origin:"external",source:"apple-app-intents"`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift`; `Intents/CaptureThoughtIntent.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
 | W3 | Box screen navigation (§3.5) | web→native | main-frame navigation to `<baseURL>/box`, cancelled by native | `Views/ChatWebView.swift` · `isBoxScreenURL`, `Coordinator.mainFramePolicy(for:)` | the `/<box>/box` route; the landmark menu's box row | SILENT-degraded |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |

@@ -14,7 +14,7 @@
  * dropdown — only sessions in here show up.
  *
  * The `migrated` flag gates a one-shot backfill that scans existing
- * JSONLs for `<speech>`/`<typed>` user content and treats those as web
+ * JSONLs for human-input wrapper content and treats those as chat
  * chat sessions.
  *
  * Also owns the "most-active" pointer at `.beebox/chat-session-id.json`,

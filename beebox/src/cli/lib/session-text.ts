@@ -57,8 +57,8 @@ export function stripSpeechWrappers(text: string): string {
   // placemarker, not a word the user typed (either spelling, see
   // `shared/composer-tokens.ts`).
   out = out.replace(/\[(?:image|file|selection)#?\d+]/g, "");
-  // Unwrap outer <speech>/<typed> shells, keeping their text content
-  out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
+  // Unwrap outer human-input shells, keeping their text content.
+  out = out.replace(/<\/?(?:speech|typed|external-input)\b[^>]*>/g, "");
   // Unwrap <unsure>word</unsure> low-confidence marks (Track 4,
   // docs/plans/transcript-confidence.md) to the plain word — this reader
   // (retro, chat review, --dialogue-only) wants clean human text, not the

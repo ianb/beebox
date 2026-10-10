@@ -182,7 +182,7 @@ export function readAcceptedMessages(
     if (!Number.isFinite(at) || at < cutoff) continue;
 
     // The bus carries the same attributed text the transcript will (the
-    // `<typed user=… >` shell and all), which is what lets the client compare
+    // human-input wrapper shell and all), which is what lets the client compare
     // the two and what lets the bubble render identically either way.
     //
     // Except for `[imageN]`: both the transcript and the client's optimistic
