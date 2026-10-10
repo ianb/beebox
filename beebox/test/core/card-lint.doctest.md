@@ -1136,3 +1136,21 @@ const scopedResult = await lintCardsDispatch(
 scopedResult.results.map((r) => r.warnings.filter((w) => w.message.includes("Undefined tag")).length)
 => [0, 1]
 ```
+
+## The retired type-specific tags are undefined everywhere
+
+`purpose`, `correction`, `image`, and `silence` were core tags owned by one
+card type each (briefing, capture-session). The `body-tags-2026-10` migration
+rewrote them into frontmatter, a section, a link, and plain text, and the
+table no longer has them, so each is reported as an undefined tag in any card.
+
+```ts
+const retiredBox = await makeTmpBox();
+await retiredBox.write(
+  "_content/box/Old.doc.card",
+  "---\ntype: doc\ntitle: Old\n---\n{% purpose %}\nP\n{% /purpose %}\n\n{% correction %}\nC\n{% /correction %}\n\n{% image ref=\"attach/a.image.card\" /%}\n\n{% silence duration=\"9s\" /%}\n",
+);
+const retired = await lintCardsDispatch([retiredBox.path("_content/box/Old.doc.card")], { boxRoot: retiredBox.root, ctx });
+retired.results[0].warnings.filter((w) => w.message.includes("Undefined tag")).map((w) => w.message.match(/'([a-z]+)'/)?.[1])
+=> ["purpose", "correction", "image", "silence"]
+```

@@ -30,7 +30,6 @@ import { UnknownTagInline, UnknownTagBlock } from "./UnknownTag";
 import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
-import { makeBriefingComponents } from "./BriefingTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
@@ -42,7 +41,6 @@ import { detectVideoEmbed } from "../../lib/video-url";
 import {
   externalImageProxyUrl,
   resolveImageSrc,
-  resolveRelativePath,
   type NavigateHint,
   type ViewTarget,
 } from "../../lib/view-url";
@@ -197,7 +195,6 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
-  const briefing = makeBriefingComponents();
   const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath });
   const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
   const Task = ({ done }: { done?: boolean }) => (
@@ -208,40 +205,6 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
       readOnly
       className="mr-2 align-middle accent-warm-500"
     />
-  );
-  // Capture-session transcript markers. `{% image %}` links to the child
-  // image card; `{% silence %}` is a dim gap marker. The `ref` attribute is
-  // renamed to `sourceRef` by the Markdoc transform (React reserves `ref`).
-  const CaptureImage = ({ sourceRef }: { sourceRef?: string }) => {
-    const ref = typeof sourceRef === "string" ? sourceRef : "";
-    const label = ref.replace(/^attach\//, "").replace(/\.image\.card$/, "");
-    const path = ref === "" ? null : resolveRelativePath(linkCtx.basePath, ref);
-    // An unresolvable marker (empty or box-escaping ref) renders as inert text,
-    // not a button that silently does nothing when clicked.
-    if (path === null) {
-      return (
-        <span className="mx-0.5 align-middle text-xs text-danger-dark" title={`Unresolvable image ref: ${ref}`}>
-          📷 {label === "" ? "image" : label}
-        </span>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          const target: ViewTarget = { path, viewer: null, params: {}, viewState: null };
-          linkCtx.onNavigate(target, label === "" ? undefined : { label });
-        }}
-        className="mx-0.5 rounded bg-warm-100 px-1.5 py-0.5 align-middle text-xs text-warm-700 hover:bg-warm-200"
-      >
-        📷 {label === "" ? "image" : label}
-      </button>
-    );
-  };
-  const Silence = ({ duration }: { duration?: string }) => (
-    <span className="mx-1 align-middle text-xs text-warm-400">
-      — {typeof duration === "string" ? duration : ""} silence —
-    </span>
   );
   // Markdoc's renderer wants one homogeneous `Record<string, ComponentType<Record<string,unknown>>>`
   // map, but each of these components has its own specific, narrower prop type
@@ -262,11 +225,7 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
     QuoteBlock: cast(QuoteBlock),
     SourceInline: cast(SourceInline),
     SourceBlock: cast(SourceBlock),
-    Purpose: cast(briefing.Purpose),
-    Correction: cast(briefing.Correction),
     Task: cast(Task),
-    CaptureImage: cast(CaptureImage),
-    Silence: cast(Silence),
     RedactedInline: cast(RedactedInline),
     RedactedBlock: cast(RedactedBlock),
     TodoInline: cast(TodoInline),

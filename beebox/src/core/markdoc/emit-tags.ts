@@ -63,13 +63,12 @@ function childText(ctx: TagCtx): string {
 }
 
 /**
- * Per-tag markdown emitters. Dispatches to one of three groups
- * (universal, briefing, markup); unknown tags fall back to "emit inner
+ * Per-tag markdown emitters. Dispatches to one of two groups
+ * (universal, markup); unknown tags fall back to "emit inner
  * content + stderr warning".
  */
 export function emitTag(ctx: TagCtx): void {
   if (emitUniversalTag(ctx)) return;
-  if (emitBriefingTag(ctx)) return;
   if (emitMarkupTag(ctx)) return;
   const { node, out } = ctx;
   const tagName = node.tag === undefined ? "(unnamed)" : node.tag;
@@ -135,31 +134,6 @@ function emitUniversalTag(ctx: TagCtx): boolean {
       const usage = str(attrs, "usage") === "" ? str(attrs, "as") : str(attrs, "usage");
       const cite = ref === "" ? "" : ` [→ ${displayFromRef(ref)}${usage === "" ? "" : `: ${usage}`}]`;
       out.push(node.inline ? `${content}${cite}` : `${content}${cite}\n\n`);
-      return true;
-    }
-    default:
-      return false;
-  }
-}
-
-/**
- * Briefing-vocabulary body tags: `purpose`, `correction`. The structured
- * records (`key-person` → `key-people:`, `property` → `properties:`) moved
- * to briefing frontmatter and are emitted by `compileBriefing`, not here;
- * `project-phase` was retired.
- */
-function emitBriefingTag(ctx: TagCtx): boolean {
-  const { node, out } = ctx;
-  const attrs = node.attributes;
-  switch (node.tag ?? "") {
-    case "purpose":
-      out.push(`**Purpose:** ${childText(ctx)}\n\n`);
-      return true;
-    case "correction": {
-      const test = str(attrs, "test");
-      const text = childText(ctx);
-      const testStr = test === "" ? "" : ` _(test: ${test})_`;
-      out.push(`**Correction:** ${text}${testStr}\n\n`);
       return true;
     }
     default:
