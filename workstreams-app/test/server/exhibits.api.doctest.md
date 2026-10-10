@@ -39,12 +39,20 @@ async function makeStore(): Promise<string> {
   return root;
 }
 
+/** The focus runner is injected; this stub records calls and fails on demand. */
+const focusCalls: string[] = [];
+let focusFailure: string | null = null;
+
 async function makeApp(storeRoot: string) {
   return buildExhibitsApp({
     storeRoot,
     appsRoot: path.join(storeRoot, "unused-apps-root"),
     token: TOKEN,
     port: EXHIBITS_PORT,
+    runFocus: async (request) => {
+      focusCalls.push(`${request.verb} ${request.name}`);
+      if (focusFailure !== null) throw new Error(focusFailure);
+    },
     createAssets: async () => fakeAssets(),
   });
 }
@@ -128,6 +136,44 @@ JSON.stringify({
   crossOriginRead: crossOriginRead.statusCode,
 })
 => {"foreign":403,"refusalNamesOrigin":true,"sameOrigin":200,"namedHost":200,"opaque":403,"noOrigin":200,"crossOriginRead":200}
+```
+
+## Reply in the session: bring a workstream's terminal tab forward
+
+`POST /api/<ws>/<exhibit>/focus` runs `bin/workstreams focus <ws>` through the
+injected runner. Success is 204. A runner failure is a 409 whose `detail` is the
+CLI's last stderr line, so the page can show why there is no live session. The
+committed-app namespace and `main` have no session row: they are refused with
+409 before the runner is called. A foreign `Origin` is refused like any write.
+
+```ts continue
+const focused = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
+focusFailure = "workstreams focus: no live session for demo-ws — use resume";
+const noSession = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
+focusFailure = null;
+const callsBeforeRefusals = focusCalls.length;
+const appsFocus = await app.inject({ method: "POST", url: "/api/apps/story-eval/focus", headers: authorized });
+const mainFocus = await app.inject({ method: "POST", url: "/api/main/anything/focus", headers: authorized });
+const unknownFocus = await app.inject({ method: "POST", url: "/api/no-such-ws/nothing/focus", headers: authorized });
+const foreignFocus = await app.inject({
+  method: "POST",
+  url: `${scope}/focus`,
+  headers: { ...authorized, origin: "http://localhost:5173" },
+});
+const anonymousFocus = await app.inject({ method: "POST", url: `${scope}/focus` });
+JSON.stringify({
+  focused: [focused.statusCode, focused.body],
+  noSession: [noSession.statusCode, noSession.json()],
+  apps: [appsFocus.statusCode, appsFocus.json().detail.startsWith("Committed apps")],
+  main: mainFocus.statusCode,
+  unknown: unknownFocus.statusCode,
+  foreign: foreignFocus.statusCode,
+  anonymous: anonymousFocus.statusCode,
+  calls: focusCalls,
+  refusalsSpawnedNothing: focusCalls.length === callsBeforeRefusals,
+  noAppsDirectoryMade: await fs.stat(path.join(store, "apps")).then(() => false, () => true),
+})
+=> {"focused":[204,""],"noSession":[409,{"message":"Could not bring the session forward.","detail":"workstreams focus: no live session for demo-ws — use resume"}],"apps":[409,true],"main":409,"unknown":404,"foreign":403,"anonymous":401,"calls":["focus demo-ws","focus demo-ws"],"refusalsSpawnedNothing":true,"noAppsDirectoryMade":true}
 ```
 
 ## Documents round-trip

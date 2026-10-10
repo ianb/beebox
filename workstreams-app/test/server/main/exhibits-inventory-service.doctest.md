@@ -92,6 +92,7 @@ async function makeApp(storeRoot: string, assets: ExhibitsAssets) {
     appsRoot: path.join(storeRoot, "apps"),
     token: TOKEN,
     port: EXHIBITS_PORT,
+    runFocus: async () => {},
     createAssets: async () => assets,
   });
 }

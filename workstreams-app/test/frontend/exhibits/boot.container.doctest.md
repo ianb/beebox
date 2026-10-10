@@ -72,3 +72,21 @@ JSON.stringify({
 })
 => {"page":true,"title":true,"prose":false}
 ```
+
+A store exhibit carries the "Reply in the session" button; a committed app does
+not, because it belongs to no workstream and has no session to bring forward.
+
+```ts
+const store = render(boot({}));
+const committed = render(boot({
+  scope: "apps/threshold-tuner",
+  manifest: { title: "Threshold tuner", created: "2026-08-15T00:00:00Z" },
+}));
+JSON.stringify({
+  storeButton: store.includes("Reply in the session"),
+  appButton: committed.includes("Reply in the session"),
+  // The refusal (and its link to the dashboard) renders only after a click.
+  idleRefusal: store.includes("Open the workstream list"),
+})
+=> {"storeButton":true,"appButton":false,"idleRefusal":false}
+```

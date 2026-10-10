@@ -10,6 +10,10 @@
 // the same onRequest auth hook as every page (auth.ts). A second Fastify
 // instance would be an unauthenticated surface, which is why this is a plugin.
 //
+// One more route is not storage: POST /api/<ws>/<exhibit>/focus brings the
+// workstream's terminal tab forward, the exhibits origin's only grant of
+// authority beyond the store.
+//
 // Committed apps (/apps/<name>/) write to the reserved store namespace
 // store/apps/<name>/: their code is tracked, their runtime data is not, so
 // using an app can never dirty a checkout.
@@ -53,8 +57,26 @@ const CAPTURE_EXTENSION_SET = new Set<string>(CAPTURE_EXTENSIONS);
 export const DOCUMENT_BODY_LIMIT = 1024 * 1024;
 export const CAPTURE_BODY_LIMIT = 25 * 1024 * 1024;
 
+/**
+ * Brings a workstream's terminal tab forward (`bin/workstreams focus <name>`).
+ * Structurally the workstreams origin's ActionCommandRunner, which the backend
+ * passes in; a rejection's message is the CLI's last stderr line.
+ */
+export type FocusRunner = (request: { verb: "focus"; name: string }) => Promise<void>;
+
 export interface ExhibitsApiOptions {
   storeRoot: string;
+  runFocus: FocusRunner;
+}
+
+/** Workstream names that have no session registry row to focus. */
+const NO_SESSION_REASONS: Record<string, string> = {
+  [APPS_SEGMENT]: "Committed apps belong to no workstream, so there is no session to bring forward.",
+  main: "The main checkout has no workstream session to bring forward.",
+};
+
+function lastLine(text: string): string {
+  return text.split("\n").map((line) => line.trim()).findLast((line) => line !== "") ?? "";
 }
 
 /** One JSONL line, as the client posts it; the server adds `at`. */
@@ -210,7 +232,7 @@ async function readIfPresent(file: string): Promise<string | null> {
  * content-type parsers are encapsulated per plugin.
  */
 export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (api, options) => {
-  const { storeRoot } = options;
+  const { storeRoot, runFocus } = options;
 
   // eslint-disable-next-line max-params -- Fastify's setErrorHandler signature is fixed (the hub-http-error.ts precedent).
   api.setErrorHandler<FastifyError>((error, request, reply) => {
@@ -231,7 +253,7 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
 
   api.setNotFoundHandler((request, reply) =>
     reply.code(404).send({
-      error: `No exhibit API route for ${request.method} ${request.url}. The API is /api/<scope>/data/<key>, /api/<scope>/events, and /api/<scope>/captures/<name>.`,
+      error: `No exhibit API route for ${request.method} ${request.url}. The API is /api/<scope>/data/<key>, /api/<scope>/events, /api/<scope>/captures/<name>, and POST /api/<scope>/focus.`,
     }));
 
   await api.register(async (json) => {
@@ -255,6 +277,25 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
         return reply.type("application/json; charset=utf-8").send(content);
       },
     );
+
+    // Bounded authority: bring a workstream's terminal tab forward. No body, no
+    // text reaches the CLI, and the workstream name is a validated segment.
+    json.post<{ Params: ScopeParams }>("/:ws/:exhibit/focus", async (request, reply) => {
+      const workstream = requireSegment(request.params.ws, "workstream");
+      requireSegment(request.params.exhibit, "exhibit name");
+      const noSession = NO_SESSION_REASONS[workstream];
+      if (noSession !== undefined) {
+        return reply.code(409).send({ message: "No session to focus.", detail: noSession });
+      }
+      await scopeDir(storeRoot, request.params);
+      try {
+        await runFocus({ verb: "focus", name: workstream });
+      } catch (error) {
+        const detail = lastLine(error instanceof Error ? error.message : String(error));
+        return reply.code(409).send({ message: "Could not bring the session forward.", detail });
+      }
+      return reply.code(204).send();
+    });
 
     json.put<{ Params: ScopeParams & { key: string }; Body: string }>(
       "/:ws/:exhibit/data/:key",
