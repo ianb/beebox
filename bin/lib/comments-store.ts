@@ -6,7 +6,7 @@
  * leaves a remark on a document, an agent reads it, acts, and clears it. They
  * never reach git, and they must survive a worktree cull — the third
  * persistence class the exhibits store established
- * (`beebox/docs/plans/workstream-exhibits.md`), so the root derivation,
+ * (`beebox/docs/implemented-plans/workstream-exhibits.md`), so the root derivation,
  * marker guard, and containment posture here deliberately mirror
  * `workstreams-app/src/server/exhibits/store.ts` without importing it (the
  * resident-app precedent is to share patterns, not source, and `bin/` and the

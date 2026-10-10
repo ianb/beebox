@@ -1,6 +1,6 @@
 ---
 title: "Exhibits rethink: show, do not ask"
-status: draft
+status: active
 workstream: exhibits-rethink
 issues: []
 ---
@@ -87,7 +87,7 @@ it belongs to rather than from a queue of questions.
 
 ## Stated preferences this plan trades against
 
-- **The original design** ([workstream-exhibits](workstream-exhibits.md),
+- **The original design** ([workstream-exhibits](../implemented-plans/workstream-exhibits.md),
   "Job to be done"): *"I want one queue that says what is waiting on me and
   what each item costs."* This plan removes that queue. Trade: the queue was
   never answered through its own surface in 52 days; chat is the channel the

@@ -1028,7 +1028,7 @@ case "$cmd" in
 
     # Exhibit stores: REPORT-ONLY, every run, both modes. Sweep never deletes
     # a store — culling exhibit content is always the developer's manual act
-    # (docs/plans/workstream-exhibits.md Track A). "main" and the reserved
+    # (docs/implemented-plans/workstream-exhibits.md Track A). "main" and the reserved
     # "apps" namespace are never orphans.
     if [ -d "${WT_EXHIBITS_ROOT:-}" ]; then
       for d in "$WT_EXHIBITS_ROOT"/*; do

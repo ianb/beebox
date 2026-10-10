@@ -1,7 +1,7 @@
 # Exhibit store lifecycle (bin/lib/exhibits-store.sh)
 
 The exhibit store is the third persistence class
-(`docs/plans/workstream-exhibits.md` Track A): per-workstream directories
+(`docs/implemented-plans/workstream-exhibits.md` Track A): per-workstream directories
 outside git and outside every worktree, symlink-mounted at
 `<checkout>/exhibits`. These tests drive the sourced bash functions with
 `WT_EXHIBITS_ROOT` pointed at a temp root — the same variable
