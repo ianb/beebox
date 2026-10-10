@@ -13,6 +13,8 @@ export class ReplayRing {
   private readonly frames: ArrayBuffer[] = [];
   private seen = 0;
   private gapStart = 0;
+  /** Where live forwarding actually stopped; `gapStart` adds the pad before it. */
+  private outageStart = 0;
 
   constructor(opts: { capacity: number }) {
     this.capacity = opts.capacity;
@@ -26,7 +28,18 @@ export class ReplayRing {
 
   /** Live forwarding stopped `padFrames` before now (a drop's detection latency). */
   markGap(opts: { padFrames: number }): void {
+    this.outageStart = this.seen;
     this.gapStart = Math.max(0, this.seen - opts.padFrames);
+  }
+
+  /**
+   * Every frame since the outage began is still in the ring, so a reconnect
+   * replays all of it. The pad before the outage does not count: it repeats
+   * audio the live text already holds. Covered means the audio is available
+   * for replay, not that it has been transcribed yet.
+   */
+  coversGap(): boolean {
+    return this.seen - this.outageStart <= this.frames.length;
   }
 
   /** The frames since the gap, oldest first, at most the whole ring. */
