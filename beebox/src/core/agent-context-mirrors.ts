@@ -248,9 +248,11 @@ async function mirrorRules(boxRoot: string): Promise<string[]> {
 }
 
 /**
- * CLAUDE.md and Claude skills remain canonical and editable. Codex sees them
- * through symlinks; Claude-only path rules are copied into generated Codex
- * skills because Codex plugins have no rules component.
+ * Claude skills remain canonical and editable. Codex sees them through
+ * symlinks; Claude-only path rules are copied into generated Codex skills
+ * because Codex plugins have no rules component. Codex reads `AGENTS.md`
+ * directly; in a box not yet converted, `mirrorClaudeDocs` links each legacy
+ * `CLAUDE.md` to an `AGENTS.md` beside it.
  */
 export async function generateAgentContextMirrors(boxRoot: string): Promise<string[]> {
   const shape = await getBoxShape(boxRoot);

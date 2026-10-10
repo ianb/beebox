@@ -313,7 +313,7 @@ export const BOX_LAYOUT = [
     boxDirsKey: "claude",
     path: ".claude",
     area: "agent-config",
-    description: "Agent configuration: CLAUDE.md, rules, memory, Claude Code settings.",
+    description: "Agent configuration: rules, memory, Claude Code settings.",
   },
   {
     boxDirsKey: "rules",

@@ -6,6 +6,9 @@ issues: []
 ---
 # Shared Frontend/Backend Code — Subplan
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A subplan of `markdoc-tags-plan.md`. The Markdoc work needs the same
 tag schemas on both sides of the frontend/backend split: the React
 renderer (`Markdown.tsx`) on the frontend, and the new server-side

@@ -6,6 +6,9 @@ issues: []
 ---
 # Semantic search (box-search phase 3): hybrid BM25 + vector retrieval
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Add semantic retrieval to `bbx search`: embed each searchable card's
 `contains` sentence as a 512-dim vector in the existing Orama index, and
 switch the query path to Orama's native `mode: "hybrid"` (BM25 + vector

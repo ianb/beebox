@@ -25,7 +25,7 @@ const tokens = (docRel, content) => check(docRel, content).map((p) => `${p.line}
 
 ```ts
 // Relative to the doc's own directory (beebox/test/).
-tokens("beebox/test/CLAUDE.md", "Helpers live in `dev/doc-check/helper.ts`.")
+tokens("beebox/test/AGENTS.md", "Helpers live in `dev/doc-check/helper.ts`.")
 => []
 
 // Relative to the package root (beebox/), from a doc deeper in the package.
@@ -79,7 +79,7 @@ candidatePath("_config/box.json", "beebox/docs/x.md")
 
 ```ts
 // docs/box/ is shipped into box-docs/ and read inside a box.
-tokens("beebox/docs/box/tricks.md", "Rules land in `.claude/rules/card-memo.md` and `src/schemas/CLAUDE.md`.")
+tokens("beebox/docs/box/tricks.md", "Rules land in `.claude/rules/card-memo.md` and `src/schemas/AGENTS.md`.")
 => []
 
 // The same tokens in a dev doc are checked.

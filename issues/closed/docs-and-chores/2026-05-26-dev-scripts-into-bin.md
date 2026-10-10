@@ -6,6 +6,8 @@ priority: important
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 The worktree-tooling instance of this is now **implemented** (2026-08,
 `worktree-worktree-seam`): [the worktree control surface
 plan](../../beebox/docs/plans/worktree-control-surface.md) promoted

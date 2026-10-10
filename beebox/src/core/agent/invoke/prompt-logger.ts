@@ -3,7 +3,7 @@
  *
  * When `BBX_LOG_PROMPTS=1`, the agent run points `ANTHROPIC_BASE_URL` at this
  * local proxy so every request/response (including system prompts and
- * CLAUDE.md content) is written to `.beebox/logs/`.
+ * instruction-file content) is written to `.beebox/logs/`.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";

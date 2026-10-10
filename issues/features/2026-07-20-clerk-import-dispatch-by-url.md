@@ -63,7 +63,7 @@ what it needs beyond the ID.
 
 - **Where does the pattern registry live?** A connector declaring "I accept
   URLs matching X" is a new capability. Options: a field on the connector
-  interface (`src/connectors/`, see its CLAUDE.md), or a separate resolver the
+  interface (`src/connectors/`, see its AGENTS.md), or a separate resolver the
   clerk endpoint consults. The former keeps the knowledge next to the code that
   handles it; the latter avoids widening the connector interface for something
   only one caller uses. Note connectors are per-box configured — so *which*

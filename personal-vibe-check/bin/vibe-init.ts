@@ -217,7 +217,15 @@ function setupClaudeHook(): string[] {
   return ["Added lint hook to .claude/settings.json"];
 }
 
-// 8. Copy conventions.md and add @conventions.md to CLAUDE.md
+// The project's instruction file: an existing CLAUDE.md or AGENTS.md, else a new
+// AGENTS.md. Claude Code and Codex both read AGENTS.md, and creating a CLAUDE.md
+// beside an AGENTS.md would make Claude Code ignore the AGENTS.md.
+function instructionFileName(): string {
+  if (existsSync(join(cwd, "CLAUDE.md"))) return "CLAUDE.md";
+  return "AGENTS.md";
+}
+
+// 8. Copy conventions.md and add @conventions.md to the instruction file
 function copyConventions(): string[] {
   const created: string[] = [];
   const selfDir = import.meta.dirname;
@@ -227,17 +235,18 @@ function copyConventions(): string[] {
     copyFileSync(srcConventions, destConventions);
     created.push("Copied conventions.md into project");
   }
-  const claudeMdPath = join(cwd, "CLAUDE.md");
-  const claudeMdContent = existsSync(claudeMdPath) ? readFileSync(claudeMdPath, "utf-8") : "";
-  if (!claudeMdContent.includes("@conventions.md")) {
+  const instructionName = instructionFileName();
+  const instructionPath = join(cwd, instructionName);
+  const instructionContent = existsSync(instructionPath) ? readFileSync(instructionPath, "utf-8") : "";
+  if (!instructionContent.includes("@conventions.md")) {
     const separator =
-      claudeMdContent.length > 0 && !claudeMdContent.endsWith("\n")
+      instructionContent.length > 0 && !instructionContent.endsWith("\n")
         ? "\n\n"
-        : claudeMdContent.length > 0
+        : instructionContent.length > 0
           ? "\n"
           : "";
-    writeFileSync(claudeMdPath, claudeMdContent + separator + "@conventions.md\n");
-    created.push("Added @conventions.md to CLAUDE.md");
+    writeFileSync(instructionPath, instructionContent + separator + "@conventions.md\n");
+    created.push(`Added @conventions.md to ${instructionName}`);
   }
   return created;
 }
@@ -253,7 +262,7 @@ function printSummary(created: string[]): void {
     console.log(`  ✓ ${item}`);
   }
   console.log(
-    "\nNext steps:\n  1. Run `npx vibe-check` to verify\n  2. Review CLAUDE.md and .claude/settings.json",
+    `\nNext steps:\n  1. Run \`npx vibe-check\` to verify\n  2. Review ${instructionFileName()} and .claude/settings.json`,
   );
 }
 

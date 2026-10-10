@@ -3,6 +3,9 @@ title: "Docs-reorg companion: gap analysis — non-obvious, undocumented convent
 ---
 # Docs-reorg companion: gap analysis — non-obvious, undocumented conventions
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Historical assessment accompanying [the shipped reorganization](docs-reorg.md).
 Its findings describe that checkpoint, not a verified current backlog.
 

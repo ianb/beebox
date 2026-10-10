@@ -6,6 +6,9 @@ issues: []
 ---
 # Documentation structured like code: cards
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Fifth cluster under the [organizing principles](../README.md#organizing-principles):
 the card file format, the schema workflow, validation, and migrations become
 members of one `cards` subject. The pages were already one file per member;

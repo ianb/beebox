@@ -8,6 +8,8 @@ labels: [soft-launch]
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **CLOSED 2026-07-21 — resolved via proper-lockfile (commit `7cf6a9c5`), with
 one residual accepted by boxholder decision.** The two *reachable* races are
 gone: the empty-file publication window and the unconditional-unlink

@@ -1,5 +1,8 @@
 # nanobot (HKUDS) — Highlight Scout
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Clone: github.com/HKUDS/nanobot, MIT, Python ≥3.11. Audience assumes deep prior study of OpenClaw, Hermes, and Letta — this doc leans on contrast rather than re-explaining shared concepts.
 
 ## 1. Identity / focus

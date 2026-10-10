@@ -186,9 +186,9 @@ rather than serving it:
 
 ```ts
 const nsCtx2 = await makeTestServer();
-await nsCtx2.seed("CLAUDE.md", "# Box\n");
-const claudeMd = await nsCtx2.rawRequest({ method: "GET", url: "/api/files/CLAUDE.md" });
-claudeMd.statusCode
+await nsCtx2.seed("AGENTS.md", "# Box\n");
+const agentsMd = await nsCtx2.rawRequest({ method: "GET", url: "/api/files/AGENTS.md" });
+agentsMd.statusCode
 => 403
 
 await nsCtx2.cleanup();

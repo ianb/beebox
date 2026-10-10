@@ -6,6 +6,9 @@ issues: []
 ---
 # Selection Commentary — referencing document text in chat input
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status: Implemented (2026-05).** This document is the original design
 > plan, kept as a historical record. The feature shipped on the
 > `worktree-commetary` branch; the text below is forward-tense ("this plan

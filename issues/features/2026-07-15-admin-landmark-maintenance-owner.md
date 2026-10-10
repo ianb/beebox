@@ -13,7 +13,7 @@ problem (e.g. the 2026-07-15 local test-box episode: three scheduled tasks stuck
 "failing/never-succeeded" — all stale, cleared by re-running through the
 scheduler), there's no designated place an agent goes to *do maintenance*: what to
 check, how to read `bbx health`, when a failure is stale-vs-live, how to clear it,
-and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
+and what else to sweep. The knowledge is scattered across box AGENTS.md-equivalents,
 per-directory briefings, connector rules, and docs — so each maintenance pass
 re-derives it.
 
@@ -34,8 +34,8 @@ already splits the two audiences we need:
   surface.
 - **`briefing`** (agent-facing, `briefing.briefing.card`) — "context every agent
   needs to know about this spot." This is where the maintenance instructions live
-  (boxes deliberately don't inherit the repo CLAUDE.md, so in-box the agent-facing
-  doc is a briefing card, not a literal CLAUDE.md — worth confirming that's the
+  (boxes deliberately don't inherit the repo AGENTS.md, so in-box the agent-facing
+  doc is a briefing card, not a literal AGENTS.md — worth confirming that's the
   right vehicle vs. something new).
 
 So the shape is likely: an `admin/` (or similarly named) box directory carrying an
@@ -73,7 +73,7 @@ landmark and has everything.
   system (`config/template-versions.json`) like other stock cards. Decide whether
   the admin landmark ships as template stock and how updates roll out.
 - **What exactly moves out of "the other paths"** — enumerate the maintenance
-  instructions currently scattered in box CLAUDE.md-equivalents / briefings /
+  instructions currently scattered in box AGENTS.md-equivalents / briefings /
   connector rules / docs, and which consolidate here vs. stay. That enumeration is
   the concrete first design step (a `## Research (incomplete)` if pursued).
 - **Landmark + destinations role.** A landmark can also carry a `destinations`

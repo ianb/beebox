@@ -1,6 +1,6 @@
 ---
 name: knowledge-audit
-description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box CLAUDE.md, generated agent guide, schema instructions, prompts, rules); dev audits (`--dev`) cover what a Claude Code session in this checkout learns from the repo's AGENTS.md files, skills, and docs. Use after changing either surface.
+description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box AGENTS.md, generated agent guide, schema instructions, prompts, rules); dev audits (`--dev`) cover what a Claude Code session in this checkout learns from the repo's AGENTS.md files, skills, and docs. Use after changing either surface.
 ---
 
 # Knowledge audits: verifying what agents actually know
@@ -16,7 +16,7 @@ levels, prompt style, and failure patterns are in
 - Immediately after adding or editing audit entries, filtered to those
   entries. A never-run audit is unverified in both directions: the agent may
   fail it, or the audit itself may be wrong.
-- After changing what a box agent loads (box CLAUDE.md, agent guide, schema
+- After changing what a box agent loads (box AGENTS.md, agent guide, schema
   `instructions`, box prompts or rules), or, with `--dev` (Claude only, no
   box), this repo's AGENTS.md files, skills, or the docs they point to.
 - Monthly otherwise, for drift.

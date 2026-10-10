@@ -6,6 +6,9 @@ issues: []
 ---
 # Named Places (`place` cards + `bbx location mark`)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status: implemented (2026-06-29).** Frozen design record. Code:
 > `src/schemas/place.tsx` (+ `registry.ts`, `templates-builtins.ts`, `BOX_DIRS`),
 > `src/core/geo.ts`, `src/core/place-mark.ts`, `src/core/place-cards.ts`,

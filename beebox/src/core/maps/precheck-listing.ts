@@ -49,7 +49,7 @@ export type BoxTree = ReadonlyMap<string, readonly TreeEntry[]>;
  *   bullet; not worth a file.
  * - **Root is always skipped**: every top-level directory in a box is part
  *   of the bbx-init skeleton (`_content/`, `_config/`, ...) and is already
- *   documented in CLAUDE.md / `docs/box-layout.md`. The root MAP would be
+ *   documented in AGENTS.md / `docs/box-layout.md`. The root MAP would be
  *   pure boilerplate.
  */
 export function listMappableDirs(tree: BoxTree, patterns: readonly string[]): string[] {

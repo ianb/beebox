@@ -31,7 +31,7 @@
  *    data; now they're authored as body tags. Each rendered both by
  *    the frontend React renderer (per-tag component) and by the
  *    backend `compileBriefing` emitter that produces the markdown
- *    embedded in CLAUDE.md. (`key-people` and `properties` stayed
+ *    embedded in AGENTS.md. (`key-people` and `properties` stayed
  *    frontmatter — there are no tags for them.)
  *  - `image` / `silence` — capture-session timeline vocabulary, emitted
  *    by the capture preparation worker into a session card's generated

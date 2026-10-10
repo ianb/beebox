@@ -9,6 +9,8 @@ discovered-in: worktree-full-embrace-annex — converting the last manifest-sche
 resolution: wontfix
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Closed wontfix, 2026-09-14.** Boxholder: *"meta-cb and tech-talk should be
 > purged, that's why they aren't converted."* Both were moved aside the same
 > day — `meta-cb` to `~/src/boxes/purged/`, `tech-talk` to the server's

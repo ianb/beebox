@@ -2,7 +2,7 @@
  * Backend Markdoc AST → markdown emitter.
  *
  * Walks a parsed Markdoc body and emits plain markdown text suitable for
- * `@`-including into CLAUDE.md (which Claude Code reads as raw markdown —
+ * `@`-including into AGENTS.md (which Claude Code reads as raw markdown —
  * it has no Markdoc awareness). Used by `compileBriefing` and any other
  * server-side path that needs to render Markdoc-tagged bodies as
  * markdown.
