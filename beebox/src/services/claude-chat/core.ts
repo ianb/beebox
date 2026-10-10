@@ -111,7 +111,7 @@ export function buildQueryOptions(
     },
     // The box's project settings (AGENTS.md, rules, skills, hooks); never the
     // host user's ~/.claude settings or the host account's claude.ai connectors.
-    ...boxSessionSettings({ boxRoot: opts.cwd, loadBoxContext: true }),
+    ...boxSessionSettings({ boxRoot: opts.boxRoot ?? opts.cwd, loadBoxContext: true }),
   };
   if (opts.additionalDirectories && opts.additionalDirectories.length > 0) {
     queryOptions.additionalDirectories = opts.additionalDirectories;
@@ -158,6 +158,14 @@ function providerEnvMatches(warm: Record<string, string | undefined>, next: Reco
 }
 
 /**
+ * Element-wise equality, where an absent list differs from an empty one.
+ */
+function sameList(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return a.length === b.length && a.every((item, i) => item === b[i]);
+}
+
+/**
  * Whether a `start()` call's options are compatible with a pre-warmed slot.
  * Exported for `test/services/claude-chat.doctest.md`: this and
  * `warmSlotKey` are the warm pool's whole decision surface, and getting either
@@ -178,6 +186,7 @@ export function warmCompatible(
   // may only serve a chat that brings none.
   if ((warm.coinedSessionId ?? null) !== (next.coinedSessionId ?? null)) return false;
   if (warm.cwd !== next.cwd) return false;
+  if ((warm.boxRoot ?? null) !== (next.boxRoot ?? null)) return false;
   if (warm.systemPrompt !== next.systemPrompt) return false;
   if ((warm.model ?? null) !== (next.model ?? null)) return false;
   if (warm.includePartialMessages !== next.includePartialMessages) return false;
@@ -185,22 +194,8 @@ export function warmCompatible(
   // different one would silently widen (or narrow) the next session. Absent and
   // empty are compared as different things on purpose: omitting the option
   // means "all built-in tools", `[]` means none.
-  const wt = warm.tools;
-  const nt = next.tools;
-  if ((wt === undefined) !== (nt === undefined)) return false;
-  if (wt !== undefined && nt !== undefined) {
-    if (wt.length !== nt.length) return false;
-    for (const [i, tool] of wt.entries()) {
-      if (tool !== nt[i]) return false;
-    }
-  }
-  const wd = warm.additionalDirectories ?? [];
-  const nd = next.additionalDirectories ?? [];
-  if (wd.length !== nd.length) return false;
-  for (const [i, dir] of wd.entries()) {
-    if (dir !== nd[i]) return false;
-  }
-  return true;
+  if (!sameList(warm.tools, next.tools)) return false;
+  return sameList(warm.additionalDirectories ?? [], next.additionalDirectories ?? []);
 }
 
 /**
