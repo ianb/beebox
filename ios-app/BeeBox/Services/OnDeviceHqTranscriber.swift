@@ -70,8 +70,8 @@ enum OnDeviceHqTranscriber {
     }
 
     /// Starts the one-time language-model download in the background, so the
-    /// first HQ send after enabling HQ dictation does not fall through to the
-    /// server for want of assets. The web re-posts its HQ state on every
+    /// first HQ send does not fall through to the server for want of assets.
+    /// The web re-posts its HQ state on every
     /// session change, so this runs once per process: again only after a
     /// download that failed, never after one that finished or a check that
     /// says this phone cannot run the model.

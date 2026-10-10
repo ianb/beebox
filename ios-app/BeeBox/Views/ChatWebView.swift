@@ -22,9 +22,9 @@ struct NativeChatEmission: Equatable, Identifiable {
 
 /// `beeboxHqDictationState` (contract §4.4a). `diarized` is the box's HQ
 /// service labelling speakers, which keeps the HQ pass on the server; a
-/// payload from web that predates the field reads as not diarized.
+/// payload from web that predates the field reads as not diarized. The
+/// payload's `enabled` is ignored: every dictated message gets the HQ pass.
 struct NativeHqDictationState: Equatable {
-    var enabled: Bool
     var diarized: Bool
 }
 
@@ -1084,19 +1084,16 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     static func hqDictationState(from body: Any) -> NativeHqDictationState? {
-        guard
-            let payload = dictionaryPayload(from: body),
-            let enabled = payload["enabled"] as? Bool
-        else {
+        guard let payload = dictionaryPayload(from: body) else {
             return nil
         }
         guard let rawDiarized = payload["diarized"] else {
-            return NativeHqDictationState(enabled: enabled, diarized: false)
+            return NativeHqDictationState(diarized: false)
         }
         guard let diarized = rawDiarized as? Bool else {
             return nil
         }
-        return NativeHqDictationState(enabled: enabled, diarized: diarized)
+        return NativeHqDictationState(diarized: diarized)
     }
 
     static func speechPlaybackActive(from body: Any) -> Bool? {

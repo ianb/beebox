@@ -204,10 +204,10 @@ function validateNarrationState(fx) {
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
-// ── hq-dictation-state (contract §4.4a): `diarized` absent reads false ──
+// ── hq-dictation-state (contract §4.4a): `diarized` absent reads false; `enabled` is ignored ──
 function validateHqDictationState(fx) {
-  const { enabled, diarized = false } = fx.input;
-  const got = typeof enabled === "boolean" && typeof diarized === "boolean" ? { enabled, diarized } : null;
+  const { diarized = false } = fx.input;
+  const got = typeof diarized === "boolean" ? { diarized } : null;
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
@@ -426,13 +426,15 @@ runFamily("narration-state", validateNarrationState)
 
 ## hq-dictation-state
 
-The HQ flag and whether the box's HQ service labels speakers. A payload from
-web that predates `diarized` reads as not diarized; a non-boolean value in either field
-is ignored:
+Whether the box's HQ service labels speakers. A payload from web that predates
+`diarized` reads as not diarized, and a non-boolean `diarized` drops the
+payload. `enabled` is ignored: every dictated message gets the HQ pass
+(docs/plans/hq-always.md), and web still sends `enabled: true` only for native
+builds from before that change:
 
 ```ts
 runFamily("hq-dictation-state", validateHqDictationState)
-=> {"family":"hq-dictation-state","cases":6,"pass":6}
+=> {"family":"hq-dictation-state","cases":7,"pass":7}
 ```
 
 ## pairing-url

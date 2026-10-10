@@ -4,7 +4,6 @@
     "diarized": true
   },
   "expected": {
-    "enabled": false,
     "diarized": true
   }
 }

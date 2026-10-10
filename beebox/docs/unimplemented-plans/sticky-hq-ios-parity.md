@@ -1,11 +1,16 @@
 ---
 title: "Sticky HQ dictation on iOS"
-status: partial
+status: superseded
+superseded-by: ../plans/hq-always.md
 workstream: transcript-confidence
 issues:
-  - ../../../issues/features/2026-08-26-sticky-hq-transcription-preference.md
+  - ../../../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md
 ---
 # Sticky HQ dictation on iOS
+
+> **Superseded 2026-10-09** by [hq-always](../plans/hq-always.md): every
+> dictated message gets the HQ pass, so there is no per-chat setting to bridge.
+> The bridge channel shipped and now carries only `diarized`.
 
 When HQ dictation is enabled for a chat, the native iOS composer must use the HQ transcription pass for every voice-send path, just as the web composer does.
 

@@ -55,7 +55,9 @@ Authorization must survive the handoff:
 - Exploratory or design work: the session reads the material, reports its
   understanding, and proposes an approach before editing.
 - Approved implementation: say so, and tell it to continue to completion
-  without asking again. Name the remaining gates (external messages,
+  without asking again. Approval does not waive planning: non-trivial work
+  still goes through the bbx-plan skill and its plan review first. Name the
+  remaining gates (external messages,
   destructive cleanup, merge, deploy, a reserved choice).
 - Diagnosis, review, or planning only: do not broaden it.
 

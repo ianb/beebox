@@ -3,7 +3,7 @@
  * that file under the 300-line cap.
  *
  * `ownerProcedure`: gated on `enabled` (the caller passes `canManageDefaults`
- * == isOwner, same gate `hqPreferences` uses) rather than fetched and its
+ * == isOwner) rather than fetched and its
  * FORBIDDEN suppressed. Undefined `.data` (loading, or gated off for a
  * non-owner) means the picker treats every option as usable — it never
  * blocks on this query. `staleTime` is generous since a grant added on the

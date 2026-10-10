@@ -16,7 +16,6 @@ import * as path from "node:path";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
 import { isKnownFeature, isValidValue } from "../chat/features.js";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
-import { loadHqDictationDefault } from "../box/config.js";
 import { mergeSeedFeatures } from "../chat/features.js";
 import { landmarkScanRelDir } from "./root-dir.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
@@ -101,9 +100,6 @@ export async function seedFeaturesForNewChat(options: {
   request?: Record<string, string> | null | undefined;
 }): Promise<Record<string, string>> {
   const { boxRoot, contextDir, request } = options;
-  const [boxHq, landmark] = await Promise.all([
-    loadHqDictationDefault(boxRoot),
-    contextDir === null || contextDir === undefined ? null : readLandmarkFeaturesForDir(boxRoot, contextDir),
-  ]);
-  return mergeSeedFeatures({ box: { "hq-dictation": boxHq }, landmark, request });
+  const landmark = contextDir === null || contextDir === undefined ? null : await readLandmarkFeaturesForDir(boxRoot, contextDir);
+  return mergeSeedFeatures({ landmark, request });
 }

@@ -32,7 +32,7 @@ Design smalls, none hard:
 - Persistence: per-session in the chat's client state at minimum; whether a
   pin survives reload rides the same per-viewer-preference story as sticky
   HQ (localStorage vs chat feature state — see
-  [sticky-hq-transcription-preference](../../features/2026-08-26-sticky-hq-transcription-preference.md)
+  [sticky-hq-transcription-preference](2026-08-26-sticky-hq-transcription-preference.md)
   for the precedent question).
 - Interaction with the overflow-scroll fix
   ([new-tab-not-scrolled-into-view](../bugs/2026-08-29-new-tab-not-scrolled-into-view.md)):

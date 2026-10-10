@@ -135,32 +135,24 @@ export function assembleChatMessage(
     wrapped = `<typed${attrs}>${body}</typed>`;
   } else {
     const diarizedAttr = emission.diarized ? " diarized=\"1\"" : "";
-    // `stt` is stamped when the message carries transcription provenance —
-    // either captured word-confidence data (`deepgram`) or an HQ pass that
-    // replaced the realtime text (`hq`, docs/implemented-plans/hq-dictation-switch.md).
-    // The two are mutually exclusive: an HQ pass always drops the realtime
-    // words it replaced (the pre-existing HQ-drop rule), so `emission.words`
-    // is never defined on an `hqText` emission. Absence of `stt` means no
-    // provenance data backs this message at all — distinct from "captured,
-    // none unsure" (`deepgram` with no `<unsure>` marks).
-    const sttAttr = emission.hqText === true
-      ? " stt=\"hq\""
-      : emission.words !== undefined ? " stt=\"deepgram\"" : "";
+    // Every dictated message gets the HQ pass when it can
+    // (docs/plans/hq-always.md), so the marker is on the exception:
+    // `stt="live"` says this text is the live transcript — HQ failed, timed
+    // out, was skipped by the user, the box has no HQ key, or there was no
+    // recording. HQ text carries no `stt`, only `stt-service` naming the
+    // engine. Older messages may carry `stt="hq"`, `stt="deepgram"`, or
+    // `hq="failed"`; readers (`message-parsing.ts`) still accept them.
+    const sttAttr = emission.hqText === true ? "" : " stt=\"live\"";
     const sttServiceAttr = emission.hqText === true && emission.hqService
       ? ` stt-service="${emission.hqService}"`
       : "";
-    // `hq="failed"` marks a realtime send that stands in for a requested HQ
-    // pass — budget expiry, "Send live text", or HQ failing outright
-    // (docs/plans/resilient-voice-recording.md, Track 4). Never together
-    // with `stt="hq"`.
-    const hqAttr = emission.hqFallback === true ? " hq=\"failed\"" : "";
     // `message-id` (retranscription-in-chat plan, Vocabulary lock-ins) is the
     // emission id — the same value returned as `messageId` below and the key
     // the audio retention store uses — stamped on every voice send so the
     // message stays addressable after the pending→authoritative uuid swap.
     // Typed sends carry no recording to point back at, so they don't get it.
     const messageIdAttr = ` message-id="${emission.id}"`;
-    wrapped = `<speech${sttAttr}${sttServiceAttr}${hqAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
+    wrapped = `<speech${sttAttr}${sttServiceAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
   }
 
   // File attachments emit a sibling <attachments> block of markdown-style
