@@ -33,22 +33,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.292`, Codex `0.160.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.293`, Codex `0.161.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.295` (SDK), `2.1.295` (Claude Code), `0.162.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.296` (SDK), `2.1.296` (Claude Code), `0.162.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.292` on 2026-10-08
-  (taking `0.3.291`); Codex stays at `0.160.1`. Next: Codex `0.161.0`
-  (settles 2026-10-09T15:58Z), `0.3.293` (2026-10-09T17:21Z), `0.3.294` /
-  `0.3.295` (2026-10-10, 16:36Z / 18:22Z), Codex `0.162.0`
-  (2026-10-10T18:55Z). Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md` (also
-  covers Haiku 5.5).
+- **Current recommendation:** Both families moved on 2026-10-09 — Agent SDK
+  to `0.3.293`, Codex to `0.161.0`. Next: `0.3.294` / `0.3.295` (settle
+  2026-10-10 at 16:36Z / 18:22Z; verify 0.3.295's `--flag=value` option
+  passing), `0.3.296` (2026-10-11T16:59Z), Codex `0.162.0` / `0.162.1`
+  (2026-10-10T18:55Z / 2026-10-11T19:44Z). Open:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`
+  (`claude-haiku-5-5` now verified on the pin).
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -74,6 +74,34 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### Codex 0.162.1 — pending, nothing relevant (published 2026-10-09T19:44Z)
+
+Fixes a TUI crash on multi-line asynchronous questions, and startup failures
+from feature-setting differences between a running background server and CLI
+defaults. beebox drives Codex through `@openai/codex-sdk` with no TUI and no
+background server. Settled path; takeable 2026-10-11T19:44Z.
+- **Sources:** [rust-v0.162.1](https://github.com/openai/codex/releases/tag/rust-v0.162.1)
+
+### 0.3.296 / Claude Code 2.1.296 — pending (published 2026-10-09T16:59Z, ~8h at this turn)
+
+- **SDK:** `initialize` reports `claude_code_version`; `AgentDefinition` gains
+  `autoCompactWindow`; the `sandbox` option now merges with an inline
+  `settings.sandbox` block (beebox passes neither); MCP description limit 2,048
+  → 4,096 (no MCP servers in beebox runtime).
+- **Claude Code, RUNTIME:** SDK cost figures now price Sonnet 5.5 cache reads at
+  $0.10/Mtok (was $0.20) — beebox cost displays that read SDK totals will drop
+  for Sonnet 5.5; `CLAUDE_CODE_RESUME_INTERRUPTED_TURN` no longer re-runs a
+  finished turn; resumed subagents are no longer told a shutdown-interrupted
+  tool call was user-rejected; Edit refuses non-UTF-8 files instead of
+  mangling non-ASCII characters.
+- **Claude Code, HARNESS:** Esc during a `UserPromptSubmit` hook no longer ends
+  headless sessions or lets the unchecked prompt through; Bash checks now prompt
+  for `BASH_ARGV0` assignment tricks; secret redaction in shared transcripts
+  and debug logs catches more values; `--debug` logs each command hook's
+  outcome and duration (useful for slow `.claude/` hooks).
+- **Action:** Settled path; takeable 2026-10-11T16:59Z.
+- **Sources:** [SDK 0.3.296](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03296), [Claude Code 2.1.296](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21296)
 
 ### Codex 0.162.0 — pending (published 2026-10-08T18:55Z, ~5h at this turn)
 
@@ -123,7 +151,7 @@ instructions allowing what they should block, and how Stop/SubagentStop prompt
 hooks are judged. Checked: `.claude/` defines no `prompt` or `agent` hooks.
 Settled path; takeable 2026-10-10T16:36Z.
 
-### Codex 0.161.0 — pending (published 2026-10-07T15:58Z, ~8h at this turn)
+### Codex 0.161.0 — APPLIED 2026-10-09 (published 2026-10-07T15:58Z)
 
 - **GPT-6.1 Sol is the default model** in the bundled and Bedrock catalogs.
   beebox's `sol` alias still pins `gpt-6-sol`
@@ -136,10 +164,10 @@ Settled path; takeable 2026-10-10T16:36Z.
   the damaged database kept as a backup; retries honor server retry guidance.
 - New and opt-in: `/mcp login`, voice device selection, Daybreak (off by
   default), `cyberAccessProgram` in the TypeScript SDK. beebox uses none.
-- **Action:** Settled path; takeable 2026-10-09T15:58Z.
+- **Action:** Applied 2026-10-09; the deploy gate passed on `codex-cli 0.161.0`. Boxes now inherit GPT-6.1 Sol as Codex's default model.
 - **Sources:** [rust-v0.161.0](https://github.com/openai/codex/releases/tag/rust-v0.161.0)
 
-### 0.3.293 / Claude Code 2.1.293 — pending (published 2026-10-07T17:21Z, ~6h at this turn)
+### 0.3.293 / Claude Code 2.1.293 — APPLIED 2026-10-09 (published 2026-10-07T17:21Z)
 
 - **SDK:** adds optional `subagent_type` to `background_tasks_changed` entries.
   No beebox use.
@@ -154,7 +182,7 @@ Settled path; takeable 2026-10-10T16:36Z.
   suggested when a tool list removes it. Reverted: the 2.1.281 auto-mode denial
   wording, and the 2.1.290 cloud `/loop` wakeup fix (cloud only).
 - HTTP MCP memory leak fixed; beebox runtime configures no MCP servers.
-- **Action:** Settled path; takeable 2026-10-09T17:21Z.
+- **Action:** Applied 2026-10-09. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.293, `pnpm -C beebox test` (11,981 pass, 2 skip); `claude-haiku-5-5` answered a `query()` on this pin.
 - **Sources:** [SDK 0.3.293](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03293), [Claude Code 2.1.293](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21293)
 
 ### Codex 0.160.1 — APPLIED 2026-10-07, nothing relevant (published 2026-10-05T18:33Z)
