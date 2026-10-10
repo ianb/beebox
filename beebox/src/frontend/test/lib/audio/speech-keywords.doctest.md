@@ -254,3 +254,21 @@ Phrases with characters meaningful in XML are escaped, matching the tag form `de
 appendSendKeywordTag("Ping R&D.", { action: "send", matchedPhrase: 'send "the" message' })
 => Ping R&D. <send-message phrase="send &quot;the&quot; message" heard="live" />
 ```
+
+## A live gap marker breaks a phrase
+
+`[…]` in the live transcript marks words the live pass missed
+(`docs/plans/live-gap-marker.md`). A command never matches across it: the
+words on either side were not spoken together. A command after it still
+fires, and the marker stays in the text.
+
+```ts
+detectKeyword("then send […] message")
+=> null
+
+detectKeyword("cancel the […] message")
+=> null
+
+detectKeyword("buy milk […] send message")?.processedTranscript
+=> buy milk […] <send-message phrase="send message" />
+```

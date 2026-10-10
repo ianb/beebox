@@ -1,3 +1,4 @@
+import { LIVE_GAP_MARKER } from "../audio/live-gap-marker";
 import { BadTagError, BadWordError } from "./errors";
 
 export function tokenizePattern(
@@ -66,7 +67,30 @@ export interface InputWord {
   leading: string;
 }
 
+/**
+ * Tokenize input text. A live gap marker (`docs/plans/live-gap-marker.md`)
+ * becomes a word of its own that no pattern word matches, so a phrase never
+ * matches across words the live transcript missed. Its surroundings
+ * tokenize as usual, and joining every word still gives back the text.
+ */
 export function tokenizeInput(text: string): InputWord[] {
+  if (!text.includes(LIVE_GAP_MARKER)) return tokenizeWords(text);
+  const result: InputWord[] = [];
+  for (const [index, part] of text.split(LIVE_GAP_MARKER).entries()) {
+    if (index > 0) result.push({ normalized: LIVE_GAP_MARKER, original: LIVE_GAP_MARKER, leading: "", trailing: "" });
+    if (/[^\s\p{P}]/u.test(part)) {
+      result.push(...tokenizeWords(part));
+      continue;
+    }
+    if (part === "") continue;
+    const last = result.at(-1);
+    if (last !== undefined) last.trailing += part;
+    else result.push({ normalized: "", original: "", leading: part, trailing: "" });
+  }
+  return result;
+}
+
+function tokenizeWords(text: string): InputWord[] {
   const result: InputWord[] = [];
   const startMatch = text.match(/^[\s\p{P}]*/u);
   let firstLeading = startMatch?.[0] ?? "";

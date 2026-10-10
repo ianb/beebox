@@ -1,5 +1,16 @@
 import { mergeFinalText, mergeFinalWords } from "./transcription-merge";
 import type { FinalWord } from "../transcription-events";
+import { LIVE_GAP_MARKER } from "../../lib/audio/live-gap-marker";
+
+/**
+ * Where the segment stands on live gaps (docs/plans/live-gap-marker.md):
+ * - `beforeFirst`: no connection yet; nothing is shown for the wait.
+ * - `none`: live text is complete as far as it goes.
+ * - `open`: live text is down; the committed text ends with the marker.
+ * - `awaitingText`: a reconnect replayed the whole gap; the marker stays
+ *   until the new connection's first non-empty final text.
+ */
+type GapState = "beforeFirst" | "none" | "open" | "awaitingText";
 
 /**
  * One segment's transcript across live connections. Each transport emits its
@@ -8,8 +19,10 @@ import type { FinalWord } from "../transcription-events";
  * connections is folded into a committed prefix and prepended to everything
  * the current connection emits. Word lists follow the same rule; `null`
  * means no service attached word data (Voxtral/OpenAI) and stays `null`.
+ * A gap in live text is marked with `LIVE_GAP_MARKER`; see `GapState`.
  */
 export class SegmentTranscript {
+  private gap: GapState = "beforeFirst";
   private committedText = "";
   private currentText = "";
   private committedWords: FinalWord[] | null = null;
@@ -17,6 +30,10 @@ export class SegmentTranscript {
 
   /** Record the current connection's final text/words; returns the segment-wide merge. */
   update(opts: { finalText: string; finalWords: FinalWord[] | null }): { text: string; words: FinalWord[] | null } {
+    if (this.gap === "awaitingText" && opts.finalText.trim() !== "") {
+      this.dropTrailingMarker();
+      this.gap = "none";
+    }
     this.currentText = opts.finalText;
     this.currentWords = opts.finalWords;
     return { text: this.textWith(opts.finalText), words: this.wordsWith(opts.finalWords) };
@@ -30,6 +47,37 @@ export class SegmentTranscript {
     }
     this.committedWords = mergeFinalWords(this.committedWords, this.currentWords);
     this.currentWords = null;
+  }
+
+  /** Live text went down (a drop, or given up for the segment): fold, then mark the gap once. */
+  openGap(): void {
+    this.fold();
+    if (!this.committedText.endsWith(LIVE_GAP_MARKER)) {
+      this.committedText = mergeFinalText(this.committedText, LIVE_GAP_MARKER);
+    }
+    this.gap = "open";
+  }
+
+  /**
+   * A connection was adopted and replayed what it could. `covered`: the
+   * replay held every frame since the outage (`ReplayRing.coversGap`).
+   * Returns whether the text changed.
+   */
+  connected(opts: { covered: boolean }): boolean {
+    const before = this.committedText;
+    if (this.gap === "beforeFirst") {
+      if (!opts.covered) this.committedText = mergeFinalText(this.committedText, LIVE_GAP_MARKER);
+      this.gap = "none";
+    } else if (this.gap === "open") {
+      this.gap = opts.covered ? "awaitingText" : "none";
+    }
+    return this.committedText !== before;
+  }
+
+  private dropTrailingMarker(): void {
+    if (this.committedText.endsWith(LIVE_GAP_MARKER)) {
+      this.committedText = this.committedText.slice(0, -LIVE_GAP_MARKER.length).trimEnd();
+    }
   }
 
   /** Segment text given a connection's own final text. */

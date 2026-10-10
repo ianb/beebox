@@ -17,6 +17,7 @@ import type { ChatImageAttachment } from "../../api-chat";
 import { applySelections, escapeAttr, escapeText } from "../../lib/selection/serialize";
 import type { Emission } from "../emission";
 import { markUnsureWords } from "../unsure-words/mark";
+import { wrapLiveGapMarkers } from "../../lib/audio/live-gap-marker";
 import { composerToken, composerTokenIn } from "@shared/composer-tokens";
 
 /**
@@ -113,9 +114,15 @@ export function assembleChatMessage(
   // against the marked text; a spoken anchor phrase that happens to include a
   // marked word is a narrow, accepted trade for keeping the marker placement
   // itself simple and never XML-corrupting.
-  const markedText = emission.origin === "voice" && emission.words !== undefined
+  const confidenceMarked = emission.origin === "voice" && emission.words !== undefined
     ? markUnsureWords(text, { words: emission.words, spokenStart: emission.spokenStart ?? 0 })
     : text;
+  // Live text with a gap (docs/plans/live-gap-marker.md): each `[…]` is
+  // speech the live pass never transcribed, sent as unsure. Anywhere in the
+  // text, since a marker can arrive in the prefix from an earlier segment.
+  const markedText = emission.origin === "voice" && emission.hqText !== true
+    ? wrapLiveGapMarkers(confidenceMarked)
+    : confidenceMarked;
   const body = applySelections(markedText, {
     selections: [...emission.selections],
   });
