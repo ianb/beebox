@@ -29,7 +29,7 @@ import { buildLoadContext } from "../../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../../core/external/url-check/core.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../../core/card-io.js";
-import { checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors, boxSchemaFieldWarnings } from "./box-checks.js";
+import { checkLegacyInstructionErrors, checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors, boxSchemaFieldWarnings } from "./box-checks.js";
 import { resolveCliTargetPath } from "../../lib/cli-target-path.js";
 import { canonicalBuckets, checkCommitted, countTotalErrors, printTextResults, useColor } from "./report.js";
 import { errorMessage } from "../../../shared/error-guards.js";
@@ -77,6 +77,8 @@ export interface ValidationResults extends CollectedResults {
   reservedSegmentErrors: string[];
   /** Invalid card/chrome presentation configuration from `_config/box.json`. */
   presentationErrors: string[];
+  /** Legacy instruction files (`CLAUDE.md` and kin) in a box converted to `AGENTS.md`. Same box-wide treatment. */
+  legacyInstructionErrors: string[];
   systemCardErrors: string[];
   /** Whether `--canonical` asked for the canonical-form report. */
   canonical: boolean;
@@ -279,8 +281,9 @@ export const validateCommand = new Command("validate")
         const rootStrayErrors = await checkRootStrayErrors(boxRoot);
         const reservedSegmentErrors = await checkReservedSegmentErrors(boxRoot);
         const presentationErrors = await checkPresentationErrors(boxRoot);
+        const legacyInstructionErrors = await checkLegacyInstructionErrors(boxRoot);
         const systemCardErrors = options.staged ? await checkStagedSystemCards(boxRoot) : await checkSystemCards(boxRoot);
-        const results: ValidationResults = { ...collected, systemCardErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, canonical };
+        const results: ValidationResults = { ...collected, systemCardErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, legacyInstructionErrors, canonical };
 
         if (json) {
           const counts = canonicalCounts(canonicalBuckets(results));
@@ -300,6 +303,7 @@ export const validateCommand = new Command("validate")
             rootStrays: results.rootStrayErrors,
             reservedSegments: results.reservedSegmentErrors,
             presentation: results.presentationErrors,
+            legacyInstructionFiles: results.legacyInstructionErrors,
             systemCards: results.systemCardErrors,
             // The `--canonical` buckets, top-level and separate for the same
             // reason `brokenRefs` is: a relative-but-resolving ref is a

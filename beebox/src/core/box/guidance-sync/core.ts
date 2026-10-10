@@ -12,6 +12,7 @@ import { installTemplateFile } from "../../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../../template-stock-hashes.js";
 import { generateRules } from "../../init-rules.js";
 import { invariant, assertNever } from "../../../shared/invariant.js";
+import { instructionFilePath, instructionSiblingPath } from "../../agent-instruction-files.js";
 import { generateSkills } from "./skills.js";
 import { MANAGED_STOCK_TEMPLATES } from "../templates.js";
 import {
@@ -25,14 +26,26 @@ const GENERATORS = {
   generateSkills,
 } satisfies Record<GuidanceGenerator, (boxRoot: string) => Promise<string[]>>;
 
+/**
+ * The box path a tracked row installs to. An instruction-file row resolves
+ * through `instructionFilePath`, so a box not yet converted keeps its legacy
+ * `CLAUDE.md` guide instead of gaining a stock `AGENTS.md` beside it.
+ */
+async function trackedRowPath(boxRoot: string, rowPath: string): Promise<string> {
+  if (instructionSiblingPath(rowPath) === null) return rowPath;
+  const dir = path.posix.dirname(rowPath);
+  return instructionFilePath(boxRoot, dir === "." ? "" : dir);
+}
+
 /** Install one tracked row through the template tracker, from its stock template. */
 async function installTracked(boxRoot: string, row: { path: string; template: StockTemplateName }): Promise<void> {
   const stock = MANAGED_STOCK_TEMPLATES.find((t) => t.name === row.template);
   invariant(stock !== undefined, `no MANAGED_STOCK_TEMPLATES entry for ${row.template}`);
-  await stripStrayMapInclude(path.join(boxRoot, row.path));
+  const relPath = await trackedRowPath(boxRoot, row.path);
+  await stripStrayMapInclude(path.join(boxRoot, relPath));
   await installTemplateFile({
     boxRoot,
-    relPath: row.path,
+    relPath,
     templateContent: stock.content,
     priorStockHashes: TEMPLATE_STOCK_HASHES[row.template].superseded,
   });

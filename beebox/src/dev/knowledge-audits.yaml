@@ -115,7 +115,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Names the YAML rubric, preserves authored rules, retains an existing chat, and distinguishes session continuity from landmark placement"
     fixture:
-      CLAUDE.md: |
+      AGENTS.md: |
         @node_modules/beebox/box-docs/quick-chat.md
     correct_contains:
       - "_config/chat-routing.yaml"
@@ -146,7 +146,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Puts Dashboard, Browse, History, and Storage summary in the avatar menu with Settings and Admin, not on the box screen; places nav.card shortcuts on the box screen under Shortcuts, reached from the box row of the app bar's landmark menu and shown at phone launch"
     fixture:
-      CLAUDE.md: |
+      AGENTS.md: |
         @node_modules/beebox/box-docs/card-nav.md
     correct_contains: ["box screen", "avatar menu"]
     correct_matches:
@@ -262,7 +262,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Allows bounded reversible repair, asks a concrete loss question, and leaves verification and commits to the runner"
     fixture:
-      CLAUDE.md: |
+      AGENTS.md: |
         @node_modules/beebox/box-docs/migration-repair.md
     correct_matches:
       - '(?:reversible|Git)[\s\S]{0,220}(?:rename|repair)|rename[\s\S]{0,220}(?:reversible|Git)'
@@ -1103,7 +1103,7 @@ tests:
     # Status (2026-09-26, doc-structure): keywords updated — schemas live in
     # src/schemas/ and authoring is in box-docs/schemas.md; the old
     # `_config/schemas` / `bbx init` answer is retired. Rerun: pass (1 read).
-    watch_for: "Names src/schemas/ + cardSchema()/Zod; reading src/schemas/CLAUDE.md and following it to box-docs/schemas.md is the intended path"
+    watch_for: "Names src/schemas/ + cardSchema()/Zod; reading src/schemas/AGENTS.md and following it to box-docs/schemas.md is the intended path"
     correct_contains_any: ["src/schemas", "cardSchema"]
     tags: [schemas, extension]
 
@@ -1697,7 +1697,7 @@ tests:
   - id: what-are-tricks
     prompt: "What are tricks and how would I create a new one?"
     expected_level: knows_about
-    watch_for: "Explains tricks (reusable bbx trick scripts) and points to the `tricks` skill for authoring; may not need to open tricks/scripts/CLAUDE.md"
+    watch_for: "Explains tricks (reusable bbx trick scripts) and points to the `tricks` skill for authoring; may not need to open tricks/scripts/AGENTS.md"
     correct_contains: ["bbx trick"]
     tags: [tricks, extension]
     notes: >
@@ -2732,7 +2732,7 @@ tests:
     max_turns: 20
     tags: [drop-test, intake]
     notes: >
-      The ledger CLAUDE.md says to preserve notes and context about sentimental
+      The ledger AGENTS.md says to preserve notes and context about sentimental
       significance. The hammer's story matters even though it's not "actionable."
       The failure mode is creating a dry inventory record that loses the personal
       meaning.
@@ -3589,8 +3589,8 @@ tests:
   #
   # Chats started from a landmark spawn the SDK with `cwd` set to the
   # landmark directory and the box root in `additionalDirectories`, so
-  # the subdirectory's CLAUDE.md walk-up loads automatically. This
-  # section audits that behavior end-to-end: a fixture CLAUDE.md with
+  # the subdirectory's AGENTS.md walk-up loads automatically. This
+  # section audits that behavior end-to-end: a fixture AGENTS.md with
   # a unique marker is written into a throwaway subdirectory, the agent
   # is asked about the marker from that cwd, and we assert it answered
   # directly without reading the file.
@@ -3601,7 +3601,7 @@ tests:
   # Status (2026-05-10): landmark-subdir-claude-md-loads passes —
   # agent answered "ZK-4827-LANDMARK" with 0 file reads and 0
   # searches, confirming the SDK auto-loads the subdirectory
-  # CLAUDE.md when cwd is set there.
+  # AGENTS.md when cwd is set there.
   #
   # Status (2026-05-11): landmark-parent-claude-md-loads added and
   # passes — agent quoted the box-root CLAUDE.md's CLAUDE_SCANS.md
@@ -3615,28 +3615,28 @@ tests:
     expected_level: knows_directly
     watch_for: >
       Answers `ZK-4827-LANDMARK` directly, citing the directory's
-      CLAUDE.md as the source. Does NOT need to Read or Glob the
-      CLAUDE.md first — the SDK loads it automatically when cwd is
+      AGENTS.md as the source. Does NOT need to Read or Glob the
+      AGENTS.md first — the SDK loads it automatically when cwd is
       set to this directory.
     context_dir: audit-landmark-fixture
     fixture:
-      audit-landmark-fixture/CLAUDE.md: |
+      audit-landmark-fixture/AGENTS.md: |
         # Landmark Audit Fixture
 
         This directory exists only to verify that landmark sessions
-        load this CLAUDE.md into the agent's initial context. The
+        load this AGENTS.md into the agent's initial context. The
         knowledge-audit harness writes and removes it around the test.
 
         ZONE CODE: ZK-4827-LANDMARK. Whenever asked "what is the zone
         code for this directory," answer with `ZK-4827-LANDMARK`.
     correct_contains: ["ZK-4827-LANDMARK"]
-    should_not_read: ["audit-landmark-fixture/CLAUDE.md"]
+    should_not_read: ["audit-landmark-fixture/AGENTS.md"]
     tags: [landmarks, sessions, sdk]
     notes: >
       Failure modes: (1) agent says it doesn't know — the SDK isn't
-      auto-loading the subdirectory CLAUDE.md when cwd is set there,
+      auto-loading the subdirectory AGENTS.md when cwd is set there,
       which would break the whole landmark-session design; (2) agent
-      reads the CLAUDE.md before answering — it's still discoverable
+      reads the AGENTS.md before answering — it's still discoverable
       but the cheap auto-load isn't happening, which means MAP.md
       content under a landmark wouldn't be free either.
 
@@ -3644,34 +3644,103 @@ tests:
     prompt: "In this box, what does CLAUDE_SCANS.md hold, and where does its content get used outside the chat?"
     expected_level: knows_directly
     watch_for: >
-      Answers from the box-root CLAUDE.md's CLAUDE_SCANS.md
+      Answers from the box-root AGENTS.md's CLAUDE_SCANS.md
       paragraph — mentions scan-specific context (recurring people,
       eras, places, handwriting clues) and that `bbx scan-import`
       injects it into the Gemini Flash prompt for each page. Does
-      NOT need to Read any CLAUDE.md or CLAUDE_SCANS.md: the SDK's
+      NOT need to Read any AGENTS.md or CLAUDE_SCANS.md: the SDK's
       walk-up from the landmark cwd picks up the box root's
-      CLAUDE.md and follows its @-imports automatically.
+      AGENTS.md and follows its @-imports automatically.
     context_dir: audit-landmark-fixture
     fixture:
-      audit-landmark-fixture/CLAUDE.md: |
+      audit-landmark-fixture/AGENTS.md: |
         # Landmark Audit Fixture (parent-loading)
 
         This directory exists only to verify that the box root's
-        CLAUDE.md still loads when the SDK runs from a subdirectory.
+        AGENTS.md still loads when the SDK runs from a subdirectory.
         It deliberately contains no information about CLAUDE_SCANS,
         scans, or scan-import — the answer must come from the
-        parent CLAUDE.md, not this fixture.
+        parent AGENTS.md, not this fixture.
     correct_contains_any: ["handwriting", "scan-import", "Gemini Flash"]
-    should_not_read: ["CLAUDE_SCANS.md", "CLAUDE.md"]
+    should_not_read: ["CLAUDE_SCANS.md", "AGENTS.md"]
     tags: [landmarks, sessions, sdk]
     notes: >
       Sibling to landmark-subdir-claude-md-loads. That test confirms
-      the landmark-dir CLAUDE.md auto-loads; this one confirms the
-      walk-up still picks up the box root's CLAUDE.md (and the
+      the landmark-dir AGENTS.md auto-loads; this one confirms the
+      walk-up still picks up the box root's AGENTS.md (and the
       `@CLAUDE_SCANS.md` import chain) so core box-wide instructions
       don't go missing when a chat is bound to a landmark. Failure
       mode: agent says it has to look, or its answer matches some
       generic notion of "scans" without the box-specific details.
+
+  # === Box AGENTS.md (box-agents-md plan) ===
+  #
+  # Run on a converted box: the runner (`run-test.ts`) prepares no box state, so
+  # an unconverted box is audited as it stands and agents-md-course-entry would
+  # correctly name CLAUDE.md there. Convert the audit box first
+  # (`bbx engine migrate`, migration agents-md-2026-10).
+  # Status (2026-10-09, Claude and Codex): disposable copy of the worktree test
+  # box clone, converted with `bbx engine migrate --sweep`, real node_modules
+  # directory. agents-md-course-entry 1/1 each engine, 0 reads.
+  # agents-md-write-only-dir 1/1 each engine after the fixture moved from a
+  # top-level people/ (not a box content folder; the first run put the card in
+  # _content/people and flagged the stray folder) to _content/people/. Both
+  # agents ran `cat _content/people/AGENTS.md` before `bbx create`; the fixture
+  # edits a tracked file, which shows in the session's git status, so these
+  # passes do not show whether the rule arrives unprompted. The pre-plan probe
+  # (no fixture cue) followed the rule 0/3 with AGENTS.md, 1/3 with CLAUDE.md.
+
+  - id: agents-md-course-entry
+    prompt: >
+      The boxholder wants the course in courses/spanish/ to be run by a chat
+      scoped to that directory. Which instruction file do you create or edit
+      in that directory so the runner instructions load, and what does it
+      contain? Explain only; do not read files, use tools, or change anything.
+    expected_level: knows_about
+    watch_for: >
+      Names `AGENTS.md` in the course directory as the editable file that
+      @-includes the course runner instructions, and does not tell the agent to
+      create a `CLAUDE.md`.
+    correct_contains: ["AGENTS.md"]
+    response_not_matches:
+      - '(?:creat|writ|add|edit)\w*\s[^.\n]{0,40}CLAUDE\.md'
+    tags: [courseware, agents-md]
+    notes: >
+      Converted-box check: in a box that has run agents-md-2026-10 the editable
+      instruction file is AGENTS.md. In an unconverted box CLAUDE.md is the
+      correct answer and this audit is expected to fail on correct_contains.
+
+  - id: agents-md-write-only-dir
+    prompt: >
+      Add a person card for Dana Reyes, a neighbor the boxholder mentioned
+      today, in the box's people folder. Write the card; keep it short.
+    expected_level: discoverable
+    watch_for: >
+      The new card follows the people/ folder rule (`met_via:` line) from the
+      directory's AGENTS.md, even though the agent enters the folder through
+      `bbx create` or a Bash write and has no reason to Read there first. The
+      `bbx create` "Folder instructions:" line is the cue.
+    fixture:
+      _content/people/AGENTS.md: |
+        @MAP.md
+
+        # People folder
+
+        Every new person card in this folder must include a `met_via:` line in
+        its body naming how the boxholder met the person. If you do not know,
+        write `met_via: unknown`.
+    cards_contain: ["met_via:"]
+    max_turns: 15
+    tags: [agents-md, folder-instructions, people]
+    notes: >
+      Tool order is NOT asserted: the audit schema has no ordering check
+      (should_read / should_not_read test whether a file was read at all, not
+      when). Read the report's file reads and Bash commands by hand to see
+      whether the agent wrote before reading _content/people/AGENTS.md. A pass on
+      cards_contain with no read of people/AGENTS.md means the rule arrived
+      another way (nested loading or the `bbx create` line). Context: the
+      2026-10-09 write-gap audit found Bash entry never triggers nested loading
+      under either file name, which Track F's `bbx create` line addresses.
 
   # === Agent feedback cards ===
   #
@@ -4823,7 +4892,7 @@ tests:
   # describing how the content was derived (renamed from `as=` in the
   # prompt-surface overhaul). Complements `{% quote %}`: the two compose
   # for "verbatim from there." Agent-guide section is the `sourceSection`
-  # (loaded via CLAUDE.md).
+  # (loaded via AGENTS.md).
   #
   # Status (2026-09-26): all 7 source-* pass on test1 after the section
   # moved to box-docs/provenance.md (doc-structure Track 3). Re-leveled to
@@ -5360,7 +5429,7 @@ tests:
   #
   # Indirect knowledge, like the other view-authoring audits: the command lives
   # in node_modules/beebox/box-docs/views.md (Testing a View), the bbx-commands.md reference, and
-  # the views/CLAUDE.md stub — not the always-loaded guide (appropriate altitude
+  # the views/AGENTS.md stub — not the always-loaded guide (appropriate altitude
   # for a view-authoring tool). The agent reads the views guide and names the
   # command. The failure mode is telling the user to open it in a browser or
   # asking them whether it works.
@@ -5395,7 +5464,7 @@ tests:
   # read src/views/CLAUDE.md, then box-docs/views.md; 51k context. The agent
   # noticed views.md marked rendersCardTypes optional; the table now says Yes.
   # Plan: docs/implemented-plans/doc-structure-box-guidance.md, Track 2. The view API
-  # lives in box-docs/views.md alone; src/views/CLAUDE.md and the views skill
+  # lives in box-docs/views.md alone; src/views/AGENTS.md and the views skill
   # point there and no longer carry an export list.
   # Status (2026-09-26, doc-structure Track 3, DOCS): pass on the test1 clone, 4
   # reads, 2 searches, 40k ctx.
@@ -5647,7 +5716,7 @@ tests:
   #
   # Indirect knowledge, like the other view-authoring audits: the widgets are
   # documented in node_modules/beebox/box-docs/views.md ("Card-aware widgets") and named in the
-  # views/CLAUDE.md stub, not the always-loaded guide (authoring a view is not a
+  # views/AGENTS.md stub, not the always-loaded guide (authoring a view is not a
   # frequent task — appropriate altitude). The authoring framing ("check the
   # box's own view docs first") reliably triggers the guide read, mirroring
   # views-render-test-command.
@@ -5672,7 +5741,7 @@ tests:
     tags: [views, cards]
     notes: >
       Dropped should_read node_modules/beebox/box-docs/views.md 2026-07-03: the refreshed
-      views/CLAUDE.md (auto-loaded) now names CardLink/CardRef, so the agent
+      views/AGENTS.md (auto-loaded) now names CardLink/CardRef, so the agent
       answers correctly whether it reads views.md or answers directly. The
       content check is the real assertion; also de-baited the "check the docs
       first" preamble that the should_read was pinning.
@@ -5706,7 +5775,7 @@ tests:
 
   # === Views: card text through Markdown ===
   # Added 2026-09-25 (docs/plans/todos-ui.md, Track 6). knows_directly per the
-  # plan: the views/CLAUDE.md stub names `Markdown` and the rule, so the agent
+  # plan: the views/AGENTS.md stub names `Markdown` and the rule, so the agent
   # should not need views.md. The always-loaded agent guide does not name view
   # APIs, so the stub loading (or not) decides the measured level.
   # Run 2026-09-25 on test1 (claude): PASS on every watch_for point, but found
@@ -6216,7 +6285,7 @@ tests:
     expected_level: knows_about
     watch_for: >
       A course is run as a chat SCOPED to its attach directory, reached from a
-      landmark (a chat destination); the scoped CLAUDE.md (which @-includes the
+      landmark (a chat destination); the scoped AGENTS.md (which @-includes the
       runner instructions) and the path-globbed exposition rules auto-load, and
       the agent follows the lesson-plan and updates progress.
     correct_contains_any: ["landmark", "tutoring", "chat scoped", "attach"]
@@ -6224,7 +6293,7 @@ tests:
     notes: >
       The run side, distinct from build-course. Entry = a landmark chat
       destination that scopes the chat to the course attach dir, where a thin
-      CLAUDE.md (@course-runner.md) and the exposition rules auto-load. Failure
+      AGENTS.md (@course-runner.md) and the exposition rules auto-load. Failure
       mode: thinking a built course just sits there with no way to conduct it.
 
   # === User Location ===

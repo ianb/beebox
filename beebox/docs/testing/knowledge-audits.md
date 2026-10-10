@@ -15,7 +15,7 @@ The harness lives in `src/dev/`:
 - `lib/test-runner.ts`, `lib/report.ts`, `lib/session-report.ts` — internals
 - `reports/` — gitignored output
 
-**When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior. Run them after touching AGENTS.md, box CLAUDE.md, schemas, prompts, or anything
+**When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior. Run them after touching AGENTS.md, box AGENTS.md, schemas, prompts, or anything
 that changes what an agent should know; the periodic cadence is in
 [maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.md`.
 
@@ -34,7 +34,7 @@ Reports go to `src/dev/reports/audit-report-<timestamp>.md`; the durable record 
 
 When we talk about what the agent "knows," there are distinct phenomena worth naming. These categories mix together where information lives, what retrieval strategy is needed, and what failure modes look like — but that's because they describe the distinct behaviors agents actually exhibit. Some are about the knowledge architecture (knows directly, knows about), some about retrieval effort (discoverable, deducible, researchable), and some about what goes wrong when retrieval doesn't happen (guessable, improvised). They don't form a tidy linear spectrum — each is a phenomenon you might encounter when testing or observing an agent, and a starting point for further investigation.
 
-1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CLAUDE.md` → `.beebox/agent-guide.md`, plus any `.claude/rules/` files triggered by the current task. These answers should be immediate and accurate.
+1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `AGENTS.md` → `.beebox/agent-guide.md`, plus any `.claude/rules/` files triggered by the current task. These answers should be immediate and accurate.
 
 2. **Knows about** — Knows *that* something exists and *where to learn more*. The agent guide references docs or files by path (e.g., "see `node_modules/beebox/box-docs/card-memo.md`"), so the agent can follow the pointer to get details. May require multiple hops of file reading (e.g., guide → table of contents → specific doc), but each hop is straightforward traversal — the agent knows where to go next without searching or guessing. Reliability depends on whether the agent actually follows the references vs. guessing from the name alone.
 
@@ -56,7 +56,7 @@ When we talk about what the agent "knows," there are distinct phenomena worth na
 
 The same information can sit at different levels depending on what the agent is currently doing. In Claude Code, this happens concretely through conditional rules:
 
-- `src/schemas/CLAUDE.md` is **knows directly** when the agent is editing files in `src/schemas/` (Claude Code auto-loads directory CLAUDE.md files). But when the agent is working on something unrelated, the same information is only **discoverable** — the agent would have to navigate to that directory and find the file.
+- `src/schemas/AGENTS.md` is **knows directly** once the agent reads a file in `src/schemas/` (Claude Code loads a directory's `AGENTS.md` then). But when the agent is working on something unrelated, the same information is only **discoverable** — the agent would have to navigate to that directory and find the file.
 
 - `.claude/rules/card-memo.md` is **knows directly** when the agent reads or edits a `*.memo.card` file (the `paths:` glob triggers loading). When working on other card types, memo-specific knowledge is **discoverable** at best.
 
@@ -68,8 +68,8 @@ This means testing should consider: what was the agent *doing* when it answered?
 
 The agent's context is built in layers, each corresponding to a knowledge level:
 
-- **Always loaded** → *knows directly*: `CLAUDE.md` → `.beebox/agent-guide.md` (~128 lines of operational overview, directory layout, command summaries, card type catalog with doc references)
-- **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `CLAUDE.md` files (e.g., `src/schemas/CLAUDE.md`) are loaded when the agent works in that directory.
+- **Always loaded** → *knows directly*: `AGENTS.md` → `.beebox/agent-guide.md` (~128 lines of operational overview, directory layout, command summaries, card type catalog with doc references)
+- **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `AGENTS.md` files (e.g., `src/schemas/AGENTS.md`) are loaded when the agent reads a file in that directory.
 - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card type specs, command reference, procedure authoring guide, domain guides — see its `README.md` index) and box-compiled docs in `_content/docs/generated/*.md` (guide compilations, personality, box-local card type specs). The agent guide points to these by path.
 - **Present but not referenced** → *discoverable*: config files, procedure definitions, guide cards. Available in the box but the agent has to find them by exploring.
 - **Outside the box** → *deducible*: beebox source code (`src/cards/`, `src/schemas/`, etc., or `node_modules/beebox` from inside the box). Accessible if the agent knows where to look, but outside the box.
@@ -153,8 +153,8 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `max_turns` — override the default 10-turn limit (use for tests requiring multi-step card creation).
 - `tags` — for filtering with `--filter`.
 - `surface` — `box` (default) or `dev`; see Dev-guidance audits.
-- `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `CLAUDE.md` (and its `@MAP.md` import) actually load into the agent's context at session start.
-- `fixture` — map of box-relative path → file content, written before the test and removed afterward. Used to stage a `CLAUDE.md` (or any other file) without checking it into the box. Combined with `context_dir`, this lets a single audit set up its own landmark-style scratch directory.
+- `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `AGENTS.md` (and its `@MAP.md` import) actually load into the agent's context at session start.
+- `fixture` — map of box-relative path → file content, written before the test and removed afterward. Used to stage an `AGENTS.md` (or any other file) without checking it into the box. Combined with `context_dir`, this lets a single audit set up its own landmark-style scratch directory.
 - `chat_mode` — when true, the agent runs with `CHAT_SYSTEM_PROMPT` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.
 - `response_not_contains` — list of substrings that must NOT appear in the agent's response. Useful for testing prompt overrides: e.g. the narration overlay tells the agent not to emit `<speech>` even when the user spoke; the audit can assert this directly.
 
@@ -217,7 +217,7 @@ Each report entry shows a **Context** line — the loaded-context size the box
 agent carried during that audit, read from the session log's per-turn `usage`
 (summed across `input + cache_creation + cache_read`, since prompt caching
 leaves raw `input_tokens` tiny). The *initial* number is the always-on baseline
-the box pays every turn (system prompt + agent-guide + box CLAUDE.md + tool
+the box pays every turn (system prompt + agent-guide + box AGENTS.md + tool
 schemas); *peak* and *added* show how much answering grew it. A `knows_directly`
 / 0-read audit doubles as a baseline gauge: trim a box's always-on context, re-
 run, watch *initial* drop. Logic lives in `lib/context-usage.ts`.
@@ -225,7 +225,7 @@ run, watch *initial* drop. Logic lives in `lib/context-usage.ts`.
 Every run also appends these numbers to **`src/dev/context-history.yaml`** — a
 committed ledger keyed by box → audit id → entries, each stamped with the date,
 the box's HEAD, and the monorepo's HEAD. The file's git history is the trend
-line: a CLAUDE.md trim that drops the baseline shows up as a diff. (`boxCommit`
+line: an AGENTS.md trim that drops the baseline shows up as a diff. (`boxCommit`
 is the box's HEAD *before* the harness regenerates docs — stable for a current
 box, but the throwaway worktree box clone is behind upstream templates, so its
 hash moves each run.) Logic lives in `lib/context-history.ts`.
@@ -235,7 +235,7 @@ hash moves each run.) Logic lives in `lib/context-history.ts`.
 Common failure patterns and what they mean:
 
 - **Hits `max_turns`** — the agent didn't converge. Either the prompt is ambiguous, the right docs aren't loadable from the agent's perspective, or the task is too multi-step for the default 10-turn limit. Try `max_turns: 20` first; if that doesn't help, the prompt or the underlying knowledge is the problem.
-- **Tool issues** — the agent tried to use a tool that's not available in this box, or used an available tool wrong. Usually means a CLAUDE.md or rule file is misleading.
+- **Tool issues** — the agent tried to use a tool that's not available in this box, or used an available tool wrong. Usually means an AGENTS.md or rule file is misleading.
 - **Knowledge gap** — the agent answered confidently but wrong. The doc that should have taught the right answer either doesn't exist, isn't loaded into the agent's context, or contradicts itself.
 - **Reads wrong files** — `should_read` is wrong, or the doc structure changed and the agent is following a stale pointer.
 

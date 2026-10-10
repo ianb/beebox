@@ -47,3 +47,13 @@ const summary = JSON.stringify({
 summary
 => {"readCount":3,"wrappedReadDetected":true,"bashCount":3,"searchCount":3,"response":"The date comes from EXIF.","words":5,"context":null}
 ```
+
+An `AGENTS.md` read keeps its own name; nothing rewrites it to `CLAUDE.md`:
+
+```ts
+const agentsRead = codexBehaviorFromActivity([
+  { type: "command", command: "cat people/AGENTS.md" },
+], "ok");
+agentsRead.filesRead
+=> ["cat people/AGENTS.md"]
+```

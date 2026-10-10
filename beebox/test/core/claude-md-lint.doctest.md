@@ -1,13 +1,16 @@
-# CLAUDE.md size lint
+# Instruction-file size lint
 
-A box `CLAUDE.md` loads into the agent's context every turn, so `bbx validate`
-surfaces a **soft** (never blocking) warning when one grows too large. The
+A box instruction file (`AGENTS.md`, or `CLAUDE.md` before conversion) loads
+into the agent's context every turn, so `bbx validate` surfaces a **soft** (never blocking) warning when one grows too large. The
 check is character-based — a line can be a one-word bullet or a 170-char
 paragraph, so line count is a poor proxy for context cost — with two tiers: a
 gentle nudge at `CLAUDE_MD_WARN_CHARS`, firmer language at `CLAUDE_MD_FIRM_CHARS`.
 
 ```ts setup
-import { lintClaudeMdSize, CLAUDE_MD_WARN_CHARS, CLAUDE_MD_FIRM_CHARS } from "../../src/core/claude-md-lint.js";
+import { lintAllClaudeMd, lintClaudeMdSize, CLAUDE_MD_WARN_CHARS, CLAUDE_MD_FIRM_CHARS } from "../../src/core/claude-md-lint.js";
+import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 // Classify the result into a stable tier label so these tests assert *which*
 // tier fires, not the exact wording (which is free to evolve).
@@ -69,4 +72,21 @@ the character count, so the agent (or boxholder) sees which file and how big.
 warningLead("config/CLAUDE.md", 25000)
 =>
 warning  config/CLAUDE.md  [claude-md-size] 25000 chars
+```
+
+## Both instruction-file names are linted, mirrors once
+
+`bbx validate` walks the box for every real instruction file: `AGENTS.md` in a
+converted box, `CLAUDE.md` in one not yet converted. The `AGENTS.md` symlink
+beside a legacy `CLAUDE.md` is the same content and is not reported twice.
+
+```ts
+const root = await mkdtemp(join(tmpdir(), "bbx-instruction-size-"));
+await mkdir(join(root, "legacy"), { recursive: true });
+await mkdir(join(root, "converted"), { recursive: true });
+await writeFile(join(root, "legacy/CLAUDE.md"), "x".repeat(CLAUDE_MD_WARN_CHARS));
+await symlink("CLAUDE.md", join(root, "legacy/AGENTS.md"));
+await writeFile(join(root, "converted/AGENTS.md"), "x".repeat(CLAUDE_MD_WARN_CHARS));
+(await lintAllClaudeMd(root)).map((w) => w.split("  ")[1])
+=> ["converted/AGENTS.md", "legacy/CLAUDE.md"]
 ```

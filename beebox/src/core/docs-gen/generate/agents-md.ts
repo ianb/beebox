@@ -1,30 +1,33 @@
 /**
- * CLAUDE.md @-include management for doc generation.
+ * Root instruction-file @-include management for doc generation.
  *
- * Keeps the box's CLAUDE.md pointed at the generated agent guide and any
- * compiled briefing files, without ever overwriting hand-edited content.
- * Split out of generate-docs.ts as a self-contained sub-feature.
+ * Keeps the box's root instruction file (`AGENTS.md`, or `CLAUDE.md` in a box
+ * not yet converted; see `instructionFilePath`) pointed at the generated agent
+ * guide and any compiled briefing files, without ever overwriting hand-edited
+ * content. Split out of generate-docs.ts as a self-contained sub-feature.
  */
 
 import { join } from "node:path";
 import { writeFile, readFile } from "node:fs/promises";
 import { AGENT_GUIDE_FILE } from "../shared.js";
 import { generateAgentContextMirrors } from "../../agent-context-mirrors.js";
+import { instructionFilePath } from "../../agent-instruction-files.js";
 
 export async function ensureAgentContext(boxRoot: string, briefingPaths: string[]): Promise<void> {
-  await ensureClaudeMdIncludes(boxRoot, briefingPaths);
+  await ensureInstructionIncludes(boxRoot, briefingPaths);
   await generateAgentContextMirrors(boxRoot);
 }
 
 /**
- * Ensure CLAUDE.md has the @-include for the agent guide and any compiled briefings.
+ * Ensure the root instruction file has the @-include for the agent guide and
+ * any compiled briefings.
  *
- * If CLAUDE.md doesn't exist, create it with the includes.
+ * If the file doesn't exist, create it with the includes.
  * Adds missing includes and removes stale briefing includes.
  * Never overwrite hand-edited content.
  */
-async function ensureClaudeMdIncludes(boxRoot: string, briefingPaths: string[]): Promise<void> {
-  const claudePath = join(boxRoot, "CLAUDE.md");
+async function ensureInstructionIncludes(boxRoot: string, briefingPaths: string[]): Promise<void> {
+  const instructionPath = join(boxRoot, await instructionFilePath(boxRoot, ""));
   const includeLine = `@.beebox/${AGENT_GUIDE_FILE}`;
 
   // All lines that should be @-included (in order)
@@ -35,16 +38,16 @@ async function ensureClaudeMdIncludes(boxRoot: string, briefingPaths: string[]):
 
   let content: string;
   try {
-    content = await readFile(claudePath, "utf-8");
+    content = await readFile(instructionPath, "utf-8");
   } catch (_e) {
-    // No CLAUDE.md — create one with all includes. Absence is the normal
+    // No instruction file — create one with all includes. Absence is the normal
     // first-run trigger; the subsequent writeFile would resurface any real
     // I/O problem (e.g. permissions) rather than silently masking it.
     const seed = [
       ...requiredIncludes,
       "",
     ].join("\n");
-    await writeFile(claudePath, seed);
+    await writeFile(instructionPath, seed);
     return;
   }
 
@@ -85,6 +88,6 @@ async function ensureClaudeMdIncludes(boxRoot: string, briefingPaths: string[]):
   }
 
   if (changed) {
-    await writeFile(claudePath, lines.join("\n"));
+    await writeFile(instructionPath, lines.join("\n"));
   }
 }

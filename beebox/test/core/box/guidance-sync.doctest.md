@@ -23,7 +23,7 @@ import {
 import { isTemplateManagedPath } from "../../../src/core/install-template-file.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
 import { generateAgentContextMirrors } from "../../../src/core/agent-context-mirrors.js";
-import { ensureClaudeMdInDir } from "../../../src/core/maps/finalize/core.js";
+import { ensureInstructionMapInclude } from "../../../src/core/maps/finalize/core.js";
 import { compileGuides } from "../../../src/core/docs-gen/compile/core.js";
 import { readDocId, withDocId } from "../../../src/core/docs-gen/shared.js";
 import { commitTemplateSyncChanges } from "../../../src/core/docs-gen/generate/core.js";
@@ -90,12 +90,13 @@ const samplePath = (rowPath: string): string =>
 generators; `bbx init` reaches them through `generateDocs` right after. Rows
 installed by another owner (a later `generateDocs` phase, the refresh-maps
 procedure, the package build) are not the walk's; the registry names their
-owner.
+owner. Instruction rows name `AGENTS.md`, and a new box is converted
+(`agents-md-2026-10` is in its manifest), so its guides are `AGENTS.md` files.
 
 ```ts
 const box = await makeTmpBox({ git: "none" });
 const missing = (files: string[], rows: typeof GUIDANCE_SURFACES): string[] =>
-  rows.filter((row) => !files.some((f) => guidancePathPattern(row.path).test(f))).map((row) => row.path);
+  rows.filter((row) => !files.some((f) => guidancePathPattern(row.path).test(f) || guidanceSurfaceFor(f) === row)).map((row) => row.path);
 const fromTemplates = GUIDANCE_SURFACES.filter((row) => row.install.via === "tracker" || row.install.via === "seed");
 missing(await boxFiles(box.root), fromTemplates)
 => []
@@ -150,21 +151,21 @@ parking.
 
 ```ts continue
 const versionsPath = path.join(box.root, "_config/template-versions.json");
-for (const rel of ["src/tricks/scripts/CLAUDE.md", "src/views/CLAUDE.md"]) {
+for (const rel of ["src/tricks/scripts/AGENTS.md", "src/views/AGENTS.md"]) {
   await fs.rm(path.join(box.root, rel));
 }
 const seeded = JSON.parse(await fs.readFile(versionsPath, "utf8"));
-delete seeded["src/tricks/scripts/CLAUDE.md"];
-delete seeded["src/views/CLAUDE.md"];
+delete seeded["src/tricks/scripts/AGENTS.md"];
+delete seeded["src/views/AGENTS.md"];
 await fs.writeFile(versionsPath, JSON.stringify(seeded, null, 2) + "\n");
 
 await syncBoxGuidance(box.root, { generators: true });
 
-await exists(box.root, "src/tricks/scripts/CLAUDE.md") && await exists(box.root, "src/views/CLAUDE.md")
+await exists(box.root, "src/tricks/scripts/AGENTS.md") && await exists(box.root, "src/views/AGENTS.md")
 => true
 
 const versions = JSON.parse(await fs.readFile(versionsPath, "utf8"));
-["src/tricks/scripts/CLAUDE.md", "src/views/CLAUDE.md"].every((k) => typeof versions[k]?.sha256 === "string")
+["src/tricks/scripts/AGENTS.md", "src/views/AGENTS.md"].every((k) => typeof versions[k]?.sha256 === "string")
 => true
 ```
 
@@ -176,18 +177,32 @@ await box.cleanup();
 
 A git-tracked `tracked` or `generated` row is a managed path, so the sync
 commit sweeps it. An `owned` row, a `package` row, or a gitignored row is not.
+The one exception is the root `AGENTS.md`: the `**/AGENTS.md` mirror row also
+matches it, because in a box not yet converted it is the generated symlink to
+the root `CLAUDE.md`. The sync commit keeps whatever was dirty before it ran, so
+this sweeps only the engine's own include edits.
 
 ```ts
 GUIDANCE_SURFACES
   .filter((row) => isTemplateManagedPath(samplePath(row.path)) !== (row.gitTracked && (row.class === "tracked" || row.class === "generated")))
   .map((row) => row.path)
-=> []
+=> ["AGENTS.md"]
 
-isTemplateManagedPath("src/views/CLAUDE.md") && isTemplateManagedPath("nested/dir/AGENTS.md")
+isTemplateManagedPath("src/views/AGENTS.md") && isTemplateManagedPath("nested/dir/AGENTS.md")
 => true
 
 isTemplateManagedPath("CLAUDE.md") || isTemplateManagedPath("_content/MAP.md")
 => false
+```
+
+The four tracked guides keep their legacy `CLAUDE.md` paths as managed paths,
+so a box not yet converted still commits a guide the sync updates. Other
+`CLAUDE.md` files stay the box's own:
+
+```ts
+["src/schemas/CLAUDE.md", "src/views/CLAUDE.md", "src/tricks/scripts/CLAUDE.md", "_config/feedback/CLAUDE.md", "_content/notes/CLAUDE.md"]
+  .map(isTemplateManagedPath)
+=> [true, true, true, true, false]
 ```
 
 ## The reference table matches the registry
@@ -285,7 +300,7 @@ unrelated work.
 
 ```ts
 const box = await makeTmpBox({ git: true, deps: true });
-await fs.rm(path.join(box.root, "src/views/CLAUDE.md"));
+await fs.rm(path.join(box.root, "src/views/AGENTS.md"));
 execFileSync("git", ["commit", "-q", "-am", "an older box"], { cwd: box.root });
 await box.write("notes.md", "work in progress\n");
 
@@ -296,8 +311,8 @@ const status = await getStatus(box.root);
 JSON.stringify({ modified: status.modified, untracked: status.untracked })
 => {"modified":[],"untracked":["notes.md"]}
 
-JSON.stringify(lastCommit(box.root).split("\n").filter((line) => line.startsWith("Sync") || line === "src/views/CLAUDE.md" || line === ".claude/rules/card-memo.md"))
-=> ["Sync templates from upstream",".claude/rules/card-memo.md","src/views/CLAUDE.md"]
+JSON.stringify(lastCommit(box.root).split("\n").filter((line) => line.startsWith("Sync") || line === "src/views/AGENTS.md" || line === ".claude/rules/card-memo.md"))
+=> ["Sync templates from upstream",".claude/rules/card-memo.md","src/views/AGENTS.md"]
 ```
 
 ```ts cleanup
@@ -329,31 +344,31 @@ JSON.stringify({
 
 ## The maps finalizer leaves tracked guides alone
 
-`ensureClaudeMdInDir` plants the map include line in a directory's
-`CLAUDE.md`. Where that file is a tracked guide, the include would make it
+`ensureInstructionMapInclude` plants the map include line in a directory's
+`AGENTS.md`. Where that file is a tracked guide, the include would make it
 differ from stock and park every later rewrite, so the finalizer skips the
 directory and strips an include an earlier run prepended. The sync strips the
 same stray line before the tracker compares.
 
 ```ts continue
-const stock = await box.read("src/views/CLAUDE.md");
-await ensureClaudeMdInDir(box.root, "src/views");
-(await box.read("src/views/CLAUDE.md")) === stock
+const stock = await box.read("src/views/AGENTS.md");
+await ensureInstructionMapInclude(box.root, "src/views");
+(await box.read("src/views/AGENTS.md")) === stock
 => true
 
-await box.write("src/views/CLAUDE.md", "@MAP.md\n\n" + stock);
-await ensureClaudeMdInDir(box.root, "src/views");
-(await box.read("src/views/CLAUDE.md")) === stock
+await box.write("src/views/AGENTS.md", "@MAP.md\n\n" + stock);
+await ensureInstructionMapInclude(box.root, "src/views");
+(await box.read("src/views/AGENTS.md")) === stock
 => true
 
-await box.write("src/views/CLAUDE.md", "@MAP.md\n\n" + stock);
+await box.write("src/views/AGENTS.md", "@MAP.md\n\n" + stock);
 await syncBoxGuidance(box.root, { generators: false });
-(await box.read("src/views/CLAUDE.md")) === stock
+(await box.read("src/views/AGENTS.md")) === stock
 => true
 
 await fs.mkdir(path.join(box.root, "_content/mapped"), { recursive: true });
-await ensureClaudeMdInDir(box.root, "_content/mapped");
-(await box.read("_content/mapped/CLAUDE.md")).trim()
+await ensureInstructionMapInclude(box.root, "_content/mapped");
+(await box.read("_content/mapped/AGENTS.md")).trim()
 => @MAP.md
 ```
 

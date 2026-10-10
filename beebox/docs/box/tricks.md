@@ -11,7 +11,7 @@ and run as child processes of the engine with their own npm dependencies.
 
 Every trick is a directory with an `index.ts`. A `.ts` file placed directly in
 `scripts/` is not a trick and does not list. The box's
-`src/tricks/scripts/CLAUDE.md` shows the directory layout and holds this box's
+`src/tricks/scripts/AGENTS.md` shows the directory layout and holds this box's
 own conventions for tricks.
 
 ## Script interface

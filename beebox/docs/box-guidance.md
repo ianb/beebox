@@ -11,8 +11,8 @@ loads, or that an agent opens because an instruction names it. Each surface
 has one **tier** and one **class**.
 
 The tier says how eagerly a host loads it: `always` (every turn, through the
-root `CLAUDE.md` and its `@` includes), `situational` (when the agent works on
-matching paths: nested `CLAUDE.md`, `.claude/rules/`), `invoked` (by name:
+root `AGENTS.md` and its `@` includes), `situational` (when the agent works on
+matching paths: nested `AGENTS.md`, `.claude/rules/`), `invoked` (by name:
 skills, procedures), `on-demand` (opened by path: package docs, compiled box
 docs), or `mirror` (Codex's copy of a Claude surface).
 
@@ -33,15 +33,15 @@ two differ. `<name>` stands for one path segment, and `**/` for any directory.
 
 | Surface | Tier | Class | Installed by | In box git |
 |---|---|---|---|---|
-| `CLAUDE.md` | always | owned | box; `ensureAgentContext` keeps its include lines | yes |
+| `AGENTS.md` | always | owned | box; `ensureAgentContext` keeps its include lines | yes |
 | `.beebox/agent-guide.md` | always | generated | `generateDocs` | no |
 | `_content/briefing.md` | always | generated | `compileBriefings` | yes |
 | `_content/briefing.briefing.card` | always | tracked | `installBriefing` | yes |
 | `_config/main.personality.card` | always | tracked | `installPersonality` | yes |
-| `src/schemas/CLAUDE.md` | situational | tracked | walk | yes |
-| `src/views/CLAUDE.md` | situational | tracked | walk | yes |
-| `src/tricks/scripts/CLAUDE.md` | situational | tracked | walk | yes |
-| `_config/feedback/CLAUDE.md` | situational | tracked | walk | yes |
+| `src/schemas/AGENTS.md` | situational | tracked | walk | yes |
+| `src/views/AGENTS.md` | situational | tracked | walk | yes |
+| `src/tricks/scripts/AGENTS.md` | situational | tracked | walk | yes |
+| `_config/feedback/AGENTS.md` | situational | tracked | walk | yes |
 | `**/MAP.md` | situational | owned | refresh-maps procedure | yes |
 | `.claude/rules/card-<type>.md` | situational | generated | walk (`generateRules`) | yes |
 | `.claude/rules/connector-<name>.md` | situational | generated | walk (`generateRules`) | yes |
@@ -59,6 +59,14 @@ two differ. `<name>` stands for one path segment, and `**/` for any directory.
 | `.agents/skills/beebox-rule-<rule>/SKILL.md` | mirror | generated | `generateAgentContextMirrors` | yes |
 | `.agents/skills/<skill>` | mirror | generated | `generateAgentContextMirrors` | yes |
 | `.codex/hooks.json` | mirror | generated | `generateAgentContextMirrors` | yes |
+
+Claude Code and Codex both read `AGENTS.md`, so one file serves both. A nested
+`AGENTS.md` loads when the agent reads a file in its directory, not when it
+only writes there, so `bbx create` names the folder's instruction files. A
+`CLAUDE.md` in a box is a lint error: it makes Claude Code ignore every
+`AGENTS.md`. Unconverted boxes still use `CLAUDE.md` (with an `AGENTS.md`
+symlink for Codex, the `**/AGENTS.md` row) until `bbx engine migrate` runs
+`agents-md-2026-10`.
 
 ## How it works
 
@@ -103,15 +111,15 @@ The families `compileGuides` writes (`guides-for-<type>.md`,
 
 A Claude session started for a box reads only this guidance. `boxSessionSettings`
 (`src/core/agent/box-session-settings.ts`) loads the `project` setting source
-and not `user`, excludes every `CLAUDE.md` in a directory above the box root,
+and not `user`, excludes every instruction file in a directory above the box root,
 and turns off the claude.ai connectors of the server's Claude login. Chat, agent
 runs, and scan vision all use it.
 
 ## Maps and tracked guides
 
 The maps finalizer (`src/core/maps/finalize/core.ts`) gives every map-bearing
-directory a `CLAUDE.md` holding the map include line. A directory whose
-`CLAUDE.md` is a tracked guide is skipped: the include would make the guide
+directory an `AGENTS.md` holding the map include line. A directory whose
+`AGENTS.md` is a tracked guide is skipped: the include would make the guide
 differ from stock, and the tracker would park every later rewrite. That
 happened on production boxes before 2026-09-26, so the finalizer and the sync
 both strip a leading include they find on a tracked guide
@@ -126,7 +134,7 @@ row, plus the tracker's own bookkeeping and everything under `.claude/rules/`,
 
 Engine facts about a subject go in that subject's package doc under
 `docs/box/` (for example [tricks](box/tricks.md) or
-[schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
+[schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
 plus the box's own conventions, and a managed skill holds its trigger, its
 first commands, and a pointer. `test/core/docs-gen/package-docs.pointers.doctest.md` fails
 when a pointer names a doc the package does not ship.

@@ -2,7 +2,6 @@
 
 import type { CodexObservedActivity } from "../../../../core/agent/codex-run/core.js";
 import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-observation.js";
-import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
 import type { AgentBehavior } from "./run-test.js";
 
 /** Pure normalization boundary for fixture tests and provider parity checks. */
@@ -23,11 +22,8 @@ export function codexBehaviorFromActivity(
   const responseText = rawResponseText.trim();
   return {
     // Codex exposes reads through shell commands rather than a dedicated Read
-    // tool. Keep only commands that actually invoke a text-reading utility,
-    // and normalize editable AGENTS.md mirrors to their canonical CLAUDE.md.
-    filesRead: commands
-      .filter(shellCommandConsultsFiles)
-      .map((command) => command.replaceAll(AGENTS_MD, CLAUDE_MD)),
+    // tool. Keep only commands that actually invoke a text-reading utility.
+    filesRead: commands.filter(shellCommandConsultsFiles),
     searches: [...providerSearches, ...shellSearches],
     bashCommands: commands,
     bashRawCommands: commands,
