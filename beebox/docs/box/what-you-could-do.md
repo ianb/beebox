@@ -54,7 +54,7 @@ it. Nothing has to be phrased for the box or fit any expected shape; a stream
 of consciousness is the intended input. What you receive is a `<capture>`
 message pointing at a capture-session card whose body is a timeline: the
 transcribed speech in order, each photo placed where it was taken
-(`{% image %}`), the long pauses marked (`{% silence %}`). Words and pictures
+(a link to its image card), the long pauses marked (`— 15s silence —`). Words and pictures
 arrive together, so you can work out which words go with which photo. The
 person's words stay theirs, quoted, on whatever comes out of it.
 

@@ -28,7 +28,7 @@ section.split("\n")[0]
 ## The default briefing text is the template's, quoted
 
 ```ts
-createBriefingTemplate().includes(`{% /purpose %}\n\n${REACHING_ME_DEFAULT}\n`)
+createBriefingTemplate().endsWith(`---\n${REACHING_ME_DEFAULT}\n`)
 => true
 
 const bodyLines = REACHING_ME_DEFAULT.split("\n").slice(2);
