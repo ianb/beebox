@@ -56,7 +56,7 @@ function fakeServices(workstreams: WorkstreamSummary[] = []): AppServices {
     },
     quotas: { get: async () => [] },
     exhibits: {
-      askQueue: async () => ({ origin: "http://127.0.0.1:3230", storeProblem: null, entries: [] }),
+      inventory: async () => ({ origin: "http://127.0.0.1:3230", storeProblem: null, entries: [] }),
     },
     actions: {
       run: async () => ({ status: "complete" }),
@@ -216,6 +216,71 @@ JSON.stringify({
 => {"status":200,"name":"from-api"}
 ```
 
+The list joins each workstream's exhibits by directory name == row name,
+newest first with broken rows last, and the detail procedure returns the same
+rows. A store the service could not read becomes a warning, so it never reads
+as "no exhibits".
+
+```ts continue
+const summary = (name: string): WorkstreamSummary => {
+  const source = cliRow(name);
+  return {
+    name: source.name, branch: source.branch, url: source.url, git: source.git, runtime: source.runtime,
+    agent: source.agent, session: source.session, routing: source.routing, boxState: source.boxState, schedule: source.schedule,
+  };
+};
+const entry = (workstream: string, slug: string, title: string | null, created: string | null, problem: string | null) =>
+  ({ workstream, slug, path: `/${workstream}/${slug}/`, title, created, problem });
+const joinServices = fakeServices([summary("with-exhibits"), summary("without")]);
+joinServices.exhibits.inventory = async () => ({
+  origin: "http://127.0.0.1:3230",
+  storeProblem: null,
+  entries: [
+    entry("with-exhibits", "old", "Old one", "2026-08-01T00:00:00Z", null),
+    entry("with-exhibits", "broken", null, null, "broken manifest: created: Invalid input"),
+    entry("with-exhibits", "new", "New one", "2026-09-01T00:00:00Z", null),
+    entry("orphaned", "x", "No worktree", "2026-09-02T00:00:00Z", null),
+  ],
+});
+const joinApp = await buildApp({
+  services: joinServices,
+  routerCapability: "correct-capability",
+  basePath: "/workstreams",
+  buildId: "build-42",
+  activeJobs: () => 0,
+});
+const trpcHeaders = { [ROUTER_CAPABILITY_HEADER]: "correct-capability" };
+const joined = (await joinApp.inject({ method: "GET", url: "/workstreams/api/trpc/workstreams.list", headers: trpcHeaders })).json().result.data;
+const detailUrl = `/workstreams/api/trpc/workstreams.detail?input=${encodeURIComponent(JSON.stringify({ name: "with-exhibits" }))}`;
+const detail = (await joinApp.inject({ method: "GET", url: detailUrl, headers: trpcHeaders })).json().result.data;
+JSON.stringify({
+  origin: joined.exhibitsOrigin,
+  withSlugs: joined.items[0].exhibits.map((exhibit: { slug: string }) => exhibit.slug),
+  withoutSlugs: joined.items[1].exhibits.map((exhibit: { slug: string }) => exhibit.slug),
+  warnings: joined.warnings.length,
+  detailSlugs: detail.exhibits.map((exhibit: { slug: string }) => exhibit.slug),
+  detailOrigin: detail.exhibitsOrigin,
+})
+=> {"origin":"http://127.0.0.1:3230","withSlugs":["new","old","broken"],"withoutSlugs":[],"warnings":0,"detailSlugs":["new","old","broken"],"detailOrigin":"http://127.0.0.1:3230"}
+
+const problemServices = fakeServices([summary("with-exhibits")]);
+problemServices.exhibits.inventory = async () => ({
+  origin: "http://127.0.0.1:3230",
+  storeProblem: "No exhibit store yet: /store has no marker file. Run bin/exhibits to create one.",
+  entries: [],
+});
+const problemApp = await buildApp({
+  services: problemServices,
+  routerCapability: "correct-capability",
+  basePath: "/workstreams",
+  buildId: "build-42",
+  activeJobs: () => 0,
+});
+const problemList = (await problemApp.inject({ method: "GET", url: "/workstreams/api/trpc/workstreams.list", headers: trpcHeaders })).json().result.data;
+JSON.stringify({ exhibits: problemList.items[0].exhibits.length, warnings: problemList.warnings.map((warning: { message: string }) => warning.message) })
+=> {"exhibits":0,"warnings":["No exhibit store yet: /store has no marker file. Run bin/exhibits to create one."]}
+```
+
 Every mutating procedure contributes to the health activity count until it
 settles. This includes issue commits, not only long-running resume jobs, so the
 supervisor cannot replace the backend during a write transaction.
@@ -271,4 +336,6 @@ JSON.stringify({
 await app.close();
 await apiApp.close();
 await mutationApp.close();
+await joinApp.close();
+await problemApp.close();
 ```

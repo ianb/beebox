@@ -1,7 +1,8 @@
 // The exhibits listener: a second Fastify instance, a second origin.
 //
 // Agent-written pages script freely here, so this origin holds no
-// router/workstreams authority: its cookie grants exhibit routes only. Route =
+// router/workstreams authority: its cookie grants exhibit routes plus one
+// bounded action, bringing a workstream's terminal tab forward (api.ts). Route =
 // store path (filesystem routing), with two roots on one contract —
 // /<ws>/<exhibit>/ in the persistent store, /apps/<name>/ in the main
 // checkout's tracked dev/apps.
@@ -13,7 +14,7 @@ import path from "node:path";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 
 import { DOC_FILE, MANIFEST_FILE, type ExhibitBoot } from "../../../shared/exhibits.js";
-import { exhibitsApiPlugin } from "./api.js";
+import { exhibitsApiPlugin, type ExhibitsApiOptions, type FocusRunner } from "./api.js";
 import type { ExhibitsAssets } from "../assets.js";
 import { registerExhibitsAuth } from "./auth.js";
 import {
@@ -68,6 +69,11 @@ export interface BuildExhibitsAppOptions {
   token: string;
   /** This listener's own port — the origin a mutating request must come from. */
   port: number;
+  /** Runs `bin/workstreams focus` for the page's "Reply in the session" button. */
+  runFocus: FocusRunner;
+  /** The page's comment panel writes through these (api-comments.ts). */
+  comments: ExhibitsApiOptions["comments"];
+  transcribe: ExhibitsApiOptions["transcribe"];
   createAssets(server: http.Server): Promise<ExhibitsAssets>;
   logger?: boolean | undefined;
 }
@@ -83,7 +89,6 @@ interface PageTarget {
   scope: string;
   listUrl: string;
   listLabel: string;
-  requireAsk: boolean;
 }
 
 function html(reply: FastifyReply, page: { code: number; body: string }): FastifyReply {
@@ -128,7 +133,7 @@ async function servePage(
   const resolved = await resolveExhibitDir(target.root, target.segments);
   if (!resolved) return delegate(assets, target);
 
-  const manifest = await readManifest(resolved.dir, { requireAsk: target.requireAsk });
+  const manifest = await readManifest(resolved.dir);
   if (!manifest.ok) {
     return html(reply, {
       code: manifest.missing ? 404 : 500,
@@ -210,7 +215,13 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
   registerExhibitsAuth(app, { token: options.token, port: options.port });
   // On this instance, so the API inherits the auth hook above: a separately
   // built instance would be an unauthenticated write surface.
-  await app.register(exhibitsApiPlugin, { prefix: "/api", storeRoot: options.storeRoot });
+  await app.register(exhibitsApiPlugin, {
+    prefix: "/api",
+    storeRoot: options.storeRoot,
+    runFocus: options.runFocus,
+    comments: options.comments,
+    transcribe: options.transcribe,
+  });
 
   /** Every store route fails closed on an unmarked root (marker discipline). */
   async function requireStore(reply: FastifyReply): Promise<boolean> {
@@ -242,12 +253,7 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       body: renderExhibitList({
         heading: "Committed apps",
         basePath: "/apps/",
-        // A committed app's code is tracked in the checkout; its documents —
-        // including any disposition — live in the store's reserved namespace.
-        exhibits: await listExhibits(options.appsRoot, {
-          requireAsk: false,
-          dataRoot: path.join(options.storeRoot, APPS_SEGMENT),
-        }),
+        exhibits: await listExhibits(options.appsRoot),
       }),
     }));
 
@@ -258,7 +264,6 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       scope: `${APPS_SEGMENT}/${request.params.name}`,
       listUrl: "/apps/",
       listLabel: "Committed apps",
-      requireAsk: false,
       request,
       reply,
     }));
@@ -286,7 +291,7 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       body: renderExhibitList({
         heading: ws,
         basePath: `/${encodeURIComponent(ws)}/`,
-        exhibits: await listExhibits(root, { requireAsk: true }),
+        exhibits: await listExhibits(root),
       }),
     });
   });
@@ -300,7 +305,6 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       scope: `${ws}/${exhibit}`,
       listUrl: `/${encodeURIComponent(ws)}/`,
       listLabel: ws,
-      requireAsk: true,
       request,
       reply,
     });

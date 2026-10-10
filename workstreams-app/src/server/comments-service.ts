@@ -22,18 +22,39 @@ import { z } from "zod";
 import { commentSchema, type Comment } from "../shared/comments.js";
 
 /** What `bin/comments <cmd> --json` emits. Parsed, not trusted. */
+const cliSubjectSchema = z.discriminatedUnion("scope", [
+  z.object({ scope: z.literal("tracked"), relPath: z.string() }),
+  z.object({ scope: z.literal("worktree"), worktree: z.string(), relPath: z.string() }),
+  z.object({ scope: z.literal("exhibit"), workstream: z.string(), exhibit: z.string() }),
+]);
 const cliEntrySchema = z.object({
-  subject: z.object({
-    scope: z.enum(["tracked", "worktree"]),
-    worktree: z.string().optional(),
-    relPath: z.string(),
-  }).nullable(),
+  subject: cliSubjectSchema.nullable(),
   storePath: z.string().optional(),
   problem: z.string().nullable().optional(),
   comments: z.array(commentSchema),
 });
 const cliOutputSchema = z.object({ entries: z.array(cliEntrySchema) });
 const cliAddSchema = z.object({ id: z.string() });
+
+/**
+ * What a comment is on. A file is addressed by repository path plus the
+ * checkout whose untracked namespace applies; an exhibit page by workstream
+ * and name (`docs/implemented-plans/exhibit-comments.md`).
+ */
+export type CommentTarget =
+  | { relPath: string; worktree: string | null }
+  | { exhibit: { workstream: string; exhibit: string } };
+
+/** The CLI's spelling of a target: the path, or `exhibit:<ws>/<name>`. */
+function targetArgs(target: CommentTarget): string[] {
+  if ("exhibit" in target) return [`exhibit:${target.exhibit.workstream}/${target.exhibit.exhibit}`];
+  return [target.relPath, ...optionalFlag("worktree", target.worktree ?? undefined)];
+}
+
+/** A flag with an empty value would be read as the next flag; omit it instead. */
+function optionalFlag(name: string, value: string | undefined): string[] {
+  return value === undefined || value === "" ? [] : [`--${name}`, value];
+}
 
 export class CommentsCliError extends Error {
   constructor(detail: string) {
@@ -55,12 +76,11 @@ export interface CommentsService {
   /** Everything waiting, optionally narrowed to what is addressed to one workstream. */
   waiting(workstream: string | null): Promise<Array<{ relPath: string; comments: Comment[] }>>;
   add(input: {
-    relPath: string;
+    /** A file, in which checkout's untracked namespace; or an exhibit page. */
+    target: CommentTarget;
     body: string;
     origin: "typed" | "voice";
     workstream: string | null;
-    /** Which checkout's namespace an UNTRACKED file belongs to. */
-    worktree: string | null;
     // `exactOptionalPropertyTypes` is on, so an ABSENT optional and an
     // explicit `undefined` are different types — and Zod hands back the latter.
     quoted?: string | undefined;
@@ -83,10 +103,7 @@ export function createCommentsService(options: { repoRoot: string }): CommentsSe
     return result.stdout;
   }
 
-  /** A flag with an empty value would be read as the next flag; omit it instead. */
-  function optional(name: string, value: string | undefined): string[] {
-    return value === undefined || value === "" ? [] : [`--${name}`, value];
-  }
+  const optional = optionalFlag;
 
   return {
     async forDocument({ relPath, worktree }): Promise<Comment[]> {
@@ -97,19 +114,21 @@ export function createCommentsService(options: { repoRoot: string }): CommentsSe
     async waiting(workstream): Promise<Array<{ relPath: string; comments: Comment[] }>> {
       const args = ["list", "--json", ...optional("workstream", workstream ?? undefined)];
       const parsed = cliOutputSchema.parse(JSON.parse(await run(args)));
-      return parsed.entries
-        .filter((entry) => entry.subject !== null)
-        .map((entry) => ({ relPath: entry.subject?.relPath ?? "", comments: entry.comments }));
+      // Exhibit subjects have no path; the dashboard's waiting list is a list
+      // of documents, so they are read with `bin/comments` instead.
+      return parsed.entries.flatMap((entry) =>
+        entry.subject === null || entry.subject.scope === "exhibit"
+          ? []
+          : [{ relPath: entry.subject.relPath, comments: entry.comments }]);
     },
     async add(input): Promise<{ id: string }> {
       const args = [
         "add",
-        input.relPath,
+        ...targetArgs(input.target),
         "--body", input.body,
         "--origin", input.origin,
         "--json",
         ...optional("workstream", input.workstream ?? undefined),
-        ...optional("worktree", input.worktree ?? undefined),
         ...optional("quoted", input.quoted),
         ...optional("section", input.section),
         ...optional("fragment", input.fragment),

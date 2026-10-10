@@ -9,11 +9,12 @@ import { defaultStoreRoot } from "../exhibits/store.js";
 import { createViteAssets } from "../exhibits/vite-assets.js";
 import { createWorkstreamsCommandService } from "./workstreams-command.js";
 import { createSchedulesCommandService } from "./schedules-command.js";
-import { createCommentsService } from "../comments-service.js";
+import { createCommentsService, type CommentsService } from "../comments-service.js";
 import { createTranscribeService } from "./transcribe-openai.js";
+import type { TranscribeService } from "../services.js";
 import { createDocumentsService } from "./documents-service.js";
 import { createIssueRelatedService } from "./issue-related-service.js";
-import { createExhibitsQueueService } from "./exhibits-queue-service.js";
+import { createExhibitsInventoryService } from "./exhibits-inventory-service.js";
 import { createQuotasService } from "./quotas-service.js";
 import {
   createActionCommandRunner,
@@ -44,13 +45,19 @@ function exhibitsRoots(env: z.infer<typeof serverEnvSchema>): { storeRoot: strin
   };
 }
 
-async function startExhibits(env: z.infer<typeof serverEnvSchema>): Promise<FastifyInstance> {
+async function startExhibits(
+  env: z.infer<typeof serverEnvSchema>,
+  shared: { comments: CommentsService; transcribe: TranscribeService },
+): Promise<FastifyInstance> {
   const { storeRoot, appsRoot } = exhibitsRoots(env);
   const app = await buildExhibitsApp({
     storeRoot,
     appsRoot,
     token: env.EXHIBITS_TOKEN,
     port: env.EXHIBITS_PORT,
+    runFocus: createActionCommandRunner(repoRoot),
+    comments: shared.comments,
+    transcribe: shared.transcribe,
     createAssets: (server) =>
       createViteAssets({
         server,
@@ -83,10 +90,10 @@ async function main(): Promise<void> {
     transcribe: createTranscribeService(),
     quotas: createQuotasService(),
     actions,
-    // The queue reads the same store the exhibits listener serves, and links
+    // The inventory reads the same store the exhibits listener serves, and links
     // back to its origin: same host, the port that listener binds below.
-    exhibits: createExhibitsQueueService({
-      ...exhibitsRoots(env),
+    exhibits: createExhibitsInventoryService({
+      storeRoot: exhibitsRoots(env).storeRoot,
       origin: `http://127.0.0.1:${String(env.EXHIBITS_PORT)}`,
     }),
   };
@@ -99,7 +106,9 @@ async function main(): Promise<void> {
     logger: true,
   });
 
-  const exhibits = await startExhibits(env);
+  // The same comment writer and transcriber the dashboard uses; the exhibits
+  // origin is one more caller of each.
+  const exhibits = await startExhibits(env, { comments: services.comments, transcribe: services.transcribe });
 
   const shutdown = async (): Promise<void> => {
     await Promise.allSettled([app.close(), exhibits.close()]);
