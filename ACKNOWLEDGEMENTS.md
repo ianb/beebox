@@ -42,7 +42,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
   - Concept-graph construction rules (entity names, one teachable unit per node, no orphans, no degenerate chains), an orphan-node lint, and agent self-review of the map.
   - Claim classification by source support (verified, directional, qualitative, unsupported). Missing data is stated, not filled in.
   - A render check as part of figure authoring, and worked figure examples that include a categorization-sort practice.
-- **Where it landed:** `beebox/src/plugins/courseware/concept-map.ts`, `beebox/src/core/box/guidance-sync/skills-content.ts`, `beebox/src/core/box/guidance-sync/skills.ts`
+- **Where it landed:** `beebox/src/plugins/courseware/concept-map.ts`, `beebox/src/core/box/guidance-sync/skills/content.ts`, `beebox/src/core/box/guidance-sync/skills/core.ts`
 
 ### Backward design, spiral curriculum, Bloom's revised taxonomy, by Grant Wiggins and Jay McTighe; Jerome Bruner; Anderson and Krathwohl
 

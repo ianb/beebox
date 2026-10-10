@@ -32,7 +32,7 @@ import {
   BoxPackageConflictError,
 } from "../../../src/core/box/package.js";
 import { generateRules } from "../../../src/core/init-rules.js";
-import { generateSkills } from "../../../src/core/box/guidance-sync/skills.js";
+import { generateSkills } from "../../../src/core/box/guidance-sync/skills/core.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
 import { stageAll, isRepo, initRepo } from "../../../src/lib/git/core/operations.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";

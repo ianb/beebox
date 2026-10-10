@@ -28,7 +28,7 @@ export type GuidanceClass = "generated" | "tracked" | "package" | "owned";
 /** A `MANAGED_STOCK_TEMPLATES` entry, keyed by its stock-hash ledger name. */
 export type StockTemplateName = keyof typeof TEMPLATE_STOCK_HASHES;
 
-/** Generators `syncBoxGuidance` runs; each returns its prune manifest. */
+/** Generators `syncBoxGuidance` runs; each returns its prune manifest (`generateSkills` also returns its conflicts). */
 export type GuidanceGenerator = "generateRules" | "generateSkills";
 
 /** Writers that run outside the `syncBoxGuidance` walk. */
@@ -38,7 +38,6 @@ type GuidanceOwner =
   | "generateDocs"
   | "compileBriefings"
   | "compileGuides"
-  | "compileExpositionRules"
   | "installValidationHooks"
   | "installProcedures"
   | "installGuides"
@@ -104,7 +103,6 @@ export const GUIDANCE_SURFACES: readonly GuidanceSurface[] = [
   { path: ".claude/rules/bbx-validate-ignore.md", tier: "situational", class: "generated", install: owner("installValidationHooks"), gitTracked: true },
   { path: ".claude/rules/guides-for-<type>.md", tier: "situational", class: "generated", install: owner("compileGuides"), gitTracked: true },
   { path: ".claude/rules/guide-for-chat-<chat>.md", tier: "situational", class: "generated", install: owner("compileGuides"), gitTracked: true },
-  { path: ".claude/rules/exposition-<course>.md", tier: "situational", class: "generated", install: owner("compileExpositionRules"), gitTracked: true },
 
   // invoked: loaded by name when a task calls for it.
   { path: ".claude/skills/<skill>/<file>", tier: "invoked", class: "generated", install: generator("generateSkills"), gitTracked: true },

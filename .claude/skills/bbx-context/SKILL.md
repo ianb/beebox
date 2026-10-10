@@ -23,7 +23,7 @@ The box `AGENTS.md` and the generated agent guide load every turn, before the ag
 | A big self-contained reference | a box doc plus a one-line pointer from `AGENTS.md` | when the agent opens it |
 | A whole repeatable procedure | a box procedure in `_config/procedures/` | when run |
 
-Box skills are not boxholder-authored: they are a managed set written by `beebox/src/core/box/guidance-sync/skills.ts`.
+Box skills are not boxholder-authored: they are a managed set written by `beebox/src/core/box/guidance-sync/skills/core.ts`.
 
 Box instruction files are named `AGENTS.md`: Claude Code and Codex both read them. A `CLAUDE.md` in a converted box is a lint error, because it makes Claude Code ignore every `AGENTS.md`. A nested `AGENTS.md` loads when the agent reads a file in that directory, not when it only writes there; `bbx create` names the folder's instruction files. An unconverted box still uses `CLAUDE.md` until `bbx engine migrate` runs `agents-md-2026-10`.
 

@@ -131,8 +131,11 @@ list together:
 - `plugin-stub-inactive`: a stub imports a plugin that is not active. Warning.
 - `plugin-stub-missing`: a stub imports a plugin that does not exist, or the
   stub failed to load. Error.
-- `skill-name-conflict`: the plugin's skill name collides with an unmarked box
+- `skill-name-conflict`: a managed skill's name (a plugin's or a static one) collides with an unmarked box
   skill; the engine did not overwrite it. Warning.
+- `legacy-exposition-rules`: an exposition-plan card still carries a non-empty
+  `rules` field (courseware README, Migration). Warning. Core owns it so it
+  fires while the plugin is inactive.
 - `<plugin>/...`: the plugin's own `healthChecks`, prefixed.
 
 `bbx upgrade` validates the whole box under the new engine after migrations.

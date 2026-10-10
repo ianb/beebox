@@ -13,6 +13,7 @@ import type { LintIssue } from "../../../exports/cards.js";
 import { containWithinBox, realpathContained } from "../../../lib/box-containment.js";
 import { isCardFile } from "../../../lib/paths/core.js";
 import { activePluginNames } from "../../box/config.js";
+import { describeInvalidPluginEntries } from "../../plugins/active.js";
 import { resolveContainedRef, resolveRefExists } from "../../ref-exists.js";
 import { pluginByName } from "../../../plugins.js";
 
@@ -50,10 +51,10 @@ export async function pluginLintIssues(input: {
 }): Promise<LintIssue[]> {
   const { path, type, fields, boxRoot } = input;
   const { active, invalid } = await activePluginNames(boxRoot);
-  const issues: LintIssue[] = invalid.map((entry) => ({
+  const issues: LintIssue[] = describeInvalidPluginEntries(invalid).map((problem) => ({
     type: "schema",
     severity: "warning",
-    message: `_config/box.json plugins entry ${JSON.stringify(entry)} names no installed plugin — card not linted by it`,
+    message: `_config/${problem}; the card is not linted by that plugin`,
   }));
   if (active.length === 0) return issues;
   const ctx = makeLintContext(boxRoot);

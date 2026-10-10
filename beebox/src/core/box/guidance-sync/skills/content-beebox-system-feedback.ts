@@ -1,4 +1,4 @@
-import { FEEDBACK_CLAUDE_MD } from "../templates.js";
+import { FEEDBACK_CLAUDE_MD } from "../../templates.js";
 
 /** The description advertises system feedback; the body shares the local guide. */
 export const BEEBOX_SYSTEM_FEEDBACK_SKILL = `---

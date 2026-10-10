@@ -3,7 +3,7 @@
  * that file's header for the authoring conventions.
  */
 
-import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
+import { BOX_PACKAGE_DOCS } from "../../../docs-gen/shared.js";
 
 /**
  * The `what-can-you-do` skill: the moment a person asks what the box is for,

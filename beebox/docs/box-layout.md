@@ -257,6 +257,7 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 ## What's *not* in a box
 
 - **No Bee Box application/server code.** A box stores state and config and may contain authored publication source in a `publication` card's attach folder; those site projects build to static files and never run inside the Bee Box server.
+- **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activation (`plugins` in `_config/box.json`) and the small stubs under `src/schemas/` and `src/views/` that import and extend it. See [plugins](plugins.md).
 - **No global secrets file inside a box.** Connector credentials live in the machine-level secret store (`docs/secrets.md`), outside every box tree, with a per-box grant deciding who may resolve what; secrets do not commute between boxes without an explicit grant. A handful of not-yet-migrated connectors still keep a box-local `_config/connectors/*.secret.json`.
 - **No cross-box references.** Boxes are self-contained — one box never reads from another's filesystem.
 

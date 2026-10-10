@@ -39,6 +39,8 @@ import { staleIndexLockCheck } from "./checks/git-lock.js";
 import { SCAN_CONTRACT_VERSION } from "../../../../core/scan/contract-version.js";
 import { scanUploaderFreshnessCheck } from "./checks/scan-uploaders.js";
 import { templateUpdatesCheck } from "./checks/templates.js";
+import { pluginHealthChecks } from "./checks/plugins/core.js";
+import type { PluginDefinition } from "../../../../cards/plugin-definition.js";
 import { packageDocsCheck } from "./checks/package-docs.js";
 import { watchLimitHealthChecks } from "./checks/watch-limit.js";
 import { connectorHealthChecks, dismissConnectorEpisodeProcedure } from "./checks/connectors.js";
@@ -141,6 +143,8 @@ export interface RunHealthChecksOptions {
    * itself, so the dashboard and `/api/health` escalate the same way.
    */
   scheduleHealth?: BoxScheduleHealth | undefined;
+  /** Installed plugins for the plugin checks; defaults to the registry. A doctest seam. */
+  plugins?: ReadonlyArray<PluginDefinition> | undefined;
 }
 
 
@@ -217,6 +221,7 @@ export async function runHealthChecks(
   checks.push(await pendingMigrationsCheck(boxRoot));
   const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
   checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
+  checks.push(...(await pluginHealthChecks(boxRoot, { plugins: options?.plugins })));
   checks.push(scheduledTasksCheck(scheduleHealth, getBoxTime(boxRoot)));
   checks.push(...engineQuotaChecks(await boxEngineUnavailability(boxRoot), getBoxTime(boxRoot)));
   checks.push(await packageDocsCheck(boxRoot));
