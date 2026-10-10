@@ -1,5 +1,7 @@
-import { Component, useState, type ErrorInfo, type ReactNode } from "react";
+import { Component, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 
+import { CommentPanel } from "./CommentPanel.js";
+import { responseProblem } from "./comment-requests.js";
 import { Markdown } from "../../components/Markdown.js";
 import type { ExhibitBoot } from "../../../shared/exhibits.js";
 
@@ -41,18 +43,18 @@ export const DASHBOARD_WORKSTREAMS_URL = "http://localhost:3210/workstreams/stre
 
 type ReplyState = { kind: "idle" } | { kind: "working" } | { kind: "done" } | { kind: "refused"; detail: string };
 
-/** The server's 409 body is `{ message, detail }`; anything else reads as a generic failure. */
+/** The server's 409 body is `{ message, detail }`; the detail alone is what the person acts on. */
 async function refusalDetail(response: Response): Promise<string> {
+  let body: unknown = null;
   try {
-    const body: unknown = await response.json();
-    if (typeof body === "object" && body !== null && "detail" in body && typeof body.detail === "string" && body.detail !== "") {
-      return body.detail;
-    }
-    if (typeof body === "object" && body !== null && "error" in body && typeof body.error === "string") return body.error;
+    body = await response.json();
   } catch (_error) {
-    // Not JSON: fall through to the status line.
+    // Not JSON: the status line carries the report.
   }
-  return `The exhibits server answered HTTP ${String(response.status)}.`;
+  if (typeof body === "object" && body !== null && "detail" in body && typeof body.detail === "string" && body.detail !== "") {
+    return body.detail;
+  }
+  return responseProblem({ status: response.status, body });
 }
 
 /**
@@ -99,26 +101,39 @@ export function ReplyInSessionButton({ scope }: { scope: string }): ReactNode {
 /**
  * The shell every exhibit gets: breadcrumb back to its list, title, and the
  * manifest's prose rendered as Markdown, and — for store exhibits — the Reply
- * in the session button. A page that overrides the default
- * renderer still renders inside this.
+ * in the session button and the comment panel. A page that overrides the
+ * default renderer still renders inside this. The title, prose, and page share
+ * one element, so a selection anywhere in them can be commented on and the
+ * title counts as the heading above anything without a nearer one.
  */
 export function ExhibitContainer({ boot, children }: { boot: ExhibitBoot; children: ReactNode }): ReactNode {
   const { prose } = boot.manifest;
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const storeExhibit = !boot.scope.startsWith("apps/");
   return (
     <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-6 py-8">
-      <header className="flex flex-col gap-3">
-        <nav className="text-sm">
-          <a className="font-semibold text-blue-800 hover:underline" href={boot.listUrl}>
-            ← {boot.listLabel}
-          </a>
-        </nav>
-        <h1 className="text-2xl font-bold tracking-tight">{boot.manifest.title}</h1>
-        {prose ? <Markdown source={prose} /> : null}
-        {boot.scope.startsWith("apps/") ? null : <ReplyInSessionButton scope={boot.scope} />}
-      </header>
-      <main className="flex min-w-0 flex-col gap-6">
-        <ExhibitErrorBoundary>{children}</ExhibitErrorBoundary>
-      </main>
+      <nav className="text-sm">
+        <a className="font-semibold text-blue-800 hover:underline" href={boot.listUrl}>
+          ← {boot.listLabel}
+        </a>
+      </nav>
+      {storeExhibit
+        ? (
+          <div className="flex flex-col gap-3">
+            <ReplyInSessionButton scope={boot.scope} />
+            <CommentPanel scope={boot.scope} contentRef={contentRef} />
+          </div>
+        )
+        : null}
+      <div className="flex min-w-0 flex-col gap-6" ref={contentRef}>
+        <header className="flex flex-col gap-3">
+          <h1 className="text-2xl font-bold tracking-tight">{boot.manifest.title}</h1>
+          {prose ? <Markdown source={prose} /> : null}
+        </header>
+        <main className="flex min-w-0 flex-col gap-6">
+          <ExhibitErrorBoundary>{children}</ExhibitErrorBoundary>
+        </main>
+      </div>
     </div>
   );
 }

@@ -73,8 +73,10 @@ JSON.stringify({
 => {"page":true,"title":true,"prose":false}
 ```
 
-A store exhibit carries the "Reply in the session" button; a committed app does
-not, because it belongs to no workstream and has no session to bring forward.
+A store exhibit carries the "Reply in the session" button and the Comment
+control; a committed app carries neither, because it belongs to no workstream:
+no session to bring forward, nobody to send a comment to. The composer renders
+only once commenting is on and text is selected.
 
 ```ts
 const store = render(boot({}));
@@ -87,6 +89,11 @@ JSON.stringify({
   appButton: committed.includes("Reply in the session"),
   // The refusal (and its link to the dashboard) renders only after a click.
   idleRefusal: store.includes("Open the workstream list"),
+  storeComment: store.includes(">Comment</button>"),
+  appComment: committed.includes(">Comment</button>"),
+  idleComposer: store.includes("What about it?"),
+  // The title sits inside the commentable content, below the controls.
+  controlsBeforeTitle: store.indexOf(">Comment</button>") < store.indexOf("Threshold tuner"),
 })
-=> {"storeButton":true,"appButton":false,"idleRefusal":false}
+=> {"storeButton":true,"appButton":false,"idleRefusal":false,"storeComment":true,"appComment":false,"idleComposer":false,"controlsBeforeTitle":true}
 ```

@@ -77,9 +77,20 @@ export async function startRecording(maxBytes: number): Promise<{
   cancel: () => void;
 }> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  // Low bitrate on purpose: speech does not need more, and the byte cap is
-  // what decides how long a comment can be.
-  const recorder = new MediaRecorder(stream, { audioBitsPerSecond: 24_000 });
+  function release(): void {
+    for (const track of stream.getTracks()) track.stop();
+  }
+  let recorder: MediaRecorder;
+  try {
+    // Low bitrate on purpose: speech does not need more, and the byte cap is
+    // what decides how long a comment can be.
+    recorder = new MediaRecorder(stream, { audioBitsPerSecond: 24_000 });
+  } catch (error) {
+    // The track is already live; a constructor that refuses the options must
+    // not leave the indicator light on.
+    release();
+    throw error;
+  }
   const chunks: Blob[] = [];
   let bytes = 0;
   let truncated = false;
@@ -95,10 +106,6 @@ export async function startRecording(maxBytes: number): Promise<{
     }
   };
   recorder.start(1000);
-
-  function release(): void {
-    for (const track of stream.getTracks()) track.stop();
-  }
 
   return {
     cancel: () => {

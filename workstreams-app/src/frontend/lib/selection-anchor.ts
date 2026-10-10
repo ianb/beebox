@@ -49,18 +49,23 @@ export function serializeFragment(fragment: GeneratedFragment): string {
   return `:~:text=${parts.join(",")}`;
 }
 
-/** The nearest heading above a node — what section of the document this is. */
+/**
+ * The nearest heading above a node in document order — what section of the
+ * document this is. Document order, not the sibling chain: a caption inside a
+ * figure inside a section has no heading among its ancestors' siblings, yet
+ * the heading above that section is plainly what it sits under.
+ */
 function sectionFor(node: Node, root: HTMLElement): string | undefined {
-  let element: Element | null = node instanceof Element ? node : node.parentElement;
-  while (element !== null && element !== root) {
-    let sibling: Element | null = element.previousElementSibling;
-    while (sibling !== null) {
-      if (/^H[1-6]$/u.test(sibling.tagName)) return sibling.textContent.trim();
-      sibling = sibling.previousElementSibling;
-    }
-    element = element.parentElement;
+  let found: Element | undefined;
+  for (const heading of root.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+    const position = heading.compareDocumentPosition(node);
+    // FOLLOWING: the node comes after the heading. A selection that starts
+    // inside the heading itself (CONTAINED_BY) counts as under it too.
+    if ((position & (Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_CONTAINED_BY)) === 0) break;
+    found = heading;
   }
-  return undefined;
+  const text = found?.textContent.trim();
+  return text === undefined || text === "" ? undefined : text;
 }
 
 /**
