@@ -5,8 +5,8 @@ import { UserMessageText } from "./user-message-text";
 /**
  * A voice message waiting for its HQ transcript
  * (docs/plans/resilient-voice-recording.md, Track 4): the realtime text as a
- * faded user bubble, the HQ job's status line, and a control to stop waiting
- * and send the live text now (the HQ text then follows as a correction).
+ * faded user bubble with the HQ job's status line inside it, and below it a
+ * control to stop waiting and send the live text now.
  */
 export function PendingHqMessage({ pending, onSendLive }: { pending: PendingHq; onSendLive: (id: string) => void }) {
   return (
@@ -19,10 +19,11 @@ export function PendingHqMessage({ pending, onSendLive }: { pending: PendingHq; 
           <div className="text-sm whitespace-pre-wrap">
             <UserMessageText text={pending.text} />
           </div>
-        </div>
-        <div role="status" className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
-          {pending.status}
+          {/* Inside the bubble, like the sent message's "Live text" line: the status belongs to this message. */}
+          <div role="status" className="bbx-chat-user-status flex items-center gap-1.5 text-xs text-white mt-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse" />
+            {pending.status}
+          </div>
         </div>
         <Button size="sm" intent="secondary" onClick={() => onSendLive(pending.id)}>Send live text now</Button>
       </div>
