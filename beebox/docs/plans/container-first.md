@@ -76,7 +76,7 @@ built here). Searched the queue for `ghcr`, `published image`, `codex login`,
 - The most recent shipped precedent for unattended per-box convergence is
   `deploy/deploy.sh:713-716` (sweep then docs refresh, never fails the
   deploy) and its container copy at `docker/entrypoint.sh:124-125`.
-- `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
+- `AGENTS.md`, Time discipline: *"Long-running timeouts must count only awake
   time via `startAwakeTimeout` (`src/lib/awake-timeout.ts`)"*.
 - Soft-launch posture: *"one blessed deploy happy path"* and *"the front door
   reads as a message from the boxholder"*
@@ -324,7 +324,7 @@ Rebuilt, with reason:
     `container/README.md` (the install and update guide, replacing
     `docs/install/docker.md`; it leaves the `beebox/docs` tree and the docs
     browser on purpose, since it documents files beside it), and
-    `container/CLAUDE.md` (a short map). The root `CLAUDE.md` project list
+    `container/AGENTS.md` (a short map). The root `AGENTS.md` project list
     and the `beebox/AGENTS.md` Guides table gain the new entries in Track E.
   - **The three commands**, exactly as the README will print them:
 
@@ -587,7 +587,7 @@ Rebuilt, with reason:
   repository (or a Docker image built from it)"*; `docs/install/developer.md:1-6`
   presents Docker as an alternative. The docker README table still says
   `bbx serve /data/box/content` (`docker/README.md:11`). The root
-  `CLAUDE.md` project list and the `beebox/AGENTS.md` Guides table point at
+  `AGENTS.md` project list and the `beebox/AGENTS.md` Guides table point at
   files this plan moves.
 - **Direction.**
   - Root README, in order: one paragraph in the boxholder's voice (what
@@ -611,7 +611,7 @@ Rebuilt, with reason:
     it, both engines' login commands, `edge` under a contributor heading
     only, the "a box with its own dependencies" limitation, and the
     checklist sections kept.
-  - Root `CLAUDE.md` project list and `beebox/AGENTS.md` Guides table:
+  - Root `AGENTS.md` project list and `beebox/AGENTS.md` Guides table:
     `container/` and its README replace the `docs/install/docker.md` row.
   - `src/frontend/src/components/settings/ScanUploaderSection.tsx:82-87`
     tells the user to `git clone` and `pnpm install` the scan uploader. That
@@ -623,7 +623,7 @@ Rebuilt, with reason:
 - **Vocabulary lock-ins.** "the deployment directory", "the box", "the
   image" as the three names used in every doc.
 - **First implementation chunk.** `container/README.md`, since Tracks B to
-  D are its spec. README, site card, agent-install, and the two CLAUDE.md
+  D are its spec. README, site card, agent-install, and the two AGENTS.md
   maps follow once the commands are verified.
 
 ### Track F — Verification
@@ -885,7 +885,7 @@ architectures rather than changed.
    time on this machine.
 9. Track A chunk 2: the workflow file. Verified only after merge.
 10. Track E: `container/README.md`, README, site card, agent-install,
-    developer-install, the two CLAUDE.md maps, docs index, the scan
+    developer-install, the two AGENTS.md maps, docs index, the scan
     uploader text, the ledger's rung 6 entry. Depends on 7 and 8 so the
     commands documented are the commands that ran.
 11. Cross-model review, then the merge, then the boxholder's manual items.

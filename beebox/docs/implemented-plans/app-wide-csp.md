@@ -6,6 +6,9 @@ issues: []
 ---
 # App-wide Content-Security-Policy
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 This plan introduces a Content-Security-Policy (CSP) on the beebox
 webapp. Today the app ships **no** document CSP — the only CSP in the codebase
 is `FROZEN_CSP`, scoped to captured-snapshot HTML at

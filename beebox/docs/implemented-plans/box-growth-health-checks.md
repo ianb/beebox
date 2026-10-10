@@ -6,6 +6,9 @@ issues: []
 ---
 # Box-growth health checks
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 This plan adds a low-cost, persisted measurement of box filesystem and Git
 growth. It reports large or fast-growing boxes before they exhaust server
 resources. The warning identifies the growing subtree and can be acknowledged;

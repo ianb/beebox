@@ -6,6 +6,9 @@ issues: []
 ---
 # Plan Engineering Review — Markdoc Tags Design
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Trial run of an adapted plan-eng-review (no numeric scoring, no scope-gate, no cognitive-patterns checklist; citation-discipline gate ON; failure-modes per new codepath; agent-flow edge cases).
 
 ## What already exists

@@ -7,6 +7,9 @@ issues:
 ---
 # One-root box layout (shapeVersion 3)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **⚠ The migration it describes is deleted** (full-embrace-annex, 2026-09-14).
 > The one-root LAYOUT is current — shapeVersion 3 is the only shape the engine
 > understands. What is gone is the v2→v3 conversion this plan built:

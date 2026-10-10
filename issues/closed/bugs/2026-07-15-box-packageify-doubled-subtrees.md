@@ -7,6 +7,8 @@ area: beebox
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed (fixed) 2026-07-31.** Prod verified clean (scan below), and both affected
 local boxes de-doubled by hand with **no data loss**: each nested `store/`
 doubling held only empty directory structure, `CLAUDE.md` files byte-identical to

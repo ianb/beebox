@@ -1,5 +1,8 @@
 # How coupled is beebox to the Claude Agent SDK? (code audit)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 *2026-07-18. Part of the deeper backend-alternatives investigation (supersedes the
 architecture framing in the first-pass [README](README.md)). This is a code-reading
 audit with file:line evidence; the market/empirical research lives in the companion

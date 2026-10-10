@@ -34,7 +34,7 @@ about to mark a card reads it first.
 
 **We have been moving away from free-floating notes that an agent has to
 remember to read.** Durable instruction lives where it loads itself: a box's
-`CLAUDE.md`, a `.claude/rules/` glob that fires on the files it governs, or a
+`AGENTS.md`, a `.claude/rules/` glob that fires on the files it governs, or a
 schema's `instructions` string injected into context when a card of that type is
 processed (see the `bbx-context` skill for the placement rules). A note under
 `_bookkeeping/notes/` has none of that: it is discoverable only if something
@@ -57,7 +57,7 @@ strategy should live**, not whether one is worth having. Candidates:
    be read.
 2. A `.claude/rules/` entry globbed to `*.card`, so it loads whenever an agent
    is writing a card. Loads reliably; competes for context on every card write.
-3. A section of the box's `CLAUDE.md`. Always loaded; the file is already
+3. A section of the box's `AGENTS.md`. Always loaded; the file is already
    contested space.
 4. Nothing box-level: let the box's existing marks BE the strategy, and have the
    agent read the marks already in play (a `bbx` query for symbols in use)

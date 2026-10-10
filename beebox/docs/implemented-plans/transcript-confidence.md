@@ -10,6 +10,9 @@ issues:
 
 # Mark low-confidence transcript words, agent-first
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Deepgram reports a per-word confidence score that beebox currently
 discards. This plan carries that score through the realtime dictation path and
 embeds low-confidence word marks in the persisted chat message, so the **agent**

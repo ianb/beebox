@@ -6,6 +6,9 @@ issues: []
 ---
 # Remove `bbx render` and the SSR machinery
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 `bbx render` renders a frontend page to HTML with React SSR. It does not work:
 `renderToString` returns an empty `<body>` because the app is React-Query and
 Suspense driven. `bin/browse` covers the real need better. This plan removes the

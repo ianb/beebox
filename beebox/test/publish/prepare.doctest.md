@@ -269,6 +269,33 @@ result.message.includes("CLAUDE.md")
 await box.cleanup();
 ```
 
+A box's instruction file is `AGENTS.md` now, and it is just as private.
+
+```ts
+const box = await makeTmpBox();
+await writeDefinition(box);
+await box.write("_content/Example.attach/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
+await box.write("_content/Example.attach/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+const result = await preparePublication({ boxRoot: box.root, card: CARD }, {
+  ownerEmail: null,
+  runProjectCommand: async ({ step, cwd }) => {
+    if (step === "build") {
+      await mkdir(path.join(cwd, "dist"), { recursive: true });
+      await writeFile(path.join(cwd, "dist/index.html"), "<h1>Built</h1>");
+      await writeFile(path.join(cwd, "dist/AGENTS.md"), "private notes");
+    }
+  },
+});
+
+result.ok
+=> false
+
+result.message.includes("AGENTS.md")
+=> true
+
+await box.cleanup();
+```
+
 ## A git-annex pointer is refused; text that only mentions the prefix is not
 
 An annexed file whose content was never fetched holds a short pointer line.

@@ -9,6 +9,8 @@ discovered-in: worktree-journey-walks-oct — C-reconnecting journey walk, 2026-
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 Fixed 2026-10-08 by `boxSessionSettings` (`beebox/src/core/agent/box-session-settings.ts`):
 box Claude sessions load only the `project` setting source, exclude every
 `CLAUDE.md` above the box root, and set `disableClaudeAiConnectors`.

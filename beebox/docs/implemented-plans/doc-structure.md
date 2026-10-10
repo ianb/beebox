@@ -7,6 +7,9 @@ issues:
 ---
 # Documentation structured like code
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Bee Box's written guidance accretes: sections get added beside older sections
 that say something overlapping, and nobody reads the whole. This plan adopts one
 organizing principle for the engine docs under `beebox/docs/`, and later for

@@ -4,6 +4,7 @@ What beebox can actually do, catalogued from the source and checked against it.
 
 The current catalog is [catalog/2026-08-21.md](catalog/2026-08-21.md). It is produced by reading
 the source with a fleet of agents and then checking every claim they make.
+Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note.
 
 The output is only worth having if you trust it, and the only reason to trust it is that **nothing
 in the document is asserted by the agent that wrote it**. Every stage below exists to check the

@@ -24,7 +24,7 @@ const TEXT_EXTENSIONS = new Set([".html", ".htm", ".css", ".js", ".mjs", ".json"
 const FORBIDDEN_BASENAMES = new Set([
   ".env", ".npmrc", ".netrc", ".dev.vars", ".git", ".ssh", ".wrangler", "node_modules",
   "credentials.json", "credential.json", "secrets.json", "secret.json", "id_rsa", "id_ed25519",
-  "notes.md", "claude.md", "package.json", "pnpm-lock.yaml",
+  "notes.md", "claude.md", "claude.local.md", "agents.md", "package.json", "pnpm-lock.yaml",
 ]);
 const FORBIDDEN_SECRET_EXTENSIONS = new Set([".pem", ".key", ".p12", ".pfx"]);
 const FORBIDDEN_SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);

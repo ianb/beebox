@@ -1,5 +1,8 @@
 # Channels, Gateway, Connectors — bbx vs. OpenClaw vs. Hermes
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Factual comparison across the three systems' handling of external message/data
 sources: the adapter contract, inbound routing, outbound formatting, and the
 deeper question of what a "channel" even is. Sources: `bbx-proactivity-context.md`

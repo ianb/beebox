@@ -6,6 +6,9 @@ issues: []
 ---
 # Capture mode — unifying capture into the input
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Implements the "Capture mode" section of
 [input-widget.md](../plans/input-widget.md): capture stops being a separate app
 that deposits into inbox and becomes a mode of the chat composer. Media

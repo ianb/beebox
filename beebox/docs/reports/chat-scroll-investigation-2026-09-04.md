@@ -1,5 +1,8 @@
 # Chat scroll investigation, 2026-09-04
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Frozen 2026-09-25 from `docs/chat-scroll-testing.md`. The measurements, the
 reproduction runs, and the fix verification for the send-anchoring and image
 drift work of 2026-09-04. The current procedure is

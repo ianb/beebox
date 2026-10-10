@@ -6,6 +6,9 @@ issues: []
 ---
 # Remove cardworks — final deletion phase
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 The execution plan for the last phase of `remove-cardworks-package.md`: sever
 the remaining XML code paths in beebox, replace the one piece of loader
 functionality that is genuinely still used (broken-ref checking), drop

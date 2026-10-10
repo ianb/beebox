@@ -88,7 +88,7 @@ export type LandmarkChatAppData = z.infer<typeof LandmarkChatApp>;
 /**
  * One opener: a single short line the person sees as a button and sends
  * verbatim. Validated rather than silently normalized — an opener is agent-
- * written text that compiles into CLAUDE.md and renders as a button, so a
+ * written text that compiles into AGENTS.md and renders as a button, so a
  * paragraph or a blank entry is a card error the boxholder should see, not
  * something to quietly trim away.
  */

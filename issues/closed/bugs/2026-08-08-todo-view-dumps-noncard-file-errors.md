@@ -8,6 +8,8 @@ labels: [soft-launch, field-test-findings, code-error]
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Closed 2026-08-09.** Two of the three defects fixed:
 > the error dump — `listTodoCardPaths` (`src/core/todo/collect.ts`) now scopes
 > every glob to `.card` files centrally, so the plate's box-wide `glob: "**"`

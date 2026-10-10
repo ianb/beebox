@@ -8,6 +8,8 @@ discovered-in: main — production box feedback triage (bbx feedback)
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > Closed 2026-09-24 (boxholder chose both fixes): `REF_PATH_RULE` now says a ref reaches only the box's areas and package docs are read, not linked. A ref the namespace fence refuses now reports "points outside the box" with the rule, in all three broken-ref checks (`brokenRefReason`, `beebox/src/core/ref-exists.ts`). Whether refs should reach package docs stays with the linked 2026-07-07 design issue.
 
 An agent wrote a markdown link from a card to a package doc (a `box-docs/*.md`

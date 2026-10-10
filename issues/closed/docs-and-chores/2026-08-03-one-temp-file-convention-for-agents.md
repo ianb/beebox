@@ -7,6 +7,8 @@ discovered-in: "main session — boxholder: the agent has different ideas about 
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 Resolved by `45322542`. The generated box-agent guide now directs general
 scratch files to the box-root `tmp/`, rejects the host `/tmp`, and warns that
 the uncommitted contents may be swept. A focused doctest and knowledge audit

@@ -6,6 +6,9 @@ issues: []
 ---
 # Design reconciliation — adjudication list
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 The design documents disagree with each other and with the code, and none of them
 can be presumed right: the boxholder's design preferences have been developing
 (see the Direction section of `docs/plans/docs-reorg.md`: "Design docs require

@@ -86,7 +86,7 @@ async function readRootOpeners(boxRoot: string): Promise<string[]> {
  *
  * Each briefing card is compiled to a .md file next to the .card file.
  * Returns the list of compiled briefing paths (relative to box root)
- * so CLAUDE.md can include them.
+ * so AGENTS.md can include them.
  */
 export async function compileBriefings(boxRoot: string): Promise<string[]> {
   const compiledPaths: string[] = [];

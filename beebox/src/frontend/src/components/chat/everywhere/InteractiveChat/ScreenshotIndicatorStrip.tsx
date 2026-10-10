@@ -3,7 +3,7 @@
  * only (the plan's Visibility section — NOT a transcript write). Rendered in the
  * status-banner area above the composer, mirroring the background-task strip, so
  * the scroll controller's ResizeObserver already accounts for the height change
- * (chat CLAUDE.md: below-list chrome resizes the scroller — no scroll effect is
+ * (chat AGENTS.md: below-list chrome resizes the scroller — no scroll effect is
  * added here). Each row self-dismisses after a few seconds, revoking its
  * thumbnail object URL as it goes.
  *

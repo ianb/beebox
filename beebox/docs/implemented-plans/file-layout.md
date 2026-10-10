@@ -7,6 +7,9 @@ issues:
 ---
 # Source file layout: principles, rules, and what a check can verify
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Large flat directories in `beebox/src`, `beebox/test`, `bin/`, and
 `workstreams-app/` keep growing because nothing says when a directory is full
 or what a new file's neighbours must be. This plan states the principles a

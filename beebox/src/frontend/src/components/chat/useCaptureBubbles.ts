@@ -187,7 +187,7 @@ export function useCaptureBubbles(sessionId: string | null): CaptureBubbles {
   const bubbles = [...live, ...held].toSorted((a, b) => a.startedAt.localeCompare(b.startedAt));
 
   // One object, memoized, so the message-list context it feeds stays
-  // referentially stable across a send (see this directory's CLAUDE.md).
+  // referentially stable across a send (see this directory's AGENTS.md).
   const verbs = useMemo(() => ({ retry, discard }), [retry, discard]);
 
   return { bubbles, applyCaptureStatus, verbs };

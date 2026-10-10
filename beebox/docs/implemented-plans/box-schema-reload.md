@@ -6,6 +6,9 @@ issues: []
 ---
 # Box-local schema reload — design & implementation plan
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 ## TL;DR
 
 A box agent edits a box-local schema (`config/schemas/*.ts`) on the box, but the

@@ -25,8 +25,8 @@ Source trace, independently reviewed across model families:
 - `beebox/src/dev/knowledge-audit.ts` calls `generateDocs` before the loop.
 - `beebox/src/core/docs-gen/generate/core.ts` commits template sync before
   calling `ensureAgentContext`.
-- `beebox/src/core/docs-gen/generate/claude-md.ts` can update tracked
-  `CLAUDE.md` includes and generate context mirrors without committing them.
+- `beebox/src/core/docs-gen/generate/agents-md.ts` can update tracked
+  `AGENTS.md` includes and generate context mirrors without committing them.
 - `beebox/src/dev/lib/test-runner/runner.ts` captures HEAD, then restores it
   with `git reset --hard` and removes untracked output with `git clean -fd`.
   It only regenerates Codex mirrors for tests with fixtures.

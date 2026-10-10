@@ -8,6 +8,8 @@ discovered-in: refresh-maps-correctness (worktree-refresh-maps-correctness)
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 Closed 2026-09-19 in `f3301826d`: `findOrphanMaps`/`pruneOrphanMaps`
 (`beebox/src/core/maps/orphans.ts`) delete an orphan's `MAP.md`, its
 `CLAUDE.md` import line (and the `AGENTS.md` mirror symlink when it points at

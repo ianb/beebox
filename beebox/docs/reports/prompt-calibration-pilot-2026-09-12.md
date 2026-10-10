@@ -1,5 +1,8 @@
 # Prompt-calibration decision pilot
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 On 2026-09-12, Astra, Sol, Fable, and Opus each answered 12 skill-routing cases
 and five authority scenarios. The routing decisions respected all predeclared
 required/forbidden boundaries. The authority responses preserved implementation,

@@ -21,7 +21,7 @@ beebox/box-docs
 beebox/src/frontend/dist
 
 # Boxes of any kind must never enter the image (they carry a box's own
-# CLAUDE.md and private content). None live under the repo, but guard anyway.
+# AGENTS.md and private content). None live under the repo, but guard anyway.
 **/boxes
 box-worktrees
 beebox-worktrees

@@ -1,7 +1,7 @@
 /**
  * Resolves the DEFAULT config path — used identically by the bare run,
  * `configure`'s `--config` default, and `schedule install`'s `--config`
- * default (one resolver, one way to do it — CLAUDE.md #8). An explicitly
+ * default (one resolver, one way to do it). An explicitly
  * given `--config <path>` (or positional config-path argument on the bare
  * run) never goes through this module at all; it's used as given.
  *
