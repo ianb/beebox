@@ -82,10 +82,11 @@ Per `design/trust.md`, question then confirmation then automatic:
 - The agent lists a plugin name that does not exist: `bbx status` shows
   *"box.json names an unknown plugin: coursware. Installed plugins: courseware
   …"*. The agent fixes the spelling.
-- The agent lists the plugin but writes no stubs: the box validates, the
-  skill appears, and `bbx health` says *"courseware is active but
-  src/schemas/course.ts is missing; see
-  node_modules/beebox/src/plugins/courseware/README.md, Setup"*.
+- The agent lists the plugin but writes no stubs: the skill appears, and
+  `bbx health` says *"courseware is active but no schema defines course; see
+  node_modules/beebox/src/plugins/courseware/README.md, Setup"*
+  (`plugin-declared-missing`), plus the card count line if course cards
+  exist (`plugin-type-unprovided`).
 - Cards exist for a type nobody provides: *"3 cards of type course have no
   schema. The courseware plugin provides it; run `bbx plugins list` and see
   its README."*
@@ -108,10 +109,10 @@ Priya, in chat: "Can you set up a chemistry course for Wren?"
    lesson plans, learner progress. Docs: node_modules/beebox/src/plugins/courseware/README.md`.
 2. It reads the README's Setup section: add `"plugins": ["courseware"]` to
    `_config/box.json`; write `src/schemas/course.ts` and four siblings from
-   the shown stubs; write `src/views/concept-map.tsx`.
+   the shown stubs. The concept map renders with the built-in renderer.
 3. It tells Priya: *"This box has a courseware plugin that isn't on yet. I'll
    turn it on, which adds course, lesson plan, progress and concept map card
-   types. Then I'll draft the course."* It does so and commits: box.json, six
+   types. Then I'll draft the course."* It does so and commits: box.json, five
    stubs. `bbx validate` passes; `bbx view typecheck` passes.
 4. The next guidance sync mirrors the `courseware` skill into
    `.claude/skills/courseware/SKILL.md`. The agent guide's card-type list now
@@ -122,5 +123,5 @@ Priya, in chat: "Can you set up a chemistry course for Wren?"
    every health check passing. `git log` shows one commit "Activate
    courseware plugin" and one for the course.
 
-Record left behind: one line in box.json, six stub files, one skill
+Record left behind: one line in box.json, five stub files, one skill
 directory the engine owns, the course cards.
