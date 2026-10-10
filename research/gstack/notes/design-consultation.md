@@ -1,5 +1,8 @@
 # /design-consultation — design system from scratch
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Six-phase conversation that ends with a written DESIGN.md and a CLAUDE.md update telling the agent to always read it. The skill walks: pre-checks → product context (with memorable-thing forcing question) → optional competitive research → complete proposal with SAFE/RISK breakdown → optional drill-downs → visual preview (AI mockups or HTML) → write DESIGN.md.
 
 Like design-shotgun, the heavy infrastructure (`$D` image binary, `$B` browse daemon, taste-profile store) makes wholesale adoption costly. But there are some genuinely sharp ideas — one of which is among the best things in all of gstack.

@@ -391,7 +391,7 @@ The canonical surface the boxholder wants is **mostly not built** — that's the
 central gap. The pieces that exist are scattered and duplicative.
 
 - `src/core/agent-guide/index.ts:64-93` (moved to `beebox/src/core/agent-guide/guide/core.ts`) — assembles the guide from per-concept
-  section files, `@`-included into CLAUDE.md; **every box agent loads it**
+  section files, `@`-included into AGENTS.md; **every box agent loads it**
   (chat and reactor). This is why the system prompts' box-concepts blocks are
   redundant. `calendarSection()` and `driveSection()` are included
   **unconditionally** (`:74-75`) — the always-loaded-weight problem.
@@ -759,7 +759,7 @@ own chunks.
 
 Frontmatter-first briefing (`purpose` string, `key-people` list, decide
 corrections/property shape, audit `project-phase`, prose as headings), preserve
-compiled CLAUDE.md output, migrate existing briefings. Fixes the `type: briefing`
+compiled AGENTS.md output, migrate existing briefings. Fixes the `type: briefing`
 frontmatter bug. Own `/bbx-migration` discipline; `briefing-tags.ts` trim + the
 behavior.ts briefing-tag dedup land with it.
 
@@ -795,7 +795,7 @@ change, the load-model change, and the three migrations do.
 | `person.contact:` restructure orphans existing freeform-contact cards | Must add | migrate `_warnings.ts` noisy field-loss | Clear in noisy mode; silent otherwise |
 | `recipe.source:`/`hero-image:` retype breaks existing freeform values | Must add | schema validate + migration | Clear if validate tightens in lockstep |
 | `.sheet`→`.gsheet` rename leaves `.sheet.card` on disk / stale views | Must add | `bbx mv`-style rename migration | **Silent** — old cards just stop matching the schema |
-| Briefing redesign changes compiled CLAUDE.md output | Must add (golden) | None yet | **Silent** until an agent reads a changed CLAUDE.md |
+| Briefing redesign changes compiled AGENTS.md output | Must add (golden) | None yet | **Silent** until an agent reads a changed AGENTS.md |
 | Health surfaced mid-session floods every message when a task stays failing | Must add | needs de-dup / on-transition gate | **Noisy** (opposite failure) if ungated |
 | Calendar/Drive moved on-demand but the trigger never fires when needed | Must add | rule/skill trigger condition | **Silent** — agent lacks the guidance it needed |
 | About Cards defined a term but a trimmed section dropped a nuance only it had | knowledge audit | About Cards | Silent |

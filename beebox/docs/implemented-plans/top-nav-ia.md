@@ -6,6 +6,9 @@ issues: []
 ---
 # Unified app bar: one nav for chat and everything else
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Replace the two stacked header rows (the AppNav link bar + the chat header
 chips row) with a single unified app bar, navigate by place (box ▸ landmark)
 through a split-pill chip, make chat the default landing, merge the Chats

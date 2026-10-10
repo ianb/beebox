@@ -1,5 +1,8 @@
 # Knowledge-audit full rerun — 2026-07-03
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Full-corpus rerun of the knowledge audits against `~/src/boxes/test1` to catch
 agent-knowledge drift after the `prompt-surface-ia-review` overhaul (ABOUT_CARDS
 canonical surface, named laws, quote/source reconciliation, typed schema fields,

@@ -4,7 +4,7 @@
  *
  * The scroll itself goes through the controller's `anchorToTop` — the same
  * discrete-action path a send uses — so the "exactly one thing controls
- * scroll" invariant holds (frontend chat CLAUDE.md).
+ * scroll" invariant holds (frontend chat AGENTS.md).
  *
  * Arming: `MessageList` is keyed by the conversation, so a SESSION switch
  * remounts and arms on mount — but a search-result click for the chat you

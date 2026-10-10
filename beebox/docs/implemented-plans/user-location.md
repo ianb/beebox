@@ -6,6 +6,9 @@ issues: []
 ---
 # User Location (`bbx location get`)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status: implemented (2026-06-29).** Frozen design record. The code lives in
 > `src/core/location-store.ts`, `src/core/location-format.ts`,
 > `src/cli/commands/location.ts`, `src/webapp/trpc/routers/location.ts`,

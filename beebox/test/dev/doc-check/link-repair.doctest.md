@@ -113,7 +113,7 @@ readme.unfixable[0].reason
 JSON.stringify(duplicateBasenames(["issues/bugs/x.md", "issues/closed/bugs/x.md"]).get("x.md"))
 => ["issues/bugs/x.md","issues/closed/bugs/x.md"]
 
-// README.md / CLAUDE.md are intentionally one-per-dir — never counted as duplicates.
+// README.md / AGENTS.md are intentionally one-per-dir — never counted as duplicates.
 JSON.stringify([...duplicateBasenames(["a/README.md", "b/README.md", "c/dup.md", "d/dup.md"]).keys()])
 => ["dup.md"]
 ```

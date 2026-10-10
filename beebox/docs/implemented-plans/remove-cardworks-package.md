@@ -6,6 +6,9 @@ issues: []
 ---
 # Remove the cardworks package
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Delete the `cardworks` package from the monorepo. All six card schemas are
 now frontmatter (the XML `schemas[]` `ElementSchema` list is empty), so the
 large XML half of cardworks — parser, serializer, JSX, XPath, the

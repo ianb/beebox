@@ -6,6 +6,9 @@ issues: []
 ---
 # REST → tRPC route consolidation
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 ## Status — implemented 2026-07-03
 
 All tracks shipped (see the `feat(trpc)` / `refactor(*)` commits). Notes on where

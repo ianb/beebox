@@ -6,6 +6,8 @@ area: monorepo
 resolution: superseded
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed 2026-08-23** — superseded. The wrapper is no longer an ergonomic
 convenience to keep or drop: it is where the app-specific driving contract
 lives (`bbx-` id targets, annotated snapshots, the pre-action actionability and

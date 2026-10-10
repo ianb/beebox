@@ -108,7 +108,7 @@ src/publications/project-notes/
     # package.json declares a conventional build script to dist/
     dist/               # generated; only this output is published
 src/publications/
-  CLAUDE.md             # lazy pointer to installed box-docs/publishing.md
+  AGENTS.md             # lazy pointer to installed box-docs/publishing.md
   NOTES.md              # optional shared scoped private notes; never deployed
 _publish/abcdefghijklmnop2345672345/
   manifest.json
@@ -156,7 +156,7 @@ Project build scripts and optional export code run with the box's existing files
 
 ### Track C — Shipped authoring guide and optional starter; optional JSON export
 
-**What:** Ship `beebox/docs/box/publishing.md` in the installed package's `box-docs/` and a lazy `src/publications/CLAUDE.md` pointer to `node_modules/beebox/box-docs/publishing.md`. The existing package docs generator ships `docs/box/` prose to that installed path and indexes docs with `read-when` metadata (`beebox/src/core/docs-gen/package-docs.ts:6 (moved to `beebox/src/core/docs-gen/package-docs/core.ts`),75-80,168`). Include copyable React/Tailwind starter recipe/files in the installed guide; when desired, the agent copies them into a site-local `project/`. No initialization command creates a site or copies a starter automatically. Static files and other standard project stacks remain supported. Keep strict JSON-export helpers as a separate optional follow-on.
+**What:** Ship `beebox/docs/box/publishing.md` in the installed package's `box-docs/` and a lazy `src/publications/AGENTS.md` pointer to `node_modules/beebox/box-docs/publishing.md`. The existing package docs generator ships `docs/box/` prose to that installed path and indexes docs with `read-when` metadata (`beebox/src/core/docs-gen/package-docs.ts:6 (moved to `beebox/src/core/docs-gen/package-docs/core.ts`),75-80,168`). Include copyable React/Tailwind starter recipe/files in the installed guide; when desired, the agent copies them into a site-local `project/`. No initialization command creates a site or copies a starter automatically. Static files and other standard project stacks remain supported. Keep strict JSON-export helpers as a separate optional follow-on.
 
 **Why this needs to change:** Agents need a reusable golden path without making a framework mandatory or exposing Bee Box frontend internals as a published API. The guide also needs to preserve publication-specific knowledge without copying private notes into a release or coupling deploys across sites.
 

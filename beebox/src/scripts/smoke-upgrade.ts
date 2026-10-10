@@ -38,7 +38,7 @@ function requireVersion(parsed: unknown): string {
   throw new MissingPackageVersionError();
 }
 
-/** A fresh scaffold's `src/` has nothing but the CLAUDE.md guides — no
+/** A fresh scaffold's `src/` has nothing but the AGENTS.md guides — no
  *  `.ts`/`.tsx` files — so `tsc -p .` (the box tsconfig's `include: ["src"]`)
  *  fails with TS18003 ("no inputs found") before `bbx engine upgrade` even runs.
  *  Real boxes accumulate schemas/views quickly; the smoke test seeds one so

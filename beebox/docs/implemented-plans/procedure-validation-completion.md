@@ -6,6 +6,9 @@ issues: []
 ---
 # Procedure validation completion (D5)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status: IMPLEMENTED (2026-06-27).** Tracks 1 (model-evaluated instruction
 > validation) and 2 (`severity: review` auto-retry) — this plan's scope — shipped.
 > Implementation: `engine-validate-model.ts` (`evaluateInstructions`),

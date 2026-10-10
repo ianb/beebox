@@ -4,6 +4,9 @@ status: implemented
 workstream: unknown
 issues: []
 ---
+
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Status:** superseded — the MVP-era build plan, retained as history
 > (retired 2026-07-04 per `../plans/design-reconciliation.md`). Everything
 > still true in it is documented better in CLAUDE.md and the reference docs

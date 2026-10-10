@@ -131,7 +131,7 @@ prose with one blank line between paragraphs.
 JSON.stringify(cardTypesList({ allCardSchemas: [] }))
 => ""
 
-const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, instructionFile: "CLAUDE.md", allCardSchemas: [] });
+const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, instructionFile: "AGENTS.md", allCardSchemas: [] });
 const section = guide.split("## CARD_TYPES\n")[1]?.split("\n## ")[0] ?? "";
 const paragraphs = section.trim().split("\n\n");
 [paragraphs.length, section.includes("\n\n\n")].join("|")

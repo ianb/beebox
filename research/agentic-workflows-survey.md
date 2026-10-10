@@ -6,6 +6,9 @@ status: snapshot
 
 # Agentic coding workflows: practitioner reports
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Dated snapshot, 2026-10-07. Scope: experience reports, "how I work" posts,
 team write-ups and vendor practice guides about running coding agents. Skill
 repositories are out of scope (see `external-skills-harvest.md`); Beads is

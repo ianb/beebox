@@ -1,10 +1,10 @@
 # Template stock-hash ledger (rollout forcing function)
 
-The box-local CLAUDE.md guides (`_config/schemas/CLAUDE.md`, `views/CLAUDE.md`)
+The box-local AGENTS.md guides (`src/schemas/AGENTS.md`, `src/views/AGENTS.md`)
 ship through `installTemplateFile` with a `priorStockHashes` allowlist: a field
 box whose on-disk guide matches any listed hash is recognized as our own
 unmodified stock and cleanly overwritten on `bbx init`; a box matching none
-(user-edited) is parked under `config/_template-updates/`.
+(user-edited) is parked under `_config/_template-updates/`.
 
 The failure mode this guards: if you change a guide constant but forget to record
 the *superseded* hash, boxes still on the old version match nothing and silently

@@ -9,6 +9,8 @@ discovered-in: worktree-doc-structure — Track 1 of docs/implemented-plans/doc-
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 Closed 2026-09-26 by commit a3b7aa701 (worktree-doc-structure): `compileGuides`
 prunes marked `guides-for-*` and `guide-for-chat-*` rules it did not write, and
 the mirror step removes a dangling `AGENTS.md` symlink. Doctests in

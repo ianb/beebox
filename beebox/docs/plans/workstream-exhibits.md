@@ -115,7 +115,7 @@ satellite-storage patterns the repo already shipped.
   pages** — this is a boxholder-authorized new surface with its own rules, not
   a weakening of any existing config; exhibits persist with the workstream but
   never merge to main; every exhibit states its ask.
-- Root `CLAUDE.md`: worktree URLs use the short name; never restart the shared
+- Root `AGENTS.md`: worktree URLs use the short name; never restart the shared
   router from a worktree session; commit docs with hooks.
 
 ## What already exists
@@ -493,7 +493,7 @@ create and reference exhibits — plus the conventions that make exhibits good.
   and captions; when presenting live in chat, the agent runs `--open` and
   discusses in label terms; the ask's prose says what happens after the
   developer answers.
-- **Discoverability**: a paragraph in the root `CLAUDE.md` (the exhibits
+- **Discoverability**: a paragraph in the root `AGENTS.md` (the exhibits
   store, the CLI, when to present vs paste into chat) and a pointer from
   `dev/README.md`. Codex needs nothing extra — CLI + files.
 
@@ -502,7 +502,7 @@ this discussion) rules out anything harness-specific; a CLI printing a URL is
 the lowest-common-denominator contract (principle 12).
 
 **First implementation chunk.** `add`/`url`/`list` with doctests against a
-temp store; the CLAUDE.md paragraph lands in the same commit
+temp store; the AGENTS.md paragraph lands in the same commit
 (infrastructure isn't done until discoverable, `beebox/AGENTS.md`
 "Improving These Instructions").
 
@@ -714,7 +714,7 @@ path and routing. See Vocabulary and Track B.)
 
 None. Box agents never see this surface — it is dev-workflow
 infrastructure (the same rationale as `workstreams-app.md`). The
-dev-agent-facing knowledge lands as CLAUDE.md/docs updates in Track D and is
+dev-agent-facing knowledge lands as AGENTS.md/docs updates in Track D and is
 validated by `pnpm --dir beebox doc-check`.
 
 ## Implementation order
@@ -726,7 +726,7 @@ validated by `pnpm --dir beebox doc-check`.
    renderer, manifest schema, container (Tailwind, typed client stub, lint
    preset, docs skeleton).
 4. **C** — documents/events/captures + disposition, containment doctests.
-5. **D** — `bin/exhibits` CLI, conventions doc, CLAUDE.md paragraph.
+5. **D** — `bin/exhibits` CLI, conventions doc, AGENTS.md paragraph.
 6. **E** — workstreams-app ask-queue panel.
 7. **F** — story-eval port, side-by-side verification, remove the scripted
    exemption + save route, close the origin issue.

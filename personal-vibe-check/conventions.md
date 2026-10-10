@@ -1,6 +1,6 @@
 # Coding Conventions
 
-Add these to your project's CLAUDE.md (or equivalent AI assistant instructions).
+Add these to your project's AGENTS.md (or CLAUDE.md, or equivalent AI assistant instructions).
 
 ## Type Checking and Linting
 

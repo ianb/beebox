@@ -6,6 +6,9 @@ issues: []
 ---
 # Local password auth, default-on
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Add a local username/password login method and make authentication the
 always-on default — including in dev — so an unauthenticated box requires a
 loud, deliberate opt-out instead of being the accidental easy state. Google

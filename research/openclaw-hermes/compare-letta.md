@@ -1,5 +1,8 @@
 # Letta (MemGPT) vs Bee Box — non-memory architecture
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 *Added 2026-07-04 at boxholder request: "I know it has a lot of memory stuff, but that's not really my focus — what does the rest look like, and do they have clever ideas?" Sources: dives against clones of `letta-ai/letta` (Python server) and `letta-ai/letta-code` (TS/Bun CLI): [server/loop](deep-letta-server-loop.md), [tools/rules](deep-letta-tools-rules.md), [multi-agent/sleeptime](deep-letta-multiagent-sleeptime.md), [letta-code](deep-letta-code.md).*
 
 ## The shape

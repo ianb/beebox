@@ -8,6 +8,8 @@ discovered-by: agent
 discovered-in: worktree-public-site — box-authored site page experiment
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 In a v2 box package, box-local schemas physically live at
 `<package-root>/src/schemas/` — `box-shape.ts` maps the logical
 `config/schemas/` path there, and `content/config/schemas/` is a

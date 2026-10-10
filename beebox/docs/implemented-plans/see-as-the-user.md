@@ -6,6 +6,9 @@ issues: []
 ---
 # See as the user — screenshots of the live box UI for the chat agent
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Give the chat agent a way to see what the user currently sees in the box UI —
 true rendered pixels, not a DOM reconstruction — in two entry points: a
 user-initiated "Send screenshot" item in the composer's Add menu, and an

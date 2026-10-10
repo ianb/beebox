@@ -7,7 +7,7 @@
  *
  * This is the chat-specific control surface only. How the box works — cards,
  * directories, the `bbx` commands, search, provenance — lives in the agent guide,
- * which is already loaded (via the box's CLAUDE.md); this prompt does not restate
+ * which is already loaded (via the box's AGENTS.md); this prompt does not restate
  * it. It covers the two response channels, the messages you receive, and the tags
  * you emit.
  */
@@ -199,7 +199,7 @@ When the \`<chat-app>\` snapshot reports \`narration="on"\`, the user is **speak
 
 /**
  * Note appended to the system prompt when this chat is bound to a
- * landmark directory. The CLAUDE.md / MAP.md inside that dir already load
+ * landmark directory. The AGENTS.md / MAP.md inside that dir already load
  * automatically (they're under cwd) and may have been authored without
  * knowing they'd be read in a landmark context — this note tells the
  * agent the session itself is scoped to the directory.

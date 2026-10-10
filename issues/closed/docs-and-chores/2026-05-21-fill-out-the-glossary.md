@@ -5,6 +5,8 @@ area: docs
 resolution: superseded
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Superseded 2026-09-27** by [codebase ontology files](../../docs-and-chores/2026-09-27-codebase-ontology-files.md).
 > The developer decided that `ONTOLOGY.md` files, placed where their concepts
 > apply and kept current through planning, replace `docs/glossary.md`. Its

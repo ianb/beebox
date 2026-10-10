@@ -32,7 +32,7 @@ import { getBuiltinTemplates } from "../../../templates-registry.js";
 import { generateViewsDoc } from "../../views/doc/core.js";
 import { generateChatVoiceDoc } from "../../chat/voice-doc.js";
 import { generateNarrationModeDoc } from "./narration-mode-doc.js";
-import { generateReducingClaudeMdDoc } from "./reducing-claude-md-doc.js";
+import { generateReducingInstructionFileDoc } from "./reducing-instruction-file-doc.js";
 import { generateMigrationRepairDoc } from "../../migration-repair-policy.js";
 import { generatePythonToolsDoc } from "./python-tools-doc.js";
 import { CONTAINS_DOC_APPENDIX } from "../../agent-guide/search.js";
@@ -63,7 +63,7 @@ const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "triage.md", readWhen: "Working the intake → triage → handle pipeline, deciding where an inbox item belongs, or telling a reactor job from a triaged item.", generate: generateTriageGuide },
   { filename: "chat-voice.md", readWhen: "Adjusting how a spoken chat reply is delivered (voice, pacing, emphasis).", generate: generateChatVoiceDoc },
   { filename: "narration-mode.md", readWhen: "The chat snapshot reports narration=\"on\" — the user is dictating, not chatting.", generate: generateNarrationModeDoc },
-  { filename: "reducing-claude-md.md", readWhen: "The box's AGENTS.md is flagged as too large.", generate: generateReducingClaudeMdDoc },
+  { filename: "reducing-instruction-file.md", readWhen: "The box's AGENTS.md is flagged as too large.", generate: generateReducingInstructionFileDoc },
   { filename: "python-tools.md", readWhen: "Reaching for a box-specific Python CLI.", generate: generatePythonToolsDoc },
 ];
 
