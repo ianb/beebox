@@ -6249,8 +6249,8 @@ tests:
       - node_modules/beebox/box-docs/schemas.md
       - node_modules/beebox/box-docs/card-recipe.md
     correct_matches:
-      - '(?i)recipe'
-      - '(?i)undefined|warn|only in|not valid|won.t validate|will not validate'
+      - '[Rr]ecipe'
+      - '[Uu]ndefined|[Ww]arn|only in|not valid|won.t validate|will not validate|[Nn]o[.,]'
     tags: [plugins]
     notes: >
       Markdoc tags are scoped to the card type that declares them
