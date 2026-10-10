@@ -37,7 +37,7 @@ Related: [HQ for every dictated message](2026-09-18-hq-dictation-default-when-a-
 ## Implementation (2026-10-10)
 
 Boxholder decision: "especially on ios the hq transcription is cheap, and it
-should use it." Built per [the plan](../../beebox/docs/plans/ios-quick-chat-hq.md):
+should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
 the quick chat composer runs the on-device pass on a dictated thought before
 storing it, and sends `hqService` with it; the box frames it with
 `stt-service` instead of `stt="live"`.

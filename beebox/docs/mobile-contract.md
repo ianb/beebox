@@ -403,7 +403,7 @@ the contract.
   `Emission { id, origin, text, images, files, selections, diarized, hqText?, hqService?,
   hqFallback? }`. A native frontend that runs its own HQ pass says so with `hqText:true` and
   `hqService`; every other voice emission is live text, which the assembler persists as
-  `<speech stt="live">` (`docs/plans/hq-always.md`). `hqFallback:true` is still accepted and
+  `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
   means the same as its absence; older builds send it. `hqService` names the engine and is
   stamped as `<speech stt-service="…">`: a box HQ service from §5.2, or
   `apple-speech-transcriber` when iOS ran the HQ pass on the device (§4.4a). Web passes the value through without a closed set. Legacy payloads produce empty `files` and `selections`.
@@ -544,7 +544,7 @@ mint them independently; the ids are per-emission and per-kind.
   `mai-diarized`; `isDiarizedHqService` in `src/shared/transcription-services.ts`). Web reads it
   from `transcription.config`, posts true while that query is loading or refetching (fail
   closed, which covers the moment after the HQ service is switched), and re-posts on change.
-- **Semantics:** every dictated conversation message gets the HQ pass (`docs/plans/hq-always.md`):
+- **Semantics:** every dictated conversation message gets the HQ pass (`docs/implemented-plans/hq-always.md`):
   the native Send button and every spoken-send keyword enter the durable HQ audio preparation
   path, whatever this channel says. Typed messages remain direct sends. The quick chat composer
   (§5.11) runs only the on-device pass below (no recording reaches the box) and sends
@@ -1282,7 +1282,7 @@ See §1.3 (full request/response/errors).
   before it) is `"typed"`. External input requires a source; other origins reject `source`.
   `hqService` (a short token, voice only) names the engine of an HQ pass the phone ran on the
   dictation, `apple-speech-transcriber` from `Services/OnDeviceHqTranscriber.swift`; absent means
-  the phone's live transcript (`docs/plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+  the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
   and hqService, and delivery, by `submit` or a later `choose`, wraps typed thoughts as
   `<typed source="box-screen">`, voice thoughts as `<speech source="box-screen" stt-service="…">`
   with hqService or `<speech source="box-screen" stt="live">` without (no recording reaches the
