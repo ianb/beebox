@@ -432,3 +432,27 @@ No migration: the store gains a directory, existing files are untouched.
   list, and Remove (5); late-resolve mic cancel and recorder release (7);
   refuse `apps` before any store access (8). Left to the boxholder: raw
   `index.html` pages get no control (6).
+- Diff review round 1 (codex gpt-6-sol, 2026-10-10,
+  `scratch/cross-model/2026-10-10T23-14-19-647Z-codex.md`): three findings,
+  all applied in commit 9debbc05e: a second Speak click while the permission
+  prompt is open could start a second microphone (guarded with a starting
+  state); the recorder released the track only on Stop or Cancel, so a
+  recording that hit the byte cap left the indicator on until Stop (the stop
+  handler is installed before recording starts, and `start()` failures
+  release too); an explicit empty `--workstream` on an exhibit address was
+  turned into the exhibit's workstream (absent defaults, empty means unrouted).
+  The reviewer's other traces (dotted name round trip, omitted origin, selection
+  inside a heading, Cancel during a pending prompt) found no discrepancy.
+
+## Implementation status
+
+Implemented in the exhibits-rethink worktree, 2026-10-10, all four tracks, on
+top of the parent plan. Hand check against a standalone listener with a temp
+comment store: commenting on, a selection in a figure caption opened the
+composer quoting the caption under the page title (the nearest heading above
+it in document order), the typed remark came back from
+`bin/comments list --workstream exhibits-rethink` with that quote and heading,
+and `POST /api/transcribe` returned the sentence from a synthesized WAV through
+the real transcription service. The Speak button's browser path (microphone
+permission, MediaRecorder) was not exercised: no microphone in the check.
+Not merged.
