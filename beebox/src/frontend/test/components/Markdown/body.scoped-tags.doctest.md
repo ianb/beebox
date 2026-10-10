@@ -3,7 +3,7 @@
 A type's `markdocTags` reach the widget as the `tags` prop and render through
 the `components` prop. A tag the active table does not know renders as the
 text the author wrote, so nothing disappears on a surface without the type's
-tags (`docs/plans/plugins-slice-2.md`, Track 1). The tag names below are not
+tags (`docs/implemented-plans/plugins-slice-2.md`, Track 1). The tag names below are not
 in the core table; `subrecipe` and `ingredient` still are until the recipe
 plugin takes them.
 
