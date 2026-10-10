@@ -158,8 +158,9 @@ No decision depends on an external premise. Transcript gap notation such as
 - **Covered gap** — new term: every frame since the outage start is still in
   the ring at reconnect (`seen - outageStart <= frames.length`). Covered
   means the audio is available for replay, not that it has been transcribed.
-- **LiveGapTracker** — new pure class owning the marker decisions, used by
-  the actor. Not the ring and not the segment text; it combines them.
+- **Gap state** — new: `GapState` in `SegmentTranscript`
+  (`beforeFirst | none | open | awaitingText`). It lives with the text it
+  edits rather than in a separate class.
 
 ## Tracks / scope
 
@@ -174,7 +175,7 @@ No decision depends on an external premise. Transcript gap notation such as
   - `SegmentTranscript.openGap()`: fold, then append `LIVE_GAP_MARKER` to the
     committed prefix, once (no `[…] […]`). `dropGapMarker()`: remove that
     trailing marker.
-  - Gap decisions live in the actor's session as a small state: on drop or
+  - Gap decisions live in `SegmentTranscript` as `GapState`: on drop or
     abandon, open the gap and send a TEXT_UPDATE (merged text, empty
     interim). On reconnect: if not covered, the marker is permanent; if
     covered, it stays until the new connection delivers its first non-empty
@@ -195,9 +196,8 @@ No decision depends on an external premise. Transcript gap notation such as
     `core/chat/session/prompts.ts`.
 - **Vocabulary lock-ins:** `LIVE_GAP_MARKER = "[…]"`, exported from one module
   shared by actor and assembler.
-- **First implementation chunk:** `ReplayRing.coversGap`, `SegmentTranscript`
-  gap methods, and the gap state as a pure class with an event-sequence
-  doctest; then the actor wiring; then tokenizer, assembler, and prompt.
+- **First implementation chunk:** `ReplayRing.coversGap` and the
+  `SegmentTranscript` gap state with an event-sequence doctest; then the actor wiring; then tokenizer, assembler, and prompt.
 
 ## Could this be simpler?
 
@@ -262,7 +262,8 @@ transcribed and ask or retranscribe if it matters. Run before landing.
 
 ## What will hold this after it ships
 
-Doctests: the gap-state class as event sequences (drop, covered reconnect,
+Doctests (`test/machines/realtime-transcription-live/transcription-segment-text.live-gap.doctest.md`):
+the `SegmentTranscript` gap state as event sequences (drop, covered reconnect,
 send before first text, first text, uncovered reconnect, double drop,
 abandon), `ReplayRing.coversGap` with the pad, `tokenizeInput` with a marker,
 and `chat.emission-assemble` wrapping with unsure words on both sides. There
@@ -273,8 +274,7 @@ covers it.
 
 ## Implementation order
 
-1. `ReplayRing.coversGap`, `SegmentTranscript` gap methods, gap-state class,
-   doctests.
+1. `ReplayRing.coversGap`, `SegmentTranscript` gap state, doctests.
 2. Actor wiring in `dropLink`, `abandonLive`, `adopt`, `onTextUpdate`.
 3. Tokenizer word, assembler wrap, prompt sentence, composer doc paragraph.
 4. Knowledge audit, cross-model diff review.

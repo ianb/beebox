@@ -593,6 +593,45 @@ assembleChatMessage(eNoData, W).message.replace(eNoData.id, "ID")
 => <speech stt="live" message-id="ID" local-time="14:23">no data here</speech>
 ```
 
+## A live gap marker is sent as unsure
+
+`[…]` in live text marks speech the live pass never transcribed
+(`docs/plans/live-gap-marker.md`). It goes to the agent wrapped in
+`<unsure>`, anywhere in a live voice message — a marker can sit in the
+prefix when an earlier segment's text was folded into the composer. Realtime
+words on either side still mark their own spans; the marker matches no word.
+
+```ts
+const eGap = createVoiceEmission({
+  text: "Pick up the cleaning […] and the milk",
+  selections: [],
+  diarized: false,
+  words: [
+    { word: "Pick", confidence: 0.99 },
+    { word: "up", confidence: 0.98 },
+    { word: "the", confidence: 0.97 },
+    { word: "cleaning", confidence: 0.3 },
+    { word: "and", confidence: 0.95 },
+    { word: "the", confidence: 0.96 },
+    { word: "milk", confidence: 0.99 },
+  ],
+});
+assembleChatMessage(eGap, W).message.replace(eGap.id, "ID")
+=> <speech stt="live" message-id="ID" local-time="14:23">Pick up the <unsure>cleaning</unsure> <unsure>[…]</unsure> and the milk</speech>
+
+const eGapNoWords = createVoiceEmission({ text: "first […] second […]", selections: [], diarized: false });
+assembleChatMessage(eGapNoWords, W).message.replace(eGapNoWords.id, "ID")
+=> <speech stt="live" message-id="ID" local-time="14:23">first <unsure>[…]</unsure> second <unsure>[…]</unsure></speech>
+```
+
+A typed message is left as typed:
+
+```ts
+const typedGap = createTypedEmission({ text: "see […] above", images: [], files: [], selections: [] });
+assembleChatMessage(typedGap, W).message
+=> <typed local-time="14:23">see […] above</typed>
+```
+
 ## HQ text — the norm, unmarked
 
 `hqText: true` is the HQ pass's text. It carries no `stt`, only
