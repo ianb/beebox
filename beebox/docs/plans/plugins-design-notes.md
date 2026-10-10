@@ -1,5 +1,5 @@
 ---
-title: "Plugins — design notes: what a Bee Box plugin would be, if anything"
+title: "Plugins — design notes: a typed library the box extends through stubs"
 status: draft
 workstream: plugins-planning
 issues:
@@ -9,229 +9,206 @@ issues:
 ---
 # Plugins — design notes
 
-**These are notes for a discussion. This is not a plan.** No implementation is
-authorized. The ask is one decision: which direction in section 4, or none.
+**Design notes from a discussion with the boxholder, 2026-10-09.** Items
+marked **DECIDED** record a boxholder statement. Items marked **OPEN** wait
+for one. The plan is [plugins.md](plugins.md).
 
-Sources: the [medium/content issue](../../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md)
-and its TiddlyWiki and Omi findings, the
-[Agent Plugins spec review](../../../issues/exploration/2026-09-24-agent-plugins-spec.md),
-two new research notes on
-[OpenClaw plugins](../../../research/openclaw-hermes/deep-openclaw-plugins.md) and
-[Hermes plugins](../../../research/openclaw-hermes/deep-hermes-plugins.md)
-(2026-10-09), the [Imbue Studio template review](../../../research/imbue-studio/starter-templates.md),
-and a code survey of this repository (section 2).
+Sources: the [medium/content issue](../../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md),
+the [Agent Plugins spec review](../../../issues/exploration/2026-09-24-agent-plugins-spec.md),
+the research notes on [OpenClaw plugins](../../../research/openclaw-hermes/deep-openclaw-plugins.md)
+and [Hermes plugins](../../../research/openclaw-hermes/deep-hermes-plugins.md),
+the [Imbue Studio templates](../../../research/imbue-studio/starter-templates.md),
+and a code survey of this repository (section 2). The first version of these
+notes compared three directions; the discussion replaced them with the one in
+section 3. The research is unchanged.
 
-## 1. What OpenClaw and Hermes do, and what it cost them
+## 1. What OpenClaw and Hermes taught
 
-Both are chat-first agents with an in-process code plugin API. Both opened a
-registry in 2026. Both now steer authors away from code.
+Both are chat-first agents with an in-process code plugin API (60 and ~45
+registration methods, dozens of hooks). Both opened a registry in 2026. Both
+now steer authors to "bundles": content packs with no runtime code.
 
-| | OpenClaw (2026.9.9) | Hermes (v0.21.6) |
-|---|---|---|
-| Unit | npm package + `openclaw.plugin.json` (validated before code loads) | directory + `plugin.yaml` + Python `register(ctx)` |
-| API | 60 `register*` methods, ~45 typed hooks, two exclusive slots | ~45 `PluginContext` methods, ~25 hooks, 4 middleware kinds, ~10 provider ABCs |
-| Can add | providers, channels, tools, slash/CLI commands, scheduler jobs, HTTP routes, Control UI pages, memory/context engines, skills | tools, platforms, hooks, slash/CLI commands, dashboard tabs, desktop panes, providers, memory, skills, `ctx.llm` |
-| Trust | in-process, "not sandboxed"; consent hash over the declared surface; per-hook grants | in-process, "full agent privileges"; capability consent "not a sandbox"; opt-in out-of-process host since Oct 2026 |
-| Distribution | ClawHub (skills and npm plugins); `plugins install clawhub:|npm:|git:` | `plugin-catalog/` YAML in the main repo, exact SHA, human-merged; 522 entries |
-| Versioning | all APIs "experimental"; compat registry with 3-month windows | behaviour contract, additive only, no API version number |
-
-What happened:
-
-- **The code API is the cost.** OpenClaw broke third-party channel plugins
-  in March, July and October 2026 despite a formal deprecation registry. Hermes
-  delisted 11 catalog plugins in one week for monkeypatching core, and a
-  September module split hard-broke every plugin importing internals. Every
-  seam a plugin wants and does not have becomes a patch.
+- **The code API is the cost.** OpenClaw broke third-party channel plugins in
+  March, July and October 2026 despite a formal deprecation registry. Hermes
+  delisted 11 plugins in one week for monkeypatching core; a module split
+  hard-broke every plugin importing internals.
 - **People write prose, not code.** ClawHub: about 13.7k skills against 2.4k
-  plugins, and 22 of the 25 most-downloaded plugins are first-party. The
-  third-party code plugins with traction are channels and policy filters.
-  Hermes's catalog is a quarter desktop UI shims and a tenth memory providers.
-- **A registry becomes a scanning programme.** ClawHavoc (Feb 2026): 341 of
-  2,857 audited skills were malicious, by telling the human to paste a script.
-  The publish gate was a week-old GitHub account. Hermes avoided a service:
-  its catalog is YAML in the repo with a kill list.
-- **Both converged on "bundle first".** OpenClaw installs Agent Plugins, Claude
-  and Codex layouts as content packs "without importing runtime code" and its
-  vision doc now says prefer that. Hermes packs are pin lists: "nothing new
-  exists at runtime".
-- **Agents author data.** Hermes's self-improvement loop writes only skills.
-  Neither system has an agent-authored plugin path.
+  plugins; 22 of the 25 most-downloaded plugins are first-party.
+- **A registry becomes a scanning programme.** ClawHavoc: 341 of 2,857
+  audited skills were malicious. Hermes kept its catalog as YAML in the repo.
+- **Agents author data.** Neither has an agent-authored plugin path.
+- **npm has no plugin discovery.** Hosts either list plugins in config
+  (ESLint, Vite; Prettier 3 removed its node_modules scan), scan for a marker
+  (Homebridge), or read a manifest in `package.json` (VS Code, OpenClaw).
+  The trend is explicit listing.
 
 ## 2. Bee Box's extension surface today
 
-Verified in code 2026-10-09. The standing position is
-[extensibility.md](../design/extensibility.md): "knowledge, not plugins", where
-"no plugins" means no registry, marketplace, or lifecycle framework. The
-boxes-as-packages plan noted `pnpm add some-box-plugin` as enabled by the
-layout and out of scope.
+Verified in code 2026-10-09. Standing position:
+[extensibility.md](../design/extensibility.md), "knowledge, not plugins",
+where "no plugins" means no registry, marketplace, or lifecycle framework.
+That prohibition survives this design.
 
-| Piece | Lives in the box at | Author | Reload | Checked by | Runs | Distributed by |
-|---|---|---|---|---|---|---|
-| Card schema | `src/schemas/<type>.ts` | box agent | hot (server watcher) | `isCardSchema`, `bbx validate`, box `tsc` | in-process, server and CLI; may override a built-in type | hand-authored |
-| View | `src/views/*.tsx` | box agent | hot | `bbx view lint/typecheck/check`, markdown AST lint, meta import in a killed subprocess | browser, main app origin, no iframe; props are the capability set | hand-authored |
-| Trick | `src/tricks/scripts/<name>/` | box agent | per run | `--check-secrets`; no typecheck | subprocess, allow-listed env, declared secrets, no OS sandbox; commits whole tree | hand-authored |
-| Procedure | `_config/procedures/*.procedure.card` | engine templates and box | per run | schema | shell steps and agent steps | template sync with parked updates |
-| Schedule | `_config/schedules/*.scheduled-script.card` | engine templates and box | per tick | schema; `enabled` is box-owned | shell with connector credentials | template sync |
-| Skill | `.claude/skills/<name>/SKILL.md` | engine (marked) and box (unmarked survive prune) | per session | none | prompt | managed list in `guidance-sync/skills.ts` |
-| Rules, guides, personality, briefing | `.claude/rules/`, `_config/*.guide.card`, … | engine families and box | per session | schema for cards | prompt | template sync and generation |
-| Landmark | `*.landmark.card` | box | hot | schema | navigation, triage destinations, `expand` | hand-authored |
-| Agent hooks and settings | `.claude/settings.json` | engine installs validate hook; box may add | per session | none | the SDK loads only the `project` source | engine install |
+| Piece | Lives at | Author | Checked by | Runs |
+|---|---|---|---|---|
+| Card schema | `src/schemas/<type>.ts` | box agent | `bbx validate`, box `tsc` | in-process; a same-name box type overrides a built-in |
+| View | `src/views/*.tsx` | box agent | `bbx view lint/typecheck/check` | browser, main origin; esbuild bundles from the box's node_modules, shims only `react` and `beebox/view-widgets` |
+| Trick | `src/tricks/scripts/<name>/` | box agent | `--check-secrets` | subprocess, allow-listed env, declared secrets, commits with a trailer |
+| Procedure, schedule | `_config/procedures/`, `_config/schedules/` | engine templates and box | schema | shell and agent steps |
+| Skill | `.claude/skills/<name>/SKILL.md` | engine (DOCID-marked, regenerated) and box (unmarked, kept) | none | prompt; points at `node_modules/beebox/box-docs` |
+| Guidance | `AGENTS.md`, nested `AGENTS.md`, guides, personality | box; engine keeps include lines | schema for cards | prompt |
 
-Closed registries, engine-compiled, not box-reachable: connectors (4),
-Markdoc tags (18, including 6 recipe tags), named views, collections (todos
-only), job types, renderers, pre-actions, adapters, CLI verbs, tRPC routers.
-No MCP in either direction. The only things called "plugins" in the tree are
-the two agent-harness plugins under `plugins/` that install the validate hook.
+Closed, engine-compiled registries: connectors (4), Markdoc tags (18, one
+global table), named views, collections, job types, renderers, adapters, CLI
+verbs. Health checks are one function pushing fifteen checks. No MCP.
 
-Two facts bear on the design more than the rest:
+Facts the design rests on:
 
-- **The box is already a package and the boundary is already a plugin API.**
-  A box depends on `beebox` with a `^version` pin, imports only
-  `beebox/{cards,schema,view-widgets}`, and `bbx upgrade` moves the pin,
-  runs migrations, syncs templates, and typechecks in one commit.
-- **Templates already implement overlay with parked updates.**
-  `installTemplateFile` overwrites a file that still matches stock, 3-way
-  merges a changed one, and parks the rest under `_config/_template-updates/`.
-  The boxholder decided (2026-09-19) that a box agent merges a parked guide.
-  This is the "schema stub the agent extends" mechanism, already built.
+- `cardSchema(type, config)` takes the type name separately from the config,
+  so a config without a type is already an abstract base.
+- `beebox/cards` exports `cardSchema`, `body` and types, not the built-in
+  configs. A box can replace a built-in type, not extend it.
+- A box is a package depending on `beebox` with a `^version` pin;
+  `bbx upgrade` moves the pin, runs migrations, syncs templates and
+  typechecks in one commit.
+- The template tracker already does overlay with 3-way merge and parked
+  updates for data files.
 
-The test case for any direction is **recipes**: a schema, a frontend renderer,
-and six Markdoc tags in a closed registry. If a bundle cannot ship a recipe
-type that works as well as the built-in, the medium/content line cannot move
-anything that has a renderer or a tag. Education is the other candidate
-(`course`, `lesson-plan`, `exposition-plan`, `progress`, the managed
-`build-course` skill, and the exposition-rules compiler in core).
+## 3. The design
 
-## 3. Where a plugin sits relative to these
+**DECIDED.** A plugin is a **typed library** the engine ships, which a box
+uses through **small box-owned stubs** that import and extend it. Nothing new
+exists at runtime: the loaders are the ones in section 2.
 
-Not a new runtime kind. Both competitors show the in-process code API is the
-expensive part, and Bee Box already compiles that layer (connectors, tags,
-renderers) into the engine on purpose. The only candidates left are:
+### Three tiers, nothing else
 
-- a **bundle** of several existing pieces with one name, or
-- a **distribution mechanism** for what boxes already author,
+- **Instruction.** A service the agent can simply call (omdb, tmdb) is a
+  documentation entry, not a plugin. It is consumed, not integrated.
+- **Trick.** A script that integrates with nothing is a well-structured
+  trick the docs point at; the agent installs it by copying into
+  `src/tricks/scripts/`. No listing.
+- **Plugin.** A listed, typed library, for what the engine must know about: a
+  type it validates, a view, a script with declared secrets, a connector
+  wakeup must run, a health check.
 
-and the directions below differ mainly in how much of each they are.
+### What a plugin is
 
-## 4. Candidate directions
+In-repo: `beebox/src/plugins/<name>/`, reached only through the public
+subpath `beebox/plugins/<name>`. Its `index.ts` exports one
+`definePlugin({ name, description, docs, schemas?, views?, scripts?,
+connectors?, healthChecks? })`. The engine reads the declarative parts
+without running anything. **DECIDED:** only project-shipped plugins for now;
+a user plugin later is a separate package added with friction (a confirmation
+flag, a typecheck, an `external` listing `bbx doctor` reports).
 
-### A. No plugin system. Boxes author; we distribute starters and knowledge.
+**A plugin imports only the public specifiers and its own directory**,
+enforced by the layout check and import lint. This is what keeps an in-repo
+plugin from being core by another name.
 
-Keep extensibility.md as written. Serve the "easy way to start" decision with
-the [starter manifest](../../../issues/features/2026-10-08-starter-manifest-and-scripted-first-turn.md):
-a starter is cards, views, schedules and a briefing applied to an existing
-box through the template mechanism. Serve "how do people usually track
-books?" with the [wisdom corpus](../../../issues/exploration/2026-05-11-canonical-wisdom-corpus.md)
-as documents. Sharing personal work is copying files.
+### Installed versus active
 
-- For: zero new concepts; matches what the evidence says people use (prose
-  at a hook). Starters already need most of the machinery a bundle would.
-- Against: the box has no named place where its own extension goes, so
-  extraction stays archaeology. Nothing moves out of core. A starter and a
-  "plugin" would be two names for one thing if a starter ever ships a schema.
+Every in-repo plugin is **installed** (it ships with the engine). It is
+**active** only when `_config/box.json` lists it. Active means: its skill is
+mirrored into `.claude/skills/` as a DOCID-marked copy, its types appear in
+the agent guide, its health checks run, its connectors sync, `bbx plugins
+list` shows it. Inactive means nothing: unimported code in node_modules.
+**DECIDED:** new boxes have nothing active. One standing line in the agent
+guide, "other plugins: `bbx plugins list`", is the only trace of inactive
+plugins.
 
-### B. A plugin is a named bundle of existing pieces, installed by copy. (Recommended.)
+### Stubs
 
-A plugin is a directory mirroring the box's extension paths (`src/schemas/`,
-`src/views/`, `src/tricks/scripts/`, `_config/procedures/`, `_config/schedules/`,
-`.claude/skills/`, docs) plus one manifest naming what it contributes and the
-`beebox` range it was built against. Install copies the pieces into the box
-through `installTemplateFile`, tracked per plugin the way stock templates are
-tracked today: a piece the box has not edited updates in place; an edited
-piece gets a 3-way merge or parks. The box's own copy always wins. Nothing new
-exists at runtime; the loaders are the ones in section 2.
+Activation is agent-run from the plugin's docs: list the name, write the
+stubs the docs ask for. No plugin code runs at activation.
 
-Every box has one plugin of its own from the start, which is the manifest for
-the pieces the box authored. Extraction is `bbx plugin export <name>`: pick
-pieces, copy them out with the manifest, strip nothing automatically.
-Distribution is a directory or a git remote. No registry; if a list is ever
-wanted, it is YAML in this repo with a kill list, as Hermes does.
+- Schema stub: `cardSchema("recipe", { ...recipeBase, fields: { ...recipeBase.fields, rating } })`.
+  The box picks the type name and may add fields. An `extendSchema(base,
+  delta)` helper chains `validate` and `summarize` where spread would replace
+  them. Built-in types the box should extend get their configs exported as
+  bases.
+- View stub: re-export the plugin's component as default and declare
+  `rendersCardTypes`. Compiles through the existing view compiler.
+- Script stub: a trick named `<plugin>-<verb>` that imports the plugin's main;
+  `secrets.json` beside it stays the box's.
+- Data pieces (a procedure, a skill body, cards) copy through the template
+  tracker and park on conflict, as today.
 
-- For: the boxholder's 2026-09-24 list (docs, a trigger skill, command-line
-  tools, maybe views, schema stubs) is exactly a bundle of existing pieces.
-  Parked templates already solve the stub-the-agent-extends problem. A
-  starter is the same object with cards in it. One manifest gives the box a
-  place for extension and a listing of what it changed.
-- Against: a bundle can only ship what a box can author, so recipes cannot
-  move out of core until Markdoc tags and renderers are box-authorable (or a
-  box view replaces the renderer). The manifest and `bbx plugin` verbs are
-  new surface. Copying means two boxes with the same plugin drift; that is
-  also what makes box edits safe.
+The stub is the box's code. A library update never touches it.
 
-### C. A plugin is an npm dependency of the box package.
+### Markdoc tags
 
-`pnpm add` the plugin into the box; the engine discovers schemas, views,
-skills and procedures from `node_modules/<plugin>/` as a second, lower
-precedence source. Updates are version bumps; the box never edits plugin
-files, it shadows them by same-name pieces of its own.
+**DECIDED:** tags are local to the type. A schema config declares
+`markdocTags`; a card body validates and renders against core tags plus its
+type's tags. The global table shrinks to the core vocabulary. A tag that
+should be global is a revisit with a concrete case; recipes is not that case.
+The frontend half: the `Markdown` widget must accept a type's tag components
+so a stubbed view can render them.
 
-- For: real versioning and a peer range on `beebox`; no copy drift; the
-  boxes-as-packages layout left room for it.
-- Against: `beebox` is not on npm, so a peer range has nothing to resolve
-  against yet. A second discovery source is what Hermes's precedence rules,
-  impostor check and one CVE came from. The agent cannot edit a stub in
-  `node_modules`, so "stub the agent extends" becomes "shadow the whole
-  file". The engine needs new loaders for every piece kind. This is a real
-  plugin system, and nothing in the evidence says Bee Box needs one before a
-  second party writes a plugin.
+### Hooks a plugin may export
 
-### Rejected: an in-process code API (OpenClaw and Hermes's shape).
+Enumerated and typed on the plugin object, each added when a real plugin
+needs it: `healthChecks` (read-only), `connectors`. No general event hooks.
+**DECIDED:** no derived-rules hook; the exposition rules compiler is dropped
+when courseware moves, and course guidance is a nested `AGENTS.md` the agent
+writes in the course directory.
 
-Hooks, provider registration, new connectors or tags from a plugin. Both
-research notes reject it for Bee Box: a quarterly third-party break, a
-documented "not sandboxed" boundary, and breadth (providers, channels) Bee
-Box does not want. Connectors and tags stay engine source changes.
+### Uninstallation, rot, conflicts
 
-## 5. Recommendation
+Deactivation removes the name from `box.json`. Stubs stay as box code and
+still compile, because the library still ships. The agent decides whether to
+delete them. A removed library breaks a stub's import: the schema loader
+keeps the last good version and reports it, a view returns the error module,
+a trick fails at run. `bbx upgrade` typechecks before committing, so a base
+change surfaces on the stub by name. The plugin system owns four health
+checks in core: cards of a type with no active plugin, stubs referencing an
+inactive plugin, stubs importing a missing module, box typecheck failing.
+**DECIDED:** none of this is automatic; it must be loud.
 
-Direction B, scoped small, and treated as the mechanism behind starters rather
-than a parallel feature:
+### Migration
 
-1. **One object, two names.** A starter is a plugin that ships cards. Decide
-   the manifest once for both (the starter issue and this one merge).
-2. **Additive first.** Nothing moves out of core in the first slice. The first
-   plugin is extracted from a real box (the lending journey
-   walk produced a card type and a view on 2026-10-08), not carved out of the
-   engine.
-3. **Reuse the tracker.** Plugin installs record into the same
-   `_config/template-versions.json` mechanism, keyed by plugin, so parked
-   updates, `bbx template diff/accept/resolve`, and the health check work
-   unchanged.
-4. **Per-subsystem line, written down.** The issue asks for a decision per
-   subsystem. First cut, to argue with:
-   - Medium (stays): card format and intake types (doc, memo, file, image,
-     audio, pdf, webpage, email, chat, Drive), capture, questions, landmarks,
-     navigation, dashboard, personality and guides, search, git, scheduler,
-     procedures, publication, views runtime and widgets, speech and listening.
-   - Content (plugin candidates, in order of coupling): inventory (schema
-     only); education (schemas, a managed skill, a rules compiler); recipes
-     (schema, renderer, six tags, so last).
-5. **Trust stays where it is.** A plugin's pieces are the same kinds the box
-   agent may author and run under the same checks. Until a bundle from
-   outside the boxholder's own repos is installed, no scanner and no consent
-   screen; record both as later, per the research notes.
-6. **Revise extensibility.md** to name the bundle and keep its prohibition:
-   no registry, no marketplace, no lifecycle framework.
+**DECIDED:** manual and agent-run. Each plugin's docs carry a Migration
+section per engine version naming the script to run. A plugin may ship a
+mechanical update script; the docs, not the engine, tell the agent to run it.
+The project's rule: never remove a library in the release that adds its
+replacement.
 
-What B does not settle, and would be the plan's first design questions:
-the manifest format (borrow Agent Plugins' rules, not its envelope), whether
-the box's own manifest is a card, and whether `bbx plugin export` strips
-anything or only lists what it copied.
+### Conventions
 
-## 6. Questions only the boxholder can answer
+An authoring guide at `beebox/docs/plugins.md`, cheap parts enforced: layout,
+the import boundary, a description that passes the `brief` lint, a README
+with Setup, Scripts, Migration, Uninstall sections, tags on the schema,
+read-only health checks, a doctest per plugin that performs its own
+documented setup into a throwaway box.
 
-1. **Is "every box starts with its own plugin" still the idea to design
-   around**, or is export-on-demand from a plain box enough? The first adds a
-   manifest to every box; the second adds a verb.
-2. **Are a starter and a plugin one thing?** If yes, the starter issue folds
-   into this plan. If no, say what a starter may contain that a plugin may
-   not, or the reverse.
-3. **Does anything move out of core in the first year?** If recipes and
-   education stay built-in regardless, the plugin is purely additive and the
-   medium/content line is documentation, not migration.
-4. **Which real box piece is the first export?** The lending index card type
-   and view from the 2026-10-08 journey walk is the candidate in hand.
-5. **Directory and git remote only, or npm too?** B can later grow a C-style
-   dependency form; deciding "not now" keeps `beebox` off npm.
-6. **Does extensibility.md's "no plugins" survive with the word "bundle", or
-   should the word "plugin" be avoided in Bee Box altogether?**
+## 4. Candidates
+
+| Plugin | Moves | Coupling to settle | Slice |
+|---|---|---|---|
+| courseware | `course`, `lesson-plan`, `exposition-plan`, `progress`, `concept-map` and its renderer, `build-course` skill | exposition rules compiler dropped; the node-refs lint binds concept maps to courseware, so they move together | 1 |
+| conventions | the authoring guide, its lints, scoped Markdoc tags in the engine | prepares recipes | 2 |
+| Gmail connector | the connector | produces the base email types, which stay core | 3 |
+| Drive connector | the connector, `gdoc`, `gsheet`, `gfolder`, `glink` | drive handlers registry | 3 |
+| Google Calendar connector | the connector | **OPEN:** a generic `calendar-event` type does not exist; new work | 3 or later |
+| recipes | `recipe`, six tags, renderer with scaling context | scoped tags; `Markdown` widget accepting tag components | later |
+| figures | `figure`, the sketch compile route | p5, three, d3 externals list | later |
+| judgment | `judgment`, `bbx judge`, `src/core/judgment/` | a script-heavy plugin | later |
+
+Stays core as medium: inventory (a system interface card with its own tRPC router and pages, not a schema-only type as first assumed), intake types, email and (eventually) calendar base
+types, chat, capture, questions, landmarks, navigation, dashboard, settings,
+personality, guides, search, git, scheduler, procedures, publication,
+browser tasks (infrastructure for research plugins), person, place,
+commentary, record, memo, views runtime and widgets, speech and listening.
+
+Removals, filed separately, not plugins: tab arrangements (never reached a
+reasonable place), Telegram (a connector and a chat channel; its own issue).
+
+## 5. Open
+
+- **The box's own plugin.** The first issue proposed that every box starts
+  with its own plugin as the place extension goes, and that extraction is
+  packaging. Under this design the box's extension is its stubs plus the
+  `box.json` list, and local modification is how a box uses a plugin rather
+  than a plugin in itself. The boxholder inclines against the original idea
+  for that reason. See the discussion in the session; not yet decided.
+- Whether a generic calendar type comes with the connector slice.
+- Which built-in types export bases first.
