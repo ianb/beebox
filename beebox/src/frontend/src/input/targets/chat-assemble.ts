@@ -118,11 +118,10 @@ export function assembleChatMessage(
     ? markUnsureWords(text, { words: emission.words, spokenStart: emission.spokenStart ?? 0 })
     : text;
   // Live text with a gap (docs/plans/live-gap-marker.md): each `[…]` is
-  // speech the live pass never transcribed, sent as unsure. Anywhere in the
-  // text, since a marker can arrive in the prefix from an earlier segment.
-  const markedText = emission.origin === "voice" && emission.hqText !== true
-    ? wrapLiveGapMarkers(confidenceMarked)
-    : confidenceMarked;
+  // speech the live pass never transcribed, sent as unsure. Anywhere in a
+  // voice message, HQ included: a marker can arrive in the prefix from an
+  // earlier segment folded into the composer.
+  const markedText = emission.origin === "voice" ? wrapLiveGapMarkers(confidenceMarked) : confidenceMarked;
   const body = applySelections(markedText, {
     selections: [...emission.selections],
   });

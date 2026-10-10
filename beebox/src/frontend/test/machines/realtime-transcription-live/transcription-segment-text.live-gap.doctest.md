@@ -136,3 +136,22 @@ text.connected({ covered: false });
 JSON.stringify(text.update({ finalText: "world", finalWords: [{ word: "world", confidence: 0.4 }] }))
 => {"text":"hello […] world","words":[{"word":"hello","confidence":0.9},{"word":"world","confidence":0.4}]}
 ```
+
+## A second drop before any new words keeps the first gap
+
+A covered reconnect is waiting for its first words when live text drops
+again. The first outage may now lie outside the next replay, so the one
+marker stays even if the next reconnect is covered.
+
+```ts
+const text = new SegmentTranscript();
+text.connected({ covered: true });
+text.update({ finalText: "before", finalWords: null });
+text.openGap();
+text.connected({ covered: true });
+text.openGap();
+text.connected({ covered: true });
+text.update({ finalText: "after", finalWords: null }).text
+=> before […] after
+```
+

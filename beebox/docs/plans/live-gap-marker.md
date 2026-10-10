@@ -224,6 +224,8 @@ none
 | Replay pad counted as outage, false permanent hole | planned (ring doctest) | `outageStart` separate from `gapStart` | clear |
 | Keyword spotted across a gap ("cancel […] message") | planned (tokenize doctest) | marker is its own unmatched word | clear |
 | Marker folded into composer, sent later unwrapped | planned (assemble doctest) | wrap anywhere in voice text | clear |
+| A second drop before a covered reconnect's first words, then a covered reconnect, clears a gap never transcribed | yes (live-gap doctest) | `markerPermanent` | clear |
+| A gap folded into the composer is sent untagged when the next segment's HQ succeeds | yes (assemble doctest) | wrap in every voice message, HQ included | clear |
 | Marker next to unsure-marked words misaligns marking | planned (assemble doctest with words on both sides) | marker is a body token no word matches | clear |
 | HQ text replaces live text | existing (voice-intent doctest) | HQ branch builds fresh text | marker gone, correct |
 
@@ -248,6 +250,10 @@ No critical gap.
   meaning; considered, not now because the user asked about live text.
 - iOS: Apple's live recognizer runs on the device and does not drop this way.
 - A configurable or localized marker string.
+- Tagging a marker after "Edit before sending": the text becomes a typed
+  message, so the marker stays but is not wrapped. Wrapping typed `[…]` would
+  also wrap a person's own punctuation, and keeping voice origin through an
+  editable draft needs new state (diff review, 2026-10-10).
 
 ## Open design questions
 

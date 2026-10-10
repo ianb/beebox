@@ -624,7 +624,17 @@ assembleChatMessage(eGapNoWords, W).message.replace(eGapNoWords.id, "ID")
 => <speech stt="live" message-id="ID" local-time="14:23">first <unsure>[…]</unsure> second <unsure>[…]</unsure></speech>
 ```
 
-A typed message is left as typed:
+An HQ message keeps a marker that came from an earlier live segment in its
+prefix, wrapped the same way:
+
+```ts
+const hqWithPrefixGap = createVoiceEmission({ text: "earlier […] then the HQ part", selections: [], diarized: false, hqText: true, hqService: "whisper" });
+assembleChatMessage(hqWithPrefixGap, W).message.replace(hqWithPrefixGap.id, "ID")
+=> <speech stt-service="whisper" message-id="ID" local-time="14:23">earlier <unsure>[…]</unsure> then the HQ part</speech>
+```
+
+A typed message is left as typed, including text moved there by "Edit before
+sending" — the marker stays, without the tag:
 
 ```ts
 const typedGap = createTypedEmission({ text: "see […] above", images: [], files: [], selections: [] });
