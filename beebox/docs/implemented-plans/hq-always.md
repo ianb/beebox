@@ -1,6 +1,6 @@
 ---
 title: "HQ transcription for every dictated message"
-status: active
+status: implemented
 workstream: hq-always
 issues:
   - ../../../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md
@@ -80,7 +80,7 @@ exception (live text), not on the norm.
 | Web send that settled before parking (idle race) | live, marked `stt="live"` |
 | Recovered dictation (no audio) | live, marked |
 | iOS conversation composer (button and keyword) | HQ always: on-device, server, live |
-| iOS quick chat (box screen) | live; `<speech source="box-screen" stt="live">`. No recording leaves the phone, so there is no server pass; on-device HQ for it is filed separately |
+| iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reaches the box, so no server pass ([ios-quick-chat-hq](ios-quick-chat-hq.md)) |
 | Capture voice clips, preaction transcription | unchanged: already batch-transcribed whole recordings |
 
 ## Cost
@@ -102,7 +102,7 @@ passes cost nothing.
 
 ## NOT in scope
 
-- On-device HQ for iOS quick chat (issue filed).
+- On-device HQ for iOS quick chat: done separately in [ios-quick-chat-hq](ios-quick-chat-hq.md).
 - Typed-text-lost-after-error bug: same merge rule, not changed here (see the
   issue's update).
 - Browser Web Speech no-key live path.

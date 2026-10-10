@@ -15,6 +15,7 @@ final class BoxScreenStoreTests: XCTestCase {
         var submitted: [(UUID, String)] = []
         var submittedOrigins: [QuickChatOrigin?] = []
         var submittedSources: [String?] = []
+        var submittedHqServices: [String?] = []
         var chosen: [String] = []
         /// Runs inside `home`, before it answers, so a test can land an answer
         /// while a refresh is in flight.
@@ -23,10 +24,17 @@ final class BoxScreenStoreTests: XCTestCase {
         /// box screen while the request is out.
         var duringSubmit: (@MainActor () async -> Void)?
 
-        func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String? = nil) async throws -> QuickChatView {
+        func submit(
+            id: UUID,
+            message: String,
+            origin: QuickChatOrigin?,
+            source: String? = nil,
+            hqService: String? = nil
+        ) async throws -> QuickChatView {
             submitted.append((id, message))
             submittedOrigins.append(origin)
             submittedSources.append(source)
+            submittedHqServices.append(hqService)
             await duringSubmit?()
             if offline {
                 throw URLError(.notConnectedToInternet)
@@ -82,6 +90,21 @@ final class BoxScreenStoreTests: XCTestCase {
         return (store, repository)
     }
 
+    /// A dictated thought the phone ran HQ on keeps its engine on disk and
+    /// sends it (docs/plans/ios-quick-chat-hq.md).
+    func testHqThoughtCarriesItsEngineThroughTheOutbox() async throws {
+        let client = FakeClient()
+        let (store, repository) = makeStore(client)
+        await store.start()
+
+        _ = await store.submitThought("Call Odette", origin: .voice, boxID: box.id, hqService: "apple-speech-transcriber")
+
+        let onDisk = try await repository.loadQuickChatOutbox()
+        XCTAssertEqual(onDisk.map(\.hqService), ["apple-speech-transcriber"])
+        try await waitUntil { store.outbox.entries.isEmpty }
+        XCTAssertEqual(client.submittedHqServices, ["apple-speech-transcriber"])
+    }
+
     func testSubmitThoughtIsOnDiskWhenItAnswersAndTheAnswerBecomesARow() async throws {
         let client = FakeClient()
         let (store, repository) = makeStore(client)
@@ -95,6 +118,7 @@ final class BoxScreenStoreTests: XCTestCase {
         try await waitUntil { store.outbox.entries.isEmpty }
         XCTAssertEqual(client.submitted.map(\.1), ["Call mom"])
         XCTAssertEqual(client.submittedOrigins, [.voice], "a dictated thought is submitted as voice")
+        XCTAssertEqual(client.submittedHqServices, [nil], "a live dictated thought names no HQ engine")
         guard case .record(let view) = store.needs(boxID: box.id).first else {
             return XCTFail("expected the needs-choice answer under Needs you")
         }
