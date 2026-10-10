@@ -7622,12 +7622,26 @@ auditbox:
       peak: 16485
       added: 0
       turns: 1
+    - date: 2026-10-10T14:14:19.037Z
+      boxCommit: 5eb8abcdd1f7a6d6250ef388952ec7ed3f3b6f14
+      repoCommit: a6eb8e44476871696f35813443899c905f7fda0d
+      initial: 32124
+      peak: 32124
+      added: 0
+      turns: 2
   landmark-parent-claude-md-loads:
     - date: 2026-10-09T22:25:10.186Z
       boxCommit: c8e4e1e1ffe96326860165d3e26f31502d45c5e0
       repoCommit: c25883abc24f760e81469413a85d5e535324f4d3
       initial: 16496
       peak: 16496
+      added: 0
+      turns: 2
+    - date: 2026-10-10T14:14:12.693Z
+      boxCommit: 5eb8abcdd1f7a6d6250ef388952ec7ed3f3b6f14
+      repoCommit: a6eb8e44476871696f35813443899c905f7fda0d
+      initial: 32135
+      peak: 32135
       added: 0
       turns: 2
   views-render-test-command:
@@ -7652,6 +7666,28 @@ auditbox:
       peak: 55203
       added: 23544
       turns: 15
+  landmark-chat-box-and-local-context:
+    - date: 2026-10-10T14:13:57.663Z
+      boxCommit: 972e6ff7aa55f118e2cf42503c7c494b13308f3b
+      repoCommit: a6eb8e44476871696f35813443899c905f7fda0d
+      initial: 32110
+      peak: 32110
+      added: 0
+      turns: 2
+    - date: 2026-10-10T14:14:04.032Z
+      boxCommit: 5eb8abcdd1f7a6d6250ef388952ec7ed3f3b6f14
+      repoCommit: a6eb8e44476871696f35813443899c905f7fda0d
+      initial: 32110
+      peak: 32110
+      added: 0
+      turns: 2
+    - date: 2026-10-10T14:18:15.678Z
+      boxCommit: 972e6ff7aa55f118e2cf42503c7c494b13308f3b
+      repoCommit: 2eb6dc739777c34571b13783e05058934832729d
+      initial: 31912
+      peak: 31912
+      added: 0
+      turns: 2
 box:
   publishing-positive-data-export:
     - date: 2026-10-06T18:44:05.743Z

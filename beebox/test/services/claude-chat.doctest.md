@@ -68,6 +68,18 @@ isolated.queryOptions.disallowedTools
 ]
 ```
 
+A landmark chat runs with `cwd` in the landmark's directory and passes the box
+root separately. The exclude list starts above the box root, so the box's own
+root `AGENTS.md` and `.claude/rules/` still load; computed from `cwd`, they were
+excluded (`issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md`).
+
+```ts
+const landmark = buildQueryOptions({ cwd: "/tmp/box/_content/course", boxRoot: "/tmp/box", systemPrompt: "system", env: {} });
+const excluded = landmark.queryOptions.settings.claudeMdExcludes;
+JSON.stringify({ cwd: landmark.queryOptions.cwd, rootExcluded: excluded.includes("/tmp/box/AGENTS.md"), rulesExcluded: excluded.includes("/tmp/box/.claude/rules/**"), aboveExcluded: excluded.includes("/tmp/AGENTS.md") })
+=> {"cwd":"/tmp/box/_content/course","rootExcluded":false,"rulesExcluded":false,"aboveExcluded":true}
+```
+
 ## A warm subprocess only ever serves the chat it was warmed for
 
 A warm slot has its session id baked in at spawn (`--session-id`), so the pool
@@ -106,4 +118,15 @@ JSON.stringify({
   unchanged: warmCompatible(base, { ...base, env: {} }),
 })
 => {"telemetryTurnedOff":false,"unchanged":true}
+```
+
+The box root is baked in with the isolation settings, so a slot warmed for a
+plain chat does not serve a landmark chat with the same `cwd`:
+
+```ts continue
+JSON.stringify({
+  landmarkFromPlain: warmCompatible(base, { ...base, boxRoot: "/tmp" }),
+  sameLandmark: warmCompatible({ ...base, boxRoot: "/tmp" }, { ...base, boxRoot: "/tmp" }),
+})
+=> {"landmarkFromPlain":false,"sameLandmark":true}
 ```
