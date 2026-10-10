@@ -37,7 +37,7 @@ export class ExhibitErrorBoundary extends Component<{ children: ReactNode }, Bou
 }
 
 /** The dashboard's workstream list, where a row's Resume button lives. */
-export const DASHBOARD_WORKSTREAMS_URL = "http://localhost:3210/main/workstreams/streams";
+export const DASHBOARD_WORKSTREAMS_URL = "http://localhost:3210/workstreams/streams";
 
 type ReplyState = { kind: "idle" } | { kind: "working" } | { kind: "done" } | { kind: "refused"; detail: string };
 
