@@ -75,12 +75,18 @@ async function makeV3Fixture() {
   return boxRoot;
 }
 
+/** A quiet `bbx health --json` report: the shape the real command prints. */
+const HEALTH_OK = JSON.stringify({ boxChecks: [{ name: "plugin-config", ok: true, message: "", severity: "error" }] });
+
 /** A fake `runCommand`: records every step's label in `calls`, simulates
  *  `pnpm install` resolving `NEW_VERSION` and `pnpm-install-restore`
  *  reverting to `OLD_VERSION` (the two steps with a real filesystem side
- *  effect in production), and fails the step named in `failLabel` (if any)
- *  with `failOutput`. */
-function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile }) {
+ *  effect in production), answers `bbx health --json` with a quiet report,
+ *  fails the step named in `failLabel` (if any) with `failOutput`, and
+ *  returns `outputs[label]` verbatim for a step that should exit 0 with
+ *  specific output (a validate report with warnings, a health report with
+ *  failing rows). */
+function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile, outputs }) {
   return async ({ label }) => {
     calls.push(label);
     if (label === failLabel) {
@@ -88,8 +94,10 @@ function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile }) {
       if (junkFile) await fs.writeFile(path.join(boxRoot, junkFile), "junk");
       return { code: 1, output: failOutput };
     }
+    if (outputs?.[label] !== undefined) return { code: 0, output: outputs[label] };
     if (label === "pnpm-install") await writeInstalledVersion(boxRoot, NEW_VERSION);
     if (label === "pnpm-install-restore") await writeInstalledVersion(boxRoot, OLD_VERSION);
+    if (label === "bbx-health") return { code: 0, output: HEALTH_OK };
     return { code: 0, output: "" };
   };
 }
@@ -118,7 +126,40 @@ result.installedVersion
 => 0.2.0
 
 calls
-=> ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc"]
+=> ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc","bbx-validate","bbx-health"]
+
+(await getLog(boxRoot, 1))[0].trailers
+=> {"Upgraded-To":"beebox@0.2.0"}
+```
+
+A box that validates under the new engine, with its plugin health quiet,
+reports nothing:
+
+```ts continue
+({ validationIssues: result.validationIssues, pluginHealth: result.pluginHealth })
+=> { validationIssues: null, pluginHealth: [] }
+```
+
+```ts cleanup
+await fs.rm(boxRoot, { recursive: true, force: true });
+```
+
+## Validation issues are reported, never a revert
+
+`bbx validate` under the new engine runs after typecheck so cards a plugin base
+change made invalid are listed by file. Its exit code does not decide anything:
+the upgrade commits and the result carries the output for the summary
+(boxholder decision 2026-10-10; `docs/plugins.md`, "Health").
+
+```ts
+const boxRoot = await makeV3Fixture();
+const calls = [];
+const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls, failLabel: "bbx-validate", failOutput: "content/Acids.course.card: missing required field learner" }));
+result.validationIssues
+=> content/Acids.course.card: missing required field learner
+
+calls
+=> ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc","bbx-validate","bbx-health"]
 
 (await getLog(boxRoot, 1))[0].trailers
 => {"Upgraded-To":"beebox@0.2.0"}
@@ -126,6 +167,66 @@ calls
 
 ```ts cleanup
 await fs.rm(boxRoot, { recursive: true, force: true });
+```
+
+A warning is kept too. A card whose type has no schema (a course card in a box
+that never wrote the courseware stubs) is a validate WARNING with exit 0, so the
+exit code alone would print success over it:
+
+```ts
+const boxRoot = await makeV3Fixture();
+const warned = "content/Acids.course.card\n  warning: no schema registered for card type \"course\" — card not validated\n1 file checked, 1 warning in 1 file\n";
+const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [], outputs: { "bbx-validate": warned } }));
+result.validationIssues.split("\n")[1].trim()
+=> warning: no schema registered for card type "course" — card not validated
+```
+
+```ts cleanup
+await fs.rm(boxRoot, { recursive: true, force: true });
+```
+
+## Plugin health under the new engine is reported, never a revert
+
+After validate, `bbx health --json` runs under the new engine and the failing
+plugin rows (`plugin-*`, `legacy-exposition-rules`, `skill-name-conflict`;
+`docs/plugins.md`, "Health") are carried into the result for the summary's
+`Plugin health after upgrade:` section. Other rows, and passing rows, are left
+out; a nonzero exit (health exits 1 on any error row) does not revert.
+
+```ts
+const boxRoot = await makeV3Fixture();
+const report = JSON.stringify({ boxChecks: [
+  { name: "plugin-config", ok: true, message: "Every plugins entry in _config/box.json names an installed plugin", severity: "error" },
+  { name: "plugin-type-unprovided", ok: false, message: "2 cards of type course have no schema. The courseware plugin provides it: `bbx plugins list`, then its README.", severity: "error" },
+  { name: "legacy-exposition-rules", ok: false, message: "content/Acids.attach/Plan.exposition-plan.card still carries rules", severity: "warning" },
+  { name: "google-auth", ok: false, message: "Google authorization expired", severity: "warning" },
+] });
+const runner = makeFakeRunner({ boxRoot, calls: [], outputs: {} });
+const result = await tryUpgrade(boxRoot, async (request) => request.label === "bbx-health" ? { code: 1, output: report } : runner(request));
+result.pluginHealth
+=> [
+  "plugin-type-unprovided (error): 2 cards of type course have no schema. The courseware plugin provides it: `bbx plugins list`, then its README.",
+  "legacy-exposition-rules (warning): content/Acids.attach/Plan.exposition-plan.card still carries rules",
+]
+
+(await getLog(boxRoot, 1))[0].trailers
+=> {"Upgraded-To":"beebox@0.2.0"}
+```
+
+Output that is not the health JSON (the new engine's `bbx health` crashed) is
+one line in the same list rather than silence:
+
+```ts continue
+const crashed = makeFakeRunner({ boxRoot: await makeV3Fixture(), calls: [], outputs: {} });
+const boxRoot2 = await makeV3Fixture();
+const broken = await tryUpgrade(boxRoot2, async (request) => request.label === "bbx-health" ? { code: 1, output: "TypeError: boom\n    at health.ts:1" } : makeFakeRunner({ boxRoot: boxRoot2, calls: [] })(request));
+broken.pluginHealth.map((line) => line.replace(/\(.*\)/, "(...)"))
+=> ["bbx health --json exited 1 without a JSON report (...): TypeError: boom"]
+```
+
+```ts cleanup
+await fs.rm(boxRoot, { recursive: true, force: true });
+await fs.rm(boxRoot2, { recursive: true, force: true });
 ```
 
 ## Revert on failure: code + data revert as ONE unit (the Ghost lesson)

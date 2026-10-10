@@ -276,7 +276,7 @@ box-local type's in `_content/docs/generated/`.
 <!-- rules: card-types.list -->
 {{card_types}}
 
-<!-- rules: card-types.new-type-conversation, card-types.new-type-when, card-types.schema-pointer -->
+<!-- rules: card-types.new-type-conversation, card-types.new-type-when, card-types.schema-pointer, card-types.plugins -->
 A new kind of thing to keep track of is a conversation before it is a file:
 when the user shows interest in tracking something (plants, games, bills),
 first find out what they want out of it and how they'd use it, and only then
@@ -284,7 +284,8 @@ build; don't create the first card or type in the same breath as the offer. A
 collection of repeated items with distinct typed fields gets a new card type,
 not generic memos or records. Read `node_modules/beebox/box-docs/schemas.md`
 before writing one; it goes in the box's `src/schemas/`, never
-`_config/schemas/`.
+`_config/schemas/`. Other plugins: run `bbx plugins list` to see installed
+plugins and how to activate one.
 
 ## QUESTIONS
 

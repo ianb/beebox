@@ -207,3 +207,25 @@ check(repeated).find((f) => f.path === "pkg/src/router/router-core.ts")?.message
 ```
 
 Both message shapes shown above.
+
+## A wildcard export's source lives where the pattern points
+
+`"./plugins/*"` is one `exports` key for a family of surfaces; the scanner
+expands it against `src/plugins/<name>/` and records the pattern. The
+pattern, not `src/exports/`, is the declared location, so the expansion's
+source gets no finding; a literal key built from the same tree still does.
+
+```ts
+const wildcard = layout({
+  files: {
+    "src/plugins/alpha/plugin.ts": {},
+    "src/plugins/beta/plugin.ts": {},
+  },
+  publicSurfaces: [
+    { specifier: "./plugins/alpha", target: "dist/plugins/alpha/plugin.js", source: "src/plugins/alpha/plugin.ts", pattern: "./plugins/*" },
+    { specifier: "./beta", target: "dist/plugins/beta/plugin.js", source: "src/plugins/beta/plugin.ts" },
+  ],
+});
+summary(check(wildcard).filter((f) => f.rule === "public-surface"))
+=> public-surface pkg/src/plugins/beta/plugin.ts
+```

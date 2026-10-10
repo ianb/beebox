@@ -16,6 +16,8 @@ import { loadBoxSchemas } from "../../schemas.js";
 import { listSchemaLoadFailures } from "../../schema-load-status.js";
 import { getEngineVersionReport } from "../../core/engine-version.js";
 import { errorMessage } from "../../shared/error-guards.js";
+import { activePluginNames } from "../../core/box/config.js";
+import { describeInvalidPluginEntries } from "../../core/plugins/active.js";
 
 export const statusCommand = new Command("status")
   .description("Show current state summary")
@@ -105,6 +107,12 @@ export const statusCommand = new Command("status")
           }
         }
       }
+
+      // Plugin activation problems: an unknown name in `plugins`, or a field
+      // that is not a list of names. Neither activates anything, and only
+      // this line and the card lint say so.
+      const { invalid: invalidPlugins } = await activePluginNames(boxRoot);
+      for (const problem of describeInvalidPluginEntries(invalidPlugins)) console.log(problem);
 
       // Legacy schema path: stray *.ts files under _config/schemas/ (the
       // pre-src/schemas/ location) — invisible to the loader and to the

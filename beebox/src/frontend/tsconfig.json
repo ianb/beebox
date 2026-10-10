@@ -57,12 +57,17 @@
   // lives beside its schema but is frontend code. The backend tsconfig excludes
   // the same glob. `../types/markdown-it-footnote.d.ts` types a package the
   // shared Markdown parser imports.
+  // `../plugins/*/view.tsx` is a plugin's browser view module (same split as
+  // list components); `../types/view-widgets.d.ts` is the ambient
+  // `beebox/view-widgets` those views import.
   "include": [
     "eslint.config.ts",
     "src",
     "../shared/**/*",
     "../schemas/*/list-entry.tsx",
-    "../types/markdown-it-footnote.d.ts"
+    "../plugins/*/view.tsx",
+    "../types/markdown-it-footnote.d.ts",
+    "../types/view-widgets.d.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

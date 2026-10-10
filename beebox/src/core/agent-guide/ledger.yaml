@@ -91,7 +91,7 @@ registry:
     governs: the words to use with the user in place of system vocabulary
     referrers:
       - src/core/chat/session/prompts.ts
-      - src/core/box/guidance-sync/skills-content-what-can-you-do.ts
+      - src/core/box/guidance-sync/skills/content-what-can-you-do.ts
       - src/dev/knowledge-audits.yaml
   - handle: ABOUT_CARDS
     governs: what a card is, its shared frontmatter, naming, attachments, and card commands
@@ -1082,6 +1082,13 @@ rows:
     reason: The pointer at the moment of the decision; `_config/schemas/` was the old home and is still the guess, and a schema left there is silently ignored.
     audits: [create-new-card-type, box-packageify-schemas-location]
     mechanics: box-docs/schemas.md
+  - id: card-types.plugins
+    rule: Before building a type a plugin provides, run `bbx plugins list`; it names every installed plugin, active or not, and its README says how to activate it.
+    handle: CARD_TYPES
+    bin: core
+    reason: An inactive plugin's types are not in the catalogue above, and nothing else in the always-loaded text says plugins exist; without this line the agent builds a course type from scratch beside the one the engine ships. One line, no per-plugin detail; an active plugin's types already appear through their stubs.
+    audits: []
+    mechanics: docs/plugins.md
   - id: card-types.pdf-image-formats
     rule: New PDF page and figure images are WebP; older AVIF images remain readable without conversion, and the attached original is preserved. Use the PDF card's `?page=N` link for a durable page reference because reanalysis can replace generated image filenames.
     handle: CARD_TYPES

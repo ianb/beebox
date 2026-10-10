@@ -16,7 +16,7 @@ import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { engineDocFilenames } from "../../../src/core/docs-gen/package-docs/core.js";
 
 const SOURCES = [
-  "src/core/box/guidance-sync/skills-content.ts",
+  "src/core/box/guidance-sync/skills/content.ts",
   "src/core/box/templates.ts",
 ];
 const GUIDE_DIR = "src/core/agent-guide";
