@@ -72,7 +72,7 @@ noted for the "skills are load-bearing" instinct.
 |---|---|---|
 | Agents-as-markdown (`mode`, `model`, `steps`, `permission`) | procedures, schedules, wakeup→reactor | different axis: workflows vs loop configurations |
 | Permission ruleset (`tool → glob → allow/ask/deny`) | `bypassPermissions` (`src/core/agent/run.ts` (moved to `beebox/src/core/agent/invoke/run.ts`)) — one trusted operator | openclaw-hermes §3.4 already settled this; a hardline deny-list via PreToolUse is the right size. `doom_loop` and `external_directory` as *concepts* are the only keepers |
-| Remote skill index (`skill/discovery.ts`: `index.json`, versioned cache, atomic swap) | compiled-in managed skills (`src/core/box/skills.ts` (moved to `beebox/src/core/box/guidance-sync/skills.ts`)) | correct today; revisit at the first third-party box skill — the atomic-swap cache is the reference implementation then |
+| Remote skill index (`skill/discovery.ts`: `index.json`, versioned cache, atomic swap) | compiled-in managed skills (`src/core/box/skills.ts` (moved to `beebox/src/core/box/guidance-sync/skills/core.ts`)) | correct today; revisit at the first third-party box skill — the atomic-swap cache is the reference implementation then |
 | Live share to `opncd.ai` (public secret URL, `share: auto`) | `docs/unimplemented-plans/publish-pages-superseded.md`: snapshot-never-live, fail-closed tiers | validates beebox's posture |
 | Codemode (restricted-JS tree-walking interpreter batching tool calls) | `bbx <verb>` composable in one bash line | solves the huge-MCP-catalog problem beebox doesn't have |
 | One server, many clients; ACP; desktop sidecar | web + iOS over one server; `docs/mobile-contract.md` | already done, and the drift legend is sharper |

@@ -4,7 +4,7 @@ Everything an agent is told about Bee Box before it acts: the agent guide,
 the chat and reactor system prompts, schema instructions, box skills, and
 rules. All of it is generated code (`src/core/agent-guide/`,
 `src/core/chat/session/prompts.ts`, `src/core/reactor/prompts.ts`, schema
-`instructions`, `src/core/box/guidance-sync/skills-content.ts`), assembled into a
+`instructions`, `src/core/box/guidance-sync/skills/content.ts`), assembled into a
 per-situation context stack. One page per member.
 
 ## Members

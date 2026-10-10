@@ -95,11 +95,18 @@ export interface PublicSurface {
   target: string;
   /** Source module the build produces `target` from, or null when unknown. */
   source: string | null;
+  /**
+   * The `exports` key as written when it holds a `*` (`./plugins/*`); this
+   * surface is one expansion of it, and its source sits where the pattern
+   * points rather than in `src/exports/`. Absent for a literal key.
+   */
+  pattern?: string;
 }
 
 export type RuleId =
   | "scan"
   | "set-members"
+  | "plugin-imports"
   | "member-imports"
   | "registry"
   | "side-effect-registration"

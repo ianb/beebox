@@ -59,13 +59,12 @@ import {
   cardRefProbe,
   planCanonicalRef,
 } from "../../canonical-refs.js";
-import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./node-refs.js";
+import { pluginLintIssues } from "./plugin-lint.js";
 import { lintCardSymbolSrc, lintFigureEntry } from "./path-fields.js";
 import { lintFilenameAttachRef } from "./filename-attach.js";
 import { lintDuplicateChatSession } from "./chat-duplicates.js";
 import { lintDuplicatePublicationId } from "../publication-duplicates.js";
 import { findAbsoluteMachinePaths } from "../../../lib/absolute-path-check.js";
-import { conceptMapShapeWarnings } from "../../../schemas/concept-map.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { validateThemeChoice } from "../../../shared/card-theme/core.js";
 
@@ -278,21 +277,15 @@ async function lintFrontmatterCard(input: {
   }
   warnings.push(...bodyTitleWarnings(parsed.fields));
   warnings.push(...lintFrontmatterTodoAssigned(parsed.fields));
-  // Type-specific box-aware checks: progress entries and lesson-plan segments
-  // name concept-map node ids, which can't be verified self-contained (the map
-  // is in another card) nor by the generic ref walk (a node id isn't a file
-  // ref). The lesson-plan adapter also warns on deferred-but-unmarked material.
-  // Cards carry path fields NOT named `ref` (`symbol.src`, a figure's `entry`),
-  // which the generic walk therefore misses — see path-fields.ts.
-  if (type === "progress") {
-    warnings.push(...(await lintProgressNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
-  } else if (type === "lesson-plan") {
-    warnings.push(...(await lintLessonPlanNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
-  } else if (type === "concept-map") {
-    warnings.push(...conceptMapShapeWarnings(parsed.fields));
-  } else if (type === "figure") {
+  // Type-specific box-aware checks. Cards carry path fields NOT named `ref`
+  // (`symbol.src`, a figure's `entry`), which the generic walk therefore
+  // misses — see path-fields.ts. A plugin's cross-card checks (courseware's
+  // concept-map node ids, for one) run through its `lintCards` hook when the
+  // plugin is active — see plugin-lint.ts.
+  if (type === "figure") {
     warnings.push(...(await lintFigureEntry({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   }
+  warnings.push(...(await pluginLintIssues({ path, type, fields: parsed.fields, boxRoot: options.boxRoot })));
   warnings.push(...lintFilenameAttachRef({ path, type, fields: parsed.fields }));
   // Type-specific, self-contained validation (rules Zod can't express) lives on
   // the schema as its `validate` hook — see the commentary/extfile schema

@@ -1,18 +1,26 @@
-# Extensibility — knowledge, not plugins
+# Extensibility — knowledge, not a plugin framework
 
-## The active plan (neither half exists yet)
+## The active plan
 
 Extensibility prioritizes understanding over plugin architecture: the primary
 mechanism is **giving the agent the knowledge to compose existing pieces** —
 concepts, best practices, discovered facts ("AVIF re-encoding halves image
 size" becomes part of what the box knows) — plus **small typed artifacts** it
 can author: box-local schemas (`src/schemas/` in the box), box skills, box-authored
-views. "No plugins" means no registry, marketplace, or lifecycle framework.
+views. "No plugin framework" means no registry service, marketplace, or
+lifecycle framework, and no in-process hook API for third-party code.
 
-Status honestly (ruling 18): this is **actively the plan, and neither part
-exists yet** — there is no wiki-style knowledge system, and no plugin system
-either. The extension surface that does exist (schemas, skills, views) is the
-raw material, not the fulfillment. Empirical support for the no-framework
+What does exist (2026-10, [plugins](../plugins.md)): a **plugin** is a typed
+library shipped inside the engine package, which a box activates by listing
+it in `_config/box.json` and completing through small box-owned stubs: a
+schema stub that extends the plugin's base type, a view stub that re-exports
+its view. Nothing new runs at runtime; the stubs are ordinary box schemas and
+views. That is the "small typed artifacts" half with a named source for the
+artifacts. The knowledge half, a wiki-style corpus of practice, still does
+not exist; the plugin README and skill are its stand-in for each plugin.
+
+Status (ruling 18, revised 2026-10-10): the artifacts half exists in the
+form above; the knowledge half does not. Empirical support for the no-framework
 side: Activities, a built framework for reusable interaction containers, was
 removed because the unit of customization that emerged from real use was "a
 feature flag plus some prose, not a class hierarchy"

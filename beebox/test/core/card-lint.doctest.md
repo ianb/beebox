@@ -17,9 +17,6 @@ import { lintCardsDispatch } from "../../src/core/card-lint/core/lint-cards.js";
 import type { LoadCardContext } from "../../src/core/card-io.js";
 import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
-import { ProgressSchema } from "../../src/schemas/progress.js";
-import { LessonPlanSchema } from "../../src/schemas/lesson-plan.js";
-import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
 import { ChatSchema } from "../../src/schemas/chat.js";
@@ -64,9 +61,6 @@ const ctx: LoadCardContext = {
     ["commentary", CommentarySchema],
     ["extfile", ExtfileSchema],
     ["gadget", gadgetSchema],
-    ["progress", ProgressSchema],
-    ["lesson-plan", LessonPlanSchema],
-    ["concept-map", ConceptMapSchema],
     ["landmark", LandmarkSchema],
     ["figure", FigureSchema],
     ["chat", ChatSchema],
@@ -743,164 +737,6 @@ result.results[0]!.errors[0]!.message
 => gadget mode must not be "forbidden"
 
 result.results[1]!.errors.length
-=> 0
-```
-
-## Progress cards: entries must name real concept-map nodes
-
-A progress card's `entries` reference concept-map nodes by `id`. This is checked
-box-aware (progress → its `course` → the course's embedded `concept-map`): a
-`node` that the map doesn't define is a **warning** (a stale node id, not a hard
-error). A valid node id is silent.
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/store/Acids.course.card",
-  "---\nconcept-map: { ref: attach/Map.concept-map.card }\n---\nCourse.\n",
-);
-await box.write(
-  "_content/store/Acids.attach/Map.concept-map.card",
-  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
-);
-await box.write(
-  "_content/store/Learner.progress.card",
-  "---\ncourse: { ref: Acids.course.card }\nentries:\n  - node: acids\n    level: partial\n    basis: observed\n    evidence: [heard them explain it]\n  - node: ghost\n    level: solid\n    basis: observed\n    evidence: [refers to a node the map lacks]\n---\nProgress.\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/store/Learner.progress.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalErrors
-=> 0
-
-result.totalWarnings
-=> 1
-
-result.results[0]!.warnings[0]!.message.includes("ghost")
-=> true
-```
-
-## Lesson-plans: segments must name real concept-map nodes, and defer visibly
-
-A lesson-plan's `segments[].concepts[]` reference concept-map nodes by `id`. The
-lesson-plan is co-located with the map in the course attach scope, so the check
-resolves the **sibling `*.concept-map.card`** (no course back-ref). A `concepts`
-id the map doesn't define is a **warning** naming the segment that holds it:
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/store/Acids.attach/Acids_Concept_Map.concept-map.card",
-  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
-);
-await box.write(
-  "_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
-  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Name a node the map lacks\n    mode: interactive\n    concepts: [ghost]\n---\nFlow.\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalWarnings
-=> 1
-
-result.results[0]!.warnings[0]!.message.includes("segments[1].concepts[0]")
-=> true
-
-result.results[0]!.warnings[0]!.message.includes("ghost")
-=> true
-```
-
-A `material` segment that has neither a `material` ref nor `planned: true` is a
-**deferral warning** — "incomplete material" is stated, never silent:
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/store/Acids.attach/Acids_Concept_Map.concept-map.card",
-  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n---\nMap.\n",
-);
-await box.write(
-  "_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
-  "---\nsegments:\n  - do: Hand them a doc\n    mode: material\n---\nFlow.\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalWarnings
-=> 1
-
-result.results[0]!.warnings[0]!.message.includes("no material card")
-=> true
-```
-
-A valid plan — every `concepts` id real, every material segment either `ready`
-with a resolvable ref or explicitly `planned: true` — is silent:
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/store/Acids.attach/Acids_Concept_Map.concept-map.card",
-  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
-);
-await box.write("_content/store/Acids.attach/Recap.doc.card", "---\ntitle: Recap\n---\nRecap.\n");
-await box.write(
-  "_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
-  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Read the recap\n    mode: material\n    concepts: [bases]\n    material: { ref: Recap.doc.card }\n  - do: A future figure, not built yet\n    mode: material\n    planned: true\n---\nFlow.\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalWarnings
-=> 0
-```
-
-## Concept-maps: an orphan node (no edge in or out) warns
-
-A concept-map node with no edges — nothing it depends on, nothing depending on it
-— is a modeling smell, surfaced as a **warning** naming the node. A map where
-every node connects is silent; a 0–1 node map is never flagged (edges aren't
-possible).
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/store/Bonds.concept-map.card",
-  "---\nconcepts:\n  - id: ionic\n    name: Ionic Bonds\n    kind: concept\n  - id: covalent\n    name: Covalent Bonds\n    kind: concept\n    related:\n      - { to: ionic, kind: contrasts-with }\n  - id: trivia\n    name: A Floating Aside\n    kind: fact\n---\nMap.\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/store/Bonds.concept-map.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalErrors
-=> 0
-
-result.totalWarnings
-=> 1
-
-result.results[0]!.warnings[0]!.message.includes("trivia")
-=> true
-
-result.results[0]!.warnings[0]!.message.includes("orphan")
-=> true
-```
-
-A fully connected map warns about nothing:
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "_content/store/Bonds2.concept-map.card",
-  "---\nconcepts:\n  - id: ionic\n    name: Ionic Bonds\n    kind: concept\n  - id: covalent\n    name: Covalent Bonds\n    kind: concept\n    related:\n      - { to: ionic, kind: contrasts-with }\n---\nMap.\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("_content/store/Bonds2.concept-map.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalWarnings
 => 0
 ```
 

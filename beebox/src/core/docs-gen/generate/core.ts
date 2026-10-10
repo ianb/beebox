@@ -48,7 +48,6 @@ import {
   compilePersonalities,
 } from "../compile/core.js";
 import type { ProcedureSummary } from "../compile/core.js";
-import { compileExpositionRules } from "../../compile-exposition-rules.js";
 import { ensureAgentContext } from "./agents-md.js";
 import { AGENTS_MD, instructionFileName } from "../../agent-instruction-files.js";
 
@@ -223,7 +222,7 @@ async function checkChatGuideMtimes(
  * no-op otherwise.
  *
  * It does not commit: `generateDocs` writes more tracked output after it
- * (guides, exposition rules, the briefing, agent mirrors) and commits all of
+ * (guides, the briefing, agent mirrors) and commits all of
  * it once at the end.
  */
 async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
@@ -446,9 +445,6 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot);
-
-  // Compile each course's exposition-plan `rules` into a path-loaded box rule.
-  await compileExpositionRules(boxRoot);
 
   // Rewrite agent guide now that we have guide summaries
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),

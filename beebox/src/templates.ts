@@ -21,7 +21,6 @@
 
 import { defineRegistry } from "./shared/registry.js";
 import { BUILTIN_TEMPLATES } from "./templates/builtins/templates.js";
-import { COURSEWARE_TEMPLATES } from "./templates/courseware.js";
 import { QUESTION_TEMPLATES } from "./templates/question.js";
 import { SYSTEM_CARD_TEMPLATES } from "./templates/system-cards.js";
 import type { TemplateDefinition } from "./templates-shape.js";
@@ -32,7 +31,6 @@ export const templateGroups = defineRegistry<readonly TemplateDefinition[]>({
   ordered: false,
   members: {
     builtins: BUILTIN_TEMPLATES,
-    courseware: COURSEWARE_TEMPLATES,
     question: QUESTION_TEMPLATES,
     systemCards: SYSTEM_CARD_TEMPLATES,
   },

@@ -18,6 +18,7 @@ import { migrateCommand } from "./commands/migrate.js";
 import { docsCommand } from "./commands/docs.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { statusCommand } from "./commands/status.js";
+import { pluginsCommand } from "./commands/plugins.js";
 import { templateCommand } from "./commands/template.js";
 import { validateCommand } from "./commands/validate/command.js";
 import { agentContextCommand } from "./commands/agent-context.js";
@@ -153,6 +154,7 @@ const ALL: readonly Command[] = [
   todoReviewCommand,
   queryCommand,
   connectorCommand,
+  pluginsCommand,
 ];
 
 /** Verb name (`bbx <name>`) to its command. */

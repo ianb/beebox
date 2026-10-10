@@ -13,7 +13,7 @@ import { TEMPLATE_STOCK_HASHES } from "../../template-stock-hashes.js";
 import { generateRules } from "../../init-rules.js";
 import { invariant, assertNever } from "../../../shared/invariant.js";
 import { instructionFilePath, instructionSiblingPath } from "../../agent-instruction-files.js";
-import { generateSkills } from "./skills.js";
+import { generateSkills } from "./skills/core.js";
 import { MANAGED_STOCK_TEMPLATES } from "../templates.js";
 import {
   GUIDANCE_SURFACES,
@@ -24,7 +24,7 @@ import {
 const GENERATORS = {
   generateRules,
   generateSkills,
-} satisfies Record<GuidanceGenerator, (boxRoot: string) => Promise<string[]>>;
+} satisfies Record<GuidanceGenerator, (boxRoot: string) => Promise<string[] | { written: string[] }>>;
 
 /**
  * The box path a tracked row installs to. An instruction-file row resolves

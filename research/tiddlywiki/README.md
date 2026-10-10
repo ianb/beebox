@@ -14,7 +14,7 @@ and how it degrades on mixed types — has a working twenty-year-old answer here
 a filter expression selects tiddlers, a widget renders the set, a template
 controls each item. Secondarily, the plugin system tells us whether an extension
 surface can reach the query and rendering layers, which is where our own
-[plugin design](../../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md)
+[plugin design](../../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md)
 is stuck.
 
 ## Documents
