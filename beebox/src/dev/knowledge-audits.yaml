@@ -6236,6 +6236,27 @@ tests:
       node_modules is replaced on upgrade; a change there is lost. The stub is
       the box's own file and is where a field addition belongs.
 
+  - id: plugins-scoped-tags
+    prompt: >
+      You are writing a memo card and want to mark an ingredient amount with
+      the `{% ingredient %}` tag that recipe cards use. Will that validate?
+      Answer and explain; do not change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Says no: the recipe tags belong to the recipe card type and are undefined
+      in a memo body (validate warns); use plain prose or a recipe card.
+    should_read_any:
+      - node_modules/beebox/box-docs/schemas.md
+      - node_modules/beebox/box-docs/card-recipe.md
+    correct_matches:
+      - '(?i)recipe'
+      - '(?i)undefined|warn|only in|not valid|won.t validate|will not validate'
+    tags: [plugins]
+    notes: >
+      Markdoc tags are scoped to the card type that declares them
+      (docs/plugins.md, Conventions); a tag outside its type renders as its
+      authored text and is reported as undefined.
+
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + courseware plugin skill) ===
   #
   # Status (2026-10-10): revised for the courseware plugin move
