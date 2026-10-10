@@ -7284,6 +7284,31 @@ tests:
     response_not_contains: ["--message msg-1"]
     tags: [chat, voice, transcription]
 
+  # Live gap marker (docs/implemented-plans/live-gap-marker.md): `<unsure>[…]</unsure>`
+  # in live text is speech the live pass never transcribed. The failure this
+  # guards against is the agent acting on the half sentence as if complete.
+  #
+  # Status (2026-10-10): 1/1 correct, 0 reads, 0 searches, 40k ctx. Read the
+  # marker as missing speech, refused to guess the object, retranscribed
+  # with `--message msg-9`, and planned to ask if still unclear. The first run
+  # failed only on a too-broad not-contains ("I cancelled" matched "confirm
+  # what I cancelled"); the check was narrowed.
+  - id: chat-live-gap-marker
+    prompt: >
+      A voice message arrives as `<speech stt="live" message-id="msg-9">Cancel
+      the <unsure>[…]</unsure> on Thursday</speech>`. What does the bracketed
+      part mean, and what do you do before cancelling anything?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Reads `<unsure>[…]</unsure>` as speech that was said but not
+      transcribed, so it cannot tell what is to be cancelled; does not guess
+      or cancel. Retranscribes with `--message msg-9` or asks the user.
+    correct_matches:
+      - "retranscrib|ask"
+    response_not_contains: ["I've cancelled"]
+    tags: [chat, voice, transcription]
+
   # === Secrets (machine-level store) ===
   #
   # The two audits named in docs/implemented-plans/secret-custody.md, "Knowledge audits":

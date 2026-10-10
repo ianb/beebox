@@ -351,3 +351,16 @@ export async function startOpenAIRealtimeConnection(callbacks: ServiceCallbacks)
     },
   };
 }
+
+/** Detach handlers and close a socket without firing machine events. */
+export function discardSocket(handle: ConnectionHandle | null): void {
+  if (!handle) return;
+  const ws = handle.ws;
+  ws.onopen = null;
+  ws.onerror = null;
+  ws.onclose = null;
+  ws.onmessage = null;
+  if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+    ws.close();
+  }
+}

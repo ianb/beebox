@@ -6899,6 +6899,14 @@ test1:
       peak: 40335
       added: 0
       turns: 2
+  chat-live-gap-marker:
+    - date: 2026-10-10T14:09:02.343Z
+      boxCommit: d77e8d0dadb1f24f6b34d00a86796c89c6d0edf3
+      repoCommit: 221ff3615380d07b4c41b497ae2e4d21afbfbe67
+      initial: 40264
+      peak: 40264
+      added: 0
+      turns: 2
   siri-capture-how-to:
     - date: 2026-10-10T13:47:50.547Z
       boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
