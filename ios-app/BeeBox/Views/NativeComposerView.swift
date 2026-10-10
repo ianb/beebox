@@ -871,9 +871,9 @@ struct NativeComposerView: View {
 
     /// A dictated quick chat thought (docs/plans/ios-quick-chat-hq.md): the
     /// send lock is taken before the first await and held until the outbox has
-    /// the thought; the draft is flushed first, so a kill during the pass
-    /// leaves the live text in the composer. The microphone was already closed
-    /// by `send()` or the spoken send, and nothing here reopens it.
+    /// the thought; the draft is flushed first and kept, so a kill during the
+    /// pass leaves the live text in the composer. The microphone was already
+    /// closed by `send()` or the spoken send, and nothing here reopens it.
     private func submitQuickChatVoice(
         _ send: VoiceSendText,
         audioURL: URL?,
@@ -881,7 +881,9 @@ struct NativeComposerView: View {
     ) {
         let sendingBoxID = box.id
         let application = backgroundTaskApplication
-        dictation.resetDictationState()
+        // Dictation is reset only once the outbox has the thought: a reset
+        // writes its empty transcript into the draft, which would blank the
+        // composer (and its saved copy) for the whole pass.
         focused = false
         isPreparingSend = true
         statusText = audioURL == nil ? nil : "Transcribing…"
@@ -900,6 +902,7 @@ struct NativeComposerView: View {
                 return
             }
             statusText = nil
+            dictation.resetDictationState()
             await draftStore.clearForSending(boxID: sendingBoxID)
         }
     }

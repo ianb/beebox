@@ -185,7 +185,8 @@ none
 | Hostile `hqService` value breaks the wrapper attribute | planned (doctest) | regex | clear |
 | Older outbox entries without the field | planned (XCTest decode) | `decodeIfPresent` | compatible |
 | Older box without the field | doctest shows the current schema strips an unknown key | ignored; the thought is framed `stt="live"` until the box updates | quiet, transitional |
-| App killed during the pass | no | draft flushed before the pass | the live text stays in the composer |
+| App killed during the pass | no | draft flushed before the pass; dictation reset (which blanks the draft) only after the outbox stores the thought | the live text stays in the composer |
+| Draft write fails (disk full) and the app is killed during the pass | no | none: `flush()` reports no failure | accepted (diff review, 2026-10-10): needs a full disk and a kill within seconds; the outbox write would fail too |
 | App backgrounded during the pass | no | background hold; the pass is bounded | the send finishes or falls back to live |
 
 ## Agent-flow / user-flow edge cases
