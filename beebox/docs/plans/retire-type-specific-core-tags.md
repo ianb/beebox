@@ -33,21 +33,21 @@ The core Markdoc tag table carries four tags that belong to one card type each: 
 ### Spirit
 
 - **Serves:** "The box is plain files" — a purpose line and a corrections list read as text, with no vocabulary to learn.
-- **Risks:** "Make honesty easy" — a corrections bullet has no slot for the `test` attribute, so the way to check a correction can be left out. Guard: the briefing instructions ask for a trailing "Test: …" sentence, and the knowledge audit `briefing-corrections-section` checks the agent knows to write one.
+- **Risks:** "Make honesty easy" — a corrections bullet has no slot for the `test` attribute, so the way to check a correction can be left out. Guard: the briefing instructions ask the author to say how to check it in the same bullet, and the knowledge audit `briefing-corrections-section` checks the agent knows to.
 
 ### Trust
 
-Shows only, takes no action. The migration is a deterministic script run by `bbx engine migrate`; it fails closed and writes nothing when it meets a shape it cannot convert.
+Shows only, takes no action. The migration is a deterministic script run by `bbx engine migrate`; it plans the whole box first and writes nothing when it meets a shape it cannot convert. Writes then happen file by file, as in the precedent (`briefing-openers/run.ts:99`); a write that fails midway leaves the box partly converted, and the sweep reports the failure without restoring files (`src/core/migration-sweep.ts:235`). A rerun completes the job because converted cards are skipped. No box-wide atomic write is added.
 
 ### When it goes wrong or does nothing
 
-- A briefing card still carrying `{% purpose %}` after the engine upgrade (migration not yet run) renders the tag as muted authored text (the unknown-tag fallback from slice 2) and `bbx validate` reports `Undefined tag 'purpose'` with the file and line. The fix is `bbx engine migrate`.
+- A briefing card still carrying `{% purpose %}` after the engine upgrade (migration not yet run) renders the tag as muted authored text (the unknown-tag fallback from slice 2) and `bbx validate` reports `Undefined tag 'purpose'` with the file and line. That report is a warning, not an error (`src/core/body-markdoc-lint.ts:35-37`: *"one warning-severity `LintIssue` per violation"*), so validate still exits 0; the blocking check that the migration finished is the migration's own `--verify` scan. The fix is `bbx engine migrate`.
 - A migration that finds two purpose blocks, or a purpose block and a `purpose:` frontmatter key with different text, prints both locations and exits 1 with nothing written. The person resolves it by hand and re-runs.
 - A capture-session card with an image link whose card was moved shows an ordinary dangling card link, the same as any other body link; `bbx validate` reports the dangling ref the same way it does for any link.
 
 ### Walkthrough
 
-A boxholder records a two-minute voice note with one photo. The capture worker writes the session card body: a paragraph of speech, then `[photo-001](attach/photo-001.image.card)`, then `— 26s silence —`, then more speech. On the card page the link renders through the existing card-link component with the image card's label, and clicking it opens the image card. The agent annotating the capture reads the body as markdown and follows the link like any other ref. Nothing else is left behind.
+A boxholder records a two-minute voice note with one photo. The capture worker writes the session card body: a paragraph of speech, then `[photo-001](attach/photo-001.image.card)`, then `— 26s silence —`, then more speech. On the card page the link renders through the existing markdown-link component with the text `photo-001`, the same label the old chip showed, and clicking it opens the image card. The agent annotating the capture reads the body as markdown and follows the link like any other ref. Nothing else is left behind.
 
 ## Smallest fix and budget
 
@@ -85,7 +85,7 @@ Source plus tests about 830 changed lines. Authored docs and instructions about 
 - Tag schemas `src/shared/markdoc-config/tags/core.ts:204-224` and `:246-268`; registration `:392-393`, `:397-398`; header comment `:29-39`. **Delete.**
 - Migration runner: `src/core/migrations.ts` (append-only `MIGRATIONS`, manifest `_config/migrations.jsonl`), `bbx engine migrate` (`src/core/migration-run.ts`, `src/core/migration-sweep.ts`). Deploy runs `engine migrate --sweep` during activation (`deploy/deploy.sh:843`) and the `box-convergence` schedule retries (`docs/server/deploying.md:28`). **Reuse.**
 - Unknown-tag render fallback (slice 2, `src/shared/markdoc-config/scoped.ts`): an unmigrated card shows `{% purpose %}` as muted code and its text below. **Reuse** as the transition rendering.
-- Search extraction (`src/core/search/extract/core.ts:210-221`) indexes raw body text and has no tag handling. Nothing to change.
+- Search extraction (`src/core/search/extract/core.ts:210-221`) indexes raw body text and has no tag handling, so today the purpose text is searchable as body text. `foldFields` (`core.ts:229`) folds chosen frontmatter fields per type and has no `briefing` case. **Extend:** a `briefing` case folding `purpose`, or the purpose leaves the search document when it leaves the body. Directory briefings are not compiled to a `.md` (`src/core/docs-gen/compile/core.ts:117`), so there is no second search hit to rely on.
 
 ## Prior art (external)
 
@@ -141,13 +141,17 @@ purpose: What this box is for.
 Instructions replace the "Body tags" list (`briefing.tsx:104-112`) with:
 
 - `purpose:` (frontmatter) — one sentence or short paragraph, what this box or directory is for. Required at the box root; optional in directory briefings.
-- `## Corrections` (body section) — one bullet per instruction that overrides default agent behavior, added after an observed mistake. End a bullet with `Test: …` when there is a way to check the correction is followed.
+- `## Corrections` (body section) — one bullet per instruction that overrides default agent behavior, added after an observed mistake. When there is a way to check that the correction is followed, say so in the same bullet.
+
+No prefix is prescribed for the check sentence. The migration writes a converted `test` attribute as the sentence `Test: <text>` to keep the words, and future authors write the check in their own words. (The review asked whether a fixed prefix should be a convention; it is not, because nothing parses it and this plan retires vocabulary rather than adding it.)
 
 The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/notifications.md:111` keeps its meaning and needs no change (it says "the root briefing's purpose").
 
-**Vocabulary lock-ins.** Frontmatter key `purpose`; heading text `## Corrections`; trailing sentence prefix `Test:`.
+**Vocabulary lock-ins.** Frontmatter key `purpose`; heading text `## Corrections`.
 
-**First implementation chunk.** Schema field, `compileBriefing`, `situation.ts`, seed template, `pnpm template-stock:update`, instructions text, and the doctests `test/schemas.briefing-compile.doctest.md`, `test/core/agent-guide/guide/reaching.doctest.md:31`, `test/cli/commands/judge/command.doctest.md:229`. The emitter case stays until Track 3 so the chunk is green on its own.
+**Search.** `foldFields` in `src/core/search/extract/core.ts:229` gains `case "briefing": return { extra: compact([str(fields["purpose"])]) }`, with a doctest that a directory briefing's purpose is found by search.
+
+**First implementation chunk.** Schema field, `compileBriefing`, `situation.ts`, search folding, seed template, `pnpm template-stock:update`, instructions text, and the doctests `test/schemas.briefing-compile.doctest.md`, `test/core/agent-guide/guide/reaching.doctest.md:31`, `test/cli/commands/judge/command.doctest.md:229`. The emitter case stays until Track 3 so the chunk is green on its own.
 
 ### Track 2. Capture timeline: link and text
 
@@ -205,13 +209,13 @@ Per card (any `*.card` under the box root, skipping `.git`, `node_modules`, and 
 4. `purpose` or `correction` in a non-briefing card is a failure.
 5. A card with none of the four tags is skipped (idempotent). Frontmatter is edited as a YAML document (`parseDocument` from `yaml`, the way `briefing-openers/plan.ts:79-82` does) so existing keys, order, and comments survive; `purpose` is added as the first key after `type` when present.
 
-`run.ts` follows `briefing-openers/run.ts`: plan the whole box, exit 1 with every failure listed and nothing written; `--apply` writes; the root briefing whose pre-image hash is in `TEMPLATE_STOCK_HASHES["briefing-seed"]` (current or superseded) goes through `recordAutomatedTemplateRewrite`; `--verify` re-scans for any of the four tags and exits 1 if one remains. Soft exit 2 is not used, for the reason the precedent gives (`run.ts:8-11`).
+`run.ts` follows `briefing-openers/run.ts`: plan the whole box, exit 1 with every failure listed and nothing written; `--apply` writes; `--verify` re-scans for any of the four tags and exits 1 if one remains. The root briefing whose pre-image hash is in `TEMPLATE_STOCK_HASHES["briefing-seed"]` (current or superseded) is replaced with `createBriefingTemplate()` verbatim, the way `briefing-openers/plan.ts:170-172` does, so the result is the exact current seed and the installer recognizes it; `recordAutomatedTemplateRewrite` then updates the ledger when the box tracks the file and is a no-op otherwise (`src/core/template-update.ts:86-91`). A hand-edited root briefing is converted like any other card. The doctest covers a tracked seed, an untracked seed, and a hand-edited root briefing. Soft exit 2 is not used, for the reason the precedent gives (`run.ts:8-11`).
 
-Tag matching is by regex on the raw body, as `situation.ts` does today, because the Markdoc parser would need the tags to still be declared to give attribute values; the regexes accept the exact shapes the two producers and the instructions ever wrote.
+Tag nodes are located with `Markdoc.parse`, which yields every tag node with its attributes and line span without any schema (the way `extractBodyRefs` reads `ref` attributes, `body-refs.ts:306-335`). Verified 2026-10-10 with a scratch parse: a block tag reports `lines: [openStart, openEnd, closeStart, closeEnd]`, an inline self-closing tag reports the span of its containing line, and a tag inside a code fence is still a tag node (Markdoc processes fences unless `process=false`). The rewrite then works on source lines: a block `purpose`/`correction` is cut by its span; a self-closing `image`/`silence` is replaced within its line by an exact-text match of the node's source. Fail-closed shapes: a `purpose` or `correction` node whose ancestors include anything but `document` (a fence, a list item, another tag) or that is inline; an `image`/`silence` node whose ancestors include a `fence` or another tag (a paragraph or list item is fine, since the replacement is exact text within the line). A failure names the file and line.
 
 **Vocabulary lock-ins.** Manifest name `body-tags-2026-10`.
 
-**First implementation chunk.** `plan.ts` with its doctest (`test/scripts/migrate/body-tags.doctest.md`): one briefing with purpose and two corrections, one capture body, one book card with an image tag, one memo with a stray `{% purpose %}` (failure), one already-migrated briefing (skipped), one briefing with two purpose blocks (failure). Then `run.ts`, the registry entry with a comment, and a doctest that runs it against a temp box and checks the manifest entry and `bbx validate` exit 0.
+**First implementation chunk.** `plan.ts` with its doctest (`test/scripts/migrate/body-tags.doctest.md`): one briefing with purpose and two corrections (one with a single-quoted `test`, one spanning two paragraphs), one capture body, one book card with an inline image tag in a paragraph, one memo with a stray `{% purpose %}` (failure), a correction inside a list item (failure), a tag inside a code fence (failure), one already-migrated briefing (skipped), one briefing with two purpose blocks (failure). Then `run.ts`, the registry entry with a comment, and a doctest that runs it against a temp box with a tracked stock seed, an untracked stock seed, and a hand-edited root briefing in turn; checks the manifest entry, `--verify` exit 0, `bbx validate` output free of `Undefined tag`, and a rerun after a half-converted apply.
 
 ## Could this be simpler?
 
@@ -219,7 +223,7 @@ Tag matching is by regex on the raw body, as `situation.ts` does today, because 
 
 **Also considered:** keep the four tags registered but mark them deprecated, so old cards keep validating. That is two ways to write one thing (principle 8, "One way to do each thing") and leaves the scoping question open. Rejected.
 
-**Also considered:** make the migration a Markdoc AST walk instead of regexes. The AST would need the schemas kept alive inside the migration; a regex on two self-closing and two block shapes is shorter and checkable in a doctest. Rejected.
+**Also considered:** locate the tags with regexes on the raw body instead of a Markdoc parse. Rejected after review: `Markdoc.parse` needs no schema to yield tag nodes with attributes and line spans (`body-refs.ts:306-335` already relies on this), and the parse is what tells a real tag from one quoted inside a code fence or nested in another tag, which a regex cannot.
 
 What the chosen plan buys over the simplest version is one deterministic pass, fail-closed, that the deploy already runs.
 
@@ -233,7 +237,9 @@ none
 |---|---|---|---|
 | Briefing with `purpose:` key blank or missing at the box root | no (planned: compile doctest) | `resolveSituation` returns the "no purpose statement" source as today | clear (the judge says why) |
 | Migration meets two purpose blocks or a conflicting key | planned doctest | fail closed, exit 1, nothing written | clear |
-| Migration meets a correction inside a nested tag or with an unusual attribute quoting | planned doctest for `test='…'` single quotes; others | regex misses it; the tag stays; `--verify` exits 1 and `bbx validate` reports `Undefined tag` | clear |
+| Migration meets a tag inside a code fence, a list item (purpose/correction), or another tag | planned doctest, one case each | fail closed, exit 1, nothing written, file and line named | clear |
+| Attribute written with single quotes or across lines | planned doctest | the Markdoc parse reads it like any attribute | n/a |
+| Apply interrupted after some files were written | planned doctest: rerun on a half-converted box | converted cards are skipped; the rerun finishes | clear (sweep reports the first failure) |
 | Capture link stem collides with another file name in the body | n/a | a markdown link label is display text only | n/a |
 | Image card renamed after the transcript was written | existing link-ref tests | `extractBodyLinks` tracks it like any body link | clear (dangling ref) |
 | Unmigrated box after engine deploy, before the sweep reaches it | slice 2 unknown-tag doctest | renders authored tag text; `bbx validate` fails | clear |
@@ -250,7 +256,7 @@ No critical gap.
 - **Hand-edit drift:** ADDRESSED for purpose (a frontmatter string has one shape). For corrections, a person may write `## Correction` or a numbered list; nothing parses the section, so the only consequence is a heading that differs from the instructions. Accepted.
 - **Fabricated free-form value:** the `Test:` sentence is optional and plain text, as the `test` attribute was. No change.
 - **Validation error UX:** `Undefined tag 'purpose'` with file and line, the existing message.
-- **Partial migration / transition state:** ADDRESSED. The migration writes all or nothing per box; between engine deploy and sweep, cards render with the unknown-tag fallback and fail validation loudly.
+- **Partial migration / transition state:** ADDRESSED. The migration plans all or nothing per box and skips converted cards on a rerun; between engine deploy and sweep, cards render with the unknown-tag fallback and `bbx validate` warns `Undefined tag` with file and line. The migration's `--verify` is the blocking check.
 
 ## NOT in scope
 
@@ -269,7 +275,7 @@ None. The heading text `## Corrections` and the `Test:` prefix are settled above
 ## Knowledge audits
 
 - Rewrite `briefing-tag-vocabulary` (`knowledge-audits.yaml:5147-5158`) as `briefing-purpose-frontmatter`: "Where does a box's purpose statement live and how do you change it?" Correct answer names the `purpose:` frontmatter key on the root briefing.
-- Rewrite `briefing-correction-test` (`:5211-5222`) as `briefing-corrections-section`: "An agent keeps archiving items before reading them. Where do you record the rule and how do you say how to check it?" Correct answer names `## Corrections`, a bullet, and a `Test:` sentence; wrong answer mentions `{% correction`.
+- Rewrite `briefing-correction-test` (`:5211-5222`) as `briefing-corrections-section`: "An agent keeps archiving items before reading them. Where do you record the rule and how do you say how to check it?" Correct answer names `## Corrections` and a bullet that includes how to check it; wrong answer mentions `{% correction`.
 - Rewrite `briefing-prose-vs-tag` (`:5197-5209`) to ask about plain headings versus frontmatter.
 - Fix `briefing-key-person-ref` (`:5164-5177`) to describe the frontmatter `key-people` list, which is what exists.
 - Update the fixture body at `:7519-7528`.
@@ -301,4 +307,4 @@ Six production boxes in total: 23 briefing cards carrying the tags, 8 correction
 
 Local: five boxes under `~/src/boxes/` each have one briefing card with tags and no capture cards. The finish step runs `bbx engine migrate` on each after the merge. Generated docs under a box's `docs/generated/` that mention the old tags are regenerated by the migration CLI's guidance refresh (`docs/cards/migrations.md`, step 6).
 
-**Verify after deploy.** `bbx engine migrate --status --json` per production box shows `body-tags-2026-10` applied; `run.ts --verify` exits 0; `bbx validate` exit 0 on each box.
+**Verify after deploy.** `bbx engine migrate --status --json` per production box shows `body-tags-2026-10` applied; `run.ts --verify` exits 0 on each box (this is the gate; `bbx validate` only warns on a leftover tag); `bbx validate` output has no `Undefined tag` line.
