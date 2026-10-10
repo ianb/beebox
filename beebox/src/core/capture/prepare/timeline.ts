@@ -1,8 +1,8 @@
 /**
  * Deterministic capture-timeline assembly — build a capture-session card's
  * transcript body by interleaving transcribed words and photos in absolute-time
- * order, with `{% silence %}` markers for gaps and `{% image %}` markers where
- * a photo was taken.
+ * order, with a `— Ns silence —` line for each gap and a markdown link to the
+ * image card where a photo was taken.
  *
  * Relocated from `src/core/commands/assemble-timeline-helpers.ts` for the
  * preparation worker (Track 3). Two differences from the original:
@@ -179,10 +179,16 @@ function mergeTimelineEvents(input: {
   return events;
 }
 
+/** A photo in the transcript: a markdown link to its image card, labelled by the card's stem. */
+function imageLink(ref: string): string {
+  const stem = ref.replace(/^attach\//, "").replace(/\.image\.card$/, "");
+  return `[${stem}](${ref})`;
+}
+
 /**
- * Build the transcript markdown body: text runs as paragraphs, gaps as
- * `{% silence %}` block tags, and photos as `{% image %}` block tags. Blocks
- * are blank-line separated so the Markdoc tags parse as block-level.
+ * Build the transcript markdown body: text runs as paragraphs, gaps as a
+ * `— Ns silence —` line, and photos as markdown links to their image cards.
+ * Parts are blank-line separated so each is its own paragraph.
  */
 function buildTranscriptMarkdown(events: TimelineEvent[], allImages: TimedImage[]): string {
   const parts: string[] = [];
@@ -203,7 +209,7 @@ function buildTranscriptMarkdown(events: TimelineEvent[], allImages: TimedImage[
         if (lastWordEnd > 0 && w.absoluteStart - lastWordEnd > SILENCE_THRESHOLD_MS) {
           flushText();
           const gapSeconds = Math.round((w.absoluteStart - lastWordEnd) / 1000);
-          parts.push(`{% silence duration="${gapSeconds}s" /%}`);
+          parts.push(`— ${gapSeconds}s silence —`);
         }
         currentWords.push(w.word);
         lastWordEnd = w.absoluteEnd;
@@ -211,7 +217,7 @@ function buildTranscriptMarkdown(events: TimelineEvent[], allImages: TimedImage[
       }
       case "image":
         flushText();
-        parts.push(`{% image ref="${event.image.ref}" /%}`);
+        parts.push(imageLink(event.image.ref));
         break;
       case "untranscribed":
         flushText();
@@ -224,7 +230,7 @@ function buildTranscriptMarkdown(events: TimelineEvent[], allImages: TimedImage[
 
   // Images-only (or empty) session: list the photos in order.
   if (parts.length === 0 && allImages.length > 0) {
-    for (const img of allImages) parts.push(`{% image ref="${img.ref}" /%}`);
+    for (const img of allImages) parts.push(imageLink(img.ref));
   }
 
   return parts.join("\n\n");

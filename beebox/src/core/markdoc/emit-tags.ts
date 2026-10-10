@@ -63,14 +63,12 @@ function childText(ctx: TagCtx): string {
 }
 
 /**
- * Per-tag markdown emitters. Dispatches to one of three vocabulary groups
- * (universal, briefing, recipe); unknown tags fall back to "emit inner
+ * Per-tag markdown emitters. Dispatches to one of two groups
+ * (universal, markup); unknown tags fall back to "emit inner
  * content + stderr warning".
  */
 export function emitTag(ctx: TagCtx): void {
   if (emitUniversalTag(ctx)) return;
-  if (emitBriefingTag(ctx)) return;
-  if (emitRecipeTag(ctx)) return;
   if (emitMarkupTag(ctx)) return;
   const { node, out } = ctx;
   const tagName = node.tag === undefined ? "(unnamed)" : node.tag;
@@ -144,87 +142,8 @@ function emitUniversalTag(ctx: TagCtx): boolean {
 }
 
 /**
- * Briefing-vocabulary body tags: `purpose`, `correction`. The structured
- * records (`key-person` → `key-people:`, `property` → `properties:`) moved
- * to briefing frontmatter and are emitted by `compileBriefing`, not here;
- * `project-phase` was retired.
- */
-function emitBriefingTag(ctx: TagCtx): boolean {
-  const { node, out } = ctx;
-  const attrs = node.attributes;
-  switch (node.tag ?? "") {
-    case "purpose":
-      out.push(`**Purpose:** ${childText(ctx)}\n\n`);
-      return true;
-    case "correction": {
-      const test = str(attrs, "test");
-      const text = childText(ctx);
-      const testStr = test === "" ? "" : ` _(test: ${test})_`;
-      out.push(`**Correction:** ${text}${testStr}\n\n`);
-      return true;
-    }
-    default:
-      return false;
-  }
-}
-
-/** Recipe-vocabulary tags: task, ingredient, step, yield, substitution, subrecipe, recipe-section. */
-function emitRecipeTag(ctx: TagCtx): boolean {
-  const { node, out } = ctx;
-  const attrs = node.attributes;
-  switch (node.tag ?? "") {
-    case "task": {
-      // GFM task checkbox. The Markdoc transform injects this for `[ ]`/`[x]`
-      // prefixes inside list items; in markdown the original form is exactly
-      // what we want.
-      const done = attrs["done"] === true;
-      out.push(done ? "[x] " : "[ ] ");
-      return true;
-    }
-    case "ingredient": {
-      const amount = str(attrs, "amount");
-      const unit = str(attrs, "unit");
-      const name = childText(ctx);
-      const qty = amount === "" ? "" : `${amount}${unit === "" ? "" : ` ${unit}`} `;
-      out.push(node.inline ? `**${qty}${name}**` : `- ${qty}${name}\n`);
-      return true;
-    }
-    case "step":
-      out.push(`${childText(ctx)}\n\n`);
-      return true;
-    case "yield": {
-      const amount = str(attrs, "amount");
-      const text = childText(ctx);
-      const base = amount === "" ? "" : ` _(base ${amount})_`;
-      out.push(`**Yield:** ${text}${base}\n\n`);
-      return true;
-    }
-    case "substitution": {
-      const forAttr = str(attrs, "for");
-      const text = childText(ctx);
-      const forStr = forAttr === "" ? "" : ` _(for ${forAttr})_`;
-      out.push(`**Substitution${forStr}:** ${text}\n\n`);
-      return true;
-    }
-    case "subrecipe": {
-      const ref = str(attrs, "ref");
-      const text = childText(ctx);
-      out.push(`**Subrecipe:** [→ ${ref}]${text === "" ? "" : ` — ${text}`}\n\n`);
-      return true;
-    }
-    case "recipe-section": {
-      const name = str(attrs, "name");
-      if (name !== "") out.push(`## ${name}\n\n`);
-      ctx.emitChildren(node, out);
-      return true;
-    }
-    default:
-      return false;
-  }
-}
-
-/**
- * Tags the parser itself produces: rebuilt raw HTML (`html`) and footnotes.
+ * Tags the parser itself produces: the GFM task checkbox (`task`), rebuilt raw
+ * HTML (`html`) and footnotes.
  * HTML goes back out as HTML (Claude reads it fine); footnotes as GFM
  * `[^n]` syntax.
  */
@@ -232,6 +151,13 @@ function emitMarkupTag(ctx: TagCtx): boolean {
   const { node, out } = ctx;
   const attrs = node.attributes;
   switch (node.tag ?? "") {
+    case "task": {
+      // GFM task checkbox. The Markdoc transform injects this for `[ ]`/`[x]`
+      // prefixes inside list items; in markdown the original form is exactly
+      // what we want.
+      out.push(attrs["done"] === true ? "[x] " : "[ ] ");
+      return true;
+    }
     case "html": {
       const element = str(attrs, "element");
       const rendered = Object.entries(attrs)

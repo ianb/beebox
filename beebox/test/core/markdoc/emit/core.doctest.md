@@ -129,3 +129,22 @@ Claim[^1].
 «blankline»
 [^1]: The source.
 ```
+
+## A checklist item keeps its checkbox; a recipe tag falls back to its content
+
+The GFM task checkbox is a parser-produced `task` tag, emitted as it was
+written. The recipe tags belong to the recipe plugin and are undefined here, so
+a recipe tag in a body takes the unknown-tag path: the inner content stays and
+a warning goes to stderr (the warning is expected).
+
+```ts
+const warn = console.warn;
+console.warn = () => {};
+const result = [
+  emitBodyAsMarkdown("- [x] done\n- [ ] later\n"),
+  emitBodyAsMarkdown('{% yield amount="4" %}4 servings{% /yield %}'),
+];
+console.warn = warn;
+result
+=> ["- [x] done\n- [ ] later\n\n", "4 servings\n\n"]
+```

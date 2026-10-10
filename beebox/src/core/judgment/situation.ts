@@ -1,7 +1,7 @@
 /**
  * The situation a judgment starts from: whose box this is and what it is for.
  * A judgment card's `situation:` ref names a card whose text is used whole;
- * without one, the root briefing's `{% purpose %}` block is used, so every
+ * without one, the root briefing's `purpose:` field is used, so every
  * judgment knows whose box it is. See docs/implemented-plans/notifications.md (Track D and
  * Track F, "Give Jev the situation").
  */
@@ -10,6 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../shared/error-guards.js";
 import { resolveRefPath } from "../../shared/ref-path/core.js";
+import { readCardFrontmatter } from "../card-io.js";
 
 /** The root briefing, box-relative (`core/docs-gen/compile.ts` reads the same file). */
 const ROOT_BRIEFING_PATH = "_content/briefing.briefing.card";
@@ -17,7 +18,12 @@ const ROOT_BRIEFING_PATH = "_content/briefing.briefing.card";
 /** The stock stub a new box's briefing carries; it says nothing about the box. */
 const STUB_PURPOSE = "What this box is for.";
 
-const PURPOSE_BLOCK = /{%\s*purpose\s*%}([\S\s]*?){%\s*\/purpose\s*%}/;
+/** The root briefing's `purpose:` frontmatter field, trimmed; null when absent or not a string. */
+function readPurpose(briefingText: string): string | null {
+  const fm = readCardFrontmatter(briefingText);
+  const value = fm?.["purpose"];
+  return typeof value === "string" ? value.trim() : null;
+}
 
 /** A `situation:` ref that names no card: it escapes the box (`resolved` null) or the card is missing. */
 export class SituationRefError extends Error {
@@ -64,7 +70,7 @@ export async function resolveSituation(
     return { text: text.trim(), source: resolved };
   }
   const briefing = await readIfPresent(path.join(boxRoot, ROOT_BRIEFING_PATH));
-  const purpose = briefing === null ? null : PURPOSE_BLOCK.exec(briefing)?.[1]?.trim() ?? null;
+  const purpose = briefing === null ? null : readPurpose(briefing);
   if (purpose === null || purpose === "" || purpose === STUB_PURPOSE) {
     return { text: "", source: `none (the root briefing ${ROOT_BRIEFING_PATH} has no purpose statement)` };
   }

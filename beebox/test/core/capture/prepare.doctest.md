@@ -170,16 +170,16 @@ const doc = await box.read(docRel);
 => { hasSessionId: true, transcriptionFailedFlag: false, audioTranscribed: true, notifications: 0, timingWords: 4 }
 ```
 
-The assembled body interleaves speech, the photo, and the silence gap in
-absolute-time order (silence is measured from the last word before the gap):
+The assembled body interleaves speech, the photo (a markdown link to its
+image card), and the silence gap (a plain text line) in absolute-time order (silence is measured from the last word before the gap):
 
 ```ts continue
 splitCardContent(await box.read(docRel)).body.trim()
 => Walked through the kitchen.
 «blankline»
-{% image ref="attach/photo-001.image.card" /%}
+[photo-001](attach/photo-001.image.card)
 «blankline»
-{% silence duration="26s" /%}
+— 26s silence —
 «blankline»
 Found the recipe.
 ```

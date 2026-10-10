@@ -68,7 +68,10 @@ the box has written it, since activation is the agent writing those files.
 ```ts
 const box = await makeTmpBox();
 (await listPlugins(box.root)).plugins.map((p) => `${p.name} ${p.active ? "active" : "inactive"} ${p.description} ${p.docs} stubs=${p.stubs.length}`)
-=> ["courseware inactive Courses, lesson plans, learner progress node_modules/beebox/src/plugins/courseware/README.md stubs=0"]
+=> [
+  "courseware inactive Courses, lesson plans, learner progress node_modules/beebox/src/plugins/courseware/README.md stubs=0",
+  "recipe inactive Scalable recipes with ingredient, step and yield tags node_modules/beebox/src/plugins/recipe/README.md stubs=0"
+]
 ```
 
 ```ts

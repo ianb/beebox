@@ -1653,6 +1653,13 @@ test1:
       peak: 41358
       added: 172
       turns: 3
+    - date: 2026-10-10T19:25:42.265Z
+      boxCommit: faa5ced60b2121c2a0bb6fb07af701ceb8e4a79c
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31303
+      peak: 34983
+      added: 3680
+      turns: 4
   cooking-follow-recipe-pattern:
     - date: 2026-07-03T10:45:45.958Z
       boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
@@ -1661,6 +1668,13 @@ test1:
       peak: 41346
       added: 161
       turns: 3
+    - date: 2026-10-10T19:25:42.265Z
+      boxCommit: faa5ced60b2121c2a0bb6fb07af701ceb8e4a79c
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31302
+      peak: 31723
+      added: 421
+      turns: 4
   what-are-tricks:
     - date: 2026-07-03T10:45:45.958Z
       boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
@@ -3536,6 +3550,13 @@ test1:
       peak: 44700
       added: 6990
       turns: 9
+    - date: 2026-10-10T22:20:51.465Z
+      boxCommit: 9ab5c61e99e5f879e233cf5e6b7dd7433e150b09
+      repoCommit: c851f0f588746e6531916f2170e96176781bfb75
+      initial: 31343
+      peak: 33193
+      added: 1850
+      turns: 4
   briefing-prose-vs-tag:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3544,6 +3565,13 @@ test1:
       peak: 41222
       added: 0
       turns: 1
+    - date: 2026-10-10T22:21:04.863Z
+      boxCommit: 9ab5c61e99e5f879e233cf5e6b7dd7433e150b09
+      repoCommit: c851f0f588746e6531916f2170e96176781bfb75
+      initial: 31350
+      peak: 33327
+      added: 1977
+      turns: 4
   briefing-correction-test:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3567,6 +3595,13 @@ test1:
       peak: 45262
       added: 1510
       turns: 3
+    - date: 2026-10-10T19:25:42.265Z
+      boxCommit: faa5ced60b2121c2a0bb6fb07af701ceb8e4a79c
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31315
+      peak: 37080
+      added: 5765
+      turns: 10
   recipe-ingredient-attrs:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3575,6 +3610,13 @@ test1:
       peak: 42848
       added: 1622
       turns: 3
+    - date: 2026-10-10T19:25:42.265Z
+      boxCommit: faa5ced60b2121c2a0bb6fb07af701ceb8e4a79c
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31343
+      peak: 34839
+      added: 3496
+      turns: 8
   recipe-prose-vs-tag:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3590,6 +3632,13 @@ test1:
       peak: 41245
       added: 0
       turns: 1
+    - date: 2026-10-10T19:25:42.265Z
+      boxCommit: faa5ced60b2121c2a0bb6fb07af701ceb8e4a79c
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31360
+      peak: 33010
+      added: 1650
+      turns: 3
   contains-writing-rule:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -6854,6 +6903,13 @@ test1:
       peak: 31005
       added: 0
       turns: 2
+    - date: 2026-10-10T19:24:37.648Z
+      boxCommit: 646d7604a11a267883391cb38fa734bd91589e64
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31336
+      peak: 31336
+      added: 0
+      turns: 2
   plugins-extend:
     - date: 2026-10-10T05:59:29.115Z
       boxCommit: df39ea1227683b222b6fa7499790053f4ec23032
@@ -6876,6 +6932,13 @@ test1:
       peak: 40784
       added: 9784
       turns: 19
+    - date: 2026-10-10T19:24:37.648Z
+      boxCommit: 646d7604a11a267883391cb38fa734bd91589e64
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31331
+      peak: 36455
+      added: 5124
+      turns: 6
   plugins-activate:
     - date: 2026-10-10T06:02:23.842Z
       boxCommit: df39ea1227683b222b6fa7499790053f4ec23032
@@ -6891,6 +6954,13 @@ test1:
       peak: 35581
       added: 4570
       turns: 8
+    - date: 2026-10-10T19:24:37.648Z
+      boxCommit: 646d7604a11a267883391cb38fa734bd91589e64
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31342
+      peak: 36779
+      added: 5437
+      turns: 7
   chat-live-transcript-marker:
     - date: 2026-10-09T23:51:18.951Z
       boxCommit: 53066dd79fbf3c3e591acfd8d3aa09f628e1e41a
@@ -6958,6 +7028,45 @@ test1:
       peak: 40612
       added: 0
       turns: 2
+  plugins-scoped-tags:
+    - date: 2026-10-10T19:24:37.648Z
+      boxCommit: 646d7604a11a267883391cb38fa734bd91589e64
+      repoCommit: 966d962fbbd99bac65dc3455d5b733159b772831
+      initial: 31348
+      peak: 35132
+      added: 3784
+      turns: 7
+  briefing-purpose-frontmatter:
+    - date: 2026-10-10T22:20:37.720Z
+      boxCommit: 53e8e72c4c6fd53d029a053ae3d527a92dfd020e
+      repoCommit: c851f0f588746e6531916f2170e96176781bfb75
+      initial: 31333
+      peak: 33745
+      added: 2412
+      turns: 6
+  briefing-corrections-section:
+    - date: 2026-10-10T22:21:23.803Z
+      boxCommit: 9ab5c61e99e5f879e233cf5e6b7dd7433e150b09
+      repoCommit: c851f0f588746e6531916f2170e96176781bfb75
+      initial: 31361
+      peak: 35833
+      added: 4472
+      turns: 5
+  capture-transcript-markers:
+    - date: 2026-10-10T22:21:43.182Z
+      boxCommit: 9ab5c61e99e5f879e233cf5e6b7dd7433e150b09
+      repoCommit: c851f0f588746e6531916f2170e96176781bfb75
+      initial: 31335
+      peak: 35410
+      added: 4075
+      turns: 9
+    - date: 2026-10-10T22:23:15.747Z
+      boxCommit: 9ab5c61e99e5f879e233cf5e6b7dd7433e150b09
+      repoCommit: c851f0f588746e6531916f2170e96176781bfb75
+      initial: 31335
+      peak: 34366
+      added: 3031
+      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
