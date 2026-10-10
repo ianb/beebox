@@ -547,7 +547,8 @@ mint them independently; the ids are per-emission and per-kind.
 - **Semantics:** every dictated conversation message gets the HQ pass (`docs/plans/hq-always.md`):
   the native Send button and every spoken-send keyword enter the durable HQ audio preparation
   path, whatever this channel says. Typed messages remain direct sends. The quick chat composer
-  (§5.11) has no HQ pass and sends its live transcript. Web always posts
+  (§5.11) runs only the on-device pass below (no recording reaches the box) and sends
+  `hqService` with the thought, or its live transcript when the pass does not run. Web always posts
   `enabled: true`; current native ignores `enabled` and reads only `diarized`. Builds from before
   this change read `enabled` and so keep running HQ.
 - **Cost:** one HQ call per dictated minute when the box pass runs — about $0.006/min on `whisper`
@@ -1274,16 +1275,21 @@ See §1.3 (full request/response/errors).
 ### 5.11 Quick chat — `quickChat.submit`, `choose`, `discard`, `home`
 
 - **Direction:** native → box, bearer-authenticated tRPC (not batched). `POST
-  /api/trpc/quickChat.submit` `{id,message,origin?,source?,channel?}`, `POST /api/trpc/quickChat.choose`
+  /api/trpc/quickChat.submit` `{id,message,origin?,source?,hqService?,channel?}`, `POST /api/trpc/quickChat.choose`
   `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
   /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. `origin` is `"typed"`,
   `"voice"`, or `"external"`, how the person entered the thought; an absent `origin` (a build from
-  before it) is `"typed"`. External input requires a source; other origins reject `source`. The
-  record keeps origin and source, and delivery, by `submit` or a later `choose`, wraps typed thoughts
-  as `<typed source="box-screen">`, voice thoughts as `<speech source="box-screen" stt="live">`
-  (the phone's live transcript; no recording reaches the box), and external thoughts as
+  before it) is `"typed"`. External input requires a source; other origins reject `source`.
+  `hqService` (a short token, voice only) names the engine of an HQ pass the phone ran on the
+  dictation, `apple-speech-transcriber` from `Services/OnDeviceHqTranscriber.swift`; absent means
+  the phone's live transcript (`docs/plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+  and hqService, and delivery, by `submit` or a later `choose`, wraps typed thoughts as
+  `<typed source="box-screen">`, voice thoughts as `<speech source="box-screen" stt-service="…">`
+  with hqService or `<speech source="box-screen" stt="live">` without (no recording reaches the
+  box, so there is no server pass), and external thoughts as
   `<external-input source="apple-app-intents">`. A repeated `submit` of a stored id keeps its
-  stored origin and source. Each mutation answers a
+  stored origin, source, and hqService. A box from before hqService strips the key and frames the
+  thought `stt="live"`. Each mutation answers a
   `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Each
   `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
   first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
@@ -1303,7 +1309,7 @@ See §1.3 (full request/response/errors).
 - **Request deadline:** the App Intent's initial `quickChat.submit` request has a 20-second timeout
   so Siri can return an honest local-queue result inside its execution window. Other quick-chat
   mutations retain the normal 60-second request timeout.
-- **Outbox:** the phone stores `{id,boxID,text,origin,source?,createdAt,attempts,lastAttemptAt}` in
+- **Outbox:** the phone stores `{id,boxID,text,origin,source?,hqService?,createdAt,attempts,lastAttemptAt}` in
   `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
   answers. A failed request keeps it; retries follow a backoff while the app is in the
   foreground, and once per launch, for seven days, then the row reads "Not sent". An entry for a
