@@ -1,5 +1,8 @@
 # Enforcement: Iron Laws and a 23-hook layer
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 **Snapshot date:** 2026-07-30. Companion to [README.md](README.md).
 
 Their central bet is that **prose in a config file does not change agent

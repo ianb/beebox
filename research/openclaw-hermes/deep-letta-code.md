@@ -1,5 +1,8 @@
 # letta-code — Deep Technical Dive
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 *Repo: [letta-ai/letta-code](https://github.com/letta-ai/letta-code), read at shallow-clone HEAD `d90d3bf` (2026-07). TypeScript/Bun, Ink TUI. All file:line citations are into the clone at `scratchpad/letta-code`.*
 
 **What it is:** a Claude-Code-shaped CLI where the agent is not a process you start but a **persistent server-side entity** — "agents that are more like people than tools... memory, identity, and a sense of experience over time" (README.md:5). Built by the MemGPT / sleep-time-compute people. The interesting question for us (building on Claude Code / Agent SDK): what actually changes about a coding CLI when the agent persists?

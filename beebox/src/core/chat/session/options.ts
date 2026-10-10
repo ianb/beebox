@@ -89,7 +89,7 @@ export interface ChatSessionOptions {
   /**
    * Box-relative directory this chat is bound to (set when the chat was
    * started from a landmark). When present, the SDK's `cwd` is the landmark
-   * directory so its `CLAUDE.md` / `MAP.md` auto-load, the box root is added
+   * directory so its `AGENTS.md` / `MAP.md` auto-load, the box root is added
    * via `additionalDirectories` so the rest of the box stays accessible, and
    * a one-line note is appended to the system prompt naming the directory.
    *

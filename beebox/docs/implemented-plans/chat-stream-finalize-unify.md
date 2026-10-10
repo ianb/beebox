@@ -6,6 +6,9 @@ issues: []
 ---
 # Chat streaming/finalize unification: one stably-keyed assistant turn
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 When a streamed assistant response finalizes, the live streaming bubble is
 unmounted and the completed message is mounted in its place — a visible
 "shudder" (the streamed text disappears and the full response pops in). This

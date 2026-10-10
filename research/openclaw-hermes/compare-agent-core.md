@@ -1,5 +1,8 @@
 # Core Agent Loop & Model Layer — Comparison
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Bee Box (bbx) vs. OpenClaw vs. Hermes Agent. Scope: who owns the turn loop, how
 models/providers are abstracted, streaming, steering/interruption, retries/failover,
 queueing/concurrency, sub-agent delegation, and token/cost accounting.

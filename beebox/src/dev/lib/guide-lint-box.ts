@@ -22,7 +22,7 @@ export interface BoxGuideLintReport extends GuideLintReport {
 
 /**
  * The `agent-context chat` always-loaded total, with `guide` counted in place
- * of the box's on-disk `.beebox/agent-guide.md` (which the box's `CLAUDE.md`
+ * of the box's on-disk `.beebox/agent-guide.md` (which the box's `AGENTS.md`
  * includes), so the number reflects this render rather than the last sync.
  */
 async function alwaysLoadedWith(boxRoot: string, guide: string): Promise<number> {

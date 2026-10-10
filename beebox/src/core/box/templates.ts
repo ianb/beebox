@@ -1,7 +1,7 @@
 /**
  * Template bodies for the box's tracked guidance, and the tricks code scaffold.
  *
- * The nested CLAUDE.md guides and the briefing seed live in
+ * The nested AGENTS.md guides and the briefing seed live in
  * `MANAGED_STOCK_TEMPLATES`, the content source for the registry's tracked
  * rows (`guidance-surfaces.ts`); `syncBoxGuidance` installs them through the
  * template tracker. The tricks `package.json` is code, not guidance, so

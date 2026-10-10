@@ -8,6 +8,8 @@ discovered-in: main — the boxholder brought an OpenAI applied-AI post for disc
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > Closed 2026-09-25 as implemented by
 > [`doc-structure`](../../../beebox/docs/implemented-plans/doc-structure.md)
 > (commit range ending `9915e8125`, plus the finish-time site-build fix). The

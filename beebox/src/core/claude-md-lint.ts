@@ -15,9 +15,9 @@
  * large" nudge, then firmer "too large" language.
  *
  * Both are *soft* warnings — never a hard error and never a commit block. The
- * nudge is to trim, or move detail onto a lazier surface (a nested CLAUDE.md,
+ * nudge is to trim, or move detail onto a lazier surface (a nested AGENTS.md,
  * a `.claude/rules/` glob, or a skill) rather than to fail the edit. Markdown
- * validity is deliberately NOT checked for CLAUDE.md (it isn't rendered); only
+ * validity is deliberately NOT checked for instruction files (they aren't rendered); only
  * size is.
  *
  * Sources (June 2026):

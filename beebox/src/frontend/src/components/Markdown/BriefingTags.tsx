@@ -2,7 +2,7 @@
  * Briefing body-tag components: `{% purpose %}` and `{% correction %}` —
  * the free-text material. Each renders as a compact styled block; the
  * backend `compileBriefing` emitter produces the parallel `**Label:** …`
- * markdown that lands in the @-included CLAUDE.md slice.
+ * markdown that lands in the @-included AGENTS.md slice.
  *
  * The structured records (key-people, properties) live in briefing
  * frontmatter and render via the default card viewer's field table, not

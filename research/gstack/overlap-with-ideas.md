@@ -1,5 +1,8 @@
 # gstack ↔ beebox/docs/ideas.md overlap
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Pairing each gstack skill that's marked `try`, `integrate`, `integrate (parts)`,
 or `tbd (mine ideas)` against ideas.md entries that point at the same territory.
 Goal: when one of these gstack experiments lands in beebox, it lands on

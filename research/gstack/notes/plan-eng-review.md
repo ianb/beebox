@@ -1,5 +1,8 @@
 # /plan-eng-review — engineering plan review
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A 1787-line skill that does a structured eng review of a plan document. Dense, but several pieces are genuinely good — especially the ones that align with your form-as-prompt preference and the "explain-why-then-reason" framing.
 
 This is the skill where Garry's engineering opinions are most exposed, and the structure of the review is calibrated to those opinions. Some of it transfers wholesale; the calibration itself is the most interesting transferable pattern.

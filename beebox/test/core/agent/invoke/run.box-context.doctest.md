@@ -1,6 +1,6 @@
 # What a small pass does not load
 
-The SDK loads a box's own agent context by default — `CLAUDE.md`, the generated
+The SDK loads a box's own agent context by default — `AGENTS.md`, the generated
 agent guide, `.claude/rules/`. For the reactor, procedure runs and chat that is
 the design. For the small structured passes (chat review, retro observation,
 triage, the procedure judge) it is pure cost: measured on the test box it is
@@ -10,7 +10,7 @@ or a yes/no verdict cannot use any of it
 
 `loadBoxContext: false` is how a call site opts out. It reaches the SDK as an
 empty `settingSources`. Every other run loads the box's project settings
-(`CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, the box hooks) and nothing
+(`AGENTS.md`, `.claude/rules/`, `.claude/skills/`, the box hooks) and nothing
 from the host user's `~/.claude`.
 
 ```ts setup

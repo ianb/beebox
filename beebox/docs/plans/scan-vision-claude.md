@@ -491,7 +491,7 @@ In `executeScanImport` (both photo entry points), replacing the two
 | Gemini key invalid (401/403) | doctest: fake `"fatal"` path | `"fatal"` → run aborts once, loudly (improvement over today's per-batch failure spam) | Clear |
 | `BBX_SCAN_VISION` typo | doctest of the selection function | hard error listing valid values | Clear |
 | Claude structured output missing/unparseable despite `success` | doctest: fake-shape test of the parse boundary | Zod `safeParse` → typed error → split/fail path | Clear |
-| Box CLAUDE.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` — hermetic call, unlike the reactor | Silent by design (documented in the service header) |
+| Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` — hermetic call, unlike the reactor | Silent by design (documented in the service header) |
 
 ## Agent-flow / user-flow edge cases
 

@@ -1,5 +1,8 @@
 # gstack review
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Working through Garry Tan's [gstack](https://github.com/garrytan/gstack) — a collection of ~50 Claude Code "skills" (slash commands defined by `SKILL.md` files). Goal: absorb ideas, not copy wholesale. Identify what to experiment with, what to integrate, what to skip.
 
 Local clone: `/tmp/gstack/` (shallow). Re-clone if gone.

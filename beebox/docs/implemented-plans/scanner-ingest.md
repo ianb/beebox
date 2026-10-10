@@ -6,6 +6,9 @@ issues: []
 ---
 # Scanner Ingest
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **⚠ Its annex citations point at deleted files** (full-embrace-annex,
 > 2026-09-14). `src/core/annex/to-annex.ts` and `to-annex-errors.ts` no longer
 > exist, and neither does the migration they implemented — every box is

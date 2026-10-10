@@ -6,6 +6,9 @@ issues: []
 ---
 # `extfile` Card — an In-Box Pointer to a Live External File
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Implemented (2026-06).** Shipped as Tracks A–D: the `extfile` schema
 > (`src/schemas/extfile.tsx`) + lint (`src/core/card-lint.ts` (moved to `beebox/src/core/card-lint/core.ts`)), `bbx extfile sync`
 > (`src/cli/commands/extfile.ts`, `src/core/extfile-sync.ts`,

@@ -6,6 +6,9 @@ issues: []
 ---
 # Implementation spec: `.attach/` directories
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **⚠ Its forward pointer is stale** (full-embrace-annex, 2026-09-14). The
 > `.attach/` convention is live, but it is no longer "part of the asset-manifest
 > system": that scheme and its SHA-256 `manifest.json` tracking are deleted, and

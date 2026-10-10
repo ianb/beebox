@@ -33,7 +33,7 @@ pnpm exec bbx engine serve content
 ```
 
 `bbx engine init` scaffolds the package (`package.json`, `tsconfig.json`, a thin
-`CLAUDE.md`) and the box itself under `content/` — directories, default
+`AGENTS.md`) and the box itself under `content/` — directories, default
 procedures and guides, generated agent docs, and an initial git commit. The
 `pnpm install` resolves the real dependency `bbx engine init` just wrote. `bbx engine serve`
 then boots a local server for the box; open the printed URL in a browser.
@@ -48,14 +48,14 @@ use itself.
 my-box/                    the package — coding surfaces live here
 ├── package.json           declares a "beebox" dependency; private
 ├── node_modules/           gitignored
-├── CLAUDE.md               thin: this is a box package; the box is content/
+├── AGENTS.md               thin: this is a box package; the box is content/
 ├── src/
 │   ├── schemas/            box-local card-type definitions (optional)
 │   ├── views/              custom view definitions (optional)
 │   └── tricks/             agent-authored scripts (optional)
 └── content/                THE BOX — the operational root, no package.json inside
     ├── .bbx-box             marker file
-    ├── CLAUDE.md           the operating agent's context
+    ├── AGENTS.md           the operating agent's context
     ├── box/  store/  config/  people/  places/  docs/  procedure/
     └── ...
 ```

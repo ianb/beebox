@@ -374,7 +374,7 @@ to write from.
   `telegram-setup.md`, `calendar.md`.
 - security: `security-overview.md`, `secrets.md`.
 - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
-  directory's `CLAUDE.md` marks the rest as steering docs).
+  directory's `AGENTS.md` marks the rest as steering docs).
 - design: the ten files.
 - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
   `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,

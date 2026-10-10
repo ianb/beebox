@@ -40,7 +40,7 @@ in place of its consequence ("this is the key insight").
 
 ## Scope
 
-1. **Sweep.** Rewrite hits in present-tense reference docs, CLAUDE.md files,
+1. **Sweep.** Rewrite hits in present-tense reference docs, AGENTS.md files,
    skills, and agent-facing prompt text first. Replace the phrase with the
    concrete consequence: "load-bearing" → what breaks if it is removed.
    Delete intensifiers ("genuinely", "honestly", "crucially").

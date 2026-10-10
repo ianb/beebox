@@ -1,5 +1,8 @@
 # Knowledge audit prompt catalog and run notes (frozen 2026-02-23)
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Frozen 2026-09-24 from `docs/knowledge-taxonomy.md`. The live audit catalog is
 `src/dev/knowledge-audits.yaml`; the knowledge levels and prompt-style guidance
 that were in this file now live in

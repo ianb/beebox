@@ -7,6 +7,9 @@ issues:
 ---
 # Calibrate skill discovery and the root agent instructions
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Shorten skill descriptions without losing the connections that make a skill discoverable. Reassemble the root agent instructions around the decisions an agent needs to make, preserving repository facts and constraints while removing persuasion and duplicate explanations.
 
 The skill descriptions and root assembly have been approved. The descriptions were committed in `6fa206288`; the reviewed assembly is now applied to root `CLAUDE.md` in this worktree. The assembly below records the reviewed design; the root file is the active instruction source.

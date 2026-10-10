@@ -39,7 +39,7 @@ export interface CollectedResults {
   cardSummary: LintSummary | null;
   mdSummary: MarkdownLintSummary | null;
   attachErrors: AttachLintError[];
-  /** Soft, non-blocking size warnings for oversized CLAUDE.md files. */
+  /** Soft, non-blocking size warnings for oversized instruction files. */
   claudeMdWarnings: string[];
   /** Broken `cardRef="…"` refs in box-authored views (warning-only). */
   viewWarnings: string[];

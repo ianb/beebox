@@ -1,7 +1,7 @@
 # Briefing compile
 
 `compileBriefing` produces the markdown that gets `@`-included into
-CLAUDE.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`, prose)
+AGENTS.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`, prose)
 followed by the frontmatter records (`key-people:`, `properties:`) as
 `**Label:** …` lines, then the root place's openers. The structured records
 live in frontmatter; only the free-text material stays in the body. (Outputs

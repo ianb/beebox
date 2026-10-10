@@ -7,6 +7,8 @@ filed-by: agent
 discovered-in: worktree-path-handling-model — tracing which agent types receive the ref-path guidance (Track E of docs/implemented-plans/box-root-paths.md)
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track H, commit `d0dbbd1c0`): triage, chat review, retro observer, and the procedure judge now opt out of `loadBoxContext`, so the four structured passes stop loading the box's ~9,700-word agent context. The retro observer is flagged in code as the one worth watching if observation quality drops.
 
 While verifying that the box-root link rule reaches every agent surface, the

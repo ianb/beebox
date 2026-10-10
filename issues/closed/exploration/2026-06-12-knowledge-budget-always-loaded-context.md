@@ -6,6 +6,8 @@ area: beebox
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed:** Resolved by [the agent guide spec](../../../beebox/docs/implemented-plans/agent-guide-spec.md)
 (commit `d46da959b` and the tracks around it): `src/core/agent-guide/ledger.yaml`
 gives every always-loaded rule a row, a bin (`law`/`core`/`indirect`/`delete`),

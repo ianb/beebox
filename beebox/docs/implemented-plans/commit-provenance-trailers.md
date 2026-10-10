@@ -9,6 +9,9 @@ issues:
 
 # Commit provenance trailers
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Monorepo commits record which workstream and plan produced them, automatically,
 and optionally which issue they serve. Landings on `main` become visible merge
 commits. A small query wraps `git log` so agents answer "what did stream X do"

@@ -61,7 +61,7 @@ app-switch), so at send time `document.hidden` is often true. The post-turn refr
 that would render the durable message is therefore **parked** — the optimistic /
 streamed message is cleared on the assumption the refresh runs promptly (the chat
 finalize contract: `streamText` survives only *until* the authoritative history
-lands, then one `assign` swaps it in — see `components/chat/CLAUDE.md`), but that
+lands, then one `assign` swaps it in — see `components/chat/AGENTS.md`), but that
 refresh is deferred, so there's a **gap** where the message is simply gone. It
 reappears when the tab is foregrounded and the parked refresh finally fires (~20s =
 however long until the tab is visible again). Typing is affected less because it
@@ -98,7 +98,7 @@ reactive background refetch still is. Reproduce the disappear before fixing.
   — same optimistic-message-vs-durable-history-timing family; this is the specific
   deferred-resync mechanism.
 - `add0c339` / `546310cb` — the OOM/refetch-storm fixes this regressed out of.
-- `components/chat/CLAUDE.md` — the streaming→finalize "streamText survives until
+- `components/chat/AGENTS.md` — the streaming→finalize "streamText survives until
   history lands" invariant the deferral breaks.
 
 ## Correction (2026-08-06) — the deferred-resync hypothesis is likely WRONG

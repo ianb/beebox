@@ -1,5 +1,8 @@
 # Skills, Tools, Plugins, Extensibility — bbx vs. OpenClaw vs. Hermes
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Factual comparison across three systems' extensibility surfaces. bbx = Bee Box
 (`beebox/`, this monorepo). OpenClaw and Hermes Agent are the two comparable
 open-source personal-assistant/agent systems. Sourced from `bbx-proactivity-context.md`,

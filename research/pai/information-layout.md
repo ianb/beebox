@@ -1,5 +1,8 @@
 # Information layout — how PAI organizes context, memory, and state
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Sources:
 - `$PAI/CLAUDE.md` (the @-imports and routing tables)
 - `$PAI/PAI/DOCUMENTATION/Memory/MemorySystem.md` (581 lines — the MEMORY contract)

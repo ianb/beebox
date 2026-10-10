@@ -27,7 +27,7 @@ Several places special-case this subtree because it's bbx-owned, not box-owned:
 Since the box already resolves `beebox` from node_modules, the identical
 docs could **live once in the package and be referenced**, not copied per box:
 `node_modules/beebox/docs/generated/…` (or wherever the package ships
-them). The box's CLAUDE.md already `@`-includes the agent guide by path
+them). The box's AGENTS.md already `@`-includes the agent guide by path
 (`docs-gen/claude-md.ts:22`, `@.beebox/<AGENT_GUIDE_FILE>`) — that include
 could point into the resolved package instead.
 
@@ -48,7 +48,7 @@ away.
   split is: reference the box-invariant docs from the package, still generate the
   box-specific ones. The issue is deciding that boundary cleanly.
 - **`@`-include resolution.** Confirm Claude Code's `@path` include can point into
-  `node_modules/beebox/…` from a box's CLAUDE.md (relative path across the
+  `node_modules/beebox/…` from a box's AGENTS.md (relative path across the
   package boundary) and that validation/MAP/`list-cards` special-casing updates to
   match the new location.
 - **Version skew.** A copied doc matches whatever `bbx init` last ran; a referenced

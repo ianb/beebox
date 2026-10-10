@@ -14,6 +14,9 @@ issues:
 
 # Box model/engine policy
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 A box can say which native harness it runs (`agentEngine` in `config/box.json`).
 It cannot say which model it thinks with. This plan gives a box one **model
 policy** — a pinned model that chat, the reactor, and every other unpinned agent

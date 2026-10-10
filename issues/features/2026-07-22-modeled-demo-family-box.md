@@ -73,7 +73,7 @@ be the right builder.
 ## Open questions
 
 - **Where it lives:** `~/src/boxes/<name>/` alongside test1 (outside the monorepo
-  so it doesn't inherit the dev CLAUDE.md), like every other box.
+  so it doesn't inherit the dev AGENTS.md), like every other box.
 - **How much content** is enough to be believable without being a maintenance
   burden — and how it stays current with schema/template changes (a box that
   can't `bbx init` cleanly is a bad demo).

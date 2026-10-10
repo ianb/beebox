@@ -8,7 +8,7 @@ import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
  *
  * Deliberate-REST inventory (Track L.12e):
  * - `startChatTurn` — POST /api/chat/send. Not a tRPC candidate: per
- *   CLAUDE.md this route needs the raw request's authenticated user plus
+ *   beebox/AGENTS.md this route needs the raw request's authenticated user plus
  *   the live per-box `ChatSessionRegistry`, and its result is delivered out
  *   of band over the `events.turnStream` tRPC *subscription*, not the HTTP
  *   response — a request/response procedure can't model that split.

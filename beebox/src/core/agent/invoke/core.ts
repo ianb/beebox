@@ -5,7 +5,7 @@
  * but we communicate via typed SDKMessage events instead of parsing raw stdout.
  *
  * Set BBX_LOG_PROMPTS=1 to capture full API traffic (including system prompts
- * and CLAUDE.md content) via claude-code-logger. Logs go to .beebox/logs/.
+ * and instruction-file content) via claude-code-logger. Logs go to .beebox/logs/.
  */
 
 import type { z } from "zod";

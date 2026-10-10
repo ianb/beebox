@@ -6,6 +6,9 @@ issues: []
 ---
 # Markdoc Tags — Design
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Plan for the next four Markdoc work tracks, following the `{% quote %}`
 tag that shipped first. Each track is sized to be implemented small,
 dogfooded, then tweaked — not designed comprehensively up front.

@@ -1,5 +1,8 @@
 # Plan Engineering Review — Markdoc Tags Design
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Review of `markdoc-tags-plan.md` following the `bbx-plan-review` skill's
 review-mode template. Findings cite `file:line` in the plan and in
 source. Trace each to a stated preference in CLAUDE.md / code-style.md

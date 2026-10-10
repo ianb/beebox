@@ -15,7 +15,7 @@ box extensively. It failed as a general assistant because it centered the
 mechanics it lives inside.
 
 The cause is probably the weight of box guidance in the agent's context. The
-box CLAUDE.md and agent guide describe the box in detail, and nothing tells the
+box AGENTS.md and agent guide describe the box in detail, and nothing tells the
 agent that many questions have no relation to the box. Guidance that makes box
 questions go well can make general questions go badly.
 

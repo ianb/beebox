@@ -20,13 +20,13 @@
  *                                the box is unworkable.
  *
  *   bbx refresh-maps --prune-orphans
- *                                Delete those MAP.md files, their CLAUDE.md
+ *                                Delete those MAP.md files, their AGENTS.md
  *                                imports, and their state entries. Runs as the
  *                                procedure's shell-only first step, so a box
  *                                with only orphans never starts an agent.
  *
  *   bbx refresh-maps --finalize   Read the persisted brief, ensure per-dir
- *                                CLAUDE.md @-includes, stamp the state file for
+ *                                AGENTS.md @-includes, stamp the state file for
  *                                the maps that were actually rewritten. Runs as
  *                                a procedure run-phase shell, so it executes
  *                                even when the agent errored or ran out of
@@ -216,7 +216,7 @@ export const refreshMapsCommand = new Command("refresh-maps")
   .option("--brief", "Output the JSON brief (for agent consumption)")
   .option("--finalize", "Run the post-agent finalize step")
   .option("--orphans", "List MAP.md files in directories that no longer get one")
-  .option("--prune-orphans", "Delete orphan MAP.md files and their CLAUDE.md imports")
+  .option("--prune-orphans", "Delete orphan MAP.md files and their instruction-file imports")
   .action(async (options: RunOptions) => {
     try {
       const boxRoot = await requireBoxRoot();

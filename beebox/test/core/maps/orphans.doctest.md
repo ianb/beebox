@@ -2,7 +2,7 @@
 
 Tests for `src/core/maps/orphans.ts`. A MAP.md in a directory that no longer
 gets one — hidden by an ignore pattern, or no longer meeting the container
-and useful-content rules — is never refreshed, yet its CLAUDE.md keeps
+and useful-content rules — is never refreshed, yet its instruction file keeps
 importing it into agent context. Pruning deletes the map, the import, and
 the state entry.
 
@@ -23,12 +23,12 @@ async function exists(box, rel: string): Promise<boolean> {
 
 `_content/chat/**` is a skeleton-hidden path. `solo/` has one subdirectory
 and nothing else, so it fails the useful-content rule. `work/` qualifies. The
-box root is never reported: its CLAUDE.md is a managed template.
+box root is never reported: its AGENTS.md is a managed template.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write("_content/chat/MAP.md", "# Map: store/chat\n");
-await box.write("_content/chat/CLAUDE.md", "@MAP.md\n");
+await box.write("_content/chat/AGENTS.md", "@MAP.md\n");
 await box.write("solo/only/a.md", "a");
 await box.write("solo/MAP.md", "# Map: solo\n");
 await box.write("work/notes/a.md", "a");

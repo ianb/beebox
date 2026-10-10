@@ -215,7 +215,7 @@ program
     const engine = options.engine;
 
     // `--box` names a path at or below the box's one root; resolve to that
-    // root (where `.beebox/box.json`, cards, and CLAUDE.md live) so
+    // root (where `.beebox/box.json`, cards, and AGENTS.md live) so
     // generateDocs/runTest target the box itself, and derive a stable ledger
     // identity. See resolveAuditBox. assertStandaloneBox verifies the git
     // repo is that same root.
@@ -243,7 +243,7 @@ program
     // Capture the box's HEAD *before* regenerating docs. generateDocs makes a
     // deterministic template-sync commit, so the post-regen HEAD churns every
     // run; the pre-regen HEAD is the stable key that moves only when the box
-    // itself meaningfully changes (e.g. a CLAUDE.md trim). Paired with
+    // itself meaningfully changes (e.g. an AGENTS.md trim). Paired with
     // repoCommit it still pins the exact audited context.
     const boxCommit = gitHead(resolvedBox);
 

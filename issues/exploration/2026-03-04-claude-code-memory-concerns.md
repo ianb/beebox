@@ -12,4 +12,4 @@ Auto-memory (`~/.claude/projects/<path-hash>/memory/`) is problematic:
 - No setting to relocate memory into the project repo
 - Open feature request: [anthropics/claude-code#25739](https://github.com/anthropics/claude-code/issues/25739)
 
-Durable project knowledge should go in repo files (CLAUDE.md, docs/), not auto-memory.
+Durable project knowledge should go in repo files (AGENTS.md, docs/), not auto-memory.

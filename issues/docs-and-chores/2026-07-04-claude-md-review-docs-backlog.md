@@ -27,7 +27,7 @@ folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, a
   on when to reach for XState vs. `useState`/`useReducer`, naming
   (`fooMachine.ts`), the one-machine-per-hook pattern, or the boundary
   between machine state and tRPC/SSE-driven state.
-- **Decide which directories get their own CLAUDE.md.** Candidates that
+- **Decide which directories get their own AGENTS.md.** Candidates that
   carry real conventions with no home: `src/cli/` (40+ commands, shared
   `lib/`, where to add a new one) and `src/webapp/` (tRPC routers, raw
   routes, auth, server — where the tRPC-by-default rule logically lives).

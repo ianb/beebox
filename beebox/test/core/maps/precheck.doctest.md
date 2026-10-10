@@ -144,7 +144,7 @@ Rules that gate which directories qualify:
 - **Useful-content rule** — at least 2 total visible children. A
   single-entry MAP just restates one bullet; not worth a file.
 - **Root is always skipped** — top-level paths are skeleton categories
-  already covered in CLAUDE.md.
+  already covered in the root AGENTS.md.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -263,8 +263,9 @@ await box.cleanup();
 
 ## Instruction files and box config never appear in a listing
 
-Every box gets an `AGENTS.md` symlink beside each `CLAUDE.md` so a Codex
-session finds the same content under the name it reads. Both names are meta —
+A box not yet converted to `AGENTS.md` has an `AGENTS.md` symlink beside
+each `CLAUDE.md`, so a Codex session finds the same content under the name it
+reads. Both names are meta —
 listing either one asks the agent to describe an instruction file in a content
 MAP, which it correctly refuses to do, so the precheck never goes quiet and
 every later run fails the same way. `_config/box.json` is machine-owned config

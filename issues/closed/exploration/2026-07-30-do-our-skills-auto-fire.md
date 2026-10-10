@@ -7,6 +7,8 @@ discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 resolution: superseded
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > Superseded 2026-08-27: consolidated into
 > [run-skill-trigger-evals](../../docs-and-chores/2026-07-30-run-skill-trigger-evals.md),
 > which now owns the eval run, the description rewrite, and the auto-fire question.

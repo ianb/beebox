@@ -23,7 +23,7 @@ export type SearchWhere = z.infer<typeof searchWhereSchema>;
 /**
  * Who is audited: `box` (default) a box agent in a box, `dev` a headless
  * Claude Code session in this monorepo checkout, which loads the dev
- * guidance (CLAUDE.md files, skills) instead of box guidance.
+ * guidance (AGENTS.md files, skills) instead of box guidance.
  */
 const auditSurfaceSchema = z.enum(["box", "dev"]);
 export type AuditSurface = z.infer<typeof auditSurfaceSchema>;
@@ -73,7 +73,7 @@ const auditTestObjectSchema = z.object({
    * Box-relative subdirectory to run the agent from — simulates a landmark
    * session. The SDK's `cwd` becomes `<boxRoot>/<context_dir>` and the box
    * root is added via `additionalDirectories`, mirroring what `ChatSession`
-   * does for landmark-bound chats. The directory's own `CLAUDE.md` walk-up is
+   * does for landmark-bound chats. The directory's own `AGENTS.md` walk-up is
    * what's being audited.
    */
   context_dir: z.string().optional(),
