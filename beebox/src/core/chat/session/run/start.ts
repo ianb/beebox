@@ -30,6 +30,7 @@ import {
 import type { FeatureStore } from "./features.js";
 import type { ChatBackendStartOptions, ChatContentBlock } from "../../../../services/claude-chat/core.js";
 import type { ChatSessionOptions } from "../options.js";
+import { buildLandmarkBoxContext } from "../landmark-context.js";
 
 const log = makeLog("ChatSession");
 
@@ -116,14 +117,18 @@ export async function buildBackendStartOptions(
 ): Promise<{ startOpts: ChatBackendStartOptions; resolvedContextDir: string | null }> {
   const baseSystemPrompt = await resolveSystemPrompt(ctx);
   const contextDir = await pickContextDir(ctx);
-  const systemPrompt = contextDir
-    ? baseSystemPrompt + buildLandmarkSessionNote(contextDir)
-    : baseSystemPrompt;
   const cwd = contextDir ? path.join(ctx.boxRoot, contextDir) : ctx.boxRoot;
   const engine = await resolveStartEngine(ctx.boxRoot, {
     sessionId: ctx.sessionId,
     requested: ctx.options.engine ?? null,
   });
+  // A Claude landmark chat starts below the box root, where the root's `@`
+  // includes (agent guide, briefing) do not load, so they ride the system
+  // prompt. Codex already gets them: codex-chat appends the root's includes.
+  const landmarkBoxContext = contextDir && engine === "claude" ? await buildLandmarkBoxContext(ctx.boxRoot) : "";
+  const systemPrompt = contextDir
+    ? baseSystemPrompt + landmarkBoxContext + buildLandmarkSessionNote(contextDir)
+    : baseSystemPrompt;
   const baseEnv = await buildScriptEnv(ctx.boxRoot, {
     CLAUDECODE: undefined,
     // Only when a real id exists — a pending-new session must not advertise a
@@ -156,6 +161,7 @@ export async function buildBackendStartOptions(
   }
   if (contextDir) {
     startOpts.additionalDirectories = [ctx.boxRoot];
+    startOpts.boxRoot = ctx.boxRoot;
   }
   return { startOpts, resolvedContextDir: contextDir };
 }
