@@ -1,6 +1,6 @@
 ---
 title: "Mark gaps in the live transcript"
-status: draft
+status: active
 workstream: hq-always
 issues: []
 ---
@@ -59,8 +59,9 @@ timer the transcript does not otherwise have.
 
 ### Trust
 
-Shows only, takes no action. The agent's response to an unsure span is
-already governed by the chat prompt's unsure-mark guidance.
+Shows only, takes no action. The marker must also not create one: spoken
+commands never match across it (Track 1). The agent's response to an unsure
+span is already governed by the chat prompt's unsure-mark guidance.
 
 ### When it goes wrong or does nothing
 
@@ -72,6 +73,13 @@ already governed by the chat prompt's unsure-mark guidance.
   editable text. The person sees the gap and can type over it.
 - The microphone itself is lost (`reconnecting`): no audio exists for that
   stretch, and this plan does not mark it (NOT in scope).
+- Unconfirmed in-progress words at the moment of the drop vanish, as they do
+  today (`fold()` keeps only final text,
+  `transcription-segment-text.ts:26`). They fall inside the gap, so the marker
+  stands for them too.
+- Recording before the first live connection: no marker; the pending bubble
+  already says "Recording without live text"
+  (`voice-keyword-send.ts:124`) when nothing was transcribed.
 
 ### Walkthrough
 
@@ -90,9 +98,10 @@ and the chat would render the marker with the unsure underline.
 
 Smallest fix: append `[…]` to the live text on every drop and never remove
 it. Chosen design: also remove it on reconnect when the replay covered the
-gap, and wrap it as unsure at assembly. One track, frontend only. Estimate:
-~60 source lines (actor, segment text, assembler, prompt sentence), ~80 test
-lines (two doctests extended), one knowledge audit. Docs: one paragraph in
+gap and the recognizer has caught up, block keyword matches across it, and
+wrap it as unsure at assembly. One track, frontend only. Estimate: ~120
+source lines (gap state, ring, segment text, actor, tokenizer, assembler,
+prompt), ~150 test lines, one knowledge audit. Docs: one paragraph in
 `docs/chat/composer.md`.
 
 ## Stated preferences this plan trades against
@@ -143,8 +152,14 @@ No decision depends on an external premise. Transcript gap notation such as
   transcript. New. Not a composer token (`[file#N]`, `[image#N]`).
 - **Gap** — existing (`ReplayRing.gapStart`): frames since live forwarding
   stopped.
-- **Covered gap** — new term: a gap whose frames all fit in the ring at
-  reconnect (`seen - gapStart <= frames.length`).
+- **Outage start** — new: the frame count when live forwarding actually
+  stopped, before the replay pad is subtracted. `gapStart` is
+  `outageStart - padFrames`.
+- **Covered gap** — new term: every frame since the outage start is still in
+  the ring at reconnect (`seen - outageStart <= frames.length`). Covered
+  means the audio is available for replay, not that it has been transcribed.
+- **LiveGapTracker** — new pure class owning the marker decisions, used by
+  the actor. Not the ring and not the segment text; it combines them.
 
 ## Tracks / scope
 
@@ -154,26 +169,35 @@ No decision depends on an external premise. Transcript gap notation such as
 - **Why:** a send during or after an uncovered drop shows less text than was
   spoken, with nothing saying so.
 - **Direction:**
-  - `ReplayRing.sinceGap()` stays; add `coversGap(): boolean`.
+  - `ReplayRing.markGap` records `outageStart` as well as the padded
+    `gapStart`; add `coversGap(): boolean` per the Ontology.
   - `SegmentTranscript.openGap()`: fold, then append `LIVE_GAP_MARKER` to the
-    committed prefix (once; no double marker if already trailing).
-    `closeGap({ covered })`: when covered, remove the trailing marker.
-  - `dropLink` and `abandonLive` call `openGap()` and send a TEXT_UPDATE with
-    the merged text and empty interim. `adopt` calls
-    `closeGap({ covered: replay.coversGap() })` before replaying and sends a
-    TEXT_UPDATE.
+    committed prefix, once (no `[…] […]`). `dropGapMarker()`: remove that
+    trailing marker.
+  - Gap decisions live in the actor's session as a small state: on drop or
+    abandon, open the gap and send a TEXT_UPDATE (merged text, empty
+    interim). On reconnect: if not covered, the marker is permanent; if
+    covered, it stays until the new connection delivers its first non-empty
+    final text, then it is removed. A send in between keeps it.
   - First connect: the gap starts at frame 0 (`transcription-replay-ring.ts:8`).
-    No marker is shown before the first connect; if that connect's replay is
-    truncated, `closeGap` inserts the marker at the start instead.
+    No marker before it; if that connect's replay is not covered, the marker
+    goes at the start.
+  - Keyword spotting: `tokenizeInput` (`lib/patmatch/tokenize.ts:69`) emits
+    the marker as its own word whose normalized form matches no pattern word,
+    so no phrase can span it.
   - `assembleChatMessage`: after unsure marking, for a voice emission without
-    `hqText`, wrap each bare `LIVE_GAP_MARKER` in the spoken part
-    (`spokenStart` onward) that is not already inside `<unsure>…</unsure>`.
+    `hqText`, wrap each bare `LIVE_GAP_MARKER` not already inside
+    `<unsure>…</unsure>`, anywhere in the text. Markers folded into the
+    composer from an earlier segment, or restored by "Continue" on recovered
+    dictation, are voice-made too. A person typing `[…]` into a voice message
+    gets it wrapped; accepted.
   - Prompt: one sentence in the unsure paragraph of
     `core/chat/session/prompts.ts`.
 - **Vocabulary lock-ins:** `LIVE_GAP_MARKER = "[…]"`, exported from one module
   shared by actor and assembler.
-- **First implementation chunk:** `SegmentTranscript` + `ReplayRing`
-  changes with a doctest; then the actor wiring; then the assembler and prompt.
+- **First implementation chunk:** `ReplayRing.coversGap`, `SegmentTranscript`
+  gap methods, and the gap state as a pure class with an event-sequence
+  doctest; then the actor wiring; then tokenizer, assembler, and prompt.
 
 ## Could this be simpler?
 
@@ -195,8 +219,12 @@ none
 | Two drops before reconnect leave `[…] […]` | planned (segment-text doctest) | `openGap` skips a trailing marker | clear |
 | Replay covered, marker not removed | planned | `closeGap({covered:true})` | visible as a false hole |
 | Marker inside an unsure span gets double-wrapped | planned (assemble doctest) | wrap only outside spans | clear |
-| Typed `[…]` in the typed prefix gets wrapped | planned | wrap only from `spokenStart` | clear |
-| Keyword spotted across a gap ("send […] message") | no | none; punctuation is ignored by tokenizing | accepted risk: needs the two words to straddle an uncovered gap exactly |
+| Send between a covered reconnect and the first new text sends without marker | planned (gap-state doctest) | marker kept until first non-empty final | clear |
+| First new final covers only the replay pad (words already shown), so the marker goes before the gap's own words arrive | no | none | accepted: the rest of the replay transcribes within a second or two, and the recognizers expose no audio timestamps on every service to do better |
+| Replay pad counted as outage, false permanent hole | planned (ring doctest) | `outageStart` separate from `gapStart` | clear |
+| Keyword spotted across a gap ("cancel […] message") | planned (tokenize doctest) | marker is its own unmatched word | clear |
+| Marker folded into composer, sent later unwrapped | planned (assemble doctest) | wrap anywhere in voice text | clear |
+| Marker next to unsure-marked words misaligns marking | planned (assemble doctest with words on both sides) | marker is a body token no word matches | clear |
 | HQ text replaces live text | existing (voice-intent doctest) | HQ branch builds fresh text | marker gone, correct |
 
 No critical gap.
@@ -207,8 +235,8 @@ No critical gap.
   the bracketed form means.
 - Stale ref — not applicable.
 - Two agents — not applicable.
-- Hand-edit drift — ADDRESSED: a person typing `[…]` in the typed prefix is
-  left alone (spoken part only).
+- Hand-edit drift — ADDRESSED: a typed-only message never wraps; a `[…]`
+  typed into a voice message's prefix gets wrapped (accepted).
 - Fabricated value — ADDRESSED: the agent never writes the marker; the unsure
   guidance already says never emit `<unsure>`.
 - Validation UX — not applicable.
@@ -219,7 +247,6 @@ No critical gap.
 - Marking microphone loss (`reconnecting`): no audio exists, a different
   meaning; considered, not now because the user asked about live text.
 - iOS: Apple's live recognizer runs on the device and does not drop this way.
-- Blocking keyword matches across a marker: accepted risk above.
 - A configurable or localized marker string.
 
 ## Open design questions
@@ -235,16 +262,21 @@ transcribed and ask or retranscribe if it matters. Run before landing.
 
 ## What will hold this after it ships
 
-Doctests: `SegmentTranscript` gap open/close (pure),
-`ReplayRing.coversGap` (pure), and `chat.emission-assemble` wrapping. The
-actor wiring is covered by the existing transcription-actor doctests if they
-reach `dropLink`/`adopt`; otherwise the pure pieces carry the decision.
+Doctests: the gap-state class as event sequences (drop, covered reconnect,
+send before first text, first text, uncovered reconnect, double drop,
+abandon), `ReplayRing.coversGap` with the pad, `tokenizeInput` with a marker,
+and `chat.emission-assemble` wrapping with unsure words on both sides. There
+is no actor-level doctest (the actor needs a microphone worklet and staging
+queue; the machine doctests use a fake actor), so the actor stays thin
+wiring over the tested class, and a browser check with DevTools "Offline"
+covers it.
 
 ## Implementation order
 
-1. `ReplayRing.coversGap`, `SegmentTranscript.openGap/closeGap`, doctests.
-2. Actor wiring in `dropLink`, `abandonLive`, `adopt`.
-3. Assembler wrap, prompt sentence, composer doc paragraph.
+1. `ReplayRing.coversGap`, `SegmentTranscript` gap methods, gap-state class,
+   doctests.
+2. Actor wiring in `dropLink`, `abandonLive`, `adopt`, `onTextUpdate`.
+3. Tokenizer word, assembler wrap, prompt sentence, composer doc paragraph.
 4. Knowledge audit, cross-model diff review.
 
 ## Rollout shape
