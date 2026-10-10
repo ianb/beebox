@@ -208,13 +208,13 @@ None. During implementation, verify `supportedModes` availability for the iOS 17
 
 ## Implementation outcome
 
-The implementation is committed in the worktree; the issue remains gated on physical-device testing. The App Intent uses the app-lifetime box store and outbox, refuses a locked or unavailable selected box before persistence, and reports sent, needs-choice, or unconfirmed states without reading a reply. The box outbox is restored without draining before a new intent entry is appended. Simulator build and XCTest, changed beebox tests, and the mobile-contract check pass. The knowledge audit was not run because its configured test box has uncommitted worktree setup changes and the audit guard forbids dirty boxes. Physical Siri phrase matching, background launch, lock-screen behavior, and Shortcut execution remain unverified.
+The implementation is merged to `main`; the issue remains gated on physical-device testing. The App Intent uses the app-lifetime box store and outbox, refuses a locked or unavailable selected box before persistence, and reports sent, needs-choice, or unconfirmed states without reading a reply. The box outbox is restored without draining before a new intent entry is appended. Simulator build and XCTest, changed beebox tests, and the mobile-contract check pass. The wrapper interpretation and Siri how-to knowledge audits both passed on the clean primary test box; the agent answered the exact “How can I use you in Siri?” question without reading files. Physical Siri phrase matching, background launch, lock-screen behavior, and Shortcut execution remain unverified.
 
-The implementation tracks are complete. Two validation gates remain before this plan can be marked implemented: run the authored knowledge audit on a clean test box, and complete the physical-device checks listed in the linked issue. The issue stays open with `needs: [manual-testing]` until the device checks pass.
+The implementation tracks and knowledge-audit gate are complete. The plan remains partial until the physical-device checks listed in the linked issue pass. The issue stays open with `needs: [manual-testing]` until then.
 
 ## Knowledge audits
 
-The `external-input-arrival-tag` `knows_directly` audit is authored in `beebox/src/dev/knowledge-audits.yaml`. It checks that an agent recognizes the wrapper as real human text from an external assistant, does not invent an audio recording, does not assume its reply will be heard, and does not apply voice-in-implies-voice-out. The audit has not been run: its configured test box has uncommitted worktree setup changes, and the audit guard forbids running against a dirty box. Run it against a clean test box and record its status before marking this plan implemented.
+The `external-input-arrival-tag` audit verifies that an agent recognizes the wrapper as real human text, understands that quick chat chose the conversation, knows there is no audio recording, and does not assume its reply will be heard. The `siri-capture-how-to` audit asks “How can I use you in Siri?” and checks the available phrases, Shortcut action, selected-box behavior, and no reply readback. Both passed on the clean primary test box on 2026-10-10 using Claude, with no files read. See the status comments beside the entries in `beebox/src/dev/knowledge-audits.yaml`.
 
 ## What will hold this after it ships
 
