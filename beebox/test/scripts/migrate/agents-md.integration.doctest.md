@@ -282,21 +282,19 @@ rows
 
 The generation cache keys on input mtimes and the engine version, not on the
 migration manifest. The migration removes the marker, so the next
-`generateDocs` regenerates the agent guide and course skill with `AGENTS.md`
-wording.
+`generateDocs` regenerates the agent guide with `AGENTS.md` wording.
 
 ```ts
 const root = await fixture();
 await generateDocs(root);
 const guide = () => fs.readFile(path.join(root, ".beebox/agent-guide.md"), "utf8");
-const skill = () => fs.readFile(path.join(root, ".claude/skills/build-course/SKILL.md"), "utf8");
-const before = { current: await generatedDocsAreCurrent(root), guide: (await guide()).includes("own `CLAUDE.md`"), skill: (await skill()).includes("editable `CLAUDE.md`") };
+const before = { current: await generatedDocsAreCurrent(root), guide: (await guide()).includes("own `CLAUDE.md`") };
 await runAgentsMd({ boxRoot: root, mode: "apply" });
 await fs.appendFile(path.join(root, "_config/migrations.jsonl"), `${JSON.stringify({ name: "agents-md-2026-10", "applied-at": "2026-10-09T00:00:00.000Z" })}\n`);
 const stale = await generatedDocsAreCurrent(root);
 await generateDocs(root);
-({ before, stale, guide: (await guide()).includes("own `AGENTS.md`"), skill: (await skill()).includes("editable `AGENTS.md`"), legacy: (await skill()).includes("CLAUDE.md") })
-=> { before: { current: true, guide: true, skill: true }, stale: false, guide: true, skill: true, legacy: false }
+({ before, stale, guide: (await guide()).includes("own `AGENTS.md`"), legacy: (await guide()).includes("own `CLAUDE.md`") })
+=> { before: { current: true, guide: true }, stale: false, guide: true, legacy: false }
 ```
 
 ```ts cleanup

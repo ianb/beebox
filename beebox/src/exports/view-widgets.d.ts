@@ -9,6 +9,15 @@
  */
 import type { ComponentType, ReactNode } from "react";
 
+/**
+ * The props a view's default export receives, and the card/file shapes in
+ * them. Re-exported from the shipped source so a plugin view typed against
+ * them matches what the host passes. The path is two directories up in both
+ * places this file lives (src/exports/ here, dist/view-widgets/ in a release),
+ * so it resolves for a box's `tsc` as well as in-repo.
+ */
+export type { ViewProps, ViewCard, ViewFile } from "../../src/core/views/types.js";
+
 export const CardLink: ComponentType<{
   cardRef: string;
   view?: string;

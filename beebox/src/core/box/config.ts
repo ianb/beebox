@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { getBoxDir } from "../../lib/paths/core.js";
+import { pluginNames } from "../../plugins.js";
 import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 import { ADDED_MODEL_LABEL_MAX, isOpenRouterModelId, type AddedModel } from "../../shared/chat-models.js";
@@ -93,6 +94,12 @@ export interface BoxConfig {
    * is nobody. A box a person actually uses must not set this.
    */
   agentBrowsing?: "owner";
+  /**
+   * The in-repo plugins this box has activated, by registry name
+   * (`src/plugins.ts`; `docs/plugins.md`). Missing means none. Read through
+   * {@link activePluginNames}, which rejects entries that name no plugin.
+   */
+  plugins?: string[];
 }
 
 /** Validated Claude Code telemetry setting for first-party runs. An invalid value reads as off. */
@@ -197,6 +204,36 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   if (engine === undefined) return "claude";
   if (engine === "claude" || engine === "codex") return engine;
   throw new InvalidAgentEngineError(engine);
+}
+
+/** Why a `plugins` entry activates nothing; worded by `describeInvalidPluginEntries` (`core/plugins/active.ts`). */
+export type PluginConfigProblem =
+  | { kind: "unknown-name"; name: string }
+  /** The whole field, when it is not an array of strings. */
+  | { kind: "malformed"; value: unknown };
+
+/**
+ * The active plugins: `plugins` entries that name a registry member, in config
+ * order, deduplicated. `invalid` carries one problem per unknown name, or one
+ * `malformed` problem (the raw value, nothing active) when the field is not an
+ * array of strings. Hand-edited JSON is the boundary here: an unknown name
+ * disables that one plugin and nothing else, while a malformed field is one
+ * problem, not a list of them.
+ */
+export async function activePluginNames(boxRoot: string): Promise<{ active: string[]; invalid: PluginConfigProblem[] }> {
+  const raw: unknown = (await loadBoxConfig(boxRoot)).plugins;
+  if (raw === undefined) return { active: [], invalid: [] };
+  if (!Array.isArray(raw) || !raw.every((entry) => typeof entry === "string")) {
+    return { active: [], invalid: [{ kind: "malformed", value: raw }] };
+  }
+  const known = new Set(pluginNames());
+  const active: string[] = [];
+  const invalid: PluginConfigProblem[] = [];
+  for (const name of raw) {
+    if (!known.has(name)) invalid.push({ kind: "unknown-name", name });
+    else if (!active.includes(name)) active.push(name);
+  }
+  return { active, invalid };
 }
 
 /**

@@ -42,13 +42,13 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
   - Concept-graph construction rules (entity names, one teachable unit per node, no orphans, no degenerate chains), an orphan-node lint, and agent self-review of the map.
   - Claim classification by source support (verified, directional, qualitative, unsupported). Missing data is stated, not filled in.
   - A render check as part of figure authoring, and worked figure examples that include a categorization-sort practice.
-- **Where it landed:** `beebox/src/schemas/concept-map.ts`, `beebox/src/core/box/guidance-sync/skills-content.ts`, `beebox/src/core/box/guidance-sync/skills.ts`
+- **Where it landed:** `beebox/src/plugins/courseware/concept-map.ts`, `beebox/src/core/box/guidance-sync/skills/content.ts`, `beebox/src/core/box/guidance-sync/skills/core.ts`
 
 ### Backward design, spiral curriculum, Bloom's revised taxonomy, by Grant Wiggins and Jay McTighe; Jerome Bruner; Anderson and Krathwohl
 
 - **Source:** https://www.ascd.org/books/understanding-by-design-expanded-2nd-edition (book); Bruner, *The Process of Education* (1960); Anderson and Krathwohl, *A Taxonomy for Learning, Teaching, and Assessing* (2001)
 - **What we took:** A course's success criteria as the destination, set first. `complements` cycles for concepts that are learned together. An optional Bloom target level for each node.
-- **Where it landed:** `beebox/src/schemas/course.ts`, `beebox/src/schemas/concept-map.ts`, `beebox/src/schemas/progress.ts`
+- **Where it landed:** `beebox/src/plugins/courseware/course.ts`, `beebox/src/plugins/courseware/concept-map.ts`, `beebox/src/plugins/courseware/progress.ts`
 
 ### claude-elixir-phoenix, by Oliver Kriska (oliver-kriska)
 

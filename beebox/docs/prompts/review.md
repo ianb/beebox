@@ -6,7 +6,7 @@ Rendering what an agent actually reads, the layering model, the structural rules
 
 The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Read this when auditing the assembled prompt stack for overlap/redundancy/staleness/contradiction, checking what an agent actually sees in some situation, or after any change to prompt-generating code. [Prompt lenses](lenses.md) is the companion lens catalog for the hunt step. (For routing a single new instruction to the right box surface, use the `bbx-context` skill.)
 
-The prompts are how every agent comes to understand Bee Box — what it is, what its role is, what the rules are. They are generated code (`src/core/agent-guide/`, `src/core/chat/session/prompts.ts`, `src/core/reactor/prompts.ts`, schema `instructions`, `src/core/box/guidance-sync/skills-content.ts`), assembled into a per-situation context stack. Review the *assembled stack*, not the source files: judge what an agent actually reads, end to end.
+The prompts are how every agent comes to understand Bee Box — what it is, what its role is, what the rules are. They are generated code (`src/core/agent-guide/`, `src/core/chat/session/prompts.ts`, `src/core/reactor/prompts.ts`, schema `instructions`, `src/core/box/guidance-sync/skills/content.ts`), assembled into a per-situation context stack. Review the *assembled stack*, not the source files: judge what an agent actually reads, end to end.
 
 ## See the assembled context
 

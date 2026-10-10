@@ -6122,7 +6122,89 @@ tests:
     response_not_contains: ["window.history.pushState", "window.history.replaceState"]
     tags: [views, navigation, state]
 
-  # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
+  # === Plugins (discover, activate, extend) ===
+  #
+  # Plan: docs/implemented-plans/plugins.md, "Knowledge audits". Not yet run.
+  # Run against ~/src/boxes/test1 with `--filter plugins-`.
+  # 2026-10-10: all three pass against the plugins-planning test1 clone with
+  # courseware installed and inactive (report audit-report-claude-2026-10-10T06-04-46).
+  # plugins-discover first required box.json and stubs from memory and
+  # failed twice: the agent names the plugin check unprompted and nothing
+  # else, which is the designed one-line advertisement; the mechanics moved
+  # to plugins-activate with reading allowed.
+
+  - id: plugins-discover
+    prompt: >
+      A boxholder asks for a course on chemistry and this box has no course
+      card type. What do you do first? Explain only; do not read files, use
+      tools, or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Looks for a plugin before writing a schema from scratch: `bbx plugins
+      list` or the courseware README, then activates it by listing it under
+      `plugins` in `_config/box.json` and writing the schema stubs under
+      `src/schemas/`. Does not propose a hand-written course schema or an
+      edit under node_modules.
+    correct_matches:
+      - 'bbx plugins list|plugins list|installed plugins?|plugin[\s\S]{0,80}(?:turn\w* (?:it )?on|activat|already (?:cover|provide|add))|courseware[\s\S]{0,80}README'
+    tags: [plugins]
+    notes: >
+      The failure mode is writing a course schema cold. The plugin is the
+      first move. The activation mechanics (box.json `plugins`, the stubs)
+      are in the plugin README, read on demand, so this audit asks only for
+      the first move; plugins-activate covers the mechanics with reading
+      allowed. 2026-10-10: the first version also required box.json and
+      stubs from memory and failed; the agent named `bbx plugins list`
+      unprompted and nothing else, which is the designed behavior.
+
+  - id: plugins-activate
+    prompt: >
+      A boxholder asks for a course on chemistry and this box has no course
+      card type. Find out how to add one and explain the exact steps you
+      would take, naming the files. Do not change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Runs `bbx plugins list`, reads the courseware README, and names the
+      three steps: `plugins: ["courseware"]` in `_config/box.json`, the five
+      schema stubs under `src/schemas/`, the view stub under `src/views/`.
+    should_read_any:
+      - node_modules/beebox/src/plugins/courseware/README.md
+    correct_matches:
+      - 'box\.json[\s\S]{0,160}plugins|plugins[\s\S]{0,160}box\.json'
+      - 'src/schemas'
+      - 'src/views'
+    tags: [plugins]
+    notes: >
+      The mechanics are on demand by design; this audit checks that the
+      README is found and followed.
+
+  - id: plugins-extend
+    prompt: >
+      You want recipe-like cards to carry a rating field. Where does the field
+      go? Look up how, name the file, and explain. Do not change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Puts the field in the box's own schema stub under `src/schemas/` through
+      `extendSchema`, not in the plugin or engine source under node_modules.
+    should_read_any:
+      - node_modules/beebox/box-docs/schemas.md
+    correct_matches:
+      - 'extendSchema'
+      - 'src/schemas'
+    tags: [plugins]
+    notes: >
+      node_modules is replaced on upgrade; a change there is lost. The stub is
+      the box's own file and is where a field addition belongs.
+
+  # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + courseware plugin skill) ===
+  #
+  # Status (2026-10-10): revised for the courseware plugin move
+  # (docs/implemented-plans/plugins.md, Track 5) and not rerun since. The skill is now
+  # `courseware` (mirrored to .claude/skills/courseware/ while the plugin is
+  # active); the card docs are box-local generated docs under
+  # _content/docs/generated/ once the box has the schema stubs, with the plugin
+  # README as the package-side reference; presentation rules live in the
+  # course's AGENTS.md, not in compiled exposition rules.
   #
   # Status (2026-07-03): all 12 pass against test1. courseware-exposition-plan was
   # failing only on the stale should_read (agent recalls "keep the reasoning in"
@@ -6150,9 +6232,9 @@ tests:
       about building a course for them?
     expected_level: knows_about
     watch_for: >
-      Reaches for the build-course skill / understands the learner FIRST
+      Reaches for the courseware skill / understands the learner FIRST
       (a phenomenon-anchored, Piagetian probe) rather than writing a course cold.
-    correct_contains_any: ["probe", "build-course"]
+    correct_contains_any: ["probe", "courseware"]
     tags: [courseware]
     notes: >
       Building a course starts by understanding the learner, not by generating
@@ -6161,7 +6243,7 @@ tests:
   - id: courseware-course-composition
     prompt: "What does a course card hold? What are its parts?"
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/card-course.md"]
+    should_read_any: ["_content/docs/generated/card-course.md", "node_modules/beebox/src/plugins/courseware/README.md"]
     watch_for: >
       Names the concept-map and exposition-plan (embedded), the material/ subdir,
       and that progress is tracked separately.
@@ -6187,7 +6269,7 @@ tests:
       Can a concept-map have two concepts that each depend on the other — a
       cycle? Or is that an error to fix?
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/card-concept-map.md"]
+    should_read_any: ["_content/docs/generated/card-concept-map.md", "node_modules/beebox/src/plugins/courseware/README.md"]
     watch_for: >
       Says cycles are valid/intended (spirals), often via complements edges —
       NOT an error to fix.
@@ -6202,7 +6284,7 @@ tests:
       I'm recording that a learner has 'solid' understanding of a concept. What
       does that progress entry need to include?
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/card-progress.md"]
+    should_read_any: ["_content/docs/generated/card-progress.md", "node_modules/beebox/src/plugins/courseware/README.md"]
     watch_for: >
       Says every status needs evidence (what the learner said/did) plus a basis —
       there is no anonymous rating.
@@ -6261,7 +6343,7 @@ tests:
       difference — which one holds what?
     expected_level: knows_about
     watch_for: >
-      exposition-plan = how/why to present (rated approaches + compiled rules);
+      exposition-plan = how/why to present (rated approaches + presentation rules);
       lesson-plan = the ordered what-to-do (the interactive-vs-material
       sequence). The WHY lives in the exposition-plan, not the lesson-plan.
     correct_contains: ["exposition-plan", "lesson-plan"]
@@ -6312,14 +6394,14 @@ tests:
     watch_for: >
       A course is run as a chat SCOPED to its attach directory, reached from a
       landmark (a chat destination); the scoped AGENTS.md (which @-includes the
-      runner instructions) and the path-globbed exposition rules auto-load, and
+      runner instructions and holds the presentation rules) auto-loads, and
       the agent follows the lesson-plan and updates progress.
     correct_contains_any: ["landmark", "tutoring", "chat scoped", "attach"]
     tags: [courseware]
     notes: >
-      The run side, distinct from build-course. Entry = a landmark chat
+      The run side, distinct from building. Entry = a landmark chat
       destination that scopes the chat to the course attach dir, where a thin
-      AGENTS.md (@course-runner.md) and the exposition rules auto-load. Failure
+      AGENTS.md (@course-runner.md, presentation rules) auto-loads. Failure
       mode: thinking a built course just sits there with no way to conduct it.
 
   # === User Location ===

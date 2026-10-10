@@ -76,6 +76,10 @@ function surfaceSourceFindings(layout: PackageLayout): Finding[] {
       });
       continue;
     }
+    // A wildcard export (`./plugins/*`) names its sources by the pattern
+    // itself; the scanner expanded it from the directory the pattern points
+    // at, so that directory, not `src/exports/`, is the declared location.
+    if (surface.pattern !== undefined) continue;
     const ownExportsDir = `${innermostPackageRootOf(layout, surface.source)}/src/exports`;
     if (dirOf(surface.source) === ownExportsDir) continue;
     findings.push({
