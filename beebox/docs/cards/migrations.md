@@ -340,6 +340,28 @@ it prints the plan; after applying it verifies that no briefing still carries
 under `_config/_template-updates/` are skipped. Idempotent. See
 `src/scripts/migrate/briefing-openers/plan.ts`.
 
+#### `body-tags-2026-10` (rewrite — retired `image`, `silence`, `purpose`, `correction` tags)
+
+`docs/plans/retire-type-specific-core-tags.md`, Track 4. The four
+type-specific core Markdoc tags are gone; every `*.card` is rewritten. Tags are
+located with the Markdoc parse. `{% image ref="X" /%}` becomes `[<stem>](X)` and
+`{% silence duration="D" /%}` becomes `— D silence —`, in any card type. In a
+briefing, the one `{% purpose %}` block becomes frontmatter `purpose` (after
+`type`), and each `{% correction [test] %}` block leaves the body and becomes a
+bullet under a final `## Corrections` heading (`Test: <test>` appended). A root
+briefing that is an untouched stock seed (a `briefing-seed` hash) becomes the
+current seed verbatim and keeps its template ledger in step.
+
+A tag inside a code fence or another tag, a `purpose`/`correction` that is
+inline, in a list, or outside a briefing, two `purpose` blocks, a conflicting
+`purpose:` key, an existing `## Corrections` heading, or a body Markdoc cannot
+parse (single-quoted attribute values included) fails the whole box: the script
+prints each path and line, writes nothing, and exits 1, so no manifest entry is
+recorded. Like `briefing-openers-2026-10` it skips the harness, plans before
+writing, and `--verify` alone re-parses every card and exits 1 on a leftover
+tag (`bbx validate` only warns). Writes are per file; a rerun finishes a
+half-converted box. See `src/scripts/migrate/body-tags/plan.ts`.
+
 ## Manual runs (for debugging)
 
 A migrator script is runnable standalone (`npx tsx src/scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `bbx engine migrate`. If you do this and want it to count, append the entry yourself or run `bbx engine migrate --apply` afterwards.
