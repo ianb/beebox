@@ -93,6 +93,8 @@ async function makeApp(storeRoot: string, assets: ExhibitsAssets) {
     token: TOKEN,
     port: EXHIBITS_PORT,
     runFocus: async () => {},
+    comments: { add: async () => ({ id: "c-unused" }) },
+    transcribe: { transcribe: async () => ({ text: "" }) },
     createAssets: async () => assets,
   });
 }

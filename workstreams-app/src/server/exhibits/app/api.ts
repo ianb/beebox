@@ -10,8 +10,10 @@
 // the same onRequest auth hook as every page (auth.ts). A second Fastify
 // instance would be an unauthenticated surface, which is why this is a plugin.
 //
-// One more route is not storage: POST /api/<ws>/<exhibit>/focus brings the
-// workstream's terminal tab forward, the exhibits origin's only grant of
+// Three more routes are not storage: POST /api/<ws>/<exhibit>/focus brings
+// the workstream's terminal tab forward, and the comment and transcribe routes
+// in api-comments.ts write the boxholder's remarks to the comment store
+// (docs/plans/exhibit-comments.md). Those are the origin's only grants of
 // authority beyond the store.
 //
 // Committed apps (/apps/<name>/) write to the reserved store namespace
@@ -26,6 +28,7 @@ import type { FastifyError, FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { exhibitSegmentSchema } from "../../../shared/exhibits.js";
+import { exhibitCommentRoutes, type ExhibitCommentOptions } from "./api-comments.js";
 import {
   APPS_SEGMENT,
   DATA_DIR,
@@ -64,7 +67,7 @@ export const CAPTURE_BODY_LIMIT = 25 * 1024 * 1024;
  */
 export type FocusRunner = (request: { verb: "focus"; name: string }) => Promise<void>;
 
-export interface ExhibitsApiOptions {
+export interface ExhibitsApiOptions extends ExhibitCommentOptions {
   storeRoot: string;
   runFocus: FocusRunner;
 }
@@ -75,7 +78,7 @@ const NO_SESSION_REASONS = new Map<string, string>([
   ["main", "The main checkout has no workstream session to bring forward."],
 ]);
 
-function lastLine(text: string): string {
+export function lastLine(text: string): string {
   return text.split("\n").map((line) => line.trim()).findLast((line) => line !== "") ?? "";
 }
 
@@ -86,7 +89,7 @@ const eventEnvelopeSchema = z.object({
 });
 
 /** A refusal the developer (or the page author) must be able to act on. */
-class ExhibitRequestError extends Error {
+export class ExhibitRequestError extends Error {
   /** Zod-style detail, when the refusal has more than one part. */
   issues: string[] = [];
 
@@ -139,7 +142,7 @@ async function ensureDirUnderRoot(root: string, segments: string[]): Promise<str
   return base;
 }
 
-function requireSegment(value: string, what: string): string {
+export function requireSegment(value: string, what: string): string {
   if (!exhibitSegmentSchema.safeParse(value).success) {
     throw new ExhibitRequestError(
       400,
@@ -173,7 +176,7 @@ function captureFile(name: string): string {
   return name;
 }
 
-function parseJsonBody(body: string, what: string): unknown {
+export function parseJsonBody(body: string, what: string): unknown {
   try {
     // eslint-disable-next-line no-restricted-syntax -- JSON.parse is the parse boundary; callers treat the result as unknown.
     return JSON.parse(body) as unknown;
@@ -185,7 +188,7 @@ function parseJsonBody(body: string, what: string): unknown {
   }
 }
 
-interface ScopeParams {
+export interface ScopeParams {
   ws: string;
   exhibit: string;
 }
@@ -195,7 +198,7 @@ interface ScopeParams {
  * is the directory the page is served from — while an app's store directory is
  * created on first write, because an app's code lives in the checkout instead.
  */
-async function scopeDir(storeRoot: string, params: ScopeParams): Promise<string> {
+export async function scopeDir(storeRoot: string, params: ScopeParams): Promise<string> {
   try {
     await assertStoreInitialized(storeRoot);
   } catch (error) {
@@ -232,7 +235,7 @@ async function readIfPresent(file: string): Promise<string | null> {
  * content-type parsers are encapsulated per plugin.
  */
 export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (api, options) => {
-  const { storeRoot, runFocus } = options;
+  const { storeRoot, runFocus, comments, transcribe } = options;
 
   // eslint-disable-next-line max-params -- Fastify's setErrorHandler signature is fixed (the hub-http-error.ts precedent).
   api.setErrorHandler<FastifyError>((error, request, reply) => {
@@ -253,7 +256,7 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
 
   api.setNotFoundHandler((request, reply) =>
     reply.code(404).send({
-      error: `No exhibit API route for ${request.method} ${request.url}. The API is /api/<scope>/data/<key>, /api/<scope>/events, /api/<scope>/captures/<name>, and POST /api/<scope>/focus.`,
+      error: `No exhibit API route for ${request.method} ${request.url}. The API is /api/<scope>/data/<key>, /api/<scope>/events, /api/<scope>/captures/<name>, POST /api/<scope>/focus, POST /api/<scope>/comments, and POST /api/transcribe.`,
     }));
 
   await api.register(async (json) => {
@@ -296,6 +299,9 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
       }
       return reply.code(204).send();
     });
+
+    // Nested so the comment routes share this parser and the error handler above.
+    await json.register(exhibitCommentRoutes, { storeRoot, comments, transcribe });
 
     json.put<{ Params: ScopeParams & { key: string }; Body: string }>(
       "/:ws/:exhibit/data/:key",
