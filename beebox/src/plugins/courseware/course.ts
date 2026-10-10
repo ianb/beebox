@@ -12,7 +12,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { body, type CardSchemaConfig } from "../../exports/cards.js";
 import { z } from "../../exports/schema.js";
 
 /** A reference to a component card (the `ref` key is validated by card-lint). */
@@ -30,7 +30,7 @@ const courseFields = {
   body: body(z.string()),
 };
 
-export const courseBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
+export const courseBase: CardSchemaConfig<string, typeof courseFields> = {
   brief: "The manifest for one course",
   description: "The manifest for one learning experience — binds a concept-map, exposition-plan, lesson-plan, material, and per-learner progress",
   category: "authored",

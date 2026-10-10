@@ -4,11 +4,13 @@
  * from the engine's ref resolver and containment helpers so a plugin never
  * imports them. The hooks' issues are warnings in the card's lint result,
  * like the engine's own box-aware checks. An invalid `plugins` entry in
- * `_config/box.json` is reported once per card as a warning naming it.
+ * `_config/box.json` is reported once per card as a warning naming it. A hook
+ * that throws is one warning on that card naming the plugin and the error;
+ * the other hooks and the rest of the box still lint.
  */
 import { readdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import type { LintContext } from "../../../cards/plugin-definition.js";
+import { join, relative, resolve } from "node:path";
+import type { LintContext, PluginDefinition } from "../../../cards/plugin-definition.js";
 import type { LintIssue } from "../../../exports/cards.js";
 import { containWithinBox, realpathContained } from "../../../lib/box-containment.js";
 import { isCardFile } from "../../../lib/paths/core.js";
@@ -16,6 +18,7 @@ import { activePluginNames } from "../../box/config.js";
 import { describeInvalidPluginEntries } from "../../plugins/active.js";
 import { resolveContainedRef, resolveRefExists } from "../../ref-exists.js";
 import { pluginByName } from "../../../plugins.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 /** The box-aware helpers a plugin's hook gets, each failing closed on a path that leaves the box. */
 export function makeLintContext(boxRoot: string): LintContext {
@@ -48,8 +51,10 @@ export async function pluginLintIssues(input: {
   type: string;
   fields: Record<string, unknown>;
   boxRoot: string;
+  /** The installed plugins; defaults to the registry. A doctest seam for a fixture hook. */
+  plugins?: ReadonlyArray<PluginDefinition> | undefined;
 }): Promise<LintIssue[]> {
-  const { path, type, fields, boxRoot } = input;
+  const { path, type, fields, boxRoot, plugins } = input;
   const { active, invalid } = await activePluginNames(boxRoot);
   const issues: LintIssue[] = describeInvalidPluginEntries(invalid).map((problem) => ({
     type: "schema",
@@ -59,9 +64,18 @@ export async function pluginLintIssues(input: {
   if (active.length === 0) return issues;
   const ctx = makeLintContext(boxRoot);
   for (const name of active) {
-    const hook = pluginByName(name)?.lintCards;
+    const plugin = plugins === undefined ? pluginByName(name) : plugins.find((p) => p.name === name);
+    const hook = plugin?.lintCards;
     if (hook === undefined) continue;
-    issues.push(...(await hook({ path, type, fields }, ctx)));
+    try {
+      issues.push(...(await hook({ path, type, fields }, ctx)));
+    } catch (e) {
+      issues.push({
+        type: "schema",
+        severity: "warning",
+        message: `the ${name} plugin's lintCards threw on ${relative(boxRoot, path)}: ${errorMessage(e)}; its checks did not run for this card`,
+      });
+    }
   }
   return issues;
 }

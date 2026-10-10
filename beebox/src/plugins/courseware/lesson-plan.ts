@@ -23,7 +23,7 @@
  * See docs/plans/courseware-lesson-plan.md.
  */
 
-import { body, type CardSchemaConfig, type FieldDecl } from "../../exports/cards.js";
+import { body, type CardSchemaConfig } from "../../exports/cards.js";
 import { z } from "../../exports/schema.js";
 
 /** Whether a segment plays out live in chat or leans on a pre-made material card. */
@@ -45,7 +45,7 @@ const lessonPlanFields = {
   body: body(z.string()),
 };
 
-export const lessonPlanBase: CardSchemaConfig<string, Record<string, FieldDecl>> = {
+export const lessonPlanBase: CardSchemaConfig<string, typeof lessonPlanFields> = {
   brief: "A course's ordered delivery flow",
   description: "A course's ordered delivery flow — segments tagged interactive (live in chat) or material (pre-made card), tied to concept-map nodes",
   category: "authored",

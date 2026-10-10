@@ -4,7 +4,9 @@
 behind the `plugin-type-unprovided` and `plugin-declared-missing` health
 checks. It reads three things: the card types on disk, the effective schema
 map's type names, and the registry with the active list. The active list alone
-decides nothing (`docs/plans/plugins.md`, Track 3).
+decides nothing (`docs/plans/plugins.md`, Track 3). A declared schema type is
+missing when the effective map lacks it; the stub file's presence only sets the
+`reason`, `no-file` or `no-schema`.
 
 ```ts setup
 import { pluginTypeCoverage } from "../../../src/core/plugins/coverage.js";
@@ -45,9 +47,9 @@ coverage({ typesOnDisk: new Map([["course", 2]]), active: new Set(["courseware"]
 => {
   unprovided: [{ plugin: "courseware", type: "course", cards: 2 }],
   declaredMissing: [
-    { plugin: "courseware", kind: "schema", name: "course" },
-    { plugin: "courseware", kind: "schema", name: "concept-map" },
-    { plugin: "courseware", kind: "view", name: "concept-map" },
+    { plugin: "courseware", kind: "schema", name: "course", reason: "no-file" },
+    { plugin: "courseware", kind: "schema", name: "concept-map", reason: "no-file" },
+    { plugin: "courseware", kind: "view", name: "concept-map", reason: "no-file" },
   ],
 }
 ```
@@ -61,9 +63,9 @@ coverage({ active: new Set(["courseware"]) })
 => {
   unprovided: [],
   declaredMissing: [
-    { plugin: "courseware", kind: "schema", name: "course" },
-    { plugin: "courseware", kind: "schema", name: "concept-map" },
-    { plugin: "courseware", kind: "view", name: "concept-map" },
+    { plugin: "courseware", kind: "schema", name: "course", reason: "no-file" },
+    { plugin: "courseware", kind: "schema", name: "concept-map", reason: "no-file" },
+    { plugin: "courseware", kind: "view", name: "concept-map", reason: "no-file" },
   ],
 }
 ```
@@ -83,11 +85,12 @@ coverage({
 => { unprovided: [], declaredMissing: [] }
 ```
 
-## A stub file that exists but did not load
+## A stub file that exists but puts no schema of its type in the map
 
-The type is absent from the effective map, so its cards are unprovided; but the
-stub is on disk, so the declaration is not "missing". The failed load is
-`plugin-stub-missing`'s report.
+The type is absent from the effective map, so its cards are unprovided and the
+declaration is missing with reason `no-schema`: the file is there, but it
+defines some other type, or failed to load (then `plugin-stub-missing` also
+reports the failure). File presence never passes a declaration on its own.
 
 ```ts
 coverage({
@@ -95,7 +98,13 @@ coverage({
   active: new Set(["courseware"]),
   stubs: { schemaTypes: new Set(["course", "concept-map"]), viewNames: new Set(["concept-map"]) },
 })
-=> { unprovided: [{ plugin: "courseware", type: "course", cards: 1 }], declaredMissing: [] }
+=> {
+  unprovided: [{ plugin: "courseware", type: "course", cards: 1 }],
+  declaredMissing: [
+    { plugin: "courseware", kind: "schema", name: "course", reason: "no-schema" },
+    { plugin: "courseware", kind: "schema", name: "concept-map", reason: "no-schema" },
+  ],
+}
 ```
 
 ## A type two plugins both declare
@@ -115,6 +124,6 @@ coverage({
     { plugin: "courseware", type: "course", cards: 4 },
     { plugin: "syllabus", type: "course", cards: 4 },
   ],
-  declaredMissing: [{ plugin: "syllabus", kind: "schema", name: "course" }],
+  declaredMissing: [{ plugin: "syllabus", kind: "schema", name: "course", reason: "no-file" }],
 }
 ```

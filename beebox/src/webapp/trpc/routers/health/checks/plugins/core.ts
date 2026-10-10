@@ -4,10 +4,14 @@
  * list alone, so deactivation, a missing stub, and engine-side removal all
  * surface (`docs/plans/plugins.md`, Track 3).
  *
+ * - `plugin-config` (error): one row per invalid `plugins` entry in
+ *   `_config/box.json`, worded as `bbx status` words it
+ *   (`describeInvalidPluginEntries`).
  * - `plugin-type-unprovided` (error): cards on disk of a type with no
  *   effective schema that some plugin, active or not, declares.
- * - `plugin-declared-missing` (error): an active plugin declares a type or
- *   view with no stub.
+ * - `plugin-declared-missing` (error): an active plugin declares a type with
+ *   no effective schema (no stub file, or a stub file that defines no schema
+ *   of that type) or a view with no stub file.
  * - `plugin-stub-inactive`, `plugin-stub-missing`: `stubs.ts`.
  * - `skill-name-conflict` (warning): the box owns an unmarked
  *   `.claude/skills/<name>/SKILL.md` under a managed skill's name, so the
@@ -40,7 +44,7 @@ export interface PluginHealthOptions {
 export async function pluginHealthChecks(boxRoot: string, options?: PluginHealthOptions): Promise<HealthCheck[]> {
   const installed = options?.plugins ?? pluginRegistry.list;
   const installedNames = new Set(installed.map((p) => p.name));
-  const listing = (await listPlugins(boxRoot)).plugins;
+  const { plugins: listing, problems } = await listPlugins(boxRoot);
   const active = new Set(listing.filter((p) => p.active && installedNames.has(p.name)).map((p) => p.name));
   const activePlugins = installed.filter((p) => active.has(p.name));
   const presentStubs = listing.flatMap((p) => p.stubs.filter((s) => s.present));
@@ -61,6 +65,7 @@ export async function pluginHealthChecks(boxRoot: string, options?: PluginHealth
   });
 
   return [
+    ...configChecks(problems),
     ...coverageChecks(coverage),
     ...stubImportChecks({
       imports: await scanStubImports(boxRoot),
@@ -84,6 +89,14 @@ async function countCardTypes(boxRoot: string): Promise<Map<string, number>> {
   return counts;
 }
 
+/** `plugin-config`: the invalid `plugins` entries `listPlugins` already worded; one ok row when none. */
+function configChecks(problems: ReadonlyArray<string>): HealthCheck[] {
+  if (problems.length === 0) {
+    return [{ name: "plugin-config", ok: true, message: "Every plugins entry in _config/box.json names an installed plugin", severity: "error" }];
+  }
+  return problems.map((message) => ({ name: "plugin-config", ok: false, message, severity: "error" }));
+}
+
 function coverageChecks(coverage: PluginTypeCoverage): HealthCheck[] {
   const checks: HealthCheck[] = [];
   for (const { plugin, type, cards } of coverage.unprovided) {
@@ -99,12 +112,15 @@ function coverageChecks(coverage: PluginTypeCoverage): HealthCheck[] {
   if (coverage.unprovided.length === 0) {
     checks.push({ name: "plugin-type-unprovided", ok: true, message: "Every card type a plugin declares has a schema", severity: "error" });
   }
-  for (const { plugin, kind, name } of coverage.declaredMissing) {
+  for (const { plugin, kind, name, reason } of coverage.declaredMissing) {
     const stub = kind === "schema" ? `src/schemas/${name}.ts` : `src/views/${name}.tsx`;
+    const problem = reason === "no-file"
+      ? `its ${kind} ${name} has no stub at ${stub}`
+      : `its stub ${stub} is present and defines no schema named ${name}`;
     checks.push({
       name: "plugin-declared-missing",
       ok: false,
-      message: `The ${plugin} plugin is active but its ${kind} ${name} has no stub at ${stub}. Write it from node_modules/beebox/src/plugins/${plugin}/README.md, Setup.`,
+      message: `The ${plugin} plugin is active but ${problem}. Write it from node_modules/beebox/src/plugins/${plugin}/README.md, Setup.`,
       severity: "error",
     });
   }

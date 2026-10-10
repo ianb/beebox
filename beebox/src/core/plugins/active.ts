@@ -11,6 +11,7 @@ import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../
 import { errnoCode } from "../../shared/error-guards.js";
 import { pluginByName, pluginNames } from "../../plugins.js";
 import type { PluginDefinition } from "../../cards/plugin-definition.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { assertNever, invariant } from "../../shared/invariant.js";
 
 /** One stub an active plugin declares: a schema per default type, a view per view. */
@@ -20,7 +21,20 @@ export interface PluginStub {
   name: string;
   /** Box-relative path the stub lives at when present. */
   path: string;
+  /** The stub file exists. */
   present: boolean;
+  /**
+   * The stub does its job: for a schema, the effective schema map
+   * (`createCardSchemaMap`) has a schema of this type; for a view, the file
+   * exists. A present schema stub that defines some other type is not effective.
+   */
+  effective: boolean;
+}
+
+/** `present` / `missing` / `present, defines no <type> schema`, for `bbx plugins list`. */
+export function describeStubStatus(stub: PluginStub): string {
+  if (!stub.present) return "missing";
+  return stub.effective ? "present" : `present, defines no ${stub.name} schema`;
 }
 
 export interface PluginListing {
@@ -67,7 +81,12 @@ async function exists(absPath: string): Promise<boolean> {
   }
 }
 
-/** The stubs `plugin` declares and whether the box has each (`docs/plugins.md`, Stubs). */
+/**
+ * The stubs `plugin` declares, whether the box has each file, and whether each
+ * takes effect (`docs/plugins.md`, Stubs). The schema check reads the EFFECTIVE
+ * map, so a stub that is on disk but defines a different type reads as not
+ * effective rather than as done.
+ */
 async function pluginStubs(boxRoot: string, plugin: PluginDefinition): Promise<PluginStub[]> {
   const shape = await getBoxShape(boxRoot);
   const abs = boxCodePaths(shape);
@@ -86,9 +105,12 @@ async function pluginStubs(boxRoot: string, plugin: PluginDefinition): Promise<P
       path: `${rel.viewsDir}/${view.name}.tsx`,
     })),
   ];
+  const schemaTypes = new Set((await createCardSchemaMap(boxRoot)).keys());
   const stubs: PluginStub[] = [];
   for (const { kind, name, absPath, path } of declared) {
-    stubs.push({ kind, name, path, present: await exists(absPath) });
+    const present = await exists(absPath);
+    const effective = kind === "schema" ? schemaTypes.has(name) : present;
+    stubs.push({ kind, name, path, present, effective });
   }
   return stubs;
 }

@@ -123,11 +123,16 @@ standing line pointing at it.
 Core owns these checks; they derive from effective schemas and the active
 list together:
 
+- `plugin-config`: an entry in the box's `plugins` list names no installed
+  plugin, or the field is not an array of names. Error. Same wording as
+  `bbx status` and `bbx plugins list`.
 - `plugin-type-unprovided`: cards of a type with no effective schema that
   some plugin declares. Error. Covers both "inactive" and "active but no
   stub".
-- `plugin-declared-missing`: an active plugin declares a type or view with no
-  stub. Error.
+- `plugin-declared-missing`: an active plugin declares a type with no
+  effective schema (no stub file, or a stub file that defines no schema of
+  that type) or a view with no stub file. Error. `bbx plugins list` shows the
+  same: `present`, `missing`, or `present, defines no <type> schema`.
 - `plugin-stub-inactive`: a stub imports a plugin that is not active. Warning.
 - `plugin-stub-missing`: a stub imports a plugin that does not exist, or the
   stub failed to load. Error.
@@ -138,8 +143,10 @@ list together:
   fires while the plugin is inactive.
 - `<plugin>/...`: the plugin's own `healthChecks`, prefixed.
 
-`bbx upgrade` validates the whole box under the new engine after migrations.
-Failures are reported and the upgrade finishes; they never block it.
+`bbx upgrade` validates the whole box under the new engine after migrations,
+then runs `bbx health --json` there and prints the failing rows above under
+`Plugin health after upgrade:`. Validation errors and warnings and failing
+health rows are reported and the upgrade finishes; they never block it.
 
 ## Deactivation, removal, rot
 
