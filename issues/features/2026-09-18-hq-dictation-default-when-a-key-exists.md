@@ -9,6 +9,8 @@ discovered-in: main — boxholder asking to reconsider HQ as the default, not th
 needs: [manual-testing]
 ---
 
+> **⏳ Awaiting manual testing** — fix landed in `9201ccd31` (hq-always branch, merged to main); run the iOS device steps in "Manual testing" below. Only the developer clears this.
+
 HQ dictation is opt-in: a per-chat value with landmark and box defaults above
 it, resolved server-side
 ([sticky HQ preference](../closed/features/2026-08-26-sticky-hq-transcription-preference.md),
