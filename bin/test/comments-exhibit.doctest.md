@@ -3,7 +3,7 @@
 An exhibit page is not a file in any checkout, so `bin/comments` names it with
 an address, `exhibit:<workstream>/<name>`, wherever it would take a path. The
 exhibits listener writes through this same CLI
-(`beebox/docs/plans/exhibit-comments.md`), and the agent reads with the
+(`beebox/docs/implemented-plans/exhibit-comments.md`), and the agent reads with the
 `list --workstream` call it already makes at pickup.
 
 ```ts setup

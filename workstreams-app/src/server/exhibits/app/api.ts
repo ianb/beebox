@@ -13,7 +13,7 @@
 // Three more routes are not storage: POST /api/<ws>/<exhibit>/focus brings
 // the workstream's terminal tab forward, and the comment and transcribe routes
 // in api-comments.ts write the boxholder's remarks to the comment store
-// (docs/plans/exhibit-comments.md). Those are the origin's only grants of
+// (docs/implemented-plans/exhibit-comments.md). Those are the origin's only grants of
 // authority beyond the store.
 //
 // Committed apps (/apps/<name>/) write to the reserved store namespace

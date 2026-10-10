@@ -2,7 +2,7 @@
 
 The panel on an exhibit page is a textarea, a Speak button, and two `fetch`
 calls; what it decides is kept here, pure, so it can be checked without a
-browser (`docs/plans/exhibit-comments.md`). The reader that matters is the
+browser (`docs/implemented-plans/exhibit-comments.md`). The reader that matters is the
 agent running `bin/comments list`, so what reaches the wire is what matters.
 
 ```ts setup

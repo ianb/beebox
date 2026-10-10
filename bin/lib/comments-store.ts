@@ -22,7 +22,7 @@
  * be found wherever it is next opened. An untracked one is not: two worktrees
  * routinely hold entirely different `scratch/notes.md`, and one namespace would
  * silently merge their comments. An exhibit lives in the exhibits store
- * outside every checkout (`docs/plans/exhibit-comments.md`), so it is named,
+ * outside every checkout (`docs/implemented-plans/exhibit-comments.md`), so it is named,
  * not pathed.
  *
  * The store is untrusted input (an agent, a human, and an app all write here),
@@ -98,7 +98,7 @@ export type CommentsFile = z.infer<typeof commentsFileSchema>;
 
 /**
  * Which namespace a document lives in. Two are repository paths; the third is
- * an exhibit (`docs/plans/exhibit-comments.md`), which lives in the exhibits
+ * an exhibit (`docs/implemented-plans/exhibit-comments.md`), which lives in the exhibits
  * store outside every checkout and is named by workstream and exhibit name.
  */
 export type Subject =

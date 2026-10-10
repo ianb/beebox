@@ -1,6 +1,6 @@
 ---
 title: "Comments on exhibit pages, typed or spoken"
-status: active
+status: implemented
 workstream: exhibits-rethink
 issues: []
 ---

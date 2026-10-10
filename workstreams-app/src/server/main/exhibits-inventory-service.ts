@@ -1,5 +1,5 @@
 // The exhibit inventory: a read-only scan of the exhibit store for the
-// workstreams app (Track 5 of docs/plans/exhibits-rethink.md).
+// workstreams app (Track 5 of docs/implemented-plans/exhibits-rethink.md).
 //
 // This is the issue-overlay.ts posture: the workstreams origin reads disk and
 // never writes it. Committed apps belong to no workstream and are not listed.

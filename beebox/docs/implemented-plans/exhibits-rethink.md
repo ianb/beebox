@@ -1,6 +1,6 @@
 ---
 title: "Exhibits rethink: show, do not ask"
-status: active
+status: implemented
 workstream: exhibits-rethink
 issues: []
 ---

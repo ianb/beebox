@@ -39,7 +39,7 @@ const cliAddSchema = z.object({ id: z.string() });
 /**
  * What a comment is on. A file is addressed by repository path plus the
  * checkout whose untracked namespace applies; an exhibit page by workstream
- * and name (`docs/plans/exhibit-comments.md`).
+ * and name (`docs/implemented-plans/exhibit-comments.md`).
  */
 export type CommentTarget =
   | { relPath: string; worktree: string | null }

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-10T16:34:51Z
-Total documents: 513
+Generated: 2026-10-10T23:44:53Z
+Total documents: 515
 
 ## Issues
 
@@ -173,6 +173,8 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:6 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/docs-reorg.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doctest-usability.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/exhibit-comments.md:77 (mention) — - `AGENTS.md` root, "Minimize invented concepts" (memory
+- docs/implemented-plans/exhibits-rethink.md:90 (mention) — (about 90 lines) and gains the phrasing section (about 25); root `AGENTS.md`
 - docs/implemented-plans/extfile-card.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/feedback-as-cards.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/file-layout.check.subplan.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -229,6 +231,7 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/webapp-production-mode.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/websocket-chat-transport.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/workstream-exhibits.md:123 (mention) — - Root `AGENTS.md`: worktree URLs use the short name; never restart the shared
 - docs/implemented-plans/workstream-routing.md:276 (mention) — AGENTS.md and mirrored skill are the enforcement surface; a beebox agent
 - docs/implemented-plans/workstreams.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/model-policy.md:105 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `AGENTS.md`, generated agent
@@ -255,7 +258,6 @@ Referenced by:
 - docs/plans/publish-sites-admin.md:111 (mention) — AGENTS.md             # lazy pointer to installed box-docs/publishing.md
 - docs/plans/scan-vision-claude.md:494 (mention) — | Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
 - docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
-- docs/plans/workstream-exhibits.md:118 (mention) — - Root `AGENTS.md`: worktree URLs use the short name; never restart the shared
 - docs/plans/worktree-control-surface.md:144 (mention) — (`:236-242`), runs the workspace install (`:252`), generates the Codex AGENTS.md
 - docs/prompts/logging.md:7 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
 - docs/prompts/review.md:23 (mention) — **Boxes go stale.** The box-side layers (AGENTS.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
@@ -765,7 +767,7 @@ Referenced by:
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
-- ../bin/AGENTS.md:186 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
+- ../bin/AGENTS.md:188 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:38 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -1194,6 +1196,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/doc-structure.md:60 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
+- docs/implemented-plans/exhibit-comments.md:66 (mention) — - `beebox/docs/engineering-principles.md` **8** (one way to do each thing):
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/file-layout.md:50 (mention) — (`docs/engineering-principles.md:87-93`): *"a cluster that encodes its
 - docs/implemented-plans/hq-dictation-switch.md:29 (mention) — `docs/engineering-principles.md` #8: no new attribute, no new registry —
@@ -1238,6 +1241,7 @@ Referenced by:
 - docs/implemented-plans/transcript-confidence.md:68 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: confidence rides
 - docs/implemented-plans/tts-streamed-playback.md:73 (mention) — (`docs/engineering-principles.md:49`). Streaming moves the moment of failure
 - docs/implemented-plans/webapp-production-mode.md:31 (mention) — - `docs/engineering-principles.md:37-44`: environment variables are validated
+- docs/implemented-plans/workstream-exhibits.md:97 (mention) — - Principle 3, **validate at boundaries** (`docs/engineering-principles.md:37`):
 - docs/implemented-plans/workstream-launch-liveness.md:18 (mention) — `beebox/docs/engineering-principles.md:51` says, *"invisible
 - docs/implemented-plans/workstream-routing.md:39 (mention) — (`beebox/docs/engineering-principles.md:49`): *"Degradation is allowed
 - docs/implemented-plans/workstreams.md:61 (mention) — - `docs/engineering-principles.md` §4 (resilient AND never silent — the
@@ -1278,7 +1282,6 @@ Referenced by:
 - docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
 - docs/plans/tts-backend-selection.md:31 (mention) — - **Principle 4, resilient AND never silent** (`docs/engineering-principles.md:49`):
 - docs/plans/workspace-pane-controls.md:46 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
-- docs/plans/workstream-exhibits.md:92 (mention) — - Principle 3, **validate at boundaries** (`docs/engineering-principles.md:37`):
 - docs/plans/workstreams-app.md:44 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
 - docs/plans/worktree-control-surface.md:111 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
 - docs/unimplemented-plans/publish-custom-domain-admin.md:30 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
@@ -4694,6 +4697,32 @@ Title: "Engine-aware chat model selection" | 109 lines | shipped history | imple
 
 No references in or out.
 
+#### docs/implemented-plans/exhibit-comments.md
+
+Title: "Comments on exhibit pages, typed or spoken" | 459 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/exhibits-rethink.md:31 (link) — dictation to the page: [exhibit comments](exhibit-comments.md).
+
+References:
+- → docs/plans/document-comments.md (mention)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
+
+#### docs/implemented-plans/exhibits-rethink.md
+
+Title: "Exhibits rethink: show, do not ask" | 611 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/workstream-exhibits.md:15 (link) — [exhibits-rethink](exhibits-rethink.md) removed Track E (the ask
+
+References:
+- → docs/implemented-plans/exhibit-comments.md (link)
+- → ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md (link)
+- → ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md (link)
+- → AGENTS.md (mention)
+- → docs/implemented-plans/workstream-exhibits.md (link)
+
 #### docs/implemented-plans/expose-dev-router.md
 
 Title: "Make the shared dev router safely exposable over Tailscale" | 566 lines | shipped history | implemented
@@ -5564,7 +5593,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 447 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/AGENTS.md:169 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/AGENTS.md:171 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 
 References:
 - → AGENTS.md (mention)
@@ -6657,6 +6686,25 @@ References:
 - → AGENTS.md (mention)
 - → code-style.md (mention)
 
+#### docs/implemented-plans/workstream-exhibits.md
+
+Title: "Workstream exhibits" | 759 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/exhibits-rethink.md:105 (link) — - **The original design** ([workstream-exhibits](../implemented-plans/workstream-exhibits.md),
+- docs/plans/document-comments.md:80 (mention) — - **Precedent: the exhibits store** — `beebox/docs/implemented-plans/workstream-exhibits.md:236`:
+- docs/plans/general-browser.md:143 (mention) — stays one directory per workstream (`workstream-exhibits.md:231`) — that layout
+- ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md:13 (mention) — > `beebox/docs/plans/workstream-exhibits.md`). The separate origin this
+- ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:31 (link) — ([workstream-exhibits](../../beebox/docs/implemented-plans/workstream-exhibits.md):265).
+
+References:
+- → ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md (frontmatter)
+- → docs/implemented-plans/exhibits-rethink.md (link)
+- → docs/media/assets.md (mention)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
+- → docs/plans/workstreams-app.md (mention)
+
 #### docs/implemented-plans/workstream-launch-liveness.md
 
 Title: "Protect a workstream while its agent launches" | 327 lines | shipped history | implemented
@@ -6810,6 +6858,7 @@ Referenced by:
 - docs/implemented-plans/design-md-retired-sections.md:12 (link) — > their contents held by git-annex. Current model: [`assets.md`](../media/assets.md).
 - docs/implemented-plans/doc-structure-media.md:46 (mention) — | `assets.md` | `media/assets.md` |
 - docs/implemented-plans/scanner-ingest.md:17 (link) — > [`assets.md`](../media/assets.md).
+- docs/implemented-plans/workstream-exhibits.md:67 (mention) — (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
 - docs/media.md:11 (link) — | [Assets](media/assets.md) | git-annex: the model, the extension allowlist, absent content, configuration, commands, fa
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
 - docs/plans/asset-annex.md:16 (link) — > is the storage design itself. Current model: [`../assets.md`](../media/assets.md).
@@ -6819,7 +6868,6 @@ Referenced by:
 - docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
 - docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
 - docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../media/assets.md).
-- docs/plans/workstream-exhibits.md:62 (mention) — (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
 - docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../media/assets.md).
 - docs/server/operations.md:214 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
 - ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/media/assets.md` records "3,655 manifests removed", the old
@@ -7371,8 +7419,9 @@ No references in or out.
 Title: "Document comments" | 945 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/exhibit-comments.md:55 (mention) — about (the plan's job to be done in `document-comments.md`), and it can be
 - docs/plans/general-browser.md:17 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/AGENTS.md:101 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
+- ../bin/AGENTS.md:103 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:70 (link) — - [document-comments](../../../beebox/docs/plans/document-comments.md) — the
 - ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:39 (link) — [document-comments](../../beebox/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:19 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
@@ -7383,7 +7432,7 @@ References:
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 - → code-style.md (mention)
-- → docs/plans/workstream-exhibits.md (mention)
+- → docs/implemented-plans/workstream-exhibits.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/plans/general-browser.md (mention)
 - → docs/data-source-tagging.md (mention)
@@ -7423,7 +7472,7 @@ References:
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 - → docs/data-source-tagging.md (mention)
-- → docs/plans/workstream-exhibits.md (mention)
+- → docs/implemented-plans/workstream-exhibits.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 
 #### docs/plans/gmail-admission-and-preparation.md
@@ -8217,29 +8266,12 @@ References:
 - → docs/plans/workspace-pane-controls.md (link)
 - → ../issues/closed/bugs/2026-09-08-view-test-invalid-card-diagnostic-missing-under-load.md (link)
 
-#### docs/plans/workstream-exhibits.md
-
-Title: "Workstream exhibits" | 754 lines | proposal | partial
-
-Referenced by:
-- docs/plans/document-comments.md:80 (mention) — - **Precedent: the exhibits store** — `beebox/docs/plans/workstream-exhibits.md:236`:
-- docs/plans/general-browser.md:143 (mention) — stays one directory per workstream (`workstream-exhibits.md:231`) — that layout
-- ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md:13 (mention) — > `beebox/docs/plans/workstream-exhibits.md`). The separate origin this
-- ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:31 (link) — ([workstream-exhibits](../../beebox/docs/plans/workstream-exhibits.md):265).
-
-References:
-- → ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md (frontmatter)
-- → docs/media/assets.md (mention)
-- → docs/engineering-principles.md (mention)
-- → AGENTS.md (mention)
-- → docs/plans/workstreams-app.md (mention)
-
 #### docs/plans/workstreams-app.md
 
 Title: "Resident workstreams application" | 463 lines | proposal | partial
 
 Referenced by:
-- docs/plans/workstream-exhibits.md:142 (mention) — `docs/plans/workstreams-app.md`). The exhibits surface lives inside this
+- docs/implemented-plans/workstream-exhibits.md:147 (mention) — `docs/plans/workstreams-app.md`). The exhibits surface lives inside this
 - ../issues/closed/code-quality/2026-08-13-resident-workstreams-app.md:10 (frontmatter) — design: ../../../beebox/docs/plans/workstreams-app.md
 
 References:

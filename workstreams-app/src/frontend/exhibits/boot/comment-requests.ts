@@ -1,5 +1,5 @@
 // The comment panel's decisions, kept pure so they can be checked without a
-// browser (`docs/plans/exhibit-comments.md`, Track 3). The panel itself is a
+// browser (`docs/implemented-plans/exhibit-comments.md`, Track 3). The panel itself is a
 // few event listeners around these.
 
 import type { SelectionAnchor } from "../../lib/selection-anchor.js";

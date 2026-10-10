@@ -12,7 +12,7 @@ issues:
 
 Moved to implemented-plans on 2026-10-10. The boxholder's acceptance pass
 below never ran; after 52 days with no answer recorded through the page,
-[exhibits-rethink](../plans/exhibits-rethink.md) removed Track E (the ask
+[exhibits-rethink](exhibits-rethink.md) removed Track E (the ask
 queue) and the disposition form. Tracks A through D and F stand.
 
 Tracks A through F are implemented on this branch, through the fix round

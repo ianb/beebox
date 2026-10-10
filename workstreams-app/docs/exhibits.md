@@ -5,7 +5,7 @@ shows work to the developer — rendered documents, labeled screenshots, small
 interactive pages. An exhibit shows; it asks nothing. Questions go in chat.
 History and the original design (which still describes asks, dispositions, and the queue):
 `beebox/docs/implemented-plans/workstream-exhibits.md`. The current contract is
-this document and `beebox/docs/plans/exhibits-rethink.md`.
+this document and `beebox/docs/implemented-plans/exhibits-rethink.md`.
 
 ## Create one
 
@@ -218,7 +218,7 @@ may call the routes directly: `POST /api/<ws>/<exhibit>/comments` with
 `{ body, origin?, quoted?, section?, fragment? }` answers 201 `{ id, workstream }`,
 and `POST /api/transcribe` with `{ audio: <base64>, mimeType? }` answers
 `{ text }`. Committed apps have no workstream and are refused with 409.
-Design: [exhibit comments](../../beebox/docs/plans/exhibit-comments.md).
+Design: [exhibit comments](../../beebox/docs/implemented-plans/exhibit-comments.md).
 
 ## Writing pages the checks will not see
 

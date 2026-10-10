@@ -2,7 +2,7 @@
 //
 // An exhibit is a directory in the store carrying a manifest, content files,
 // and captured interactions. See docs/exhibits.md for the page contract and
-// beebox/docs/plans/exhibits-rethink.md for why there is no ask.
+// beebox/docs/implemented-plans/exhibits-rethink.md for why there is no ask.
 
 import { z } from "zod";
 
