@@ -5140,7 +5140,7 @@ tests:
   # bullets under a plain `## Corrections` heading; `key-people:` and
   # `properties:` are frontmatter lists. The briefing-specific Markdoc tags
   # (`{% purpose %}`, `{% correction %}`) were retired by the
-  # `body-tags-2026-10` migration (docs/plans/retire-type-specific-core-tags.md).
+  # `body-tags-2026-10` migration (docs/implemented-plans/retire-type-specific-core-tags.md).
 
   - id: briefing-purpose-frontmatter
     prompt: >
@@ -6668,7 +6668,7 @@ tests:
 
   # The transcript body is plain markdown since body-tags-2026-10: a photo is
   # a markdown link to its image card, a pause is a `— Ns silence —` line
-  # (docs/plans/retire-type-specific-core-tags.md Track 2).
+  # (docs/implemented-plans/retire-type-specific-core-tags.md Track 2).
   - id: capture-transcript-markers
     prompt: >
       In a capture-session card's transcript body, what does a photo look

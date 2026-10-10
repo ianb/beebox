@@ -54,3 +54,12 @@ Reviewer: codex gpt-6-sol, effort high, 2026-10-10 (`scratch/cross-model/2026-10
 Plan-record corrections from the same review: single-quoted attribute values are a parse error in Markdoc, so the migration fails closed on them (the plan had said they parse normally); `bbx validate` warns on a leftover tag and does not fail, so the plan's remaining "fails validation" wording was corrected.
 
 Found clean by the reviewer: consecutive photo tags, two replacements on one line, purpose removal at body boundaries, briefing compile order, missing, blank, and stub purpose handling, and no other producer or reader of the four tags in `src/`.
+
+# Implementation review — round 2
+
+Reviewer: codex gpt-6-sol, effort high, 2026-10-10 (`scratch/cross-model/2026-10-10T22-31-30-867Z-codex.md`), verifying the six fixes in bb16fab77. Five hold. Two residuals, both fixed in the following commit:
+
+- **Comment on a replaced `purpose: null`** followed the new value (`purpose: A # deliberately unset`). The comment described the absence, so the planner now drops the trailing comment when it sets an existing null in place; a doctest shows the result.
+- **Identical decoy in a code span** before the real tag: the re-parse check accepted the literal first. Markdoc gives no column offsets, so the planner now fails closed whenever an inline code span in the card contains a retired tag; the doctest that showed a decoy being left alone now shows the card failing with "quoted in a code span". The `%`-in-ref case keeps its own test.
+
+Rounds stop here (two full rounds, residuals fixed and covered by doctests). Residual risk accepted: a card whose only retired-tag text is in a fenced block with `process=false` is not a tag node and is left untouched by design; none exists in production (grep 2026-10-10).

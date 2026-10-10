@@ -1,6 +1,6 @@
 ---
 title: "Retire the four type-specific core Markdoc tags"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues: []
 ---

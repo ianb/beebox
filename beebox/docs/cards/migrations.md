@@ -342,7 +342,7 @@ under `_config/_template-updates/` are skipped. Idempotent. See
 
 #### `body-tags-2026-10` (rewrite — retired `image`, `silence`, `purpose`, `correction` tags)
 
-`docs/plans/retire-type-specific-core-tags.md`, Track 4. The four
+`docs/implemented-plans/retire-type-specific-core-tags.md`, Track 4. The four
 type-specific core Markdoc tags are gone; every `*.card` is rewritten. Tags are
 located with the Markdoc parse. `{% image ref="X" /%}` becomes `[<stem>](X)` and
 `{% silence duration="D" /%}` becomes `— D silence —`, in any card type. In a

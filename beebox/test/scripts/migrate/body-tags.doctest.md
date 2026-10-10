@@ -3,7 +3,7 @@
 `body-tags-2026-10` rewrites the retired `image`, `silence`, `purpose`, and
 `correction` Markdoc tags: an image becomes a link, a silence becomes text, a
 briefing's purpose moves to frontmatter, and its corrections become a
-`## Corrections` section (docs/plans/retire-type-specific-core-tags.md,
+`## Corrections` section (docs/implemented-plans/retire-type-specific-core-tags.md,
 Track 4). It locates tags with the Markdoc parse and fails closed: when it
 cannot place a tag it names the path and line, writes nothing, and exits 1, so
 `bbx engine migrate` records no manifest entry.
@@ -210,12 +210,20 @@ plan("_content/Notes/c.memo.card", "---\ntype: memo\n---\n{% image ref=\"attach/
 => ["block-form {% image %}...{% /image %} is not supported; rewrite it by hand"]
 ```
 
-A `%` inside a quoted attribute is matched, and a decoy literal tag in backticks
-on the same line is left alone.
+A `%` inside a quoted attribute is matched and converted.
 
 ```ts
-plan("_content/Notes/d.memo.card", "---\ntype: memo\n---\nWrite `{% image ref=\"x\" /%}` then {% image ref=\"attach/a%20b.image.card\" /%} ok.\n").after?.split("\n")[3]?.split("then ")
-=> ["Write `{% image ref=\"x\" /%}` ", "[a%20b](attach/a%20b.image.card) ok."]
+plan("_content/Notes/d.memo.card", "---\ntype: memo\n---\nSee {% image ref=\"attach/a%20b.image.card\" /%} ok.\n").after?.split("\n")[3]
+=> See [a%20b](attach/a%20b.image.card) ok.
+```
+
+A retired tag quoted in a code span cannot be told from the real tag by its
+source text, so a card holding one is left to a person, even when the real
+tag differs.
+
+```ts
+plan("_content/Notes/d2.memo.card", "---\ntype: memo\n---\nWrite `{% image ref=\"x\" /%}` then {% image ref=\"attach/a.image.card\" /%} ok.\n").failures.map((f) => f.reason)
+=> ["a retired tag is quoted in a code span in this card; rewrite the card by hand"]
 ```
 
 A ref that cannot be written as a markdown link fails (space in the stem):
@@ -237,6 +245,13 @@ An existing `purpose: null` is set in place; key order is kept.
 ```ts
 plan(ROOT, briefing("{% purpose %}\nA\n{% /purpose %}\n", "type: briefing\nother: 1\npurpose:\nlast: 2\n")).after?.split("\n")
 => ["---", "type: briefing", "other: 1", "purpose: A", "last: 2", "---", ""]
+```
+
+A comment on that null described the absence, so it does not follow the value.
+
+```ts
+plan(ROOT, briefing("{% purpose %}\nA\n{% /purpose %}\n", "type: briefing\npurpose: # deliberately unset\nlast: 2\n")).after?.split("\n")
+=> ["---", "type: briefing", "purpose: A", "last: 2", "---", ""]
 ```
 
 An interrupted stock-seed apply (seed written, ledger still on the old hash)

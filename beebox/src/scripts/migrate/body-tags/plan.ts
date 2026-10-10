@@ -3,7 +3,7 @@
  * (`image`, `silence`, `purpose`, `correction`) into plain card shapes. The
  * whole decision, as a pure function of the cards' text, so a doctest reaches
  * every case with no box on disk; `run.ts` is the IO around it
- * (docs/plans/retire-type-specific-core-tags.md, Track 4).
+ * (docs/implemented-plans/retire-type-specific-core-tags.md, Track 4).
  *
  * Tag nodes come from `Markdoc.parse` (no schema needed), which gives each
  * tag its attributes and line span and tells a real tag from one quoted in a
@@ -50,16 +50,20 @@ interface Found { node: Node; ancestors: readonly string[] }
 const sha256 = (text: string): string => createHash("sha256").update(text).digest("hex");
 
 /** Every retired tag node, with the node types above it, plus the first parse error node. */
-function scan(root: Node): { tags: Found[]; error: Node | null } {
+function scan(root: Node): { tags: Found[]; error: Node | null; literal: Node | null } {
   const tags: Found[] = [];
   let error: Node | null = null;
+  let literal: Node | null = null;
   const visit = (node: Node, ancestors: readonly string[]): void => {
     if (node.type === "error" && error === null) error = node;
+    // A retired tag quoted in a code span is text, but it is indistinguishable
+    // from the real tag by source text, so the card is left to a person.
+    if (node.type === "code" && literal === null && RETIRED_TAG_PATTERN.test(String(node.attributes["content"] ?? ""))) literal = node;
     if (node.type === "tag" && node.tag !== undefined && RETIRED_TAGS.has(node.tag)) tags.push({ node, ancestors });
     for (const child of node.children) visit(child, [...ancestors, node.type]);
   };
   visit(root, []);
-  return { tags, error };
+  return { tags, error, literal };
 }
 
 /** Raw text of the lines between a block tag's open and close lines. */
@@ -76,6 +80,12 @@ function withPurpose(split: ReturnType<typeof splitCardContent>, purpose: string
   const existing = isMap(doc.contents) && doc.contents.has("purpose");
   doc.set("purpose", purpose);
   const map = doc.contents;
+  if (existing) {
+    // The old value was null (anything else is a conflict upstream); a trailing
+    // comment on it described the absence, so it does not carry over.
+    const value: unknown = doc.get("purpose", true);
+    if (isScalar(value)) value.comment = null;
+  }
   if (isMap(map) && !existing) {
     // `set` appends; move the new pair to just after `type` (or first).
     const added = map.items.pop();
@@ -158,9 +168,10 @@ function mergePurpose(where: Where, { split, node, lines }: { split: ReturnType<
 function planCard(card: CardInput): { after: string | null } | Failed {
   const split = splitCardContent(card.text);
   const where = whereFor(card, split.lineOffset);
-  const { tags, error } = scan(parseMarkdown(split.body));
+  const { tags, error, literal } = scan(parseMarkdown(split.body));
   if (tags.length === 0 && !(error !== null && RETIRED_TAG_PATTERN.test(split.body))) return { after: null };
   if (error !== null) return where.fail("Markdoc cannot parse this body (a malformed or single-quoted tag attribute); fix it by hand", error);
+  if (literal !== null) return where.fail("a retired tag is quoted in a code span in this card; rewrite the card by hand", literal);
   const lines = split.body.split("\n");
   const found = collect(where, { tags, lines });
   if ("failures" in found) return found;
