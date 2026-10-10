@@ -254,6 +254,45 @@ clearChatRuntime(box.root);
 await box.cleanup();
 ```
 
+## A voice thought the phone ran HQ on
+
+When the phone ran its own HQ pass (docs/plans/ios-quick-chat-hq.md), it sends
+`hqService`, and the thought is framed with `stt-service` instead of
+`stt="live"`. The record keeps it through a choice and a repeated submit.
+
+```ts
+const { box } = await gardenBox();
+const runtime = scriptedRuntime(box.root);
+const sure = caller(box.root, judged({ c0: 0.95, c1: 0.03, c2: 0.02 }));
+await sure.submit({ id: randomUUID(), message: "Call Odette about the 14th", origin: "voice", hqService: "apple-speech-transcriber" });
+const unsure = caller(box.root, judged({ c0: 0.5, c1: 0.45, c2: 0.05 }));
+const waitingId = randomUUID();
+const waiting = await unsure.submit({ id: waitingId, message: "Something about the beds", origin: "voice", hqService: "apple-speech-transcriber" });
+await unsure.submit({ id: waitingId, message: "Something about the beds", origin: "voice" });
+await unsure.choose({ id: waiting.id, candidateId: "c1" });
+runtime.sends.map((send) => send.message)
+=> [
+  "<speech source=\"box-screen\" stt-service=\"apple-speech-transcriber\">Call Odette about the 14th</speech>",
+  "<speech source=\"box-screen\" stt-service=\"apple-speech-transcriber\">Something about the beds</speech>",
+]
+```
+
+`hqService` belongs only to a voice thought, and must be a short token: it is
+framed into a wrapper attribute.
+
+```ts continue
+await failure(() => sure.submit({ id: randomUUID(), message: "Buy stamps", origin: "typed", hqService: "apple-speech-transcriber" }))
+=> «BAD_REQUEST: *»
+
+await failure(() => sure.submit({ id: randomUUID(), message: "Hi", origin: "voice", hqService: "x\" onload=\"y" }))
+=> «BAD_REQUEST: *»
+```
+
+```ts cleanup
+clearChatRuntime(box.root);
+await box.cleanup();
+```
+
 ## "New chat" is honored over the existing-chat preference
 
 The box's existing root chat and the new general chat share the root. Jev

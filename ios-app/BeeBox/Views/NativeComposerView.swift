@@ -3,17 +3,26 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 
+/// What a quick chat send hands its target. `hqService` names the engine of
+/// the phone's HQ pass on a dictated thought; nil is typed or live text
+/// (docs/plans/ios-quick-chat-hq.md).
+struct QuickChatThought: Equatable {
+    var text: String
+    var origin: NativeChatEmission.Origin
+    var hqService: String?
+}
+
 /// Where the composer's sends go.
 ///
 /// `.conversation` hands the message to `PendingEmissionStore` for the web
-/// chat's bound conversation. `.quickChat` hands the final text and its origin
-/// (typed or dictated) to its closure and does nothing else: no pending
-/// emission, no binding check, text only.
+/// chat's bound conversation. `.quickChat` hands a `QuickChatThought` to its
+/// closure and does nothing else: no pending emission, no binding check, text
+/// only.
 /// The closure answers whether the text is stored; the draft clears only then,
 /// so a kill between the two cannot lose the thought.
 enum NativeComposerSubmitTarget {
     case conversation
-    case quickChat(@MainActor (String, NativeChatEmission.Origin) async -> Bool)
+    case quickChat(@MainActor (QuickChatThought) async -> Bool)
 
     var voicePolicy: NativeComposerVoicePolicy {
         switch self {
@@ -31,22 +40,16 @@ enum NativeComposerSubmitTarget {
 /// same submit as the Send button, and cancel, erase, and mic off act on the
 /// draft and the microphone, which a quick chat composer also has.
 ///
-/// Every dictated conversation message gets the HQ pass (on the device, then
-/// the box, then the live transcript as the fallback; docs/plans/hq-always.md).
-/// A quick chat composer has no HQ pass — its thought is text only and no
-/// recording reaches the box — so it sends the live transcript, and every
-/// spoken send closes the microphone, as the Send button does: a sent thought
-/// may open its chat.
+/// Every dictated message gets the HQ pass. A conversation message tries the
+/// device, then the box, then sends the live transcript
+/// (docs/plans/hq-always.md); a quick chat thought tries only the device, since
+/// no recording reaches the box (docs/plans/ios-quick-chat-hq.md). On the box
+/// screen every spoken send closes the microphone, as the Send button does: a
+/// sent thought may open its chat.
 struct NativeComposerVoicePolicy: Equatable {
     var sendsToConversation: Bool
 
     var detectsKeywords: Bool { true }
-
-    var highQualityTranscription: Bool { sendsToConversation }
-
-    func keywordSendPlan(for intent: SpeechKeywordResult) -> NativeVoiceKeywordSendPlan {
-        highQualityTranscription ? .hq : .live(text: intent.processedTranscript)
-    }
 
     func keywordSendClosesMicrophone(_ action: SpeechKeywordAction) -> Bool {
         sendsToConversation == false || action == .sendClose
@@ -743,7 +746,7 @@ struct NativeComposerView: View {
         }
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         let audioURL = origin == .voice ? dictation.consumeRecordedAudioURL() : nil
-        if origin == .voice, highQualityTranscriptionEnabled {
+        if origin == .voice {
             submit(.voicePreparation(
                 liveTranscript: message,
                 priorInput: dictation.dictationSeedText(),
@@ -815,10 +818,21 @@ struct NativeComposerView: View {
                     audioURL: audioURL,
                     deliver: deliver
                 )
-            case .voicePreparation(let liveTranscript, _, _, _, _, let audioURL, _):
-                // Unreachable: a quick chat composer has no high-quality
-                // transcription. The live transcript is the final text.
-                submitQuickChat(text: liveTranscript, origin: .voice, spoken: true, audioURL: audioURL, deliver: deliver)
+            case .voicePreparation(
+                let liveTranscript, let priorInput, let action, let matchedPhrase,
+                let appendsKeywordTag, let audioURL, _
+            ):
+                submitQuickChatVoice(
+                    VoiceSendText(
+                        liveTranscript: liveTranscript,
+                        priorInput: priorInput,
+                        action: action,
+                        matchedPhrase: matchedPhrase,
+                        appendsKeywordTag: appendsKeywordTag
+                    ),
+                    audioURL: audioURL,
+                    deliver: deliver
+                )
             }
         }
     }
@@ -831,7 +845,7 @@ struct NativeComposerView: View {
         origin: NativeChatEmission.Origin,
         spoken: Bool,
         audioURL: URL?,
-        deliver: @escaping @MainActor (String, NativeChatEmission.Origin) async -> Bool
+        deliver: @escaping @MainActor (QuickChatThought) async -> Bool
     ) {
         if let audioURL {
             try? FileManager.default.removeItem(at: audioURL)
@@ -842,7 +856,7 @@ struct NativeComposerView: View {
         statusText = nil
         isPreparingSend = true
         Task {
-            let stored = await deliver(text, origin)
+            let stored = await deliver(QuickChatThought(text: text, origin: origin, hqService: nil))
             isPreparingSend = false
             guard stored else {
                 if spoken {
@@ -852,6 +866,66 @@ struct NativeComposerView: View {
                 return
             }
             await draftStore.clearForSending(boxID: sendingBoxID)
+        }
+    }
+
+    /// A dictated quick chat thought (docs/plans/ios-quick-chat-hq.md): the
+    /// send lock is taken before the first await and held until the outbox has
+    /// the thought; the draft is flushed first, so a kill during the pass
+    /// leaves the live text in the composer. The microphone was already closed
+    /// by `send()` or the spoken send, and nothing here reopens it.
+    private func submitQuickChatVoice(
+        _ send: VoiceSendText,
+        audioURL: URL?,
+        deliver: @escaping @MainActor (QuickChatThought) async -> Bool
+    ) {
+        let sendingBoxID = box.id
+        let application = backgroundTaskApplication
+        dictation.resetDictationState()
+        focused = false
+        isPreparingSend = true
+        statusText = audioURL == nil ? nil : "Transcribing…"
+        Task {
+            await draftStore.flush()
+            let hq = await transcribeQuickChat(audioURL: audioURL, boxID: sendingBoxID, application: application)
+            if let audioURL {
+                try? FileManager.default.removeItem(at: audioURL)
+            }
+            let resolved = QuickChatVoiceText.resolve(send, hq: hq)
+            let stored = await deliver(QuickChatThought(text: resolved.text, origin: .voice, hqService: resolved.hqService))
+            isPreparingSend = false
+            guard stored else {
+                applyEarcon(.cancelWaiting)
+                statusText = "This thought could not be saved. It is still here."
+                return
+            }
+            statusText = nil
+            await draftStore.clearForSending(boxID: sendingBoxID)
+        }
+    }
+
+    /// The on-device HQ pass for a quick chat thought, or nil when it did not
+    /// run or produced nothing; there is no server pass to fall back to.
+    private func transcribeQuickChat(
+        audioURL: URL?,
+        boxID: UUID,
+        application: any BackgroundTaskApplication
+    ) async -> (text: String, service: String)? {
+        guard let audioURL else {
+            return nil
+        }
+        let backgroundHold = BackgroundExecutionHold(application: application)
+        _ = backgroundHold.begin(name: "beebox.quick-chat-hq") {
+            BoxLog.warn("quick chat HQ background hold expired", category: .composer, targetBoxID: boxID)
+        }
+        defer { backgroundHold.end() }
+        do {
+            let result = try await OnDeviceHqTranscriber.transcribe(fileURL: audioURL, diarizationRequested: false)
+            return (result.text, OnDeviceHqTranscriber.serviceName)
+        } catch {
+            let skip = error as? OnDeviceHqTranscriber.Skip ?? .failed(String(reflecting: type(of: error)))
+            BoxLog.info("quick chat HQ skipped reason=\(skip.logLabel)", category: .composer, targetBoxID: boxID)
+            return nil
         }
     }
 
@@ -873,10 +947,6 @@ struct NativeComposerView: View {
 
     private var voiceKeywordsEnabled: Bool {
         voicePolicy.detectsKeywords
-    }
-
-    private var highQualityTranscriptionEnabled: Bool {
-        voicePolicy.highQualityTranscription
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -964,14 +1034,6 @@ struct NativeComposerView: View {
             applyVoiceTurn(.voiceMessageSent(closeMicrophone: true))
         }
         let audioURL = dictation.consumeRecordedAudioURL()
-        switch voicePolicy.keywordSendPlan(for: intent) {
-        case .live(let text):
-            // Quick chat only: its submit drops the recording.
-            submit(.message(text: text, origin: .voice, voiceKeywordAction: intent.action, audioURL: audioURL))
-            return
-        case .hq:
-            break
-        }
         let priorInput = dictation.consumeKeywordSeedText()
         submit(.voicePreparation(
             liveTranscript: intent.processedTranscript,

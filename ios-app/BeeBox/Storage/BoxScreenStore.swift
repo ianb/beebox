@@ -4,7 +4,7 @@ import Foundation
 /// The quick chat procedures the box screen calls. `QuickChatAPI` is the real
 /// one; the DEBUG fixture screen supplies a fake.
 protocol QuickChatClient {
-    func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String?) async throws -> QuickChatView
+    func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String?, hqService: String?) async throws -> QuickChatView
     func choose(id: UUID, candidateId: String) async throws -> QuickChatView
     func discard(id: UUID) async throws -> QuickChatView
     func home() async throws -> QuickChatHome
@@ -294,9 +294,15 @@ final class BoxScreenStore: ObservableObject {
 
     /// The composer's quick chat target. Answers once the thought is on disk;
     /// the first attempt runs after.
-    func submitThought(_ text: String, origin: QuickChatOrigin, boxID: UUID, source: String? = nil) async -> Bool {
+    func submitThought(
+        _ text: String,
+        origin: QuickChatOrigin,
+        boxID: UUID,
+        source: String? = nil,
+        hqService: String? = nil
+    ) async -> Bool {
         await outbox.restore()
-        guard let entry = await outbox.store(text: text, origin: origin, source: source, boxID: boxID) else {
+        guard let entry = await outbox.store(text: text, origin: origin, source: source, hqService: hqService, boxID: boxID) else {
             return false
         }
         BoxLog.info("quick chat thought stored origin=\(origin.rawValue)", category: .composer, targetBoxID: boxID)
@@ -329,7 +335,7 @@ final class BoxScreenStore: ObservableObject {
     /// Retry a `sending` record: `submit` with the same id delivers again.
     func retry(_ view: QuickChatView, boxID: UUID) async {
         await act(on: view, boxID: boxID, name: "retry", follows: true) { client in
-            try await client.submit(id: view.id, message: view.message, origin: nil, source: nil)
+            try await client.submit(id: view.id, message: view.message, origin: nil, source: nil, hqService: nil)
         }
     }
 
@@ -339,7 +345,9 @@ final class BoxScreenStore: ObservableObject {
         }
         let view: QuickChatView
         do {
-            view = try await client(box).submit(id: entry.id, message: entry.text, origin: entry.origin, source: entry.source)
+            view = try await client(box).submit(
+                id: entry.id, message: entry.text, origin: entry.origin, source: entry.source, hqService: entry.hqService
+            )
         } catch {
             if entry.attempts == 0 {
                 BoxLog.warn("quick chat submit failed \(Self.describe(error))", category: .net, targetBoxID: box.id)

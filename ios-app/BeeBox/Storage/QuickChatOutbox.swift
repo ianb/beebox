@@ -17,12 +17,15 @@ struct QuickChatOutboxEntry: Codable, Equatable, Identifiable, Sendable {
     /// How the person entered the thought; distinct from the webview emission vocabulary.
     var origin: QuickChatOrigin
     var source: String? = nil
+    /// The engine of the HQ pass the phone ran on a dictated thought; nil is
+    /// live text (docs/plans/ios-quick-chat-hq.md).
+    var hqService: String? = nil
     var createdAt: Date
     var attempts: Int
     var lastAttemptAt: Date?
 
     private enum CodingKeys: String, CodingKey {
-        case id, boxID, text, origin, source, createdAt, attempts, lastAttemptAt
+        case id, boxID, text, origin, source, hqService, createdAt, attempts, lastAttemptAt
     }
 }
 
@@ -35,6 +38,7 @@ extension QuickChatOutboxEntry {
         text = try container.decode(String.self, forKey: .text)
         origin = try container.decodeIfPresent(QuickChatOrigin.self, forKey: .origin) ?? .typed
         source = try container.decodeIfPresent(String.self, forKey: .source)
+        hqService = try container.decodeIfPresent(String.self, forKey: .hqService)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         attempts = try container.decode(Int.self, forKey: .attempts)
         lastAttemptAt = try container.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
@@ -141,8 +145,8 @@ final class QuickChatOutbox: ObservableObject {
     /// Store a new thought, then make the first attempt. The entry is on disk
     /// before any request starts.
     @discardableResult
-    func add(text: String, origin: QuickChatOrigin, source: String? = nil, boxID: UUID) async -> QuickChatOutboxEntry? {
-        guard let entry = await store(text: text, origin: origin, source: source, boxID: boxID) else {
+    func add(text: String, origin: QuickChatOrigin, source: String? = nil, hqService: String? = nil, boxID: UUID) async -> QuickChatOutboxEntry? {
+        guard let entry = await store(text: text, origin: origin, source: source, hqService: hqService, boxID: boxID) else {
             return nil
         }
         await attempt(entry.id)
@@ -151,7 +155,7 @@ final class QuickChatOutbox: ObservableObject {
 
     /// Store a new thought without attempting it. Returns nil when it could not
     /// be written, so the caller keeps its own copy.
-    func store(text: String, origin: QuickChatOrigin, source: String? = nil, boxID: UUID) async -> QuickChatOutboxEntry? {
+    func store(text: String, origin: QuickChatOrigin, source: String? = nil, hqService: String? = nil, boxID: UUID) async -> QuickChatOutboxEntry? {
         guard isLoaded, restoreFailed == false else { return nil }
         let entry = QuickChatOutboxEntry(
             id: UUID(),
@@ -159,6 +163,7 @@ final class QuickChatOutbox: ObservableObject {
             text: text,
             origin: origin,
             source: source,
+            hqService: hqService,
             createdAt: now(),
             attempts: 0,
             lastAttemptAt: nil

@@ -23,6 +23,12 @@ export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
 export const QUICK_CHAT_ORIGINS = ["typed", "voice", "external"] as const;
 export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
 export const QUICK_CHAT_SOURCES = ["apple-app-intents"] as const;
+/**
+ * The engine that produced a dictated thought's HQ text on the phone
+ * (docs/plans/ios-quick-chat-hq.md); the same name as the native emission's
+ * `hqService`. A short token, since it is framed into a wrapper attribute.
+ */
+export const quickChatHqServiceSchema = z.string().regex(/^[\da-z-]{1,64}$/);
 export type QuickChatSource = (typeof QUICK_CHAT_SOURCES)[number];
 
 /** Duplicate protection lasts 7 days (send-dedup.ts); refuse a late delivery a day before that. */
@@ -40,6 +46,8 @@ const baseShape = {
   /** Absent on records written before the origin was kept: those were typed. */
   origin: z.enum(QUICK_CHAT_ORIGINS).default("typed"),
   source: z.enum(QUICK_CHAT_SOURCES).optional(),
+  /** Absent: a typed thought, or the phone's live transcript. */
+  hqService: quickChatHqServiceSchema.optional(),
   candidates: z.array(routingCandidateSchema),
   /** Empty when routing was unavailable. Kept for calibration; never shown. */
   probabilities: z.record(z.string(), z.number()),
