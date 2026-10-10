@@ -39,5 +39,5 @@ gap list only.
 
 ## Fixed in passing
 
-- `.claude/skills/bbx-context/SKILL.md` said boxes get no skills; `src/core/box/skills.ts` (moved to `beebox/src/core/box/guidance-sync/skills.ts`) installs managed ones. Line corrected.
+- `.claude/skills/bbx-context/SKILL.md` said boxes get no skills; `src/core/box/skills.ts` (moved to `beebox/src/core/box/guidance-sync/skills/core.ts`) installs managed ones. Line corrected.
 - `beebox/docs/glossary.md` carried two `asset` definitions; the superseded manifest one removed.
