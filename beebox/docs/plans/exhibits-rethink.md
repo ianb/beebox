@@ -15,6 +15,20 @@ the session-finished desktop notification open the exhibit page, gives the
 page a button that brings up the session's terminal tab so a reaction is one
 click away, and lists each workstream's exhibits on the dashboard.
 
+## Implementation status
+
+Implemented in the exhibits-rethink worktree, 2026-10-10, all five tracks.
+Hand check against a standalone run of this worktree's listener
+(`BBX_EXHIBITS_ROOT` pointed at the real store): a legacy `decide` exhibit
+renders its old prose; the focus route answers 204 for this worktree, 409
+with the CLI's reason for a workstream with no live session, 409 before
+spawning for `apps/` and `main`, 403 for a foreign `Origin`, 400 for a
+traversal segment; the browser button reaches the route; the workstream list
+API carries each workstream's exhibits and surfaces an unreadable store as a
+warning. The Stop hook edit (Track 3) is in `~/.claude/hooks/notify.sh`.
+Codex (gpt-6-sol) reviewed the plan twice and the diff once; every finding
+was applied. Not merged.
+
 **Issues addressed:** none filed directly. Related, not addressed:
 [orphaned comment namespaces after a cull](../../../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md)
 cites the exhibits store's orphan report as precedent; it is untouched here.
