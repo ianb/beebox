@@ -23,6 +23,12 @@ type GapState = "beforeFirst" | "none" | "open" | "awaitingText";
  */
 export class SegmentTranscript {
   private gap: GapState = "beforeFirst";
+  /**
+   * The trailing marker stands for audio no replay will bring back: live text
+   * dropped again before a covered reconnect delivered any words, so the
+   * earlier outage may lie outside the next replay.
+   */
+  private markerPermanent = false;
   private committedText = "";
   private currentText = "";
   private committedWords: FinalWord[] | null = null;
@@ -51,9 +57,13 @@ export class SegmentTranscript {
 
   /** Live text went down (a drop, or given up for the segment): fold, then mark the gap once. */
   openGap(): void {
+    const pendingRecovery = this.gap === "awaitingText";
     this.fold();
     if (!this.committedText.endsWith(LIVE_GAP_MARKER)) {
       this.committedText = mergeFinalText(this.committedText, LIVE_GAP_MARKER);
+      this.markerPermanent = false;
+    } else if (pendingRecovery) {
+      this.markerPermanent = true;
     }
     this.gap = "open";
   }
@@ -69,7 +79,7 @@ export class SegmentTranscript {
       if (!opts.covered) this.committedText = mergeFinalText(this.committedText, LIVE_GAP_MARKER);
       this.gap = "none";
     } else if (this.gap === "open") {
-      this.gap = opts.covered ? "awaitingText" : "none";
+      this.gap = opts.covered && !this.markerPermanent ? "awaitingText" : "none";
     }
     return this.committedText !== before;
   }
