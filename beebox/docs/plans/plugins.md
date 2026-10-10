@@ -650,6 +650,7 @@ harness `plugins/` directory (the paths do not collide), no connectors hook
 | Stylesheet injected twice when two views import the same plugin | new doctest | the inliner guards on a data attribute per stylesheet hash | clear |
 | Concept-map card with no view stub | README | Card and Source renderers show the card; `plugin-declared-missing` names the view | clear |
 | Import regex misses a dynamic import in a stub | new doctest | documented: stubs use static imports (README) | silent for exotic stubs; accepted |
+| A mis-named stub masked by another box file defining the type | none | effective-map check passes by type name; `bbx plugins list` names the file | silent; accepted (implementation review round 2) |
 
 ## Agent-flow / user-flow edge cases
 

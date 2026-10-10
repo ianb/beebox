@@ -378,3 +378,23 @@ Beyond the read-list, including bounded content searches and delegated inspectio
 ## Single most important change
 
 **Define plugin health from actual usable schemas, views and remaining migration work—not from the activation list.** An active plugin with missing stubs or discarded guidance must remain visibly broken until repaired; the current four-check design cannot guarantee that.
+---
+
+# Implementation review (2026-10-10)
+
+Reviewer: codex gpt-6-sol on the branch diff (`git diff main...HEAD -- beebox`),
+read-only, two rounds via `bin/cross-model-run`.
+
+Round 1 found five problems, all verified against the source and fixed in
+commit `061437772`: typed bases lost through the public export (now
+`definePlugin<const S>`); a present stub with the wrong type passing health
+(now compared with the effective schema map); a throwing `lintCards` hook
+aborting validation (now one warning per card); the upgrade hiding
+validation warnings (now prints them and the plugin health rows, never
+blocking); invalid `plugins` entries invisible to health (now `plugin-config`).
+
+Round 2 verified all five fixes hold. Residual, accepted as a documented
+risk: if a stub file for one type defines a different type while another box
+schema file defines the expected type, the effective map contains the type
+and no row fires. The stub status in `bbx plugins list` names the file; a
+provenance check (which file defined which type) is not built.
