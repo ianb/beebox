@@ -8,7 +8,8 @@ import { buildTimezoneContext, loadCodexTelemetry } from "../../box/config.js";
 import type { AgentResult } from "../types.js";
 import { ensureCodexPluginInstalled } from "../ensure-codex-plugin.js";
 import { checkCodexAuth } from "../auth-preflight.js";
-import { expandClaudeIncludes } from "../../agent-context-includes.js";
+import { expandInstructionIncludes } from "../../agent-context-includes.js";
+import { instructionFilePath } from "../../agent-instruction-files.js";
 import { validateHookPathsResult } from "../../../cli/validate-hook/command.js";
 import { codexRunErrorText, resultFromCodexTurn } from "./result.js";
 import { applyEngineUnavailability } from "../engine-unavailability-apply.js";
@@ -75,8 +76,8 @@ export async function runCodexAgent(
     await checkCodexAuth();
     await ensureCodexPluginInstalled();
     const tzContext = options.resumeSessionId === undefined ? await buildTimezoneContext(options.boxRoot) : "";
-    const includedContext = await expandClaudeIncludes({
-      claudePath: join(options.boxRoot, "CLAUDE.md"),
+    const includedContext = await expandInstructionIncludes({
+      instructionPath: join(options.boxRoot, await instructionFilePath(options.boxRoot, "")),
       boxRoot: options.boxRoot,
     });
     if (options.maxBudgetUsd !== undefined) {

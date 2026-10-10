@@ -10,7 +10,7 @@ import { generateAgentGuide } from "../../../../src/core/agent-guide/guide/core.
 import { reachingDefaultQuote } from "../../../../src/core/agent-guide/guide/reaching.js";
 import { createBriefingTemplate, REACHING_ME_DEFAULT } from "../../../../src/schemas/briefing.js";
 
-const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/b" } });
+const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/b" }, instructionFile: "CLAUDE.md" });
 const start = guide.indexOf("## REACHING_THE_BOXHOLDER");
 const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
 ```

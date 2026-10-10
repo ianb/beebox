@@ -1,6 +1,7 @@
 /**
- * The one line a map-bearing directory's `CLAUDE.md` carries so Claude Code
- * loads `MAP.md` when an agent works there. Shared by the maps finalizer,
+ * The one line a map-bearing directory's instruction file (`AGENTS.md`, or a
+ * legacy `CLAUDE.md`) carries so Claude Code loads `MAP.md` when an agent
+ * works there. Shared by the maps finalizer,
  * which writes it, and the guidance sync, which strips it off a tracked guide
  * that an earlier finalizer prepended it to (see
  * `docs/box-guidance.md`, "Maps and tracked guides").

@@ -1,12 +1,15 @@
 ---
 title: "Move to AGENTS.md as the authored instruction file, in the repo and on boxes"
-workstream: unattached
+workstream: agents-md
+resolution: implemented
 area: docs
 labels: [agent-workflow]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder wants one authored instruction filename once Claude Code reads AGENTS.md
 ---
+
+**Closed 2026-10-09: implemented.** Repo half landed in `bee88d5d6`. Box half: registered migration `agents-md-2026-10` (plan `beebox/docs/implemented-plans/box-agents-md.md`), merged in this landing. Cleanup of the CLAUDE.md compat path is deferred (`issues/deferred/2026-10-09-retire-claude-md-box-compat.md`).
 
 **Status 2026-10-09: the repo half is done** in `worktree-agents-md`. Boxes
 remain open (see "What boxes would change" below). Findings from that work,
@@ -100,4 +103,4 @@ before touching a box.
 3. Boxes second, and only with SDK behavior confirmed. A migration changes
    files inside every box, so it is a registered migration, not an edit.
 
-Related: [Claude Code Mods](../exploration/2026-09-18-claude-code-mods.md).
+Related: [Claude Code Mods](../../exploration/2026-09-18-claude-code-mods.md).

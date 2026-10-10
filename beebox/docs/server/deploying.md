@@ -21,10 +21,14 @@ commit; final deployment success is written only after the checks finish.
 Per-box convergence invokes `bbx migrate --sweep --within-maintenance --json`
 under the existing controller. That single operation handles deterministic
 migrations and generated guidance with snapshots and changed-path commits.
-Dirty input is accepted; deployment does not start a repair agent. Its separate
-ten-minute command limit remains. A box needing repair is reported and stays
-closed; restarting its process does not clear failed convergence. The hourly
-`box-convergence` schedule retries with bounded repair authority. See
+Dirty input is accepted, and no repair agent runs inside that shared downtime.
+Its separate ten-minute command limit remains. A box needing repair is reported
+and stays closed; restarting its process does not clear failed convergence.
+When convergence fails, the deploy then runs the same bounded repair the hourly
+`box-convergence` schedule runs (`bbx engine migrate --sweep --repair`, 25-minute
+limit) for each box that still has a pending migration, after the other boxes
+are serving again, and still reports the deploy as failed. A chained deploy waits
+for it. The hourly schedule retries anything the repair leaves. See
 [migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
 
 The shared drain accounts for gate-aware writers. The first rollout from older

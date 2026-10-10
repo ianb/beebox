@@ -216,7 +216,7 @@ A soft instruction-size warning exits 0 and reaches the agent through the
 
 ```ts
 const warningBox = await makeTmpBox();
-const instructions = join(warningBox.root, "CLAUDE.md");
+const instructions = join(warningBox.root, "AGENTS.md");
 await writeFile(instructions, "x".repeat(13000));
 const warning = await runShellHook(instructions);
 JSON.stringify({
@@ -239,7 +239,7 @@ resets the notice, and another session gets its own notice.
 
 ```ts
 const repeatBox = await makeTmpBox();
-const repeatFile = join(repeatBox.root, "CLAUDE.md");
+const repeatFile = join(repeatBox.root, "AGENTS.md");
 await writeFile(repeatFile, "x".repeat(13000));
 const first = await runShellHook(repeatFile, "session-one");
 await writeFile(repeatFile, "x".repeat(13100));

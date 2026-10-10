@@ -14,12 +14,12 @@ import { MANIFEST_PATH, isProcedureMigration, type Migration } from "./migration
 import {
   appendManifestEntry,
   computePending,
-  readManifest,
   restoreManifest,
   runMigrationScript,
   snapshotManifest,
   SOFT_FAILURE_EXIT,
 } from "./migration-run.js";
+import { readManifest } from "./migration-manifest.js";
 /**
  * How long a yielding pass waits for live work to clear. Long enough for the
  * box's server to notice the phase and close idle chat runs (it polls every

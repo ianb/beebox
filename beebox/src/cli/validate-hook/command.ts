@@ -23,6 +23,7 @@ import { lintViewMarkdown } from "../../core/views/markdown-check/core.js";
 import { lintCardsDispatch } from "../../core/card-lint/core/lint-cards.js";
 import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
 import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
+import { legacyInstructionError } from "../../core/legacy-instruction-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
@@ -176,6 +177,9 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
   }
   if (isAgentInstructionsFile(fp)) {
     const boxRoot = await requireBoxRoot(path.dirname(fp));
+    // Checks the name first; only a CLAUDE.md-family write reads the manifest.
+    const legacy = await legacyInstructionError(boxRoot, fp);
+    if (legacy !== null) return { feedback: legacy, hasErrors: true };
     const warning = await lintClaudeMdFile(boxRoot, fp);
     if (sessionId !== null) {
       try {
