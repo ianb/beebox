@@ -14,17 +14,20 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { z } from "zod";
+
 import {
   MANIFEST_FILE,
-  appManifestSchema,
   exhibitManifestSchema,
   exhibitSegmentSchema,
   type ExhibitManifest,
 } from "../../shared/exhibits.js";
-import { readDisposition } from "./disposition.js";
 
 /** Written by bin/lib/exhibits-store.sh when the store root is created. */
 export const STORE_MARKER = ".workstream-exhibits";
+
+/** Where an exhibit's documents live, relative to its directory. */
+export const DATA_DIR = "data";
 
 /** Reserved: /apps/<name> is the committed-app tier, not a workstream. */
 export const APPS_SEGMENT = "apps";
@@ -147,11 +150,25 @@ function formatIssue(issue: { path: PropertyKey[]; message: string }): string {
 }
 
 /**
+ * Manifests written before the ask was removed carry `ask: { prose, ... }`.
+ * Lift `ask.prose` into a missing top-level `prose`, then drop `ask`; its other
+ * contents are never validated. Read side only: nothing writes `ask` any more.
+ */
+export function liftLegacyManifest(raw: unknown): unknown {
+  const object = z.record(z.string(), z.unknown()).safeParse(raw);
+  if (!object.success || !("ask" in object.data)) return raw;
+  const { ask, ...rest } = object.data;
+  if ("prose" in rest) return rest;
+  const prose = z.object({ prose: z.string() }).safeParse(ask);
+  return prose.success ? { ...rest, prose: prose.data.prose } : rest;
+}
+
+/**
  * Read and validate exhibit.json. A directory with content but no usable
  * manifest is an error the developer must see, never a bare listing
- * (principle 4) — the ask is what makes an exhibit an exhibit.
+ * (principle 4).
  */
-export async function readManifest(dir: string, options: { requireAsk: boolean }): Promise<ManifestResult> {
+export async function readManifest(dir: string): Promise<ManifestResult> {
   const file = path.join(dir, MANIFEST_FILE);
   // The same posture the events log takes (api.ts): a manifest that is a
   // symlink is refused rather than followed, so nothing outside the store can
@@ -178,8 +195,7 @@ export async function readManifest(dir: string, options: { requireAsk: boolean }
       issues: [`not valid JSON: ${error instanceof Error ? error.message : String(error)}`],
     };
   }
-  const schema = options.requireAsk ? exhibitManifestSchema : appManifestSchema;
-  const result = schema.safeParse(parsed);
+  const result = exhibitManifestSchema.safeParse(liftLegacyManifest(parsed));
   if (!result.success) {
     return { ok: false, missing: false, issues: result.error.issues.map(formatIssue) };
   }
@@ -223,47 +239,18 @@ export async function listWorkstreams(storeRoot: string): Promise<string[]> {
 export interface ExhibitListing {
   name: string;
   title: string | null;
-  askType: string | null;
-  /** Null when the exhibit states no ask; otherwise whether it was answered. */
-  answered: boolean | null;
-  /** A disposition that exists but cannot be read as one. */
-  problem: string | null;
   error: string | null;
 }
 
-export interface ListExhibitsOptions {
-  requireAsk: boolean;
-  /**
-   * Where each exhibit's runtime data lives, when that is not the same tree as
-   * its manifest — a committed app's code is tracked in the checkout while its
-   * documents stay in the store.
-   */
-  dataRoot?: string;
-}
-
-/**
- * The listing a developer scans to find what still needs them, so it carries
- * answered state — read through the same helper the ask queue uses, because two
- * definitions of "answered" would drift the moment one of them was wrong.
- */
-export async function listExhibits(root: string, options: ListExhibitsOptions): Promise<ExhibitListing[]> {
+export async function listExhibits(root: string): Promise<ExhibitListing[]> {
   const listings: ExhibitListing[] = [];
   for (const name of await listRoutableDirs(root)) {
-    const manifest = await readManifest(path.join(root, name), { requireAsk: options.requireAsk });
-    if (!manifest.ok) {
-      listings.push({ name, title: null, askType: null, answered: null, problem: null, error: manifest.issues.join("; ") });
-      continue;
-    }
-    const ask = manifest.manifest.ask ?? null;
-    const disposition = ask === null ? null : await readDisposition(path.join(options.dataRoot ?? root, name));
-    listings.push({
-      name,
-      title: manifest.manifest.title,
-      askType: ask?.type ?? null,
-      answered: disposition?.answered ?? null,
-      problem: disposition?.problem ?? null,
-      error: null,
-    });
+    const manifest = await readManifest(path.join(root, name));
+    listings.push(
+      manifest.ok
+        ? { name, title: manifest.manifest.title, error: null }
+        : { name, title: null, error: manifest.issues.join("; ") },
+    );
   }
   return listings;
 }

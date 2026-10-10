@@ -13,7 +13,7 @@ import { createCommentsService } from "../comments-service.js";
 import { createTranscribeService } from "./transcribe-openai.js";
 import { createDocumentsService } from "./documents-service.js";
 import { createIssueRelatedService } from "./issue-related-service.js";
-import { createExhibitsQueueService } from "./exhibits-queue-service.js";
+import { createExhibitsInventoryService } from "./exhibits-inventory-service.js";
 import { createQuotasService } from "./quotas-service.js";
 import {
   createActionCommandRunner,
@@ -83,10 +83,10 @@ async function main(): Promise<void> {
     transcribe: createTranscribeService(),
     quotas: createQuotasService(),
     actions,
-    // The queue reads the same store the exhibits listener serves, and links
+    // The inventory reads the same store the exhibits listener serves, and links
     // back to its origin: same host, the port that listener binds below.
-    exhibits: createExhibitsQueueService({
-      ...exhibitsRoots(env),
+    exhibits: createExhibitsInventoryService({
+      storeRoot: exhibitsRoots(env).storeRoot,
       origin: `http://127.0.0.1:${String(env.EXHIBITS_PORT)}`,
     }),
   };

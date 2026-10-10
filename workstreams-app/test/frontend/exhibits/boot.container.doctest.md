@@ -1,10 +1,8 @@
 # The exhibit container
 
-The shell every exhibit renders inside. It carries both halves of the ask: the
-header that states the question, and — below whatever the page rendered — the
-control that answers it. That placement is what makes an instrument answerable:
-a page tier is a choice about presentation, never about whether the developer
-can reply.
+The shell every exhibit renders inside: breadcrumb, title, the manifest's prose
+rendered as Markdown, and whatever the page rendered. A page tier is a choice
+about presentation, never about whether the prose and title appear.
 
 ```ts setup
 import * as React from "react";
@@ -17,7 +15,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 // import. Handing the global over is the smallest way to render one here.
 Object.assign(globalThis, { React });
 
-import { ExhibitContainer } from "../../../src/frontend/exhibits/Container.js";
+import { ExhibitContainer } from "../../../src/frontend/exhibits/boot/Container.js";
 import type { ExhibitBoot } from "../../../src/shared/exhibits.js";
 
 function boot(overrides: Partial<ExhibitBoot>): ExhibitBoot {
@@ -28,7 +26,7 @@ function boot(overrides: Partial<ExhibitBoot>): ExhibitBoot {
     manifest: {
       title: "Threshold tuner",
       created: "2026-08-15T00:00:00Z",
-      ask: { type: "react", prose: "Tell me how it feels." },
+      prose: "The tuner shows **three** thresholds:\n\n- low\n- high",
     },
     doc: null,
     module: "/@fs/store/demo-ws/instrument/index.tsx",
@@ -43,35 +41,34 @@ function render(value: ExhibitBoot): string {
 }
 ```
 
-An instrument — a page with its own `index.tsx` — gets the disposition control
-appended below its content. Before this, an instrument that stated an ask gave
-the developer no way to answer it.
+Prose renders as Markdown under the title: a list comes out as a list and
+emphasis as emphasis, not one run-on paragraph. The page's own content follows.
+There is no answer form.
 
 ```ts
 const instrument = render(boot({}));
 JSON.stringify({
   page: instrument.includes("the page&#x27;s own content"),
+  list: instrument.includes("<li>low</li>"),
+  emphasis: instrument.includes("<strong>three</strong>"),
   form: instrument.includes("Your answer"),
-  // Static rendering runs no effects, so the form is caught in its first state:
-  // reading whatever answer is already on disk.
-  reading: instrument.includes("Checking for a recorded answer"),
-  pageComesFirst: instrument.indexOf("own content") < instrument.indexOf("Your answer"),
+  titleFirst: instrument.indexOf("Threshold tuner") < instrument.indexOf("three"),
+  proseBeforePage: instrument.indexOf("three") < instrument.indexOf("own content"),
 })
-=> {"page":true,"form":true,"reading":true,"pageComesFirst":true}
+=> {"page":true,"list":true,"emphasis":true,"form":false,"titleFirst":true,"proseBeforePage":true}
 ```
 
-A committed app may state no ask — a durable tool is not a question — and then
-there is nothing to answer and no control.
+A manifest without prose shows the title and the page only.
 
 ```ts
-const app = render(boot({
+const bare = render(boot({
   scope: "apps/threshold-tuner",
   manifest: { title: "Threshold tuner", created: "2026-08-15T00:00:00Z" },
 }));
 JSON.stringify({
-  page: app.includes("the page&#x27;s own content"),
-  form: app.includes("Your answer"),
-  note: app.includes("Committed app"),
+  page: bare.includes("the page&#x27;s own content"),
+  title: bare.includes("Threshold tuner"),
+  prose: bare.includes("three"),
 })
-=> {"page":true,"form":false,"note":true}
+=> {"page":true,"title":true,"prose":false}
 ```

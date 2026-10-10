@@ -83,7 +83,6 @@ interface PageTarget {
   scope: string;
   listUrl: string;
   listLabel: string;
-  requireAsk: boolean;
 }
 
 function html(reply: FastifyReply, page: { code: number; body: string }): FastifyReply {
@@ -128,7 +127,7 @@ async function servePage(
   const resolved = await resolveExhibitDir(target.root, target.segments);
   if (!resolved) return delegate(assets, target);
 
-  const manifest = await readManifest(resolved.dir, { requireAsk: target.requireAsk });
+  const manifest = await readManifest(resolved.dir);
   if (!manifest.ok) {
     return html(reply, {
       code: manifest.missing ? 404 : 500,
@@ -242,12 +241,7 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       body: renderExhibitList({
         heading: "Committed apps",
         basePath: "/apps/",
-        // A committed app's code is tracked in the checkout; its documents —
-        // including any disposition — live in the store's reserved namespace.
-        exhibits: await listExhibits(options.appsRoot, {
-          requireAsk: false,
-          dataRoot: path.join(options.storeRoot, APPS_SEGMENT),
-        }),
+        exhibits: await listExhibits(options.appsRoot),
       }),
     }));
 
@@ -258,7 +252,6 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       scope: `${APPS_SEGMENT}/${request.params.name}`,
       listUrl: "/apps/",
       listLabel: "Committed apps",
-      requireAsk: false,
       request,
       reply,
     }));
@@ -286,7 +279,7 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       body: renderExhibitList({
         heading: ws,
         basePath: `/${encodeURIComponent(ws)}/`,
-        exhibits: await listExhibits(root, { requireAsk: true }),
+        exhibits: await listExhibits(root),
       }),
     });
   });
@@ -300,7 +293,6 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       scope: `${ws}/${exhibit}`,
       listUrl: `/${encodeURIComponent(ws)}/`,
       listLabel: ws,
-      requireAsk: true,
       request,
       reply,
     });

@@ -19,7 +19,6 @@ export const PAGE_SECTIONS = {
   plans: { label: "Plans", glyph: "P", color: "#6b4fa0" },
   browse: { label: "Browse", glyph: "B", color: "#58738f" },
   testing: { label: "Manual testing", glyph: "T", color: "#a07a10" },
-  asks: { label: "Asks", glyph: "A", color: "#a63d7a" },
   alerts: { label: "Alerts", glyph: "!", color: "#8f2d24" },
 } as const;
 

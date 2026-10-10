@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
-import { Markdown } from "../components/Markdown.js";
-import type { ExhibitBoot, ExhibitFigure } from "../../shared/exhibits.js";
+import { Markdown } from "../../components/Markdown.js";
+import type { ExhibitBoot, ExhibitFigure } from "../../../shared/exhibits.js";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"];
 

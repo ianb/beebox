@@ -198,7 +198,7 @@ from disk.
 
 ```ts continue
 await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "ratings", data: { figure: "A1" } }) });
-await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "disposition", data: { choice: "A" } }) });
+await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "choices", data: { choice: "A" } }) });
 await Promise.all(
   Array.from({ length: 8 }, (_unused, index) =>
     app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "burst", data: index }) })),
@@ -212,7 +212,7 @@ JSON.stringify({
   stamped: parsed.every((entry) => typeof entry.at === "string" && !Number.isNaN(Date.parse(entry.at))),
   burst: parsed.filter((entry) => entry.log === "burst").map((entry) => entry.data).toSorted((a, b) => a - b),
 })
-=> {"lines":10,"logs":["ratings","disposition"],"data":{"figure":"A1"},"stamped":true,"burst":[0,1,2,3,4,5,6,7]}
+=> {"lines":10,"logs":["ratings","choices"],"data":{"figure":"A1"},"stamped":true,"burst":[0,1,2,3,4,5,6,7]}
 ```
 
 An envelope that is not `{ log, data }` is refused with the Zod issues, not

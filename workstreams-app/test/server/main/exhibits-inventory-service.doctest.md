@@ -1,4 +1,4 @@
-# Exhibits surface
+# Exhibits surface and inventory
 
 The exhibits listener is a second Fastify instance on its own origin: it serves
 the persistent exhibit store (and the main checkout's committed apps) to the
@@ -50,7 +50,6 @@ function manifest(overrides: Record<string, unknown>): string {
   return JSON.stringify({
     title: "A title",
     created: "2026-08-15T00:00:00Z",
-    ask: { type: "fyi", prose: "Nothing needed." },
     ...overrides,
   });
 }
@@ -64,7 +63,8 @@ async function makeStore(): Promise<string> {
 
   await writeFile(path.join(ws, "passive/exhibit.json"), manifest({
     title: "Six screenshots",
-    ask: { type: "decide", prose: "Which layout ships?", options: ["A", "B"] },
+    created: "2026-08-17T00:00:00Z",
+    prose: "The wide layout next to the narrow one.",
     figures: [{ label: "A1", file: "shot.png", caption: "Wide layout" }],
   }));
   await writeFile(path.join(ws, "passive/doc.md"), "# Notes\n\nA1 is the wide one.\n");
@@ -77,8 +77,8 @@ async function makeStore(): Promise<string> {
   await writeFile(path.join(ws, "plain/index.html"), "<!doctype html><p>plain</p>\n");
   await writeFile(path.join(ws, "plain/data.json"), '{"ok":true}\n');
 
-  await writeFile(path.join(ws, "malformed/exhibit.json"), JSON.stringify({ title: "No ask", created: "x" }));
-  await writeFile(path.join(ws, "malformed/index.html"), "<p>content without an ask</p>\n");
+  await writeFile(path.join(ws, "malformed/exhibit.json"), JSON.stringify({ title: "No created date" }));
+  await writeFile(path.join(ws, "malformed/index.html"), "<p>content without a created date</p>\n");
 
   await writeFile(path.join(ws, "unmanifested/index.tsx"), "export default function Page() { return null; }\n");
   // CODING_FEEDBACK entries (bin/coding-feedback) share the workstream directory.
@@ -138,8 +138,8 @@ JSON.stringify({
 
 ## Listings
 
-The root lists workstreams; a workstream lists its exhibits with ask badges and
-names the ones whose manifest is unusable rather than hiding them.
+The root lists workstreams; a workstream lists its exhibits and names the ones
+whose manifest is unusable rather than hiding them.
 
 ```ts continue
 const root = await app.inject({ method: "GET", url: "/", headers: authorized });
@@ -149,11 +149,11 @@ JSON.stringify({ status: root.statusCode, hasWorkstream: root.body.includes('hre
 const listing = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
 JSON.stringify({
   status: listing.statusCode,
-  decide: listing.body.includes("badge-decide"),
   title: listing.body.includes("Six screenshots"),
-  malformed: listing.body.includes("ask: Invalid input"),
+  malformed: listing.body.includes("created: Invalid input"),
+  noAskState: !listing.body.includes("waiting") && !listing.body.includes("answered"),
 })
-=> {"status":200,"decide":true,"title":true,"malformed":true}
+=> {"status":200,"title":true,"malformed":true,"noAskState":true}
 ```
 
 The `coding-feedback/` directory beside the exhibits holds retrospective notes
@@ -168,30 +168,6 @@ JSON.stringify({
   file: feedbackFile.statusCode === 200 || feedbackFile.body.includes("retro note"),
 })
 => {"listed":false,"page":false,"file":false}
-```
-
-The listing also says which asks are still costing the developer something. It
-reads the disposition through the same helper the ask queue uses, so a
-half-written answer is "waiting" plus a stated problem on both surfaces rather
-than "answered" on one and not the other.
-
-```ts continue
-const waiting = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
-await writeFile(
-  path.join(store, "demo-ws/passive/data/disposition.json"),
-  JSON.stringify({ askType: "decide", choice: "A", decidedAt: "2026-08-15T12:00:00Z" }),
-);
-await writeFile(path.join(store, "demo-ws/instrument/data/disposition.json"), '{"askType":"fyi","dec');
-const answered = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
-const rowFor = (body: string, name: string): string =>
-  body.split("<li>").find((row) => row.includes(`/${name}/`)) ?? "";
-JSON.stringify({
-  before: rowFor(waiting.body, "passive").includes(">waiting<"),
-  after: rowFor(answered.body, "passive").includes(">answered<"),
-  truncatedStaysWaiting: rowFor(answered.body, "instrument").includes(">waiting<"),
-  truncatedIsNamed: rowFor(answered.body, "instrument").includes("disposition is not valid JSON"),
-})
-=> {"before":true,"after":true,"truncatedStaysWaiting":true,"truncatedIsNamed":true}
 ```
 
 ## Page tiers
@@ -243,7 +219,7 @@ JSON.stringify({ status: broken.statusCode, named: broken.body.includes("Unexpec
 => {"status":500,"named":true}
 ```
 
-## Every exhibit carries its ask
+## Every exhibit carries a manifest
 
 An invalid manifest names the file and the Zod issues; a directory with content
 but no manifest is not served as an anonymous page. Neither ever renders as a
@@ -254,9 +230,10 @@ const malformed = await app.inject({ method: "GET", url: "/demo-ws/malformed/", 
 JSON.stringify({
   status: malformed.statusCode,
   file: malformed.body.includes("demo-ws/malformed/exhibit.json"),
-  issue: malformed.body.includes("ask:"),
+  issue: malformed.body.includes("created:"),
+  shape: malformed.body.includes("&quot;prose&quot;?") || malformed.body.includes('"prose"?'),
 })
-=> {"status":500,"file":true,"issue":true}
+=> {"status":500,"file":true,"issue":true,"shape":true}
 
 const unmanifested = await app.inject({ method: "GET", url: "/demo-ws/unmanifested/", headers: authorized });
 JSON.stringify({
@@ -298,18 +275,13 @@ await fs.rm(secret, { force: true });
 ```
 
 A symlinked *entry* is refused the same way, and — this is the part a scan can
-get wrong — it is refused consistently. Listings and the ask queue enumerate the
-store and then read `exhibit.json` and `data/disposition.json` from the names
-they find, so following a link there would read (and advertise) a directory
+get wrong — it is refused consistently. Listings and the inventory enumerate the
+store and then read `exhibit.json` from the names they find, so following a link there would read (and advertise) a directory
 outside the store that the direct routes already 404. `lstat`, not `stat`.
 
 ```ts continue
 const outside = path.join(store, "..", `exhibits-outside-${String(process.pid)}`);
 await writeFile(path.join(outside, "exhibit.json"), manifest({ title: "Planted from outside the store" }));
-await writeFile(path.join(outside, "data/disposition.json"), JSON.stringify({
-  askType: "fyi",
-  decidedAt: "2026-08-15T00:00:00Z",
-}));
 // An exhibit-shaped link inside a workstream, and a whole workstream-shaped one.
 await fs.symlink(outside, path.join(store, "demo-ws/planted"));
 await fs.symlink(outside, path.join(store, "planted-ws"));
@@ -317,12 +289,11 @@ await fs.symlink(outside, path.join(store, "planted-ws"));
 await fs.mkdir(path.join(store, "demo-ws/borrowed"));
 await fs.symlink(path.join(outside, "exhibit.json"), path.join(store, "demo-ws/borrowed/exhibit.json"));
 
-const { createExhibitsQueueService } = await import("../../../src/server/main/exhibits-queue-service.js");
-const queue = await createExhibitsQueueService({
+const { createExhibitsInventoryService } = await import("../../../src/server/main/exhibits-inventory-service.js");
+const queue = await createExhibitsInventoryService({
   storeRoot: store,
-  appsRoot: path.join(store, "apps"),
   origin: `http://127.0.0.1:${String(EXHIBITS_PORT)}`,
-}).askQueue();
+}).inventory();
 
 const workstreams = await app.inject({ method: "GET", url: "/", headers: authorized });
 const exhibits = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
@@ -336,9 +307,9 @@ JSON.stringify({
   borrowedRefusesTheLink: borrowed.body.includes("is a symlink"),
   outsideTitleAnywhere: [workstreams.body, exhibits.body, planted.body, borrowed.body, JSON.stringify(queue)]
     .some((body) => body.includes("Planted from outside the store")),
-  queueSlugs: queue.entries.map((entry) => entry.slug),
+  inventorySlugs: queue.entries.map((entry) => entry.slug),
 })
-=> {"workstreamListed":false,"exhibitListed":false,"plantedRoute":404,"borrowedRoute":500,"borrowedRefusesTheLink":true,"outsideTitleAnywhere":false,"queueSlugs":["borrowed","instrument","malformed","passive","plain","unmanifested"]}
+=> {"workstreamListed":false,"exhibitListed":false,"plantedRoute":404,"borrowedRoute":500,"borrowedRefusesTheLink":true,"outsideTitleAnywhere":false,"inventorySlugs":["borrowed","instrument","malformed","passive","plain","unmanifested"]}
 
 await fs.rm(outside, { recursive: true, force: true });
 ```
@@ -346,6 +317,78 @@ await fs.rm(outside, { recursive: true, force: true });
 ```ts cleanup
 await app.close();
 await fs.rm(store, { recursive: true, force: true });
+```
+
+## The inventory
+
+The dashboard's per-workstream exhibit list is a plain scan: each store exhibit
+becomes `{ workstream, slug, path, title, created, problem }`. A manifest that
+does not parse keeps its row with a null title and date plus the problem, so an
+incomplete inventory is never mistaken for a complete one. Committed apps belong
+to no workstream and are not listed.
+
+```ts
+const { createExhibitsInventoryService } = await import("../../../src/server/main/exhibits-inventory-service.js");
+const invStore = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-inventory-")));
+await writeFile(path.join(invStore, STORE_MARKER), "");
+await writeFile(path.join(invStore, "ws-a/good/exhibit.json"), JSON.stringify({ title: "Good one", created: "2026-08-17T00:00:00Z" }));
+await writeFile(path.join(invStore, "ws-a/broken/exhibit.json"), '{"title":"No date"}');
+await writeFile(path.join(invStore, "ws-a/bare/index.html"), "<p>no manifest</p>");
+await writeFile(path.join(invStore, "apps/an-app/exhibit.json"), JSON.stringify({ title: "An app", created: "2026-01-01T00:00:00Z" }));
+
+const inv = await createExhibitsInventoryService({ storeRoot: invStore, origin: "http://127.0.0.1:3230" }).inventory();
+JSON.stringify({
+  origin: inv.origin,
+  storeProblem: inv.storeProblem,
+  entries: inv.entries.map((entry) => [entry.workstream, entry.slug, entry.path, entry.title, entry.created, entry.problem]),
+})
+=> {"origin":"http://127.0.0.1:3230","storeProblem":null,"entries":[["ws-a","bare","/ws-a/bare/",null,null,"broken manifest: exhibit.json is missing"],["ws-a","broken","/ws-a/broken/",null,null,"broken manifest: created: Invalid input: expected string, received undefined"],["ws-a","good","/ws-a/good/","Good one","2026-08-17T00:00:00Z",null]]}
+```
+
+A store root with no marker is reported as a `storeProblem`, not as an empty
+inventory.
+
+```ts continue
+const missing = await createExhibitsInventoryService({
+  storeRoot: path.join(invStore, "nowhere"),
+  origin: "http://127.0.0.1:3230",
+}).inventory();
+JSON.stringify({ entries: missing.entries.length, problem: missing.storeProblem?.startsWith("No exhibit store yet:") })
+=> {"entries":0,"problem":true}
+
+await fs.rm(invStore, { recursive: true, force: true });
+```
+
+## Manifests written before the ask was removed
+
+Old manifests carry `ask: { type, prose, options? }`. The read side lifts
+`ask.prose` into a missing top-level `prose` and drops `ask` without ever
+validating its contents; nothing writes `ask` any more.
+
+```ts
+const { liftLegacyManifest, readManifest } = await import("../../../src/server/exhibits/store.js");
+const base = { title: "Old", created: "2026-08-01T00:00:00Z" };
+JSON.stringify([
+  liftLegacyManifest({ ...base, ask: { type: "decide", prose: "Which layout?", options: ["A", "B"] } }),
+  liftLegacyManifest({ ...base, prose: "Kept", ask: { type: "fyi", prose: "Dropped" } }),
+  liftLegacyManifest({ ...base, ask: "garbage" }),
+  liftLegacyManifest({ ...base, ask: { type: "nonsense", prose: 4 } }),
+])
+=> [{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Which layout?"},{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Kept"},{"title":"Old","created":"2026-08-01T00:00:00Z"},{"title":"Old","created":"2026-08-01T00:00:00Z"}]
+```
+
+Through `readManifest`, a legacy file reads as the new shape, and a legacy
+`ask: "garbage"` is stripped without an error.
+
+```ts continue
+const legacyDir = await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-legacy-"));
+await writeFile(path.join(legacyDir, "exhibit.json"), JSON.stringify({ ...base, ask: { type: "decide", prose: "Which layout?", options: ["A", "B"] } }));
+const lifted = await readManifest(legacyDir);
+await writeFile(path.join(legacyDir, "exhibit.json"), JSON.stringify({ ...base, ask: "garbage" }));
+const garbage = await readManifest(legacyDir);
+await fs.rm(legacyDir, { recursive: true, force: true });
+JSON.stringify([lifted, garbage])
+=> [{"ok":true,"manifest":{"title":"Old","created":"2026-08-01T00:00:00Z","prose":"Which layout?"}},{"ok":true,"manifest":{"title":"Old","created":"2026-08-01T00:00:00Z"}}]
 ```
 
 ## An unmarked directory is not a store

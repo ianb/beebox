@@ -1,4 +1,4 @@
-/* The exhibits container stylesheet. Imported by boot.tsx, never linked: Vite
+/* The exhibits container stylesheet. Imported by boot/mount.tsx, never linked: Vite
    dev serves a direct .css request as a JS module. Tailwind's content scan
    covers this tree AND the out-of-repo page trees (see vite-assets.ts). */
 

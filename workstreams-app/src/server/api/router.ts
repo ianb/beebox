@@ -18,7 +18,6 @@ import {
   relatedResultSchema,
   testingQueueSchema,
 } from "../../shared/documents.js";
-import { askQueueSchema } from "../../shared/exhibits.js";
 import {
   scheduleAlertIdSchema,
   scheduleAlertsResultSchema,
@@ -112,11 +111,6 @@ const testingRouter = router({
     ctx.services.documents.testingQueue()),
 });
 
-/** Read-only: answering an ask happens on the exhibits origin, never here. */
-const exhibitsRouter = router({
-  askQueue: procedure.output(askQueueSchema).query(async ({ ctx }) => ctx.services.exhibits.askQueue()),
-});
-
 const quotasRouter = router({
   get: procedure.output(z.object({ items: z.array(quotaSchema) })).query(async ({ ctx }) => ({
     items: await ctx.services.quotas.get(),
@@ -164,7 +158,6 @@ export const appRouter = router({
   plans: plansRouter,
   testing: testingRouter,
   quotas: quotasRouter,
-  exhibits: exhibitsRouter,
   actions: actionsRouter,
 });
 

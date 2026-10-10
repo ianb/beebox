@@ -19,7 +19,7 @@ import type {
   ActionVerb,
   LifecycleJob,
 } from "../shared/actions.js";
-import type { AskQueue } from "../shared/exhibits.js";
+import type { ExhibitInventory } from "../shared/exhibits.js";
 import type { ScheduleAlert } from "../shared/schedules.js";
 import type { CommentsService } from "./comments-service.js";
 
@@ -70,9 +70,9 @@ export interface TranscribeService {
   transcribe(input: { audio: Buffer; mimeType: string }): Promise<{ text: string }>;
 }
 
-/** Read-only: the workstreams origin never answers an ask (Track E). */
+/** Read-only: the workstreams origin lists exhibits and never writes the store. */
 export interface ExhibitsService {
-  askQueue(): Promise<AskQueue>;
+  inventory(): Promise<ExhibitInventory>;
 }
 
 export interface DocumentsService {
