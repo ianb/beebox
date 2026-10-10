@@ -7969,3 +7969,12 @@ auditbox-legacy:
       peak: 51134
       added: 19440
       turns: 10
+siri-doc-audit.QUMfJu:
+  siri-capture-how-to:
+    - date: 2026-10-10T13:58:25.996Z
+      boxCommit: 43f28306dc726b15adf17dcab537410e4826c02c
+      repoCommit: c39a04edba7c1d5cc0b8f10016695a52438424e3
+      initial: 39258
+      peak: 39900
+      added: 642
+      turns: 2
