@@ -52,9 +52,10 @@ Takes no new action; the thought goes where it went before.
 ### When it goes wrong or does nothing
 
 The pass is skipped (old iOS, no assets, unsupported locale, empty result,
-timeout, error): the live text is stored, as today, and the box marks it
-`stt="live"`. The app is killed during the pass: the draft is still in the
-composer (it clears only after the outbox stores the thought).
+timeout, error, or no recording): the live text is stored, as today, and the
+box marks it `stt="live"`. The app is killed during the pass: the draft was
+flushed to disk before the pass started (`ComposerDraftStore.flush`), so the
+live text is still in the composer on relaunch and can be sent again.
 
 ### Walkthrough
 
@@ -128,10 +129,14 @@ the shipped on-device HQ work already uses.
 
 - **Direction:** `quickChatSubmitInput` gains `hqService` (optional string,
   `/^[a-z0-9-]{1,64}$/`, rejected unless `origin: "voice"`). The record's base
-  shape gains `hqService` optional. Delivery frames a voice thought as
+  shape gains `hqService` optional, and every place that copies record fields
+  carries it: `baseOf` (`quick-chat-submit/submit.ts:86`), `route`, the
+  `deliver` arguments (`submit.ts:42`, `:157`), and the framing callback in
+  `quick-chat.ts`. Delivery frames a voice thought as
   `<speech source="box-screen" stt-service="…">` when present, else
   `stt="live"` as today. A repeated submit of a stored id keeps the stored
-  value, as `origin` does.
+  value, as `origin` does. Doctests: immediate send, a needs-choice thought
+  delivered by `choose`, and a repeated submit.
 - **First chunk:** schema, submit plumbing, framing, doctest in
   `test/webapp/trpc/routers/quick-chat.submit.doctest.md`.
 
@@ -140,11 +145,18 @@ the shipped on-device HQ work already uses.
 - **Direction:**
   - `voicePolicy` gives both targets HQ; `keywordSendPlan` returns `.hq` for
     both. `keywordSendClosesMicrophone` is unchanged.
-  - Quick chat's `.voicePreparation` case: show "Transcribing…", run
-    `OnDeviceHqTranscriber` on the recording, resolve the text with the shared
-    keyword rule, then deliver `{text, origin: .voice, hqService}`; on any
-    `Skip`, deliver the live transcript with no `hqService`. Delete the
-    recording after.
+  - Quick chat's `.voicePreparation` case, in this order: set
+    `isPreparingSend` synchronously (the existing send lock, held until the
+    outbox has stored the thought or refused it); `flush()` the draft; hold a
+    `BackgroundExecutionHold` as the conversation path does; run
+    `OnDeviceHqTranscriber` on the recording; compute the text and
+    `hqService` with one pure function, `QuickChatVoiceText.resolve`, over the
+    submission's fields and the HQ result (HQ: the shared keyword rule over
+    `priorInput` + HQ text; skip or no recording: the submission's
+    `liveTranscript` as is, no `hqService`); deliver; delete the recording.
+  - The quick chat path never calls `applyVoiceTurn`: the microphone was
+    already closed by `send()` or by `keywordSendClosesMicrophone`, and stays
+    closed through HQ success, fallback, and a storage failure.
   - The quick chat closure takes a `QuickChatThought { text, origin,
     hqService }`. `submitThought`, `QuickChatOutboxEntry` (decode-if-present),
     and `QuickChatAPI.submit` carry `hqService`.
@@ -165,12 +177,16 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Pass skipped (old iOS, assets, locale, timeout, empty) | planned (XCTest on the resolver/fallback seam) | `Skip` → live text, no `hqService` | quiet, marked `stt="live"` |
+| Pass skipped (old iOS, assets, locale, timeout, empty) or no recording | planned (XCTest on `QuickChatVoiceText.resolve`) | live text, no `hqService` | quiet, marked `stt="live"` |
+| Button and keyword paths compose text differently (typed prefix, tag) | planned (XCTest: button and keyword cases with a typed prefix, a matching HQ command, a missing HQ command, fallback) | one pure function | clear |
+| Second Send during the pass | no (view code) | `isPreparingSend` set before the first await, held through storage | clear (Send disabled) |
+| `hqService` dropped in a record transition | planned (doctests: send, choose, repeat) | carried through `baseOf` and `deliver` | clear |
 | Client sends `hqService` on a typed thought | planned (doctest) | input refine rejects | clear (BAD_REQUEST) |
 | Hostile `hqService` value breaks the wrapper attribute | planned (doctest) | regex | clear |
 | Older outbox entries without the field | planned (XCTest decode) | `decodeIfPresent` | compatible |
 | Older box without the field | doctest shows the current schema strips an unknown key | ignored; the thought is framed `stt="live"` until the box updates | quiet, transitional |
-| App killed during the pass | no | draft clears only after store | the thought stays in the composer |
+| App killed during the pass | no | draft flushed before the pass | the live text stays in the composer |
+| App backgrounded during the pass | no | background hold; the pass is bounded | the send finishes or falls back to live |
 
 ## Agent-flow / user-flow edge cases
 
@@ -187,9 +203,12 @@ none
 
 ## Open design questions
 
-None. Settled: a new phone on an old box sends `hqService`, which the old
-`quickChatSubmitInput` (`z.object`, default strip) drops; the thought is
-framed `stt="live"` until the box updates. No version gate.
+None. Settled, with a residual the boxholder may override: a new phone on an
+old box sends `hqService`, which the old `quickChatSubmitInput` (`z.object`,
+default strip) drops; the thought is framed `stt="live"` until the box
+updates. The claim errs toward caution (the agent treats HQ text as rough),
+the box updates on merge, and a version gate would add a capability
+handshake for a window of hours. No gate (plan review, 2026-10-10).
 
 ## Knowledge audits
 
