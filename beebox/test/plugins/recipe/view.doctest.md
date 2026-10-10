@@ -99,6 +99,21 @@ const text = html.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "");
 => [true, true, true, true, true, true, true, true, false]
 ```
 
+## A scaled range yield renders its numbers, not an object
+
+`scaleAmount` returns a React element for a range, so the yield renders it as a
+node beside the remaining label text.
+
+```ts continue
+const { makeRecipeComponents, RecipeScaleContext } = await import("../../../src/plugins/recipe/view/tags.js");
+const { RecipeYield } = makeRecipeComponents();
+const scaledYield = renderToString(createElement(RecipeScaleContext.Provider, { value: 2 },
+  createElement(RecipeYield, { amount: "2-3" }, "2-3 servings")));
+const scaledText = scaledYield.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "");
+[scaledText.includes("4–6 servings"), scaledText.includes("[object Object]")]
+=> [true, false]
+```
+
 ## Without a matching card the view says so
 
 ```ts continue

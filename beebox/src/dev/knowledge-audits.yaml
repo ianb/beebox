@@ -5230,10 +5230,12 @@ tests:
   # the always-loaded agent guide (recipes are domain-specific; most
   # boxes don't touch them). It lives in the recipe plugin base
   # (`src/plugins/recipe/base.ts` `instructions`) and reaches
-  # `node_modules/beebox/box-docs/card-recipe.md` through the box's
-  # `src/schemas/recipe.ts` stub. The audits
+  # `_content/docs/generated/card-recipe.md` inside the box (the recipe type
+  # is box-local) through the box's `src/schemas/recipe.ts` stub. The audits
   # below are `knows_about` — the agent reads the recipe doc on
   # demand when asked about recipes.
+  #
+  # Status (2026-10-10): rerun after the recipe plugin move; all 3 content-correct; should_read repointed to the box-generated doc.
   #
   # Status (2026-07-03): all 3 pass. recipe-prose-vs-tag was failing only on the
   # stale should_read — the agent knows "don't invent tags, use plain markdown"
@@ -5262,7 +5264,7 @@ tests:
       credit for naming the rest: `{% yield %}`, `{% substitution %}`,
       `{% subrecipe %}`, `{% recipe-section %}`. Does NOT say "use
       XML elements" (the old schema is gone).
-    should_read: ["node_modules/beebox/box-docs/card-recipe.md"]
+    should_read: ["_content/docs/generated/card-recipe.md"]
     correct_contains_any: ["{% ingredient", "{% step", "ingredient", "step"]
     tags: [recipe, cards, markdown]
 
@@ -5278,7 +5280,7 @@ tests:
       Shape like `{% ingredient amount="2" unit="cups" %}all-purpose
       flour{% /ingredient %}`. Recognises that the recipe view uses
       `amount` for scaling.
-    should_read: ["node_modules/beebox/box-docs/card-recipe.md"]
+    should_read: ["_content/docs/generated/card-recipe.md"]
     correct_contains_any: ["amount=\"2\"", "amount='2'", "amount=", "unit=\"cups\"", "unit="]
     tags: [recipe, cards, markdown]
 
@@ -6247,7 +6249,7 @@ tests:
       in a memo body (validate warns); use plain prose or a recipe card.
     should_read_any:
       - node_modules/beebox/box-docs/schemas.md
-      - node_modules/beebox/box-docs/card-recipe.md
+      - _content/docs/generated/card-recipe.md
     correct_matches:
       - '[Rr]ecipe'
       - '[Uu]ndefined|[Ww]arn|only in|not valid|won.t validate|will not validate|[Nn]o[.,]'

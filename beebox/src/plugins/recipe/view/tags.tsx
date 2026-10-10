@@ -166,7 +166,7 @@ function RecipeYield(props: Record<string, unknown>) {
   // better than a wrong number silently pasted over prose we did not parse.
   const rewritten = label !== null && scaledYield !== null && baseAmount !== null
     && label.trimStart().startsWith(baseAmount)
-    ? `${String(scaledYield)}${label.trimStart().slice(baseAmount.length)}`
+    ? <>{scaledYield}{label.trimStart().slice(baseAmount.length)}</>
     : null;
   return (
     <div className="my-2 text-sm text-warm-600">

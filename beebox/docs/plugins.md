@@ -165,6 +165,7 @@ marked (checked). The rest are convention only.
 - **name**: equals the directory under `src/plugins/`, kebab-case (checked).
 - **docs**: names the README, which has the five sections What it is, Setup, Conventions, Migration, Uninstall (checked).
 - **stubs**: every base key has a stub `src/schemas/<key>.ts` in the README; every view has a stub `src/views/<name>.tsx` and a `view.tsx` entry (checked).
+- **stubs validate**: the README stubs written into an empty temp box compile, load, and pass `bbx validate` with exit 0 and no error lines (checked).
 - **scoped tags**: keys are kebab-case and not in the core table (checked; `RedeclaredTagError` also fires at load).
 - **render names**: a plugin's tag render names are unique against the widget's component map (convention). Core names, from `buildRenderConfig` in `src/frontend/src/components/Markdown/body.tsx`: Fragment, Para, Blockquote, Link, Img, QuoteInline, QuoteBlock, SourceInline, SourceBlock, Purpose, Correction, Task, CaptureImage, Silence, RedactedInline, RedactedBlock, TodoInline, TodoBlock, SeeAlso, UnknownTagInline, UnknownTagBlock.
 - **CSS**: classes are prefixed `bbx-<plugin>-` (convention).

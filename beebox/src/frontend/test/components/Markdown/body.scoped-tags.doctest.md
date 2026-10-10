@@ -57,3 +57,17 @@ const block = render('{% plating ref="x.recipe.card" %}\nBody\n{% /plating %}');
 block.includes("plating ref=&quot;x.recipe.card&quot;")
 => true
 ```
+
+## A variable attribute prints as authored
+
+```ts
+render("{% garnish amount=$n %}x{% /garnish %}").includes("{% garnish amount=$n %}")
+=> true
+```
+
+## A tag named after an Object.prototype key is still unknown
+
+```ts
+render('{% toString amount="2" %}flour{% /toString %}').includes("toString amount=&quot;2&quot;")
+=> true
+```

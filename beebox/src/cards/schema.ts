@@ -523,7 +523,7 @@ function addDeclaredFields(
 function scopedTagsMember(tags: Readonly<Record<string, Schema>> | undefined): { markdocTags?: Readonly<Record<string, Schema>> } {
   if (tags === undefined) return {};
   for (const name of Object.keys(tags)) {
-    if (name in (markdocConfig.tags ?? {})) throw new RedeclaredTagError(name);
+    if (Object.hasOwn(markdocConfig.tags ?? {}, name)) throw new RedeclaredTagError(name);
   }
   return { markdocTags: tags };
 }

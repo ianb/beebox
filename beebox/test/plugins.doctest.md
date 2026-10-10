@@ -44,11 +44,14 @@ import { access } from "node:fs/promises";
 import { join } from "node:path";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
 import { markdocConfig } from "../src/shared/markdoc-config/tags/core.js";
-import { readmeStubs, readmeText } from "./helpers/plugin-readme.js";
+import { bbx, readmeStubs, readmeText, stubbedBox } from "./helpers/plugin-readme.js";
+import { buildPluginBundlesIntoDist } from "./helpers/plugin-bundles.js";
 
 const KEBAB = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const SECTIONS = ["## What it is", "## Setup", "## Conventions", "## Migration", "## Uninstall"];
 const exists = (path: string) => access(join(PACKAGE_ROOT, path)).then(() => true, () => false);
+
+await buildPluginBundlesIntoDist();
 
 async function conventionProblems(): Promise<string[]> {
   const problems: string[] = [];
@@ -77,6 +80,15 @@ async function conventionProblems(): Promise<string[]> {
     for (const view of def.views ?? []) {
       if (!stubs.has(`src/views/${view.name}.tsx`)) fail("view-stub", `README has no stub src/views/${view.name}.tsx`);
       if (!(await exists(`src/plugins/${name}/view.tsx`))) fail("view-entry", `src/plugins/${name}/view.tsx is missing`);
+    }
+    // The stubs written into an empty box must compile and load.
+    const box = await stubbedBox(name);
+    try {
+      const result = await bbx(box, ["validate"]);
+      const errors = result.report.filter((line) => /error|fail|✗/i.test(line));
+      if (result.code !== 0 || errors.length > 0) fail("stubs-validate", `exit ${result.code}: ${result.report.join(" | ")}`);
+    } finally {
+      await box.cleanup();
     }
   }
   return problems;

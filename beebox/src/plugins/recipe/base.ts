@@ -79,8 +79,9 @@ Markdoc-annotated markdown. Vocabulary:
 - \`{% subrecipe ref="/_content/recipes/sauces/Marinara.recipe.card" %}
   Make a half batch.{% /subrecipe %}\` — link to a sibling recipe.
   \`ref\` is a card path — see PROVENANCE for ref semantics.
-- \`{% recipe-section name="Sauce" %}\` — block. Groups a sub-recipe
-  within a recipe (e.g. sauce + pasta in one card). Optional.
+- \`{% recipe-section name="Sauce" %}…{% /recipe-section %}\` — block.
+  Groups a sub-recipe within a recipe (e.g. sauce + pasta in one card).
+  Optional.
 
 Free-form markdown headings (\`## Notes\`, \`## Equipment\`) work
 alongside the tags for sections that don't need structure.

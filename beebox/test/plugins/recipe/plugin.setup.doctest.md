@@ -11,44 +11,14 @@ symlink to the engine package; the setup builds the plugin bundles first
 (`test/helpers/plugin-bundles.ts`) so the test does not depend on a prior build.
 
 ```ts setup
-import { execFile } from "node:child_process";
-import { readFile, realpath } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
-import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
-import { isRecord } from "../../../src/shared/is-record.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
-import { readmeStubs as readPluginStubs } from "../../helpers/plugin-readme.js";
+import { bbx, readmeStubs as readPluginStubs, stubbedBox as stubbedPluginBox } from "../../helpers/plugin-readme.js";
 
-const exec = promisify(execFile);
 const readmeStubs = () => readPluginStubs("recipe");
 await buildPluginBundlesIntoDist();
-const CLI = join(PACKAGE_ROOT, "src/cli/entry/run.ts");
-
-/** A box with the README's stubs written and the plugin active. */
-async function stubbedBox(): Promise<TmpBox> {
-  const box = await makeTmpBox({ deps: true, git: true });
-  for (const [path, content] of await readmeStubs()) await box.write(path, content);
-  return box;
-}
-
-/** `bbx <args>` in the box: exit code and the report, box-relative, blank lines dropped. */
-async function bbx(box: TmpBox, args: string[]): Promise<{ code: number; stdout: string; report: string[] }> {
-  const roots = [await realpath(box.root), box.root].toSorted((a, b) => b.length - a.length);
-  const lines = (text: string) =>
-    roots.reduce((acc, root) => acc.replaceAll(`${root}/`, ""), text).split("\n").filter((line) => line.trim() !== "");
-  try {
-    const { stdout } = await exec(process.execPath, ["--import", import.meta.resolve("tsx"), CLI, ...args], { cwd: box.root });
-    return { code: 0, stdout, report: lines(stdout) };
-  } catch (e) {
-    if (!isRecord(e)) throw e;
-    const code = typeof e["code"] === "number" ? e["code"] : 1;
-    const out = typeof e["stdout"] === "string" ? e["stdout"] : "";
-    const err = typeof e["stderr"] === "string" ? e["stderr"] : "";
-    return { code, stdout: out, report: lines(`${out}${err}`) };
-  }
-}
+const stubbedBox = () => stubbedPluginBox("recipe");
 ```
 
 ## The README names the config, one schema stub and one view stub

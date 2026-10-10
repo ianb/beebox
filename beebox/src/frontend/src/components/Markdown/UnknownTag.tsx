@@ -5,19 +5,9 @@
  */
 
 import type { ReactNode } from "react";
-import { isRecord } from "@shared/is-record";
 
 function authoredOpening(name: string, attrs: string): string {
-  let parsed: unknown = {};
-  try {
-    parsed = JSON.parse(attrs);
-  } catch (_e) {
-    parsed = {};
-  }
-  const pairs = isRecord(parsed)
-    ? Object.entries(parsed).map(([key, value]) => ` ${key}=${JSON.stringify(value)}`)
-    : [];
-  return `{% ${name}${pairs.join("")} %}`;
+  return `{% ${name}${attrs} %}`;
 }
 
 interface UnknownTagProps {
@@ -27,7 +17,7 @@ interface UnknownTagProps {
 }
 
 function Opening({ name, attrs }: UnknownTagProps) {
-  return <code className="text-warm-500 text-xs">{authoredOpening(name ?? "", attrs ?? "{}")}</code>;
+  return <code className="text-warm-500 text-xs">{authoredOpening(name ?? "", attrs ?? "")}</code>;
 }
 
 export function UnknownTagInline(props: UnknownTagProps) {
