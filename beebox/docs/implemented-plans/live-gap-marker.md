@@ -1,6 +1,6 @@
 ---
 title: "Mark gaps in the live transcript"
-status: active
+status: implemented
 workstream: hq-always
 issues: []
 ---

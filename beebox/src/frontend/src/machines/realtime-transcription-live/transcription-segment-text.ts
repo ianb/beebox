@@ -3,7 +3,7 @@ import type { FinalWord } from "../transcription-events";
 import { LIVE_GAP_MARKER } from "../../lib/audio/live-gap-marker";
 
 /**
- * Where the segment stands on live gaps (docs/plans/live-gap-marker.md):
+ * Where the segment stands on live gaps (docs/implemented-plans/live-gap-marker.md):
  * - `beforeFirst`: no connection yet; nothing is shown for the wait.
  * - `none`: live text is complete as far as it goes.
  * - `open`: live text is down; the committed text ends with the marker.

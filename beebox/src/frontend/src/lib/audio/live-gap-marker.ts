@@ -1,5 +1,5 @@
 /**
- * The live gap marker (`docs/plans/live-gap-marker.md`): `[…]` in a
+ * The live gap marker (`docs/implemented-plans/live-gap-marker.md`): `[…]` in a
  * segment's live transcript where live transcription went offline and the
  * words spoken then are not in the live text. The HQ pass fills them in; when
  * the live text is what gets sent, the marker goes to the agent wrapped as
