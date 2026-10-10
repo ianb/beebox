@@ -52,6 +52,13 @@ export interface ChatBackendStartOptions {
    * intentionally redundant for that provider.
    */
   additionalDirectories?: string[] | undefined;
+  /**
+   * The box root, when `cwd` is a landmark directory below it. The host
+   * isolation settings exclude instruction files above the box root; computed
+   * from `cwd` instead, they would also exclude the box's own root file and
+   * rules. Omit when `cwd` is the box root.
+   */
+  boxRoot?: string | undefined;
   /** Appended to the `claude_code` system-prompt preset. */
   systemPrompt: string;
   /** If set, resumes the given SDK session; otherwise a fresh session. */
