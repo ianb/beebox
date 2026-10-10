@@ -6,7 +6,7 @@ guide and the briefing would be missing. `buildLandmarkBoxContext` expands the
 root file the way the harness does at the box root, for the system prompt.
 
 ```ts setup
-import { rm } from "node:fs/promises";
+import { rm, symlink } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { buildLandmarkBoxContext } from "../../../../src/core/chat/session/landmark-context.js";
 ```
@@ -54,4 +54,20 @@ await buildLandmarkBoxContext(escaping.root).then(() => "ok", (e: unknown) => e 
 => UnsafeAgentContextIncludeError
 
 await escaping.cleanup();
+```
+
+A symlink inside the box that points outside it is refused the same way: the
+include's real path must stay in the box or its engine package.
+
+```ts
+const linked = await makeTmpBox();
+const outside = await makeTmpBox();
+await outside.write("secret.md", "host secret\n");
+await symlink(outside.path("secret.md"), linked.path("notes.md"));
+await linked.write("AGENTS.md", "@notes.md\n");
+await buildLandmarkBoxContext(linked.root).then((c) => c.includes("host secret") ? "leaked" : "ok", (e: unknown) => e instanceof Error ? e.name : "?")
+=> UnsafeAgentContextIncludeError
+
+await linked.cleanup();
+await outside.cleanup();
 ```

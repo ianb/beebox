@@ -31,6 +31,7 @@ import type { FeatureStore } from "./features.js";
 import type { ChatBackendStartOptions, ChatContentBlock } from "../../../../services/claude-chat/core.js";
 import type { ChatSessionOptions } from "../options.js";
 import { buildLandmarkBoxContext } from "../landmark-context.js";
+import { UnsafeAgentContextIncludeError } from "../../../agent-context-includes.js";
 
 const log = makeLog("ChatSession");
 
@@ -108,15 +109,16 @@ async function pickContextDir(ctx: StartContext): Promise<string | null> {
 }
 
 /**
- * The landmark chat's box context, or "" when the root's includes cannot be
- * expanded (one escapes the box). The chat still starts, as it did before box
+ * The landmark chat's box context, or "" when one of the root's includes
+ * escapes the box. Any other failure still fails the start. The chat still starts, as it did before box
  * context existed, without the guide and briefing; the log names why.
  */
 async function landmarkBoxContextOrEmpty(boxRoot: string): Promise<string> {
   try {
     return await buildLandmarkBoxContext(boxRoot);
   } catch (e) {
-    log("start", `Landmark box context unavailable, starting without it: ${e instanceof Error ? e.message : String(e)}`);
+    if (!(e instanceof UnsafeAgentContextIncludeError)) throw e;
+    log("start", `Landmark box context unavailable, starting without it: ${e.message} (${e.specifier})`);
     return "";
   }
 }
