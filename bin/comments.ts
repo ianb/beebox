@@ -25,11 +25,11 @@
  *
  * Design: beebox/docs/plans/document-comments.md
  * Store:  bin/lib/comments-store.ts (root derivation, namespaces, containment)
+ * Target: bin/lib/comments-address.ts (a path or an exhibit address → subjects)
  */
 
-import * as path from "node:path";
-import { execa } from "execa";
 
+import { describeSubject, resolveContext, subjectsFor, type Context } from "./lib/comments-address.js";
 import {
   appendComment,
   byNewest,
@@ -42,20 +42,21 @@ import {
   readComments,
   type Comment,
   type StoreEntry,
-  type Subject,
 } from "./lib/comments-store.js";
 
 const USAGE = `usage: bin/comments <command>
 
   show <path>                     Comments on one document. Accepts an absolute,
-                                  repository-relative, or worktree-relative path.
+                                  repository-relative, or worktree-relative path,
+                                  or an exhibit address: exhibit:<workstream>/<name>.
   list [--workstream <name>]      Every document with comments waiting, newest
                                   first. --workstream narrows to what is
                                   addressed to that workstream.
   clear <path> [--id <id>]        Remove handled comments. Without --id, clears
                                   the document.
   add <path> --body <text>        Write a comment. --origin typed|voice,
-                                  --workstream <name> (who it is FOR),
+                                  --workstream <name> (who it is FOR; an exhibit
+                                  address defaults to its workstream),
                                   --worktree <name> (which checkout's namespace,
                                   for untracked files; defaults to this one),
                                   --quoted/--section/--fragment <text>.
@@ -64,88 +65,6 @@ const USAGE = `usage: bin/comments <command>
 
 Comments never reach git. Read them, act, then clear them.
 `;
-
-/** Where the repository is, and which worktree we are standing in. */
-interface Context {
-  repoRoot: string;
-  mainRoot: string;
-  worktree: string;
-}
-
-/**
- * `git rev-parse --show-toplevel` gives this checkout; `--path-format=absolute
- * --git-common-dir` gives the shared `.git`, whose parent is the MAIN checkout
- * even from inside a worktree. The store hangs off main, so both are needed.
- */
-async function resolveContext(): Promise<Context> {
-  const { stdout: top } = await execa("git", ["rev-parse", "--show-toplevel"]);
-  const { stdout: common } = await execa("git", [
-    "rev-parse",
-    "--path-format=absolute",
-    "--git-common-dir",
-  ]);
-  const repoRoot = top.trim();
-  const mainRoot = path.dirname(common.trim());
-  return { repoRoot, mainRoot, worktree: path.basename(repoRoot) };
-}
-
-/** Is this path tracked by git? Decides which namespace holds its comments. */
-async function isTracked(repoRoot: string, relPath: string): Promise<boolean> {
-  const result = await execa("git", ["ls-files", "--error-unmatch", "--", relPath], {
-    cwd: repoRoot,
-    reject: false,
-  });
-  return result.exitCode === 0;
-}
-
-/**
- * Accept a path in any spelling the developer or agent has to hand — absolute,
- * repository-relative, or relative to the current directory. Refusing a
- * plausible spelling is the kind of friction that stops a tool being used.
- */
-function toRepoRelative(context: Context, input: string): string {
-  const absolute = path.isAbsolute(input) ? input : path.resolve(process.cwd(), input);
-  const relative = path.relative(context.repoRoot, absolute);
-  if (relative === "" || relative.startsWith("..")) {
-    // Not under this checkout; treat it as already repository-relative.
-    return path.normalize(input);
-  }
-  return relative;
-}
-
-/**
- * BOTH namespaces a path could hold comments in, current-status-first.
- *
- * `worktree` names the UNTRACKED namespace. It defaults to the checkout this
- * CLI is running in, which is right for an agent at a terminal — but the app
- * runs from the MAIN checkout while the developer reads another workstream's
- * file through a lens, so it passes the lens explicitly. Without that, a
- * comment on `scratch/foo.md` viewed as `dev-comments` would be filed under
- * `worktree/main/` and the agent in `dev-comments` would never see it.
- *
- * Tracked status is not stable: a `scratch/notes.md` commented while untracked
- * and later committed would, if we consulted only its CURRENT namespace, report
- * "no comments" for remarks sitting on disk — and `clear` could not reach them
- * by path. So every read and every clear considers both, and the ordering only
- * decides which one a NEW comment would be written to.
- */
-async function subjectsFor(
-  context: Context,
-  target: { path: string; worktree?: string | undefined },
-): Promise<Subject[]> {
-  const relPath = toRepoRelative(context, target.path);
-  const worktree = target.worktree === undefined || target.worktree === ""
-    ? context.worktree
-    : target.worktree;
-  const tracked: Subject = { scope: "tracked", relPath };
-  const local: Subject = { scope: "worktree", worktree, relPath };
-  return (await isTracked(context.repoRoot, relPath)) ? [tracked, local] : [local, tracked];
-}
-
-function describeSubject(subject: Subject | null, storePath: string): string {
-  if (subject === null) return `${storePath} (unreadable entry)`;
-  return subject.scope === "tracked" ? subject.relPath : `${subject.relPath} (${subject.worktree})`;
-}
 
 function renderComment(comment: Comment): string {
   const lines: string[] = [];
@@ -225,13 +144,18 @@ async function commandAdd(context: Context, args: string[]): Promise<number> {
     process.stderr.write("comments add: could not resolve a subject\n");
     return 2;
   }
-  const workstream = options.get("workstream");
+  // An exhibit belongs to one workstream, so a comment on it is for that
+  // workstream unless the caller says otherwise. A file belongs to nobody.
+  const given = options.get("workstream");
+  const workstream = given === undefined || given === ""
+    ? (subject.scope === "exhibit" ? subject.workstream : null)
+    : given;
   const comment = commentSchema.parse({
     id: newCommentId(),
     at: new Date().toISOString(),
     origin,
     body,
-    workstream: workstream === undefined || workstream === "" ? null : workstream,
+    workstream,
     worktree: context.worktree,
     ...(options.get("quoted") === undefined ? {} : { quoted: options.get("quoted") }),
     ...(options.get("section") === undefined ? {} : { section: options.get("section") }),

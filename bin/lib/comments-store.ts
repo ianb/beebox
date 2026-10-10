@@ -14,13 +14,16 @@
  *
  * Design: `beebox/docs/plans/document-comments.md`.
  *
- * TWO NAMESPACES, because a repository-relative path is not a unique document:
+ * THREE NAMESPACES, because a repository-relative path is not a unique document:
  *   tracked/<repo-relative>.comments.yaml            — follows the file everywhere
  *   worktree/<name>/<repo-relative>.comments.yaml    — stays where it was written
+ *   exhibit/<workstream>/<exhibit>.comments.yaml     — an exhibit page, not a file
  * A tracked file is the same file in every checkout, so a comment on it should
  * be found wherever it is next opened. An untracked one is not: two worktrees
  * routinely hold entirely different `scratch/notes.md`, and one namespace would
- * silently merge their comments.
+ * silently merge their comments. An exhibit lives in the exhibits store
+ * outside every checkout (`docs/plans/exhibit-comments.md`), so it is named,
+ * not pathed.
  *
  * The store is untrusted input (an agent, a human, and an app all write here),
  * so every segment is validated, no path component inside the store may be a
@@ -93,10 +96,15 @@ const commentsFileSchema = z.object({
 export type Comment = z.infer<typeof commentSchema>;
 export type CommentsFile = z.infer<typeof commentsFileSchema>;
 
-/** Which namespace a document lives in, and its repository-relative path. */
+/**
+ * Which namespace a document lives in. Two are repository paths; the third is
+ * an exhibit (`docs/plans/exhibit-comments.md`), which lives in the exhibits
+ * store outside every checkout and is named by workstream and exhibit name.
+ */
 export type Subject =
   | { scope: "tracked"; relPath: string }
-  | { scope: "worktree"; worktree: string; relPath: string };
+  | { scope: "worktree"; worktree: string; relPath: string }
+  | { scope: "exhibit"; workstream: string; exhibit: string };
 
 
 
@@ -124,6 +132,16 @@ function validWorktreeName(name: string): boolean {
 }
 
 /**
+ * An exhibit name, as `bin/exhibits add` accepts it: the rule of
+ * `exhibitSegmentSchema` in `workstreams-app/src/shared/exhibits.ts`, copied
+ * because this store imports nothing from that app. Dots are allowed inside,
+ * so `review.v2` is a name; a leading dot is not, so no `..` and no hidden file.
+ */
+function validExhibitName(name: string): boolean {
+  return name.length <= 120 && /^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(name);
+}
+
+/**
  * Reject anything that is not a plain repository-relative path BEFORE it is
  * joined to a root. An unchecked `..` here is a write outside the store.
  */
@@ -143,6 +161,15 @@ function assertRelPath(relPath: string): void {
 
 /** The store-relative path of a subject's comments file. */
 export function subjectKey(subject: Subject): string {
+  if (subject.scope === "exhibit") {
+    if (!validWorktreeName(subject.workstream)) {
+      throw new InvalidCommentPathError({ kind: "bad-worktree-name", worktree: subject.workstream });
+    }
+    if (!validExhibitName(subject.exhibit)) {
+      throw new InvalidCommentPathError({ kind: "bad-exhibit-name", exhibit: subject.exhibit });
+    }
+    return path.join("exhibit", subject.workstream, `${subject.exhibit}${COMMENTS_SUFFIX}`);
+  }
   assertRelPath(subject.relPath);
   if (subject.scope === "tracked") {
     return path.join("tracked", `${subject.relPath}${COMMENTS_SUFFIX}`);
@@ -160,10 +187,11 @@ export function subjectKey(subject: Subject): string {
  */
 export function commentsFilePath(storeRoot: string, subject: Subject): string {
   const root = path.resolve(storeRoot);
-  const resolved = path.resolve(root, subjectKey(subject));
+  const key = subjectKey(subject);
+  const resolved = path.resolve(root, key);
   const relative = path.relative(root, resolved);
   if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-    throw new InvalidCommentPathError({ kind: "outside-store", relPath: subject.relPath });
+    throw new InvalidCommentPathError({ kind: "outside-store", relPath: key });
   }
   return resolved;
 }
@@ -417,6 +445,11 @@ function subjectFromStorePath(storeRelative: string): Subject | null {
   } else if (namespace === "worktree" && rest.length > 1) {
     const [worktree, ...relParts] = rest;
     if (worktree !== undefined) candidate = { scope: "worktree", worktree, relPath: strip(relParts) };
+  } else if (namespace === "exhibit" && rest.length === 2) {
+    const [workstream, file] = rest;
+    if (workstream !== undefined && file !== undefined) {
+      candidate = { scope: "exhibit", workstream, exhibit: strip([file]) };
+    }
   }
   if (candidate === null) return null;
   try {
