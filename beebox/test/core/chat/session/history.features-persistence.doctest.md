@@ -219,7 +219,7 @@ when the start takes the seed for its write. It once closed only after the
 write returned. The atomic write fsyncs the directory after the new file is
 visible, so a toggle in that window folded into a seed that had already been
 written, and the chat came back with the seed value. The full suite hit this
-under load in `chat.hq-preferences.doctest.md`. Toggling the moment the seed is
+under load in what is now `chat.reserved-features.doctest.md`. Toggling the moment the seed is
 visible lost the toggle every time.
 
 The poll below checks on every event-loop turn rather than with `eventually`,
@@ -228,7 +228,7 @@ whose interval can step over the fsync window:
 ```ts
 const box = await makeTmpBox();
 const sessionId = "55555555-5555-4555-8555-555555555555";
-const seed = { "hq-dictation": "on" };
+const seed = { narration: "on" };
 const handoff = createReservationFeatureHandoff(seed);
 const store = new FeatureStore({
   boxRoot: box.root,
@@ -240,13 +240,13 @@ const store = new FeatureStore({
 await store.ensureLoaded();
 
 const started = recordSessionStart(box.root, { sessionId, seedFeatures: seed, engine: "claude", onSeedTaken: handoff.close });
-while ((await getFeaturesForSession(box.root, sessionId))?.["hq-dictation"] !== "on") {
+while ((await getFeaturesForSession(box.root, sessionId))?.narration !== "on") {
   await new Promise((resolve) => setImmediate(resolve));
 }
-await store.set("hq-dictation", "off");
+await store.set("narration", "off");
 await started;
 await getFeaturesForSession(box.root, sessionId)
-=> { "hq-dictation": "off" }
+=> { narration: "off" }
 ```
 
 ```ts cleanup

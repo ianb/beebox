@@ -211,7 +211,9 @@ await box.cleanup();
 ## Voice and typed thoughts arrive as the person entered them
 
 `origin` says how the thought was entered. A `voice` thought is delivered as
-`<speech source="box-screen">`, a `typed` one as `<typed source="box-screen">`.
+`<speech source="box-screen" stt="live">` — it is the phone's live transcript,
+since no recording reaches the box for an HQ pass — and a `typed` one as
+`<typed source="box-screen">`.
 A client built before `origin` existed sends none, and its thought is typed.
 The record keeps the origin, so a thought that waited for the person's choice
 is delivered by `choose` in the same wrapper.
@@ -227,9 +229,9 @@ const waiting = await unsure.submit({ id: randomUUID(), message: "Something abou
 await unsure.choose({ id: waiting.id, candidateId: "c1" });
 runtime.sends.map((send) => send.message)
 => [
-  "<speech source=\"box-screen\">Call the plumber</speech>",
+  "<speech source=\"box-screen\" stt=\"live\">Call the plumber</speech>",
   "<typed source=\"box-screen\">Buy stamps</typed>",
-  "<speech source=\"box-screen\">Something about the beds</speech>",
+  "<speech source=\"box-screen\" stt=\"live\">Something about the beds</speech>",
 ]
 ```
 

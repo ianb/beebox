@@ -45,14 +45,14 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
     uiKind: "toggle",
     label: "Show agent prose",
   },
-  {
-    name: "hq-dictation",
-    allowedValues: ["on", "off"],
-    default: "off",
-    uiKind: "toggle",
-    label: "HQ dictation",
-  },
 ] as const;
+
+/**
+ * Features that no longer exist but may still sit in stored session state or
+ * landmark seeds. Dropped without a warning. `hq-dictation` went away when
+ * every dictated message got the HQ pass (docs/plans/hq-always.md).
+ */
+const RETIRED_FEATURES = new Set(["hq-dictation"]);
 
 const FEATURE_INDEX = new Map<string, FeatureDescriptor>(
   FEATURE_LIST.map((f) => [f.name, f]),
@@ -97,6 +97,7 @@ export function resolveFeatures(stored?: FeatureMap | null): FeatureMap {
   const out = getDefaults();
   if (!stored) return out;
   for (const [name, value] of Object.entries(stored)) {
+    if (RETIRED_FEATURES.has(name)) continue;
     if (!isKnownFeature(name)) {
       console.warn(`[chat-features] Ignoring unknown stored feature: ${name}`);
       continue;
@@ -118,12 +119,11 @@ export function resolveFeatures(stored?: FeatureMap | null): FeatureMap {
  * map, possibly empty.
  */
 export function mergeSeedFeatures(input: {
-  box?: Record<string, string> | null | undefined;
   landmark?: Record<string, string> | null | undefined;
   request?: Record<string, string> | null | undefined;
 }): FeatureMap {
   const out: FeatureMap = {};
-  for (const source of [input.box, input.landmark, input.request]) {
+  for (const source of [input.landmark, input.request]) {
     if (!source) continue;
     for (const [name, value] of Object.entries(source)) {
       if (isKnownFeature(name) && isValidValue(name, value)) out[name] = value;
@@ -240,6 +240,7 @@ export function parseChatAppDeltas(content: string): {
     const attrs = parseAttrs(attrsRaw);
     for (const [name, value] of attrs) {
       if (READ_ONLY_ATTRS.has(name)) continue; // system-written, ignored on input
+      if (RETIRED_FEATURES.has(name)) continue;
       if (!isKnownFeature(name)) {
         console.warn(`[chat-features] Ignoring unknown feature in agent delta: ${name}`);
         continue;

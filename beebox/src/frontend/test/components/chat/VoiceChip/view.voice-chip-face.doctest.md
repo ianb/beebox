@@ -130,19 +130,12 @@ voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true, diariz
 
 ## Diarization changes people, not the floor or answer channel
 
-A diarized HQ service only applies when HQ dictation or narration is enabled.
-Narration automatically requests HQ; merely selecting a diarized HQ service
-while both modes are off does not enable speaker labels.
+Every dictated message gets the HQ pass (docs/plans/hq-always.md), so the
+chip shows speaker labels exactly when the box's HQ service diarizes.
 
 ```ts
-JSON.stringify(["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null].map(hqService =>
-  [
-    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: false, narrationEnabled: false }),
-    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: true, narrationEnabled: false }),
-    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: false, narrationEnabled: true }),
-  ]
-))
-=> [[false,true,true],[false,true,true],[false,false,false],[false,false,false],[false,false,false],[false,false,false],[false,false,false],[false,false,false]]
+JSON.stringify(["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null].map(voiceChipDiarizationEnabled))
+=> [true,true,false,false,false,false,false,false]
 ```
 
 The group works with both arrow states and both channels. Each face still has

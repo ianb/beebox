@@ -218,14 +218,14 @@ detectKeyword("the weather is nice")
 
 ## Re-injecting a send keyword the HQ pass dropped
 
-Narration mode replaces the realtime transcript with a high-quality pass, and that pass can normalize a trailing trigger phrase away ("…send message" becomes clean prose). The realtime pass already heard the keyword — that's what fired the send — so when the HQ text comes back without one, the tag is appended rather than lost:
+Every dictated send replaces the realtime transcript with a high-quality pass, and that pass can normalize a trailing trigger phrase away ("…send message" becomes clean prose) or write it in words the spotter does not match. The realtime pass already heard the keyword — that's what fired the send — so when the HQ text comes back without one, the HQ text is kept as it is and the tag is appended with `heard="live"`: the command was detected live, and the end of the text may still hold it in other words:
 
 ```ts
 detectKeyword("Buy milk tomorrow.")
 => null
 
 appendSendKeywordTag("Buy milk tomorrow.", { action: "send", matchedPhrase: "send message" })
-=> Buy milk tomorrow. <send-message phrase="send message" />
+=> Buy milk tomorrow. <send-message phrase="send message" heard="live" />
 ```
 
 The close variant re-injects its own tag, so a dropped "send and close" stays a
@@ -233,7 +233,7 @@ close sign-off in the persisted record:
 
 ```ts
 appendSendKeywordTag("Buy milk tomorrow.", { action: "sendClose", matchedPhrase: "send and close" })
-=> Buy milk tomorrow. <send-close-message phrase="send and close" />
+=> Buy milk tomorrow. <send-close-message phrase="send and close" heard="live" />
 ```
 
 A checkpoint re-injects its tag too, and the tag reads back as the same
@@ -242,7 +242,7 @@ variant, so an HQ pass restored after a reload keeps it:
 ```ts
 const checkpointed = appendSendKeywordTag("Part one.", { action: "sendCheckpoint", matchedPhrase: "send checkpoint" })
 checkpointed
-=> Part one. <send-checkpoint-message phrase="send checkpoint" />
+=> Part one. <send-checkpoint-message phrase="send checkpoint" heard="live" />
 
 sendKeywordIn(checkpointed)
 => { action: "sendCheckpoint", matchedPhrase: "send checkpoint" }
@@ -252,5 +252,5 @@ Phrases with characters meaningful in XML are escaped, matching the tag form `de
 
 ```ts
 appendSendKeywordTag("Ping R&D.", { action: "send", matchedPhrase: 'send "the" message' })
-=> Ping R&D. <send-message phrase="send &quot;the&quot; message" />
+=> Ping R&D. <send-message phrase="send &quot;the&quot; message" heard="live" />
 ```

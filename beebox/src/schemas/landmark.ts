@@ -76,12 +76,12 @@ export type LandmarkExpandData = z.infer<typeof LandmarkExpand>;
 
 /**
  * Chat-feature seed for chats opened from this landmark. Each key is a
- * feature name; only applied at session open.
+ * feature name; only applied at session open. A retired `hq-dictation` key
+ * on an older card is stripped by the lenient parse and ignored.
  */
 const LandmarkChatApp = z.object({
   narration: z.enum(["on", "off"]).optional(),
   prose: z.enum(["on", "off"]).optional(),
-  "hq-dictation": z.enum(["on", "off"]).optional(),
 });
 export type LandmarkChatAppData = z.infer<typeof LandmarkChatApp>;
 
