@@ -596,7 +596,7 @@ assembleChatMessage(eNoData, W).message.replace(eNoData.id, "ID")
 ## A live gap marker is sent as unsure
 
 `[…]` in live text marks speech the live pass never transcribed
-(`docs/plans/live-gap-marker.md`). It goes to the agent wrapped in
+(`docs/implemented-plans/live-gap-marker.md`). It goes to the agent wrapped in
 `<unsure>`, anywhere in a live voice message — a marker can sit in the
 prefix when an earlier segment's text was folded into the composer. Realtime
 words on either side still mark their own spans; the marker matches no word.

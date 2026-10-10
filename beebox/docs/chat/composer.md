@@ -71,7 +71,7 @@ box pass costs about $0.006 per dictated minute on `whisper` or `whisper-llm`
 and $0.003 on `whisper-llm-mini` (OpenAI list prices).
 
 When live text goes down mid-recording, the live transcript shows `[…]` where
-words are missing (`docs/plans/live-gap-marker.md`). A reconnect that replays
+words are missing (`docs/implemented-plans/live-gap-marker.md`). A reconnect that replays
 the whole outage removes it once new live text arrives; a longer outage keeps
 it. If the live text is what gets sent, the marker goes to the agent as
 `<unsure>[…]</unsure>`. Spoken commands never match across it.

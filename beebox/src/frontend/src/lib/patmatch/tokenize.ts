@@ -68,7 +68,7 @@ export interface InputWord {
 }
 
 /**
- * Tokenize input text. A live gap marker (`docs/plans/live-gap-marker.md`)
+ * Tokenize input text. A live gap marker (`docs/implemented-plans/live-gap-marker.md`)
  * becomes a word of its own that no pattern word matches, so a phrase never
  * matches across words the live transcript missed. Its surroundings
  * tokenize as usual, and joining every word still gives back the text.

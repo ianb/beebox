@@ -2,7 +2,7 @@
 
 When the live transcription socket drops mid-recording, the recording keeps
 going and the HQ pass later fills in the words. The live transcript shows
-`[…]` where live text is missing (`docs/plans/live-gap-marker.md`), so a send
+`[…]` where live text is missing (`docs/implemented-plans/live-gap-marker.md`), so a send
 in that state does not look like the box lost the words. The decisions live in
 two pure pieces `TranscriptionSession` (`transcription-actor.ts`) wires
 together: `ReplayRing.coversGap` (was every frame of the outage replayed?) and

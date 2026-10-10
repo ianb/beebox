@@ -258,7 +258,7 @@ appendSendKeywordTag("Ping R&D.", { action: "send", matchedPhrase: 'send "the" m
 ## A live gap marker breaks a phrase
 
 `[…]` in the live transcript marks words the live pass missed
-(`docs/plans/live-gap-marker.md`). A command never matches across it: the
+(`docs/implemented-plans/live-gap-marker.md`). A command never matches across it: the
 words on either side were not spoken together. A command after it still
 fires, and the marker stays in the text.
 

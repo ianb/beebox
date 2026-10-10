@@ -7246,7 +7246,7 @@ tests:
     response_not_contains: ["--message msg-1"]
     tags: [chat, voice, transcription]
 
-  # Live gap marker (docs/plans/live-gap-marker.md): `<unsure>[…]</unsure>`
+  # Live gap marker (docs/implemented-plans/live-gap-marker.md): `<unsure>[…]</unsure>`
   # in live text is speech the live pass never transcribed. The failure this
   # guards against is the agent acting on the half sentence as if complete.
   #
