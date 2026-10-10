@@ -11,7 +11,6 @@ import {
 } from "../../schemas/memo.js";
 import { createInitialGuideTemplate } from "../../schemas/guide/templates.js";
 import { createRecordTemplate } from "../../schemas/record.js";
-import { createRecipeTemplate } from "../../schemas/recipe.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script/schema.js";
 import { createTodoViewTemplate } from "../../schemas/todo-view.js";
 import { TODO_STATUSES } from "../../shared/todo-model.js";
@@ -71,26 +70,6 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
       };
       if (args.description) templateArgs.description = args.description;
       return createRecordTemplate(templateArgs);
-    },
-  }),
-
-  eraseTemplateArgs({
-    name: "recipe",
-    description: "A recipe card with ingredients, steps, and scaling support",
-    cardTypes: ["recipe"],
-    defaultForTypes: ["recipe"],
-    argsSchema: z.object({
-      title: z.string().describe("Recipe name"),
-      description: z.string().optional().describe("What the dish is"),
-      servings: z.coerce.number().optional().describe("Number of servings (default: 4)"),
-    }),
-    generate: (args) => {
-      const templateArgs: Parameters<typeof createRecipeTemplate>[0] = {
-        title: args.title,
-      };
-      if (args.description) templateArgs.description = args.description;
-      if (args.servings) templateArgs.servings = args.servings;
-      return createRecipeTemplate(templateArgs);
     },
   }),
 

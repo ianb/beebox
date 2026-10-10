@@ -25,12 +25,15 @@ async function bbx(box, args) {
 
 ## Every installed plugin lists, inactive ones without stubs
 
-A new box activates nothing, so the one in-repo plugin lists as inactive:
+A new box activates nothing, so each in-repo plugin lists as inactive:
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await bbx(box, ["plugins", "list"])
-=> ["courseware  inactive  Courses, lesson plans, learner progress  docs: node_modules/beebox/src/plugins/courseware/README.md"]
+=> [
+  "courseware  inactive  Courses, lesson plans, learner progress  docs: node_modules/beebox/src/plugins/courseware/README.md",
+  "recipe  inactive  Scalable recipes with ingredient, step and yield tags  docs: node_modules/beebox/src/plugins/recipe/README.md"
+]
 ```
 
 ## An active plugin shows which stubs the box has written
@@ -53,6 +56,7 @@ await bbx(box, ["plugins", "list"])
   "  schema progress: src/schemas/progress.ts missing",
   "  schema concept-map: src/schemas/concept-map.ts missing",
   "  view concept-map: src/views/concept-map.tsx missing",
+  "recipe  inactive  Scalable recipes with ingredient, step and yield tags  docs: node_modules/beebox/src/plugins/recipe/README.md",
 ]
 ```
 
@@ -92,7 +96,7 @@ await box.write("_config/box.json", JSON.stringify({ plugins: ["coursware"] }));
 ```ts continue
 const json = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).join("\n"));
 ({ names: json.plugins.map((p) => `${p.name}:${p.active}`), problems: json.problems })
-=> { names: ["courseware:false"], problems: ["box.json names an unknown plugin: coursware"] }
+=> { names: ["courseware:false", "recipe:false"], problems: ["box.json names an unknown plugin: coursware"] }
 ```
 
 ## `bbx status` shows the same problems

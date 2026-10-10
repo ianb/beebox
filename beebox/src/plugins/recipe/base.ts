@@ -1,22 +1,13 @@
 /**
- * Recipe card schema — Phase-2 frontmatter + Markdoc-annotated body.
- *
- * Was previously an XML schema with `<ing>`, `<step>`, `<section>`, etc.
- * Now: identity in frontmatter (title, description, sources, tags, hero
- * image), structure in the body via the recipe Markdoc vocabulary
- * (`{% ingredient %}`, `{% step %}`, `{% yield %}`,
- * `{% substitution %}`, `{% subrecipe %}`, `{% recipe-section %}`). See
- * `markdoc-tags-plan.md` Track 1 for the migration rationale.
- *
- * The frontend renderer (`RecipeView`) wraps the body in a container
- * that provides scaling context + CSS step-counter resets; otherwise
- * it just renders the body via the shared Markdown component.
+ * Recipe base (the recipe plugin): identity in frontmatter (title,
+ * description, sources, tags, hero image), structure in the body via the
+ * recipe Markdoc vocabulary (`{% ingredient %}`, `{% step %}`, `{% yield %}`,
+ * `{% substitution %}`, `{% subrecipe %}`, `{% recipe-section %}`). A box
+ * completes it as `cardSchema("recipe", recipe.schemas["recipe"])`.
  */
 
-import { stringify as stringifyYaml } from "yaml";
-import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
-import { LabeledSourcesEntrySchema } from "../cards/sources-entry.js";
+import { body, LabeledSourcesEntrySchema, type CardSchemaConfig } from "../../exports/cards.js";
+import { z } from "../../exports/schema.js";
 
 /**
  * A representative image — exactly one of `ref` (into the recipe's attach scope,
@@ -31,19 +22,21 @@ const RecipeHeroImage = z
     message: "hero-image needs exactly one of ref / href",
   });
 
-export const RecipeSchema = cardSchema("recipe", {
+const recipeFields = {
+  title: z.string(),
+  description: z.string().optional(),
+  // Where the recipe came from: a page, a card, or a named cookbook or person.
+  sources: z.array(LabeledSourcesEntrySchema).optional(),
+  tags: z.array(z.string()).optional(),
+  "hero-image": RecipeHeroImage.optional(),
+  body: body(z.string()),
+};
+
+export const recipeBase: CardSchemaConfig<string, typeof recipeFields> = {
   brief: "A scalable recipe",
   description: "A recipe with scaling-aware ingredients, steps, and substitutions via the recipe Markdoc tags",
   category: "authored",
-  fields: {
-    title: z.string(),
-    description: z.string().optional(),
-    // Where the recipe came from: a page, a card, or a named cookbook or person.
-    sources: z.array(LabeledSourcesEntrySchema).optional(),
-    tags: z.array(z.string()).optional(),
-    "hero-image": RecipeHeroImage.optional(),
-    body: body(z.string()),
-  },
+  fields: recipeFields,
   instructions: `# Recipe Cards
 
 Recipes live in \`_content/recipes/\`. Organize with subdirectories only if
@@ -102,34 +95,4 @@ whole card. Convert or normalize only when asked, and say that you did.
 ## File naming
 
 \`_content/recipes/Recipe_Name.recipe.card\``,
-});
-
-export type RecipeFields = InferCardFields<typeof RecipeSchema>;
-
-/**
- * Template for creating a recipe card. Seeds yield + headings + a
- * single ingredient/step as a starting shape.
- */
-export function createRecipeTemplate(options: {
-  title: string;
-  description?: string;
-  servings?: number;
-}): string {
-  const fields: Record<string, unknown> = { title: options.title };
-  if (options.description !== undefined && options.description !== "") {
-    fields["description"] = options.description;
-  }
-  const servings = options.servings ?? 4;
-  const yamlText = stringifyYaml(fields);
-  const bodyText = `{% yield amount="${servings}" %}${servings} servings{% /yield %}
-
-## Ingredients
-
-- {% ingredient amount="1" unit="cup" %}ingredient name{% /ingredient %}
-
-## Steps
-
-{% step %}First step here.{% /step %}
-`;
-  return `---\n${yamlText}---\n${bodyText}`;
-}
+};

@@ -5228,8 +5228,10 @@ tests:
   # `{% step %}`, `{% yield %}`, `{% substitution %}`, `{% subrecipe %}`,
   # `{% recipe-section %}`. Recipe vocabulary is intentionally NOT in
   # the always-loaded agent guide (recipes are domain-specific; most
-  # boxes don't touch them). It lives in `RecipeSchema.instructions`,
-  # which compiles into `node_modules/beebox/box-docs/card-recipe.md`. The audits
+  # boxes don't touch them). It lives in the recipe plugin base
+  # (`src/plugins/recipe/base.ts` `instructions`) and reaches
+  # `node_modules/beebox/box-docs/card-recipe.md` through the box's
+  # `src/schemas/recipe.ts` stub. The audits
   # below are `knows_about` — the agent reads the recipe doc on
   # demand when asked about recipes.
   #

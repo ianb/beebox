@@ -122,6 +122,7 @@
     "dagre": "^0.8.5",
     "eslint": "^9.39.2",
     "eslint-import-resolver-typescript": "^4.4.4",
+    "fraction.js": "^5.3.4",
     "knip": "^5.83.1",
     "lint-staged": "^16.2.7",
     "madge": "^8.0.0",

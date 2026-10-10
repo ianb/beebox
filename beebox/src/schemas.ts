@@ -37,7 +37,6 @@ import { PdfSchema } from "./schemas/pdf.js";
 import { CaptureSessionSchema } from "./schemas/capture-session.js";
 import { UploadBatchSchema } from "./schemas/upload-batch.js";
 import { RecordSchema } from "./schemas/record.js";
-import { RecipeSchema } from "./schemas/recipe.js";
 import { EmailThreadSchema } from "./schemas/email-thread.js";
 import { EmailMessageSchema } from "./schemas/email-message.js";
 import { EmailOutboundSchema } from "./schemas/email-outbound.js";
@@ -105,7 +104,6 @@ export const cardSchemas = defineRegistry<CardSchema>({
     TodoViewSchema,
     QuestionSchema,
     BrowserTaskSchema,
-    RecipeSchema,
     CommentarySchema,
     BriefingSchema,
     GuideSchema,
