@@ -353,14 +353,15 @@ briefing that is an untouched stock seed (a `briefing-seed` hash) becomes the
 current seed verbatim and keeps its template ledger in step.
 
 A tag inside a code fence or another tag, a `purpose`/`correction` that is
-inline, in a list, or outside a briefing, two `purpose` blocks, a conflicting
+inline, in a list, or outside a briefing, a block-form `image`/`silence`, an image ref with whitespace or `] ( ) < >`, a non-string correction `test`, two `purpose` blocks, a conflicting
 `purpose:` key, an existing `## Corrections` heading, or a body Markdoc cannot
 parse (single-quoted attribute values included) fails the whole box: the script
 prints each path and line, writes nothing, and exits 1, so no manifest entry is
 recorded. Like `briefing-openers-2026-10` it skips the harness, plans before
 writing, and `--verify` alone re-parses every card and exits 1 on a leftover
 tag (`bbx validate` only warns). Writes are per file; a rerun finishes a
-half-converted box. See `src/scripts/migrate/body-tags/plan.ts`.
+half-converted box, and it also repairs a template ledger left on the old
+seed hash by an interrupted run. See `src/scripts/migrate/body-tags/plan.ts`.
 
 ## Manual runs (for debugging)
 

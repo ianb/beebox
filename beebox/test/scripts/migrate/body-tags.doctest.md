@@ -199,3 +199,60 @@ const run = await runBodyTags({ boxRoot: box.root, mode: "apply" });
 
 `bbx validate` output was not checked here: it needs a full box command run, and
 `--verify` is the gate (body Markdoc findings are warnings there).
+
+## Review fixes
+
+Block-form `image` (and `silence`) is not converted to a dangling close tag; it
+fails, and the closing tag is what `--verify` would also look for.
+
+```ts
+plan("_content/Notes/c.memo.card", "---\ntype: memo\n---\n{% image ref=\"attach/a.image.card\" %}\ncaption\n{% /image %}\n").failures.map((f) => f.reason)
+=> ["block-form {% image %}...{% /image %} is not supported; rewrite it by hand"]
+```
+
+A `%` inside a quoted attribute is matched, and a decoy literal tag in backticks
+on the same line is left alone.
+
+```ts
+plan("_content/Notes/d.memo.card", "---\ntype: memo\n---\nWrite `{% image ref=\"x\" /%}` then {% image ref=\"attach/a%20b.image.card\" /%} ok.\n").after?.split("\n")[3]?.split("then ")
+=> ["Write `{% image ref=\"x\" /%}` ", "[a%20b](attach/a%20b.image.card) ok."]
+```
+
+A ref that cannot be written as a markdown link fails (space in the stem):
+
+```ts
+plan("_content/Notes/e.memo.card", "---\ntype: memo\n---\n{% image ref=\"attach/cover 2.image.card\" /%}\n").failures.map((f) => f.reason)
+=> ["the image ref \"attach/cover 2.image.card\" cannot be written as a markdown link (whitespace or one of ] ( ) < >); rename the card or link it by hand"]
+```
+
+A non-string `test` fails instead of being dropped:
+
+```ts
+plan(ROOT, briefing("{% correction test=42 %}\nFix.\n{% /correction %}\n")).failures.map((f) => f.reason)
+=> ["{% correction %} test must be a quoted string; fix it by hand"]
+```
+
+An existing `purpose: null` is set in place; key order is kept.
+
+```ts
+plan(ROOT, briefing("{% purpose %}\nA\n{% /purpose %}\n", "type: briefing\nother: 1\npurpose:\nlast: 2\n")).after?.split("\n")
+=> ["---", "type: briefing", "other: 1", "purpose: A", "last: 2", "---", ""]
+```
+
+An interrupted stock-seed apply (seed written, ledger still on the old hash)
+is reconciled by the next `--apply`.
+
+```ts
+import { createBriefingTemplate } from "../../../src/schemas/briefing.js";
+import { TEMPLATE_STOCK_HASHES } from "../../../src/core/template-stock-hashes.js";
+import { readVersions, writeVersions } from "../../../src/core/install-template-file.js";
+const OLD = "---\ntype: briefing\nopeners:\n  - Let me tell you what this box is for.\n  - What can you do?\n---\n{% purpose %}\nWhat this box is for.\n{% /purpose %}\n";
+const box = await makeTmpBox();
+const seed = createBriefingTemplate();
+await box.write(ROOT, seed);
+await writeVersions(box.root, { [ROOT]: { sha256: sha(OLD), "installed-at": "2026-09-01T00:00:00.000Z", stock: OLD } });
+const run = await runBodyTags({ boxRoot: box.root, mode: "apply" });
+({ code: run.code, oldIsStock: TEMPLATE_STOCK_HASHES["briefing-seed"].superseded.includes(sha(OLD)),
+   ledger: (await readVersions(box.root))[ROOT]?.sha256 === sha(seed), text: (await box.read(ROOT)) === seed })
+=> { code: 0, oldIsStock: true, ledger: true, text: true }
+```

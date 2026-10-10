@@ -40,8 +40,10 @@ import { TEMPLATE_STOCK_HASHES } from "../../../core/template-stock-hashes.js";
 import { createBriefingTemplate } from "../../../schemas/briefing.js";
 import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
 import { errnoCode } from "../../../shared/error-guards.js";
-import { planBodyTagRewrites, RETIRED_TAGS, RETIRED_TAG_PATTERN, type CardInput } from "./plan.js";
+import { createHash } from "node:crypto";
+import { planBodyTagRewrites, ROOT_BRIEFING_PATH, RETIRED_TAGS, RETIRED_TAG_PATTERN, type CardInput } from "./plan.js";
 
+const sha256 = (text: string): string => createHash("sha256").update(text).digest("hex");
 const SKIP_DIRS = new Set([".git", "node_modules"]);
 
 /** Box-relative paths of every live `*.card`, sorted. */
@@ -72,8 +74,9 @@ async function readCards(boxRoot: string): Promise<CardInput[]> {
   return cards;
 }
 
-/** True when the Markdoc parse of `body` holds a node for one of the four tags. */
+/** True when the Markdoc parse holds a node for one of the four tags, or an error node (an orphaned closing tag parses as one). */
 function hasRetiredTag(node: Node): boolean {
+  if (node.type === "error") return true;
   if (node.type === "tag" && node.tag !== undefined && RETIRED_TAGS.has(node.tag)) return true;
   return node.children.some(hasRetiredTag);
 }
@@ -95,7 +98,10 @@ export async function runBodyTags({ boxRoot, mode }: { boxRoot: string; mode: Ru
   const lines: string[] = [];
   if (mode !== "verify") {
     const stock = TEMPLATE_STOCK_HASHES["briefing-seed"];
-    const plan = planBodyTagRewrites(await readCards(boxRoot), { seed: createBriefingTemplate(), stockSeedHashes: new Set([stock.current, ...stock.superseded]) });
+    const seed = createBriefingTemplate();
+    const stockSeedHashes = new Set([stock.current, ...stock.superseded]);
+    const cards = await readCards(boxRoot);
+    const plan = planBodyTagRewrites(cards, { seed, stockSeedHashes });
     if (plan.failures.length > 0) {
       for (const failure of plan.failures) lines.push(`failed: ${failure.path}${failure.line === undefined ? "" : `:${String(failure.line)}`}: ${failure.reason}`);
       lines.push(`body-tags: ${String(plan.failures.length)} failure(s); nothing written.`);
@@ -110,6 +116,13 @@ export async function runBodyTags({ boxRoot, mode }: { boxRoot: string; mode: Ru
       if (versions[file.path]?.sha256 !== undefined) {
         await recordAutomatedTemplateRewrite({ boxRoot, relPath: file.path, before: file.before, after: file.after });
       }
+    }
+    // An earlier run may have written the seed and stopped before the ledger
+    // update; the ledger's own `stock` text is the pre-image it needs.
+    const rootCard = cards.find((card) => card.path === ROOT_BRIEFING_PATH);
+    const recorded = versions[ROOT_BRIEFING_PATH];
+    if (rootCard?.text === seed && recorded?.stock !== undefined && recorded.sha256 !== undefined && recorded.sha256 !== sha256(seed) && stockSeedHashes.has(recorded.sha256)) {
+      await recordAutomatedTemplateRewrite({ boxRoot, relPath: ROOT_BRIEFING_PATH, before: recorded.stock, after: seed });
     }
   }
   const left = await verify(boxRoot);

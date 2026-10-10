@@ -36,8 +36,8 @@ import { applyLineEdits, type LineEdit } from "./edit-lines.js";
 
 export const ROOT_BRIEFING_PATH = "_content/briefing.briefing.card";
 export const RETIRED_TAGS: ReadonlySet<string> = new Set(["image", "silence", "purpose", "correction"]);
-/** A cheap pre-filter: any open tag with one of the four names. */
-export const RETIRED_TAG_PATTERN = /{%-?\s*(?:image|silence|purpose|correction)\b/;
+/** A cheap pre-filter: any opening or closing tag with one of the four names. */
+export const RETIRED_TAG_PATTERN = /{%-?\s*\/?\s*(?:image|silence|purpose|correction)\b/;
 
 export interface CardInput { path: string; text: string }
 export interface BodyTagOptions { seed: string; stockSeedHashes: ReadonlySet<string> }
@@ -73,9 +73,10 @@ const bulletText = (inner: readonly string[]): string => inner.join("\n").trim()
 function withPurpose(split: ReturnType<typeof splitCardContent>, purpose: string): string | null {
   const doc = parseDocument(split.frontmatterText);
   if (doc.errors.length > 0) return null;
+  const existing = isMap(doc.contents) && doc.contents.has("purpose");
   doc.set("purpose", purpose);
   const map = doc.contents;
-  if (isMap(map)) {
+  if (isMap(map) && !existing) {
     // `set` appends; move the new pair to just after `type` (or first).
     const added = map.items.pop();
     const typeAt = map.items.findIndex((pair) => isScalar(pair.key) && pair.key.value === "type");
@@ -99,6 +100,20 @@ function whereFor(card: CardInput, lineOffset: number): Where {
   };
 }
 
+/** The replace edit for an `image` or `silence` node, or a failure. */
+function selfClosing(where: Where, { node, ancestors }: Found): LineEdit | Failed {
+  const name = node.tag ?? "";
+  const from = node.lines[0] ?? 0;
+  if (ancestors.includes("fence") || ancestors.includes("tag")) return where.fail(`{% ${name} %} inside a code fence or another tag; rewrite it by hand`, node);
+  if (node.lines.length !== 2) return where.fail(`block-form {% ${name} %}...{% /${name} %} is not supported; rewrite it by hand`, node);
+  const attribute = name === "image" ? "ref" : "duration";
+  const value = node.attributes[attribute];
+  if (typeof value !== "string") return where.fail(`{% ${name} %} has no ${attribute} string`, node);
+  if (name === "image" && /[\s()<>[\]]/.test(value)) return where.fail(`the image ref ${JSON.stringify(value)} cannot be written as a markdown link (whitespace or one of ] ( ) < >); rename the card or link it by hand`, node);
+  const replacement = name === "image" ? `[${value.replace(/^attach\//, "").replace(/\.image\.card$/, "")}](${value})` : `— ${value} silence —`;
+  return { kind: "replace", from, to: node.lines[node.lines.length - 1] ?? from, tag: name, attributes: node.attributes, replacement };
+}
+
 /** Sort the found tags into line edits, purposes, and corrections, or fail on the first misplaced one. */
 function collect(where: Where, { tags, lines }: { tags: readonly Found[]; lines: readonly string[] }): Collected | Failed {
   const { card } = where;
@@ -115,16 +130,14 @@ function collect(where: Where, { tags, lines }: { tags: readonly Found[]; lines:
       if (name === "purpose") out.purposes.push(node);
       else {
         const test = node.attributes["test"];
+        if (test !== undefined && typeof test !== "string") return where.fail("{% correction %} test must be a quoted string; fix it by hand", node);
         out.corrections.push({ text: bulletText(innerLines(lines, node.lines)), test: typeof test === "string" && test !== "" ? test : undefined });
       }
       continue;
     }
-    if (ancestors.includes("fence") || ancestors.includes("tag")) return where.fail(`{% ${name} %} inside a code fence or another tag; rewrite it by hand`, node);
-    const attribute = name === "image" ? "ref" : "duration";
-    const value = node.attributes[attribute];
-    if (typeof value !== "string") return where.fail(`{% ${name} %} has no ${attribute} string`, node);
-    const replacement = name === "image" ? `[${value.replace(/^attach\//, "").replace(/\.image\.card$/, "")}](${value})` : `— ${value} silence —`;
-    out.edits.push({ kind: "replace", from, to: node.lines[node.lines.length - 1] ?? from, tag: name, replacement });
+    const edit = selfClosing(where, { node, ancestors });
+    if ("failures" in edit) return edit;
+    out.edits.push(edit);
   }
   return out;
 }

@@ -62,7 +62,7 @@ A boxholder records a two-minute voice note with one photo. The capture worker w
 | 3. Remove the tags, components, emitter cases | ~210 deleted | ~10 |
 | 4. Migration script and registry entry | ~260 | ~140 |
 
-Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `docs/box/what-you-could-do.md`, `docs/cards/migrations.md`, knowledge audits). Generated output: the briefing seed stock hash (one line). Not a BIG CHANGE. The fuller design buys a working box on the day the engine lands: an unmigrated card fails validation loudly (principle 4 in `docs/engineering-principles.md`, "never silent"), and the bbx-plan skill rules that a migration expected to stop midway is a subplan, so this one runs to completion or writes nothing.
+Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `docs/box/what-you-could-do.md`, `docs/cards/migrations.md`, knowledge audits). Generated output: the briefing seed stock hash (one line). Not a BIG CHANGE. The fuller design buys a working box on the day the engine lands: an unmigrated card is reported by `bbx validate` as `Undefined tag` with file and line (a warning, principle 4 in `docs/engineering-principles.md`, "never silent"), and the bbx-plan skill rules that a migration expected to stop midway is a subplan, so this one plans to completion or writes nothing.
 
 ## Stated preferences this plan trades against
 
@@ -195,7 +195,7 @@ The capture-session instructions (`capture-session.tsx:10-12, 48, 72-74`) and `d
 
 **What.** A script migration at `src/scripts/migrate/body-tags/{plan.ts,run.ts}`, registered last in `MIGRATIONS`, that converts every live card in a box.
 
-**Why.** Six production boxes and five local boxes hold the old shape. After Track 3 those cards fail validation. The conversion is deterministic text rewriting, so it is a script, not a procedure (`.claude/skills/bbx-migration/SKILL.md`, "Which kind").
+**Why.** Six production boxes and five local boxes hold the old shape. After Track 3 those cards render their tags as authored text and `bbx validate` warns on each. The conversion is deterministic text rewriting, so it is a script, not a procedure (`.claude/skills/bbx-migration/SKILL.md`, "Which kind").
 
 **Direction.** `plan.ts` is pure: `planBodyTagRewrites(cards: ReadonlyArray<{path, text}>): { writes: Array<{path, text}>; failures: Array<{path, reason}> }`.
 
@@ -238,11 +238,12 @@ none
 | Briefing with `purpose:` key blank or missing at the box root | no (planned: compile doctest) | `resolveSituation` returns the "no purpose statement" source as today | clear (the judge says why) |
 | Migration meets two purpose blocks or a conflicting key | planned doctest | fail closed, exit 1, nothing written | clear |
 | Migration meets a tag inside a code fence, a list item (purpose/correction), or another tag | planned doctest, one case each | fail closed, exit 1, nothing written, file and line named | clear |
-| Attribute written with single quotes or across lines | planned doctest | the Markdoc parse reads it like any attribute | n/a |
+| Attribute written with single quotes | doctest | Markdoc does not accept single-quoted attribute values (found in implementation); the body parses with an error node and the card fails closed, file and line named | clear |
+| Attribute written across lines | doctest | the Markdoc parse reads it like any attribute | n/a |
 | Apply interrupted after some files were written | planned doctest: rerun on a half-converted box | converted cards are skipped; the rerun finishes | clear (sweep reports the first failure) |
 | Capture link stem collides with another file name in the body | n/a | a markdown link label is display text only | n/a |
 | Image card renamed after the transcript was written | existing link-ref tests | `extractBodyLinks` tracks it like any body link | clear (dangling ref) |
-| Unmigrated box after engine deploy, before the sweep reaches it | slice 2 unknown-tag doctest | renders authored tag text; `bbx validate` fails | clear |
+| Unmigrated box after engine deploy, before the sweep reaches it | slice 2 unknown-tag doctest | renders authored tag text; `bbx validate` warns `Undefined tag`; the migration's `--verify` is the blocking check | clear |
 | Stock seed hash not updated after the template change | `test/core/box/...` template-stock doctest fails | `pnpm template-stock:update` | clear (test) |
 | Judge default situation changes when a box's purpose moves to frontmatter | planned: judge doctest reads frontmatter | same text, new source | n/a |
 

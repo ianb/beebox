@@ -37,3 +37,20 @@ Reviewer: codex gpt-6-sol, effort high, 2026-10-10 (`scratch/cross-model/2026-10
 - `attach/` markdown links are extracted, rewritten by `bbx mv`, lint-checked, and resolved by the frontend the same as the old `ref` attribute (reviewer check 2, `body-refs.ts:55`, `rewrite-card-refs/core.ts:204`, `lint-cards.ts:188`, `view-url.ts:170`).
 - Compiled briefing order `**Purpose:**`, body, records has no dependency on `emitBriefingTag` (check 5).
 - Generated image and silence markers are single-line self-closing tags (check 3).
+
+# Implementation review — round 1
+
+Reviewer: codex gpt-6-sol, effort high, 2026-10-10 (`scratch/cross-model/2026-10-10T22-21-16-280Z-codex.md`), on commits 0c2b17d70, 7a689a9f6, c851f0f58. Six findings, all verified against the source; all fixed in the migration before round 2.
+
+| Finding | Verdict | Fix |
+|---|---|---|
+| Block-form `{% image %}…{% /image %}` converts to a link plus a dangling close tag, and `--verify` skips it because the prefilter matches opening tags only | Holds | Planner fails closed on an image/silence node with a 4-entry line span; the prefilter in plan and verify matches closing tags too |
+| The source-tag regex cannot match a `%` inside an attribute, so a decoy literal tag on the same line is replaced instead and only verify notices, after the write | Holds | Regex allows `%` inside double-quoted values; each matched source string is re-parsed and must yield one tag node with the planned tag and attributes, or the card fails before any write |
+| A ref with a space or bracket becomes text that is not a markdown link | Holds | Planner fails closed on whitespace, `]`, `(`, `)`, `<`, `>` in the ref; generated capture names never contain them |
+| An apply interrupted between writing the seed and updating the ledger leaves a stale ledger that a rerun does not repair | Holds | Apply reconciles the ledger when the root briefing equals the current seed and the ledger records an older stock hash |
+| `test=42` parses as a number and the check is dropped | Holds | Fail closed on a present non-string `test` |
+| An existing `purpose: null` key makes `doc.set` update in place and the reorder moves the wrong pair | Holds | Set in place when the key exists; reorder only a newly added pair |
+
+Plan-record corrections from the same review: single-quoted attribute values are a parse error in Markdoc, so the migration fails closed on them (the plan had said they parse normally); `bbx validate` warns on a leftover tag and does not fail, so the plan's remaining "fails validation" wording was corrected.
+
+Found clean by the reviewer: consecutive photo tags, two replacements on one line, purpose removal at body boundaries, briefing compile order, missing, blank, and stub purpose handling, and no other producer or reader of the four tags in `src/`.
