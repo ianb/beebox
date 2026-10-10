@@ -2,25 +2,30 @@
 # CLI for workstream exhibits — the medium an agent uses to show work.
 #
 # An exhibit is a directory in the per-workstream store carrying a manifest
-# (exhibit.json), content files, and whatever the page captures. Every exhibit
-# states one ask: decide | confirm | react | fyi. Design and vocabulary:
-# beebox/docs/plans/workstream-exhibits.md; page contract:
-# workstreams-app/docs/exhibits.md.
+# (exhibit.json), content files, and whatever the page captures. An exhibit
+# shows work; it carries no ask. Say what you want in chat. Page contract and
+# the rule for writing prose: workstreams-app/docs/exhibits.md.
 #
 # Commands:
 #   add [files...]     Create an exhibit and print its URL (stdout, one line).
 #                      --title <t>          required
-#                      --ask <type>         decide|confirm|react|fyi (required)
-#                      --prose <p>          what you want, and what happens
-#                                           after the answer (required)
-#                      --option <label>     repeatable; decide needs >= 2
+#                      --prose <p>          optional Markdown shown under the
+#                                           title
 #                      --workstream <ws>    default: the cwd checkout's own
 #                      --open               also `open` the URL (best effort)
 #                      --permanent          make a committed app skeleton at
 #                                           dev/apps/<slug>/ in THIS checkout
 #                                           instead (tracked; ships by merge)
-#   list               Every exhibit: workstream, slug, ask, answered state.
-#                      --workstream <ws> narrows; --json emits an array.
+#                      --caption <text>     repeatable; the n-th caption goes on
+#                                           the n-th figure file (argument
+#                                           order); fewer captions than
+#                                           figures is fine, more is an error
+#   list               Every exhibit: workstream, slug, title, created.
+#                      --workstream <ws> narrows; --json emits an array of
+#                      { workstream, name, title, created, permanent,
+#                        problem? }. A manifest that does not parse still
+#                      gets a row (title and created null, problem set), and
+#                      list exits 1 after printing when any row has one.
 #   url <ws>/<name>    Reprint one exhibit's URL (also `url apps/<name>`).
 #   help               This text.
 #
@@ -171,23 +176,22 @@ shift || true
 case "$cmd" in
   add)
     title=""
-    ask=""
     prose=""
     workstream=""
     want_open=false
     permanent=false
-    options=()
     files=()
+    captions=()
     while [ $# -ge 1 ]; do
       case "$1" in
         --title) [ $# -ge 2 ] || die "add: --title needs a value"; title="$2"; shift 2 ;;
         --title=*) title="${1#--title=}"; shift ;;
-        --ask) [ $# -ge 2 ] || die "add: --ask needs a value"; ask="$2"; shift 2 ;;
-        --ask=*) ask="${1#--ask=}"; shift ;;
+        --ask|--ask=*|--option|--option=*)
+          die "add: exhibits no longer carry an ask; say what you want in chat (see workstreams-app/docs/exhibits.md)" ;;
         --prose) [ $# -ge 2 ] || die "add: --prose needs a value"; prose="$2"; shift 2 ;;
         --prose=*) prose="${1#--prose=}"; shift ;;
-        --option) [ $# -ge 2 ] || die "add: --option needs a value"; options+=("$2"); shift 2 ;;
-        --option=*) options+=("${1#--option=}"); shift ;;
+        --caption) [ $# -ge 2 ] || die "add: --caption needs a value"; captions+=("$2"); shift 2 ;;
+        --caption=*) captions+=("${1#--caption=}"); shift ;;
         --workstream) [ $# -ge 2 ] || die "add: --workstream needs a value"; workstream="$2"; shift 2 ;;
         --workstream=*) workstream="${1#--workstream=}"; shift ;;
         --open) want_open=true; shift ;;
@@ -199,24 +203,6 @@ case "$cmd" in
     done
 
     [ -n "$title" ] || die "add: --title is required"
-    if [ "$permanent" = false ]; then
-      [ -n "$ask" ] || die "add: --ask is required (decide|confirm|react|fyi)"
-    fi
-    if [ -n "$ask" ]; then
-      case "$ask" in
-        decide|confirm|react|fyi) ;;
-        *) die "add: --ask must be decide, confirm, react, or fyi (got '$ask')" ;;
-      esac
-      [ -n "$prose" ] || die "add: --prose is required — say what you want and what happens after the answer"
-      case "$ask" in
-        decide) [ "${#options[@]}" -ge 2 ] || die "add: --ask decide needs at least two --option labels" ;;
-        react|fyi) [ "${#options[@]}" -eq 0 ] || die "add: --option is meaningless for --ask $ask" ;;
-      esac
-    else
-      [ "${#options[@]}" -eq 0 ] || die "add: --option needs --ask"
-      [ -z "$prose" ] || die "add: --prose needs --ask"
-    fi
-
     slug="$(slugify "$title")"
     [ -n "$slug" ] || die "add: --title '$title' has no slug-able characters"
     # Reserved: <store>/<workstream>/coding-feedback/ holds bin/coding-feedback
@@ -224,14 +210,20 @@ case "$cmd" in
     [ "$slug" != "coding-feedback" ] || die "add: 'coding-feedback' is reserved for CODING_FEEDBACK notes — pick another title"
 
     doc_source=""
+    figure_count=0
     for f in ${files[@]+"${files[@]}"}; do
       [ -f "$f" ] || die "add: not a readable file: $f"
+      if is_figure_file "$f"; then figure_count=$((figure_count + 1)); fi
       if [ "$permanent" = false ] && is_markdown_file "$f"; then
         [ -z "$doc_source" ] \
           || die "add: only one Markdown document can be rendered as doc.md (got '$doc_source' and '$f')"
         doc_source="$f"
       fi
     done
+    # Every argument check runs before the exhibit directory exists, so a
+    # refusal never leaves a half-made exhibit occupying the slug.
+    [ "${#captions[@]}" -le "$figure_count" ] \
+      || die "add: ${#captions[@]} captions for $figure_count figures — one caption per figure, in file order"
 
     # One line on stdout, structurally: everything a step prints lands on
     # stderr, and the URL goes out on the stashed fd 3 (bin/workstreams create's
@@ -286,24 +278,19 @@ case "$cmd" in
       fi
       if is_figure_file "$safe"; then
         n=$((n + 1))
-        figures_json="$(jq -c --arg label "A$n" --arg file "$safe" '. + [{label: $label, file: $file}]' <<<"$figures_json")"
+        caption="${captions[$((n - 1))]-}"
+        figures_json="$(jq -c --arg label "A$n" --arg file "$safe" --arg caption "$caption" \
+          '. + [{label: $label, file: $file} | if $caption == "" then . else .caption = $caption end]' <<<"$figures_json")"
       fi
     done
 
-    options_json="$(printf '%s\n' ${options[@]+"${options[@]}"} | jq -R . | jq -sc 'map(select(. != ""))')"
-
     manifest="$(jq -n \
       --arg title "$title" \
-      --arg type "$ask" \
       --arg prose "$prose" \
       --arg created "$created" \
-      --argjson options "$options_json" \
       --argjson figures "$figures_json" \
       '{title: $title, created: $created}
-       | if $type == "" then . else
-           .ask = ({type: $type, prose: $prose}
-                   | if ($options | length) > 0 then .options = $options else . end)
-         end
+       | if $prose == "" then . else .prose = $prose end
        | if ($figures | length) > 0 then .figures = $figures else . end')"
     printf '%s\n' "$manifest" > "$dest/exhibit.json"
 
@@ -321,7 +308,7 @@ HTML
       fi
       say "committed app skeleton at $dest — it is TRACKED: commit it, and it ships to /apps/$slug/ only once the branch merges to main"
     else
-      say "exhibit at $dest (ask: ${ask}, document: $document, figures: $n)"
+      say "exhibit at $dest (document: $document, figures: $n)"
     fi
 
     url="$(exhibit_url "$scope")"
@@ -344,38 +331,24 @@ HTML
 
     rows="[]"
     add_row() {
-      local ws="$1" name="$2" dir="$3" data_dir="$4" permanent="$5"
-      local manifest ask_type title answered decided_at problem
+      local ws="$1" name="$2" dir="$3" permanent="$4"
+      local manifest
       manifest="$dir/exhibit.json"
       [ -f "$manifest" ] || return 0
-      jq -e . "$manifest" >/dev/null 2>&1 || { say "skipping unparseable manifest: $manifest"; return 0; }
-      title="$(jq -r '.title // ""' "$manifest")"
-      ask_type="$(jq -r '.ask.type // ""' "$manifest")"
-      answered=false
-      decided_at=""
-      problem=""
-      # Answered means the disposition PARSES and is one — the same rule the app
-      # applies (workstreams-app/src/server/exhibits/disposition.ts). A file that
-      # merely exists used to count, so a half-written answer hid a live ask here
-      # while the app's own queue still showed it waiting.
-      if [ -f "$data_dir/disposition.json" ]; then
-        if decided_at="$(jq -er 'if (.askType | type) == "string" and (.decidedAt | type) == "string"
-                                 then .decidedAt else error("not a disposition") end' \
-                          "$data_dir/disposition.json" 2>/dev/null)"; then
-          answered=true
-        else
-          decided_at=""
-          problem="disposition.json is not a readable answer"
-        fi
+      if jq -e 'type == "object"' "$manifest" >/dev/null 2>&1; then
+        rows="$(jq -c \
+          --arg workstream "$ws" --arg name "$name" --argjson permanent "$permanent" \
+          --slurpfile m "$manifest" \
+          '. + [{workstream: $workstream, name: $name,
+                 title: ($m[0].title | if type == "string" then . else null end),
+                 created: ($m[0].created | if type == "string" then . else null end),
+                 permanent: $permanent}]' <<<"$rows")"
+      else
+        rows="$(jq -c \
+          --arg workstream "$ws" --arg name "$name" --argjson permanent "$permanent" \
+          '. + [{workstream: $workstream, name: $name, title: null, created: null,
+                 permanent: $permanent, problem: "exhibit.json does not parse"}]' <<<"$rows")"
       fi
-      rows="$(jq -c \
-        --arg workstream "$ws" --arg name "$name" --arg title "$title" \
-        --arg ask "$ask_type" --arg decidedAt "$decided_at" --arg problem "$problem" \
-        --argjson answered "$answered" --argjson permanent "$permanent" \
-        '. + [{workstream: $workstream, name: $name, title: $title, ask: $ask,
-               answered: $answered, permanent: $permanent}
-              | if $decidedAt == "" then . else .decidedAt = $decidedAt end
-              | if $problem == "" then . else .problem = $problem end]' <<<"$rows")"
     }
 
     if [ -d "${WT_EXHIBITS_ROOT:-}" ]; then
@@ -386,7 +359,7 @@ HTML
         [ -z "$workstream" ] || [ "$ws" = "$workstream" ] || continue
         for ex_dir in "$ws_dir"/*; do
           [ -d "$ex_dir" ] || continue
-          add_row "$ws" "$(basename "$ex_dir")" "$ex_dir" "$ex_dir/data" false
+          add_row "$ws" "$(basename "$ex_dir")" "$ex_dir" false
         done
       done
     fi
@@ -398,7 +371,7 @@ HTML
       for app_dir in "$WT_MONO"/dev/apps/*; do
         [ -d "$app_dir" ] || continue
         name="$(basename "$app_dir")"
-        add_row "apps" "$name" "$app_dir" "${WT_EXHIBITS_ROOT:-}/apps/$name/data" true
+        add_row "apps" "$name" "$app_dir" true
       done
     fi
 
@@ -407,18 +380,19 @@ HTML
     else
       count="$(jq 'length' <<<"$rows")"
       if [ "$count" = "0" ]; then
-        echo "no exhibits yet (bin/exhibits add --title … --ask … --prose …)"
+        echo "no exhibits yet (bin/exhibits add --title …)"
       else
-        jq -r '(["WORKSTREAM","EXHIBIT","ASK","STATE","TITLE"],
+        jq -r '(["WORKSTREAM","EXHIBIT","CREATED","TITLE"],
                 (.[] | [.workstream, .name,
-                        (if .ask == "" then "-" else .ask end),
-                        (if .permanent then "permanent"
-                         elif .answered then "answered " + (.decidedAt // "")
-                         elif .problem then "waiting (unreadable answer)"
-                         else "waiting" end),
-                        .title]))
+                        (.created // "-"),
+                        (if .problem then "PROBLEM: " + .problem
+                         else (.title // "-") + (if .permanent then " (permanent)" else "" end) end)]))
                | @tsv' <<<"$rows" | column -t -s "$(printf '\t')"
       fi
+    fi
+    if [ "$(jq 'map(select(.problem)) | length' <<<"$rows")" != "0" ]; then
+      say "some exhibits have problems (see PROBLEM rows / .problem); the list is incomplete"
+      exit 1
     fi
     ;;
 
