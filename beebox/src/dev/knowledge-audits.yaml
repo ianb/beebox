@@ -3665,6 +3665,41 @@ tests:
       but the cheap auto-load isn't happening, which means MAP.md
       content under a landmark wouldn't be free either.
 
+  - id: landmark-chat-box-and-local-context
+    prompt: >
+      Answer from your instructions only, without using tools. Two things:
+      (1) when routine work you did for the boxholder succeeds, should you
+      tell them? (2) In this chat, what is an acid, in one sentence?
+    expected_level: knows_directly
+    watch_for: >
+      (1) comes from the box briefing's "Reaching me" section, which a
+      landmark chat gets only through the BOX CONTEXT section of its system
+      prompt; (2) follows the landmark AGENTS.md and builds from the
+      learner's "dumps something extra" phrase. Both in one answer shows
+      the landmark chat has whole-box context and still attends to its
+      local instructions.
+    context_dir: audit-landmark-course
+    fixture:
+      audit-landmark-course/AGENTS.md: |
+        # Course landmark (audit fixture)
+
+        Tutor note: the learner already thinks of an acid as something that
+        "dumps something extra". Build every explanation from that phrase;
+        do not restart from textbook definitions.
+    correct_matches:
+      - '(do not|don.t|no\b|shouldn.t|not)[^.]{0,120}(tell|report|mention|notify)|(tell|report|mention)[^.]{0,80}(only|just)[^.]{0,60}(fail|problem|wrong)'
+      - 'dumps? (off )?(something|an?) extra'
+    should_not_read: ["briefing.md", "AGENTS.md"]
+    tags: [landmarks, sessions, sdk]
+    # Status (2026-10-10, Claude): 2/2 passed, 0 reads/searches, 32k context
+    # (landmark audits ran at 16k before BOX CONTEXT), on a converted disposable
+    # copy of the worktree test box; landmark-parent and landmark-subdir also
+    # passed at 32k.
+    notes: >
+      Regression for issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:
+      landmark chats once excluded the box root's AGENTS.md and rules and
+      never received the agent guide or briefing.
+
   - id: landmark-parent-claude-md-loads
     prompt: "In this box, what does CLAUDE_SCANS.md hold, and where does its content get used outside the chat?"
     expected_level: knows_directly
@@ -3673,9 +3708,12 @@ tests:
       paragraph — mentions scan-specific context (recurring people,
       eras, places, handwriting clues) and that `bbx scan-import`
       injects it into the Gemini Flash prompt for each page. Does
-      NOT need to Read any AGENTS.md or CLAUDE_SCANS.md: the SDK's
-      walk-up from the landmark cwd picks up the box root's
-      AGENTS.md and follows its @-imports automatically.
+      NOT need to Read any AGENTS.md or CLAUDE_SCANS.md. The SDK's
+      walk-up from the landmark cwd loads the box root's AGENTS.md but
+      does not expand its @-imports; the imports reach a landmark chat
+      through the system prompt's BOX CONTEXT section
+      (core/chat/session/landmark-context.ts), which the audit runner adds
+      for context_dir audits the same way.
     context_dir: audit-landmark-fixture
     fixture:
       audit-landmark-fixture/AGENTS.md: |
