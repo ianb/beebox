@@ -440,7 +440,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
       return { outcome: "overwritten", writtenAt: relPath };
     }
   }
-  versions[key] = { ...(versions[key] ?? {}), pending: templateHash };
+  versions[key] = { ...versions[key], pending: templateHash };
   await writeVersions(boxRoot, versions);
   return { outcome: "parked", writtenAt: path.relative(boxRoot, updateAbs) };
 }
