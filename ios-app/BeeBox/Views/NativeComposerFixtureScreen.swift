@@ -220,8 +220,8 @@ struct NativeComposerFixtureScreen: View {
         guard Self.isQuickChat else {
             return .conversation
         }
-        return .quickChat { text, _ in
-            quickChatSent.append(text)
+        return .quickChat { thought in
+            quickChatSent.append(thought.text)
             return true
         }
     }

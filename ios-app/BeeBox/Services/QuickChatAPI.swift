@@ -26,9 +26,16 @@ struct QuickChatAPI {
     var box: PairedBox
     var transport: any ChatTransport = URLSessionChatTransport()
 
-    /// `origin` is nil for a repeat of a stored id: the server keeps the stored origin.
-    func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String? = nil) async throws -> QuickChatView {
-        try Self.decodeView(await send(submitRequest(id: id, message: message, origin: origin, source: source)))
+    /// `origin` is nil for a repeat of a stored id: the server keeps the stored
+    /// origin. `hqService` names the phone's HQ pass on a dictated thought.
+    func submit(
+        id: UUID,
+        message: String,
+        origin: QuickChatOrigin?,
+        source: String? = nil,
+        hqService: String? = nil
+    ) async throws -> QuickChatView {
+        try Self.decodeView(await send(submitRequest(id: id, message: message, origin: origin, source: source, hqService: hqService)))
     }
 
     func choose(id: UUID, candidateId: String) async throws -> QuickChatView {
@@ -43,10 +50,18 @@ struct QuickChatAPI {
         try Self.decodeHome(await send(homeRequest()))
     }
 
-    func submitRequest(id: UUID, message: String, origin: QuickChatOrigin?, source: String? = nil) throws -> URLRequest {
+    func submitRequest(
+        id: UUID,
+        message: String,
+        origin: QuickChatOrigin?,
+        source: String? = nil,
+        hqService: String? = nil
+    ) throws -> URLRequest {
         try mutation(
             "quickChat.submit",
-            body: SubmitBody(id: Self.wireID(id), message: message, origin: origin, source: source, channel: Self.channel),
+            body: SubmitBody(
+                id: Self.wireID(id), message: message, origin: origin, source: source, hqService: hqService, channel: Self.channel
+            ),
             timeoutInterval: origin == .external ? 20 : 60
         )
     }
@@ -134,6 +149,7 @@ struct QuickChatAPI {
         /// Omitted when nil.
         var origin: QuickChatOrigin?
         var source: String?
+        var hqService: String?
         var channel: String
     }
 

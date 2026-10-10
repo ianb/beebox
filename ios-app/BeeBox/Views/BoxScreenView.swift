@@ -219,8 +219,13 @@ struct BoxScreenView: View {
                 locationSharingEnabled: false,
                 onToggleLocationSharing: {},
                 onTakeScreenshot: {},
-                submitTarget: .quickChat { [screenStore, boxID = box.id] text, origin in
-                    await screenStore.submitThought(text, origin: QuickChatOrigin(rawValue: origin.rawValue) ?? .typed, boxID: boxID)
+                submitTarget: .quickChat { [screenStore, boxID = box.id] thought in
+                    await screenStore.submitThought(
+                        thought.text,
+                        origin: QuickChatOrigin(rawValue: thought.origin.rawValue) ?? .typed,
+                        boxID: boxID,
+                        hqService: thought.hqService
+                    )
                 },
                 automaticallyResumeVoicePreparations: false
             )

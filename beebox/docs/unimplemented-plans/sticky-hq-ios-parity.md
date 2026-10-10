@@ -1,14 +1,14 @@
 ---
 title: "Sticky HQ dictation on iOS"
 status: superseded
-superseded-by: ../plans/hq-always.md
+superseded-by: ../implemented-plans/hq-always.md
 workstream: transcript-confidence
 issues:
   - ../../../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md
 ---
 # Sticky HQ dictation on iOS
 
-> **Superseded 2026-10-09** by [hq-always](../plans/hq-always.md): every
+> **Superseded 2026-10-09** by [hq-always](../implemented-plans/hq-always.md): every
 > dictated message gets the HQ pass, so there is no per-chat setting to bridge.
 > The bridge channel shipped and now carries only `diarized`.
 
