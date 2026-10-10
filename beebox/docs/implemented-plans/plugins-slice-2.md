@@ -1,12 +1,12 @@
 ---
 title: "Plugins slice 2: scoped Markdoc tags, recipes as a plugin, conventions"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues: []
 ---
 # Plugins slice 2: scoped Markdoc tags, recipes as a plugin, conventions
 
-Slice 1 ([plugins.md](../implemented-plans/plugins.md)) made a plugin a typed
+Slice 1 ([plugins.md](plugins.md)) made a plugin a typed
 library a box completes through stubs, and moved courseware into one. This
 slice gives a card type its own Markdoc tags, moves the recipe type and its
 six tags into a `recipe` plugin as the first consumer, and turns the
@@ -52,7 +52,12 @@ deletions of core recipe code. **BIG CHANGE**, by a small margin, and slice 1
 ran 2.2× its estimate. **Approved by the boxholder 2026-10-10** ("Yes,
 proceed"), with the `unknown-tag` fallback presentation ("Show the authored
 tag") approved the same day. Scoping the four built-in tags is under
-discussion; this slice leaves them global. What drives it: the recipe view and its seven tag
+discussion; this slice leaves them global.
+
+**Actual size at implementation end (against main, excluding the plan and
+review documents, the lockfile and the audit context history):** ~1,350
+source, ~590 test, ~160 authored doc lines, about 2,100 changed lines in all
+against the 2,150 estimate. Deletions of core recipe code: ~640. What drives it: the recipe view and its seven tag
 components (394 lines today) move across a boundary that forbids their current
 imports, so they are rewritten against `beebox/view-widgets` rather than
 copied. Generated output: `dist/plugins/recipe/*` (not committed).

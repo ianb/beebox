@@ -80,3 +80,29 @@ the tag table. Todo extraction keeps only `todo`/`see-also` errors
 (`todo/extract/body.ts:88-91`). Publish lowering already fails on recipe
 tags. Search extraction does not use the tag table. The reviewer named 23
 files opened beyond the read-list; none changed a conclusion.
+
+## Implementation review (codex gpt-6-sol, 2026-10-10)
+
+Round 1 on the branch diff found four items; all fixed in `85c4d4a13`:
+
+- Scaled yield rendered `[object Object]` for a range (`2-3` at 2×). Fixed:
+  the scaled value renders as a React node; the view doctest asserts
+  `4–6 servings`.
+- `in` matched prototype keys (`toString`) in the unknown-tag rewrite and the
+  core-tag check. Fixed with `Object.hasOwn`; doctest case.
+- Variable attributes serialized as Markdoc internals. Fixed: the authored
+  attribute string is built once in `authoredAttributes()`; `{% garnish
+  amount=$n %}` renders as written.
+- The enumerating doctest never installed the stubs. Fixed: it writes each
+  plugin's README stubs into a temp box and validates.
+
+Round 2 verified three fixes hold and found the fourth partial: a stub that
+fails to load is a stderr warning under `bbx validate` with exit 0. Closed in
+the same session: the doctest also reads `bbx plugins list --json` on the
+temp box and fails when any declared stub is not `effective` or the config
+has problems. A one-off run with a stub declaring the wrong type name
+(`cardSchema("dish", ...)`) showed `validate` exit 0 and
+`effective: false`, which the check rejects.
+
+Residual, accepted: none beyond slice 1's (a mis-named stub masked by another
+file defining the type).

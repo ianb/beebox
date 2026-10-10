@@ -44,6 +44,7 @@ import { access } from "node:fs/promises";
 import { join } from "node:path";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
 import { markdocConfig } from "../src/shared/markdoc-config/tags/core.js";
+import { isRecord } from "../src/shared/is-record.js";
 import { bbx, readmeStubs, readmeText, stubbedBox } from "./helpers/plugin-readme.js";
 import { buildPluginBundlesIntoDist } from "./helpers/plugin-bundles.js";
 
@@ -81,12 +82,26 @@ async function conventionProblems(): Promise<string[]> {
       if (!stubs.has(`src/views/${view.name}.tsx`)) fail("view-stub", `README has no stub src/views/${view.name}.tsx`);
       if (!(await exists(`src/plugins/${name}/view.tsx`))) fail("view-entry", `src/plugins/${name}/view.tsx is missing`);
     }
-    // The stubs written into an empty box must compile and load.
+    // The stubs written into an empty box must compile and load. A stub that
+    // fails to load is only a stderr warning under `bbx validate` (exit 0), so
+    // `bbx plugins list --json` is the load check: every declared stub must be
+    // effective (present and defining its type), and the config must have no
+    // problems.
     const box = await stubbedBox(name);
     try {
       const result = await bbx(box, ["validate"]);
       const errors = result.report.filter((line) => /error|fail|✗/i.test(line));
       if (result.code !== 0 || errors.length > 0) fail("stubs-validate", `exit ${result.code}: ${result.report.join(" | ")}`);
+      const listing: unknown = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).stdout);
+      const entry = isRecord(listing) && Array.isArray(listing["plugins"])
+        ? listing["plugins"].find((p: unknown) => isRecord(p) && p["name"] === name)
+        : undefined;
+      const stubsListed = isRecord(entry) && Array.isArray(entry["stubs"]) ? entry["stubs"] : [];
+      if (!isRecord(entry) || entry["active"] !== true) fail("stubs-load", "plugins list does not show the plugin active");
+      for (const stub of stubsListed) {
+        if (isRecord(stub) && stub["effective"] !== true) fail("stubs-load", `${String(stub["kind"])} ${String(stub["name"])} at ${String(stub["path"])} is ${stub["present"] === true ? "present but not effective" : "missing"}`);
+      }
+      if (isRecord(listing) && Array.isArray(listing["problems"]) && listing["problems"].length > 0) fail("stubs-load", JSON.stringify(listing["problems"]));
     } finally {
       await box.cleanup();
     }
