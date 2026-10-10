@@ -6833,6 +6833,57 @@ test1:
       peak: 40335
       added: 0
       turns: 2
+  siri-capture-how-to:
+    - date: 2026-10-10T13:47:50.547Z
+      boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
+      repoCommit: 5c777f2e0b9642d342d9778561231a290f9d6157
+      initial: 24942
+      peak: 24942
+      added: 0
+      turns: 2
+    - date: 2026-10-10T13:48:17.681Z
+      boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
+      repoCommit: 5c777f2e0b9642d342d9778561231a290f9d6157
+      initial: 40611
+      peak: 40611
+      added: 0
+      turns: 1
+    - date: 2026-10-10T13:48:44.942Z
+      boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
+      repoCommit: 5c777f2e0b9642d342d9778561231a290f9d6157
+      initial: 40611
+      peak: 40611
+      added: 0
+      turns: 2
+    - date: 2026-10-10T13:49:10.188Z
+      boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
+      repoCommit: 5c777f2e0b9642d342d9778561231a290f9d6157
+      initial: 40611
+      peak: 40611
+      added: 0
+      turns: 2
+  external-input-arrival-tag:
+    - date: 2026-10-10T13:49:10.188Z
+      boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
+      repoCommit: 5c777f2e0b9642d342d9778561231a290f9d6157
+      initial: 40612
+      peak: 40612
+      added: 0
+      turns: 2
+    - date: 2026-10-10T13:49:32.520Z
+      boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
+      repoCommit: 5c777f2e0b9642d342d9778561231a290f9d6157
+      initial: 40612
+      peak: 40612
+      added: 0
+      turns: 2
+    - date: 2026-10-10T13:49:48.495Z
+      boxCommit: d7d7722e148a1b6e925dc513ec7272ef99590797
+      repoCommit: 5c777f2e0b9642d342d9778561231a290f9d6157
+      initial: 40612
+      peak: 40612
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
