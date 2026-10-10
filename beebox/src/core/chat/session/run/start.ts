@@ -108,6 +108,20 @@ async function pickContextDir(ctx: StartContext): Promise<string | null> {
 }
 
 /**
+ * The landmark chat's box context, or "" when the root's includes cannot be
+ * expanded (one escapes the box). The chat still starts, as it did before box
+ * context existed, without the guide and briefing; the log names why.
+ */
+async function landmarkBoxContextOrEmpty(boxRoot: string): Promise<string> {
+  try {
+    return await buildLandmarkBoxContext(boxRoot);
+  } catch (e) {
+    log("start", `Landmark box context unavailable, starting without it: ${e instanceof Error ? e.message : String(e)}`);
+    return "";
+  }
+}
+
+/**
  * Compute the `ChatBackendStartOptions` for a fresh run (no resume id, no
  * model override) and the landmark binding it resolved to. The caller
  * stores `resolvedContextDir` back on the instance cache.
@@ -125,7 +139,7 @@ export async function buildBackendStartOptions(
   // A Claude landmark chat starts below the box root, where the root's `@`
   // includes (agent guide, briefing) do not load, so they ride the system
   // prompt. Codex already gets them: codex-chat appends the root's includes.
-  const landmarkBoxContext = contextDir && engine === "claude" ? await buildLandmarkBoxContext(ctx.boxRoot) : "";
+  const landmarkBoxContext = contextDir && engine === "claude" ? await landmarkBoxContextOrEmpty(ctx.boxRoot) : "";
   const systemPrompt = contextDir
     ? baseSystemPrompt + landmarkBoxContext + buildLandmarkSessionNote(contextDir)
     : baseSystemPrompt;

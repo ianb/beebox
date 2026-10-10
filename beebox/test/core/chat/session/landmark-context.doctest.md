@@ -11,8 +11,8 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { buildLandmarkBoxContext } from "../../../../src/core/chat/session/landmark-context.js";
 ```
 
-The root's own text and each include arrive; the include lines themselves do
-not.
+Each include arrives. The root file's own text does not: Claude Code loads it
+natively from the landmark directory.
 
 ```ts
 const box = await makeTmpBox();
@@ -22,17 +22,17 @@ await box.write("_content/brief.md", "Briefing text.\n");
 const context = await buildLandmarkBoxContext(box.root);
 JSON.stringify({
   framed: context.startsWith("\n\nBOX CONTEXT:\n"),
-  root: context.includes("House rule: be brief."),
+  rootTextDuplicated: context.includes("House rule: be brief."),
   guide: context.includes("Guide text."),
   briefing: context.includes("Briefing text."),
   includeLines: /^@/m.test(context),
 })
-=> {"framed":true,"root":true,"guide":true,"briefing":true,"includeLines":false}
+=> {"framed":true,"rootTextDuplicated":false,"guide":true,"briefing":true,"includeLines":false}
 
 await box.cleanup();
 ```
 
-A box with no root instruction file adds nothing.
+A box with no root instruction file, or one with no includes, adds nothing.
 
 ```ts
 const bare = await makeTmpBox();
@@ -41,4 +41,17 @@ await rm(bare.path("AGENTS.md"), { force: true });
 => 0
 
 await bare.cleanup();
+```
+
+An include that escapes the box throws. The chat start path catches it, logs
+it, and starts the chat without box context, as chats started before box
+context existed (`chat/session/run/start.ts`).
+
+```ts
+const escaping = await makeTmpBox();
+await escaping.write("AGENTS.md", "@../outside.md\n");
+await buildLandmarkBoxContext(escaping.root).then(() => "ok", (e: unknown) => e instanceof Error ? e.name : "?")
+=> UnsafeAgentContextIncludeError
+
+await escaping.cleanup();
 ```
