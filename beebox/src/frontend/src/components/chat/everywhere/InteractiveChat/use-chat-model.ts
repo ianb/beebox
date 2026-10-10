@@ -69,8 +69,6 @@ export function useChatModelFeatures(opts: {
       .then((features) => {
         if (!current || preSessionFeatureTouchedRef.current) return;
         setChatFeatures(features);
-        const hq = features["hq-dictation"];
-        if (hq === "on" || hq === "off") send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: hq });
       })
       .catch((error: unknown) => {
         console.warn(`[chatfsm] get new-chat features failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -131,7 +129,7 @@ export function useChatModelFeatures(opts: {
   }, [sessionId]);
 
   const {
-    narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation,
+    narrationEnabled, handleToggleNarration,
   } = useChatFeatureToggles({ conversationKey, sessionId, chatFeatures, setChatFeatures, send, preSessionFeatureTouchedRef });
 
   // Generation counter so an out-of-order completion (an older select
@@ -219,7 +217,6 @@ export function useChatModelFeatures(opts: {
     handlePinModel, handleOpenModelPanel,
     modelMarkers, chatFeatures, setChatFeatures,
     narrationEnabled, handleToggleNarration,
-    hqDictationEnabled, handleToggleHqDictation,
     handleSelectModel,
   };
 }
@@ -237,10 +234,9 @@ function useModelConversationScope(key: string | null, { sessionId, reset }: { s
 }
 
 /**
- * The chat-feature toggles (narration, HQ dictation) — split from
- * `useChatModelFeatures` for its line budget. Both follow one shape: set
- * optimistically, reconcile from the server's answer, and roll back on a
- * rejection, since no event corrects a write the server refused.
+ * The narration toggle — split from `useChatModelFeatures` for its line
+ * budget. Set optimistically, reconcile from the server's answer, and roll
+ * back on a rejection, since no event corrects a write the server refused.
  */
 function useChatFeatureToggles(opts: {
   conversationKey: string | null;
@@ -252,17 +248,14 @@ function useChatFeatureToggles(opts: {
 }) {
   const { sessionId, chatFeatures, setChatFeatures, send, preSessionFeatureTouchedRef } = opts;
   const narrationEnabled = chatFeatures.narration === "on";
-  const hqDictationEnabled = chatFeatures["hq-dictation"] === "on";
 
   // Generation counters so an out-of-order completion (an older toggle/select
   // resolving after a newer one) can't clobber state a later request already
   // set — bumped on every call, and a response only applies if it's still the
   // most recent one in flight.
   const narrationRequestIdRef = useRef(0);
-  const hqDictationRequestIdRef = useRef(0);
   useEffect(() => {
     narrationRequestIdRef.current++;
-    hqDictationRequestIdRef.current++;
   }, [opts.conversationKey, sessionId]);
 
   const handleToggleNarration = useCallback(() => {
@@ -298,32 +291,5 @@ function useChatFeatureToggles(opts: {
       });
   }, [sessionId, narrationEnabled, send, setChatFeatures, preSessionFeatureTouchedRef]);
 
-  // Mirrors handleToggleNarration exactly (docs/implemented-plans/hq-dictation-switch.md,
-  // chunk 1) — a separate feature slot, separate request-id generation, same
-  // optimistic-set/rollback shape.
-  const handleToggleHqDictation = useCallback(() => {
-    const next = hqDictationEnabled ? "off" : "on";
-    const previous = hqDictationEnabled ? "on" : "off";
-    const requestId = ++hqDictationRequestIdRef.current;
-    setChatFeatures((prev) => ({ ...prev, "hq-dictation": next }));
-    if (!sessionId) {
-      preSessionFeatureTouchedRef.current = true;
-      send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: next });
-      return;
-    }
-    setChatFeature({ sessionId, feature: "hq-dictation", value: next })
-      .then((res) => {
-        if (hqDictationRequestIdRef.current !== requestId) return;
-        setChatFeatures(res.features);
-      })
-      .catch((e: unknown) => {
-        console.warn(`[chatfsm] set-feature hq-dictation failed: ${e instanceof Error ? e.message : String(e)}`);
-        toastError("Failed to update HQ dictation", { cause: e });
-        if (hqDictationRequestIdRef.current !== requestId) return;
-        setChatFeatures((prev) => ({ ...prev, "hq-dictation": previous }));
-      });
-  }, [sessionId, hqDictationEnabled, send, setChatFeatures, preSessionFeatureTouchedRef]);
-
-
-  return { narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation };
+  return { narrationEnabled, handleToggleNarration };
 }

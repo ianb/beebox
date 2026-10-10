@@ -142,7 +142,7 @@ function useSegmentEnd(opts: {
   useEffect(() => {
     const sub = actorRef.on("maxDurationReached", () => {
       if (pendingSendRef.current !== null) return;
-      pendingSendRef.current = { processedTranscript: transcriptRef.current, matchedPhrase: "", closeMic: false, hq: false };
+      pendingSendRef.current = { processedTranscript: transcriptRef.current, matchedPhrase: "", closeMic: false };
     });
     return () => sub.unsubscribe();
   }, [actorRef, pendingSendRef]);
@@ -161,7 +161,6 @@ function useSegmentEnd(opts: {
       text: pending.processedTranscript,
       matchedPhrase: pending.matchedPhrase,
       closeMic: pending.closeMic,
-      hq: pending.hq,
       recording,
       // The words the machine finalized for the parked text, at the same transition.
       words: finalWords,
@@ -294,7 +293,7 @@ export function useRealtimeTranscription(
 
   const submitSegment = useCallback((opts: { closeMic: boolean }): boolean => {
     // A send is already parked (a spoken keyword fired moments before the
-    // tap) — clobbering it would drop its matchedPhrase and "send HQ" choice.
+    // tap) — clobbering it would drop its matchedPhrase and send variant.
     if (pendingSendRef.current !== null) return true;
     // Segment fully settled: the caller falls back to its direct-send path.
     if (state === "idle") return false;
@@ -302,7 +301,6 @@ export function useRealtimeTranscription(
       processedTranscript: transcript,
       matchedPhrase: "",
       closeMic: opts.closeMic,
-      hq: false,
     };
     // `connecting`/`finalizing`: nothing to stop yet, or a stop is already in
     // flight — the idle-transition effect fires the parked send either way.

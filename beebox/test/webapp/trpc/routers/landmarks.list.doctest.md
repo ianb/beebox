@@ -115,33 +115,16 @@ JSON.stringify({ path: landmark?.path, dir: landmark?.dir, label: landmark?.labe
 await box.cleanup();
 ```
 
-## `setHqPreference`/`hqPreferences`/`forDir` reject a `dir` outside the box namespace
+## `forDir` rejects a `dir` outside the box namespace
 
 Finding 3 (Track E hardening review, round 3): the input `refine` only
 rejected an escaping form (`..`/leading `/`) — a real, non-underscore
 directory like `src/templates` passed it and named a physical directory the
-landmark writer then read/wrote into directly. Every landmark procedure
-taking `dir` now resolves it through the box namespace fence (write mode for
-the mutation) and rejects a non-namespace `dir` with `BAD_REQUEST`.
-
-`setHqPreference`/`hqPreferences` are `ownerProcedure` (secret-custody:
-mutating box config is owner-only) — a caller needs `isOwner: true` to reach
-the namespace check at all:
+landmark reader then read directly. Every landmark procedure taking `dir`
+resolves it through the box namespace fence and rejects a non-namespace `dir`
+with `BAD_REQUEST`.
 
 ```ts
-function ownerCaller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-  };
-  return appRouter.createCaller(ctx);
-}
-
 const box = await makeTmpBox({ git: true });
 await mkdir(box.path("src/templates"), { recursive: true });
 await box.write("src/templates/Private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
@@ -155,34 +138,8 @@ async function throwsBadRequest(fn) {
   }
 }
 
-const setRejected = await throwsBadRequest(() =>
-  ownerCaller(box.root).landmarks.setHqPreference({ dir: "src/templates", value: "on" }),
-);
-const hqRejected = await throwsBadRequest(() =>
-  ownerCaller(box.root).landmarks.hqPreferences({ dir: "src/templates" }),
-);
-const forDirRejected = await throwsBadRequest(() =>
-  caller(box.root).landmarks.forDir({ dir: "src/templates" }),
-);
-JSON.stringify({ setRejected, hqRejected, forDirRejected })
-=> {"setRejected":true,"hqRejected":true,"forDirRejected":true}
-```
-
-The card outside the namespace is untouched by the rejected write:
-
-```ts continue
-(await box.read("src/templates/Private.landmark.card")).includes("hq-dictation")
-=> false
-```
-
-`dir: ""` (the root scope, physically `_content/`) still works — the fence
-only rejects a dir that isn't in ANY underscore area:
-
-```ts continue
-await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Root\n---\n");
-const rootPref = await ownerCaller(box.root).landmarks.hqPreferences({ dir: "" });
-JSON.stringify({ hasLandmark: rootPref.hasLandmark })
-=> {"hasLandmark":true}
+await throwsBadRequest(() => caller(box.root).landmarks.forDir({ dir: "src/templates" }))
+=> true
 ```
 
 ```ts cleanup
