@@ -44,7 +44,7 @@ Concrete outputs, so you can evaluate whether to accept them:
 7. Installs as devDependencies: `eslint@^9 prettier oxlint knip madge husky lint-staged`.
 8. Runs `npx husky init` and writes `.husky/pre-commit` with `npx lint-staged` + `npm run typecheck`.
 9. Adds a `PostToolUse` hook (`matcher: "Edit|Write"`, command: `npx vibe-check lint --hook`) to `.claude/settings.json`.
-10. Copies `conventions.md` into the project root and appends `@conventions.md` to `CLAUDE.md` (creating CLAUDE.md if absent).
+10. Copies `conventions.md` into the project root and appends `@conventions.md` to the project's instruction file: an existing `CLAUDE.md`, else `AGENTS.md` (created if absent). Claude Code and Codex both read `AGENTS.md`; a `CLAUDE.md` beside it would make Claude Code ignore it.
 
 ## When to go manual
 
@@ -175,7 +175,7 @@ The package ships `conventions.md` — prose rules that ESLint cannot enforce (n
 cp node_modules/@ianbicking/personal-vibe-check/conventions.md ./conventions.md
 ```
 
-Then append `@conventions.md` to the project's `CLAUDE.md` (create it if absent) so Claude Code loads it automatically.
+Then append `@conventions.md` to the project's `AGENTS.md`, or its `CLAUDE.md` if it already has one (create `AGENTS.md` if neither exists), so Claude Code loads it automatically.
 
 ## Verification
 
