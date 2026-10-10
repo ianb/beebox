@@ -7,6 +7,9 @@ issues:
 ---
 # On-demand image thumbnails
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 When a box contains a full-resolution photograph, a person wants small presentations to load from a derived image so the companion panel, chat, and Browse do not download the original photograph just to paint a few hundred pixels. The original remains available in the lightbox and through the raw file route.
 
 **Issues addressed:** `2026-09-03-on-demand-image-thumbnails`. A queue search for `thumbnail`, `image transform`, `image cache`, `AVIF`, and `WebP` found no duplicate. `2026-06-18-avif-webp-for-stored-images` controls what intake stores and is not addressed here. `2026-08-21-rotated-image-cards-overflow-and-misplace-bbox` is a separate rendering defect and is not addressed here.

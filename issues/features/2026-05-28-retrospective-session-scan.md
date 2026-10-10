@@ -6,7 +6,7 @@ area: monorepo
 priority: normal
 ---
 
-Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user had to correct, what Claude had to ask, what kept going wrong*. The current setup is reactive — `CLAUDE.md` says "when you get corrected, update CLAUDE.md," but that depends on the agent noticing in the moment and on the user remembering to push back. A weekly retrospective sweep would catch the patterns that slip through.
+Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user had to correct, what Claude had to ask, what kept going wrong*. The current setup is reactive — `beebox/AGENTS.md` says to put a short rule at the narrowest accurate owner when a correction exposes missing guidance, but that depends on the agent noticing in the moment and on the user remembering to push back. A weekly retrospective sweep would catch the patterns that slip through.
 
 Signal sources in JSONL:
 
@@ -18,7 +18,7 @@ Signal sources in JSONL:
 
 Existing overlap: the `fewer-permission-prompts` skill already does the permissions slice (mines repeated Bash/MCP calls and proposes allowlist entries). This would be the docs-and-conventions slice.
 
-The hard part is signal-to-noise. Regex on "no" is useless. Better approach: per session, feed the last ~30 turns to a small classifier prompt — "did the user correct or teach Claude something not in CLAUDE.md? Return a list, or 'nothing'." Cheap, high-signal, and the candidate list goes into a weekly digest the boxholder skims. Not an auto-applier — humans review and accept, like dependabot PRs for documentation. The Claude Code auto-memory system does something analogous for personal preferences across all projects; this'd be the project-scoped equivalent writing to `CLAUDE.md` / `.claude/rules/`.
+The hard part is signal-to-noise. Regex on "no" is useless. Better approach: per session, feed the last ~30 turns to a small classifier prompt — "did the user correct or teach Claude something not in AGENTS.md? Return a list, or 'nothing'." Cheap, high-signal, and the candidate list goes into a weekly digest the boxholder skims. Not an auto-applier — humans review and accept, like dependabot PRs for documentation. The Claude Code auto-memory system does something analogous for personal preferences across all projects; this'd be the project-scoped equivalent writing to `AGENTS.md` / `.claude/rules/`.
 
 Open questions:
 - **Cost vs. value.** Per-session LLM cost vs. how often the digest actually contains something actionable. Mitigated by running only on sessions over some length and only on new sessions since last run.

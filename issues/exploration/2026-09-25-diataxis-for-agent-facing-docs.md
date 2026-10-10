@@ -59,7 +59,7 @@ A first reading, to test rather than assume:
 Candidate surfaces where mixing is visible today: the always-loaded agent
 guide (`beebox/src/core/agent-guide/`), which mixes reference, how-to and
 rules in one document; skill files that carry explanation alongside procedure;
-and CLAUDE.md files.
+and AGENTS.md files.
 
 ## Research (incomplete)
 

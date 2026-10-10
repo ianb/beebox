@@ -22,7 +22,7 @@ const ledger = loadLedger();
 const guide = generateAgentGuide({
   procedures: [{ name: "tidy", filename: "tidy.procedure.card", description: "Tidy the inbox." }],
   shape: { shapeVersion: 3, boxRoot: "/tmp/box" },
-  instructionFile: "CLAUDE.md",
+  instructionFile: "AGENTS.md",
   guides: [{ name: "cooking", guidePath: "_config/cooking.guide.card", compiledPath: "_content/docs/generated/cooking-guide.md", appliesTo: "recipes", jobTypes: [] }],
   personalitySection: "## Personality\n\nWarm and brief.",
 });

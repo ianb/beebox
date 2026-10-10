@@ -3,6 +3,7 @@ import UIKit
 
 struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
+    @EnvironmentObject private var boxScreenStore: BoxScreenStore
     @EnvironmentObject private var boxLockManager: BoxLockManager
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var composerDraftStore = ComposerDraftStore(scope: .conversation)
@@ -12,7 +13,6 @@ struct RootView: View {
     /// The box screen's composer requires a pending store; a quick chat send
     /// never touches it, so this one is never activated.
     @StateObject private var boxScreenPendingStore = PendingEmissionStore()
-    @StateObject private var boxScreenStore = BoxScreenStore()
     /// What the person sees, and whether `ChatWebView` exists behind it.
     @State private var surfaceState = RootSurfaceState.launching
     /// The last stay in the background, until the foreground event or a
@@ -32,8 +32,6 @@ struct RootView: View {
     @State private var speechStopRequest: NativeSpeechStopRequest?
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var locationSharingEnabled = false
-    @State private var narrationEnabled = false
-    @State private var hqDictationEnabled = false
     /// The box's HQ service labels speakers (contract §4.4a), which keeps the
     /// HQ pass on the server. A box setting, so a conversation change keeps it.
     @State private var hqDiarizationRequested = false
@@ -145,8 +143,6 @@ struct RootView: View {
             locationShareRequest = nil
             locationShareResult = nil
             locationSharingEnabled = false
-            narrationEnabled = false
-            hqDictationEnabled = false
             hqDiarizationRequested = false
             speechPlaybackActive = false
             responseActive = false
@@ -236,7 +232,7 @@ struct RootView: View {
     /// Redeliver pending emissions whose receipt has not arrived within the
     /// backoff, and log the two transitions worth diagnosing later.
     private func prefetchOnDeviceHqAssetsIfNeeded() {
-        guard (hqDictationEnabled || narrationEnabled) && hqDiarizationRequested == false else {
+        guard hqDiarizationRequested == false else {
             return
         }
         OnDeviceHqTranscriber.prefetchAssets()
@@ -468,8 +464,6 @@ struct RootView: View {
                 guard let publication else { pendingEmissionStore.invalidateBinding(); return }
                 guard publication.boxSlug == box.slug else { return }
                 if pendingEmissionStore.changesConversation(publication) {
-                    narrationEnabled = false
-                    hqDictationEnabled = false
                     speechPlaybackActive = false
                     responseActive = false
                     speechStopRequest = nil
@@ -479,8 +473,6 @@ struct RootView: View {
             onSessionChange: { sessionID in
                 guard pendingEmissionStore.composerBinding == nil else { return }
                 if visibleChatSessionID != sessionID {
-                    narrationEnabled = false
-                    hqDictationEnabled = false
                     speechPlaybackActive = false
                     responseActive = false
                     speechStopRequest = nil
@@ -511,12 +503,7 @@ struct RootView: View {
             onLocationSharingStateChange: { enabled in
                 locationSharingEnabled = enabled
             },
-            onNarrationStateChange: { enabled in
-                narrationEnabled = enabled
-                prefetchOnDeviceHqAssetsIfNeeded()
-            },
             onHqDictationStateChange: { state in
-                hqDictationEnabled = state.enabled
                 hqDiarizationRequested = state.diarized
                 prefetchOnDeviceHqAssetsIfNeeded()
             },
@@ -615,8 +602,6 @@ struct RootView: View {
                 draftStore: composerDraftStore,
                 pendingStore: pendingEmissionStore,
                 captureAvailable: composerBox.sessionID?.isEmpty == false,
-                narrationEnabled: narrationEnabled,
-                hqDictationEnabled: hqDictationEnabled,
                 hqDiarizationRequested: hqDiarizationRequested,
                 speechPlaybackActive: speechPlaybackActive,
                 responseActive: responseActive,
@@ -897,6 +882,7 @@ private struct EmptyBoxView: View {
 #Preview {
     RootView()
         .environmentObject(PairedBoxStore())
+        .environmentObject(BoxScreenStore())
         .environmentObject(BoxLockManager())
 }
 

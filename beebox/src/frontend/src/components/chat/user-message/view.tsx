@@ -16,7 +16,7 @@ import { useAudioOverlayEntry, type AudioOverlayStore } from "../audio-overlay-s
 import {
   extractFileAttachments,
   getUserName,
-  isHqFallbackMessage,
+  isLiveTranscriptMessage,
   parseTaskNotification,
   resolveEntryMessageId,
   resolveTranscriptionProvenance,
@@ -163,10 +163,10 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     currentUserName,
   });
 
-  // A realtime send that stands in for a requested HQ pass gets a static
-  // label — the HQ result itself stays on the box, reachable only through
-  // `bbx chat retranscribe` (late correction removed).
-  const hqStatus = isHqFallbackMessage(firstEntry)
+  // Live text is the exception (docs/plans/hq-always.md) and gets a static
+  // label; a late HQ result stays on the box, reachable only through
+  // `bbx chat retranscribe`.
+  const hqStatus = isLiveTranscriptMessage(firstEntry)
     ? <div role="status" className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">Live text — HQ transcript unavailable</div>
     : null;
 

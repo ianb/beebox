@@ -148,7 +148,7 @@ async function routeArrivals(opts: { boxRoot: string }): Promise<string[]> {
       continue;
     }
     if (entry.name.startsWith(".")) continue;
-    // Only route card files. Non-card top-level files (CLAUDE.md, MAP.md,
+    // Only route card files. Non-card top-level files (AGENTS.md, MAP.md,
     // README, etc.) are agent-facing context for `_content/inbox/` and stay put.
     if (!isCardFile(entry.name)) continue;
     const src = path.join(inboxDir, entry.name);

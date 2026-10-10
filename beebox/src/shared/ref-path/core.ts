@@ -30,7 +30,7 @@
  * **Box namespace fence.** A resolved ref must land inside an underscore
  * area (`BOX_ROOT_VOCABULARY`'s `kind: "area"` names — `_content`,
  * `_config`, `_bookkeeping`, `_publish`, `_tmp`); anything else — `src/`,
- * `node_modules/`, `.git/`, `CLAUDE.md`, `package.json`, any unlisted root
+ * `node_modules/`, `.git/`, `AGENTS.md`, `package.json`, any unlisted root
  * name — resolves to `null`, fail-closed like the `..`-escape rule
  * (`docs/implemented-plans/one-root-box-layout.md` Track B).
  *
@@ -198,7 +198,7 @@ function nonRoot(resolved: string | null): string | null {
 /**
  * The box namespace fence: a resolved ref must land inside an underscore
  * area (`_content`, `_config`, …) — everything else (`node_modules/`,
- * `.git/`, `src/`, `CLAUDE.md`, package.json, any unlisted root name) is
+ * `.git/`, `src/`, `AGENTS.md`, package.json, any unlisted root name) is
  * `null`, fail-closed exactly like the `..`-escape rule above. There are no
  * ref-addressable root files (the box-facing root card/doc files live under
  * `_content/`) — a ref that resolves to a bare root name is refused, not

@@ -221,7 +221,7 @@ await writeFile(instructions, "x".repeat(13000));
 const warning = await runShellHook(instructions);
 JSON.stringify({
   code: warning.code,
-  context: JSON.parse(warning.stdout).hookSpecificOutput.additionalContext.includes("claude-md-size"),
+  context: JSON.parse(warning.stdout).hookSpecificOutput.additionalContext.includes("instruction-file-size"),
   stderr: warning.stderr,
 })
 => {"code":0,"context":true,"stderr":""}
@@ -264,7 +264,7 @@ await mkdir(cacheFile);
 const unavailableCache = await runShellHook(repeatFile, "session-one");
 JSON.stringify([first, repeated, firm, softAgain, firmAgain, clean, afterClean, newSession, corruptCache, recoveredCache, unavailableCache].map((result) => ({
   code: result.code,
-  warning: result.stdout.includes("claude-md-size"),
+  warning: result.stdout.includes("instruction-file-size"),
   stderr: result.stderr,
 })))
 => [{"code":0,"warning":true,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":true,"stderr":""}]

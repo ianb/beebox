@@ -35,7 +35,7 @@ The human's wording sets the ceiling; when it is unclear, take the lowest level 
 
 - **discuss**: assess, compare, recommend. No plan doc, no probe, no edits. "I like it" is input for the next round, not a go-ahead.
 - **plan**: write or revise the plan, walk each scenario against real code, call real services with test data. No implementation.
-- **do** (issue tag `do-it`): implement in a worktree, commit at checkpoints, get cross-model review, report. No merge.
+- **do** (issue tag `do-it`): implement in a worktree, commit at checkpoints, get cross-model review, report. No merge. Non-trivial work goes through [bbx-plan](.claude/skills/bbx-plan/SKILL.md) and its cross-model plan review before code; authorization to implement does not waive it.
 - **land** (the finish ask, issue tag `verify-without-me`): do, then merge and deploy.
 
 A bare "go ahead" after a proposal means **do** for that proposal. Destructive or outward-facing actions (deleting data, pushing, touching prod, spending money) need their own yes at any level. A docs-only workstream may land each verified change.

@@ -208,10 +208,13 @@ clearChatRuntime(box.root);
 await box.cleanup();
 ```
 
-## Voice and typed thoughts arrive as the person entered them
+## Voice, typed, and external thoughts retain their input source
 
 `origin` says how the thought was entered. A `voice` thought is delivered as
-`<speech source="box-screen">`, a `typed` one as `<typed source="box-screen">`.
+`<speech source="box-screen" stt="live">` — it is the phone's live transcript,
+since no recording reaches the box for an HQ pass — and a `typed` one as
+`<typed source="box-screen">`. An external input requires a source and is framed
+as `<external-input source="…">`.
 A client built before `origin` existed sends none, and its thought is typed.
 The record keeps the origin, so a thought that waited for the person's choice
 is delivered by `choose` in the same wrapper.
@@ -225,15 +228,21 @@ await sure.submit({ id: randomUUID(), message: "Buy stamps" });
 const unsure = caller(box.root, judged({ c0: 0.5, c1: 0.45, c2: 0.05 }));
 const waiting = await unsure.submit({ id: randomUUID(), message: "Something about the beds", origin: "voice" });
 await unsure.choose({ id: waiting.id, candidateId: "c1" });
+const external = await unsure.submit({ id: randomUUID(), message: "Renew my passport", origin: "external", source: "apple-app-intents" });
+await unsure.choose({ id: external.id, candidateId: "c1" });
+const retriedExternal = await unsure.submit({ id: external.id, message: external.message });
 runtime.sends.map((send) => send.message)
 => [
-  "<speech source=\"box-screen\">Call the plumber</speech>",
+  "<speech source=\"box-screen\" stt=\"live\">Call the plumber</speech>",
   "<typed source=\"box-screen\">Buy stamps</typed>",
-  "<speech source=\"box-screen\">Something about the beds</speech>",
+  "<speech source=\"box-screen\" stt=\"live\">Something about the beds</speech>",
+  "<external-input source=\"apple-app-intents\">Renew my passport</external-input>",
 ]
+retriedExternal.state
+=> sent
 ```
 
-An origin outside the two is refused.
+An origin outside the supported inputs is refused.
 
 ```ts continue
 await failure(() => sure.submit({ id: randomUUID(), message: "Hum", origin: "video" }))
@@ -332,7 +341,7 @@ running at the first submit. `home` lists the record as unfinished, and a repeat
 const { box } = await gardenBox();
 const fake = judged({ c0: 0.95, c1: 0.03, c2: 0.02 });
 const api = caller(box.root, fake);
-const request = { id: randomUUID(), message: "Renew the car registration" };
+const request = { id: randomUUID(), message: "Renew the car registration", origin: "external", source: "apple-app-intents" };
 face(await api.submit(request))
 => { state: "sending", destination: { label: "“Plan the week”", sessionId: "«*»" }, lastError: "Chat is not running on the box. Retry in a moment." }
 
@@ -340,8 +349,8 @@ face(await api.submit(request))
 => ["sending"]
 
 const runtime = scriptedRuntime(box.root);
-[(await api.submit(request)).state, fake.calls.length, runtime.sends.length, (await api.home()).open.length]
-=> ["sent", 1, 1, 0]
+[(await api.submit({ id: request.id, message: request.message })).state, fake.calls.length, runtime.sends.length, runtime.sends[0]?.message, (await api.home()).open.length]
+=> ["sent", 1, 1, "<external-input source=\"apple-app-intents\">Renew the car registration</external-input>", 0]
 ```
 
 If the server stops after delivery and before writing `sent`, the second

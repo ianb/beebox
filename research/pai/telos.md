@@ -1,5 +1,8 @@
 # TELOS and the identity pair — PAI's user-description layer
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Sources:
 - `$PAI/PAI/USER/TELOS/` — nine source files + `README.md` + generated summary + `CURRENT_STATE/`/`IDEAL_STATE/` dirs
 - `$PAI/PAI/USER/PRINCIPAL_IDENTITY.md`, `$PAI/PAI/USER/DA_IDENTITY.md`

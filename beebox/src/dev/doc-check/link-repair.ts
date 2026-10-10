@@ -118,7 +118,7 @@ function decideLink(
 }
 
 // Half-open [start, end) ranges of inline-code spans on a single line, so link
-// syntax quoted inside backticks (`[x](y)` in prose/CLAUDE.md examples) is
+// syntax quoted inside backticks (`[x](y)` in prose/AGENTS.md examples) is
 // never rewritten — it illustrates syntax, it isn't a live link.
 function inlineCodeRanges(line: string): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];

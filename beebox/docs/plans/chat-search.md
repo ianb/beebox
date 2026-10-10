@@ -248,7 +248,7 @@ window, page older history via `chat.history` until present (bounded by the
 transcript); then reveal it **through the scroll controller** — a new
 one-shot `revealEntry(uuid)` action on `useChatScroll`, treated like the
 open-time action class of `settleOpen` (the "exactly one thing controls
-scroll" invariant, `frontend chat CLAUDE.md`). One-shot like `companion`;
+scroll" invariant, `frontend chat AGENTS.md`). One-shot like `companion`;
 a later refresh does not re-scroll.
 
 **Why.** The issue's ideal: "results open the chat at the matching message."
@@ -375,7 +375,7 @@ purely infrastructural plus UI.
   controller's `anchorToTop` — the action the harness's send scenarios
   already exercise — and the new logic is the React wiring around it, which
   the harness does not model.
-- The chat CLAUDE.md scenario-table requirement applies to scroll-controller
+- The chat AGENTS.md scenario-table requirement applies to scroll-controller
   changes; none were made (`scroll.ts` untouched).
 
 ## Implementation order

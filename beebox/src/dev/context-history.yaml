@@ -3760,6 +3760,13 @@ test1:
       peak: 53620
       added: 0
       turns: 1
+    - date: 2026-10-09T23:51:49.982Z
+      boxCommit: 53066dd79fbf3c3e591acfd8d3aa09f628e1e41a
+      repoCommit: 8eadeb7a731c2c82c9f35a99eb95ebe819fccf6b
+      initial: 40245
+      peak: 40245
+      added: 0
+      turns: 2
   views-write-conflict-safe:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -5183,6 +5190,13 @@ test1:
       peak: 53684
       added: 0
       turns: 1
+    - date: 2026-10-09T23:51:40.333Z
+      boxCommit: 53066dd79fbf3c3e591acfd8d3aa09f628e1e41a
+      repoCommit: 8eadeb7a731c2c82c9f35a99eb95ebe819fccf6b
+      initial: 40280
+      peak: 40280
+      added: 0
+      turns: 2
   secrets-provisioning:
     - date: 2026-08-18T01:31:04.241Z
       boxCommit: 9e0a78f2811de86e947189f93f96b95999386198
@@ -5800,6 +5814,13 @@ test1:
       initial: 54318
       peak: 54824
       added: 506
+      turns: 4
+    - date: 2026-10-09T23:52:08.411Z
+      boxCommit: 53066dd79fbf3c3e591acfd8d3aa09f628e1e41a
+      repoCommit: 8eadeb7a731c2c82c9f35a99eb95ebe819fccf6b
+      initial: 40423
+      peak: 40858
+      added: 435
       turns: 4
   browser-task-authoring:
     - date: 2026-09-12T21:25:51.361Z
@@ -6870,6 +6891,14 @@ test1:
       peak: 35581
       added: 4570
       turns: 8
+  chat-live-transcript-marker:
+    - date: 2026-10-09T23:51:18.951Z
+      boxCommit: 53066dd79fbf3c3e591acfd8d3aa09f628e1e41a
+      repoCommit: 8eadeb7a731c2c82c9f35a99eb95ebe819fccf6b
+      initial: 40335
+      peak: 40335
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

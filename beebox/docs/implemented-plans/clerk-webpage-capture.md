@@ -6,6 +6,9 @@ issues: []
 ---
 # Web-page commentary capture
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Make the beebox-clerk browser extension's primary action turn the current
 web page into a **commentary document** inside a box: extract a readable
 markdown rendering, freeze a faithful full copy of the page as an attachment,

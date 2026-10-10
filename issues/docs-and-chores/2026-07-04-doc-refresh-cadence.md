@@ -19,9 +19,9 @@ Proposal: a periodic doc-refresh pass (add to
 1. `pnpm doc-graph` + `doc-check` (mechanical layer — already enforced at
    commit time, so this is just the report).
 2. Sample the live reference docs (flat `docs/`, `docs/design/`, module
-   CLAUDE.mds) and spot-check their concrete claims against code —
+   AGENTS.md files) and spot-check their concrete claims against code —
    explicitly deciding per divergence whether the doc or the code is wrong.
-3. Anthropic's own guidance: re-audit CLAUDE.md content after model
+3. Anthropic's own guidance: re-audit instruction-file content after model
    releases — strip instructions that existed to work around a weaker
    model's limitations.
 

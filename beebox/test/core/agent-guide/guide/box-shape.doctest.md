@@ -18,7 +18,7 @@ const v3Shape: BoxShape = {
 ## A shapeVersion-3 box gets the BOX_CODE section
 
 ```ts
-const full = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile: "CLAUDE.md" });
+const full = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile: "AGENTS.md" });
 const text = full.slice(full.indexOf("## BOX_CODE"), full.indexOf("\n## ", full.indexOf("## BOX_CODE")));
 text.split("\n")[0]
 => ## BOX_CODE — Box-Owned Code
@@ -27,7 +27,7 @@ text.split("\n")[0]
 ## A box's full generated guide includes the section, positioned after the directory layout
 
 ```ts
-const guide3 = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile: "CLAUDE.md" });
+const guide3 = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile: "AGENTS.md" });
 const guideLines = guide3.split("\n");
 guideLines.findIndex((l) => l === "## DIRECTORY_LAYOUT — Directory Layout") < guideLines.findIndex((l) => l === "## BOX_CODE — Box-Owned Code")
 => true

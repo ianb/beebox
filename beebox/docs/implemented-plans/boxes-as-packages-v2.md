@@ -6,6 +6,9 @@ issues: []
 ---
 # Boxes as Packages v2 — beebox as a library
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Each box becomes a Node package that depends on `beebox` as a library — real imports,
 real types, its own process — while the *operational* box (cards, config, runtime state) stays
 a code-free directory that agents inhabit. A new hub process owns routing, auth, and per-box

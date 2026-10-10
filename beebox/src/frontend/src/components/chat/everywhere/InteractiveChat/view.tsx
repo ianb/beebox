@@ -43,7 +43,7 @@ function BarChromeRegion(props: ChatBodyProps) {
     sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
   const { onZoomView } = tabs;
-  const { agentEngine, selectedModel, modelInForce, boxDefault, enabledEngines, boxEngine, handlePinModel, handleOpenModelPanel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
+  const { agentEngine, selectedModel, modelInForce, boxDefault, enabledEngines, boxEngine, handlePinModel, handleOpenModelPanel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
   // Pinning writes box configuration, so it is the owner's control — the same
   // signal the dashboard uses for its owner-only actions.
   const currentUser = useCurrentUser();
@@ -103,8 +103,6 @@ function BarChromeRegion(props: ChatBodyProps) {
       onToggleMute={mute.handleToggleMute}
       narrationEnabled={narrationEnabled}
       onToggleNarration={handleToggleNarration}
-      hqDictationEnabled={hqDictationEnabled}
-      onToggleHqDictation={handleToggleHqDictation}
       hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
       selectedModel={selectedModel}

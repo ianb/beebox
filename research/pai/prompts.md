@@ -1,5 +1,8 @@
 # The actual prompts — quoted and annotated
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 PAI's intelligence lives almost entirely in three prompt files. This doc quotes the
 load-bearing passages and notes what bbx should and shouldn't take. bbx's comparable
 surfaces: the generated agent guide (`src/core/agent-guide/`), the chat system

@@ -4,7 +4,7 @@ Capturing the full API traffic of an agent run, and confirming which generated d
 
 ## What it is
 
-When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic — including system prompts, CLAUDE.md content, and all context that Claude Code sends to the API.
+When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic — including system prompts, instruction-file (`AGENTS.md`) content, and all context that Claude Code sends to the API.
 
 This is useful for:
 - Verifying that generated documentation (`agent-guide.md`, card rules) is actually loaded
@@ -54,7 +54,7 @@ sed -n '/📋 System Reminder/,/👤/p' .beebox/logs/<session-id>.log
 In the system prompt you'll see blocks like:
 
 ```
-Contents of /path/to/boxes/test1/CLAUDE.md (project instructions):
+Contents of /path/to/boxes/test1/AGENTS.md (project instructions):
 
 @.beebox/agent-guide.md
 
@@ -69,7 +69,7 @@ Contents of /path/to/boxes/test1/.claude/rules/card-question.md (project instruc
 ...
 ```
 
-This confirms which CLAUDE.md files, @-includes, and `.claude/rules/` files were loaded.
+This confirms which AGENTS.md files, @-includes, and `.claude/rules/` files were loaded.
 
 ### List all loaded files
 
@@ -80,9 +80,9 @@ grep "^Contents of " .beebox/logs/<session-id>.log
 
 Example output:
 ```
-Contents of /Users/.../CLAUDE.md (project instructions, checked into the codebase):
+Contents of /Users/.../AGENTS.md (project instructions, checked into the codebase):
 Contents of /Users/.../THINKING_CLAUDE.md (project instructions, checked into the codebase):
-Contents of /Users/.../boxes/test1/CLAUDE.md (project instructions, checked into the codebase):
+Contents of /Users/.../boxes/test1/AGENTS.md (project instructions, checked into the codebase):
 Contents of /Users/.../boxes/test1/.beebox/agent-guide.md (project instructions, checked into the codebase):
 Contents of /Users/.../boxes/test1/.claude/rules/card-procedure.md (project instructions, checked into the codebase):
 Contents of /Users/.../boxes/test1/.claude/rules/card-question.md (project instructions, checked into the codebase):

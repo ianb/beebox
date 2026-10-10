@@ -24,7 +24,7 @@ import { collectViewRefWarnings } from "../../../core/views/refs.js";
 import { lintAttachLayout, type AttachLintError } from "../../../lib/attach-lint.js";
 import { lintProminenceBudget, type ProminenceLintWarning } from "../../../core/lint-prominence/core.js";
 import { lintCardsDispatch } from "../../../core/card-lint/core/lint-cards.js";
-import { lintAllClaudeMd } from "../../../core/claude-md-lint.js";
+import { lintAllInstructionFiles } from "../../../core/instruction-file-lint.js";
 import { buildLoadContext } from "../../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../../core/external/url-check/core.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../../core/validation-ignore.js";
@@ -39,8 +39,8 @@ export interface CollectedResults {
   cardSummary: LintSummary | null;
   mdSummary: MarkdownLintSummary | null;
   attachErrors: AttachLintError[];
-  /** Soft, non-blocking size warnings for oversized CLAUDE.md files. */
-  claudeMdWarnings: string[];
+  /** Soft, non-blocking size warnings for oversized instruction files. */
+  instructionFileWarnings: string[];
   /** Broken `cardRef="…"` refs in box-authored views (warning-only). */
   viewWarnings: string[];
   /**
@@ -167,7 +167,7 @@ async function collectStagedResults({ boxRoot, ctx, resolved, ignore }: CollectA
   const cardSummary = cards.length > 0 ? await lintCardsDispatch(cards, { boxRoot, ctx }) : null;
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings, ...NO_CANONICAL };
+  return { cardSummary, mdSummary, attachErrors: [], instructionFileWarnings: [], viewWarnings, ...NO_CANONICAL };
 }
 
 /** Validate every card, markdown file, view, and attach layout in the box. */
@@ -178,7 +178,7 @@ async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArg
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
   const prominenceWarnings = await lintProminenceBudget(boxRoot, ctx);
-  const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
+  const instructionFileWarnings = await lintAllInstructionFiles(boxRoot);
   const viewPaths = await listBoxViewFiles(boxRoot);
   const viewWarnings = await collectViewRefWarnings(viewPaths, boxRoot);
   const canonicalViewWarnings = canonical ? await collectViewCanonicalWarnings(viewPaths, boxRoot) : [];
@@ -190,7 +190,7 @@ async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArg
     attachErrors,
     prominenceWarnings,
     boxSchemaFields,
-    claudeMdWarnings,
+    instructionFileWarnings,
     viewWarnings,
     canonicalViewWarnings,
     canonicalDossierWarnings,
@@ -209,7 +209,7 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
   const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, ctx }) : null;
   const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths, { boxRoot }) : null;
   const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings, ...NO_CANONICAL };
+  return { cardSummary, mdSummary, attachErrors: [], instructionFileWarnings: [], viewWarnings, ...NO_CANONICAL };
 }
 
 /**
@@ -297,7 +297,7 @@ export const validateCommand = new Command("validate")
             attach: results.attachErrors,
             prominence: results.prominenceWarnings ?? [],
             boxSchemaFields: results.boxSchemaFields ?? [],
-            claudeMd: results.claudeMdWarnings,
+            claudeMd: results.instructionFileWarnings,
             views: results.viewWarnings,
             legacySchemaPath: results.legacySchemaErrors,
             rootStrays: results.rootStrayErrors,

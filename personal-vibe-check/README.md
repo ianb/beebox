@@ -145,7 +145,7 @@ npm run typecheck
 
 ## Coding Conventions
 
-The `conventions.md` file in this package contains coding rules to add to your project's `CLAUDE.md` (or equivalent AI assistant instructions). The key rules enforced by lint:
+The `conventions.md` file in this package contains coding rules to add to your project's `AGENTS.md` (or `CLAUDE.md`, or equivalent AI assistant instructions). The key rules enforced by lint:
 
 - **Semicolons**: always
 - **Quotes**: double quotes

@@ -7,6 +7,9 @@ issues:
 ---
 # The publication card is the publication
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 When I look for a published site in my box, I want one card that is the site: its request settings, its notes, its files beside it, and its review controls. Today the files are in `src/publications/<name>/`, the settings are in `publication.json`, and a separate pointer card named by a random id holds the controls. This plan joins them and removes everything the old shape left.
 
 **Issues addressed:** `issues/decisions/2026-10-02-publication-source-and-card-split.md`. Searched the queue for "publication" and "publications page": no other open issue covers the source layout, the card, the Publications page, or `bbx pub`. `issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md` is about the Worker and is not addressed.

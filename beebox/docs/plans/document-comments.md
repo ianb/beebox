@@ -70,7 +70,7 @@ three adjacent items exist and none is resolved by this plan:
   (resilient AND never silent), **6** (right-sized defensiveness), **8** (one way
   to do each thing), **12** (the maintainer is usually an agent), and **13** (a
   control shows the state the system is in, never the one it intends).
-- `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
+- `AGENTS.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
   never-disable-lint rule. The dev-page casualness carve-out does **not** apply
   to anything here: this is workstreams-app code, which is linted and
   typechecked like any other app code (`workstreams-app/package.json` —
@@ -631,12 +631,12 @@ outside the checkout is invisible unless something points at it.
    `cat comments/tracked/beebox/docs/plans/foo.md.comments.yaml` works from
    anywhere. Read convenience only; writes never traverse it.
 2. `bin/comments show <path>` and `bin/comments list` (Track 1).
-3. One sentence in the root `CLAUDE.md` pointing at `bin/comments show` when
+3. One sentence in the root `AGENTS.md` pointing at `bin/comments show` when
    working from a document, with the mechanism in a reference doc. This is the
    altitude the feature earns: a pointer in the prompt, details in docs.
 4. A `SessionStart` line naming documents with waiting comments, printed **only
    when the store is non-empty**. Silent otherwise, which keeps it out of the
-   category `CLAUDE.md` calls a bug: *"Warnings, deprecation notices… cost real
+   category `AGENTS.md` calls a bug: *"Warnings, deprecation notices… cost real
    agent context every time they appear."*
 
 Layer 4 is what makes discovery automatic rather than documented; it is listed as
@@ -648,7 +648,7 @@ an open question because it adds a hook the boxholder may not want.
 `bin/lib/worktree-create.sh` (best-effort, so a failed mount never blocks a
 session), and the `.gitignore` entry `/comments` — no trailing slash, the
 symlink lesson recorded at `workstream-exhibits.md:250`. Covered by
-`beebox/test/dev/comments-mount.doctest.md` (moved to `bin/test/comments-mount.doctest.md`). The `CLAUDE.md` sentence and
+`beebox/test/dev/comments-mount.doctest.md` (moved to `bin/test/comments-mount.doctest.md`). The `AGENTS.md` sentence and
 the reference doc are still Track 5 layer 3.
 
 ## Could this be simpler?
@@ -863,7 +863,7 @@ audit.
    `TranscribeAudioParams` in `beebox`, the injected `transcribe` service,
    and the `comments.transcribe` mutation. Independent of chunks 5–6.
 8. **Spoken capture** (Track 4, client half). Depends on chunks 6 and 7.
-9. **Guidance** (Track 5 layers 3–4). The `CLAUDE.md` sentence, the reference
+9. **Guidance** (Track 5 layers 3–4). The `AGENTS.md` sentence, the reference
    doc, the `docs/secrets.md` line, and the `SessionStart` line if the boxholder
    wants it. Last, because it documents what the earlier chunks actually did.
 

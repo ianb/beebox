@@ -50,7 +50,7 @@ export function entryText(entry: SessionEntry): string {
 }
 
 /**
- * Strip attributes from `<typed>` / `<speech>` opening tags so the optimistic
+ * Strip attributes from human-input wrapper opening tags so the optimistic
  * client-side text and the server-stored text compare equal. The server
  * injects `user="…" user-email="…"` (and the route may append `<pending-schedules>`
  * suffixes), neither of which the optimistic copy carries.
@@ -76,7 +76,7 @@ function normalizeForCompare(text: string): string {
     // leave the token in on one side and strip it on the other — turning a
     // match into a mismatch, which is this whole function's failure mode.
     .replace(/\[image#?\d+]/g, "")
-    .replace(/<(typed|speech)\b[^>]*>/g, "<$1>");
+    .replace(/<(typed|speech|external-input)\b[^>]*>/g, "<$1>");
 }
 
 /**

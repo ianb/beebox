@@ -9,6 +9,8 @@ priority: important
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 states all three facts — child-process/tsx-wrapper parentage, exit-code-0-gated
 whole-tree auto-commit with the `Run-By: trick/<name>` trailer, and the

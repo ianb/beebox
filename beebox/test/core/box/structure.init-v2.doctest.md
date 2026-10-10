@@ -256,7 +256,7 @@ calendarRule.includes('"_content/calendar/**/*.ics"')
 
 A merged root `.gitignore` (covering both the npm namespace and the
 operational rules) exists — `fullInit` here doesn't call `generateDocs`, so
-it doesn't produce a root `CLAUDE.md` (that's `ensureAgentContext`'s job,
+it doesn't produce a root `AGENTS.md` (that's `ensureAgentContext`'s job,
 covered by `test/core/agent-context-mirrors.doctest.md`):
 
 ```ts continue

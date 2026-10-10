@@ -955,7 +955,7 @@ time.
    3d protects a scope assumption, both of which Track 2 needs.
 5. **Track 2** — `bin/test-select`.
 6. **Track 4** — `test:changed` / `pretest:changed`, first-invocation-full,
-   `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
+   `--base`, AGENTS.md guidance. The point at which behavior changes for agents,
    and deliberately last.
 7. **Track 5b** — the nightly.
 

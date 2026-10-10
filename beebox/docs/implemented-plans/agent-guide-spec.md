@@ -8,6 +8,9 @@ issues:
 ---
 # The agent guide is built from a spec
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 `src/core/agent-guide/*.ts`) is the only thing a box agent knows before its
 task arrives. Its source grew from 3,355 words at `f2da8f5f2` (2026-04-27,

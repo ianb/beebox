@@ -6,6 +6,9 @@ issues: []
 ---
 # Schema `validate` hook — co-locate non-Zod card validation with its schema
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 > **Status: implemented (2026-06-18).** Frozen historical record. The shipped
 > convention lives in `docs/cards/schemas.md`, the box-local schema guide
 > (`src/core/box-templates.ts` → `config/schemas/CLAUDE.md`), and the

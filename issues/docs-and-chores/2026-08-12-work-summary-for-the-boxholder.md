@@ -59,7 +59,7 @@ Candidates, and the choice matters more than the wording:
   demands honesty about scope and verification. Closest existing home, but it
   runs headless at the very end, which is precisely when a summary degrades into
   "what did I just do".
-- **Root `CLAUDE.md`** — a general expectation on every agent, at the cost of
+- **Root `AGENTS.md`** — a general expectation on every agent, at the cost of
   being everywhere and enforced nowhere.
 - A **parallel document** per workstream, which the `/workstreams/` app could
   surface directly.

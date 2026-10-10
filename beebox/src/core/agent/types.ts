@@ -27,7 +27,7 @@ export interface AgentInvokeOptions {
   /** Model override (e.g., "claude-haiku-4-5-20251001"). */
   model?: string;
   /**
-   * Whether this run loads the box's own agent context — CLAUDE.md, the
+   * Whether this run loads the box's own agent context — AGENTS.md, the
    * generated agent guide, `.claude/rules/`. Defaults to true, which is right
    * for anything doing the box's work.
    *
@@ -56,7 +56,7 @@ export interface AgentInvokeOptions {
   dryRun?: boolean;
   /**
    * Override the SDK's working directory. Defaults to `boxRoot`. Set to a
-   * subdirectory to reproduce a landmark-style session — the CLAUDE.md
+   * subdirectory to reproduce a landmark-style session — the AGENTS.md
    * walk-up at that path is auto-loaded into the agent's context. Pair
    * with `additionalDirectories: [boxRoot]` to keep the rest of the box
    * accessible.

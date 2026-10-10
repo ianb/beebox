@@ -7,6 +7,9 @@ issues:
 ---
 # Acknowledgements backfill: credit adopted external ideas
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 Bee Box adopted ideas from other projects (skills, review formats, workflow
 shapes, design patterns). Credit for those ideas lives only in research notes
 and closed issues, which go stale. This plan produces a vetted acknowledgements

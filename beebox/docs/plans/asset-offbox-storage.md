@@ -360,7 +360,7 @@ refuses to overwrite an existing file whose hash differs (that's a
 conflict, not a restore).
 
 **Where it runs.** `bbx wakeup` already ends by pushing to the box's git
-remote (`CLAUDE.md:96`). Asset push belongs in the same place, so the
+remote (`AGENTS.md`). Asset push belongs in the same place, so the
 two halves of a box's durability move together.
 
 **First implementation chunk.** `push` with `--dry-run`, plus a

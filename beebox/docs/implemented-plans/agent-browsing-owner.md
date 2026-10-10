@@ -7,6 +7,9 @@ issues:
 ---
 # Agent browsing as the owner: a box opts in, the browse key becomes a person
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 An agent driving a real browser in local dev (`bin/browse`, tours, the user-story
 browser pass, journey walks) authenticates with the machine-wide browse key,
 which clears the auth wall but is deliberately nobody: no `user`, never the

@@ -29,49 +29,51 @@ for the roadmap). Given a tarball URL or path:
 mkdir my-box && cd my-box
 pnpm dlx --package=<beebox tarball> bbx engine init .
 pnpm install
-pnpm exec bbx engine serve content
+pnpm exec bbx engine serve
 ```
 
-`bbx engine init` scaffolds the package (`package.json`, `tsconfig.json`, a thin
-`CLAUDE.md`) and the box itself under `content/` — directories, default
-procedures and guides, generated agent docs, and an initial git commit. The
-`pnpm install` resolves the real dependency `bbx engine init` just wrote. `bbx engine serve`
-then boots a local server for the box; open the printed URL in a browser.
+`bbx engine init` scaffolds the box in that one directory: the package
+(`package.json`, `tsconfig.json`), the root `AGENTS.md`, the operational areas,
+default procedures and guides, generated agent docs, and an initial git commit.
+The `pnpm install` resolves the real dependency `bbx engine init` just wrote.
+`bbx engine serve` then boots a local server for the box; open the printed URL
+in a browser.
 
-From here, open a Claude Code session at `content/` (or point it at the box
-in your existing setup) and start talking to it — it already knows how to
+From here, open a Claude Code or Codex session in the box directory (or point
+your existing setup at it) and start talking to it — it already knows how to
 use itself.
 
 ## Box anatomy at a glance
 
 ```
-my-box/                    the package — coding surfaces live here
-├── package.json           declares a "beebox" dependency; private
-├── node_modules/           gitignored
-├── CLAUDE.md               thin: this is a box package; the box is content/
+my-box/                    the box: one root, also its npm package and git repo
+├── .beebox/box.json        marker (shapeVersion 3) and generated agent guide
+├── AGENTS.md               the agent's instructions; includes the agent guide
+├── package.json            declares a "beebox" dependency; private
+├── node_modules/           gitignored; also holds the engine's reference docs
 ├── src/
 │   ├── schemas/            box-local card-type definitions (optional)
 │   ├── views/              custom view definitions (optional)
 │   └── tricks/             agent-authored scripts (optional)
-└── content/                THE BOX — the operational root, no package.json inside
-    ├── .bbx-box             marker file
-    ├── CLAUDE.md           the operating agent's context
-    ├── box/  store/  config/  people/  places/  docs/  procedure/
-    └── ...
+├── _content/               the boxholder's content: cards and folders
+├── _config/                box configuration, procedures, guides
+├── _bookkeeping/           machine working state and archives
+├── _publish/               publication output
+└── _tmp/                   scratch (gitignored)
 ```
 
-The package root is a coding surface: `src/schemas`, `src/views`, and
-`src/tricks` are the only places the box's own agent may add code, importing
-exclusively from the `beebox` package (`beebox/cards`,
-`beebox/schema`, `beebox/view-widgets`). Everything else at the
-package root — `package.json`, `node_modules`, lockfiles — belongs to
-whoever operates the box, not to the agent. `content/` is the box: a plain
-directory of Markdown cards with YAML frontmatter that the agent reads,
-writes, and moves as it works. See [`docs/box-layout.md`](docs/box-layout.md)
-for the full directory reference.
+Folders under `_content/` and the `src/` directories may carry their own
+`AGENTS.md`; see [box layout](docs/box-layout.md) for the full vocabulary.
+
+`src/schemas`, `src/views`, and `src/tricks` are the only places the box's own
+agent may add code, importing exclusively from the `beebox` package
+(`beebox/cards`, `beebox/schema`, `beebox/view-widgets`). `package.json`,
+`node_modules`, and lockfiles belong to whoever operates the box, not to the
+agent. `_content/` is a plain directory of Markdown cards with YAML frontmatter
+that the agent reads, writes, and moves as it works.
 
 Upgrading the engine (bumping the `beebox` dependency and running data
-migrations) is `bbx engine upgrade`, run from the package root.
+migrations) is `bbx engine upgrade`, run from the box root.
 
 ## What leaves your machine
 

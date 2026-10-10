@@ -31,7 +31,7 @@ keep that one, so it is still there ten opens later.
 Grepped the queue for adjacent items (`sidecar`, `companion`, `tab`, `panel`,
 `persist`, `sessionStorage`, `502`, `reconnect`, `stale`, `scroll`). Related but
 NOT resolved here:
-[sticky-hq-transcription-preference](../../../issues/features/2026-08-26-sticky-hq-transcription-preference.md)
+[sticky-hq-transcription-preference](../../../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md)
 (the per-viewer-preference precedent question the pin issue points at — Track C
 answers it for tabs only, and says why the answer does not generalize),
 [todos-inline-things-to-think-about](../../../issues/features/2026-08-30-todos-inline-things-to-think-about.md)
@@ -503,7 +503,7 @@ paragraph, not a design step.
   durable strip that follows you between devices is a different feature with a
   different question behind it.
 - **A general per-viewer-preference mechanism** — the pin issue points at
-  [sticky-hq-transcription-preference](../../../issues/features/2026-08-26-sticky-hq-transcription-preference.md)
+  [sticky-hq-transcription-preference](../../../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md)
   and asks whether pins ride the same story. They do not: an HQ-dictation
   preference is durable and cross-session, a tab strip is not. Track C answers
   only for tabs and takes no position on HQ.

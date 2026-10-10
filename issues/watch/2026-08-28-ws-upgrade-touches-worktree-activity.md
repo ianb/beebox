@@ -9,7 +9,7 @@ discovered-in: tour-health — cross-model review of the router split (pre-exist
 ---
 
 `bin/router-upgrade.ts` calls `core.touch(handle)` on every accepted WebSocket
-upgrade. The router contract (root `CLAUDE.md`, `bin/AGENTS.md`) says only HTTP
+upgrade. The router contract (root `AGENTS.md`, `bin/AGENTS.md`) says only HTTP
 requests count as activity and WebSockets never *wake* a worktree; an upgrade
 of an already-running worktree is an HTTP request, so a single touch is within
 the letter of it. The question is the loop: a stale tab whose socket drops

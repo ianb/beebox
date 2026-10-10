@@ -60,8 +60,8 @@ export function userIdentity(content: SessionContentBlock[], attr: "user" | "use
   const firstText = content.find((b) => b.type === "text")?.text || "";
   const re =
     attr === "user"
-      ? /<(?:typed|speech)\b[^>]*\buser="([^"]*)"/
-      : /<(?:typed|speech)\b[^>]*\buser-email="([^"]*)"/;
+      ? /<(?:typed|speech|external-input)\b[^>]*\buser="([^"]*)"/
+      : /<(?:typed|speech|external-input)\b[^>]*\buser-email="([^"]*)"/;
   const match = firstText.match(re);
   if (match && match[1]) {
     return match[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");

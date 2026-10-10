@@ -7,6 +7,8 @@ discovered-in: main session — boxholder noticed while landing codex worktree p
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Closed 2026-08-04** — implemented in the `cross-model-review-skill` worktree.
 > `.claude/skills/codex/` → `.claude/skills/cross-model/`, branching in prose on
 > which model runs it. The new Codex→Claude half is

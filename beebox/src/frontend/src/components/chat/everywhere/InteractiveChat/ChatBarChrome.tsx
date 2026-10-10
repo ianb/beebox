@@ -49,8 +49,6 @@ export interface ChatBarChromeProps {
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
-  hqDictationEnabled: boolean;
-  onToggleHqDictation: () => void;
   hqInFlight: boolean;
   onNewSession: () => void;
   selectedModel: string | null;
@@ -81,7 +79,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   const {
     contextDir, boxSlug, sessionLabel, messages, onZoomView,
     muted, onToggleMute, narrationEnabled, onToggleNarration,
-    hqDictationEnabled, onToggleHqDictation, hqInFlight,
+    hqInFlight,
     onNewSession, selectedModel, modelInForce, boxDefault, canPin, canChooseEngine, enabledEngines,
     boxEngine, onChooseStart, onPinModel, onOpenModelPanel,
     agentEngine, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
@@ -146,14 +144,11 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
         onToggleDebugLog={onToggleDebugLog}
       />
       <VoiceChip
-        contextDir={contextDir}
         canManageDefaults={canPin}
         muted={muted}
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}
         onToggleNarration={onToggleNarration}
-        hqDictationEnabled={hqDictationEnabled}
-        onToggleHqDictation={onToggleHqDictation}
         hqInFlight={hqInFlight}
       />
     </>

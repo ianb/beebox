@@ -9,6 +9,8 @@ priority: important
 resolution: implemented
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed 2026-10-06 (test-suite-health, `50961ada5`).** Both directories are deliberate: the guidance registry (`beebox/src/core/box/guidance-surfaces.ts`) installs `src/publications/CLAUDE.md` and `_config/feedback/CLAUDE.md` in every new box. The doctest now derives its skeleton set from a fresh box's watcher instead of a hand list, so later scaffolding cannot make it stale. 18/18, three runs.
 
 `beebox/test/core/box/file-watcher.doctest.md` fails four subtests on

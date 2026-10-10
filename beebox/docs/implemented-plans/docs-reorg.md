@@ -6,6 +6,9 @@ issues: []
 ---
 # Documentation reorganization
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 This plan reorganizes the monorepo's developer-facing documentation (~252
 tracked `.md` files, excluding `beebox/test/` fixtures and box-agent
 docs that ship into boxes). Goals: surface the most important docs first,

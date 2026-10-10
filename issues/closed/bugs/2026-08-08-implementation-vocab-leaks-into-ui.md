@@ -9,6 +9,8 @@ labels: [soft-launch, field-test-findings, ui-sensibility]
 priority: important
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 > **Closed 2026-09-02 (vocab-sweep).** All remaining items landed on this
 > branch (see `beebox/docs/implemented-plans/vocab-glossary-sweep.md`, Track
 > C): box-not-found copy, session→chat labels, error-badge gate, view tabs,

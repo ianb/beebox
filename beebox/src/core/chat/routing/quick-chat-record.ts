@@ -19,9 +19,11 @@ import { routingCandidateSchema, type RoutingCandidate } from "./policy.js";
 const QUICK_CHAT_STATES = ["needs-choice", "sending", "sent", "discarded"] as const;
 export const QUICK_CHAT_REASONS = ["uncertain", "routing-unavailable", "destination-gone"] as const;
 export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
-/** How the person entered the thought: delivered as `<typed>` or `<speech>`. */
-export const QUICK_CHAT_ORIGINS = ["typed", "voice"] as const;
+/** How the person entered the thought. External inputs are neither keyboard text nor a recording. */
+export const QUICK_CHAT_ORIGINS = ["typed", "voice", "external"] as const;
 export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
+export const QUICK_CHAT_SOURCES = ["apple-app-intents"] as const;
+export type QuickChatSource = (typeof QUICK_CHAT_SOURCES)[number];
 
 /** Duplicate protection lasts 7 days (send-dedup.ts); refuse a late delivery a day before that. */
 const QUICK_CHAT_DELIVERY_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
@@ -37,6 +39,7 @@ const baseShape = {
   id: z.string().uuid(), message: z.string(), createdAt: z.string(),
   /** Absent on records written before the origin was kept: those were typed. */
   origin: z.enum(QUICK_CHAT_ORIGINS).default("typed"),
+  source: z.enum(QUICK_CHAT_SOURCES).optional(),
   candidates: z.array(routingCandidateSchema),
   /** Empty when routing was unavailable. Kept for calibration; never shown. */
   probabilities: z.record(z.string(), z.number()),

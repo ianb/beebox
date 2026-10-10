@@ -10,6 +10,8 @@ discovered-in: main — boxholder discussion, 2026-09-27
 priority: important
 ---
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
 **Closed.** Implemented in 41ca5601a (move) and 514999dbf (ledger header). Divergence: the ledger landed in `schedules/sdk-update/`, not `beebox/docs/`, because anything under `beebox/` deploys and the schedule commits ledger-only changes most days.
 
 The monorepo root has a `docs/` directory that holds only three leftover

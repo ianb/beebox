@@ -6,7 +6,7 @@ refreshing → idle` handoff: `refreshing` holds `streamText` until its
 clears the stream in ONE `assign`. `InteractiveChat-messages.tsx` renders the
 provisional bubble for as long as `streamText` is non-empty, so that atomic swap
 is what makes finalize an in-place update instead of an unmount/remount
-(`components/chat/CLAUDE.md`, "Streaming → finalize").
+(`components/chat/AGENTS.md`, "Streaming → finalize").
 
 The event that threatens it is `REFRESH`. The backend broadcasts
 `chat-complete` on its global bus the moment a turn ends, and

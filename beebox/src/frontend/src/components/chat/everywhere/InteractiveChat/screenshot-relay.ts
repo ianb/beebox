@@ -17,7 +17,7 @@
  * returns `null` from {@link captureViaRelay} so the caller falls through to the
  * consent popup — never silent, because the popup is the visible fallback.
  *
- * Presence is cached module-level (not React state — the chat CLAUDE.md scroll/
+ * Presence is cached module-level (not React state — the chat AGENTS.md scroll/
  * store invariants forbid new root state): {@link startRelayProbe} pings once at
  * mount so a later capture pays no handshake latency, and a capture re-probes if
  * the relay was never seen (extension installed mid-session).

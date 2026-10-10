@@ -21,7 +21,7 @@ import { lintViewFile } from "../../webapp/views/compiler/compile.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintViewMarkdown } from "../../core/views/markdown-check/core.js";
 import { lintCardsDispatch } from "../../core/card-lint/core/lint-cards.js";
-import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
+import { lintInstructionFile } from "../../core/instruction-file-lint.js";
 import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
 import { legacyInstructionError } from "../../core/legacy-instruction-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
@@ -60,7 +60,7 @@ const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "packag
  *
  * Returns `null` — never a "clean" result — when there's nothing to
  * surface, so a clean root falls through to the edited file's own per-type
- * handling (a root-level CLAUDE.md edit still gets its usual size lint, say)
+ * handling (a root-level AGENTS.md edit still gets its usual size lint, say)
  * rather than short-circuiting it.
  */
 async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<HookValidationResult | null> {
@@ -180,14 +180,14 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
     // Checks the name first; only a CLAUDE.md-family write reads the manifest.
     const legacy = await legacyInstructionError(boxRoot, fp);
     if (legacy !== null) return { feedback: legacy, hasErrors: true };
-    const warning = await lintClaudeMdFile(boxRoot, fp);
+    const warning = await lintInstructionFile(boxRoot, fp);
     if (sessionId !== null) {
       try {
         // Character counts change on each edit, but the warning's advice is
         // the same until the size tier changes.
         const fingerprint = warning?.replace(/\d+ chars \(~\d+ KB\)/, "<size>") ?? null;
         const shouldEmit = await recordHookWarning({
-          boxRoot, sessionId, filePath: fp, category: "claude-md-size", fingerprint,
+          boxRoot, sessionId, filePath: fp, category: "instruction-file-size", fingerprint,
         });
         if (!shouldEmit) return CLEAN_HOOK_VALIDATION;
       } catch (_error) {

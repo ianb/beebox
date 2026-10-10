@@ -1,5 +1,8 @@
 # No Mistakes vs beebox review and landing
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 _Snapshot: 2026-08-30. Upstream: [kunchenguid/no-mistakes](https://github.com/kunchenguid/no-mistakes) v1.60.3, commit [`c7897368`](https://github.com/kunchenguid/no-mistakes/commit/c78973685d8af1cf5b1baaf959ad6a77347c0520), 7,967 GitHub stars at inspection time._
 
 ## Bottom line

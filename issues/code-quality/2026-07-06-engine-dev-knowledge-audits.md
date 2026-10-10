@@ -5,7 +5,7 @@ workstream: unknown
 
 The knowledge-audit harness (`src/dev/knowledge-audit.ts`,
 `src/dev/knowledge-audits.yaml`) verifies what a **box agent** recalls —
-it spawns an agent with a box cwd and box CLAUDE.md context and checks
+it spawns an agent with a box cwd and box AGENTS.md context and checks
 recall of box conventions (card-authoring tags, schema `instructions`,
 box docs). The `{% quote %}` audits are the precedent.
 

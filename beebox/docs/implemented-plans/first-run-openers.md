@@ -8,6 +8,9 @@ issues:
 
 # First-run openers
 
+> **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to `AGENTS.md`. This document predates that and keeps the old name.
+
+
 ## Problem
 
 A fresh box opens on an empty chat that says "Start a conversation with your

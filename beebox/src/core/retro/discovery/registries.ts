@@ -8,7 +8,7 @@
  * registries record only each thread's *current* session — rotated-away
  * ids survive only in the webapp history file — so these are provenance
  * hints, not a gate. The walker's actual chat test is the presence of real
- * (`<typed>`/`<speech>`-tagged) user messages in the transcript.
+ * (human-input-tagged) user messages in the transcript.
  */
 
 import * as fs from "node:fs/promises";
