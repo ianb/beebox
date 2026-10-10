@@ -58,7 +58,19 @@ Authored docs separately: `docs/plugins.md` authoring guide (~150 lines),
 courseware README and SKILL.md (~120, mostly moved from `skills-content.ts`),
 `extensibility.md` revision (~20).
 
-**BIG CHANGE.** Source plus tests is about 3,300 changed lines. Approved by the boxholder 2026-10-10 with the two decisions below. About 600 of
+**BIG CHANGE.** Source plus tests is about 3,300 changed lines. Approved by the boxholder 2026-10-10 with the two decisions below.
+
+**Actual (2026-10-10, at implementation end):** `beebox/src` 4,516 and
+`beebox/test` 2,806 changed lines (additions plus deletions), about 2.2 times
+the estimate; docs 1,701 separately. What drove it, in order: the view host
+needed React and React DOM module shims so plugin bundles with CommonJS
+dependencies load, and a rewrite of relative `src/exports/*` imports to the
+public specifiers (neither in the plan); layout-rule accommodations for a
+registry with pattern exports and a directory move of the skills module;
+the concept-map view's own stylesheet replacing app primitives; and more
+doctests than planned (every health-check cell, the packaged-install path,
+the compile-to-render path). No scope was added; the view move the boxholder
+chose is the single largest item. About 600 of
 that is courseware files moving with import rewrites, counted as deletions
 plus additions. The boxholder agreed the direction and the first slice on
 2026-10-09; this label asks for approval of the size. Slices 2 (scoped
