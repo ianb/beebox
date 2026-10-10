@@ -23,8 +23,10 @@
 
 import { Fragment, useMemo } from "react";
 import * as React from "react";
-import Markdoc, { type Config, type RenderableTreeNode } from "@markdoc/markdoc";
-import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config/tags/core";
+import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
+import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
+import { withScopedTags, rewriteUnknownTags } from "@shared/markdoc-config/scoped";
+import { UnknownTagInline, UnknownTagBlock } from "./UnknownTag";
 import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
@@ -160,13 +162,14 @@ interface RenderConfigBundle {
   components: Record<string, React.ComponentType<Record<string, unknown>>>;
 }
 
-function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): RenderConfigBundle {
+function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath: string | null; tags: Readonly<Record<string, Schema>> | undefined }): RenderConfigBundle {
+  const base = withScopedTags(tags);
   const config: Config = {
-    ...markdocConfig,
+    ...base,
     // An HTML `<p>` renders as `Para`, the same `<div>` a Markdown paragraph gets.
-    tags: { ...markdocConfig.tags, html: makeHtmlTag({ paragraph: "Para" }) },
+    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }) },
     nodes: {
-      ...markdocConfig.nodes,
+      ...base.nodes,
       document: { render: "Fragment" },
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
@@ -278,6 +281,8 @@ function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): Rende
     TodoInline: cast(TodoInline),
     TodoBlock: cast(TodoBlock),
     SeeAlso: cast(SeeAlso),
+    UnknownTagInline: cast(UnknownTagInline),
+    UnknownTagBlock: cast(UnknownTagBlock),
   };
   return { config, components };
 }
@@ -297,6 +302,8 @@ interface MarkdownProps {
    * component entirely.
    */
   components?: MarkdownComponentOverrides;
+  /** A type's scoped tags (`CardSchemaConfig.markdocTags`), merged over the core table for this render. */
+  tags?: Readonly<Record<string, Schema>>;
   prose?: ProseVariant;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath?: string;
@@ -315,6 +322,7 @@ interface MarkdownProps {
 export function Markdown({
   children,
   components,
+  tags,
   prose,
   onNavigate,
   basePath,
@@ -327,8 +335,9 @@ export function Markdown({
   const bodyLineOffset = card?.bodyLineOffset ?? null;
   const { tree, mergedComponents } = useMemo(() => {
     const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote };
-    const { config, components: defaults } = buildRenderConfig(ctx, cardPath);
+    const { config, components: defaults } = buildRenderConfig(ctx, { cardPath, tags });
     const ast = parseMarkdown(children);
+    rewriteUnknownTags(ast, config);
     // The collector's own numbering, so a rendered todo and the todo a write
     // addresses cannot disagree about which one `line#2` is.
     if (bodyLineOffset !== null) stampLocators(assignLocators(ast, bodyLineOffset));
@@ -341,7 +350,7 @@ export function Markdown({
       if (override !== undefined) merged[name] = override;
     }
     return { tree: t, mergedComponents: merged };
-  }, [children, onNavigate, basePath, boxSlug, components, onJumpToQuote, cardPath, bodyLineOffset]);
+  }, [children, onNavigate, basePath, boxSlug, components, tags, onJumpToQuote, cardPath, bodyLineOffset]);
 
   const rendered = renderers.react(tree, React, {
     components: mergedComponents,

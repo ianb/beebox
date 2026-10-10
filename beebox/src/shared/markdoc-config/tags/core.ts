@@ -79,6 +79,7 @@ import { validateSourceAttributes } from "./source-model.js";
 import { TODO_STATUSES, todoAssignedWarning, validateTodoAttributes } from "../../todo-model.js";
 import { stampedLocator } from "../../todo-locators.js";
 import { flattenNodes } from "../../todo-text.js";
+import { unknownTag } from "./unknown-tag.js";
 import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
@@ -474,6 +475,7 @@ export const markdocConfig: Config = {
     "recipe-section": recipeSection,
     redacted,
     task,
+    "unknown-tag": unknownTag,
     image: captureImage,
     silence,
     todo,
