@@ -210,9 +210,11 @@ None. During implementation, verify `supportedModes` availability for the iOS 17
 
 The implementation is committed in the worktree; the issue remains gated on physical-device testing. The App Intent uses the app-lifetime box store and outbox, refuses a locked or unavailable selected box before persistence, and reports sent, needs-choice, or unconfirmed states without reading a reply. The box outbox is restored without draining before a new intent entry is appended. Simulator build and XCTest, changed beebox tests, and the mobile-contract check pass. The knowledge audit was not run because its configured test box has uncommitted worktree setup changes and the audit guard forbids dirty boxes. Physical Siri phrase matching, background launch, lock-screen behavior, and Shortcut execution remain unverified.
 
+The implementation tracks are complete. Two validation gates remain before this plan can be marked implemented: run the authored knowledge audit on a clean test box, and complete the physical-device checks listed in the linked issue. The issue stays open with `needs: [manual-testing]` until the device checks pass.
+
 ## Knowledge audits
 
-Add a `knows_directly` audit for the new `<external-input source="…">` wrapper. It should test that an agent recognizes the message as real human text from an external assistant, does not invent an audio recording, does not assume its reply will be heard, and does not apply voice-in-implies-voice-out. Run the audit against the test box as part of implementation and record its status. This new prompt vocabulary changes agent-facing interpretation, so a knowledge audit is required.
+The `external-input-arrival-tag` `knows_directly` audit is authored in `beebox/src/dev/knowledge-audits.yaml`. It checks that an agent recognizes the wrapper as real human text from an external assistant, does not invent an audio recording, does not assume its reply will be heard, and does not apply voice-in-implies-voice-out. The audit has not been run: its configured test box has uncommitted worktree setup changes, and the audit guard forbids running against a dirty box. Run it against a clean test box and record its status before marking this plan implemented.
 
 ## What will hold this after it ships
 
