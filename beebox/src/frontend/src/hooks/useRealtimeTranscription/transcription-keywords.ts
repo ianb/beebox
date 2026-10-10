@@ -18,7 +18,6 @@ export interface PendingSend {
   processedTranscript: string;
   matchedPhrase: string;
   closeMic: boolean;
-  hq: boolean;
 }
 
 /**
@@ -110,14 +109,13 @@ export function dispatchKeyword(
     case "sendHq":
     case "sendClose":
     case "sendCheckpoint":
-      // `closeMic` controls re-arming; `hq` asks the chat layer for HQ even
-      // when narration mode is off. A checkpoint is a plain send on the
-      // client — only its tag (already in the transcript) differs.
+      // `closeMic` controls re-arming. A checkpoint, and "clean up and send"
+      // (HQ is every send's pass now), are plain sends on the client — only
+      // the tag already in the transcript differs.
       pendingSendRef.current = {
         processedTranscript: keyword.processedTranscript,
         matchedPhrase: keyword.matchedPhrase,
         closeMic: keyword.action === "sendClose",
-        hq: keyword.action === "sendHq",
       };
       send({ type: "STOP" });
       break;

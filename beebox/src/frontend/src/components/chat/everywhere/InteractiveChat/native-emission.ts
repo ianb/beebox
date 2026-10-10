@@ -19,6 +19,7 @@ export interface NativeEmissionV2 {
   diarized: boolean;
   hqText?: boolean;
   hqService?: string;
+  /** Still legal on the wire (contract §4.4a); every non-`hqText` voice emission is live text either way. */
   hqFallback?: boolean;
   images: ChatImageAttachment[];
   files: Array<Required<EmissionFile>>;
@@ -92,7 +93,6 @@ function parseV2(candidate: Record<string, unknown>): NativeEmissionParseResult 
       diarized: candidate.diarized,
       hqText: candidate.hqText === true ? true : undefined,
       hqService: candidate.hqText === true ? candidate.hqService : undefined,
-      hqFallback: candidate.hqFallback === true ? true : undefined,
     })
     : createTypedEmission(common);
   return { ok: true, emission: { ...emission, id } };

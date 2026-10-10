@@ -108,7 +108,6 @@ enum SpeechKeywords {
     static let keywordHintsWithText = [
         "\"send message\"",
         "\"send checkpoint\"",
-        "\"clean up and send\"",
         "\"over and out\"",
         "\"erase message\"",
         "\"cancel message\"",
@@ -204,12 +203,16 @@ enum SpeechKeywords {
         return nil
     }
 
+    /// Re-attach a send keyword the HQ pass did not reproduce. The HQ text is
+    /// kept as it came back; `heard="live"` says live dictation detected the
+    /// command and the end of the text may still hold it in other words.
     static func appendSendKeywordTag(
         to transcript: String,
         action: SpeechKeywordAction,
         matchedPhrase: String
     ) -> String {
-        "\(transcript.trimmingCharacters(in: .whitespacesAndNewlines)) \(keywordTag(action: action, phrase: matchedPhrase))"
+        let tag = keywordTag(action: action, phrase: matchedPhrase, heardLive: true)
+        return "\(transcript.trimmingCharacters(in: .whitespacesAndNewlines)) \(tag)"
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -222,11 +225,18 @@ enum SpeechKeywords {
         )
     }
 
-    private static func keywordTag(action: SpeechKeywordAction, phrase: String) -> String {
+    private static func keywordTag(action: SpeechKeywordAction, phrase: String, heardLive: Bool = false) -> String {
         let escaped = phrase
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "\"", with: "&quot;")
-        return "<\(tagName(for: action)) phrase=\"\(escaped)\" />"
+        let heard = heardLive ? " heard=\"live\"" : ""
+        return "<\(tagName(for: action)) phrase=\"\(escaped)\"\(heard) />"
+    }
+
+    /// Whether two actions write the same tag (`sendHq` and `send` both write
+    /// `send-message`).
+    static func sameTag(_ first: SpeechKeywordAction, _ second: SpeechKeywordAction) -> Bool {
+        tagName(for: first) == tagName(for: second)
     }
 
     private static func tagName(for action: SpeechKeywordAction) -> String {
@@ -380,12 +390,16 @@ enum VoicePreparationResolver {
         if preparation.appendsKeywordTag == false {
             return join(preparation.priorInput, hqTranscript)
         }
-        let processed = SpeechKeywords.detect(hqTranscript)?.processedTranscript
-            ?? SpeechKeywords.appendSendKeywordTag(
-                to: hqTranscript,
-                action: preparation.action,
-                matchedPhrase: preparation.matchedPhrase
-            )
+        // The live keyword fired the send: an HQ keyword counts only when it
+        // is the same command; otherwise the live tag is appended.
+        let detected = SpeechKeywords.detect(hqTranscript)
+        let processed = detected.flatMap {
+            SpeechKeywords.sameTag($0.action, preparation.action) ? $0.processedTranscript : nil
+        } ?? SpeechKeywords.appendSendKeywordTag(
+            to: hqTranscript,
+            action: preparation.action,
+            matchedPhrase: preparation.matchedPhrase
+        )
         return join(preparation.priorInput, processed)
     }
 
@@ -405,17 +419,6 @@ enum VoicePreparationResolver {
 enum NativeVoiceKeywordSendPlan: Equatable {
     case live(text: String)
     case hq
-
-    static func make(
-        liveTranscript: String,
-        action: SpeechKeywordAction,
-        narrationEnabled: Bool,
-        hqDictationEnabled: Bool
-    ) -> NativeVoiceKeywordSendPlan {
-        narrationEnabled || hqDictationEnabled || action == .sendHq
-            ? .hq
-            : .live(text: liveTranscript)
-    }
 }
 
 private struct Choice {
