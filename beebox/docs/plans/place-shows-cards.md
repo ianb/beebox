@@ -403,6 +403,25 @@ No design decision here depends on an external premise. The mechanisms
   doctest that a landmark with a body loads and one without still loads; the
   `forDir` doctest that `parseLandmarkFields` reads a landmark with a body.
 
+### Implementation notes (2026-10-11)
+
+- The "Also here" group is built inside `resolveLandmark`
+  (`resolveAlsoHere`, `resolve/derived-links.ts`), switched on by
+  `ResolveOptions.alsoHere`, which the payload sets from `expandsAsGroups`.
+  The layout check forbids `payload.ts` importing `buildLink`. The group
+  carries `alsoHere: true`; the page keys on that mark, not on the label.
+- `alsoHere(ordinary, { shownRefs, cap })` lives in `src/shared/also-here.ts`.
+  Shown refs are compared without `?query`/`#fragment`. A card that vanishes
+  between the walk and the build keeps a struck-through row.
+- Tile titles now come from `summarize`, so records show their name. Memo
+  tiles still show the filename, because the cached read has no body.
+- The empty-body test uses one heading rule for all callers: `title:`, else
+  `name:`. "No body content" is hidden whenever the front shows fields.
+- The landmark merge in `CardFacts` stays: a landmark with an empty body would
+  otherwise send its fields to a front the place page does not draw.
+- `installRootLandmark` keeps an agent-written body when it repairs an inert
+  root landmark.
+
 ## Could this be simpler?
 
 - **Simplest:** Track A alone, without the type defaults, plus an exclusion
@@ -526,7 +545,7 @@ All run with `pnpm knowledge-audit run --box ~/src/box-worktrees/place-shows-car
   (embed order, title once),
   `schemas.card-loaders.doctest.md` (record detail).
 - The decisions that carry risk are pure functions: the Also-here selection
-  (`alsoHere(ordinary, shownRefs, cap)`) and `splitCardFields`. Each is tested
+  (`alsoHere(ordinary, { shownRefs, cap })`) and `splitCardFields`. Each is tested
   directly.
 - The knowledge audits hold the agent behavior.
 - No new test tier.
