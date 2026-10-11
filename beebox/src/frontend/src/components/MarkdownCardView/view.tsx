@@ -20,6 +20,8 @@
 import type { ReactNode } from "react";
 import { Text } from "../ui/Text";
 import { FrontmatterFields } from "./FrontmatterFields";
+import { cardTitle } from "../../lib/card-title";
+import { withoutHeaderName } from "../../lib/readable-fields";
 import { CardBody } from "./CardBody";
 import { bodyHeadingField, bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { FileData, RendererProps } from "../../file-type-registry";
@@ -49,7 +51,7 @@ export function MarkdownCardView(props: RendererProps & { hideEmptyBody?: boolea
   const { data, onNavigate, mode } = props;
   const embed = mode === "embed";
   const title = bodyHeadingTitle(data.frontmatter);
-  const front = frontFields(data, { bodyEmpty: isCardBodyEmpty(data.body, title), mode });
+  const front = withoutHeaderName(frontFields(data, { bodyEmpty: isCardBodyEmpty(data.body, title), mode }), cardTitle(data));
   const showsFields = Object.keys(front).length > 0;
   const heading = embed ? embedHeading({ title, detail: data.detail }) : null;
   // With fields or a heading on the front, the card is not empty: no "No body content".

@@ -59,8 +59,30 @@ rows(memo)
   "Contains = Porch repair quotes",
   "Prominence = ordinary, the type's default",
   "Symbol = 🏠 glyph: 🏠 · background: #fde",
-  "status: = new",
-  "created: = 2026-07-01",
+  "Status = new",
+  "Created = 2026-07-01",
+]
+```
+
+The fields table reads its keys as labels and small objects as one value
+(`test/lib/readable-fields.doctest.md`). A record is headed by its `name:`
+(`cardTitle`), so the table leaves out the `name` row that would repeat the
+header:
+
+```ts
+rows(render({
+  path: "_content/lending/Camp_stove.record.card",
+  type: "record",
+  schema: memoSchema,
+  frontmatter: { name: "Camp stove", location: { text: "With Idris" }, quantity: { value: "1 stove", note: "missing lid" } },
+  body: "Borrowed for the lake trip.\n",
+}))
+=> [
+  "Filed at = _content/lending/Camp_stove.record.card",
+  "Card type = record",
+  "Prominence = ordinary, the type's default",
+  "Location = With Idris",
+  "Quantity = 1 stove (missing lid)",
 ]
 ```
 
@@ -108,7 +130,7 @@ const landmark = (body) => render({
   frontmatter: { symbol: { glyph: "🤝" }, navigation: { label: "Lending" } },
   body,
 });
-[undefined, "The stove is with Idris.\n"].map((body) => ({ fields: landmark(body).includes('data-card-section="fields"'), navigation: /navigation/.test(landmark(body)) }))
+[undefined, "The stove is with Idris.\n"].map((body) => ({ fields: landmark(body).includes('data-card-section="fields"'), navigation: /Navigation/.test(landmark(body)) }))
 => [{ fields: true, navigation: true }, { fields: true, navigation: true }]
 ```
 

@@ -8,14 +8,13 @@ import { ThemedFileCardProperties } from "./PropertiesFace";
 import { useBoxPresentation } from "../BoxPresentationProvider";
 import type { FileData, FileRenderer } from "../../../file-type-registry";
 import type { FileViewMode } from "../../file-view-types";
-import { displayName } from "../../../lib/display-name";
+import { cardTitle } from "../../../lib/card-title";
 import { Button } from "../../ui/Button";
 import { CardActions } from "../../card-actions/CardActions";
 import { OpenInPanelButton } from "../../ui/OpenInPanelButton";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { isCardPath } from "../../file-view-data";
 import { readCardSymbol } from "@shared/card-symbol";
-import { isRecord } from "@shared/is-record";
 
 interface ThemedFileCardProps {
   data: FileData;
@@ -29,28 +28,6 @@ interface ThemedFileCardProps {
   onClose?: (() => void) | undefined;
   onOpenInPanel?: (() => void) | undefined;
   children: ReactNode;
-}
-
-/**
- * `title:`, else a landmark's `navigation.label`, else a named entity's
- * `name:` (person, place), else the filename. A landmark is headed by its
- * place's name, the label the place pill and the "Go to" buttons show; the
- * same rule titles its summary (`schemas/landmark.ts`), so its tab agrees.
- */
-export function cardTitle(data: FileData): string {
-  const fm = data.frontmatter;
-  if (typeof fm?.title === "string") return fm.title;
-  const label = landmarkLabel(data);
-  if (label !== null) return label;
-  if (typeof fm?.name === "string") return fm.name;
-  return displayName(data.path);
-}
-
-function landmarkLabel(data: FileData): string | null {
-  if (!data.path.endsWith(".landmark.card")) return null;
-  const navigation = data.frontmatter?.navigation;
-  const label = isRecord(navigation) && typeof navigation.label === "string" ? navigation.label.trim() : "";
-  return label === "" ? null : label;
 }
 
 export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
