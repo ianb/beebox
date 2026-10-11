@@ -131,13 +131,16 @@ export function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [s
     }
   }
 
+  // Basename fallback: only a basename unique across BOTH pools resolves. A
+  // sole match in one pool while the other holds candidates is ambiguous;
+  // accepting it marked a broken link as resolved to an unrelated file.
   const base = path.basename(cleaned);
-  const internal = ctx.internalBasenames.get(base);
-  const soleInternal = internal?.length === 1 ? internal[0] : undefined;
-  if (soleInternal !== undefined) return [soleInternal, true];
-  const external = ctx.externalBasenames.get(base);
-  const soleExternal = external?.length === 1 ? external[0] : undefined;
-  if (soleExternal !== undefined) return ["../" + soleExternal, true];
+  const internal = ctx.internalBasenames.get(base) ?? [];
+  const external = ctx.externalBasenames.get(base) ?? [];
+  if (internal.length + external.length === 1) {
+    const sole = internal[0];
+    return sole !== undefined ? [sole, true] : ["../" + external[0], true];
+  }
 
   return [cleaned, false];
 }
