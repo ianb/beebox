@@ -2,9 +2,9 @@
  * Landmark card schema — a hand-curated bookmark for a directory.
  *
  * One landmark per directory; the file lives inside the directory it
- * describes (e.g. `_content/recipes/Recipes.landmark.card`). A landmark is
- * pure structured metadata (YAML frontmatter, no body) carrying one or
- * more *roles*:
+ * describes (e.g. `_content/recipes/Recipes.landmark.card`). Its YAML
+ * frontmatter carries one or more *roles*; an optional markdown body is the
+ * place summary, shown first on the place page:
  *
  *   ---
  *   symbol:                          # the card's mark
@@ -21,12 +21,13 @@
  *       procedure:
  *         ref: /_config/procedures/archive-recipe.procedure.card
  *   ---
+ *   Bread is the weekly bake; the soup recipes are untested.
  *
  * At least one role should be present; a landmark with neither is inert.
  * See docs/landmarks.md and docs/triage.md.
  */
 
-import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
+import { body, splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { CardSymbol } from "../shared/card-symbol.js";
@@ -183,7 +184,9 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   // still means something — see LandmarkObject above — but it describes the
   // place, not this file.
   prominence: "background",
-  fields: landmarkFields,
+  // The body is the place summary the place page shows first. The lightweight
+  // readers below parse frontmatter only, so they never see it.
+  fields: { ...landmarkFields, body: body(z.string()) },
   searchable: false,
   instructions: `# Landmark Cards
 

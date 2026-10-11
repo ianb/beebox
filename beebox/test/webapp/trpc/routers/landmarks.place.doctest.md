@@ -385,3 +385,22 @@ also.children.map((c) => [c.title, c.detail ?? null]).toSorted()
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A landmark with a body is still read as a place
+
+The landmark's body is the place summary (Track C). The lightweight reader
+parses only the frontmatter, so a body changes nothing about the payload.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/lending/Lending.landmark.card",
+  "---\nnavigation:\n  label: Lending\n  links:\n    - ref: Stove.memo.card\n---\nThe [stove](Stove.memo.card) is with Idris.\n");
+await box.write("_content/lending/Stove.memo.card", "---\n---\n");
+const p = await payload(box.root, { dir: "_content/lending", expandsAsGroups: true });
+({ label: p.label, links: rows(p.links) })
+=> { label: "Lending", links: ["listed _content/lending/Stove.memo.card"] }
+```
+
+```ts cleanup
+await box.cleanup();
+```

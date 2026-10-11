@@ -92,24 +92,31 @@ rows(render({ ...broken, frontmatter: { status: [1, 2] } }))
 => ["Filed at = _content/Broken.memo.card", "Card type = memo"]
 ```
 
-A landmark has no body, so `splitCardFields` sends its type fields to the
-front. The place page replaces that front, so for a landmark Properties shows
-them under Fields instead; otherwise `navigation` would show only in Source
-(docs/implemented-plans/landmark-arrival.md, Track C). Other body-less types keep their
-fields on the front.
+A landmark's body is the place summary, and most landmarks have none. With an
+empty body, `splitCardFields` sends the type fields to the front, but the place
+page replaces that front and draws no fields. So for a landmark Properties
+shows them under Fields whether or not it has a body; otherwise `navigation`
+would show only in Source (docs/implemented-plans/landmark-arrival.md, Track C;
+docs/plans/place-shows-cards.md, Track C).
 
 ```ts
-const landmarkSchema = { hasBodyField: false, defaultProminence: null };
-const landmark = render({
+const landmarkSchema = { hasBodyField: true, defaultProminence: "background" };
+const landmark = (body) => render({
   path: "_content/lending/Lending.landmark.card",
   type: "landmark",
   schema: landmarkSchema,
   frontmatter: { symbol: { glyph: "🤝" }, navigation: { label: "Lending" } },
+  body,
 });
-({ fields: landmark.includes('data-card-section="fields"'), navigation: /navigation/.test(landmark) })
-=> { fields: true, navigation: true }
+[undefined, "The stove is with Idris.\n"].map((body) => ({ fields: landmark(body).includes('data-card-section="fields"'), navigation: /navigation/.test(landmark(body)) }))
+=> [{ fields: true, navigation: true }, { fields: true, navigation: true }]
+```
 
-const question = render({ path: "_content/Q.question.card", type: "question", schema: landmarkSchema, frontmatter: { question: "Which?" } });
+Other body-less types keep their fields on the front.
+
+```ts
+const bodiless = { hasBodyField: false, defaultProminence: null };
+const question = render({ path: "_content/Q.question.card", type: "question", schema: bodiless, frontmatter: { question: "Which?" } });
 question.includes('data-card-section="fields"')
 => false
 ```

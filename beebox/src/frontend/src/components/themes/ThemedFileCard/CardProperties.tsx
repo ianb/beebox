@@ -38,8 +38,9 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
   const bodyEmpty = isCardBodyEmpty(data.body, bodyHeadingTitle(data.frontmatter));
   const split = splitCardFields(data.frontmatter ?? {}, { hasBodyField: data.schema?.hasBodyField ?? null, bodyEmpty, mode: "page" });
   const { foundBy } = split;
-  // A landmark's front is the place page, which does not draw its fields, so
-  // Properties lists them; other body-less types keep theirs on the front.
+  // A landmark's front is the place page, which draws its body but not its
+  // fields. With an empty body (most landmarks) the split puts them on the
+  // front, so Properties lists them for a landmark either way.
   const properties = data.type === "landmark" ? { ...split.front, ...split.properties } : split.properties;
   const contains = foundBy.contains;
   const evidence = foundBy["contains-evidence"];
