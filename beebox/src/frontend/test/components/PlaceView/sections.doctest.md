@@ -72,11 +72,27 @@ outline(placeSections({
 ## A group that matches nothing still makes the place non-empty
 
 The place expects such cards, so the page shows the group with "None yet"
-rather than "Nothing here yet."
+rather than "No cards to show here yet."
 
 ```ts
 outline(placeSections({ links: [], groups: [{ label: "Every loan card here", count: 0, children: [] }] }))
 => ["Every loan card here (0)"]
+```
+
+## "Also here" is the last group
+
+The server appends "Also here" after the landmark's own groups, and the page
+keeps the server's group order.
+
+```ts
+outline(placeSections({
+  links: [link("List.memo.card", "derived", "entry-point")],
+  groups: [
+    { label: "Every loan card here", count: 2, children: [] },
+    { label: "Also here", count: 30, children: [link("Groceries.memo.card", "derived")] },
+  ],
+}))
+=> ["entry-point: List.memo.card", "Every loan card here (2)", "Also here (30)"]
 ```
 
 ## No links and no groups is an empty place

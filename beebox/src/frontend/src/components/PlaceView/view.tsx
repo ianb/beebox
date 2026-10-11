@@ -19,6 +19,7 @@ import { useBoxSlug } from "../../lib/box-slug";
 import { browseCardTarget } from "../../lib/browse-card-state";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { toDisplayPath } from "@shared/display-path";
+import { ALSO_HERE_LABEL } from "@shared/also-here";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
 import { Hint } from "../ui/Hint";
@@ -52,11 +53,14 @@ function SectionHeading({ children }: { children: ReactNode }) {
   return <Text as="h3" size="xs" weight="medium" tone="muted" uppercase>{children}</Text>;
 }
 
-/** No links and no groups: say so, and name the folder the place is. */
+/**
+ * No links and no groups: say so, and name the folder the place is. The walk
+ * skips background cards and unknown types, so the folder may still hold files.
+ */
 function EmptyPlace({ folder, onNavigate }: { folder: string; onNavigate: (target: ViewTarget) => void }) {
   return (
     <div className="flex flex-col gap-1" data-place-section="empty">
-      <Text as="p">Nothing here yet.</Text>
+      <Text as="p">No cards to show here yet.</Text>
       <Text as="p" size="sm" tone="subtle">
         This place is the folder{" "}
         <InlineAction onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`${toDisplayPath(folder)}/`}</InlineAction>
@@ -90,6 +94,7 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
     );
   }
   const sections = placeSections(payload);
+  const folder = parentDir(cardPath);
   const start = startSomething({ payloadDir: payload.dir, openers: payload.openers, chat });
   const handleSendOpener = chat?.sendOpener;
   return (
@@ -117,7 +122,7 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
         </div>
       ) : null}
 
-      {sections.kind === "empty" ? <EmptyPlace folder={parentDir(cardPath)} onNavigate={onNavigate} /> : sections.sections.map((section) =>
+      {sections.kind === "empty" ? <EmptyPlace folder={folder} onNavigate={onNavigate} /> : sections.sections.map((section) =>
         section.kind === "links" ? (
           <div key={section.tier} className="flex flex-col gap-2" data-place-section={section.tier}>
             <SectionHeading>{TIER_HEADINGS[section.tier]}</SectionHeading>
@@ -125,7 +130,16 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
           </div>
         ) : (
           <div key={`group:${section.group.label}`} data-place-section="group">
-            <LandmarkGroup group={section.group} boxSlug={boxSlug} onNavigate={onNavigate} compact defaultOpen hidePath />
+            <LandmarkGroup
+              group={section.group}
+              boxSlug={boxSlug}
+              onNavigate={onNavigate}
+              compact
+              defaultOpen
+              hidePath
+              // "Also here" lists the folder's cards, so its overflow opens the folder.
+              {...(section.group.label === ALSO_HERE_LABEL ? { onMore: () => onNavigate(browseCardTarget({ directory: folder })) } : {})}
+            />
           </div>
         ),
       )}

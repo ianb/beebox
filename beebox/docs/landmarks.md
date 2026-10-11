@@ -157,8 +157,13 @@ what the place holds, not its configuration:
   from its query ("Every loan card here"; `src/core/landmark/expand-label.ts`).
   A group that matches nothing shows "None yet". A curated link whose target
   is gone keeps its row, struck through.
-- **An empty place** says "Nothing here yet." and links to its folder in
-  Browse.
+- **Also here** — the last group: the place's ordinary cards that no tier
+  or other group shows, the 10 most recently changed, then a "+N more" link
+  that opens the folder in Browse. Background cards (chat logs, capture and
+  upload staging) are not listed.
+- **An empty place** says "No cards to show here yet." and links to its
+  folder in Browse. The folder may still hold background cards or cards of
+  unknown types.
 
 The page reads `landmarks.forDir` with `expandsAsGroups: true`; the menus
 leave the flag off and keep the flat list. The landmark's fields show under

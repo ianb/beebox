@@ -23,6 +23,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
+import { InlineAction } from "../ui/InlineAction";
 import { ChevronIcon } from "./ChevronIcon";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
@@ -188,6 +189,7 @@ export function LandmarkGroup({
   compact,
   defaultOpen,
   hidePath,
+  onMore,
 }: {
   group: ResolvedGroup;
   boxSlug: string;
@@ -197,6 +199,8 @@ export function LandmarkGroup({
   hidePath?: boolean;
   /** Start expanded (the place page); menus and the Landmarks page start collapsed. */
   defaultOpen?: boolean;
+  /** Makes the "+N more" count an action (the place page opens the folder in Browse); plain text without it. */
+  onMore?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen === true);
   const overflow = group.count - group.children.length;
@@ -221,7 +225,9 @@ export function LandmarkGroup({
           ))}
           {overflow > 0 ? (
             <Text as="div" size="xs" tone="muted" className="self-center">
-              +{overflow} more
+              {onMore === undefined ? `+${overflow} more` : (
+                <InlineAction intent="subtle" onClick={onMore}>{`+${overflow} more`}</InlineAction>
+              )}
             </Text>
           ) : null}
         </div>

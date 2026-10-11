@@ -35,6 +35,7 @@ export interface ResolvedLink {
   /**
    * The target's prominence level. Set on a `source: "derived"` or `"place"` link,
    * and on a `"listed"` link whose card is also a derived entry point or primary card.
+   * Absent on the place page's "Also here" children, which are ordinary.
    */
   prominence?: ProminenceLevel;
 }
@@ -55,6 +56,11 @@ export interface ResolveOptions {
    * that only need identity, or that deliberately skip derivation.
    */
   derived?: PrunedSubtree;
+  /**
+   * The place page's view: append the "Also here" group of `derived`'s
+   * ordinary cards (`resolveAlsoHere`). Ignored without `derived`.
+   */
+  alsoHere?: boolean;
 }
 
 export interface BuildLinkInput {

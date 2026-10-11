@@ -18,11 +18,14 @@
  */
 
 import { naturalCompare } from "../../../shared/natural-sort.js";
+import { ALSO_HERE_CAP, ALSO_HERE_LABEL, alsoHere } from "../../../shared/also-here.js";
+import { parseRef } from "../../../shared/ref-path/core.js";
 import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
 import { prunedSubtreeWith, type ProminenceEntry, type ProminenceWalkContext, type PrunedSubtree } from "../prominence-index.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";
 import type { DerivedReadProblem } from "../summaries.js";
+import type { ResolvedGroup } from "./core.js";
 
 export interface DerivedResolution {
   links: ResolvedLink[];
@@ -139,4 +142,26 @@ async function nestedEntryPoint(
     .map((e) => e.boxPath.slice(1))
     .toSorted(naturalCompare)[0];
   return first ?? null;
+}
+
+/**
+ * The place page's "Also here" group: the subtree's ordinary cards that no
+ * link or other group already shows, the most recently changed
+ * `ALSO_HERE_CAP` as children and `count` the full total
+ * (docs/plans/place-shows-cards.md, Track A). Null when none are left, so the
+ * page adds no empty group. A card deleted since the walk keeps its row,
+ * shown missing; the count includes it.
+ */
+export async function resolveAlsoHere(
+  derived: PrunedSubtree,
+  { links, groups, options }: { links: ResolvedLink[]; groups: ResolvedGroup[]; options: ResolveOptions },
+): Promise<ResolvedGroup | null> {
+  const shown = [...links, ...groups.flatMap((g) => g.children)];
+  const shownRefs = new Set(shown.map((link) => parseRef(link.ref).path));
+  const { cards, count } = alsoHere(derived.ordinary, { shownRefs, cap: ALSO_HERE_CAP });
+  if (count === 0) return null;
+  const children = await Promise.all(
+    cards.map((card) => buildLink({ rawRef: card.boxPath, label: null, source: "derived", options })),
+  );
+  return { label: ALSO_HERE_LABEL, children, count };
 }

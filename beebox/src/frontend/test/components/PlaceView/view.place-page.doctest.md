@@ -66,13 +66,14 @@ const startedLending = { contextDir: "_content/lending", showsOwnOpeners: false,
 
 ## An empty place says so and names its folder
 
-No links and no groups: "Nothing here yet." and the folder, which opens in
-Browse. A place with no openers shows no "Start something".
+No links and no groups: "No cards to show here yet." and the folder, which
+opens in Browse. It does not say the folder is empty: the place skips
+background cards and cards of unknown types. A place with no openers shows no "Start something".
 
 ```ts
 const html = await render({ payload: payload({ openers: [] }) }, startedLending);
 ({ sections: sections(html), text: text(html) })
-=> { sections: ["empty"], text: "Nothing here yet. This place is the folder lending/ . Ask in the chat to add the first card." }
+=> { sections: ["empty"], text: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card." }
 ```
 
 ## Tiers and groups, with an empty group saying "None yet"
@@ -101,6 +102,28 @@ const html = await render({ payload: payload({
   groupOpen: true,
   text: "Start here Lending list Pinned Gone Missing Every receipt card here 0 None yet",
 }
+```
+
+## "Also here" opens the folder from its overflow count
+
+"Also here" lists 10 cards; the rest show as one count that opens the folder
+in Browse. Another group's overflow stays plain text.
+
+```ts
+const tile = (name) => ({ ref: `_content/lending/${name}.memo.card`, label: null, title: name, exists: true, source: "derived" });
+const ten = Array.from({ length: 10 }, (_, i) => tile(`Card ${i}`));
+const html = await render({ payload: payload({
+  openers: [],
+  groups: [
+    { label: "Every loan card here", count: 60, children: [tile("Loan")] },
+    { label: "Also here", count: 30, children: ten },
+  ],
+}) });
+({
+  moreButtons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].map((m) => m[1]),
+  plainMore: text(html).includes("+59 more"),
+})
+=> { moreButtons: ["+20 more"], plainMore: true }
 ```
 
 ## Outside a chat, "Start something" is hidden
@@ -158,7 +181,7 @@ embedded card has no header, so the page draws the mark and label itself.
 
 ```ts
 ({
-  pane: text(await render({ payload: payload({ openers: [] }) })).startsWith("Nothing"),
+  pane: text(await render({ payload: payload({ openers: [] }) })).startsWith("No cards"),
   embed: text(await render({ payload: payload({ openers: [] }), heading: true })).slice(0, 10),
 })
 => { pane: true, embed: "🤝 Lending" }

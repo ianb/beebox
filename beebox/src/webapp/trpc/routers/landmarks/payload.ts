@@ -43,7 +43,11 @@ export interface LandmarkPayload {
   prominence: ProminenceLevel | null;
   /** Resolved listed + derived + unnamed-expand links, in tier order with dedup. */
   links: ResolvedLink[];
-  /** Named expands kept as collapsible groups (submenus). */
+  /**
+   * Named expands kept as collapsible groups (submenus). With
+   * `expandsAsGroups` (the place page), the last group is "Also here": the
+   * place's ordinary cards no link or other group shows (`resolveAlsoHere`).
+   */
   groups: ResolvedGroup[];
   /** Nesting depth relative to ancestor landmarks (root = 0). */
   depth: number;
@@ -125,6 +129,7 @@ export async function loadLandmarkPayload(
     landmarkPath: relPath,
     boxRoot,
     ...(derived === undefined ? {} : { derived }),
+    alsoHere: expandsAsGroups === true,
   });
   const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
 
