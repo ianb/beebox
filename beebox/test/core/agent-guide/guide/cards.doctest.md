@@ -39,7 +39,7 @@ const lines = text.split("\n");
 lines.includes("- **memo** — a captured note → `node_modules/beebox/box-docs/card-memo.md`")
 => true
 
-lines.includes("- **chat-job** — reactor bookkeeping")
+lines.includes("- **backfill-job** — reactor bookkeeping")
 => true
 
 // The authored group renders before the system group
@@ -47,7 +47,7 @@ lines.findIndex((l) => l.startsWith("**Types you create")) < lines.findIndex((l)
 => true
 
 // A type without instructions has no doc to link
-lines.find((l) => l.startsWith("- **chat-job**"))?.includes("→")
+lines.find((l) => l.startsWith("- **backfill-job**"))?.includes("→")
 => false
 ```
 

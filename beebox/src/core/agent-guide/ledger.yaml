@@ -499,8 +499,8 @@ rows:
     rule: "`bbx finish <job-file>` is the required closing step of a job: it deletes the job card and commits."
     handle: COMMANDS
     bin: indirect
-    reason: Applies only while processing a job, and the reactor prompt and each job type's card rule already say it where the job runs; nothing moved.
-    audits: [chat-job-processing]
+    reason: Applies only while processing a job, and the reactor prompt and each job type's card rule already say it where the job runs; nothing moved. Its audit went with the chat-job type (remove-telegram, 2026-10-11).
+    audits: []
     mechanics: the reactor prompt (src/core/reactor/prompts.ts) and each job type's card rule
   - id: commands.calendar
     rule: "`bbx calendar [timespan]` lists upcoming events (default 7d; also today, 3d, 2w, 1m)."

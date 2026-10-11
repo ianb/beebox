@@ -1097,6 +1097,9 @@ tests:
   # Status (2026-09-27, doc-structure Track 4, QUESTIONS): pass on the test1
   # clone, 1 reads, 1 searches, 36k ctx; grepped card-question.md first, which
   # does not state the 7- and 30-day defaults, so those came from the guide.
+  # Status (2026-10-11, remove-telegram, reworded to "push"): the answer was
+  # right ("can still answer it later") but missed the literal "answerable",
+  # so the string check became a regex that accepts either.
   - id: question-alert-and-aging
     prompt: >
       You're a background job and just created a question card for the
@@ -1108,8 +1111,7 @@ tests:
       boxholder (push, when set up) and reminds them once after 7
       days. It does not wait forever: it leaves the active view after 30 days
       (half and all of expires-after: when set) and stays answerable.
-    correct_matches: ["\\b(?:7|seven)\\s+days?\\b", "\\b30\\s+days?\\b"]
-    correct_contains: ["answerable"]
+    correct_matches: ["\\b(?:7|seven)\\s+days?\\b", "\\b30\\s+days?\\b", "\\b(?:answerable|still (?:be )?answer)"]
     tags: [questions]
 
   # Status (2026-09-26, doc-structure Track 3, GUIDES): pass on the test1 clone,
