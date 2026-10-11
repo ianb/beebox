@@ -97,7 +97,7 @@ empty body, `splitCardFields` sends the type fields to the front, but the place
 page replaces that front and draws no fields. So for a landmark Properties
 shows them under Fields whether or not it has a body; otherwise `navigation`
 would show only in Source (docs/implemented-plans/landmark-arrival.md, Track C;
-docs/plans/place-shows-cards.md, Track C).
+docs/implemented-plans/place-shows-cards.md, Track C).
 
 ```ts
 const landmarkSchema = { hasBodyField: true, defaultProminence: "background" };

@@ -30,7 +30,7 @@ function ctxFor(boxRoot: string): TestCtx {
 An `entry-point`/`primary`/`background`-declared card reports that level; an
 undeclared card falls back to its type's default — `ordinary` for a memo,
 `background` for a landmark (its type default, per Track A) and for a chat
-husk (`docs/plans/place-shows-cards.md`, Track A), so Browse folds it into
+husk (`docs/implemented-plans/place-shows-cards.md`, Track A), so Browse folds it into
 "more" when the folder has a primary card.
 
 ```ts

@@ -177,7 +177,7 @@ const full = await renderRecord("Lead-free, 0.8mm.\n");
 
 A card embedded in chat has no header, so the view draws the title and the
 type's summary line, then the body, then the field block
-(docs/plans/place-shows-cards.md, Track B). The title shows once: it is not
+(docs/implemented-plans/place-shows-cards.md, Track B). The title shows once: it is not
 also a row in the field block, and a body heading that repeats it is hidden.
 A record is titled by its `name:`.
 

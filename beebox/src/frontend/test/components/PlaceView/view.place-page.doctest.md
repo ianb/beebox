@@ -78,7 +78,7 @@ const html = await render({ payload: payload({ openers: [] }) }, startedLending)
 
 ## The place summary comes first
 
-The landmark card's body is the place summary (docs/plans/place-shows-cards.md,
+The landmark card's body is the place summary (docs/implemented-plans/place-shows-cards.md,
 Track C). It renders as markdown above "Start something" and the tiers.
 
 ```ts

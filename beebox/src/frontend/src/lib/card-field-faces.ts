@@ -9,7 +9,7 @@
  * failed validation), so no field is hidden without a place to see it. A
  * bodied type whose body is empty (`isCardBodyEmpty`) also keeps them on the
  * front, so its facts are not hidden behind an empty page
- * (docs/plans/place-shows-cards.md, Track B).
+ * (docs/implemented-plans/place-shows-cards.md, Track B).
  *
  * An embedded card has no Properties face (`FileView/view.tsx` returns the
  * bare renderer in embed mode), so there its type fields and title stay on the

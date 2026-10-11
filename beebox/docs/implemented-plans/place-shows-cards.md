@@ -1,12 +1,12 @@
 ---
 title: "A place shows the person's cards"
-status: draft
+status: implemented
 workstream: place-shows-cards
 issues:
-  - ../../../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md
-  - ../../../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md
-  - ../../../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md
-  - ../../../issues/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md
+  - ../../../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md
+  - ../../../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md
+  - ../../../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md
+  - ../../../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md
 ---
 # A place shows the person's cards
 

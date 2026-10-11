@@ -64,7 +64,7 @@ export interface PrunedSubtree {
   /**
    * Every `ordinary` card the walk reached, with its file mtime — the cards
    * `entries` omits. The place page's "Also here" group lists them
-   * (`docs/plans/place-shows-cards.md`, Track A).
+   * (`docs/implemented-plans/place-shows-cards.md`, Track A).
    */
   ordinary: OrdinaryCard[];
 }

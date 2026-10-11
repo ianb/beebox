@@ -12,7 +12,7 @@
  *
  * An embed (a card shown inline in chat) has no header, so it draws the title
  * and the type's summary line itself, then the body, then the fields: an
- * answer to "show me X" reads prose first (docs/plans/place-shows-cards.md,
+ * answer to "show me X" reads prose first (docs/implemented-plans/place-shows-cards.md,
  * Track B). The field that gave the title (`title:`, else `name:`) is not
  * repeated in the field block.
  */

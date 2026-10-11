@@ -94,7 +94,7 @@ export const UploadBatchSchema: CardSchema = cardSchema("upload-batch", {
   category: "synced",
   // Staging and session logs, for the agent rather than the reader: kept out
   // of a place's "Also here" list and folded in Browse
-  // (docs/plans/place-shows-cards.md, Track A).
+  // (docs/implemented-plans/place-shows-cards.md, Track A).
   prominence: "background",
   searchable: true,
   fields: uploadBatchFields,

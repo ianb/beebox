@@ -1,11 +1,14 @@
 ---
 title: "Place-page tiles show only a card's title, not its summary"
-workstream: unattached
+workstream: place-shows-cards
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending, B-inventory journey walks, 2026-10-09
 ---
+
+**Closed:** Implemented on branch worktree-place-shows-cards: place-page tiles show the card summary line.
 
 A place page lists its cards as tiles with the title only. The card type can
 define a one-line summary, and the tile does not show it.
@@ -37,11 +40,11 @@ means summarizing each linked card, which costs a read per tile in a large
 `expand` group. A tile for a card whose type has no summary needs a rule.
 Whether a summary also belongs on the Plate, search, and other lists is the
 broader question in
-[collection-views-are-badly-defined](2026-08-19-collection-views-are-badly-defined.md).
+[collection-views-are-badly-defined](../../features/2026-08-19-collection-views-are-badly-defined.md).
 
 Related: [structured-card-front-hides-its-facts](../decisions/2026-10-08-structured-card-front-hides-its-facts.md)
 (the same facts hidden on the card's own front).
-[Landmark arrival](../../beebox/docs/implemented-plans/landmark-arrival.md).
+[Landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md).
 
 Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R6,
 [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 57,

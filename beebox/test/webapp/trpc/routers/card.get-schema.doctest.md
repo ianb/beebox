@@ -51,7 +51,7 @@ await box.cleanup();
 ## `card.get` returns the type's summary line
 
 `detail` is the line the card's type writes about itself (`summarize`), shown
-under the title on the card page (docs/plans/place-shows-cards.md, Track B).
+under the title on the card page (docs/implemented-plans/place-shows-cards.md, Track B).
 A record's line is where it is and how many; a doc writes none.
 
 ```ts

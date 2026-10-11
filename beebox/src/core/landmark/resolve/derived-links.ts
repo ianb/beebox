@@ -145,7 +145,7 @@ async function nestedEntryPoint(
  * The place page's "Also here" group: the subtree's ordinary cards that no
  * link or other group already shows, the most recently changed
  * `ALSO_HERE_CAP` as children and `count` the full total
- * (docs/plans/place-shows-cards.md, Track A). Null when none are left, so the
+ * (docs/implemented-plans/place-shows-cards.md, Track A). Null when none are left, so the
  * page adds no empty group. A card deleted since the walk keeps its row,
  * shown missing; the count includes it.
  */

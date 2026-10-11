@@ -3382,7 +3382,7 @@ tests:
   # landmark-link-attribute to specify "hand-listed" since templates
   # use template-ref. Both new/refined audits pass.
 
-  # Place summary: a landmark's body (docs/plans/place-shows-cards.md, Track C).
+  # Place summary: a landmark's body (docs/implemented-plans/place-shows-cards.md, Track C).
   # The trigger to keep it current is in the always-loaded guide
   # (landmarks.summary-on-change); what it holds is in card-landmark.md.
   # Status (2026-10-11, Claude, worktree test1 clone): 4/4 pass on the final

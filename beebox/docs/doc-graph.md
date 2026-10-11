@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-11T15:20:15Z
-Total documents: 524
+Generated: 2026-10-11T18:26:27Z
+Total documents: 526
 
 ## Issues
 
@@ -46,6 +46,8 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (707 lines) · shipped history · implemented
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (254 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (343 lines) · shipped history · implemented
+- **docs/implemented-plans/place-shows-cards.md** — "A place shows the person's cards" (587 lines) · shipped history · implemented
+- **docs/implemented-plans/place-shows-cards.review.md** — "Plan review — place-shows-cards" (64 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-2.review.md** — "Plan Engineering Review — plugins slice 2" (109 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-3.review.md** — "Plan review — plugins slice 3" (70 lines) · implementation review
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (449 lines) · shipped history · implemented
@@ -1083,7 +1085,7 @@ Referenced by:
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:547 (mention) — procedure step resolves one by name at call time (`connectors.md`,
+- src/core/agent-guide/guide.md:550 (mention) — procedure step resolves one by name at call time (`connectors.md`,
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:57 (mention) — > has 64 files and none in the USE genre — `connectors.md` explains the
 - ../issues/features/2026-10-08-cross-tool-todo-as-a-target-use-case.md:35 (mention) — the connector pattern (`beebox/docs/connectors.md`).
@@ -1473,7 +1475,7 @@ References:
 
 #### docs/landmarks.md
 
-Title: "Landmarks" | 322 lines | current reference
+Title: "Landmarks" | 327 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:115 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
@@ -1486,6 +1488,8 @@ Referenced by:
 - docs/implemented-plans/landmark-arrival.md:140 (mention) — Authored documentation: about 230 lines (`docs/landmarks.md` rendering,
 - docs/implemented-plans/nav-card.md:142 (mention) — links (see `docs/landmarks.md`).
 - docs/implemented-plans/open-chat-from-card.md:100 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
+- docs/implemented-plans/place-shows-cards.md:244 (mention) — - **Place** (exists: a landmark's directory, `docs/landmarks.md`). Not a new
+- docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
 - docs/implemented-plans/top-nav-ia.md:204 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/box-screen.md:508 (mention) — - **Agent guidance.** The `nav.card` instructions (`src/schemas/nav.ts`) name the avatar menu for the box-wide pages and
@@ -2226,7 +2230,7 @@ Referenced by:
 - docs/implemented-plans/one-root-box-layout.md:468 (mention) — (`docs/triage.md`).
 - docs/implemented-plans/questions-end-to-end.md:40 (mention) — ask time). `docs/triage.md:131` already demands this: *"needing to carry both
 - docs/implemented-plans/scanner-ingest.md:609 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
-- docs/landmarks.md:34 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
+- docs/landmarks.md:34 (mention) — A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/cli-restructure.md:95 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `bbx intake`, but the bare `bbx intake` is now
 - docs/plans/gmail-admission-and-preparation.md:14 (link) — already exist in [`triage.md`](../triage.md) and the
@@ -2237,7 +2241,7 @@ Referenced by:
 - docs/unimplemented-plans/design-vision-superseded.md:17 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
 - docs/user-stories/catalog/2026-06-26.md:1672 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:418 (mention) — both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
+- src/core/agent-guide/guide.md:421 (mention) — both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
 - ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md:40 (mention) — `beebox/docs/triage.md` aligned with the corrected transport.
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:28 (mention) — (`docs/triage.md`).
 - ../issues/decisions/2026-08-01-scan-handler-move-into-place.md:9 (mention) — `docs/triage.md`, the handle stage needs a `procedure:` (inline or
@@ -2386,7 +2390,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:193 (mention) — Two flagged cases: `landmark-curation.md` is written as second-person
 - docs/implemented-plans/landmark-arrival.md:142 (mention) — `docs/box/landmark-curation.md`; one knowledge-audit entry). Schema
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:264 (mention) — (`docs/landmark-curation.md`, `docs/triage.md`) that don't exist in
-- src/core/agent-guide/guide.md:394 (mention) — Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
+- src/core/agent-guide/guide.md:397 (mention) — Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:12 (mention) — > Closed 2026-09-24: moved to `beebox/docs/box/landmark-curation.md` (with `read-when:`), so it ships as `node_modules/b
 - ../issues/features/2026-07-09-memory-gardener-consolidation-loop.md:32 (mention) — - **Landmark curation** (`beebox/docs/box/landmark-curation.md`) — curates the *navigation
 - ../research/openclaw-hermes/compare-skills-tools.md:59 (mention) — by `docs/landmark-curation.md`). None of these have a formal create/edit/patch/delete tool
@@ -2462,6 +2466,7 @@ Referenced by:
 - docs/box-guidance.md:140 (link) — [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
 - docs/box-layout.md:253 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
 - docs/cards/validation.md:56 (link) — `markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
+- docs/implemented-plans/place-shows-cards.md:215 (mention) — schemas can define it (`docs/box/schemas.md:185-205`, the `plant` example
 - docs/implemented-plans/plugins-slice-2.md:137 (mention) — (`docs/box/schemas.md:236-262`); the loader reads it at
 - docs/implemented-plans/plugins.md:97 (mention) — - `docs/box/schemas.md:204`: *"Schema and view code ... may only import from
 - ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md:11 (mention) — Fixed 2026-10-08: The escaped backticks are plain in `beebox/docs/box/schemas.md`.
@@ -2508,7 +2513,7 @@ Title: "Triage instructions and replay" | 133 lines | current reference
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:405 (mention) — is on-demand `docs/box/triage-instructions.md`, with short discoverability pointers
 - docs/triage.md:94 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
-- src/core/agent-guide/guide.md:423 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
+- src/core/agent-guide/guide.md:426 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:153 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
 
 #### docs/box/tricks.md
@@ -2521,7 +2526,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:621 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/box-agents-md.md:347 (mention) — (`docs/box-guidance.md`, `docs/box-layout.md`, `docs/box/tricks.md`), the
 - docs/implemented-plans/doc-structure-box-guidance.md:395 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
-- src/core/agent-guide/guide.md:546 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
+- src/core/agent-guide/guide.md:549 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:14 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 
 #### docs/box/what-you-could-do.md
@@ -2753,7 +2758,7 @@ Title: "Quick chat" | 298 lines | current reference
 Referenced by:
 - docs/chat.md:13 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
 - docs/design/trust.md:49 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
-- docs/landmarks.md:225 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
+- docs/landmarks.md:230 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
 - docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:18 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:24 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
@@ -5131,8 +5136,7 @@ Title: "Landmark arrival" | 940 lines | shipped history | implemented
 
 Referenced by:
 - docs/cards/migrations.md:322 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
-- docs/landmarks.md:297 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
-- ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:52 (link) — so a place stays short ([landmark arrival](../../beebox/docs/implemented-plans/landmark-arrival.md),
+- docs/landmarks.md:302 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
@@ -5140,8 +5144,9 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md:29 (link) — [landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md)). The
 - ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:45 (link) — (closed; the pill side). [Landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md).
 - ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md:44 (link) — ([landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md),
+- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:54 (link) — so a place stays short ([landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md),
 - ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:53 (link) — Related: [landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md)
-- ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:44 (link) — [Landmark arrival](../../beebox/docs/implemented-plans/landmark-arrival.md).
+- ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:47 (link) — [Landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md).
 
 References:
 - → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (frontmatter)
@@ -5538,6 +5543,34 @@ Referenced by:
 References:
 - → ../issues/features/2026-06-18-avif-webp-for-stored-images.md (frontmatter)
 - → ../issues/features/2026-08-24-pdf-card-page-addressing-gaps.md (frontmatter)
+
+#### docs/implemented-plans/place-shows-cards.md **[ORPHAN]**
+
+Title: "A place shows the person's cards" | 587 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (frontmatter)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (frontmatter)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (frontmatter)
+- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md (link)
+- → ../issues/code-quality/2026-09-20-fold-search-and-browse-summaries-onto-summarize.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
+- → src/core/agent-guide/guide.md (mention)
+- → ../issues/closed/features/2026-09-27-card-properties-design-session.md (link)
+- → docs/box/schemas.md (mention)
+- → docs/landmarks.md (mention)
+
+#### docs/implemented-plans/place-shows-cards.review.md **[ORPHAN]**
+
+Title: "Plan review — place-shows-cards" | 64 lines | implementation review
+
+References:
+- → src/core/agent-guide/guide.md (mention)
+- → docs/landmarks.md (mention)
 
 #### docs/implemented-plans/plugins-design-notes.md
 
@@ -6632,7 +6665,7 @@ Title: "Unified app bar: one nav for chat and everything else" | 542 lines | shi
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:9 (mention) — **Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
 - docs/implemented-plans/nav-card.md:18 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
-- docs/landmarks.md:176 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
+- docs/landmarks.md:181 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/plans/box-screen.md:43 (mention) — - This changes shipped navigation from `beebox/docs/implemented-plans/top-nav-ia.md`: line 296 puts Dashboard, Browse, H
 - docs/questions.md:256 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - docs/user-stories/catalog/2026-08-21.md:9051 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
@@ -9366,7 +9399,7 @@ References:
 
 #### src/core/agent-guide/guide.md
 
-Title: "Bee Box Agent Guide" | 629 lines
+Title: "Bee Box Agent Guide" | 632 lines
 
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header
@@ -9374,6 +9407,8 @@ Referenced by:
 - docs/glossary.md:20 (mention) — Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
 - docs/implemented-plans/agent-guide-spec.md:171 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
+- docs/implemented-plans/place-shows-cards.md:184 (mention) — when the agent edits a landmark (`src/core/agent-guide/guide.md:393`).
+- docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/implemented-plans/remove-telegram.md:152 (mention) — - **Agent-facing text:** `src/core/agent-guide/guide.md:309, 405`,
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
@@ -9708,8 +9743,8 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 55),
 - ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md:19 (link) — ([A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) row 9,
 - ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:24 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), R3).
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:23 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 37, 38, 78).
 - ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md:18 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row R5); a later agent may.
-- ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md:21 (link) — ([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 37, 38, 78).
 - ../issues/features/2026-08-19-collection-views-are-badly-defined.md:548 (link) — The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/report
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:91 (link) — Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no del
@@ -9727,7 +9762,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md (link)
-- → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
 - → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
@@ -9764,10 +9799,9 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:49 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 3,
 - ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md:49 (link) — Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 46.
 - ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:58 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 12,
-- ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md:53 (link) — Seen again in three walks. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a loan
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:121 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/tes
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:95 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
-- ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:46 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R6,
 
 References:
 - → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
@@ -9782,7 +9816,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
 - → ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md (link)
-- → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
 - → ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
@@ -9791,7 +9825,7 @@ References:
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
 - → ../issues/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md (link)
-- → ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md (link)
 - → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
@@ -9943,7 +9977,6 @@ Referenced by:
 - ../issues/bugs/2026-10-09-capture-delivery-does-not-anchor-like-a-send.md:16 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 17, shot 06).
 - ../issues/bugs/2026-10-09-capture-shows-no-preview-of-added-photos.md:16 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 13).
 - ../issues/bugs/2026-10-09-image-lightbox-has-no-dialog-role.md:16 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R7, row 66).
-- ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:62 (link) — [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 23.
 - ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md:36 (link) — [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 65.
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
@@ -9953,10 +9986,9 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:47 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R4,
 - ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:50 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 1,
 - ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:59 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R9,
-- ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md:53 (link) — Seen again in three walks. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a loan
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:121 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/tes
 - ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:37 (link) — Improved by agent behaviour, not by the product, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/20
-- ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:47 (link) — [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 57,
 
 References:
 - → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
@@ -9967,13 +9999,13 @@ References:
 - → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
-- → ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
-- → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
 - → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
 - → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
-- → ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
@@ -10075,7 +10107,6 @@ Referenced by:
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
 - ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:44 (link) — Seen again in two walks. [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45): "Co
 - ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:35 (link) — Evidence from [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 61): the walker rea
-- ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:60 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) rows 14 and 69,
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
 - ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md:36 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md).
@@ -10088,15 +10119,14 @@ Referenced by:
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:95 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
 - ../issues/features/2026-09-27-ack-badge-design-review.md:64 (link) — Seen again in four walks. The ack popover prints `ack.ref` as the link text (`beebox/src/frontend/src/components/chat/ac
 - ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md:26 (link) — Seen again in [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 28): the walker fou
-- ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:48 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 46.
 
 References:
 - → docs/box/todos.md (mention)
 - → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
 - → docs/box/what-you-could-do.md (mention)
-- → ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
 - → src/core/agent-guide/guide.md (mention)
-- → ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
 - → ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md (link)
@@ -10150,10 +10180,10 @@ Referenced by:
 - docs/implemented-plans/landmark-arrival.design.md:14 (link) — [D-chemistry](../../test/user-stories/journeys/D-chemistry/reports/2026-10-08.md)).
 - test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md:159 (link) — Against [2026-10-08](2026-10-08.md). The morning walk ([2026-10-09](2026-10-09.md)) built no course; its filed issues ar
 - ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:17 (link) — [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 11),
-- ../issues/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md:31 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 56, shot 19).
 - ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md:37 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (rows 65, 70).
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:19 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 15),
+- ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md:34 (link) — Report: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 56, shot 19).
 - ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:43 (link) — | [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (R4) | 7 in 5 root-chat tu
 - ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:49 (link) — [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 63),
 - ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:20 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
@@ -10161,7 +10191,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:16 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 32, shots 08 to 09;
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:20 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 6),
 - ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:26 (link) — ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), R1).
-- ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md:25 (link) — ([report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), row 30).
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:27 (link) — ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), row 30).
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
 - ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:43 (link) — Partly met in the [D-chemistry walk](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (closing
 - ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:30 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 67, shot 22).
@@ -10173,10 +10203,10 @@ References:
 - → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
-- → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
-- → ../issues/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
 - → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
 - → ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
@@ -10194,7 +10224,6 @@ Referenced by:
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
 - ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md:41 (link) — Re-checked in [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 47; reproduced in `
 - ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:24 (link) — Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show
-- ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:59 (link) — [D-chemistry second walk](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 15,
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
@@ -10202,8 +10231,9 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:50 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R3.
 - ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md:40 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 40.
 - ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:48 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) rows 2 and 41,
+- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:61 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 15,
 - ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:62 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R4.
-- ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md:53 (link) — Seen again in three walks. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a loan
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
 - ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:47 (link) — Partly met, less than on 2026-10-08, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.m
 - ../issues/features/2026-09-27-ack-badge-design-review.md:64 (link) — Seen again in four walks. The ack popover prints `ack.ref` as the link text (`beebox/src/frontend/src/components/chat/ac
 - ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:34 (link) — Mostly met, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 46, 49, 67-68).
@@ -10216,12 +10246,12 @@ References:
 - → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
 - → docs/box/what-you-could-do.md (mention)
 - → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
-- → ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
 - → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
 - → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
 - → ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
-- → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md (link)
 - → ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (link)
 - → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
@@ -10238,7 +10268,7 @@ References:
 - → test/user-stories/journeys/D-chemistry/reports/2026-10-08.md (link)
 - → test/user-stories/journeys/D-chemistry/reports/2026-10-09.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
 - → ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md (link)
 - → ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (link)
@@ -10254,7 +10284,6 @@ Referenced by:
 - ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (link) — Seen again in [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../beebox/t
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
 - ../issues/bugs/2026-10-09-cards-refer-to-the-person-as-they.md:32 (mention) — (`beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md`, row
-- ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:58 (link) — Reports: [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 26,
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:57 (link) — A fourth case sits on the closed [chat-agent-narrates-internal-bookkeeping](../docs-and-chores/2026-08-06-chat-agent-nar
@@ -10279,7 +10308,7 @@ References:
 - → ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md (link)
 - → ../issues/closed/docs-and-chores/2026-09-21-bbx-create-template-args-hard-to-discover.md (link)
 - → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
-- → ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
 - → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
 - → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
 - → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
@@ -10291,10 +10320,10 @@ References:
 - → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
-- → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
-- → ../issues/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
 - → ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
 - → ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md (link)
@@ -10391,7 +10420,6 @@ Referenced by:
 - ../issues/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md:14 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 49, shot 17).
 - ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md:30 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 42, 55, 81; harness note H3)
 - ../issues/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md:18 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 72, 73).
-- ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:61 (link) — [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 65,
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Se
@@ -10413,7 +10441,7 @@ References:
 - → ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md (link)
 - → ../issues/docs-and-chores/2026-10-09-box-docs-do-not-say-how-to-turn-on-notifications.md (link)
 - → ../issues/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md (link)
-- → ../issues/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
 - → ../issues/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
 - → ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md (link)
@@ -10421,7 +10449,7 @@ References:
 - → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
 - → ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
 - → ../issues/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md (link)
-- → ../issues/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
 - → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
 - → ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md (link)

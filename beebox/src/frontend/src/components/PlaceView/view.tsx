@@ -9,7 +9,7 @@
  * has no header, draws them here. The fields stay under Properties
  * (`CardFacts`). See
  * docs/implemented-plans/landmark-arrival.md, Track C, and
- * docs/plans/place-shows-cards.md, Track C.
+ * docs/implemented-plans/place-shows-cards.md, Track C.
  *
  * `PlaceView` fetches `landmarks.forDir` for the card's folder and owns the
  * loading and error states; `PlacePage` renders a loaded payload.

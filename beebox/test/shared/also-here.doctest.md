@@ -1,7 +1,7 @@
 # Choosing the "Also here" cards
 
 `alsoHere(ordinary, { shownRefs, cap })` picks the place page's "Also here"
-cards from the pruned walk's ordinary list (docs/plans/place-shows-cards.md,
+cards from the pruned walk's ordinary list (docs/implemented-plans/place-shows-cards.md,
 Track A): it drops cards already shown, orders the rest most recently changed
 first with the path as tie-break, and caps the list while counting all of
 them.

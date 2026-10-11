@@ -229,7 +229,7 @@ await tryLoad("---\nthread-id: t1\n---\n", "x.unknown.card")
 
 ## A landmark may carry a body, the place summary
 
-The landmark type declares a markdown body (docs/plans/place-shows-cards.md,
+The landmark type declares a markdown body (docs/implemented-plans/place-shows-cards.md,
 Track C). A landmark with one loads with it; one without still loads, with an
 empty body.
 

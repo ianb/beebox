@@ -184,7 +184,7 @@ await box.write("_content/house/Log.memo.card", "---\nprominence: entry-point\n-
 ## "Also here" lists the place's other cards, most recently changed first
 
 With `expandsAsGroups`, the last group is "Also here": the place's ordinary
-cards that no tier or other group shows (docs/plans/place-shows-cards.md,
+cards that no tier or other group shows (docs/implemented-plans/place-shows-cards.md,
 Track A). A pinned card, an entry point, an expand group's cards, a chat husk
 (background by type) and a nested place's card are not in it.
 
@@ -353,7 +353,7 @@ await box.cleanup();
 ## A tile carries its card type's summary line
 
 Each row carries `detail`, the line the card's type writes about itself
-through `summarize` (docs/plans/place-shows-cards.md, Track B). A box-authored
+through `summarize` (docs/implemented-plans/place-shows-cards.md, Track B). A box-authored
 `loan` type writes who has it and when it is due. The loan cards do not
 write `type:` on disk; the type comes from the filename, as loading a card
 does, so the line is still there. A card whose type writes no line, a
