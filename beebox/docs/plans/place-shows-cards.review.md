@@ -51,3 +51,13 @@ Round-1 findings 2-9 verified resolved; finding 1 partly resolved. Three fresh f
 1. Existing bodyless places would never get a body under an "update if untrue" rule. Fixed: the guide line says to write a summary when the landmark has none; Rollout adds a real-agent check of a card-save turn against a bodyless place and against a place with a body.
 2. Card-page `detail` would be dropped in `useFileData` (`components/file-view-data.ts:173`) and `FileData` has no field. Fixed: Track B carries `detail` through both and uses the exported `summarize`.
 3. A capped group would show two overflow counts (`LandmarkSection.tsx:201`). Fixed: `LandmarkGroup` gains `onMore`, which turns its existing "+N more" into the Browse action.
+
+## Diff review (codex gpt-6-sol), 2026-10-11
+
+Round 1 on `git diff main...HEAD`: three findings, all verified and fixed in `ffaca8cb9`.
+
+1. Root-landmark repair (`installRootLandmark`) replaced an inert root landmark whole, dropping an agent-written body. Fixed: the body is kept (a legacy XML body still goes); doctest in `defaults.landmark.doctest.md`.
+2. A tile summarized a card whose written `type:` disagrees with its filename as the filename's type. Fixed: no summary line for a mismatch; doctest case `Mislabeled.loan.card`.
+3. The "Also here" group and an author-named expand group "Also here" shared a React key. Fixed: keys include the group's kind.
+
+Round 2 (verification only): 2 and 3 hold. 1 holds for the reported case. Residual, accepted: a root landmark whose frontmatter does not parse (for example `navigation: 42`) still gets stock frontmatter in place of its own, as on main; its body is now kept. Rare, and not a regression.
