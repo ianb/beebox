@@ -1,6 +1,6 @@
 ---
 title: "Plugins slice 3: connectors stay core"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues: []
 ---

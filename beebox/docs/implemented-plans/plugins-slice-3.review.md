@@ -1,6 +1,6 @@
 ---
 title: "Plugins slice 3: plan review record"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues: []
 ---

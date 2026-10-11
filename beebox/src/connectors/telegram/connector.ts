@@ -74,7 +74,6 @@ function mergeIngestState(fresh: TelegramState, working: TelegramState): Telegra
 
 class TelegramConnector implements Connector {
   name = "telegram";
-  produces = ["chat-thread"];
   inboxPaths: string[] = [];
   triggeredBy?: string;
 

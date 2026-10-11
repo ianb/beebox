@@ -69,7 +69,6 @@ interface GoogleCalendarConnectorOptions {
 
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
-  produces = ["calendar-event"];
   inboxPaths: string[] = [];
   triggeredBy?: string;
 

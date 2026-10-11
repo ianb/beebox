@@ -29,7 +29,6 @@ import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { createGoogleAuthService } from "../../services/google-auth.js";
 import { createGoogleDriveService } from "../../services/google-drive/core.js";
 import type { GoogleDriveService } from "../../services/google-drive/core.js";
-import { getAllDriveHandlers } from "./handlers.js";
 import { findDriveCardTracking, type TrackedDriveCard } from "./tracking.js";
 import { stampGlinkCard } from "./card-stamp.js";
 import { syncDriveFile } from "./file-sync.js";
@@ -51,7 +50,6 @@ export {
 
 class GoogleDriveConnector implements Connector {
   name = "google-drive";
-  produces: string[];
   inboxPaths: string[] = [];
   triggeredBy?: string;
 
@@ -61,8 +59,6 @@ class GoogleDriveConnector implements Connector {
   constructor(boxRoot: string, service?: GoogleDriveService) {
     this.boxRoot = boxRoot;
     this.injectedService = service;
-    // Produce all card types from registered handlers
-    this.produces = getAllDriveHandlers().map((h) => h.cardType);
   }
 
   private async getService(): Promise<GoogleDriveService | null> {

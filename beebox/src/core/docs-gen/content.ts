@@ -24,11 +24,11 @@ const CONNECTORS: ConnectorInfo[] = [
   {
     name: "gmail",
     produces: ["email-thread", "email-message"],
-    description: "Pulls emails from Gmail via IMAP. Creates thread directories with message cards and body text files.",
+    description: "Pulls mail through the Gmail API. Creates thread directories with message cards and body text files; sends the agent's `email-outbound` drafts.",
   },
   {
     name: "google-drive",
-    produces: ["gsheet", "gdoc"],
+    produces: ["gdoc", "gsheet", "gfolder", "glink"],
     description: [
       "Two-way sync with Google Drive. Spreadsheets become `.gsheet.card` files with JSON tabs;",
       "Google Docs become `.gdoc.card` files with sibling markdown. Push detects conflicts when",
@@ -54,10 +54,11 @@ const CONNECTORS: ConnectorInfo[] = [
   },
   {
     name: "telegram",
-    produces: ["telegram-message"],
+    produces: ["chat-thread"],
     description: [
-      "Messages the boxholder sends the box's Telegram bot arrive as cards under",
-      "`_content/chat/telegram/`; replies go back through the same chat. There is nothing to",
+      "Messages the boxholder sends the box's Telegram bot arrive as `chat-thread` cards under",
+      "`_content/chat/telegram/`; replies go back through the same chat, and the agent's pending",
+      "`telegram-message` cards in `_bookkeeping/output/` are sent. There is nothing to",
       "author by hand: a Telegram conversation is a chat like any other.",
     ].join("\n"),
   },
