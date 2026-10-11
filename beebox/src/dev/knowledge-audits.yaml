@@ -1913,7 +1913,7 @@ tests:
   - id: chat-thread-participants
     prompt: "How do I know who's in a chat thread?"
     expected_level: knows_about
-    watch_for: "Mentions <participants> element with <person ref='people/...'> references"
+    watch_for: "Mentions the participants: list in the frontmatter, with ref: entries pointing at people cards"
     should_read: ["node_modules/beebox/box-docs/card-chat-thread.md"]
     correct_contains: ["participants"]
     tags: [chat, processing]

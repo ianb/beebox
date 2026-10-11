@@ -52,3 +52,27 @@ edited or kept) and the doc-graph link is in Track 1.
 ## Reviewer's single most important change
 Ship Track 1 first and assess Track 2 separately. Put to the boxholder as
 the plan's one open question; decided in, with the retro reader kept.
+
+## Diff review (codex gpt-6-sol, 2026-10-11)
+
+Round 1 traced the two-channel plan, a web-push-only box, an old
+`telegram` log line, `question-alert` with no channel, per-box secret
+requirements, the retro walker, the reactor type filter and the moved
+chat-run files: no runtime regression. Three misses, all fixed: nine
+knowledge audits and a ledger row still rewarded appending to an
+archive-only chat-thread card (deleted; `commands.finish` keeps its rule
+with no audit); the published architecture chapter and outline named a
+Telegram family group as current (reworded to the web chat); the active
+iOS plan called Telegram its shipped fallback (now says it was removed).
+
+Round 2 verified the fixes against an older diff and listed five
+residuals: two were already fixed (the `commands.finish` audit reference,
+the cards doctest's `chat-job` expectations); the `chat-thread-participants`
+audit now describes the YAML `participants:` list; the chapter's image and
+diagram descriptions and the outline's flashback no longer say Telegram;
+`source-available-release.md` cites the removed admin flow as history;
+the two comments read correctly. Accepted, not changed: the architecture
+narrative's "group chat" premise. The manifest labels the chapter a
+fictional household story, and a shared family conversation is the
+design it illustrates, not a claim about the web chat; replacing it is a
+rewrite of the story, outside this removal.

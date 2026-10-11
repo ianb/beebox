@@ -112,7 +112,7 @@ What the reader should understand:
 
 ## 5. How It Got Here / How It Changes
 
-**Story: Flashback.** Diana set up the box a few months ago. Connected her Gmail and set up labels for the box — swim team emails, school announcements, pharmacy notifications. Added Rosa to the Telegram group. The box started figuring out what each kind of email meant and what to do with it.
+**Story: Flashback.** Diana set up the box a few months ago. Connected her Gmail and set up labels for the box — swim team emails, school announcements, pharmacy notifications. Added Rosa to the box. The box started figuring out what each kind of email meant and what to do with it.
 
 **Story: Something new.** James starts sending photos of his posted work schedule to the group chat instead of just to Diana. The box sees a new kind of input, figures out what it is, starts parsing it. The first time it gets the format wrong. It asks. It learns.
 
