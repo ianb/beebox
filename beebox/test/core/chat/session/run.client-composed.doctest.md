@@ -2,7 +2,7 @@
 
 Claude Code treats prompt text as something a person typed: it can turn
 `@path` mentions into file attachments and dispatch a leading `/` as a
-command. Text that comes from somewhere else (another Telegram participant, a
+command. Text that comes from somewhere else (another participant's message, a
 script's self-note, a fired schedule, card content inlined into an agent run)
 must not get that treatment. The SDK's `client_composed` marks one streamed
 message that way; `verbatimPrompts` marks every message of a query.
@@ -13,7 +13,6 @@ query, so they mark the whole query.
 
 ```ts setup
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
-import { ChatThreadSession } from "../../../../src/core/chat/session/thread.js";
 import { combineQueuedInputs } from "../../../../src/core/chat/session/state.js";
 import { buildQueryOptions } from "../../../../src/core/agent/invoke/run.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
@@ -62,35 +61,6 @@ JSON.stringify([
 ```
 
 (`null` is how `JSON.stringify` prints a missing entry in an array.)
-
-## Telegram thread sessions mark every turn
-
-A thread session's input is other chat participants' messages, so every
-turn is composed.
-
-```ts
-const box = await makeTmpBox({ git: true });
-const backend = createFakeChatBackend();
-const session = new ChatThreadSession({
-  boxRoot: box.root,
-  threadRef: "chats/Jane_Doe.chat.card",
-  chatDescription: "Jane Doe",
-  backend,
-});
-const turn = session.send('<chat-message from="Jane">hi</chat-message>');
-await waitForRuns(backend, { count: 1, timeoutMs: 2000 });
-const run = backend.lastRun();
-run.emitSessionInit("sess-thread-cc");
-run.emitResult();
-await turn;
-
-JSON.stringify(run.sentClientComposed)
-=> [true]
-```
-
-```ts cleanup
-await box.cleanup();
-```
 
 ## Agent runs mark the whole query
 

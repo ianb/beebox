@@ -167,42 +167,6 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
     },
     reactions: [],
   },
-  chat: {
-    jobTypes: "chat-job",
-    appliesTo: "Use when processing chat messages from messaging connectors (Telegram, etc.)",
-    actions: [
-      {
-        name: "Respond",
-        when: "Direct question, request for help, or when you have genuinely useful information",
-        instructions: "Append an entry to the thread's entries[] with kind: message, sender: agent, and text: <your reply>. Keep it conversational and concise.",
-      },
-      {
-        name: "Acknowledge",
-        when: "Casual chatter, messages between other people, or when silence is appropriate",
-        instructions: "Append an entry to entries[] with kind: seen. Optionally include text (note-to-self) and callback-in.",
-      },
-      {
-        name: "Follow Up",
-        when: "Something needs checking later (e.g. unanswered question, pending task)",
-        instructions: "Append an entry to entries[] with kind: seen, callback-in: 30m (or other duration), and text: <what to check>. Schedules a re-invocation.",
-      },
-    ],
-    triageRules: [
-      "Direct questions or @mentions → Respond",
-      "Logistics requests (pickups, scheduling, reminders) → Respond",
-      "Casual conversation between other people → Acknowledge",
-    ],
-    defaultAction: {
-      action: "Acknowledge",
-      text: "When unsure whether to respond, stay quiet — unsolicited messages are annoying",
-    },
-    experiment: {
-      id: "exp-initial",
-      hypothesis: "Default to silence; learn which messages actually need responses",
-      approach: "Start conservative, observe what kinds of messages get follow-up questions when ignored",
-    },
-    reactions: [],
-  },
 };
 
 /**

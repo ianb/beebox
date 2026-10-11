@@ -3,7 +3,7 @@
  *
  * A session qualifies for observation when it (1) is a chat session —
  * it has real human-input tagged messages (chat tags its
- * input) or appears in a chat registry (telegram sends raw text, so the
+ * input) or appears in a chat registry (a retired connector sent raw text, so the
  * registry is the marker there) — with at least one user message,
  * (2) has been quiet past the quiescence window (don't observe a
  * conversation in progress), and (3) isn't already settled in walker

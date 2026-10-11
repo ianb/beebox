@@ -16,7 +16,6 @@ import type { createAgent as realCreateAgent } from "../../agent/invoke/core.js"
 import type { generateDocs as realGenerateDocs } from "../../docs-gen/generate/core.js";
 import { findJobCards } from "../job-discovery.js";
 import { processBatchJobs } from "./batch-jobs.js";
-import { processChatJobs } from "./chat-jobs.js";
 import type { runSync as realRunSync } from "./subprocess.js";
 import type { JobWithContent, ProcessJobsOptions } from "../types.js";
 import type { ReactorResult } from "./core.js";
@@ -234,8 +233,7 @@ async function readJobsWithContent(opts: {
 }
 
 /**
- * Process the agent jobs for one cycle. Chat jobs run individually with
- * per-thread session reuse; everything else batches into a single session.
+ * Process the agent jobs for one cycle, batched into a single session.
  * Returns true when there are no agent jobs to run.
  */
 async function processAgentJobs(opts: {
@@ -254,8 +252,5 @@ async function processAgentJobs(opts: {
     onLog,
     createAgent: agentFactory,
   };
-  if (typeFilter === "chat") {
-    return processChatJobs(jobOpts);
-  }
   return processBatchJobs(jobOpts);
 }

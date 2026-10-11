@@ -38,7 +38,6 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "gdoc" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "procedure" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "procedure-run" }, { listUI: { icon: JobIcon } });
-  registerFileType({ type: "chat-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "intake-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "question-followup-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "briefing" }, { listUI: { icon: DocumentIcon } });

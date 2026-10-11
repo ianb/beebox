@@ -13,7 +13,7 @@ import { collectPrompts } from "../prompt-inventory.js";
 import { estimateTokens, findDuplication, type DuplicationFinding, type Fragment } from "./duplication.js";
 import { assertUniqueNames, inventoryName, layerName } from "./naming.js";
 
-const SITUATION_ORDER = ["chat", "chat-thread", "reactor"] as const;
+const SITUATION_ORDER = ["chat", "reactor"] as const;
 
 export interface LayerData {
   /** Stable kebab name, e.g. `chat/claude-md`. */

@@ -12,7 +12,7 @@
  */
 
 import * as path from "node:path";
-import { safeFilename } from "../../job-cards/chat-utils.js";
+import { safeFilename } from "../../lib/safe-filename.js";
 import { getHandlerForMimeType } from "./handlers.js";
 import {
   GFOLDER_CARD_TYPE,

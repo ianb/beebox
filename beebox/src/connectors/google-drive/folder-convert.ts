@@ -19,7 +19,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createGfolderTemplate } from "../../schemas/gfolder.js";
-import { safeFilename } from "../../job-cards/chat-utils.js";
+import { safeFilename } from "../../lib/safe-filename.js";
 import { gfolderCardsIn } from "./folder-cards.js";
 import { DriveMountError } from "./mount-errors.js";
 import { resolveMountTarget } from "./mount-path.js";

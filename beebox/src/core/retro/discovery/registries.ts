@@ -3,9 +3,11 @@
  *
  * Chat transcripts share `~/.claude/projects/<encoded-box>/` with wakeup,
  * job, and procedure runs. The chat registries under `.beebox/` map
- * session ids back to their chat surface (webapp history, telegram thread
- * cards) so observations can carry thread provenance. Note: the thread
- * registries record only each thread's *current* session — rotated-away
+ * session ids back to their chat surface (webapp history, thread cards) so
+ * observations can carry thread provenance. The two thread-keyed files were
+ * written by the retired Telegram thread sessions and exist only on boxes
+ * that used them; a box without them has no thread provenance to read. Note:
+ * the thread registries record only each thread's *current* session — rotated-away
  * ids survive only in the webapp history file — so these are provenance
  * hints, not a gate. The walker's actual chat test is the presence of real
  * (human-input-tagged) user messages in the transcript.
@@ -19,7 +21,7 @@ import { errnoCode } from "../../../shared/error-guards.js";
 
 const HISTORY_FILE = ".beebox/chat-session-history.json";
 
-/** Thread-keyed registries: `{ "<thread ref>": { sessionId, ... }, ... }`. */
+/** Thread-keyed registries, written by the retired thread sessions: `{ "<thread ref>": { sessionId, ... }, ... }`. */
 const THREAD_REGISTRY_FILES = [
   ".beebox/chat-thread-sessions.json",
   ".beebox/chat-sessions.json",

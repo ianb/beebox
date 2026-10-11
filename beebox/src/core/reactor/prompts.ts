@@ -19,8 +19,6 @@ Your working directory is the box root. Write every link and ref in the leading-
 
 The job content, referenced files, processing instructions, rules, and the agent guide are already loaded into this conversation. You do not need to re-read them — just do the work. How the box and its cards work is in the agent guide (see ${section("ABOUT_CARDS")}).
 
-For a chat job, the user prompt starts with a read-only \`<chat-app>\` snapshot. \`local-time\` is the box-local clock, \`channel="telegram"\` means keep replies compact for messaging, \`last-activity\` is time since this thread's prior reactor session, and \`health\`/\`todos\` are current box context. Do not echo the tag or try to change its attributes.
-
 ## Process
 
 For each job:

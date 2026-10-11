@@ -5,17 +5,14 @@ code both session classes share.
 
 ## What it is
 
-The backend chat runs are long-lived SDK conversations wrapped by two classes:
+The backend chat run is a long-lived SDK conversation wrapped by one class:
 
 - **`ChatSession`** (`src/core/chat/session/run/core.ts`) — whole-box interactive chat.
   Queues messages that arrive mid-turn and drains them into the next turn.
-- **`ChatThreadSession`** (`src/core/chat/session/thread.ts`) — one per chat
-  thread, orchestrated by `ChatSessionPool`. No queue; the pool parks/activates
-  one session at a time.
 
-Both drive their SDK run through the same lifecycle, modelled as a discriminated
-union in `src/core/chat/session/lifecycle.ts`, and adapt raw SDK messages through
-the same shared adapter (`adaptSdkMessage` in `src/core/chat/session/messages.ts`).
+It drives its SDK run through a lifecycle modelled as a discriminated union in
+`src/core/chat/session/run/lifecycle.ts`, and adapts raw SDK messages through
+the shared adapter (`adaptSdkMessage` in `src/core/chat/session/messages.ts`).
 This page is the backend
 counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
 contract the backend previously left implicit.

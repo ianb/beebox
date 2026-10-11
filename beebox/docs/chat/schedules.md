@@ -64,7 +64,6 @@ The `<schedule-fired>` message sent to the agent is a user-type message wrapped 
 |------|------|
 | `src/core/chat/schedules/core.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
 | `src/core/chat/session/run/core.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
-| `src/core/chat/session/thread.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
 | `src/webapp/routes/chat/register.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
 | `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
 | `src/webapp/trpc/routers/chat/control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |

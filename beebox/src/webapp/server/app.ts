@@ -46,7 +46,6 @@ import {
   DEV_BUNDLE_RELOAD_ABORTED,
 } from "../../lib/dev-bundle-reload.js";
 import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../../core/chat/schedules/core.js";
-import { quiesceChatThreads, chatThreadsAreIdle } from "../../core/chat/session/thread.js";
 import { getChatRuntime } from "../chat-runtime.js";
 import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance.js";
 import { TRPC_MAX_URL_LENGTH } from "../../shared/trpc-url-limit.js";
@@ -424,9 +423,8 @@ export async function startServer(options?: InternalServerOptions): Promise<void
           if ((await boxMaintenanceStatus(box.boxRoot))?.owner) {
             pauseBoxChatSchedules(box.boxRoot);
             paused.add(box.boxRoot);
-            if (boxRequestsAreIdle(box.boxRoot) && !runtime.registry.snapshotAll().some((session) => session.busy) && chatThreadsAreIdle(box.boxRoot) && boxChatScheduleDeliveriesAreIdle(box.boxRoot)) {
+            if (boxRequestsAreIdle(box.boxRoot) && !runtime.registry.snapshotAll().some((session) => session.busy) && boxChatScheduleDeliveriesAreIdle(box.boxRoot)) {
               runtime.registry.quiesceForMaintenance();
-              quiesceChatThreads(box.boxRoot);
             }
           } else if (paused.delete(box.boxRoot)) {
             runtime.registry.resumeAfterMaintenance();
