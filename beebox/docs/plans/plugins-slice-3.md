@@ -7,12 +7,13 @@ issues: []
 # Plugins slice 3: connectors stay core
 
 The plugins plan deferred "connectors as plugins" to a third slice. This plan
-sizes that move against the code and recommends not making it: the three
-Google connectors are intake, intake is medium, and the plugin mechanism (a
-library a box completes through stubs, nothing new at runtime) does not fit
-code that runs at wakeup under shared credentials. The deliverable is the
-decision, recorded where the next reader looks, plus the two small finds the
-sizing turned up.
+sizes three shapes of that slice against the code and recommends the
+smallest: the connectors stay core. The three Google connectors are the
+box's intake for mail, calendar and drive, intake is medium, and the plugin
+mechanism (a library a box completes through stubs, nothing new at runtime)
+does not fit code that runs at wakeup under shared credentials. The
+deliverable is the boxholder's decision among the three shapes, recorded
+where the next reader looks, plus the small finds the sizing turned up.
 
 **Issues addressed:** none resolved. Related, found by grepping the queue for
 `connector`, `plugin`, `telegram`:
@@ -38,27 +39,55 @@ against it, not a design to make.
 `docs/plugins.md` and the design notes so the next planner does not re-derive
 it. Estimated 40 changed lines of authored docs, no source.
 
-**Chosen:** the smallest fix plus two issues the sizing found (Track 2) and
-one dead field (Track 3, 10 source lines, 5 test lines). Total under 100
-changed lines; docs and issues reported separately: about 80 lines.
+**Chosen (shape A):** the smallest fix plus two issues the sizing found
+(Track 2) and one dead field with its wrong generated docs (Track 3, about
+20 source lines, 5 test lines). Total under 120 changed lines; docs and
+issues reported separately: about 90 lines.
 
-**The fuller option, sized, not chosen.** Move Gmail, Google Calendar and
-Google Drive under `src/plugins/<name>/` with a `connectors` hook on
-`PluginDefinition`:
+Two fuller shapes are sized here so the boxholder chooses with the numbers.
+The boxholder's "go ahead and implement" came before this sizing; the
+bbx-plan rule is that a BIG CHANGE needs approval at its measured size, so
+shape C is a question, not a refusal.
+
+**Shape B: declarative connector plugins, code stays put.** A
+`src/plugins/gmail/plugin.ts` (and `google-calendar`, `google-drive`) with
+`schemas: undefined` and a new declarative field, `connectors: ["gmail"]`:
+connector names the engine resolves through the existing ordered registry
+(`src/connectors.ts:37`). A plugin file cannot import the connector
+(`plugin-imports`), so the hook is a name, and `bbx plugins list` resolves
+it to `present` or `missing` as it does for views. Activation becomes the
+one switch: `googleServices.<name>` (`src/core/box/config.ts:72`) retires,
+`isGoogleServiceAllowed` (`:158`) reads the active plugin list, the admin
+Google services toggles write `plugins`, a migration copies each `true`
+toggle into a `plugins` entry on every box, and the `requirements.ts:56-62`
+table follows. What a person gets: one list of what is on in this box, and
+`bbx plugins list` showing each connector's README beside its state. What
+they lose: nothing; sync behaves as today. Cost: hook field and resolution
+(about 60 lines), three plugin directories with READMEs (about 150 lines of
+docs), the policy switch and admin writer rework (about 120 lines), a
+migration with plan and verify in the body-tags shape (about 150 source, 60
+test), docs and skills that name `googleServices` (eight files). About 450
+source and 150 test lines, plus 200 of docs. The person-facing gain is a
+listing, which `bbx status`, the Google health checks and the connector
+activity checks already provide piecewise.
+
+**Shape C: move the code.** Gmail, Google Calendar and Google Drive under
+`src/plugins/<name>/` with a runtime `connectors` hook on `PluginDefinition`:
 
 | Part | Lines today | What the move needs |
 |---|---|---|
-| Connector code (`src/connectors/gmail`, `google-calendar`, `google-drive`) | 9,679 | moved; every import outside its directory re-routed (see *What already exists*) |
+| Connector code (`src/connectors/gmail`, `google-calendar`, `google-drive`, every `.ts`) | 10,149 | moved; the 54 engine modules they import re-routed (see *What already exists*) |
 | Core that imports connector internals: `bbx calendar`, `bbx connector`, `bbx drive`, tRPC `gmail`/`calendar`/`drive`/`admin.gmail` | 1,394 | stays core, so core imports plugin internals (inverts the boundary) or gains a commands hook and a routers hook that do not exist |
-| Frontend: drive renderers (gsheet, gfolder, glink), Drive and Calendar settings, Gmail filters admin | 1,487 | stays core, keyed by type names a plugin now owns, or a frontend registration path for plugins that does not exist |
+| Frontend: `renderers/{gsheet,gfolder,glink}.tsx`, `settings/CalendarSection.tsx`, `settings/DriveSection/*` (four files), `admin/GmailFiltersSection/*` (two files) | 1,487 | stays core, keyed by type names a plugin now owns, or a frontend registration path for plugins that does not exist |
 | `src/google/*` (auth, tokens, gap, status, access, skip reasons) | 979 | stays core; exported to plugins |
-| New `src/exports/` surface | 0 | about 30 engine modules the three connectors import today, re-exported |
+| New `src/exports/` surface | 0 | the 54 engine modules the three connectors import today, re-exported |
 
-Counted like for like (additions plus deletions), the move alone is over
-19,000 changed lines before any hook, export or test path change. That is a
-**BIG CHANGE** several times over, and the paragraph above is why the plan
-does not propose it: it needs the boxholder's approval at that scale, and the
-sections below show it buys nothing for a person using a box.
+The move is a git rename, cheap in itself; the work is the 54 re-routed
+imports, the export surface and the two hook kinds that do not exist. Like
+for like (additions plus deletions) the diff is over 20,000 lines; the
+effort is the new public surface, which is a slice of its own. **BIG
+CHANGE.** The sections below show it buys a person nothing that shape B does
+not, and shape B's gain is a listing.
 
 ## Stated preferences this plan trades against
 
@@ -66,12 +95,22 @@ sections below show it buys nothing for a person using a box.
   basic medium shouldn't be a plugin, even when parts are obscure"* and
   *"Intake is medium — a box that cannot take material in is not a box."*
   (`issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md`).
-  Connectors are the intake path: Gmail stages inbox items
-  (`src/connectors/gmail/connector.ts:142`, `inboxPaths = [`${BOX_DIRS.inbox}/email`]`),
-  Calendar and Drive write content the person reads. This plan sides with the
-  line over the design notes' candidate table
-  (`docs/implemented-plans/plugins-design-notes.md:189-191`), which listed
-  the connectors for slice 3 before the coupling was measured.
+  The line protects taking material in; it does not by itself say every
+  source-specific integration is medium. The plan's claim is narrower: these
+  three are the box's only intake for mail, calendar and drive, and what
+  binds them to the medium is measured, not asserted: shared Google auth
+  (`src/google/token-store.ts`, one refresh token across the three services
+  and all boxes), the admin flow that connects it
+  (`src/webapp/routes/admin.ts:11-13`), the scheduler alerts
+  (`src/core/schedule/scheduler/google-auth-alert.ts:19`), the default
+  schedules (`src/core/box/structure/defaults.ts:327-370`) and the 54 engine
+  modules they import. The design notes' own list of what *"stays core as
+  medium"* (`docs/implemented-plans/plugins-design-notes.md:193-197`) names
+  intake types and the email and calendar base types; this plan extends it
+  to the connectors that fill them, and sides with that over the candidate
+  table at `:189-191`, written before the coupling was measured. A later
+  source a box is *about* (a feed reader) is content and gets a plugin; the
+  hook it needs is in NOT in scope until it exists.
 - **Minimize invented concepts; prefer primitives** (boxholder feedback,
   recorded in session memory): *"two tiers of anything is a smell"*. A
   connector plugin adds a second activation beside `googleServices`
@@ -116,10 +155,11 @@ sections below show it buys nothing for a person using a box.
   `preserve-agent-fields.js`, the email and drive schemas, the command runner
   and trash command, job-card chat utils, box namespace and ref-path
   resolution, commit trailers, the field-test Gmail gate, and eight
-  `src/shared/*` helpers. Every one is outside the allowed set. The guide's
+  `src/shared/*` helpers: 55 distinct specifiers outside the three
+  directories, of which one (`src/exports/cards.js`) is allowed. The guide's
   rule for that case, `docs/plugins.md` *The import boundary*: a plugin that
-  needs an engine internal means the engine is missing a public piece. Thirty
-  missing pieces is the engine.
+  needs an engine internal means the engine is missing a public piece.
+  Fifty-four missing pieces is the engine.
 - **Google policy and auth** stay core under every option: `googleServices`
   typed at `src/core/box/config.ts:72`, read by `isGoogleServiceAllowed`
   (`:158`), written by the admin router; tokens shared across the three
@@ -142,12 +182,19 @@ sections below show it buys nothing for a person using a box.
   through stubs; they do not join `cardSchemas` (`docs/plugins.md`, *Stubs*),
   so moving the four types means every Drive box writes four stubs and the
   search extractor needs a hook that does not exist.
-- **Dead declaration.** `Connector.produces` (`src/connector.ts:17`) has no
-  runtime reader: the only `.produces` outside `src/connectors/` is the
-  unrelated static `ConnectorInfo` in `src/core/docs-gen/content.ts:157`.
-  Calendar's `produces = ["calendar-event"]`
+- **Dead declaration, and a wrong one beside it.** `Connector.produces`
+  (`src/connector.ts:17`) has no runtime reader in source, tests, the
+  frontend or the wakeup JSON (`src/cli/wakeup-outcome.ts:45`); the only
+  `.produces` outside `src/connectors/` is the hand-maintained static
+  `ConnectorInfo` table in `src/core/docs-gen/content.ts:23-66`, which
+  generates `box-docs/connectors.md` and is wrong on its own: Gmail says
+  *"via IMAP"* (the connector uses the Gmail API through
+  `src/services/google-gmail/core.js`), Drive lists `gsheet, gdoc` and omits
+  `gfolder` and `glink`, Telegram says `telegram-message` where the
+  connector writes `chat-thread` (`src/connectors/telegram/connector.ts:77`).
+  Calendar's class value `produces = ["calendar-event"]`
   (`src/connectors/google-calendar/connector.ts:72`) names a type with no
-  schema. Track 3.
+  schema. Track 3 covers both.
 
 ## Prior art (external)
 
@@ -207,24 +254,33 @@ needs the boxholder's word on whether any does before it is `do-it`.
 
 **First chunk.** The issue file. Same commit as Track 1.
 
-### Track 3: delete `Connector.produces`
+### Track 3: delete `Connector.produces` and correct the generated connector docs
 
 **What.** Remove `produces` from `Connector` (`src/connector.ts:17`) and from
 the four connectors (`gmail/connector.ts:141`, `google-calendar/connector.ts:72`,
-`google-drive/connector.ts:54, 65`, `telegram/connector.ts`), plus any
-doctest line that prints it.
+`google-drive/connector.ts:54, 65`, `telegram/connector.ts:77`), plus any
+doctest line that prints it. Correct the static table in
+`src/core/docs-gen/content.ts:23-66` against each connector's header
+comment: Gmail reads through the Gmail API, not IMAP; Drive produces `gdoc`,
+`gsheet`, `gfolder`, `glink`; Telegram produces `chat-thread`. Regenerate
+`box-docs/connectors.md`.
 
 **Why.** A field with no reader is a promise the engine does not keep
 (principle 4, never silent: a wrong value here is invisible). Calendar's
-`calendar-event` already proves it: declared since the connector was written,
-and nothing noticed.
+`calendar-event` proves it: declared since the connector was written, and
+nothing noticed. The generated docs are the agent-facing claim, and they are
+wrong today in three places the type checker cannot see.
 
-**Direction.** Delete; `getAllDriveHandlers` keeps its other caller
+**Direction.** Delete the field; `getAllDriveHandlers` keeps its other caller
 (`google-drive/tracking.ts:122`). `pnpm typecheck` finds every reader, which
-is the test that the field is dead.
+is the test that the field is dead. The docs table stays hand-maintained
+(it is prose about each connector, not a mirror of a runtime field); its
+`produces` list is checked by eye against `src/schemas.ts:116-127`, where
+the synced card types are registered.
 
-**First chunk.** The deletion and `test/cli/commands/wakeup/connectors.doctest.md`
-if its fake connector carries the field. One commit.
+**First chunk.** The deletion, the table correction, the regenerated box doc,
+and `test/cli/commands/wakeup/connectors.doctest.md` if its fake connector
+carries the field. One commit.
 
 ## Could this be simpler?
 
@@ -249,8 +305,9 @@ The chosen tracks add no codepath. One deletion:
 |---|---|---|---|
 | A reader of `produces` exists that the grep missed | typecheck fails on the deletion | n/a | clear: compile error names the file |
 | A doctest prints a connector object and the snapshot still shows `produces` | that doctest | n/a | clear: the doctest fails |
+| The corrected docs table drifts again when a connector gains a type | none: the table is hand-maintained prose | none | silent, as today; accepted: the table is the connector docs' summary line, and the card docs it links are generated from the schemas |
 
-No critical gap.
+No critical gap; the docs-table drift is accepted above with its reason.
 
 ## Agent-flow / user-flow edge cases
 
@@ -283,11 +340,15 @@ No critical gap.
 
 ## Open design questions
 
-- Whether the boxholder wants the fuller option after all, for a reason this
-  plan does not see (for example, a box that should have no Google code at
-  all). Lean: no. The person-facing gain is nil and the cost is the largest
-  change in the repository's history. If yes, this plan is superseded by one
-  that first builds the public server surface, which is its own slice.
+- **Which shape: A, B or C.** The boxholder's call; this plan is written for
+  A. Lean: A. Shape B's gain is one list of what is on in a box, bought with
+  a box.json migration across every box and an admin UI rework; shape C's
+  gain over B is a smaller `src/connectors/` directory, bought with the
+  largest change in the repository's history. If B, this plan's tracks
+  become its first chunk and a Track 4 (hook, policy switch, migration)
+  follows with its own design section, since the admin toggles change. If
+  C, this plan is superseded by one that first builds the public server
+  surface, which is its own slice.
 
 ## Knowledge audits
 
@@ -296,8 +357,10 @@ Skip: nothing agent-facing changes. The connector docs, skills and the
 
 ## What will hold this after it ships
 
-Track 1 is prose; `pnpm doc-check` holds its links. Track 3 is held by the
-type checker: a future reader of `produces` cannot compile. The decision
+Track 1 is prose; `pnpm doc-check` holds its links. Track 3's deletion is
+held by the type checker: a future reader of `produces` cannot compile. Its
+docs-table correction is held by nothing but the next reader; see Failure
+modes. The decision
 itself is held by `docs/plugins.md`, which `test/plugins.doctest.md` does not
 read, and by this plan under `implemented-plans/`.
 
