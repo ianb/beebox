@@ -1,6 +1,6 @@
 ---
 title: "Comment and reply controls on raw index.html exhibits"
-status: active
+status: implemented
 workstream: exhibits-rethink
 issues: []
 ---
