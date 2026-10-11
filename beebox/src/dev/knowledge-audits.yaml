@@ -591,7 +591,7 @@ tests:
   #
   # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The
   # how-items-enter check now accepts the semantically equivalent phrase
-  # "connected services" after Codex named Gmail, Telegram, Calendar, and Drive.
+  # "connected services" after Codex named Gmail, Calendar, and Drive.
   #
   # Status (2026-07-03): 2/3 pass. REAL GAP: find-memo-cards — agent answers
   # `bbx ls --kind memo` (hallucinated; `bbx ls` has no --kind) instead of the
@@ -1105,7 +1105,7 @@ tests:
     expected_level: knows_directly
     watch_for: >
       No reminder todo or chat nudge: the system sends the question to the
-      boxholder (Telegram or push, when set up) and reminds them once after 7
+      boxholder (push, when set up) and reminds them once after 7
       days. It does not wait forever: it leaves the active view after 30 days
       (half and all of expires-after: when set) and stays answerable.
     correct_matches: ["\\b(?:7|seven)\\s+days?\\b", "\\b30\\s+days?\\b"]
@@ -1936,19 +1936,6 @@ tests:
     correct_contains: ["callback-in"]
     tags: [chat, processing]
 
-  - id: chat-thread-agent-message
-    prompt: "I want to send a message to a Telegram chat from a chat thread. How do I do that?"
-    expected_level: knows_about
-    watch_for: "Appends a kind: message, sender: agent entry to the thread (or creates a telegram-message output card) — and does NOT set sent/id; the connector handles delivery"
-    correct_contains_any: ["sender: agent", "telegram-message"]
-    tags: [chat, processing]
-    notes: >
-      Critical that the agent knows NOT to fill in sent or id — the connector
-      handles delivery. Two valid mechanisms both respect that: appending a
-      kind: message, sender: agent entry to the chat-thread card, or creating a
-      *.telegram-message.card output card. The failure mode is
-      marking the message sent/delivered itself.
-
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.
   - id: chat-thread-seen-note
     prompt: "You're processing a chat-thread card and decide to acknowledge the new messages without replying. Can you leave yourself a note to pick up on your next pass over this thread? How?"
@@ -2016,16 +2003,6 @@ tests:
       guide auto-loads when the agent touches any file in that chat's directory.
       Removed should_read because the agent may answer from codebase knowledge.
 
-  - id: chat-thread-outbound-flow
-    prompt: "After I write a response in a chat thread, how does it actually get sent to Telegram?"
-    expected_level: discoverable
-    watch_for: "Describes the finalize/connector flow: unsent agent message found, sent via API, stamped"
-    correct_contains: ["finalize"]
-    tags: [chat, connectors]
-    notes: >
-      The agent shouldn't need to know the outbound mechanics to process
-      a chat job — just write the response and commit. But understanding
-      the flow helps debug issues. This is discoverable from connector docs.
   # === Todo Lists (retired) ===
   #
   # The dedicated todo-list card type was retired 2026-07-29 (superseded by

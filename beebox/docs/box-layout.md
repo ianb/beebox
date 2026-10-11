@@ -233,7 +233,8 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 | `box-growth-health.json` | Latest box file/directory/Git measurement, acknowledged size baseline, and explicit ongoing-rate expectations used by the growth health warning. Machine-written and schema-validated; use the dashboard actions instead of editing or deleting it. |
 | `scheduler.jsonl` | One JSONL line per scheduler tick. Records which scripts ran/skipped/errored. |
 | `usage.db` | Token-usage tracking database. |
-| `chat-session-history.json`, `chat-session-id.json`, `chat-sessions.json`, `chat-thread-sessions.json` | Active chat session state. |
+| `chat-session-history.json`, `chat-session-id.json` | Active chat session state. |
+| `chat-sessions.json`, `chat-thread-sessions.json` | Left by the retired Telegram thread sessions; read only by the retrospective walker to attribute old transcripts. |
 | `chat-models/<sessionId>.json` | One chat's own model choice. Absent means the chat follows the box default (`docs/model-policy.md`). |
 | `retro/state.json`, `retro/observations.jsonl` | Retrospective walker state (which sessions were observed) and the append-only observation ledger that recurrence judgments draw on. Survives transcript clearing. |
 

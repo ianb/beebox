@@ -833,7 +833,7 @@ rows:
     reason: Every question an agent considers can already have been asked, and re-asking an answered question wastes the boxholder's attention; the schema's instructions say it too, but the agent reads them only after deciding to ask.
     audits: [question-ask-decision-rule, question-dismissed-expired-meaning]
   - id: questions.alert
-    rule: A new question is sent to the boxholder when the box has Telegram or push set up, so the agent does not also chase it in chat or a todo.
+    rule: A new question is sent to the boxholder when the box has push set up, so the agent does not also chase it in chat or a todo.
     handle: QUESTIONS
     bin: core
     reason: Read from the code (`src/core/question-alert.ts`); without it an agent adds a reminder todo or a chat nudge beside every question it asks, doubling what the system already sends.

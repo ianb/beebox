@@ -9,7 +9,6 @@ See [DESIGN.md](DESIGN.md) for the full architecture, flow, and rationale.
 | `engine/core.ts` | Main loop: `runReactor()`, cycle management, locking, polling |
 | `engine/cycle.ts` | One cycle as named stages: `runOneCycle()` → sync/refresh/discover/process |
 | `engine/batch-jobs.ts` | Batch processing: all jobs in one agent session |
-| `engine/chat-jobs.ts` | Chat processing: per-thread sessions with resume |
 | `job-discovery.ts` | Scan `_bookkeeping/jobs/` for pending job cards |
 | `prompts.ts` | System and user prompt builders |
 | `engine/subprocess.ts` | `bbx wakeup` and `bbx finalize` subprocess wrappers |
