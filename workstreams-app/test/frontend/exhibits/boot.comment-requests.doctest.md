@@ -11,7 +11,7 @@ import {
   commentRequest,
   responseProblem,
   savedMessage,
-} from "../../../src/frontend/exhibits/boot/comment-requests.js";
+} from "../../../src/frontend/exhibits/comment-requests.js";
 ```
 
 ## What goes on the wire

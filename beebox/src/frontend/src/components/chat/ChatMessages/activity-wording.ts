@@ -9,15 +9,17 @@ import type { SessionContentBlock } from "../../../api";
 import type { ActivityPart } from "../message-parsing";
 import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 
-type Category = "look" | "change" | "step" | "handoff" | "hidden";
+type Category = "look" | "search" | "webpage" | "change" | "step" | "handoff" | "hidden";
 
 /** Tool → summary category, keyed on the shared tool vocabulary. */
 const TOOL_CATEGORIES = {
   Read: "look",
   Grep: "look",
   Glob: "look",
-  WebSearch: "look",
-  WebFetch: "look",
+  // The web is named as the web: "looked up" alone did not say whether the
+  // agent searched the person's box or the internet.
+  WebSearch: "search",
+  WebFetch: "webpage",
   Edit: "change",
   Write: "change",
   Bash: "step",
@@ -29,7 +31,9 @@ const TOOL_CATEGORIES = {
 
 /** Collapsed-summary phrase for a category: one occurrence, or n of them. */
 const CATEGORY_PHRASES = {
-  look: { one: "looked something up", many: (n: number) => `looked up ${n} things` },
+  look: { one: "checked something in your box", many: (n: number) => `checked ${n} things in your box` },
+  search: { one: "searched the web", many: (n: number) => `searched the web ${n} times` },
+  webpage: { one: "read a web page", many: (n: number) => `read ${n} web pages` },
   change: { one: "made a change", many: (n: number) => `made ${n} changes` },
   step: { one: "took a step", many: (n: number) => `took ${n} steps` },
   handoff: { one: "handed off a task", many: (n: number) => `handed off ${n} tasks` },
@@ -121,7 +125,7 @@ type ToolDescriber = (input: Record<string, unknown>) => string;
 const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
   Read: (input) => describeFileTool({
     path: filePath(input),
-    verbs: { card: "Looked at", schema: () => "Looked something up", other: "Looked something up" },
+    verbs: { card: "Looked at", schema: () => "Checked something in your box", other: "Checked something in your box" },
   }),
   Edit: (input) => describeFileTool({
     path: filePath(input),
@@ -135,8 +139,8 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
     const description = stringInput(input, "description");
     return description ? capitalize(description) : "Took a step";
   },
-  Grep: () => "Searched the box",
-  Glob: () => "Looked through the box",
+  Grep: () => "Searched your box",
+  Glob: () => "Looked through your box",
   WebSearch: (input) => {
     const query = stringInput(input, "query");
     return query ? `Searched the web for "${query}"` : "Searched the web";

@@ -255,6 +255,16 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 | `src/tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `src/tricks/lib/` | Shared helpers used by `src/tricks/scripts/`. |
 
+Box code imports the engine only through the `exports` map in
+`beebox/package.json`, whose targets are under `dist/`. A new public subpath
+needs its `exports` entry and a build that emits the target, usually an
+`entryPoints` build in `src/scripts/build-cli/build/bundle.ts`. A typed
+subpath also needs its declarations (`tsconfig.declarations.json` `files`, or a
+copied `.d.ts` as for `view-widgets`); one that plugin bundles import needs a
+row in `publicExportsExternal` (`build/plugins.ts`). Check the export from
+`dist/` after `pnpm build`: a test box linked to the source tree can hide a
+missing step.
+
 ## What's *not* in a box
 
 - **No Bee Box application/server code.** A box stores state and config and may contain authored publication source in a `publication` card's attach folder; those site projects build to static files and never run inside the Bee Box server.

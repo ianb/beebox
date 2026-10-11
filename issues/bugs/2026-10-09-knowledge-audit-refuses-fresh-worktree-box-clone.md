@@ -33,3 +33,12 @@ the same failure). A copy needs a real `node_modules` directory.
 Options: have worktree creation commit its linking changes in the clone, or
 let the guard ignore the known linking paths. Either keeps the guard for real
 edits.
+
+**2026-10-10 (retrospective 20261010-224248):** three more sessions hit the
+guard on their own clone and committed its setup files by hand or built a
+disposable copy: hq-always/20261009T235132Z-implemented.md,
+plugins-planning/20261010T062402Z-review-adjudicated.md,
+user-facing-language/20261009T120548Z-implemented.md. The last adds a second
+trap for disposable copies: `.beebox/box.json` is gitignored, so `git clone`
+omits it, and the failed run had already rewritten the seed briefing through
+template sync before it crashed.
