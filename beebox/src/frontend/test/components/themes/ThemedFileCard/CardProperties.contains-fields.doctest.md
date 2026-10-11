@@ -41,10 +41,12 @@ const memo = render({
     status: "new",
     created: "2026-07-01",
   },
+  body: "Three quotes so far.\n",
 });
 ```
 
 A memo with no declared `prominence` shows its type's default and says so.
+The memo has a body, so its type fields are here rather than on the front.
 The symbol row draws the mark and the group as written. The memo's own fields
 follow, in the shared fields table; the title, todos, and theme are shown
 elsewhere and are not repeated:
@@ -110,4 +112,20 @@ const landmark = render({
 const question = render({ path: "_content/Q.question.card", type: "question", schema: landmarkSchema, frontmatter: { question: "Which?" } });
 question.includes('data-card-section="fields"')
 => false
+```
+
+## An empty body leaves the type fields on the front
+
+With no body text, the front shows the type fields
+(`test/lib/card-field-faces.doctest.md`), so Properties lists no Fields
+section and nothing shows twice. A body that only repeats the title counts as
+empty, the same test the front uses.
+
+```ts
+const emptyMemo = (body) => render({
+  path: "_content/projects/Porch.memo.card", type: "memo", schema: memoSchema,
+  frontmatter: { title: "Porch", status: "new" }, body,
+});
+[emptyMemo(undefined).includes('data-card-section="fields"'), emptyMemo("# Porch\n").includes('data-card-section="fields"'), emptyMemo("Quotes.\n").includes('data-card-section="fields"')]
+=> [false, false, true]
 ```

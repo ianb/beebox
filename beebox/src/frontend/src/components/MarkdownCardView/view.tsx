@@ -13,20 +13,23 @@
 
 import { FrontmatterFields } from "./FrontmatterFields";
 import { CardBody } from "./CardBody";
-import { splitCardFields } from "../../lib/card-field-faces";
+import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { RendererProps } from "../../file-type-registry";
 
 export function MarkdownCardView(props: RendererProps & { hideEmptyBody?: boolean }) {
   const { data, onNavigate, mode } = props;
-  const hideEmptyBody = props.hideEmptyBody ?? false;
+  const title = bodyHeadingTitle(data.frontmatter);
+  const bodyEmpty = isCardBodyEmpty(data.body, title);
   const front = data.frontmatter === undefined
     ? undefined
-    : splitCardFields(data.frontmatter, { hasBodyField: data.schema?.hasBodyField ?? null, mode }).front;
-  const title = data.frontmatter?.["title"];
+    : splitCardFields(data.frontmatter, { hasBodyField: data.schema?.hasBodyField ?? null, bodyEmpty, mode }).front;
+  const showsFields = front !== undefined && Object.keys(front).length > 0;
+  // With fields on the front, the card is not empty: no "No body content".
+  const hideEmptyBody = (props.hideEmptyBody ?? false) || showsFields;
 
   return (
     <div className="bbx-card-content">
-      {front !== undefined && Object.keys(front).length > 0 ? (
+      {showsFields ? (
         <div className="mb-4 pb-3 border-b border-warm-200" data-card-section="frontmatter">
           <FrontmatterFields fields={front} onNavigate={onNavigate} basePath={data.path} />
         </div>
@@ -34,7 +37,7 @@ export function MarkdownCardView(props: RendererProps & { hideEmptyBody?: boolea
 
       <CardBody
         data={data}
-        title={typeof title === "string" ? title : undefined}
+        title={title}
         onNavigate={onNavigate}
         hideEmptyBody={hideEmptyBody}
       />

@@ -1,7 +1,7 @@
 import { trpc } from "../../../lib/trpc/client";
 import type { FileData } from "../../../file-type-registry";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
-import { splitCardFields } from "../../../lib/card-field-faces";
+import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../../lib/card-field-faces";
 import { FrontmatterFields } from "../../MarkdownCardView/FrontmatterFields";
 import { CardMark } from "../../ui/CardMark";
 import { isRecord } from "@shared/is-record";
@@ -35,7 +35,8 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
   boxSlug: string | undefined;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
 }) {
-  const split = splitCardFields(data.frontmatter ?? {}, { hasBodyField: data.schema?.hasBodyField ?? null, mode: "page" });
+  const bodyEmpty = isCardBodyEmpty(data.body, bodyHeadingTitle(data.frontmatter));
+  const split = splitCardFields(data.frontmatter ?? {}, { hasBodyField: data.schema?.hasBodyField ?? null, bodyEmpty, mode: "page" });
   const { foundBy } = split;
   // A landmark's front is the place page, which does not draw its fields, so
   // Properties lists them; other body-less types keep theirs on the front.

@@ -134,3 +134,41 @@ A different first heading stays:
 (await renderCard("# Day one\n\nWe drove down on Friday.\n")).includes("Day one</h1>")
 => true
 ```
+
+## An empty bodied card shows its fields, not "No body content"
+
+A record with only fields and an empty body shows its type fields on the
+front (`splitCardFields` with `bodyEmpty`), and the front says nothing about
+the missing body. A body that is only the repeated title heading counts as
+empty.
+
+```ts setup
+async function renderRecord(body) {
+  const data = {
+    path: "_content/inventory/Solder.record.card",
+    frontmatter: { title: "Solder", location: { text: "Tray 3" } },
+    body,
+    schema: { hasBodyField: true, defaultProminence: null },
+  };
+  const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "page" });
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const root = createRootRoute({ staticData: { title: null }, component: () => element });
+  const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  await router.load();
+  return renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() }, React.createElement(RouterProvider, { router })));
+}
+```
+
+```ts
+const empty = await renderRecord("# Solder\n");
+[empty.includes('data-card-section="frontmatter"'), empty.includes("Tray 3"), empty.includes("No body content")]
+=> [true, true, false]
+```
+
+With a body, the fields stay in Properties:
+
+```ts
+const full = await renderRecord("Lead-free, 0.8mm.\n");
+[full.includes('data-card-section="frontmatter"'), full.includes("Tray 3"), full.includes("Lead-free")]
+=> [false, false, true]
+```
