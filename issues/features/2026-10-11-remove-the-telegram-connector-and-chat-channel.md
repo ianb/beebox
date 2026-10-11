@@ -11,9 +11,13 @@ discovered-in: worktree-plugins-planning — plugins slice 3 sizing, 2026-10-11
 The plugins design notes list Telegram under removals, not plugins: *"Telegram
 (a connector and a chat channel; its own issue)"*
 (`beebox/docs/implemented-plans/plugins-design-notes.md`, Candidates). The
-issue did not exist; this is it. Nothing here is decided: a box that uses
-Telegram loses its bot chat, so the boxholder says whether any box does
-before this is `do-it`.
+issue did not exist; this is it.
+
+**Decided 2026-10-11 (boxholder):** remove it. "I'm confident it doesn't
+work right." Three production boxes carry a Telegram connector state file
+and old threads under `_content/chat/telegram/`; none has it in box config;
+the server environment holds one Telegram variable. The old threads stay as
+ordinary chat-thread cards.
 
 ## What Telegram touches
 
