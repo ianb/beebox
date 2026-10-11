@@ -21,5 +21,8 @@ test-cleanup/20261008T173241Z-landed.md, lifeos-research/20261009T033555Z-landed
 agents-md/20261010T143719Z-landed.md (preflight said "merge brought code in";
 verify said no-op).
 
-Direction: decide from the delta since the last commit that ran pre-commit (the
-branch's newest non-merge commit), not from the current merge alone.
+Direction: decide from the delta since the last tree that typecheck and lint
+actually ran on, not from the current merge alone. The newest non-merge commit
+is not that tree: a docs-only commit skips both checks. Which evidence records
+the checked tree is a decision for whoever takes this on; the conservative
+fallback is to verify whenever main's code arrived since the last code commit.

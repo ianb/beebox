@@ -98,8 +98,8 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
   README's disposition table.
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
   duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
-  `pnpm --dir beebox doc-check --fix` (it repairs `.md` links only; `git grep`
-  the old path for backticked mentions and other links), then `pnpm doc-graph`.
+  `pnpm --dir beebox doc-check --fix` and `pnpm --dir beebox doc-graph`. `--fix` only
+  repairs `.md` links and closed-issue backticks: grep the old path; check moved files' links.
 
 ## 6. Close resolved issues
 Start with the sheet's `issues`, the plan's frontmatter `issues:`, the briefing,
@@ -113,7 +113,7 @@ For each issue this work **actually resolves**: `git mv issues/<category>/<x>.md
 issues/closed/<category>/`, then in the moved file add `resolution:
 implemented|wontfix|superseded`, set `workstream:` to the bare workstream name, and
 put a closing note atop the body naming the resolving commit and any divergence from
-what the issue proposed. Then run `doc-check --fix` and the grep as in step 5.
+what the issue proposed. Then repair links as in step 5.
 Never close an issue with `needs: [manual-testing]` — only the boxholder clears
 that. Ambiguous, or a deliberate punch-list → leave open and name it. **Private
 issues** close the same way inside `private-issues/`, where `doc-check --fix`
@@ -151,9 +151,9 @@ SessionEnd and the SessionStart sweep own it.
 ## 8. Report
 Report the merge hash/count, checks and reused evidence (including flakes), plan
 MET/PARTIAL/UNMET tally, Track O findings, and scope limits. Passing tests do not
-mean browser-verified. No advice to exit or clean up. Multiple UI screenshots
-→ one labeled exhibit URL (create an `fyi` one before landing if missing).
-Write the CODING_FEEDBACK entry (see the top), then end with the status line the
+mean browser-verified. No advice to exit or clean up. Multiple UI screenshots →
+one labeled exhibit URL, captions saying what each figure shows (create an `fyi`
+one before landing if missing). Write CODING_FEEDBACK, then end with the line the
 caller parses: `RESULT: MERGED`, or `RESULT: BLOCKED` + what blocks, what you
 completed, what the human must decide — saying plainly that nothing merged if you
 stopped before step 7. With the private leg active, EVERY report also carries

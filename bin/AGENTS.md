@@ -8,11 +8,10 @@ contracts live in `bin/docs/`; read the indicated reference before editing.
 New root-infrastructure tests are doctests under `bin/test/`, mirroring the
 file they test (`bin/lib/<name>.ts` → `bin/test/lib/<name>.doctest.md`), including shell
 fixtures and CLI behavior. They run in beebox's suite, under its home and
-secret isolation: `cd beebox && pnpm exec tap ../bin/test/<path>.doctest.md`.
-`doc-check` and `layout-check` are also `beebox/` scripts; the root has neither.
-Existing `bin/*.test.ts` files are not precedent. Use a traditional test only
-when a doctest would be circular and explain why. Router unit tests live in
-`workstreams-app/test/router/`.
+secret isolation: `cd beebox && pnpm exec tap ../bin/test/<path>.doctest.md`
+(`doc-check` and `layout-check` also run from `beebox/`). Existing `bin/*.test.ts`
+files are not precedent; use a traditional test only when a doctest would be
+circular, and say why. Router unit tests live in `workstreams-app/test/router/`.
 
 ## Commit safety
 
@@ -21,15 +20,13 @@ allowlist to fix a leak. The personal blocklist is optional when absent, but a
 malformed or tracked list fails closed; diagnostics never print matched private
 values. Read [commit guards](docs/commit-guards.md) before changing the guards
 or hooks. On a shared branch use `git add <paths> && git commit -- <paths>` (or
-`stageAndCommitPaths`); a bare commit can capture another agent's staging.
-The pre-commit checks read the whole tree, and concurrent commits share the
-index and `COMMIT_EDITMSG`, so parallel agents in one worktree work in
-different packages, each briefing names the other agent's directories, and one
-agent (the orchestrator) makes every commit. Never `git reset --hard` or `git checkout .` while another
-agent edits the worktree. `main` was rewritten and force-pushed around
-2026-09-02, so hashes recorded before then do not resolve: worktree branches
-`git merge main`, never rebase or reconcile old hashes (box repos were not
-rewritten).
+`stageAndCommitPaths`). Parallel agents in one worktree share the index,
+`COMMIT_EDITMSG`, and whole-tree pre-commit checks: give each its own package,
+name the others' directories in its briefing, and let one agent commit. Never
+`git reset --hard` or `git checkout .` while another agent edits. `main` was
+rewritten and force-pushed around 2026-09-02, so hashes recorded before then do
+not resolve: worktree branches `git merge main`, never rebase or reconcile old
+hashes (box repos were not rewritten).
 
 ## Commit provenance trailers (`commit-provenance.ts`)
 

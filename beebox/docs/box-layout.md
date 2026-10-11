@@ -255,11 +255,14 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 | `src/tricks/lib/` | Shared helpers used by `src/tricks/scripts/`. |
 
 Box code imports the engine only through the `exports` map in
-`beebox/package.json`. A new public subpath needs that entry, an
-`entryPoints` build in `src/scripts/build-cli/build/bundle.ts`, a `files`
-entry in `tsconfig.declarations.json` for its types, and, if plugin bundles
-import it, a row in `publicExportsExternal` (`build/plugins.ts`). A dev
-checkout links the source tree, so only a packaged install shows a missing step.
+`beebox/package.json`, whose targets are under `dist/`. A new public subpath
+needs its `exports` entry and a build that emits the target, usually an
+`entryPoints` build in `src/scripts/build-cli/build/bundle.ts`. A typed
+subpath also needs its declarations (`tsconfig.declarations.json` `files`, or a
+copied `.d.ts` as for `view-widgets`); one that plugin bundles import needs a
+row in `publicExportsExternal` (`build/plugins.ts`). Check the export from
+`dist/` after `pnpm build`: a test box linked to the source tree can hide a
+missing step.
 
 ## What's *not* in a box
 
