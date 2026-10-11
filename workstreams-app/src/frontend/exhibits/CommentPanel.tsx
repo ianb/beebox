@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 
-import { MAX_AUDIO_BYTES } from "../../../server/transcribe-contract.js";
-import { recorderAvailability, startRecording } from "../../lib/recorder.js";
-import { captureSelection, type SelectionAnchor } from "../../lib/selection-anchor.js";
+import { MAX_AUDIO_BYTES } from "../../server/transcribe-contract.js";
+import { recorderAvailability, startRecording } from "../lib/recorder.js";
+import { captureSelection, type SelectionAnchor } from "../lib/selection-anchor.js";
 import {
   appendTranscript,
   commentRequest,
