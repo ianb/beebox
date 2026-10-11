@@ -1,3 +1,4 @@
+import type { Schema } from "@markdoc/markdoc";
 import type { LintIssue } from "./lint-format.js";
 import type { ProminenceLevel } from "../shared/prominence.js";
 import type { ThemeChoice } from "../shared/card-theme/core.js";
@@ -25,6 +26,19 @@ export class RedeclaredFieldError extends Error {
 }
 
 /**
+ * Thrown when a type declares a scoped Markdoc tag that is already in the
+ * core table, or a delta redeclares a tag its base already declares.
+ */
+export class RedeclaredTagError extends Error {
+  readonly tag: string;
+  constructor(tag: string) {
+    super(`Markdoc tag "${tag}" is already declared; a scoped tag cannot redeclare it`);
+    this.name = "RedeclaredTagError";
+    this.tag = tag;
+  }
+}
+
+/**
  * What a box adds to an exported base (a `CardSchemaConfig` without a type
  * name) when it completes the base through `extendSchema`. It is typed on its
  * own, not as `Partial<base>`, so one added field does not restate the base's
@@ -37,6 +51,8 @@ export interface SchemaDelta<
   BF extends Record<string, FieldDecl>,
   DF extends Record<string, FieldDecl>,
 > {
+  /** Added scoped Markdoc tags. A key the base already declares throws `RedeclaredTagError`. */
+  markdocTags?: Readonly<Record<string, Schema>>;
   /** Added fields. A key the base already declares is a compile-time error. */
   readonly fields?: DF;
   /** Runs after the base's `validate`; both hooks' issues are reported. */
@@ -117,7 +133,8 @@ function joinInstructions(base: string | undefined, delta: string | undefined): 
  * Compose an exported base with a box's delta into the config `cardSchema`
  * takes: `cardSchema("progress", extendSchema(progressBase, { fields: { mood } }))`.
  *
- * Rules: `fields` merge by key, and a key present in both is a type error
+ * Rules: `markdocTags` merge by key and a key in both throws `RedeclaredTagError`;
+ * `fields` merge by key, and a key present in both is a type error
  * (also thrown at runtime, since box code runs under type stripping);
  * `validate` runs base then delta and concatenates; `superRefine` runs both,
  * base first; `summarize` runs the delta with the base's result as `base`;
@@ -137,6 +154,11 @@ export function extendSchema<
       throw new RedeclaredFieldError(name);
     }
   }
+  for (const name of Object.keys(delta.markdocTags ?? {})) {
+    if (name in (base.markdocTags ?? {})) {
+      throw new RedeclaredTagError(name);
+    }
+  }
   const { summarize: baseSummarize, fields: baseFields, ...carried } = base;
   const deltaSummarize = delta.summarize;
   const baseRefine = base.superRefine;
@@ -153,6 +175,9 @@ export function extendSchema<
     fields: mergeFields(baseFields, delta.fields),
   };
   // Optional members are set only when present (exactOptionalPropertyTypes).
+  if (base.markdocTags !== undefined || delta.markdocTags !== undefined) {
+    merged = { ...merged, markdocTags: { ...base.markdocTags, ...delta.markdocTags } };
+  }
   if (instructions !== undefined) merged = { ...merged, instructions };
   if (delta.description !== undefined) merged = { ...merged, description: delta.description };
   if (delta.brief !== undefined) merged = { ...merged, brief: delta.brief };

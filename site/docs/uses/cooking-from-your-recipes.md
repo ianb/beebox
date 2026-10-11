@@ -44,4 +44,4 @@ some rotated photos upside down.
 - **Landmarks** ([landmarks](../concepts/landmarks.md)): a landmark over the recipe directory marks it as a notable spot, so the collection is something to browse.
 
 **Read next.** [Phone capture](../capabilities/phone-capture.md),
-[recipe](../reference/cards/recipe.md).
+[recipes](../capabilities/recipes.md).

@@ -131,6 +131,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // CLAUDE.local.md, or differing ledger/park duplicates. Legacy support to
   // remove: issues/deferred/2026-10-09-retire-claude-md-box-compat.md.
   { name: "agents-md-2026-10", script: "src/scripts/migrate/agents-md/run.ts" },
+  // Rewrites the retired image/silence/purpose/correction Markdoc tags: image
+  // and silence become a link and plain text, a briefing's purpose moves to
+  // frontmatter, its corrections to a `## Corrections` section. Fails closed
+  // (exit 1, nothing written) on a tag it cannot place. See the script's plan.ts.
+  { name: "body-tags-2026-10", script: "src/scripts/migrate/body-tags/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

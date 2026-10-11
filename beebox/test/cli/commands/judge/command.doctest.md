@@ -226,7 +226,7 @@ situation is the root briefing's purpose statement.
 
 ```ts
 const box = await seededBox();
-await box.write("_content/briefing.briefing.card", "---\ntype: briefing\n---\n{% purpose %}\nThe household box for the Rivera family: two parents and a child in second grade.\n{% /purpose %}\n");
+await box.write("_content/briefing.briefing.card", "---\ntype: briefing\npurpose: \"The household box for the Rivera family: two parents and a child in second grade.\"\n---\n");
 const service = jev();
 const out = await judge(box, "_config/judgments/field-trip.judgment.card", { dryRun: true }, { stdin: "One short state.", service });
 const [situation, request, exit] = out.split("\n").filter((l) => !l.startsWith("stderr:"));

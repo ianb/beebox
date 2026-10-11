@@ -23,13 +23,13 @@
 
 import { Fragment, useMemo } from "react";
 import * as React from "react";
-import Markdoc, { type Config, type RenderableTreeNode } from "@markdoc/markdoc";
-import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config/tags/core";
+import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
+import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
+import { withScopedTags, rewriteUnknownTags } from "@shared/markdoc-config/scoped";
+import { UnknownTagInline, UnknownTagBlock } from "./UnknownTag";
 import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
-import { makeBriefingComponents } from "./BriefingTags";
-import { makeRecipeComponents } from "../RecipeTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
@@ -41,7 +41,6 @@ import { detectVideoEmbed } from "../../lib/video-url";
 import {
   externalImageProxyUrl,
   resolveImageSrc,
-  resolveRelativePath,
   type NavigateHint,
   type ViewTarget,
 } from "../../lib/view-url";
@@ -160,13 +159,14 @@ interface RenderConfigBundle {
   components: Record<string, React.ComponentType<Record<string, unknown>>>;
 }
 
-function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): RenderConfigBundle {
+function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath: string | null; tags: Readonly<Record<string, Schema>> | undefined }): RenderConfigBundle {
+  const base = withScopedTags(tags);
   const config: Config = {
-    ...markdocConfig,
+    ...base,
     // An HTML `<p>` renders as `Para`, the same `<div>` a Markdown paragraph gets.
-    tags: { ...markdocConfig.tags, html: makeHtmlTag({ paragraph: "Para" }) },
+    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }) },
     nodes: {
-      ...markdocConfig.nodes,
+      ...base.nodes,
       document: { render: "Fragment" },
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
@@ -195,8 +195,6 @@ function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): Rende
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
-  const briefing = makeBriefingComponents();
-  const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
   const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath });
   const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
   const Task = ({ done }: { done?: boolean }) => (
@@ -207,40 +205,6 @@ function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): Rende
       readOnly
       className="mr-2 align-middle accent-warm-500"
     />
-  );
-  // Capture-session transcript markers. `{% image %}` links to the child
-  // image card; `{% silence %}` is a dim gap marker. The `ref` attribute is
-  // renamed to `sourceRef` by the Markdoc transform (React reserves `ref`).
-  const CaptureImage = ({ sourceRef }: { sourceRef?: string }) => {
-    const ref = typeof sourceRef === "string" ? sourceRef : "";
-    const label = ref.replace(/^attach\//, "").replace(/\.image\.card$/, "");
-    const path = ref === "" ? null : resolveRelativePath(linkCtx.basePath, ref);
-    // An unresolvable marker (empty or box-escaping ref) renders as inert text,
-    // not a button that silently does nothing when clicked.
-    if (path === null) {
-      return (
-        <span className="mx-0.5 align-middle text-xs text-danger-dark" title={`Unresolvable image ref: ${ref}`}>
-          📷 {label === "" ? "image" : label}
-        </span>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          const target: ViewTarget = { path, viewer: null, params: {}, viewState: null };
-          linkCtx.onNavigate(target, label === "" ? undefined : { label });
-        }}
-        className="mx-0.5 rounded bg-warm-100 px-1.5 py-0.5 align-middle text-xs text-warm-700 hover:bg-warm-200"
-      >
-        📷 {label === "" ? "image" : label}
-      </button>
-    );
-  };
-  const Silence = ({ duration }: { duration?: string }) => (
-    <span className="mx-1 align-middle text-xs text-warm-400">
-      — {typeof duration === "string" ? duration : ""} silence —
-    </span>
   );
   // Markdoc's renderer wants one homogeneous `Record<string, ComponentType<Record<string,unknown>>>`
   // map, but each of these components has its own specific, narrower prop type
@@ -261,23 +225,14 @@ function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): Rende
     QuoteBlock: cast(QuoteBlock),
     SourceInline: cast(SourceInline),
     SourceBlock: cast(SourceBlock),
-    Purpose: cast(briefing.Purpose),
-    Correction: cast(briefing.Correction),
-    IngredientInline: cast(recipe.IngredientInline),
-    IngredientBlock: cast(recipe.IngredientBlock),
-    Step: cast(recipe.Step),
-    RecipeYield: cast(recipe.RecipeYield),
-    Substitution: cast(recipe.Substitution),
-    Subrecipe: cast(recipe.Subrecipe),
-    RecipeSection: cast(recipe.RecipeSection),
     Task: cast(Task),
-    CaptureImage: cast(CaptureImage),
-    Silence: cast(Silence),
     RedactedInline: cast(RedactedInline),
     RedactedBlock: cast(RedactedBlock),
     TodoInline: cast(TodoInline),
     TodoBlock: cast(TodoBlock),
     SeeAlso: cast(SeeAlso),
+    UnknownTagInline: cast(UnknownTagInline),
+    UnknownTagBlock: cast(UnknownTagBlock),
   };
   return { config, components };
 }
@@ -297,6 +252,8 @@ interface MarkdownProps {
    * component entirely.
    */
   components?: MarkdownComponentOverrides;
+  /** A type's scoped tags (`CardSchemaConfig.markdocTags`), merged over the core table for this render. */
+  tags?: Readonly<Record<string, Schema>>;
   prose?: ProseVariant;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath?: string;
@@ -315,6 +272,7 @@ interface MarkdownProps {
 export function Markdown({
   children,
   components,
+  tags,
   prose,
   onNavigate,
   basePath,
@@ -327,8 +285,9 @@ export function Markdown({
   const bodyLineOffset = card?.bodyLineOffset ?? null;
   const { tree, mergedComponents } = useMemo(() => {
     const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote };
-    const { config, components: defaults } = buildRenderConfig(ctx, cardPath);
+    const { config, components: defaults } = buildRenderConfig(ctx, { cardPath, tags });
     const ast = parseMarkdown(children);
+    rewriteUnknownTags(ast, config);
     // The collector's own numbering, so a rendered todo and the todo a write
     // addresses cannot disagree about which one `line#2` is.
     if (bodyLineOffset !== null) stampLocators(assignLocators(ast, bodyLineOffset));
@@ -341,7 +300,7 @@ export function Markdown({
       if (override !== undefined) merged[name] = override;
     }
     return { tree: t, mergedComponents: merged };
-  }, [children, onNavigate, basePath, boxSlug, components, onJumpToQuote, cardPath, bodyLineOffset]);
+  }, [children, onNavigate, basePath, boxSlug, components, tags, onJumpToQuote, cardPath, bodyLineOffset]);
 
   const rendered = renderers.react(tree, React, {
     components: mergedComponents,

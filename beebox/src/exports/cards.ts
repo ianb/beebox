@@ -28,8 +28,10 @@ export {
   type CardSubmissionResult,
   type SubmissionIssue,
 } from "../cards/schema.js";
-export { extendSchema, RedeclaredFieldError, type SchemaDelta } from "../cards/extend-schema.js";
+export { extendSchema, RedeclaredFieldError, RedeclaredTagError, type SchemaDelta } from "../cards/extend-schema.js";
 export { definePlugin, type LintContext, type PluginDefinition } from "../cards/plugin-definition.js";
+export { LabeledSourcesEntrySchema } from "../cards/sources-entry.js";
+export type { TemplateDefinition } from "../templates-shape.js";
 export { extractRefs } from "../cards/extract-refs.js";
 
 export {

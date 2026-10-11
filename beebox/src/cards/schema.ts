@@ -1,4 +1,7 @@
 import { z, type ZodType } from "zod";
+import type { Schema } from "@markdoc/markdoc";
+import { markdocConfig } from "../shared/markdoc-config/tags/core.js";
+import { RedeclaredTagError } from "./extend-schema.js";
 import type { LintIssue } from "./lint-format.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
 import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
@@ -248,6 +251,8 @@ export interface CardSchemaConfig<
    * generic pass is what gives them Markdoc validation at all.
    */
   ownMarkdocValidation?: boolean;
+  /** Markdoc tags valid in this type's body in addition to the core table. Keys are authored tag names. */
+  markdocTags?: Readonly<Record<string, Schema>>;
   /**
    * A parse-time cross-field refinement applied to the whole frontmatter object
    * (after `fields` + global fields are assembled). Unlike {@link validate}
@@ -368,6 +373,8 @@ export interface CardSchema<
   readonly validate?: (input: CardValidateInput) => LintIssue[];
   /** Whether this schema's own `validate` hook already runs Markdoc validation on the body (see {@link CardSchemaConfig.ownMarkdocValidation}). */
   readonly ownMarkdocValidation?: boolean;
+  /** Scoped Markdoc tags (see {@link CardSchemaConfig.markdocTags}). */
+  readonly markdocTags?: Readonly<Record<string, Schema>>;
   /** Template reconciliation policy (see {@link CardSchemaConfig.templateMerge}). */
   readonly templateMerge?: TemplateMergePolicy;
   /** Submission contract, when this card type acts as an inbox (see {@link CardSubmissions}). */
@@ -512,6 +519,15 @@ function addDeclaredFields(
   return { bodyFieldName, bodyField };
 }
 
+/** The resolved schema's `markdocTags` member, empty when none are declared; throws when a key shadows a core tag. */
+function scopedTagsMember(tags: Readonly<Record<string, Schema>> | undefined): { markdocTags?: Readonly<Record<string, Schema>> } {
+  if (tags === undefined) return {};
+  for (const name of Object.keys(tags)) {
+    if (Object.hasOwn(markdocConfig.tags ?? {}, name)) throw new RedeclaredTagError(name);
+  }
+  return { markdocTags: tags };
+}
+
 /**
  * Declare a card schema. The result tells the loader/serializer which
  * fields are frontmatter and which is the body.
@@ -608,6 +624,7 @@ export function cardSchema<
   if (config.ownMarkdocValidation !== undefined) {
     resolved = { ...resolved, ownMarkdocValidation: config.ownMarkdocValidation };
   }
+  resolved = { ...resolved, ...scopedTagsMember(config.markdocTags) };
   if (config.templateMerge !== undefined) {
     resolved = { ...resolved, templateMerge: config.templateMerge };
   }

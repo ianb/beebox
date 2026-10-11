@@ -38,8 +38,8 @@ itself:
 getTemplate("memo")?.name
 => memo
 
-getDefaultTemplate("recipe")?.name
-=> recipe
+getDefaultTemplate("recipe")
+=> undefined
 ```
 
 ## Memo

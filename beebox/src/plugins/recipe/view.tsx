@@ -1,39 +1,48 @@
 /**
- * Recipe card renderer — header + scale controls + Markdoc-rendered body.
+ * The recipe plugin's view for `recipe` cards: header, scale control, then the
+ * body through the `Markdown` widget with the recipe tags. A box activates it
+ * with a stub at `src/views/recipe.tsx` that re-exports this component as its
+ * default and declares `rendersCardTypes = ["recipe"]` with a `dependencies`
+ * glob covering `**\/*.recipe.card`.
  *
- * Recipe schema migrated from XML (`<ing>`, `<step>`, …) to a Phase-2
- * frontmatter + Markdoc body (`{% ingredient %}`, `{% step %}`, …) in
- * `markdoc-tags-plan.md` Track 1. This view:
- *
- * - reads `title` / `description` / `sources` / `tags` / `hero-image`
- *   from the frontmatter;
- * - provides the scale-multiplier control and pipes it into the body
- *   via `RecipeScaleContext` (each `{% ingredient %}` reads it);
- * - wraps the body in a `.recipe-body` container so CSS step counters
- *   (defined in the global stylesheet) increment per `{% step %}`;
- * - renders the body via the shared `<Markdown>` component — every
- *   recipe tag is a normal Markdoc tag with a React component.
+ * The card this view renders is the anchor card: the host sets `params.path`
+ * to the card's own path and the stub's `dependencies` glob brings it into
+ * `cards`. This module imports only `react`, `beebox/view-widgets`, `fraction.js`,
+ * `@markdoc/markdoc` (through `./tags.js`) and its own `view/` siblings, so it
+ * can be bundled for a box.
  */
 
 import { useState } from "react";
-import { Markdown } from "./Markdown/body";
-import { RecipeScaleContext } from "./RecipeTags";
-import type { RendererProps } from "../file-type-registry";
-import { isRecord } from "@shared/is-record";
+import { Markdown, type ViewCard, type ViewProps } from "beebox/view-widgets";
+import { recipeTags } from "./tags.js";
+import { makeRecipeComponents, RecipeScaleContext } from "./view/tags.js";
+import "./view/recipe.css";
 
 const SCALE_OPTIONS = [0.5, 1, 1.5, 2, 3];
 
-export function RecipeView({ data, onNavigate }: RendererProps) {
+const components = makeRecipeComponents();
+
+function RecipeView({ cards, params }: ViewProps) {
+  const card = cards.find((c) => c.path === params["path"]);
+  if (card === undefined) {
+    // `params.path` comes from the URL; a stale link can name a card the
+    // dependencies glob no longer selects.
+    return <div className="max-w-2xl mx-auto p-6"><p>This recipe card is not available.</p></div>;
+  }
+  return <RecipeCard card={card} />;
+}
+
+function RecipeCard({ card }: { card: ViewCard }) {
   const [scale, setScale] = useState(1);
 
-  const frontmatter = data.frontmatter ?? {};
+  const frontmatter = card.frontmatter ?? {};
   const title = typeof frontmatter["title"] === "string" ? frontmatter["title"] : "Untitled";
   const description = typeof frontmatter["description"] === "string" ? frontmatter["description"] : undefined;
   const sources = recipeSources(frontmatter["sources"]);
   const tags = Array.isArray(frontmatter["tags"])
     ? frontmatter["tags"].filter((tag): tag is string => typeof tag === "string")
     : [];
-  const body = data.body ?? "";
+  const body = card.body ?? "";
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -80,14 +89,14 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
             }`}
             onClick={() => setScale(s)}
           >
-            {s === 1 ? "1x" : `${s}x`}
+            {s === 1 ? "1x" : `${String(s)}x`}
           </button>
         ))}
       </div>
 
       <RecipeScaleContext.Provider value={scale}>
-        <div className="recipe-body">
-          <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
+        <div className="bbx-recipe-body">
+          <Markdown card={card} tags={recipeTags} components={components}>
             {body}
           </Markdown>
         </div>
@@ -100,10 +109,18 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
 function recipeSources(value: unknown): Array<{ text: string; href: string | null }> {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry: unknown) => {
-    if (!isRecord(entry)) return [];
-    const str = (key: string): string | null => (typeof entry[key] === "string" && entry[key] !== "" ? entry[key] : null);
+    if (typeof entry !== "object" || entry === null) return [];
+    const str = (key: string): string | null => {
+      const field: unknown = Reflect.get(entry, key);
+      return typeof field === "string" && field !== "" ? field : null;
+    };
     const href = str("href");
     const text = str("label") ?? href ?? str("ref");
     return text === null ? [] : [{ text, href }];
   });
 }
+
+/** Named alias for the box stub to re-export beside the default. */
+export const recipeView = RecipeView;
+
+export default RecipeView;

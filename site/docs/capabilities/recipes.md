@@ -40,5 +40,4 @@ built as separate views or procedures if you asked for them.
 
 **Go deeper**
 
-[../reference/cards/recipe.md](../reference/cards/recipe.md),
 [views.md](views.md)

@@ -17,6 +17,7 @@ import {
   cardSchema,
   extendSchema,
   RedeclaredFieldError,
+  RedeclaredTagError,
   type CardSchemaConfig,
   type CardValidateInput,
   type LintIssue,
@@ -208,6 +209,55 @@ function redeclare(): string {
 }
 redeclare()
 => RedeclaredFieldError: extendSchema: delta redeclares base field "score" (field=score)
+```
+
+## `markdocTags` union, and a redeclared tag fails
+
+Scoped Markdoc tags merge like fields: the delta's tags are added to the
+base's, and a key the base already declares throws `RedeclaredTagError`.
+
+```ts
+const withBaseTag = extendSchema(progressBase, { markdocTags: { garnish: { render: "Garnish" } } });
+const extended = extendSchema(withBaseTag, { markdocTags: { plating: { render: "Plating" } } });
+Object.keys(extended.markdocTags ?? {})
+=> ["garnish", "plating"]
+```
+
+```ts continue
+function redeclareTag(): string {
+  try {
+    extendSchema(withBaseTag, { markdocTags: { garnish: { render: "Other" } } });
+    return "no error";
+  } catch (e) {
+    return e instanceof RedeclaredTagError ? `${e.name} (tag=${e.tag})` : "other";
+  }
+}
+redeclareTag()
+=> RedeclaredTagError (tag=garnish)
+```
+
+## `cardSchema` rejects a tag the core table has, and carries the rest
+
+A scoped tag cannot shadow a core tag such as `quote`. A valid declaration
+appears on the resolved schema.
+
+```ts
+function declareQuote(): string {
+  try {
+    cardSchema("dish", { fields: { body: body(z.string()) }, markdocTags: { quote: { render: "Q" } } });
+    return "no error";
+  } catch (e) {
+    return e instanceof RedeclaredTagError ? `${e.name} (tag=${e.tag})` : "other";
+  }
+}
+declareQuote()
+=> RedeclaredTagError (tag=quote)
+```
+
+```ts
+const dish = cardSchema("dish", { fields: { body: body(z.string()) }, markdocTags: { garnish: { render: "Garnish" } } });
+Object.keys(dish.markdocTags ?? {})
+=> ["garnish"]
 ```
 
 ## Compile-time checks
