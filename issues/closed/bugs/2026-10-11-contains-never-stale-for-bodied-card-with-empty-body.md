@@ -3,6 +3,7 @@ title: "A bodied card with an empty body never goes stale when its fields change
 workstream: unattached
 area: beebox
 filed-by: agent
+resolution: implemented
 discovered-by: agent
 discovered-in: worktree-place-shows-cards — reading `computeContainsBasis` while reviewing journey-walk findings
 ---
@@ -57,3 +58,10 @@ frontmatter field, refresh the index, and check the stale flag.
 
 The comment at `contains-state.ts:40-46` says the derived-field exclusion is
 "policy, not a live bug" for bodied cards. The fix must keep that exclusion.
+
+## Resolution (2026-10-11)
+
+Fixed with the second option: `computeContainsBasis` hashes the fields when
+the body is empty or whitespace, and the body otherwise. `STATE_VERSION` went
+to 3, so existing sidecars rebuild fresh instead of flagging every empty-body
+card stale at once. Doctest: `beebox/test/core/search/contains-update.evidence.doctest.md`.
