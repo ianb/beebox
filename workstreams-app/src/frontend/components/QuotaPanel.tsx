@@ -2,6 +2,17 @@ import { compactDuration, friendlyTimestamp, quotaPace, quotaSummaryText, quotaW
 import { useState } from "react";
 import type { Quota } from "../types.js";
 
+/** One race track: a filled bar with its percent at the end. */
+function Track({ label, percent, tone, ariaLabel }: { label: string; percent: number; tone: string; ariaLabel: string }) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  return <div className="quota-track">
+    <span className="quota-track-label">{label}</span>
+    <span className="quota-track-bar" role="meter" aria-label={ariaLabel} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(clamped)}><span className={`quota-track-fill ${tone}`} style={{ width: `${clamped}%` }} /></span>
+    <span className="quota-track-percent">{Math.round(percent)}%</span>
+  </div>;
+}
+
+/** Quota used races time elapsed: when the quota bar is ahead of the time bar, usage is over pace. */
 function Window({ window }: { window: Quota["windows"][number] }) {
   const now = new Date();
   const pace = quotaPace(window, now);
@@ -9,11 +20,10 @@ function Window({ window }: { window: Quota["windows"][number] }) {
   return <section className="quota-window">
     <strong>{window.label}</strong>
     {expired ? <p className="muted">Expired snapshot · awaiting a fresh quota update.</p> : <>
-      <p>{Math.round(window.usedPercent)}% used</p>
-      <progress max="100" value={Math.max(0, Math.min(100, window.usedPercent))} aria-label={`${window.label} usage`} />
-      {pace ? <p className={pace.onTrack ? "pace-on-track" : "pace-over"}>{pace.onTrack ? "On track" : "Over pace"} · {Math.round(Math.abs(pace.difference))} points {pace.onTrack ? "under" : "over"} budget ({Math.round(pace.expected)}% of window elapsed)</p> : <p className="muted">Pace unavailable for this window.</p>}
+      <Track label="Quota" percent={window.usedPercent} tone={pace && !pace.onTrack ? "pace-over-fill" : "pace-on-track-fill"} ariaLabel={`${window.label} quota used`} />
+      {pace ? <Track label="Time" percent={pace.expected} tone="time-fill" ariaLabel={`${window.label} time elapsed`} /> : null}
+      <p className="quota-reset">Resets {new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(window.resetsAt))}</p>
       {pace?.earlyMs ? <p className="pace-over">At this rate, quota reached {compactDuration(pace.earlyMs)} before reset</p> : null}
-      <p className="muted">Resets {friendlyTimestamp(window.resetsAt, now)}</p>
     </>}
   </section>;
 }
