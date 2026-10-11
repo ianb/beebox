@@ -3,6 +3,7 @@ import type { FileData } from "../../../file-type-registry";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../../lib/card-field-faces";
 import { FrontmatterFields } from "../../MarkdownCardView/FrontmatterFields";
+import { cardTitle } from "../../../lib/card-title";
 import { CardMark } from "../../ui/CardMark";
 import { isRecord } from "@shared/is-record";
 import { readCardSymbol } from "@shared/card-symbol";
@@ -69,7 +70,7 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
     </div> : null}
     {Object.keys(properties).length > 0 ? <div className="mt-6" data-card-section="fields">
       <h3 className="text-sm font-semibold mb-2">Fields</h3>
-      <FrontmatterFields fields={properties} onNavigate={onNavigate} basePath={data.path} />
+      <FrontmatterFields fields={properties} onNavigate={onNavigate} basePath={data.path} headerTitle={cardTitle(data)} />
     </div> : null}
   </>;
 }

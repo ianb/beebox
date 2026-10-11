@@ -20,6 +20,7 @@
 import type { ReactNode } from "react";
 import { Text } from "../ui/Text";
 import { FrontmatterFields } from "./FrontmatterFields";
+import { cardTitle } from "../../lib/card-title";
 import { CardBody } from "./CardBody";
 import { bodyHeadingField, bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { FileData, RendererProps } from "../../file-type-registry";
@@ -56,7 +57,7 @@ export function MarkdownCardView(props: RendererProps & { hideEmptyBody?: boolea
   const hideEmptyBody = (props.hideEmptyBody ?? false) || showsFields || heading !== null;
   const fields = showsFields ? (
     <div className={embed ? "mt-4 pt-3 border-t border-warm-200" : "mb-4 pb-3 border-b border-warm-200"} data-card-section="frontmatter">
-      <FrontmatterFields fields={front} onNavigate={onNavigate} basePath={data.path} />
+      <FrontmatterFields fields={front} onNavigate={onNavigate} basePath={data.path} headerTitle={cardTitle(data)} />
     </div>
   ) : null;
 

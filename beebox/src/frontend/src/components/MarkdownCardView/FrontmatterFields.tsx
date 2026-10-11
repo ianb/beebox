@@ -6,6 +6,7 @@ import { TodosFieldSchema, type TodoEntry } from "@shared/todo-model";
 import { TodoItem } from "../todo/TodoItem";
 import { hiddenInReading } from "../todo/item-logic";
 import { usePlateState } from "../todo/card-todos-context";
+import { compactValue, fieldLabel, type CompactValue } from "../../lib/readable-fields";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 
@@ -31,11 +32,12 @@ function hasRef(value: unknown): value is { ref: string } {
   return isRecord(value) && typeof value.ref === "string";
 }
 
-function RefLink({ refPath }: { refPath: string }): ReactNode {
+/** A link to a card; it reads `label` when one is given, else the ref's display path. */
+function RefLink({ refPath, label }: { refPath: string; label?: string }): ReactNode {
   const nav = useContext(FieldsNavContext);
   const noFrag = refPath.split("#")[0] ?? refPath;
   const resolved = nav === null ? null : resolveRelativePath(nav.basePath, noFrag);
-  const displayPath = toDisplayPath(refPath);
+  const displayPath = label ?? toDisplayPath(refPath);
   if (nav === null || resolved === null) {
     return <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{displayPath}</span>;
   }
@@ -56,7 +58,23 @@ function isHttpUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\/\S+$/.test(value);
 }
 
-function ValueView({ value }: { value: unknown }): ReactNode {
+/** A compact object (`compactValue`): its text, linked when it names a card, then the aside in parentheses, muted. */
+function CompactView({ value }: { value: CompactValue }): ReactNode {
+  return (
+    <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+      {value.ref === undefined ? value.text : <RefLink refPath={value.ref} label={value.text} />}
+      {/* The label's soft ink, so a card theme mutes the aside as it mutes the labels. */}
+      {value.aside === undefined ? null : <span className="text-warm-500 bbx-card-field-label"> ({value.aside})</span>}
+    </span>
+  );
+}
+
+/**
+ * One field's value, read by its shape: a URL as a link, a scalar as itself, a
+ * list as a list, a lone `ref` as a link, a known small object as one value,
+ * and any other object as nested rows with readable labels.
+ */
+export function FieldValue({ value }: { value: unknown }): ReactNode {
   if (isHttpUrl(value)) {
     return (
       <a
@@ -83,12 +101,15 @@ function ValueView({ value }: { value: unknown }): ReactNode {
     }
     return (
       <ol className="min-w-0 list-decimal list-outside ml-5 marker:text-warm-400 divide-y divide-warm-400 [&>li]:min-w-0 [&>li]:py-2 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0">
-        {value.map((item, index) => <li key={index}><ValueView value={item} /></li>)}
+        {value.map((item, index) => <li key={index}><FieldValue value={item} /></li>)}
       </ol>
     );
   }
   if (hasRef(value) && Object.keys(value).length === 1) return <RefLink refPath={value.ref} />;
-  if (isRecord(value)) return <FieldsTable fields={value} root={false} />;
+  if (isRecord(value)) {
+    const compact = compactValue(value);
+    return compact === null ? <FieldsTable fields={value} root={false} /> : <CompactView value={compact} />;
+  }
   return null;
 }
 
@@ -138,19 +159,20 @@ function FieldRow({ name, value, root }: { name: string; value: unknown; root: b
   if (todos !== null && todos.length === 0) return null;
   return (
     <div className="contents">
-      <dt className="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{name}:</dt>
+      <dt className="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{fieldLabel(name)}</dt>
       <dd className="min-w-0 max-w-full">
         {todos !== null ? (
           <ul className="min-w-0 space-y-1">
             {todos.map(({ entry, index }) => <FrontmatterTodo key={index} entry={entry} index={index} />)}
           </ul>
-        ) : name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <ValueView value={value} />}
+        ) : name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <FieldValue value={value} />}
       </dd>
     </div>
   );
 }
 
-function FieldsTable({ fields, root }: { fields: Record<string, unknown>; root: boolean }): ReactNode {
+/** Field rows with readable labels; `root` marks a card's top level, where `todos` render as todos. */
+export function FieldsTable({ fields, root }: { fields: Record<string, unknown>; root: boolean }): ReactNode {
   const entries = Object.entries(fields);
   if (entries.length === 0) return null;
   return (
@@ -160,11 +182,21 @@ function FieldsTable({ fields, root }: { fields: Record<string, unknown>; root: 
   );
 }
 
-export function FrontmatterFields({ fields, onNavigate, basePath }: {
+/**
+ * A card's fields as a person reads them. A `name` row whose value is the
+ * card's header title (`headerTitle`) is left out: the header already shows
+ * it. Only an equal value drops it, so a card headed by something else keeps
+ * its `name` row.
+ */
+export function FrontmatterFields({ fields, onNavigate, basePath, headerTitle }: {
   fields: Record<string, unknown>;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath: string | undefined;
+  headerTitle?: string;
 }): ReactNode {
   const navCtx = useMemo<FieldsNavCtx>(() => ({ onNavigate, basePath }), [onNavigate, basePath]);
-  return <FieldsNavContext.Provider value={navCtx}><FieldsTable fields={fields} root /></FieldsNavContext.Provider>;
+  const shown = headerTitle !== undefined && fields.name === headerTitle
+    ? Object.fromEntries(Object.entries(fields).filter(([key]) => key !== "name"))
+    : fields;
+  return <FieldsNavContext.Provider value={navCtx}><FieldsTable fields={shown} root /></FieldsNavContext.Provider>;
 }

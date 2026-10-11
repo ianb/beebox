@@ -17,6 +17,7 @@ import { Badge } from "../ui/Badge";
 import { Text } from "../ui/Text";
 import { CardBody } from "../MarkdownCardView/CardBody";
 import { FrontmatterFields } from "../MarkdownCardView/FrontmatterFields";
+import { cardTitle } from "../../lib/card-title";
 import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { RendererProps } from "../../file-type-registry";
 import type { ReactNode } from "react";
@@ -160,7 +161,7 @@ export function PersonView({ data, onNavigate, mode }: RendererProps) {
 
       {hasRest ? (
         <div className="mb-4 pb-3 border-b border-card-rule" data-card-section="frontmatter">
-          <FrontmatterFields fields={rest} onNavigate={onNavigate} basePath={data.path} />
+          <FrontmatterFields fields={rest} onNavigate={onNavigate} basePath={data.path} headerTitle={cardTitle(data)} />
         </div>
       ) : null}
 
