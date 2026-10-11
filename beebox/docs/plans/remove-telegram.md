@@ -44,9 +44,15 @@ What a person meets:
   validate; the schema is kept, with its wording no longer naming Telegram
   as a live connector.
 - The one where the person does not want this: a box that was reached only
-  on Telegram. None exists; if one did, the loss is loud, since the
-  `notifications-no-channel` health check counts intents nothing could
-  carry (`docs/notifications.md:230`).
+  on Telegram. None exists. If one did, the loss would be quiet for
+  pending-question alerts: `question-alert.ts:74` returns before
+  `notifyBoxholder` when no channel is configured, so no intent is logged
+  and the `notifications-no-channel` check (which counts logged intents,
+  `src/core/notification/health.ts:49-66`) does not see it. Other intents
+  reach `notifyBoxholder` and are logged with every channel skipped
+  `no-audience`, which that check does count. Accepted: no box is in this
+  state, and the notifications issue (2026-09-25) owns the design of what
+  reaches a person with no channel.
 
 Right place and time: nothing acts or shows; the Admin section's absence is
 the whole change. Trust: no action is taken on anyone's behalf.
@@ -216,7 +222,23 @@ test ../site/docs`) to zero, except history (`docs/implemented-plans/`,
 closed issues, user-story reports, `CHANGELOG`-like records), which is not
 rewritten. `CHANNELS` becomes `["apns", "web-push"]`; the `Audience`
 record and `ChannelFlags` shrink with it; `channelsToTry` is unchanged in
-logic. `perBoxOnly` and `storeNameAliases` in `requirements.ts` go entirely
+logic. The notification log is read with `z.enum(CHANNELS)`
+(`src/core/notification/intent.ts:74`) and a line that fails to parse is
+skipped with a `console.warn` on every read (`log.ts:163-166`), so an old
+`telegram` delivery line in a box's log would warn on every health check
+for as long as the log keeps it. The read schema therefore accepts
+`RETIRED_CHANNELS = ["telegram"]` beside `CHANNELS`; `DeliveryLine.channel`
+is the union, the live `Delivery.channel` stays `ChannelName`. The one
+reader that prints a logged channel (`health.ts:37`) prints the name as
+text. The public site: `site/docs/capabilities/telegram.md` and the
+`install/telegram.md` row in `site/docs-manifest.yaml:90-92` are deleted;
+`site/docs/uses/a-household-in-one-chat.md` is a Telegram use story and
+is deleted too; the twelve other pages (`01`, `04`, `05`, `06`, `08`,
+`10`, `README`, `install/README`, `capabilities/{chat,notifications}`,
+`compared/{openclaw,other-systems-scouted,hermes}`) are edited where they
+promise Telegram and left where they describe another system. The dev
+doc graph's link to `docs/connectors/telegram.md`
+(`src/dev/doc-graph-html/data.ts:55`) is removed. `perBoxOnly` and `storeNameAliases` in `requirements.ts` go entirely
 (both Telegram-only); the comment on `lifecycle.ts:178` names the publish
 bucket token as its example instead.
 
@@ -234,7 +256,7 @@ third.
 thread prompt entries in the two dev prompt tools; the `chat-job` schema and
 its registration; `reactor/engine/chat-jobs.ts`, `chat/reactor-sessions.ts`,
 the `--reset-sessions` branch in `reactor/engine/core.ts:124-129` and its
-CLI flag, the `typeFilter === "chat"` branch in `cycle.ts:257`, and the
+CLI flag (`src/cli/commands/reactor.ts:22, 35`), the `typeFilter === "chat"` branch in `cycle.ts:257`, and the
 *Chat jobs* section of `src/core/reactor/DESIGN.md:37`; the thread helpers
 in `job-cards/chat-utils.ts` (`ensureThreadFile`, `ensureParticipant`,
 `appendMessageToThread`, `findUnsentAgentMessages`, `stampSentMessage`,
@@ -242,13 +264,25 @@ in `job-cards/chat-utils.ts` (`ensureThreadFile`, `ensureParticipant`,
 `src/lib/safe-filename.ts` with its six importers; collapse
 `AgentChatChannel` to `ChatChannel` in `shared/chat-channel.ts:17` and the
 four readers; drop the `channel: "telegram"` reactor prompt rule
-(`reactor/prompts.ts:22`). The `chat-thread` schema stays; its description
-and instructions stop naming Telegram as the connector that appends.
+(`reactor/prompts.ts:22`); delete the `chat` seed from the guide templates
+(`src/schemas/guide/templates.tsx:170-187`, which advertises `chat-job`;
+no box installs it, `GUIDE_DOMAINS = ["intake", "calendar"]` at
+`src/core/box/structure/defaults.ts:140`). The `chat-thread` schema stays
+as an archive-only card: its description says a messaging connector once
+appended to it and nothing delivers from it now, and its instructions
+(`chat-thread.ts:65-96`: append a reply, expect the connector to stamp
+`sent`, schedule a `callback-in`) are replaced by two lines: read it as
+history; do not append, nothing sends.
 
 **Why.** Every item has one producer or one consumer, and it is Telegram
 (citations in *What already exists*). The `.beebox/chat-thread-sessions.json`
 and `.beebox/chat-sessions.json` state files are written by the deleted
-code only (`pool.ts`, `reactor-sessions.ts`); a leftover file is inert.
+code only (`pool.ts`, `reactor-sessions.ts`) but still read by the
+retrospective walker, which uses them to attribute old transcripts to
+their thread cards (`src/core/retro/discovery/registries.ts:23-26, 70-79`,
+`discovery/core.ts:133-145`). That reader stays, with its comment saying
+the files come from the retired thread sessions and exist only on boxes
+that used them; an old box keeps its attribution, a new box has no file.
 
 **Direction.** Same deletion-then-typecheck discipline. The reactor keeps
 batch jobs and `typeFilter` for other job types. `updatePersonEntry` is
@@ -278,11 +312,12 @@ none
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A `telegram-message` card appears (restored from a backup) | `bbx validate` unknown-type | exit 1 names the file (`validate/command.ts:200`) | clear |
-| A `telegram-bot/<slug>` entry remains in a machine secret store | none | `lookupByName` finds no registry entry: no probe, no guide, no use text; the secrets page lists the name without a description | silent but visible: it is listed; accepted, no store on the server holds one (listing checked 2026-10-11) |
-| An old box.json carries `healthAlerts.telegramChat` | none | the config parser's handling of an unknown nested key is checked in implementation; if it throws, the key is removed by the deploy's template sweep or by hand | to verify; none exists today |
+| A `telegram-bot/<slug>` entry remains in a machine secret store | none | the store accepts any name (`store.ts:130-139`); listing and box status keep showing the entry and its grant, now with no use text, guide, format hint or probe | silent: nothing says the family is retired. Accepted: the production store holds no Telegram-named entry (names listed 2026-10-11) and no local store is known to; a value, if one appeared, is the boxholder's to forget |
+| An old box.json carries `healthAlerts.telegramChat` | none | inert: `loadBoxConfigResult` parses JSON and reads each field where it is used (`src/core/box/config.ts:404-417`); an unread key is ignored | silent and harmless; none exists today |
 | `channelsToTry` with two channels changes a loudness rule | `test/core/notification/channels.doctest.md` | n/a | clear: the doctest's expectations change with the union and the diff shows each |
 | A leftover `telegram.state.json` or `.beebox/chat-sessions.json` | n/a | read by nothing | inert |
 | A site page still says Telegram after the push | none | the prose grep in Track 1's done-when | clear at review |
+| An old `telegram` delivery line in a notification log | `test/core/notification/log.doctest.md` gains the retired-channel case | the read schema accepts retired names | clear: no warn, the line is read |
 
 No critical gap.
 
@@ -315,9 +350,8 @@ No critical gap.
 
 ## Open design questions
 
-- **Track 2 in or out.** Lean: in, for the reasons in *Could this be
-  simpler?*. If out, the plan ships Track 1 and files the dead machinery
-  as a code-quality issue.
+- None open. Track 2 in or out was the one question; **DECIDED
+  (boxholder, 2026-10-11): in.**
 
 ## Knowledge audits
 
