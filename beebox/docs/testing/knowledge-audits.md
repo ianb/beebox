@@ -125,7 +125,9 @@ refused at load. Mechanics: `src/dev/lib/test-runner/dev-session.ts`.
 It cannot observe Codex sessions (`AGENTS.md`, `.codex/` agents), what a
 session learns only by doing (hooks, lint and doc-check failures, tool
 errors), or interactive-session context such as the developer's memory and
-`/` commands. It asks cold questions; a session mid-task may load more.
+`/` commands. It asks cold questions; a session mid-task may load more. The
+session reads `issues/`, so a before-and-after comparison of a guidance
+change also hides the issue that states the rule.
 
 ## Writing one
 

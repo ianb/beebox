@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-11T19:11:51Z
+Generated: 2026-10-11T19:48:52Z
 Total documents: 527
 
 ## Issues
@@ -108,7 +108,7 @@ These references point to files that don't exist.
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
 - **docs/reports/stack-decisions-2026-09-04.md:775** → `../../agent-doctest/docs/syntax.md` (link)
   Context: - Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus
-- **docs/testing/knowledge-audits.md:156** → `MAP.md` (at-include)
+- **docs/testing/knowledge-audits.md:158** → `MAP.md` (at-include)
   Context: - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `
 - **docs/user-stories/catalog/2026-06-26.md:5348** → `MAP.md` (at-include)
   Context: - Ensure per-dir CLAUDE.md includes are correct: IMPLEMENTED in finalize.ts lines 58-79 with `ensureClaudeMdInDir()` tha
@@ -292,7 +292,6 @@ Referenced by:
 - ../.claude/skills/bbx-plan/SKILL.md:64 (mention) — `beebox/AGENTS.md:101`: *"Read before writing…"* is a citation.
 - ../.claude/skills/bbx-plan/TEMPLATE.md:37 (mention) — - beebox/AGENTS.md — conventions, validation contract, "no features
 - ../.claude/skills/browse/references/authentication.md:54 (mention) — live sessions (`beebox/AGENTS.md`). If you cannot get one, say which findings
-- ../.claude/skills/doctest/SKILL.md:14 (mention) — Create `test/<name>.doctest.md`, mirroring the `src/` path (`beebox/AGENTS.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box AGENTS.md, gene
 - ../.claude/skills/launch-worktree-session/SKILL.md:65 (mention) — `/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
 - ../AGENTS.md:7 (link) — - **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
@@ -344,6 +343,7 @@ Referenced by:
 - ../issues/closed/docs-and-chores/2026-09-21-card-refs-cannot-link-package-docs-guide-silent-on-it.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- ../issues/closed/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:93 (mention) — Keep each guidance file net shorter (root `AGENTS.md`, "agent and skill files
 - ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:33 (mention) — simplicity bet (`beebox/AGENTS.md`). Note the cost is NOT "N standing agents":
 - ../issues/closed/exploration/2026-07-18-codex-sdk-second-backend.md:24 (mention) — (published TS SDK, per-turn image input, resume, AGENTS.md + Claude-interoperable
@@ -365,7 +365,6 @@ Referenced by:
 - ../issues/docs-and-chores/2026-09-16-remove-claude-isms-from-repo-docs.md:43 (mention) — 1. **Sweep.** Rewrite hits in present-tense reference docs, AGENTS.md files,
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:35 (mention) — - **Always referenced, from the same directory.** The `AGENTS.md` in the
 - ../issues/docs-and-chores/2026-10-09-codex-launch-overrides-force-embedded-mode.md:34 (mention) — AGENTS.md.
-- ../issues/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:73 (mention) — Keep each guidance file net shorter (root `AGENTS.md`, "agent and skill files
 - ../issues/exploration/2026-03-04-claude-code-memory-concerns.md:15 (mention) — Durable project knowledge should go in repo files (AGENTS.md, docs/), not auto-memory.
 - ../issues/exploration/2026-05-28-before-you-build-this.md:12 (mention) — Convention to make it stick: a short rule in `AGENTS.md` ("before writing a new component / helper / schema, run `bbx re
 - ../issues/exploration/2026-05-28-doc-usage-mining.md:14 (mention) — - **High-read + outer-ring** → mis-classified by the rings. Should be promoted closer to always-loaded, or linked from a
@@ -979,7 +978,7 @@ Referenced by:
 - AGENTS.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
 - docs/guides.md:35 (link) — | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
 - docs/implemented-plans/remove-telegram.md:95 (mention) — - **Keep data, drop code** (`docs/box-work.md`, and the boxholder's standing
-- docs/testing.md:93 (link) — each lives and what not to touch: [box work](box-work.md).
+- docs/testing.md:94 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:121 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
 - ../AGENTS.md:20 (link) — Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/
@@ -1050,7 +1049,7 @@ Referenced by:
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server/operations.md:176 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
-- docs/testing.md:84 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
+- docs/testing.md:85 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:135 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 - ../issues/closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:83 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
@@ -2082,7 +2081,7 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 119 lines | current reference
+Title: "Testing" | 111 lines | current reference
 
 Referenced by:
 - AGENTS.md:19 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
@@ -2148,13 +2147,14 @@ Referenced by:
 - docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
 - docs/unimplemented-plans/publish-pages-superseded.md:277 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - ../.claude/skills/bbx-plan/TEMPLATE.md:176 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
-- ../.claude/skills/cross-model/SKILL.md:33 (mention) — branches, parsing, money, or security gets none (`docs/testing.md`).
+- ../.claude/skills/cross-model/SKILL.md:31 (mention) — branches, parsing, money, or security gets none (`docs/testing.md`). A new
 - ../.claude/skills/doctest/SKILL.md:10 (link) — right instrument at all: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
 - ../.claude/skills/field-probe/SKILL.md:3 (mention) — description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures
 - ../.claude/skills/field-probe/SKILL.md:13 (link) — end. It is the field arm of [reproducing a bug](../../../beebox/docs/testing.md#reproducing-a-bug):
 - ../dev/skills-review-2026-10.md:34 (mention) — | bbx-guide-testing | 79 | 1 | 2 | 10-06 | merge with doctest; it duplicates the table in `beebox/docs/testing.md` and i
 - ../issues/bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md:138 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/closed/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
+- ../issues/closed/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:32 (mention) — writes the code and its test. Nothing in `beebox/docs/testing.md`,
 - ../issues/closed/features/2026-03-04-session-output-critique-tool.md:8 (mention) — **Closed:** Implemented as `bbx session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Sess
 - ../issues/closed/features/2026-08-06-agent-driven-integration-tests.md:71 (mention) — `docs/testing.md`) already does multi-step end-to-end fixtures with checkpoints and
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:55 (mention) — (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
@@ -2162,7 +2162,6 @@ Referenced by:
 - ../issues/code-quality/2026-10-08-test-volume-sweep.md:22 (mention) — Policy changed the same day (`docs/testing.md`, cross-model skill): no test
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:24 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
 - ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:87 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
-- ../issues/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:12 (mention) — writes the code and its test. Nothing in `beebox/docs/testing.md`,
 - ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:46 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:61 (mention) — - **Failing test before the fix** — `docs/testing.md` gestures at test-first for
 - ../issues/exploration/2026-09-30-evaluate-incident-investigation-skill.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
@@ -8951,7 +8950,7 @@ Referenced by:
 - docs/implemented-plans/file-layout.md:130 (mention) — - `docs/testing/doctests.md:20`: *"Create `test/<area>/<name>.doctest.md`
 - docs/testing.md:35 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
 - docs/testing/tours.md:35 (link) — [doctests](doctests.md); "does the app boot at all" is the
-- ../issues/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:13 (mention) — `beebox/docs/testing/doctests.md`, the agent-doctest docs, the finish skill or
+- ../issues/closed/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:33 (mention) — `beebox/docs/testing/doctests.md`, the agent-doctest docs, the finish skill or
 
 References:
 - → ../agent-doctest/docs/syntax.md (link)
@@ -8972,7 +8971,7 @@ References:
 
 #### docs/testing/knowledge-audits.md
 
-Title: "Knowledge audits" | 243 lines | current reference
+Title: "Knowledge audits" | 245 lines | current reference
 
 Referenced by:
 - docs/box-work.md:82 (link) — Use the knowledge-audit skill and [knowledge audits](testing/knowledge-audits.md#running-it).

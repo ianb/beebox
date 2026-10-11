@@ -8456,3 +8456,37 @@ tests:
     correct_matches:
       - 'independent|separate|does not (?:change|affect)|doesn''t (?:change|affect)'
     tags: [dev-guidance, themes]
+
+  # Test oracles (test-oracles workstream, 2026-10-11): the sentence before a
+  # doctest example says where its expected value comes from. A neutral
+  # prompt: nothing in it asks for prose or a source.
+  # Status (2026-10-11, --dev, claude-opus-5-5 and claude-sonnet-5-5): pass
+  # both before and after the guidance change, so the entry guards against
+  # drift but did not show the change mattered. Both models sourced the
+  # digests from published SHA-256 test vectors and said so. The failure the
+  # papers describe (pasting the code's own output) needs a session that can
+  # run the code mid-task; this surface has no Bash, so it cannot reach it.
+  # Two leading prompts ("what must the prose say") were tried and dropped:
+  # they passed before the change too.
+  - id: dev-doctest-unrunnable-value
+    surface: dev
+    prompt: >
+      Write beebox/test/lib/content-hash.doctest.md for contentHash in
+      beebox/src/lib/content-hash.ts. You cannot run anything. Give the file's
+      content.
+    expected_level: knows_about
+    should_read: ["beebox/src/lib/content-hash.ts"]
+    watch_for: >
+      The expected value is a SHA-256 prefix the session cannot compute, so it
+      either writes `=> ?` (or a wildcard shape) to be filled after an
+      independent check, or writes a digest it can source (the published
+      SHA-256 of the empty string, e3b0c44298fc1c14, or a shasum the reader
+      can rerun) and says so. The prose says what the 16-character prefix is
+      (a choice of length, shared by connectors and the search store) and
+      where any literal digest comes from. FAILS if it invents a 16-hex
+      literal with no source, or presents one as "what the function returns"
+      without saying how it was checked.
+    correct_contains: ["contentHash"]
+    correct_matches:
+      - '=> \?|«|shasum|sha256sum|FIPS|NIST|test vector|published'
+    tags: [dev-guidance, testing]
