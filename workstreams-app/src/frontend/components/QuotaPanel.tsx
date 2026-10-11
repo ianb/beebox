@@ -2,6 +2,35 @@ import { compactDuration, friendlyTimestamp, quotaPace, quotaSummaryText, quotaW
 import { useState } from "react";
 import type { Quota } from "../types.js";
 
+/** One lane of the race: a runner at its percent, its trail behind it. */
+function Lane({ percent, tone, ariaLabel }: { percent: number; tone: string; ariaLabel: string }) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  return <div className={`race-lane ${tone}`} role="meter" aria-label={ariaLabel} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(clamped)}>
+    <span className="race-trail" style={{ width: `${clamped}%` }} />
+    <span className="race-runner" style={{ left: `${clamped}%` }} />
+  </div>;
+}
+
+/** Quota and time race on two lanes toward a finish line at the reset. */
+function Race({ label, usedPercent, elapsedPercent, over }: { label: string; usedPercent: number; elapsedPercent: number | null; over: boolean }) {
+  return <div className="race">
+    <div className="race-grid" aria-hidden="true">
+      <span>Quota</span>
+      {elapsedPercent === null ? null : <span>Time</span>}
+    </div>
+    <div className="race-track">
+      <Lane percent={usedPercent} tone={over ? "race-over" : "race-ok"} ariaLabel={`${label} quota used`} />
+      {elapsedPercent === null ? null : <Lane percent={elapsedPercent} tone="race-time" ariaLabel={`${label} time elapsed`} />}
+      <span className="race-finish" aria-hidden="true" />
+    </div>
+    <div className="race-results">
+      <span className={over ? "pace-over" : "pace-on-track"}>{Math.round(usedPercent)}%</span>
+      {elapsedPercent === null ? null : <span className="race-time-result">{Math.round(elapsedPercent)}%</span>}
+    </div>
+  </div>;
+}
+
+/** Quota used races time elapsed: when the quota bar is ahead of the time bar, usage is over pace. */
 function Window({ window }: { window: Quota["windows"][number] }) {
   const now = new Date();
   const pace = quotaPace(window, now);
@@ -9,11 +38,9 @@ function Window({ window }: { window: Quota["windows"][number] }) {
   return <section className="quota-window">
     <strong>{window.label}</strong>
     {expired ? <p className="muted">Expired snapshot · awaiting a fresh quota update.</p> : <>
-      <p>{Math.round(window.usedPercent)}% used</p>
-      <progress max="100" value={Math.max(0, Math.min(100, window.usedPercent))} aria-label={`${window.label} usage`} />
-      {pace ? <p className={pace.onTrack ? "pace-on-track" : "pace-over"}>{pace.onTrack ? "On track" : "Over pace"} · {Math.round(Math.abs(pace.difference))} points {pace.onTrack ? "under" : "over"} budget ({Math.round(pace.expected)}% of window elapsed)</p> : <p className="muted">Pace unavailable for this window.</p>}
+      <Race label={window.label} usedPercent={window.usedPercent} elapsedPercent={pace ? pace.expected : null} over={pace !== null && !pace.onTrack} />
+      <p className="quota-reset">Resets {new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(window.resetsAt))}</p>
       {pace?.earlyMs ? <p className="pace-over">At this rate, quota reached {compactDuration(pace.earlyMs)} before reset</p> : null}
-      <p className="muted">Resets {friendlyTimestamp(window.resetsAt, now)}</p>
     </>}
   </section>;
 }
