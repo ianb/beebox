@@ -154,9 +154,9 @@ export async function removeSecret(name: string): Promise<void> {
 }
 
 /**
- * Grant a box access to a secret. Refuses for a single-box secret (a Telegram
- * bot token binds to one webhook URL — a second grant would not merely be
- * unwise, it would break routing), which is why the refusal explains rather
+ * Grant a box access to a secret. Refuses for a single-box secret (a publish
+ * bucket token is scoped to one bucket — a second grant would not merely be
+ * unwise, it would break that box's publishing), which is why the refusal explains rather
  * than just denying.
  */
 export async function grantSecret(opts: { slug: string; name: string; access: SecretAccessLevel }): Promise<void> {
@@ -175,12 +175,11 @@ export async function grantSecret(opts: { slug: string; name: string; access: Se
  * Store a single-box secret AND grant it to that box, in one locked pass.
  *
  * The programmatic form of `set` + `grant` for per-box connector flows that own
- * both halves — telegram setup, publish's minted R2 token. They differ from the
+ * both halves — publish's minted R2 token. They differ from the
  * boxholder's `bbx secrets set`/`grant` in that there is no separate granting
  * decision to make: the box just minted or was handed a credential that is
  * structurally its own, so the entry carries `owningBox` + `shareable: false`
- * (a Telegram bot token binds to one webhook URL; the R2 token is scoped to one
- * bucket) and the grant follows automatically. `grantSecret` would refuse the
+ * (the R2 token is scoped to one bucket) and the grant follows automatically. `grantSecret` would refuse the
  * second step on its own `shareable: false` check if the entry already existed
  * for a different box — the ownership check runs here too, so a flow can never
  * quietly steal another box's entry. That check reads the STORED owner and
@@ -266,7 +265,7 @@ export interface CopiedGrants {
    * a source whose only grants are single-box copies nothing either, and
    * `deploy/add-box.sh` must not read that as "this machine predates the store"
    * and fall back to copying secret FILES — which would hand the new box the
-   * very Telegram token the skip just refused.
+   * very bucket token the skip just refused.
    */
   sourceHadGrants: boolean;
 }
@@ -279,9 +278,9 @@ export interface CopiedGrants {
  * it would leave the new box's code failing with `agent-access-not-granted`
  * for no visible reason.
  *
- * Single-box secrets (`shareable: false` — a Telegram bot token, a bucket-scoped
+ * Single-box secrets (`shareable: false` — a bucket-scoped
  * R2 token) are SKIPPED rather than refused: a whole provisioning run must not
- * fail because the reference box happens to have a Telegram bot, and copying one
+ * fail because the reference box happens to have a publish bucket token, and copying one
  * would break the box already using it. Each skip is reported so the operator
  * sees what the new box still needs of its own.
  */

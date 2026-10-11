@@ -87,7 +87,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "DO_NOT_TRACK",
 
   // --- Box config a spawned `bbx` process reads (paths and flags, not credentials) ---
-  "PUBLIC_URL", // src/lib/public-url.ts, telegram-helpers.ts, and this file's publicUrl fallback.
+  "PUBLIC_URL", // src/lib/public-url.ts and this file's publicUrl fallback.
   "BBX_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
   "BBX_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
   "BBX_AUTH_FILE", // src/webapp/local-users.ts -- credential-store PATH, not a credential; withholding it would point a test subprocess at the real global auth file.

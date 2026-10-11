@@ -47,7 +47,6 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "guide" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "file" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: EXTRACTED_CARD_TYPE }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ type: "telegram-message" }, { listUI: { icon: DocumentIcon } });
 
   registerFileType({ match: (p: string) => p.endsWith(".md") }, { listUI: { icon: DocumentIcon } });
   registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") || p.endsWith(".avif") }, { listUI: { icon: ImageIcon } });

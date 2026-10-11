@@ -20,7 +20,6 @@
  * | `gemini` | `GET https://generativelanguage.googleapis.com/v1beta/models` |
  * | `deepgram` | `GET https://api.deepgram.com/v1/projects` |
  * | `openrouter` | `GET https://openrouter.ai/api/v1/key` |
- * | `telegram-bot/<box>` | `GET https://api.telegram.org/bot<token>/getMe` |
  *
  * **Three outcomes, and the middle one matters.** `ok` and `failed` are what
  * they sound like; anything that does not distinguish a bad credential from a
@@ -77,7 +76,6 @@ interface ProbeEntry {
 }
 
 const deepgramSecretSchema = z.object({ apiKey: z.string().min(1) });
-const telegramSecretSchema = z.object({ botToken: z.string().min(1) });
 
 function bearer(url: string): (value: string) => ProbeRequest {
   return (value) => ({ url, headers: { Authorization: `Bearer ${value}` } });
@@ -122,16 +120,6 @@ const probes: Record<string, ProbeEntry> = {
       return { url: "https://api.deepgram.com/v1/projects", headers: { Authorization: `Token ${creds.apiKey}` } };
     },
   },
-  "telegram-bot/": {
-    describe: "calls the Telegram bot's getMe",
-    request: (value) => {
-      const creds = parseJsonSecret({ name: "telegram-bot", value, schema: telegramSecretSchema });
-      if (creds === null) return null;
-      // Telegram has no header auth — the token IS the path segment. Nothing
-      // else about this call is unusual, and getMe changes nothing.
-      return { url: `https://api.telegram.org/bot${creds.botToken}/getMe`, headers: {} };
-    },
-  },
 };
 
 export type SecretVerified = NonNullable<SecretEntry["verified"]>;
@@ -148,12 +136,11 @@ export interface SecretProvenance {
 /**
  * The probe for one entry, or `null`.
  *
- * A `family/` prefix entry (`telegram-bot/`) additionally requires that the
- * entry was created by the connector flow that owns that family — it carries
- * `owningBox` + `shareable: false`. Without that check, an agent could DECLARE a
- * slot named `telegram-bot/anything`, and whatever value the boxholder then
- * pasted in would be sent to api.telegram.org by a probe the agent effectively
- * chose. Exact names are safe by construction: an agent cannot make `mistral`
+ * A `family/` prefix entry additionally requires that the entry was created
+ * by the flow that owns that family — it carries `owningBox` +
+ * `shareable: false`. Without that check, an agent could DECLARE a slot named
+ * `<family>/anything`, and whatever value the boxholder then pasted in would
+ * be sent to the family's provider by a probe the agent effectively chose. Exact names are safe by construction: an agent cannot make `mistral`
  * mean something else.
  */
 function probeEntryFor(opts: { name: string } & SecretProvenance): { key: string; entry: ProbeEntry } | null {
@@ -201,8 +188,8 @@ async function runProbe(opts: { entry: ProbeEntry; value: string; at: string; do
     // here would flag a good key as suspect every time the provider blipped.
     //
     // Only the error's CLASS is recorded, never its message: fetch and proxy
-    // errors routinely quote the request URL, and Telegram's probe URL contains
-    // the bot token, so a stored-and-displayed message could publish the secret
+    // errors routinely quote the request URL, and a probe URL can contain
+    // the credential, so a stored-and-displayed message could publish the secret
     // into the admin page. A class name is enough to tell a timeout from DNS.
     return { status: "unchecked", at: opts.at, reason: `could not reach the provider (${errorClass(e)})` };
   }

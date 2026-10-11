@@ -8,7 +8,6 @@
  */
 
 import type { JevService } from "./jev.js";
-import type { TelegramService } from "./telegram.js";
 import type { ClaudeCliService } from "./claude-cli.js";
 import type { CodexCliService } from "./codex-cli/core.js";
 import type { GoogleAuthService } from "./google-auth.js";
@@ -30,7 +29,6 @@ export interface Services {
   cloudflarePublishTokenVerifier?: CloudflarePublishTokenVerifier | undefined;
   managedPublicationRuntime?: ManagedPublicationRuntime | undefined;
   jev?: JevService | undefined;
-  telegram?: TelegramService | undefined;
   claudeCli?: ClaudeCliService | undefined;
   codexCli?: CodexCliService | undefined;
   googleAuth?: GoogleAuthService | undefined;

@@ -31,7 +31,7 @@ export function grantableSecrets(machine: MachineView, grantedNames: string[]): 
 
 /**
  * The picker hides names another box owns exclusively (`shareable: false`) —
- * a Telegram token routes to one webhook URL, so offering it here would only
+ * a publish bucket token belongs to one box, so offering it here would only
  * produce a refusal.
  */
 export function GrantExistingForm({

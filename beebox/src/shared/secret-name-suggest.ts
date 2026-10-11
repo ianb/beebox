@@ -18,7 +18,7 @@ export function normalizeSecretName(name: string): string {
 
 /**
  * The known name `typed` normalises to, when it is not already exactly that
- * name; otherwise null. Family prefixes (`telegram-bot/`) are skipped — they are
+ * name; otherwise null. Family prefixes (a name ending in `/`) are skipped — they are
  * not names a person types.
  */
 /**

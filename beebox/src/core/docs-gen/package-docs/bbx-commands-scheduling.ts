@@ -117,7 +117,7 @@ export function bbxCommandsScheduling(): string[] {
     "```",
     "",
     "Symmetric counterpart to `bbx engine wakeup`. Sends any pending cards in `_bookkeeping/output/`",
-    "(e.g. telegram messages). Called automatically by the reactor after job processing,",
+    "(e.g. Gmail drafts). Called automatically by the reactor after job processing,",
     "or run manually to flush output.",
     "",
     ...bbxCommandsNotify(),

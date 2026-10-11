@@ -73,7 +73,6 @@ function jsonValue<T extends z.ZodRawShape>(schema: z.ZodObject<T>, order: strin
 }
 
 const deepgramSchema = z.object({ apiKey: z.string().min(1), projectId: z.string().min(1) });
-const telegramSchema = z.object({ botToken: z.string().min(1), webhookSecret: z.string().min(1) });
 
 function sharedKey(name: string): LegacyMapping {
   return { storeName: () => name, singleBox: false, toValue: apiKeyValue };
@@ -95,11 +94,6 @@ const LEGACY_MAPPINGS: Record<string, LegacyMapping> = {
     storeName: () => "deepgram",
     singleBox: false,
     toValue: jsonValue(deepgramSchema, ["apiKey", "projectId"]),
-  },
-  telegram: {
-    storeName: (slug) => `telegram-bot/${slug}`,
-    singleBox: true,
-    toValue: jsonValue(telegramSchema, ["botToken", "webhookSecret"]),
   },
 };
 

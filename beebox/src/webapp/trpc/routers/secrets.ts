@@ -56,7 +56,7 @@ const secretNameSchema = z.string().trim().min(1).max(200);
 /**
  * Run a lifecycle mutation, turning its refusal into a client error that keeps
  * the store's own explanation. `SecretNotShareableError` in particular says WHY
- * a Telegram token cannot be shared — replacing that with "Bad Request" would
+ * a bucket-scoped publish token cannot be shared — replacing that with "Bad Request" would
  * leave the boxholder staring at a button that does nothing.
  */
 async function lifecycle<T>(operation: () => Promise<T>): Promise<T> {

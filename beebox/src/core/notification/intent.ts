@@ -16,8 +16,13 @@ export const LOUDNESS = ["dot", "quiet", "loud"] as const;
 /** `dot`: badge only. `quiet`: a muted notification. `loud`: a notification with sound. */
 export type Loudness = (typeof LOUDNESS)[number];
 
-export const CHANNELS = ["apns", "web-push", "telegram"] as const;
+export const CHANNELS = ["apns", "web-push"] as const;
 export type ChannelName = (typeof CHANNELS)[number];
+/**
+ * Channels that no longer exist. The log read schema still accepts them so a
+ * delivery line written before removal parses instead of warning on every read.
+ */
+export const RETIRED_CHANNELS = ["telegram"] as const;
 
 const DELIVERY_STATUSES = ["sent", "skipped", "failed"] as const;
 export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
@@ -71,7 +76,7 @@ export const deliveryLineSchema = z.object({
   kind: z.literal("delivery"),
   at: z.string(),
   notificationId: z.string().min(1),
-  channel: z.enum(CHANNELS),
+  channel: z.enum([...CHANNELS, ...RETIRED_CHANNELS]),
   status: z.enum(DELIVERY_STATUSES),
   detail: z.string().optional(),
 });

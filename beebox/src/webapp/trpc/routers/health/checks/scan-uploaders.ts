@@ -9,7 +9,7 @@
  * missing features. That is a state the system already knows about, that only a
  * person can resolve, which is what `bbx health` answers.
  *
- * Why health rather than a notification: a push or Telegram alert reaches
+ * Why health rather than a notification: a push alert reaches
  * nobody unless the boxholder has wired a channel, and there is no notification
  * history to look back at. A health check is visible in `bbx health` and the
  * dashboard banner whether or not any channel exists. It is also a *sticky*

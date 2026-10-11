@@ -52,7 +52,6 @@ export const PILLARS: Pillar[] = [
     supporting: [
       { path: "src/connectors/AGENTS.md", note: "Per-directory rules. Auto-loads when Claude reads connector code." },
       { path: "docs/connectors/gmail.md", note: "OAuth dance for Gmail. Notable for 'just one more callback' energy." },
-      { path: "docs/connectors/telegram.md", note: "Telegram bot setup. Calmest of the connectors." },
       { path: "docs/connectors/drive.md", note: "Drive watch-and-pull. Underused so far." },
       { path: "docs/connectors/calendar.md", note: "The newest one. Still ironing out edges." },
     ],

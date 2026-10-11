@@ -2,7 +2,7 @@
  * The admin page's vocabulary: its tabs, its sections, and which section
  * lives under which tab. A section's `title` here is the heading the section
  * renders and the accessible name of its landmark, and `bbx-admin-<id>` is
- * its DOM id, so "admin → Connections → Telegram" resolves the same way for
+ * its DOM id, so "admin → Connections → Gmail filters" resolves the same way for
  * the boxholder, the box agent, and `bin/browse`.
  */
 
@@ -24,7 +24,6 @@ export type AdminSectionId =
   | "invite"
   | "google-services"
   | "gmail-filters"
-  | "telegram"
   | "secrets"
   | "cloudflare-publishing"
   | "tailscale"
@@ -51,7 +50,6 @@ export const ADMIN_SECTIONS: Record<AdminSectionId, AdminSectionDef> = {
   "invite": { title: "Invite link", blurb: "A one-time link that creates a member account.", scope: "box" },
   "google-services": { title: "Google services", blurb: "The Google sign-in this host uses, and which of Calendar, Gmail, and Drive this box may use.", scope: "mixed" },
   "gmail-filters": { title: "Gmail filters", blurb: "Which Gmail messages this box picks up and what it does with them.", scope: "box" },
-  "telegram": { title: "Telegram", blurb: "The Telegram bot this box answers through.", scope: "box" },
   "secrets": { title: "Secrets", blurb: "API keys this box can use, and keys shared across boxes.", scope: "mixed" },
   "cloudflare-publishing": { title: "Cloudflare publishing", blurb: "Cloudflare tokens for publishing pages, and which boxes may use them.", scope: "mixed" },
   "tailscale": { title: "Tailscale", blurb: "Reaching this host from your other devices over Tailscale.", scope: "host" },
@@ -74,7 +72,7 @@ export interface AdminGroupDef {
 export const ADMIN_GROUPS: readonly AdminGroupDef[] = [
   { tab: "agents", label: "Agents", description: "What runs the box's agents: the engine, its models, and the accounts behind them.", sections: ["agent-engine", "claude-code", "codex", "openrouter-models"] },
   { tab: "people", label: "People", description: "Who can sign in to this box.", sections: ["allowed-users", "invite"] },
-  { tab: "connections", label: "Connections", description: "Outside services this box talks to.", sections: ["google-services", "gmail-filters", "telegram", "cloudflare-publishing"] },
+  { tab: "connections", label: "Connections", description: "Outside services this box talks to.", sections: ["google-services", "gmail-filters", "cloudflare-publishing"] },
   { tab: "secrets", label: "Secrets", description: "API keys this box can use, and the keys shared across boxes on this host.", sections: ["secrets"] },
   { tab: "host", label: "Host", description: "The machine this box runs on and the device you are using.", sections: ["tailscale", "backup", "notifications"] },
 ];

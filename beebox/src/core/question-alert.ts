@@ -15,7 +15,6 @@ import * as path from "node:path";
 import { generateContext } from "../webapp/context.js";
 import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
 import { parseTarget, type Target } from "./notification/target.js";
-import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { z } from "zod";
@@ -68,10 +67,10 @@ export interface QuestionAlertResult {
 
 export async function checkPendingQuestionsAndNotify(
   boxRoot: string,
-  opts: { now: Date; tg?: TelegramService; push?: PushService },
+  opts: { now: Date; push?: PushService },
 ): Promise<QuestionAlertResult | null> {
-  const channels = await notifyChannels(boxRoot, { services: { tg: opts.tg, push: opts.push } });
-  if (!channels.telegram && !channels.webPush && !channels.apns) return null;
+  const channels = await notifyChannels(boxRoot, { services: { push: opts.push } });
+  if (!channels.webPush && !channels.apns) return null;
 
   const { pendingQuestions } = await generateContext(boxRoot);
   const pendingPaths = pendingQuestions.map((q) => q.path);
@@ -106,7 +105,7 @@ export async function checkPendingQuestionsAndNotify(
   await notifyBoxholder(boxRoot, {
     intent: { title, body, target, loudness, source: "question-alert" },
     now: opts.now,
-    services: { tg: opts.tg, push: opts.push },
+    services: { push: opts.push },
   });
 
   return { notified: fresh.map((q) => q.path) };

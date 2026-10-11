@@ -52,16 +52,6 @@ const CONNECTORS: ConnectorInfo[] = [
       "`_bookkeeping/connectors/`.",
     ].join("\n"),
   },
-  {
-    name: "telegram",
-    produces: ["chat-thread"],
-    description: [
-      "Messages the boxholder sends the box's Telegram bot arrive as `chat-thread` cards under",
-      "`_content/chat/telegram/`; replies go back through the same chat, and the agent's pending",
-      "`telegram-message` cards in `_bookkeeping/output/` are sent. There is nothing to",
-      "author by hand: a Telegram conversation is a chat like any other.",
-    ].join("\n"),
-  },
 ];
 
 export interface CardDocInput {
@@ -139,7 +129,7 @@ export function generateConnectorsDocs(): string {
     "",
     "  A trick declares its secrets in `secrets.json` instead and receives them in its",
     "  environment; see `tricks.md`.",
-    "- Built-in connectors (Telegram, Gmail, transcription, …) resolve their own credentials",
+    "- Built-in connectors (Gmail, Calendar, Drive, transcription, …) resolve their own credentials",
     "  inside the server process. You never see or need those values.",
     "- A scheduled script that needs a connector says so in its `requires` field; see",
     "  `card-scheduled-script.md`.",

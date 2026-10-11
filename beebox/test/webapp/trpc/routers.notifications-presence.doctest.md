@@ -21,7 +21,6 @@ import { addSubscription } from "../../../src/core/push-subscriptions.js";
 import { pairFakePushDevice } from "../../../src/core/mobile/pairing.js";
 import { createFakePush } from "../../../src/services/push.js";
 import { createFakeApns } from "../../../src/services/apns.js";
-import { createFakeTelegram } from "../../../src/services/telegram.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-notifications-router-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
@@ -67,8 +66,8 @@ const second = await notifyBoxholder(box.root, {
 const recent = await caller({}).notifications.recent({ days: 3 });
 recent.map((n) => `${n.intent.title}: ${n.deliveries.map((d) => `${d.channel} ${d.status} ${d.detail}`).join(", ")}`).join("\n")
 =>
-Talk about the trip?: apns skipped no-audience, web-push skipped no-audience, telegram skipped no-audience
-Field trip form due: apns skipped no-audience, web-push skipped no-audience, telegram skipped no-audience
+Talk about the trip?: apns skipped no-audience, web-push skipped no-audience
+Field trip form due: apns skipped no-audience, web-push skipped no-audience
 ```
 
 ## get: one intent by id; null for an unknown id
@@ -116,22 +115,21 @@ await attempt(() => caller({}).presence.heartbeat({ sessionId: "x" }))
 
 The server's channel services arrive through the context's `services.notify`
 (production leaves it unset and builds them from the server's keys). This box
-now has a paired phone, a subscribed browser, and a Telegram chat, and the
-server holds fakes for all three.
+now has a paired phone and a subscribed browser, and the server holds fakes for
+both.
 
 ```ts continue
-await box.seed("_config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
 await pairFakePushDevice(box.root, { label: "test phone" });
 await addSubscription({
   boxSlug: await boxSlug(box.root),
   subscription: { endpoint: "https://push.example/phone", keys: { p256dh: "p", auth: "a" } },
   now: new Date(),
 });
-const notify = { apns: createFakeApns(), push: createFakePush(), tg: createFakeTelegram({ username: "bot" }) };
+const notify = { apns: createFakeApns(), push: createFakePush() };
 const agent = caller({ actor: "agent", user: null, isOwner: false, isAuthenticatedOwner: false, services: { notify } });
 
 JSON.stringify(await agent.notifications.channels())
-=> {"reach":{"apns":true,"webPush":true,"telegram":true},"configured":{"apns":true,"webPush":true,"telegram":true}}
+=> {"reach":{"apns":true,"webPush":true},"configured":{"apns":true,"webPush":true}}
 ```
 
 A send runs `notifyBoxholder` in the server process, so the delivery goes out
@@ -141,8 +139,8 @@ on the server's services and lands in the log like any other:
 const sent = await agent.notifications.send({
   intent: { title: "Pick up Sam", body: "At 3.", target: "chat:new", loudness: "loud", source: "bbx notify" },
 });
-JSON.stringify([sent.deliveries, notify.apns.sent.length, notify.push.sent.length, notify.tg.sent.length])
-=> [[{"channel":"apns","status":"sent"},{"channel":"web-push","status":"sent"},{"channel":"telegram","status":"sent"}],1,1,1]
+JSON.stringify([sent.deliveries, notify.apns.sent.length, notify.push.sent.length])
+=> [[{"channel":"apns","status":"sent"},{"channel":"web-push","status":"sent"}],1,1]
 
 (await caller({}).notifications.get({ id: sent.id }))?.intent.source
 => bbx notify
@@ -167,7 +165,7 @@ that far.
 ```ts continue
 const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "doctest" };
 (await caller({ services: { notify } }).notifications.send({ intent })).deliveries.length
-=> 3
+=> 2
 
 [
   await attempt(() => caller({ user: { email: "member@example.org", name: "Member" }, isOwner: false, isAuthenticatedOwner: false }).notifications.send({ intent })),
