@@ -23,17 +23,21 @@ function say(toolName, input) {
 
 ## Collapsed summary
 
-Tools fall into four groups, and TodoWrite is not counted:
+Tools fall into groups, and TodoWrite is not counted. Lookups say where they
+looked: the person's box, or the web.
 
 ```ts
 summarizeActivity([{ type: "thinking" }, tools(tool("Read", {}), tool("Grep", {}), tool("Bash", {}))])
-=> thought it over, looked up 2 things, took a step
+=> thought it over, checked 2 things in your box, took a step
 
 summarizeActivity([tools(tool("Edit", {}), tool("Write", {}), tool("Bash", {}), tool("mcp__x__y", {}))])
 => made 2 changes, took 2 steps
 
 summarizeActivity([tools(tool("Task", {}), tool("Agent", {}), tool("WebFetch", {}))])
-=> handed off 2 tasks, looked something up
+=> handed off 2 tasks, read a web page
+
+summarizeActivity([tools(tool("WebSearch", {}), tool("WebSearch", {}), tool("WebFetch", {}), tool("WebFetch", {}), tool("Read", {}))])
+=> searched the web 2 times, read 2 web pages, checked something in your box
 
 summarizeActivity([tools(tool("TodoWrite", {}), tool("TodoWrite", {}))])
 => working
@@ -60,7 +64,7 @@ place it makes, not the file or the word "schema":
   say("Edit", { file_path: "schemas/lending-item.ts" }),
   say("Read", { file_path: "schemas/lending-item.ts" }),
 ]
-=> ["Set up a place for your loans", "Changed how your lending items are kept", "Looked something up"]
+=> ["Set up a place for your loans", "Changed how your lending items are kept", "Checked something in your box"]
 ```
 
 The plural follows ordinary English endings:
@@ -74,7 +78,7 @@ The plural follows ordinary English endings:
 
 ```ts
 [say("Read", { file_path: "notes/todo.txt" }), say("Edit", { file_path: "notes/todo.txt" }), say("Write", {})]
-=> ["Looked something up", "Made a change", "Made a change"]
+=> ["Checked something in your box", "Made a change", "Made a change"]
 ```
 
 ## Bash
@@ -103,8 +107,8 @@ The description is shown, capitalized; the command text never is:
   say("Task", {}),
 ]
 => [
-  "Searched the box",
-  "Looked through the box",
+  "Searched your box",
+  "Looked through your box",
   "Searched the web for \"library loan rules\"",
   "Read a page on example.com",
   "Read a web page",
