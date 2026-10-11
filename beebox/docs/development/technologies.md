@@ -34,7 +34,7 @@ Transcription has four backends: OpenAI Whisper, Mistral's Voxtral, Deepgram,
 and Microsoft's diarized service, the last reachable only through OpenRouter.
 Text to speech uses OpenAI, or Gemini through OpenRouter. Search embeddings use
 OpenAI. Scan and image understanding defaults to Claude, with a Gemini backend
-available, and Gemini also handles audio questions. Google OAuth, Telegram, and
+available, and Gemini also handles audio questions. Google OAuth and
 an R2 publish target are connector credentials rather than model services. The
 repository configures image generation only for its own architecture
 illustrations; it is not a product feature.

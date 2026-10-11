@@ -203,7 +203,7 @@ Eligible candidates are recent resumable web chats (the existing seven-day
 window), the latest chat at each eligible landmark even when older, and old
 chats explicitly retained by the rubric. New conversations in each landmark
 and a new general conversation are separate choices. Background landmarks
-need an explicit rubric entry to participate. Telegram, document triage,
+need an explicit rubric entry to participate. Document triage,
 jobs, and non-chat destinations are not candidates. Jev favors a plausible
 recent or general chat, with a new general chat at the root as the fallback
 when no other destination fits.

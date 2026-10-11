@@ -87,12 +87,11 @@ Every external service has three parts:
 
 ```typescript
 // Create a fake with domain-specific constructor params
-const tg = createFakeTelegram({ username: "test_bot" });
+const cal = createFakeGoogleCalendar({ calendars: [{ id: "primary", summary: "Home" }] });
 
 // Fakes have observable state
-await tg.sendMessage(123, "hello");
-tg.sent.length  // => 1
-tg.sent[0].text // => "hello"
+await cal.insertEvent("primary", { summary: "Dentist", start: {...}, end: {...} });
+cal.events.length  // => 1
 ```
 
 ### Injecting into routes
@@ -100,19 +99,17 @@ tg.sent[0].text // => "hello"
 Pass fakes via `makeTestServer({ services: { ... } })`:
 
 ```typescript
-const tg = createFakeTelegram({ username: "my_bot" });
-const ctx = await makeTestServer({ services: { telegram: tg } });
-// Routes that use telegram will get the fake
-const res = await ctx.request({ method: "GET", url: "/api/admin/telegram-status" });
+const cal = createFakeGoogleCalendar({ calendars: [...] });
+const ctx = await makeTestServer({ services: { calendar: cal } });
+// Routes that use the calendar service will get the fake
 // Inspect what the route did via the fake's state
-tg.sent  // messages the route sent
+cal.events  // events the route inserted
 ```
 
 ### Available fakes
 
 | Service | Factory | Key constructor params | Observable state |
 |---------|---------|----------------------|-----------------|
-| Telegram | `createFakeTelegram()` | `{ username }` | `.sent[]`, `.webhookUrl` |
 | Claude CLI | `createFakeClaudeCli()` | `{ loggedIn? }` | `.loggedIn` |
 | Google Calendar | `createFakeGoogleCalendar()` | `{ calendars?, events? }` | `.calendars[]`, `.events[]` |
 | OpenAI Audio | `createFakeOpenAIAudio()` | `{ transcriptionText? }` | `.calls[]` |
@@ -127,14 +124,13 @@ Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, s
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
-await setSecret({ name: `telegram-bot/${slug}`, value: JSON.stringify({...}) });
-await grantSecret({ slug, name: `telegram-bot/${slug}`, access: "server" });
+await setSecret({ name, value });
+await grantSecret({ slug, name, access: "server" });
 
-const tg = createFakeTelegram({ username: "bot", updates: [...] });
-const connector = createTelegramConnector(box.root, tg);
+const gmail = createFakeGoogleGmail({ messages: [...] });
+const connector = createGmailConnector(box.root, gmail);
 const result = await connector.sync();
 // Check result.created, result.updated, result.pushed
-// Check tg.sent for outbound messages
 await box.cleanup();
 ```
 

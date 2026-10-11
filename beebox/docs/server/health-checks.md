@@ -192,7 +192,7 @@ A box with no scheduler running will show a stale `last verified` rather than a
 wrong verdict.
 
 On a flip to broken, the boxholder gets one notification per breakage over
-Telegram/Web Push. Reconnecting (admin page, or `bbx google-auth --reauth`) clears
+the iPhone app and Web Push. Reconnecting (admin page, or `bbx google-auth --reauth`) clears
 the state and re-arms the alert for a future relapse. Operator-facing detail is
 in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
 notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
@@ -216,7 +216,7 @@ lets the box notice. `connectors/activity-verdict.ts` holds the rule:
   the boxholder to ignore the dashboard.
 
 Each quiet or failing stretch is an **episode**, stored in the activity record.
-The scheduler daemon sends one Telegram/Web Push message per episode, beside the
+The scheduler daemon sends one iPhone app and Web Push message per episode, beside the
 task-health and Google-auth alerts (`core/schedule/box-alerts.ts`). The
 dashboard shows a `connector-activity:<name>` warning with a **This is expected**
 button until new items arrive, an ok sync ends the failing stretch, or the owner
