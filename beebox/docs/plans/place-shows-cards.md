@@ -36,7 +36,10 @@ Queue searches run (`bin/issues search`): "landmark body", "place page",
 
 Two faults from the same walks are outside this plan: the "The open chat is
 in another place" wording read as an error (A row 24, D-2 rows 40-41), and A's
-openers stayed disabled after one use (A row 46). They get their own issues.
+openers stayed disabled after one use (A row 46). Both were already filed and
+fixed:
+[place-go-to-line-reads-as-an-error](../../../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md),
+[place-page-openers-stay-disabled-after-one-send](../../../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md).
 
 ## Decisions from the boxholder (2026-10-11)
 
@@ -506,8 +509,8 @@ None.
 - A freshness line under the body: needs a recorded write time.
 - Course-specific body guidance (last / next / uncertain): the study-home
   issue owns it.
-- The "open chat is in another place" wording and the disabled openers: own
-  issues.
+- The "open chat is in another place" wording and the disabled openers:
+  already fixed under their own issues.
 - Phone layout: arrival opens no card there (landmark-arrival decision c);
   unchanged.
 
