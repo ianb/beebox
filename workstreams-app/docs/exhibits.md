@@ -94,7 +94,8 @@ One mechanism, three levels of effort:
    name beside the label opens the raw file. Most exhibits want exactly this.
 2. **`index.html`** — served as-is, scripts allowed. Sibling files (`data.json`,
    images) are served from the directory, so relative `fetch` works. Namespace
-   your `localStorage` keys: the whole origin shares them.
+   your `localStorage` keys: the whole origin shares them. One line opts the
+   page into the Reply and Comment controls; see "Controls on a raw page".
 3. **`index.tsx`** — default-export a React component. It renders inside the
    container (shell, breadcrumb, title and prose), with React 18, Tailwind, and the
    client below already provided. Drop the file in; no build step, no
@@ -105,9 +106,30 @@ module tiers.** Store exhibits on those two tiers get the button under the
 title. It calls the focus route (see Access) and brings the workstream's live
 terminal tab forward, so a reaction is typed where the agent is listening. When
 there is no live session the page shows the reason. Raw `index.html` is served
-unchanged and receives no container, so it gets no button; it may call the
-route itself. A page that wants richer interaction writes through the client
-below.
+unchanged and receives no container; it gets the button by opting into the
+control bar below, or may call the route itself. A page that wants richer
+interaction writes through the client below.
+
+### Controls on a raw page
+
+A raw `index.html` page gets the same Reply and Comment controls as the
+container by referencing one module:
+
+```html
+<script type="module" src="/controls.ts"></script>
+```
+
+The bar is fixed to the bottom of the window, 48px tall when idle, and grows
+upward when the composer opens. Leave `padding-bottom: 48px` on the page's
+scrolling element so the bar never covers the last line, and keep the page's
+own fixed elements out of the bottom 48px: the bar sits above everything. The
+bar renders in a shadow root with its own stylesheet, so the page's styles and
+the bar's do not touch; the page itself is not edited. Commenting reads
+selections in ordinary text in the page's body (not inside an iframe or a
+shadow root), and the heading above a selection is the nearest `h1`–`h6`
+before it in document order. A committed app under `apps/` gets no bar (it has
+no workstream to route a comment to); a page without the line is served
+exactly as before.
 
 Page *source* is never served as content: `.ts`/`.tsx`/`.jsx` requests are
 refused, and paths cannot leave the exhibit directory.
@@ -187,8 +209,8 @@ session (`detail` is the CLI's last stderr line). Granted 2026-10-10, with the
 comment routes. It cannot resume, close, or archive a workstream and takes no
 text. The `Origin` check keeps other origins out but
 cannot tell a click from a page's own script, so an agent-written page can
-trigger it. The container button uses it; raw `index.html` pages get no button
-and may call the route themselves.
+trigger it. The container button and the raw page's control bar use it; a raw
+page may also call the route itself.
 
 ## Comments
 
@@ -215,8 +237,8 @@ accepts for an exhibit wherever it takes a path. Nothing is read back on the
 page: a comment is a message, and the agent clears it.
 
 The control appears on the default and `index.tsx` tiers, which the container
-renders. A raw `index.html` page shows no control and gives no hint; its author
-may call the routes directly: `POST /api/<ws>/<exhibit>/comments` with
+renders, and on a raw `index.html` page that opts into the control bar
+("Controls on a raw page" above). A raw page may also call the routes directly: `POST /api/<ws>/<exhibit>/comments` with
 `{ body, origin?, quoted?, section?, fragment? }` answers 201 `{ id, workstream }`,
 and `POST /api/transcribe` with `{ audio: <base64>, mimeType? }` answers
 `{ text }`. Committed apps have no workstream and are refused with 409.
