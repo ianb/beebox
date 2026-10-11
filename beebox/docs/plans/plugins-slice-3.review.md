@@ -53,3 +53,17 @@ its reason.
 Compare against a one-connector declarative slice before closing the
 decision. Done as shape B; the comparison is in Smallest fix and budget and
 Open design questions.
+
+## Round 2 (codex gpt-6-sol, 2026-10-11)
+
+Findings 1, 2 and 4 confirmed addressed. Residuals, both fixed in the plan:
+the outside-import figure was still a specifier count (55/54); resolved to
+modules across the 56 connector files it is 45 distinct, 44 outside the
+allowed surface, and the plan now says how it was counted. Shape B's gain
+was overstated as "what is on in this box"; it is a listing of activated
+connector plugins, and activation is not a connected or synced state. Its
+named work was short of its estimate; the twelve `googleServices` readers
+are now listed and the estimate is 500 source and 150 test lines. Track 3's
+Telegram line keeps the incoming `chat-thread` and outbound
+`telegram-message` distinction. No round 3: the residuals are counts and
+wording the planner verified by command.

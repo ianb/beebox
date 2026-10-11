@@ -60,29 +60,35 @@ one switch: `googleServices.<name>` (`src/core/box/config.ts:72`) retires,
 `isGoogleServiceAllowed` (`:158`) reads the active plugin list, the admin
 Google services toggles write `plugins`, a migration copies each `true`
 toggle into a `plugins` entry on every box, and the `requirements.ts:56-62`
-table follows. What a person gets: one list of what is on in this box, and
-`bbx plugins list` showing each connector's README beside its state. What
-they lose: nothing; sync behaves as today. Cost: hook field and resolution
-(about 60 lines), three plugin directories with READMEs (about 150 lines of
-docs), the policy switch and admin writer rework (about 120 lines), a
-migration with plan and verify in the body-tags shape (about 150 source, 60
-test), docs and skills that name `googleServices` (eight files). About 450
-source and 150 test lines, plus 200 of docs. The person-facing gain is a
-listing, which `bbx status`, the Google health checks and the connector
-activity checks already provide piecewise.
+table follows, as do the other `googleServices` readers: `src/google/access.ts`,
+`src/google/sync-skipped.ts`, `src/core/docs-gen/content.ts`,
+`src/webapp/box-config-write.ts`, the admin router and `admin/google.ts`,
+and the frontend's `GoogleServicesSection`, `AdminOverview` summaries and
+Gmail filters display (twelve files by grep). What a person gets: one
+listing of the connector plugins activated in this box, with each
+connector's README beside it. Activated is not connected: whether Google
+auth works and whether a sync ran stay where they are today, in the Google
+and connector-activity health checks, so the listing adds a name, not a
+state. What they lose: nothing; sync behaves as today. Cost: hook field and
+resolution (about 60 lines), the policy switch retired and its twelve
+readers and the admin writer reworked (about 200 lines), a migration with
+plan and verify in the body-tags shape (about 150 source, 60 test), tests
+for the policy change (about 90), three plugin directories with READMEs
+(about 150 lines of docs), docs and skills that name `googleServices` (eight
+files). About 500 source and 150 test lines, plus 200 of docs.
 
 **Shape C: move the code.** Gmail, Google Calendar and Google Drive under
 `src/plugins/<name>/` with a runtime `connectors` hook on `PluginDefinition`:
 
 | Part | Lines today | What the move needs |
 |---|---|---|
-| Connector code (`src/connectors/gmail`, `google-calendar`, `google-drive`, every `.ts`) | 10,149 | moved; the 54 engine modules they import re-routed (see *What already exists*) |
+| Connector code (`src/connectors/gmail`, `google-calendar`, `google-drive`, every `.ts`) | 10,149 | moved; the 44 engine modules they import re-routed (see *What already exists*) |
 | Core that imports connector internals: `bbx calendar`, `bbx connector`, `bbx drive`, tRPC `gmail`/`calendar`/`drive`/`admin.gmail` | 1,394 | stays core, so core imports plugin internals (inverts the boundary) or gains a commands hook and a routers hook that do not exist |
 | Frontend: `renderers/{gsheet,gfolder,glink}.tsx`, `settings/CalendarSection.tsx`, `settings/DriveSection/*` (four files), `admin/GmailFiltersSection/*` (two files) | 1,487 | stays core, keyed by type names a plugin now owns, or a frontend registration path for plugins that does not exist |
 | `src/google/*` (auth, tokens, gap, status, access, skip reasons) | 979 | stays core; exported to plugins |
-| New `src/exports/` surface | 0 | the 54 engine modules the three connectors import today, re-exported |
+| New `src/exports/` surface | 0 | the 44 engine modules the three connectors import today, re-exported |
 
-The move is a git rename, cheap in itself; the work is the 54 re-routed
+The move is a git rename, cheap in itself; the work is the 44 re-routed
 imports, the export surface and the two hook kinds that do not exist. Like
 for like (additions plus deletions) the diff is over 20,000 lines; the
 effort is the new public surface, which is a slice of its own. **BIG
@@ -103,7 +109,7 @@ not, and shape B's gain is a listing.
   and all boxes), the admin flow that connects it
   (`src/webapp/routes/admin.ts:11-13`), the scheduler alerts
   (`src/core/schedule/scheduler/google-auth-alert.ts:19`), the default
-  schedules (`src/core/box/structure/defaults.ts:327-370`) and the 54 engine
+  schedules (`src/core/box/structure/defaults.ts:327-370`) and the 44 engine
   modules they import. The design notes' own list of what *"stays core as
   medium"* (`docs/implemented-plans/plugins-design-notes.md:193-197`) names
   intake types and the email and calendar base types; this plan extends it
@@ -155,11 +161,12 @@ not, and shape B's gain is a listing.
   `preserve-agent-fields.js`, the email and drive schemas, the command runner
   and trash command, job-card chat utils, box namespace and ref-path
   resolution, commit trailers, the field-test Gmail gate, and eight
-  `src/shared/*` helpers: 55 distinct specifiers outside the three
-  directories, of which one (`src/exports/cards.js`) is allowed. The guide's
-  rule for that case, `docs/plugins.md` *The import boundary*: a plugin that
-  needs an engine internal means the engine is missing a public piece.
-  Fifty-four missing pieces is the engine.
+  `src/shared/*` helpers: 45 distinct engine modules outside the three
+  directories (relative imports resolved to paths and deduplicated across
+  the 56 connector files), of which one (`src/exports/cards.js`) is allowed.
+  The guide's rule for that case, `docs/plugins.md` *The import boundary*: a
+  plugin that needs an engine internal means the engine is missing a public
+  piece. Forty-four missing pieces is the engine.
 - **Google policy and auth** stay core under every option: `googleServices`
   typed at `src/core/box/config.ts:72`, read by `isGoogleServiceAllowed`
   (`:158`), written by the admin router; tokens shared across the three
@@ -191,7 +198,8 @@ not, and shape B's gain is a listing.
   *"via IMAP"* (the connector uses the Gmail API through
   `src/services/google-gmail/core.js`), Drive lists `gsheet, gdoc` and omits
   `gfolder` and `glink`, Telegram says `telegram-message` where the
-  connector writes `chat-thread` (`src/connectors/telegram/connector.ts:77`).
+  connector writes `chat-thread` for incoming messages and only sends
+  `telegram-message` cards (`src/connectors/telegram/connector.ts:77, 143`).
   Calendar's class value `produces = ["calendar-event"]`
   (`src/connectors/google-calendar/connector.ts:72`) names a type with no
   schema. Track 3 covers both.
@@ -262,8 +270,10 @@ the four connectors (`gmail/connector.ts:141`, `google-calendar/connector.ts:72`
 doctest line that prints it. Correct the static table in
 `src/core/docs-gen/content.ts:23-66` against each connector's header
 comment: Gmail reads through the Gmail API, not IMAP; Drive produces `gdoc`,
-`gsheet`, `gfolder`, `glink`; Telegram produces `chat-thread`. Regenerate
-`box-docs/connectors.md`.
+`gsheet`, `gfolder`, `glink`; Telegram produces `chat-thread` cards for
+incoming messages and sends the agent's `telegram-message` cards from
+`_bookkeeping/output/` (`src/connectors/telegram/connector.ts:77, 143`), so
+its line keeps both. Regenerate `box-docs/connectors.md`.
 
 **Why.** A field with no reader is a promise the engine does not keep
 (principle 4, never silent: a wrong value here is invisible). Calendar's
