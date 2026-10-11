@@ -139,7 +139,7 @@ export function PlacePage({ cardPath, payload, body, onNavigate, onGoToPlace, he
             <LandmarkLinks links={section.links} boxSlug={boxSlug} onNavigate={onNavigate} compact hidePath />
           </div>
         ) : (
-          <div key={`group:${section.group.label}`} data-place-section="group">
+          <div key={`group:${section.group.alsoHere === true ? "also-here" : "expand"}:${section.group.label}`} data-place-section="group">
             <LandmarkGroup
               group={section.group}
               boxSlug={boxSlug}

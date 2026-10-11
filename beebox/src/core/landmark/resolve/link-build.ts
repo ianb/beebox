@@ -150,8 +150,13 @@ async function cardIdentity(
   const fields = type === undefined ? frontmatter : { ...frontmatter, type };
   // An invalid card (one `bbx validate` already reports) keeps the base
   // summary without `summarize` warning about it on every place-page load.
+  // A written `type:` that disagrees with the filename is invalid too: the
+  // card loader rejects it, so the tile must not summarize it as the
+  // filename's type.
+  const declared = frontmatter["type"];
+  const typeMismatch = declared !== undefined && declared !== type;
   const schema = type === undefined ? undefined : cardSchemas.get(type);
-  const valid = schema?.summarize === undefined || schema.frontmatterSchema.safeParse(fields).success;
+  const valid = !typeMismatch && (schema?.summarize === undefined || schema.frontmatterSchema.safeParse(fields).success);
   const summary = summarize({ path: boxPath, fields, ...(type === undefined ? {} : { type }) }, valid ? cardSchemas : new Map());
   return summary.detail === undefined ? { title: summary.title } : { title: summary.title, detail: summary.detail };
 }

@@ -356,8 +356,9 @@ Each row carries `detail`, the line the card's type writes about itself
 through `summarize` (docs/plans/place-shows-cards.md, Track B). A box-authored
 `loan` type writes who has it and when it is due. The loan cards do not
 write `type:` on disk; the type comes from the filename, as loading a card
-does, so the line is still there. A card whose type writes no line, and a
-loan that fails validation, have none.
+does, so the line is still there. A card whose type writes no line, a
+loan that fails validation, and a loan file whose written `type:` names
+another type (the card loader rejects it) have none.
 
 ```ts
 import * as fs from "node:fs/promises";
@@ -377,9 +378,10 @@ await box.write("_content/lending/Lending.landmark.card", "---\nnavigation:\n  l
 await box.write("_content/lending/Stove.loan.card", "---\nitem: Camp stove\nholder: Idris\ndue: 2026-10-17\n---\n");
 await box.write("_content/lending/Broken.loan.card", "---\nitem: Ladder\n---\n");
 await box.write("_content/lending/Rules.memo.card", "---\ntitle: House rules\n---\n");
+await box.write("_content/lending/Mislabeled.loan.card", "---\ntype: memo\nitem: Tent\nholder: Bram\ndue: 2026-11-01\n---\n");
 const [also] = (await payload(box.root, { dir: "_content/lending", expandsAsGroups: true })).groups;
 also.children.map((c) => [c.title, c.detail ?? null]).toSorted()
-=> [["Broken", null], ["Camp stove", "Idris has it · back by 2026-10-17"], ["House rules", null]]
+=> [["Broken", null], ["Camp stove", "Idris has it · back by 2026-10-17"], ["House rules", null], ["Mislabeled", null]]
 ```
 
 ```ts cleanup
