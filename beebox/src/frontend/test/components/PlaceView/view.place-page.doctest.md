@@ -116,7 +116,7 @@ const html = await render({ payload: payload({
   openers: [],
   groups: [
     { label: "Every loan card here", count: 60, children: [tile("Loan")] },
-    { label: "Also here", count: 30, children: ten },
+    { label: "Also here", count: 30, children: ten, alsoHere: true },
   ],
 }) });
 ({
@@ -124,6 +124,20 @@ const html = await render({ payload: payload({
   plainMore: text(html).includes("+59 more"),
 })
 => { moreButtons: ["+20 more"], plainMore: true }
+```
+
+## An author's group named "Also here" keeps a plain overflow count
+
+The page knows the server's "Also here" group by its `alsoHere` mark, not its
+label, so an expand the author named "Also here" does not open Browse.
+
+```ts
+const html = await render({ payload: payload({
+  openers: [],
+  groups: [{ label: "Also here", count: 30, children: [{ ref: "_content/lending/Loan.memo.card", label: null, title: "Loan", exists: true, source: "expand" }] }],
+}) });
+({ buttons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].length, plainMore: text(html).includes("+29 more") })
+=> { buttons: 0, plainMore: true }
 ```
 
 ## Outside a chat, "Start something" is hidden

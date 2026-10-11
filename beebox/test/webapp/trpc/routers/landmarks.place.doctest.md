@@ -234,6 +234,13 @@ rows(page.groups[1].children)
 => ["derived _content/house/notes/Landlord.memo.card", "derived _content/house/Spanish.memo.card", "derived _content/house/Groceries.memo.card"]
 ```
 
+Only the server's group carries the `alsoHere` mark the page reads.
+
+```ts continue
+page.groups.map((g) => ({ label: g.label, alsoHere: g.alsoHere === true }))
+=> [{ label: "Recipes", alsoHere: false }, { label: "Also here", alsoHere: true }]
+```
+
 The menus omit the flag and get no "Also here".
 
 ```ts continue
@@ -289,6 +296,37 @@ for (const name of ["B_10", "A", "B_2"]) {
 }
 (await payload(box.root, { dir: "_content/same", expandsAsGroups: true })).groups[0].children.map((c) => c.ref)
 => ["_content/same/A.memo.card", "_content/same/B_2.memo.card", "_content/same/B_10.memo.card"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An author's expand named "Also here" is not the server's group
+
+The author's group keeps its own cards and gets no `alsoHere` mark; the
+server's group still comes last.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/den/Den.landmark.card", [
+  "---",
+  "navigation:",
+  "  label: Den",
+  "  expand:",
+  "    - query: \"Book*.memo.card\"",
+  "      group: Also here",
+  "---",
+  "",
+].join("\n"));
+await box.write("_content/den/Book_One.memo.card", "---\n---\n");
+await box.write("_content/den/Lamp.memo.card", "---\n---\n");
+(await payload(box.root, { dir: "_content/den", expandsAsGroups: true })).groups
+  .map((g) => ({ label: g.label, alsoHere: g.alsoHere === true, children: g.children.map((c) => c.ref) }))
+=> [
+  { label: "Also here", alsoHere: false, children: ["_content/den/Book_One.memo.card"] },
+  { label: "Also here", alsoHere: true, children: ["_content/den/Lamp.memo.card"] }
+]
 ```
 
 ```ts cleanup

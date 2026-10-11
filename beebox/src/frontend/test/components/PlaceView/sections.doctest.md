@@ -89,7 +89,7 @@ outline(placeSections({
   links: [link("List.memo.card", "derived", "entry-point")],
   groups: [
     { label: "Every loan card here", count: 2, children: [] },
-    { label: "Also here", count: 30, children: [link("Groceries.memo.card", "derived")] },
+    { label: "Also here", count: 30, children: [link("Groceries.memo.card", "derived")], alsoHere: true },
   ],
 }))
 => ["entry-point: List.memo.card", "Every loan card here (2)", "Also here (30)"]

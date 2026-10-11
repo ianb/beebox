@@ -19,7 +19,6 @@ import { useBoxSlug } from "../../lib/box-slug";
 import { browseCardTarget } from "../../lib/browse-card-state";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { toDisplayPath } from "@shared/display-path";
-import { ALSO_HERE_LABEL } from "@shared/also-here";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
 import { Hint } from "../ui/Hint";
@@ -138,7 +137,7 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
               defaultOpen
               hidePath
               // "Also here" lists the folder's cards, so its overflow opens the folder.
-              {...(section.group.label === ALSO_HERE_LABEL ? { onMore: () => onNavigate(browseCardTarget({ directory: folder })) } : {})}
+              {...(section.group.alsoHere === true ? { onMore: () => onNavigate(browseCardTarget({ directory: folder })) } : {})}
             />
           </div>
         ),

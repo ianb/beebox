@@ -163,5 +163,5 @@ export async function resolveAlsoHere(
   const children = await Promise.all(
     cards.map((card) => buildLink({ rawRef: card.boxPath, label: null, source: "derived", options })),
   );
-  return { label: ALSO_HERE_LABEL, children, count };
+  return { label: ALSO_HERE_LABEL, children, count, alsoHere: true };
 }

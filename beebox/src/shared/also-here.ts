@@ -2,9 +2,9 @@
  * "Also here": the place page's last group, listing the place's ordinary cards
  * that no tier or other group already shows, most recently changed first
  * (docs/plans/place-shows-cards.md, Track A). The server builds it from the
- * pruned walk's `ordinary` list (`landmarks/payload.ts`); the place page
- * recognizes it by its label to open the folder in Browse from its overflow
- * count. Lives in `shared/` because both sides read the label.
+ * pruned walk's `ordinary` list (`landmarks/payload.ts`) and marks it
+ * `alsoHere: true`, which the place page reads to open the folder in Browse
+ * from its overflow count.
  */
 
 import { naturalCompare } from "./natural-sort.js";

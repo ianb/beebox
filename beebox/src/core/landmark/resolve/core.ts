@@ -36,6 +36,11 @@ export interface ResolvedGroup {
   children: ResolvedLink[];
   /** Total match count (may exceed `children.length` when capped). */
   count: number;
+  /**
+   * Set only on the place page's "Also here" group (`resolveAlsoHere`), so the
+   * page can tell it from an author's expand that happens to share its label.
+   */
+  alsoHere?: true;
 }
 
 /** Flat links plus named groups for one landmark's navigation role. */
