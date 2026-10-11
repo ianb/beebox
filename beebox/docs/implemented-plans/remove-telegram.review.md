@@ -1,6 +1,6 @@
 ---
 title: "Remove Telegram: plan review record"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues: []
 ---

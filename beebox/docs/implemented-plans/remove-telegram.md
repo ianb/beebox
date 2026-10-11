@@ -1,6 +1,6 @@
 ---
 title: "Remove Telegram"
-status: draft
+status: implemented
 workstream: plugins-planning
 issues:
   - ../../../issues/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md
