@@ -5,7 +5,13 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-plugins-planning — watching the body-tags-2026-10 deploy sweep, 2026-10-10
+resolution: implemented
 ---
+
+Closed 2026-10-10: fixed by hand on the one production box. The four blocks
+are now `key-people:` entries (`called`, `role`, `notes`) and the question
+card's directive points at that entry. `bbx validate` is clean there and no
+other production or local box carries the tag.
 
 The deploy sweep on 2026-10-10 printed four lines of
 `markdoc/emit: unknown tag {% key-person %}; emitting inner content only`.
