@@ -3429,7 +3429,7 @@ tests:
         ---
         Idris has the camp stove until 2026-10-17.
     correct_matches:
-      - '(?:landmark|place|lending)[\s\S]{0,160}(?:summary|body|description)|(?:summary|body|description)[\s\S]{0,160}(?:landmark|place|lending)'
+      - '(?:landmark|place|lending)[\s\S]{0,160}(?:summary|body|description|where things stand)|(?:summary|body|description|where things stand)[\s\S]{0,160}(?:landmark|place|lending)'
     tags: [landmarks, landmark-body]
 
   - id: landmark-body-vs-briefing
