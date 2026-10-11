@@ -47,14 +47,21 @@ function commonFieldFace(key: CommonField, embed: boolean): Face {
 }
 
 /**
- * The title a front's body may repeat as its opening heading: `title:`, else
- * a named entity's `name:` (person), as the card header falls back.
+ * The field that titles a card's front: `title:`, else a named entity's
+ * `name:` (person, record), as the card header falls back. Undefined when
+ * neither is a string.
  */
+export function bodyHeadingField(frontmatter: Record<string, unknown> | undefined): "title" | "name" | undefined {
+  if (typeof frontmatter?.["title"] === "string") return "title";
+  if (typeof frontmatter?.["name"] === "string") return "name";
+  return undefined;
+}
+
+/** The title a front's body may repeat as its opening heading: the `bodyHeadingField`'s value. */
 export function bodyHeadingTitle(frontmatter: Record<string, unknown> | undefined): string | undefined {
-  const title = frontmatter?.["title"];
-  if (typeof title === "string") return title;
-  const name = frontmatter?.["name"];
-  return typeof name === "string" ? name : undefined;
+  const field = bodyHeadingField(frontmatter);
+  const value = field === undefined ? undefined : frontmatter?.[field];
+  return typeof value === "string" ? value : undefined;
 }
 
 /**

@@ -172,3 +172,48 @@ const full = await renderRecord("Lead-free, 0.8mm.\n");
 [full.includes('data-card-section="frontmatter"'), full.includes("Tray 3"), full.includes("Lead-free")]
 => [false, false, true]
 ```
+
+## An embed reads title, summary line, body, then fields
+
+A card embedded in chat has no header, so the view draws the title and the
+type's summary line, then the body, then the field block
+(docs/plans/place-shows-cards.md, Track B). The title shows once: it is not
+also a row in the field block, and a body heading that repeats it is hidden.
+A record is titled by its `name:`.
+
+```ts setup
+async function renderEmbed(data) {
+  const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "embed" });
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const root = createRootRoute({ staticData: { title: null }, component: () => element });
+  const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  await router.load();
+  return renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() }, React.createElement(RouterProvider, { router })));
+}
+
+/** The `data-card-section` names in page order. */
+function sectionOrder(html) {
+  return [...html.matchAll(/data-card-section="([^"]*)"/g)].map((m) => m[1]);
+}
+```
+
+```ts
+const html = await renderEmbed({
+  path: "_content/inventory/Solder.record.card",
+  frontmatter: { name: "Solder", location: { text: "Tray 3" }, quantity: { value: "2 spools" } },
+  body: "# Solder\n\nLead-free, 0.8mm.\n",
+  detail: "Tray 3 · 2 spools",
+  schema: { hasBodyField: true, defaultProminence: null },
+});
+[sectionOrder(html), html.split("Solder<").length - 1, html.includes("Tray 3 · 2 spools"), html.includes("Lead-free")]
+=> [["heading", "body", "frontmatter"], 1, true, true]
+```
+
+A page shows the same card with its fields in Properties and no heading of
+its own; the card header has the title.
+
+```ts
+const page = await renderCard("Lead-free, 0.8mm.\n");
+sectionOrder(page)
+=> ["body"]
+```
