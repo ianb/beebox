@@ -1,6 +1,6 @@
 /**
  * How the generic field renderer reads a card's fields
- * (docs/plans/readable-card-fields.md): a key becomes a label, and a small
+ * (docs/implemented-plans/readable-card-fields.md): a key becomes a label, and a small
  * object of a known shape becomes one value. Display only; the Source view
  * keeps the keys and shapes as written.
  */

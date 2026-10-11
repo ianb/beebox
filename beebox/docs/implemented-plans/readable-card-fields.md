@@ -1,6 +1,6 @@
 ---
 title: "Readable card fields"
-status: draft
+status: implemented
 workstream: place-shows-cards
 issues: []
 ---

@@ -1,7 +1,7 @@
 # Readable card fields
 
 The generic field renderer shows a card's fields as a person reads them, not
-as the file stores them (`docs/plans/readable-card-fields.md`). These two
+as the file stores them (`docs/implemented-plans/readable-card-fields.md`). These two
 rules decide it; the Source view keeps the keys and shapes as written.
 
 ```ts setup
