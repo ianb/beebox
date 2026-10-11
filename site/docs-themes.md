@@ -197,7 +197,7 @@ has one text box, a routing model sends the thought to the fitting
 conversation, and an unclear thought waits for the person to choose.
 
 **Where it is thin.** Telling speakers apart in a recording is not solved.
-The Telegram path is rough. Several capture paths are code-verified rather
+Several capture paths are code-verified rather
 than exercised end to end. Quick chat posts a clearly routed thought without confirmation and the post
 cannot be moved; it sends the message and recent conversation text to a
 routing model through OpenRouter, and it needs that key.
@@ -249,20 +249,17 @@ a bus factor, and the project says so.
 
 **What it is.** A box can be shared, and the sharing has one granularity:
 everyone in a box shares everything in it, and a different group gets a
-different box. A household can talk to its box in one chat. This is
-primitive, and it works.
+different box. This is primitive, and it works.
 
 **How it is expressed.** Member invites and passwords, an allowed-users
-list, one hub running many boxes on one machine, Telegram or the web chat
+list, one hub running many boxes on one machine, the web chat
 as the shared surface, a calendar and lists everyone sees. The identity
 design ruling: shared boxes, one sharing granularity each.
 
 **Where it is thin.** No per-person areas or permissions inside a box;
-per-member identity beyond the login list is not designed yet; the Telegram
-path is rough; the household narrative describes an aspiration in places.
+per-member identity beyond the login list is not designed yet; the household narrative describes an aspiration in places.
 
-**Pages.** `04-who-it-is-for.md`, `uses/a-household-in-one-chat.md`,
-`design/identity.md`, `architecture/01-what-is-this.md`.
+**Pages.** `04-who-it-is-for.md`, `design/identity.md`, `architecture/01-what-is-this.md`.
 
 ---
 

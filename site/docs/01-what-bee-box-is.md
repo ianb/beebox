@@ -31,7 +31,7 @@ questions the agent is asking; a curated map of the box's notable places; a
 history of every change; settings and admin. Each kind of card has its own
 display: a recipe laid out as a recipe, a course with its lessons and your
 progress, a document, a spreadsheet, a PDF, a photo, a folder. There is an
-iPhone app, a browser extension, and a Telegram presence. The files are the
+iPhone app, and a browser extension. The files are the
 substance underneath; the application is how you use it. See
 [the web interface](capabilities/web-interface.md).
 
@@ -42,7 +42,6 @@ substance underneath; the application is how you use it. See
 - Long-form voice: talk for as long as you like, a stream of thoughts rather than a chat, and the box transcribes and files it without talking back until you are done.
 - Mixed media in one session: walk through a room photographing things while saying what each one is, and the photos and your words arrive as one timeline the agent turns into records.
 - A browser extension that saves the page you are reading, with your remarks.
-- Telegram, so a group chat can be the way a household talks to it.
 - Connectors that sync Gmail threads, Google Calendar, and Google Drive files into cards.
 - Files you drop in as a batch, and anything you type at the command line.
 

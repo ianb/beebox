@@ -26,7 +26,7 @@ the system checks. Terms are defined in [the glossary](concepts/glossary.md).
 - You want an app you install and sign into. There is no hosted service and
   no ready-made package; you build it yourself from the source code.
 - You want to use it from a phone only. There are phone surfaces, including
-  capture pages, a web app, Telegram, and an iOS app built locally, but the
+  capture pages, a web app, and an iOS app built locally, but the
   box itself runs on a computer you keep running.
 - You want a finished chat product. Bee Box is early, changing fast, and
   maintained by one person.
@@ -40,6 +40,6 @@ one granularity: everyone in a box shares everything in it. Different groups
 need different boxes. Per-member identity beyond the list of who's allowed
 to log in is not designed yet. The narrative in
 [architecture/01-what-is-this.md](architecture/01-what-is-this.md) shows a
-household using one box through a group chat.
+household using one box.
 
 Details of the requirements are in [what it requires](08-what-it-requires.md).

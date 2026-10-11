@@ -12,7 +12,6 @@ its type; a **box** is the directory of them. One page per capability is in
 - [Gmail](capabilities/gmail.md): sync watched threads in, draft replies you send yourself.
 - [Calendar](capabilities/calendar.md): two-way Google Calendar sync.
 - [Drive](capabilities/drive.md): mirror Google Docs, Sheets, and folders both ways.
-- [Telegram](capabilities/telegram.md): chat with the box from a messaging app.
 - [The web interface](capabilities/web-interface.md): dashboard, browser, questions, map, history, settings, and a display for each kind of card, on desktop and phone.
 - [Chat](capabilities/chat.md): the central web conversation, with resumable threads.
 - [Voice](capabilities/voice.md): dictation, transcription, and spoken replies.
@@ -38,7 +37,7 @@ Every card type has a reference page in
 - Inputs: memo, image, audio, capture-session, upload-batch, file, pdf.
 - Web material: webpage, extfile, commentary, tab-arrangement.
 - Things you keep: record, doc, person, place, recipe, inventory, figure, todo-view.
-- Mail and messages: email-thread, email-message, email-outbound, telegram-message, chat-thread, feedback.
+- Mail and messages: email-thread, email-message, email-outbound, chat-thread, feedback.
 - Google material: gdoc, gsheet, gfolder, glink.
 - Teaching the agent: briefing, guide, personality, landmark, question.
 - Automation: procedure, procedure-run, scheduled-script, and the job cards the engine queues.
