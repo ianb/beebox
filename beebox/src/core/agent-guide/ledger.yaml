@@ -899,6 +899,12 @@ rows:
     bin: core
     reason: The recurrence signal shows up in ordinary chat, before any landmark work is in view, so nothing else would prompt the agent to notice it; the two halves bound both slips (a cluttered page and an invisible new structure).
     audits: [landmarks-recurrence-signal, landmarks-dont-create-quietly, landmarks-not-everywhere, landmarks-criteria]
+  - id: landmarks.summary-on-change
+    rule: When you add, move, or change cards in a place, check its landmark's summary (the body) in the same turn; write one if none, update it if it no longer holds.
+    handle: LANDMARKS
+    bin: core
+    reason: The trigger is saving an ordinary card, a turn that never opens the landmark's type doc, so a rule kept only in card-landmark.md is never met there (place-shows-cards plan review, finding 1). "Write one if none" seeds existing places, which have no body.
+    audits: [landmark-body-after-card-save]
   - id: landmarks.read-first
     rule: Read box-docs/landmark-curation.md before suggesting or editing a landmark.
     handle: LANDMARKS

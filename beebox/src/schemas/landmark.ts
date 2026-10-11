@@ -192,7 +192,7 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
 
 A landmark marks a directory as a notable spot in the box — a hand-curated bookmark that can also be a triage destination. One per directory; the file lives inside the directory it describes, e.g. \`_content/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page and to triage.
 
-A landmark is pure YAML frontmatter (no body) with one or more roles. At least one role should be present.
+A landmark's YAML frontmatter carries one or more roles; at least one should be present. Its markdown body is the place summary.
 
 An optional top-level \`system-theme\` selects the app chrome while this landmark is active. Use only the theme and stock identifiers documented in \`node_modules/beebox/box-docs/card-themes.md\`.
 
@@ -226,7 +226,15 @@ In an \`expand\`, \`template-ref\` / \`template-label\` are placeholder strings 
 
 Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **collapsible submenu** instead of flattening them into the flat link list. Collapsed, the group shows its title and a child count; expanded, it reveals the matched links. Use this for "all the X" globs (e.g. \`group: Images\` over \`**/*.image.card\`) that would otherwise flood the flat list. An expand without \`group\` flattens inline as before. Group children dedup within the group only — they are independent of the flat list and of other groups.
 
-**Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and link to it.
+**Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself; where things stand goes in the place summary.
+
+## Place summary (the body)
+
+The place page shows the body first, above the place's cards. It says where things stand, in a few lines, with a link to the card behind each claim: who has what, what is next, what is unfinished. Keep it under about eight lines and don't re-list the cards; they are listed below it. For "where things stand", prefer this body over a separate entry-point doc.
+
+It is for the person. The briefing is guidance for agents; \`contains:\` is a search sentence. Write the body when you make a place, and update it in the same turn as any change to the place's cards that makes it untrue.
+
+Keep the person's words: link and quote their cards. A sentence the person wrote stays; ask before removing one.
 
 ## \`destinations\` (agent-facing filing targets)
 

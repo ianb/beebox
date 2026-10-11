@@ -31,7 +31,7 @@ Both can coexist in the same directory. Chat openers belong to the landmark (`na
 
 ## Card schema
 
-A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
+A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a few agent-written lines on where things stand, shown first on the place page. The agent writes it when it makes a place and updates it when it changes the place's cards (`landmarks.summary-on-change` in the agent guide). The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
 
 ```yaml
 ---

@@ -7088,6 +7088,73 @@ test1:
       peak: 34366
       added: 3031
       turns: 6
+  landmark-body-purpose:
+    - date: 2026-10-11T17:13:53.275Z
+      boxCommit: e3549fe66defa5bc273cb837bafe66eee722d447
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31210
+      peak: 32391
+      added: 1181
+      turns: 3
+    - date: 2026-10-11T17:15:34.025Z
+      boxCommit: b8b8c15bfc80025ae690b6eae17862a931da276f
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31210
+      peak: 32468
+      added: 1258
+      turns: 3
+  landmark-body-after-card-save:
+    - date: 2026-10-11T17:13:53.275Z
+      boxCommit: e3549fe66defa5bc273cb837bafe66eee722d447
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31222
+      peak: 32805
+      added: 1583
+      turns: 6
+    - date: 2026-10-11T17:14:38.603Z
+      boxCommit: b8b8c15bfc80025ae690b6eae17862a931da276f
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31226
+      peak: 36091
+      added: 4865
+      turns: 14
+    - date: 2026-10-11T17:15:34.025Z
+      boxCommit: b8b8c15bfc80025ae690b6eae17862a931da276f
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31226
+      peak: 34848
+      added: 3622
+      turns: 8
+  landmark-body-vs-briefing:
+    - date: 2026-10-11T17:13:53.275Z
+      boxCommit: e3549fe66defa5bc273cb837bafe66eee722d447
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31239
+      peak: 34804
+      added: 3565
+      turns: 7
+    - date: 2026-10-11T17:15:34.025Z
+      boxCommit: b8b8c15bfc80025ae690b6eae17862a931da276f
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31239
+      peak: 36044
+      added: 4805
+      turns: 5
+  landmark-body-keeps-person-words:
+    - date: 2026-10-11T17:13:53.275Z
+      boxCommit: e3549fe66defa5bc273cb837bafe66eee722d447
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31270
+      peak: 31625
+      added: 355
+      turns: 4
+    - date: 2026-10-11T17:15:34.025Z
+      boxCommit: b8b8c15bfc80025ae690b6eae17862a931da276f
+      repoCommit: dca9c2a129d373e9e2137d4a48350bf29169872e
+      initial: 31270
+      peak: 32030
+      added: 760
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
