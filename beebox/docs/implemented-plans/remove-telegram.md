@@ -3,7 +3,7 @@ title: "Remove Telegram"
 status: implemented
 workstream: plugins-planning
 issues:
-  - ../../../issues/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md
+  - ../../../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md
 ---
 # Remove Telegram
 
@@ -16,7 +16,7 @@ nothing else uses (Track 2), keeps the `chat-thread` schema because old
 threads exist on three production boxes, and needs no data migration.
 
 **Issues addressed:**
-[remove the Telegram connector and chat channel](../../../issues/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md).
+[remove the Telegram connector and chat channel](../../../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md).
 Related, found by grepping the queue for `telegram`:
 [notifications and proactive design](../../../issues/features/2026-09-25-notifications-and-proactive-design.md)
 (names Telegram as one channel of three; the design question survives with

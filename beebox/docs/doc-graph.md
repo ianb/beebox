@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-11T15:18:58Z
+Generated: 2026-10-11T15:20:15Z
 Total documents: 524
 
 ## Issues
@@ -1706,8 +1706,8 @@ Referenced by:
 - docs/implemented-plans/retire-type-specific-core-tags.md:148 (mention) — The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/
 - docs/server/configuration.md:71 (link) — [notifications](../notifications.md).
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:25 (mention) — is present (`docs/notifications.md`, the root briefing's "Reaching me").
+- ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:46 (mention) — (`docs/notifications.md`).
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:25 (mention) — walk"](../../beebox/docs/notifications.md#verification-walk) on a real
-- ../issues/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:44 (mention) — (`docs/notifications.md`).
 - ../research/imbue-studio/chat-app.md:289 (mention) — P8) vs `bbx notify` (`beebox/docs/notifications.md`). **Adopt** the
 
 References:
@@ -5548,7 +5548,7 @@ Referenced by:
 - docs/implemented-plans/plugins.md:16 (link) — [plugins-design-notes.md](plugins-design-notes.md).
 - docs/implemented-plans/retire-type-specific-core-tags.md:71 (mention) — - **`docs/implemented-plans/plugins-design-notes.md:140`**: tags are local to the type. This plan honors it by deletion
 - docs/plugins.md:9 (link) — [design notes](implemented-plans/plugins-design-notes.md). The standing position
-- ../issues/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:13 (mention) — (`beebox/docs/implemented-plans/plugins-design-notes.md`, Candidates). The
+- ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:15 (mention) — (`beebox/docs/implemented-plans/plugins-design-notes.md`, Candidates). The
 
 References:
 - → ../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md (frontmatter)
@@ -6020,10 +6020,11 @@ Title: "Remove Telegram" | 390 lines | shipped history | implemented
 
 Referenced by:
 - docs/plans/ios-companion-app.md:13 (mention) — When this plan was written, the lowest-hassle way to reach a box from a phone was the Telegram connector; it was removed
+- ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:11 (mention) — **Closed:** implemented on branch worktree-plugins-planning (commits titled "Remove Telegram: ..."; plan `beebox/docs/im
 
 References:
-- → ../issues/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md (frontmatter)
-- → ../issues/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md (link)
+- → ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md (frontmatter)
+- → ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md (link)
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
 - → ../issues/code-quality/2026-07-19-thread-authoritative-box-slug.md (link)
 - → ../issues/closed/features/2026-08-29-telegram-thread-session-context.md (link)
