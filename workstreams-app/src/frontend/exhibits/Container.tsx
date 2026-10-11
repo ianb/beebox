@@ -2,8 +2,8 @@ import { Component, useRef, useState, type ErrorInfo, type ReactNode } from "rea
 
 import { CommentPanel } from "./CommentPanel.js";
 import { responseProblem } from "./comment-requests.js";
-import { Markdown } from "../../components/Markdown.js";
-import type { ExhibitBoot } from "../../../shared/exhibits.js";
+import { Markdown } from "../components/Markdown.js";
+import type { ExhibitBoot } from "../../shared/exhibits.js";
 
 interface BoundaryState {
   message: string | null;

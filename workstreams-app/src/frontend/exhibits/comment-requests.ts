@@ -2,7 +2,7 @@
 // browser (`docs/implemented-plans/exhibit-comments.md`, Track 3). The panel itself is a
 // few event listeners around these.
 
-import type { SelectionAnchor } from "../../lib/selection-anchor.js";
+import type { SelectionAnchor } from "../lib/selection-anchor.js";
 
 export type CommentOrigin = "typed" | "voice";
 
