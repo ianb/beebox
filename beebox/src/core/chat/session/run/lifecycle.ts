@@ -1,10 +1,9 @@
 /**
  * The chat run lifecycle as a discriminated union + a transition guard.
  *
- * Both `ChatSession` (whole-box interactive chat) and `ChatThreadSession`
- * (per-thread chat) drive one long-lived SDK run through the same phases.
- * Historically each tracked that lifecycle with a `busy` boolean, a nullable
- * `run` handle, and (in ChatSession) an `intentionalStop` latch — three fields
+ * `ChatSession` (whole-box interactive chat) drives one long-lived SDK run
+ * through these phases. Historically it tracked that lifecycle with a `busy`
+ * boolean, a nullable `run` handle, and an `intentionalStop` latch — three fields
  * whose only legal combinations were a subset the types never expressed. This
  * models the phases explicitly so illegal states (streaming with no run, busy
  * while idle) are unrepresentable, and centralises the legal moves in one
@@ -20,8 +19,8 @@
  * - `stopping` — a graceful `stop()` closed the run; the close handler will
  *   land in `idle` *without* draining the queue. `wasBusy` preserves the
  *   `isBusy()` reading until the run actually ends (a turn was interrupted).
- *   Only ChatSession uses this — ChatThreadSession has no queue to protect, so
- *   its stop/park close straight through `ready`/`streaming` → `idle`.
+ *   A `park()` has no queue to protect, so it closes straight through
+ *   `ready`/`streaming` → `idle`.
  */
 
 import type { ChatBackendRun } from "../../../../services/claude-chat/core.js";

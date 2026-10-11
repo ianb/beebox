@@ -27,7 +27,7 @@ const authored: CardSchema = cardSchema("memo", {
   fields: { status: z.string() },
   instructions: "How to memo.",
 });
-const system: CardSchema = cardSchema("chat-job", {
+const system: CardSchema = cardSchema("backfill-job", {
   description: "reactor bookkeeping",
   category: "system",
   fields: { status: z.string() },

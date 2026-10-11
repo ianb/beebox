@@ -8,7 +8,7 @@ The Lund-Vegas live in South Minneapolis: Diana and James, their kids Mateo (16)
 
 It's Saturday morning. Diana is at the counter checking the box's chat on her phone. Everyone in the house talks with the box: Diana, James, Rosa, Sofia, and Mateo. The box posted a few things overnight. It sorted out a conflict with next week's schedule — James picked up an extra evening shift, which means he can't do Tuesday's swim drop-off, so Diana's on it. It has a question about the Costco list. Rosa replied to something in Spanish around 7am. James thumbs-up'd a message at 2am between patients.
 
-This chat is the primary surface: a conversation where the box is one of the participants. Not a dashboard everyone logs into separately. Not an app with a home screen. A conversation — each person talks with the box, and the box carries what one person tells it into what it says to the others. The web version is the main interface; a family Telegram group is the one thread where they all talk together, and the same could work through SMS or any other messaging platform. Different family members use whichever one they're already in.
+This chat is the primary surface: a conversation where the box is one of the participants. Not a dashboard everyone logs into separately. Not an app with a home screen. A conversation — each person talks with the box, and the box carries what one person tells it into what it says to the others. The web chat is the interface; each person talks with the box there, and the box carries what one person tells it into what it says to the others.
 
 ## Different people, different surfaces
 
@@ -52,7 +52,7 @@ Here's the architecture underneath those stories. Each bolded term below corresp
 
 **Cards and the data store.** Everything the family puts into the box — voice memos, photos, emails, chat messages, schedule PDFs — becomes structured data stored as **cards**. When Diana records a voice memo, it becomes a card. When James sends a schedule photo, the parsed shifts become cards. When Rosa tells a story in Spanish, the transcription becomes a card. Cards have schemas that define their structure, so data stays consistent even as different agents process it at different times. The filesystem is the canonical store — not a database, not a cache of some API. The files on disk are the real thing.
 
-**The conversation.** The chat — whether through the web interface, the family Telegram group, or another messaging platform — is where the box participates alongside the family. It reads what people say, responds when it has something useful, asks questions when it's uncertain. The conversation isn't a command interface; it's open-ended. People say whatever they're thinking, and the box does its best to figure out what to do with it.
+**The conversation.** The chat is where the box participates alongside the family. It reads what people say, responds when it has something useful, asks questions when it's uncertain. The conversation isn't a command interface; it's open-ended. People say whatever they're thinking, and the box does its best to figure out what to do with it.
 
 **Background processing.** The box runs a cycle on its own schedule — syncing external sources (email, calendars, Google Drive), processing new inputs, running scheduled jobs, archiving what's done. When Diana checks the group in the morning, things have already happened. The box didn't wait for her. This is how the schedule conflict got sorted out overnight, how the swim PDF got processed, how Rosa's medication reminder went out.
 

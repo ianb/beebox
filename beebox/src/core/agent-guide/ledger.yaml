@@ -487,12 +487,6 @@ rows:
     bin: delete
     reason: They work only in a live chat session, and the chat system prompt, loaded there, states each with when to use it; bbx-commands.md has the rest. The draft had this indirect.
     audits: [chat-screenshot-when, chat-last-audio-when]
-  - id: commands.seen-note
-    rule: "While processing a chat-thread card, a note to yourself goes in the `text:` of the `kind: seen` entry you append, not in `bbx chat self-note`."
-    handle: COMMANDS
-    bin: indirect
-    reason: Applies only to chat-thread processing, and the chat-thread card rule already shows the `text:` note; nothing moved.
-    audits: [chat-thread-seen-note]
     mechanics: card-chat-thread rule
   - id: commands.health
     rule: "`bbx health` is the agent's to run; `inconclusive` means the check reached no verdict, not that the work failed, so the work is not redone."
