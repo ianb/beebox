@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-11T18:26:27Z
-Total documents: 526
+Generated: 2026-10-11T19:11:51Z
+Total documents: 527
 
 ## Issues
 
@@ -46,11 +46,11 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (707 lines) · shipped history · implemented
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (254 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (343 lines) · shipped history · implemented
-- **docs/implemented-plans/place-shows-cards.md** — "A place shows the person's cards" (587 lines) · shipped history · implemented
 - **docs/implemented-plans/place-shows-cards.review.md** — "Plan review — place-shows-cards" (64 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-2.review.md** — "Plan Engineering Review — plugins slice 2" (109 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-3.review.md** — "Plan review — plugins slice 3" (70 lines) · implementation review
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (449 lines) · shipped history · implemented
+- **docs/implemented-plans/readable-card-fields.md** — "Readable card fields" (276 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (382 lines) · implementation review
 - **docs/implemented-plans/remove-bbx-render.review.md** — "Plan Engineering Review — remove-bbx-render" (53 lines) · implementation review
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (63 lines) · shipped history · implemented
@@ -365,6 +365,7 @@ Referenced by:
 - ../issues/docs-and-chores/2026-09-16-remove-claude-isms-from-repo-docs.md:43 (mention) — 1. **Sweep.** Rewrite hits in present-tense reference docs, AGENTS.md files,
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:35 (mention) — - **Always referenced, from the same directory.** The `AGENTS.md` in the
 - ../issues/docs-and-chores/2026-10-09-codex-launch-overrides-force-embedded-mode.md:34 (mention) — AGENTS.md.
+- ../issues/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:73 (mention) — Keep each guidance file net shorter (root `AGENTS.md`, "agent and skill files
 - ../issues/exploration/2026-03-04-claude-code-memory-concerns.md:15 (mention) — Durable project knowledge should go in repo files (AGENTS.md, docs/), not auto-memory.
 - ../issues/exploration/2026-05-28-before-you-build-this.md:12 (mention) — Convention to make it stick: a short rule in `AGENTS.md` ("before writing a new component / helper / schema, run `bbx re
 - ../issues/exploration/2026-05-28-doc-usage-mining.md:14 (mention) — - **High-read + outer-ring** → mis-classified by the rings. Should be promoted closer to always-loaded, or linked from a
@@ -2161,6 +2162,7 @@ Referenced by:
 - ../issues/code-quality/2026-10-08-test-volume-sweep.md:22 (mention) — Policy changed the same day (`docs/testing.md`, cross-model skill): no test
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:24 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
 - ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:87 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
+- ../issues/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:12 (mention) — writes the code and its test. Nothing in `beebox/docs/testing.md`,
 - ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:46 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:61 (mention) — - **Failing test before the fix** — `docs/testing.md` gestures at test-first for
 - ../issues/exploration/2026-09-30-evaluate-incident-investigation-skill.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
@@ -5544,9 +5546,12 @@ References:
 - → ../issues/features/2026-06-18-avif-webp-for-stored-images.md (frontmatter)
 - → ../issues/features/2026-08-24-pdf-card-page-addressing-gaps.md (frontmatter)
 
-#### docs/implemented-plans/place-shows-cards.md **[ORPHAN]**
+#### docs/implemented-plans/place-shows-cards.md
 
 Title: "A place shows the person's cards" | 587 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/readable-card-fields.md:15 (link) — [place-shows-cards](../implemented-plans/place-shows-cards.md) exhibit, after
 
 References:
 - → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (frontmatter)
@@ -5852,6 +5857,13 @@ References:
 - → docs/architecture/spirit.md (mention)
 - → docs/questions.md (mention)
 - → docs/user-stories/catalog/2026-06-26.md (mention)
+
+#### docs/implemented-plans/readable-card-fields.md **[ORPHAN]**
+
+Title: "Readable card fields" | 276 lines | shipped history | implemented
+
+References:
+- → docs/implemented-plans/place-shows-cards.md (link)
 
 #### docs/implemented-plans/refresh-clerk.md
 
@@ -8939,6 +8951,7 @@ Referenced by:
 - docs/implemented-plans/file-layout.md:130 (mention) — - `docs/testing/doctests.md:20`: *"Create `test/<area>/<name>.doctest.md`
 - docs/testing.md:35 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
 - docs/testing/tours.md:35 (link) — [doctests](doctests.md); "does the app boot at all" is the
+- ../issues/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:13 (mention) — `beebox/docs/testing/doctests.md`, the agent-doctest docs, the finish skill or
 
 References:
 - → ../agent-doctest/docs/syntax.md (link)
