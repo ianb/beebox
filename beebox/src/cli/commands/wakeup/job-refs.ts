@@ -36,7 +36,7 @@ export async function collectExistingJobRefs(
     return { held, takeable };
   }
   for (const file of jobFiles) {
-    // Matches current `-job.card` types (intake-job, chat-job, ...) and
+    // Matches current `-job.card` types (intake-job, question-followup-job, ...) and
     // legacy dotted names like `.intake.job.card`.
     if (!file.endsWith("job.card")) continue;
     const fm = readCardFrontmatter(await fs.readFile(path.join(jobsDir, file), "utf-8"));

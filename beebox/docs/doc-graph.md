@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-11T04:48:16Z
-Total documents: 521
+Generated: 2026-10-11T15:20:15Z
+Total documents: 524
 
 ## Issues
 
@@ -47,6 +47,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (254 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (343 lines) · shipped history · implemented
 - **docs/implemented-plans/plugins-slice-2.review.md** — "Plan Engineering Review — plugins slice 2" (109 lines) · implementation review
+- **docs/implemented-plans/plugins-slice-3.review.md** — "Plan review — plugins slice 3" (70 lines) · implementation review
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (449 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (382 lines) · implementation review
 - **docs/implemented-plans/remove-bbx-render.review.md** — "Plan Engineering Review — remove-bbx-render" (53 lines) · implementation review
@@ -54,6 +55,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (55 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (630 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-open-mode.md** — "Remove the unauthenticated-mode operator path" (117 lines) · shipped history · implemented
+- **docs/implemented-plans/remove-telegram.review.md** — "Plan review — remove Telegram" (79 lines) · implementation review
 - **docs/implemented-plans/resilient-voice-recording.review.md** — "Cross-model review — resilient-voice-recording (round 1)" (139 lines) · implementation review
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (412 lines) · shipped history · implemented
 - **docs/implemented-plans/retire-type-specific-core-tags.review.md** — "Plan Engineering Review — retire-type-specific-core-tags" (66 lines) · implementation review
@@ -682,6 +684,7 @@ Referenced by:
 - docs/implemented-plans/plugins-slice-2.md:302 (mention) — (`bbx-recipe-body`, `bbx-recipe-step` counters), `README.md`. Core deletes
 - docs/implemented-plans/private-issues-shadow-repo.md:160 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - docs/implemented-plans/refresh-maps-correctness.md:193 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
+- docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - docs/implemented-plans/workstreams.md:758 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
 - docs/server/boxes.md:32 (link) — see the root [`README.md`](../../README.md) for that path. This doc is about
 - docs/testing/knowledge-audits.md:73 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
@@ -770,7 +773,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:392 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:389 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -896,7 +899,7 @@ References:
 
 #### docs/box-layout.md
 
-Title: "Box Layout" | 294 lines | current reference
+Title: "Box Layout" | 295 lines | current reference
 
 Referenced by:
 - AGENTS.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
@@ -972,6 +975,7 @@ Title: "Box work from the dev repo" | 110 lines | current reference
 Referenced by:
 - AGENTS.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
 - docs/guides.md:35 (link) — | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
+- docs/implemented-plans/remove-telegram.md:95 (mention) — - **Keep data, drop code** (`docs/box-work.md`, and the boxholder's standing
 - docs/testing.md:93 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:121 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
@@ -1012,7 +1016,7 @@ References:
 
 #### docs/chat.md
 
-Title: "Chat" | 24 lines | current reference
+Title: "Chat" | 23 lines | current reference
 
 Referenced by:
 - docs/guides.md:15 (link) — | Chat: sessions, history, schedules, review, quick chat, composer, scroll | [chat](chat.md) |
@@ -1054,11 +1058,11 @@ References:
 
 #### docs/connectors.md
 
-Title: "Connectors" | 142 lines | current reference
+Title: "Connectors" | 134 lines | current reference
 
 Referenced by:
-- docs/design/interaction-model.md:46 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
-- docs/guides.md:14 (link) — | Connectors: the framework, Google auth, Calendar, Gmail, Drive, Telegram | [connectors](connectors.md) |
+- docs/design/interaction-model.md:44 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
+- docs/guides.md:14 (link) — | Connectors: the framework, Google auth, Calendar, Gmail, Drive | [connectors](connectors.md) |
 - docs/implemented-plans/agent-guide-spec.md:627 (mention) — | scheduled script gets a granted key | 7 | `connectors.md` Credentials | 17, gave up |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
@@ -1069,6 +1073,9 @@ Referenced by:
 - docs/implemented-plans/gmail-explicit-action.md:111 (mention) — `docs/connectors.md`. Doctests: `connector-gmail-pull.doctest.md` and
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:297 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
+- docs/implemented-plans/plugins-slice-3.md:197 (mention) — generates `box-docs/connectors.md` and is wrong on its own: Gmail says
+- docs/implemented-plans/plugins-slice-3.review.md:49 (mention) — `box-docs/connectors.md`; the remaining drift risk is in Failure modes with
+- docs/implemented-plans/remove-telegram.md:158 (mention) — `docs/connectors.md`, `docs/notifications.md`, `docs/security-overview.md`,
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/prompts/lenses.md:66 (link) — convention: [freshness metadata](../connectors.md#freshness-metadata).
@@ -1085,7 +1092,6 @@ Referenced by:
 References:
 - → docs/secrets.md (link)
 - → docs/connectors/google-auth.md (link)
-- → docs/connectors/telegram.md (link)
 - → docs/connectors/calendar.md (link)
 - → docs/connectors/gmail.md (link)
 - → docs/connectors/drive.md (link)
@@ -1104,7 +1110,7 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:77 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:366 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:363 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/AGENTS.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:19 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
@@ -1224,6 +1230,7 @@ Referenced by:
 - docs/implemented-plans/on-demand-image-thumbnails.md:21 (mention) — - Principle 3 requires HTTP query input to be validated once at the boundary: `docs/engineering-principles.md:37`: *"Val
 - docs/implemented-plans/one-root-box-layout.md:113 (mention) — boundaries)** — `docs/engineering-principles.md:12,37`: the box path
 - docs/implemented-plans/openrouter-chat-models.md:402 (mention) — (`beebox/docs/engineering-principles.md`, validate at the boundary).
+- docs/implemented-plans/plugins-slice-3.md:126 (mention) — (`docs/engineering-principles.md:87`): the plugins plan chose the stub
 - docs/implemented-plans/publication-card-home.md:36 (mention) — - **Consolidate over blast-radius fear** (`beebox/docs/engineering-principles.md`, principle 8, quoted in the earlier pl
 - docs/implemented-plans/questions-end-to-end.md:64 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
 - docs/implemented-plans/refresh-maps-convergence.md:67 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
@@ -1231,6 +1238,7 @@ Referenced by:
 - docs/implemented-plans/remove-bbx-render.md:25 (mention) — - **`docs/engineering-principles.md`** — the plan traces mainly to these:
 - docs/implemented-plans/remove-box-shape-v1.md:93 (mention) — - `beebox/docs/engineering-principles.md` — most load-bearing: **#4
 - docs/implemented-plans/remove-open-mode.md:19 (mention) — - `beebox/docs/engineering-principles.md` — fail-closed; make invalid
+- docs/implemented-plans/remove-telegram.md:87 (mention) — (`docs/engineering-principles.md:87`), and the file-layout rule that
 - docs/implemented-plans/resilient-voice-recording.md:119 (mention) — - `docs/engineering-principles.md`:
 - docs/implemented-plans/responsive-figures.md:34 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
@@ -1316,7 +1324,7 @@ References:
 
 #### docs/event-bus.md
 
-Title: "Event Bus" | 145 lines | current reference
+Title: "Event Bus" | 144 lines | current reference
 
 Referenced by:
 - docs/guides.md:41 (link) — | Event bus | [event-bus](event-bus.md) |
@@ -1349,6 +1357,7 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:28 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:149 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/implemented-plans/docs-reorg.md:92 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
+- docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
 - docs/plans/agent-docs.md:369 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
 - docs/plans/pdf-intake-design.md:61 (link) — **Intake-time extraction.** When a PDF arrives (`bbx import`, capture endpoint, email connector), the intake path runs d
@@ -1452,6 +1461,7 @@ Title: "Installing beebox" | 29 lines | current reference
 Referenced by:
 - docs/guides.md:11 (link) — | Installing beebox: Docker, from source, with an agent | [install](install.md) |
 - docs/implemented-plans/doc-structure-install-server.md:75 (mention) — | (new) | `install.md`: which path for whom; what every path shares |
+- docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - ../issues/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — ts,tsx src/"` into every project it bootstraps (`install.md`, and its own
 
 References:
@@ -1519,7 +1529,7 @@ Title: "Cross-Platform Mobile Contract" | 1719 lines | current reference
 
 Referenced by:
 - AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
-- docs/chat.md:21 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
+- docs/chat.md:20 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
 - docs/chat/quick-chat.md:76 (link) — [mobile contract §5.11](../mobile-contract.md).
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 - docs/guides.md:51 (link) — | Mobile contract: what the native apps and a box agree on | [mobile-contract](mobile-contract.md) |
@@ -1639,7 +1649,7 @@ Title: "Which model a box thinks with" | 189 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:209 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
-- docs/chat.md:20 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
+- docs/chat.md:19 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
 - docs/design/identity.md:27 (link) — engine's own store ([`../model-policy.md`](../model-policy.md)).
 - docs/guides.md:45 (link) — | Model policy: which engine and model a box thinks with | [model-policy](model-policy.md) |
 - docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
@@ -1689,12 +1699,14 @@ Referenced by:
 Title: "Notifications" | 240 lines | current reference
 
 Referenced by:
-- docs/design/interaction-model.md:39 (link) — [`../notifications.md`](../notifications.md) are implementation, not design,
+- docs/design/interaction-model.md:37 (link) — [`../notifications.md`](../notifications.md) are implementation, not design,
 - docs/guides.md:40 (link) — | Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [notifications
 - docs/implemented-plans/notifications.md:20 (mention) — > walk"](../notifications.md#verification-walk) — has not run; it is gated
+- docs/implemented-plans/remove-telegram.md:38 (mention) — so I am told. The channel rule (`docs/notifications.md`, *Channels*) has
 - docs/implemented-plans/retire-type-specific-core-tags.md:148 (mention) — The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/
 - docs/server/configuration.md:71 (link) — [notifications](../notifications.md).
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:25 (mention) — is present (`docs/notifications.md`, the root briefing's "Reaching me").
+- ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:46 (mention) — (`docs/notifications.md`).
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:25 (mention) — walk"](../../beebox/docs/notifications.md#verification-walk) on a real
 - ../research/imbue-studio/chat-app.md:289 (mention) — P8) vs `bbx notify` (`beebox/docs/notifications.md`). **Adopt** the
 
@@ -1707,14 +1719,15 @@ References:
 
 #### docs/plugins.md
 
-Title: "Plugins" | 179 lines | current reference
+Title: "Plugins" | 190 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:270 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
+- docs/box-layout.md:271 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
 - docs/design/extensibility.md:13 (link) — What does exist (2026-10, [plugins](../plugins.md)): a **plugin** is a typed
 - docs/guides.md:34 (link) — | Plugins: typed in-repo libraries a box activates through stubs | [plugins](plugins.md) |
 - docs/implemented-plans/boxes-as-packages-v2.md:373 (mention) — (`docs/plugins.md`, "Health") print under `Plugin health after upgrade:`. Report-only too.
 - docs/implemented-plans/plugins-slice-2.md:13 (mention) — "Conventions" list in `docs/plugins.md` into rules a doctest enforces.
+- docs/implemented-plans/plugins-slice-3.md:39 (mention) — `docs/plugins.md` and the design notes so the next planner does not re-derive
 - docs/implemented-plans/plugins.md:57 (mention) — Authored docs separately: `docs/plugins.md` authoring guide (~150 lines),
 
 References:
@@ -1722,6 +1735,7 @@ References:
 - → docs/implemented-plans/plugins-design-notes.md (link)
 - → docs/design/extensibility.md (link)
 - → docs/README.md (mention)
+- → docs/implemented-plans/plugins-slice-3.md (mention)
 
 #### docs/procedure-implementation.md
 
@@ -1775,7 +1789,7 @@ References:
 
 #### docs/questions.md
 
-Title: "Questions" | 340 lines | current reference
+Title: "Questions" | 336 lines | current reference
 
 Referenced by:
 - docs/design/trust.md:37 (link) — answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella princip
@@ -1898,7 +1912,7 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 548 lines | current reference
+Title: "Secrets: the machine-level store" | 541 lines | current reference
 
 Referenced by:
 - AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1906,24 +1920,24 @@ Referenced by:
 - docs/box-layout.md:210 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/box-work.md:46 (link) — ([secrets](secrets.md#worktree-boxes-have-their-own-store)). In a worktree,
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
-- docs/connectors/telegram.md:41 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
 - docs/design/privacy-and-egress.md:11 (link) — ([`../secrets.md`](../secrets.md)).
 - docs/development/technologies.md:31 (link) — documented in [secrets.md](../secrets.md).
 - docs/guides.md:37 (link) — | Secrets: the machine-level store and grants | [secrets](secrets.md) |
 - docs/implemented-plans/doc-structure-connectors.md:86 (mention) — `secrets.md` (the store is its own subject), `src/connectors/AGENTS.md`,
 - docs/implemented-plans/doc-structure-development.md:137 (mention) — | 4 | over budget | 19 | secrets.md#Secret names, a second statement of the OpenRouter-only backend in the store's vocab
 - docs/implemented-plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
+- docs/implemented-plans/remove-telegram.md:159 (mention) — `docs/security-report.md`, `docs/secrets.md`, `docs/chat*.md`,
 - docs/implemented-plans/secret-custody.md:751 (mention) — names per `docs/secrets.md`'s table, dedupes shared values into one entry with
 - docs/implemented-plans/secret-entry-guidance.md:85 (mention) — - **Access default.** `docs/secrets.md:52`: *"`server` (default, and all
 - docs/implemented-plans/secret-trick-runtime-delivery.md:172 (mention) — Update `beebox/docs/secrets.md` to retain the HTTP route only as a low-level
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:53 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:287 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:286 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
-- docs/testing/doctests.md:124 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
+- docs/testing/doctests.md:121 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
 - docs/testing/real-models.md:31 (link) — the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
@@ -1935,7 +1949,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 327 lines | current reference
+Title: "Security overview" | 325 lines | current reference
 
 Referenced by:
 - README.md:97 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -1943,6 +1957,7 @@ Referenced by:
 - docs/design/privacy-and-egress.md:20 (link) — ([`../security-overview.md`](../security-overview.md#what-leaves-your-machine),
 - docs/guides.md:50 (link) — | Security overview, and the structured report behind it | [security-overview](security-overview.md), [security-report](
 - docs/implemented-plans/jev-document-triage.md:552 (mention) — `security-report.md` and `security-overview.md`. It does not re-audit unrelated
+- docs/implemented-plans/remove-telegram.md:158 (mention) — `docs/connectors.md`, `docs/notifications.md`, `docs/security-overview.md`,
 - docs/implemented-plans/webapp-production-mode.md:242 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
@@ -1977,7 +1992,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 631 lines | current reference
+Title: "Security report — structured version" | 627 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:255 (link) — recent conversation text. See [security report §3](../security-report.md#3-data-egress).
@@ -1988,6 +2003,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/implemented-plans/jev-document-triage.md:552 (mention) — `security-report.md` and `security-overview.md`. It does not re-audit unrelated
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
+- docs/implemented-plans/remove-telegram.md:159 (mention) — `docs/security-report.md`, `docs/secrets.md`, `docs/chat*.md`,
 - docs/implemented-plans/webapp-production-mode.md:230 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/plans/publication-approval-card.md:21 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
@@ -2197,7 +2213,7 @@ Title: "Triage" | 117 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:158 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
-- docs/connectors.md:139 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
+- docs/connectors.md:131 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:33 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:40 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:80 (link) — marker for spot-checking ([`../triage.md`](../triage.md)).
@@ -2326,7 +2342,7 @@ Referenced by:
 
 #### docs/architecture/writing-style.md
 
-Title: "Writing Style Guide" | 95 lines | current reference
+Title: "Writing Style Guide" | 94 lines | current reference
 
 Referenced by:
 - docs/architecture/AGENTS.md:16 (mention) — - **`writing-style.md`** — Writing style guide. Tone, structure, common pitfalls, corrections from the editing process.
@@ -2444,7 +2460,7 @@ Title: "Writing Box-Local Schemas" | 301 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:140 (link) — [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
-- docs/box-layout.md:252 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
+- docs/box-layout.md:253 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
 - docs/cards/validation.md:56 (link) — `markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
 - docs/implemented-plans/plugins-slice-2.md:137 (mention) — (`docs/box/schemas.md:236-262`); the loader reads it at
 - docs/implemented-plans/plugins.md:97 (mention) — - `docs/box/schemas.md:204`: *"Schema and view code ... may only import from
@@ -2707,8 +2723,8 @@ References:
 Title: "Composer" | 364 lines | current reference
 
 Referenced by:
-- docs/chat.md:15 (link) — | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |
-- docs/chat/sessions.md:20 (link) — counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
+- docs/chat.md:14 (link) — | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |
+- docs/chat/sessions.md:17 (link) — counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
 - docs/implemented-plans/architectural-review.md:184 (mention) — docs in sync (`docs/chat/composer.md`). xstate's home; not to be
 - docs/implemented-plans/doc-structure-chat.md:73 (mention) — | `composer-input-machine.md` + `composer-states.md` (+ `composer-states/` images) | `chat/composer.md` (+ `chat/compose
 - docs/implemented-plans/docs-reorg.gap-analysis.md:121 (mention) — 10. `docs/chat/composer.md` leads with an unshipped 5-state
@@ -2727,7 +2743,7 @@ References:
 Title: "Chat history" | 54 lines | current reference
 
 Referenced by:
-- docs/chat.md:11 (link) — | [History](chat/history.md) | The transcript and the acceptance record, and how a replayed photo is served. |
+- docs/chat.md:10 (link) — | [History](chat/history.md) | The transcript and the acceptance record, and how a replayed photo is served. |
 - ../research/imbue-studio/chat-app.md:267 (mention) — vs image-only stripping (`beebox/docs/chat/history.md`). **Adapt**: extend
 
 #### docs/chat/quick-chat.md
@@ -2735,7 +2751,7 @@ Referenced by:
 Title: "Quick chat" | 298 lines | current reference
 
 Referenced by:
-- docs/chat.md:14 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
+- docs/chat.md:13 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
 - docs/design/trust.md:49 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
 - docs/landmarks.md:225 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
 - docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
@@ -2756,7 +2772,7 @@ References:
 Title: "Chat review" | 230 lines | current reference
 
 Referenced by:
-- docs/chat.md:13 (link) — | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's
+- docs/chat.md:12 (link) — | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's
 - docs/design/representation.md:77 (link) — anticipated ([`../chat/review.md`](../chat/review.md)).
 - docs/implemented-plans/chat-titles.md:54 (mention) — plan, amendments to `docs/chat/review.md` and
 - ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../beebox/docs/chat/review.md): its journal is keyed by
@@ -2772,10 +2788,10 @@ References:
 
 #### docs/chat/schedules.md
 
-Title: "Chat schedules" | 101 lines | current reference
+Title: "Chat schedules" | 82 lines | current reference
 
 Referenced by:
-- docs/chat.md:12 (link) — | [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence, Telegram
+- docs/chat.md:11 (link) — | [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence. |
 - docs/design/README.md:35 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
 - docs/design/processing.md:26 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
@@ -2795,7 +2811,7 @@ References:
 Title: "Chat scroll" | 385 lines | current reference
 
 Referenced by:
-- docs/chat.md:16 (link) — | [Scroll](chat/scroll.md) | Verifying the message list's scroll behavior: the harness, the browser procedure, the trace
+- docs/chat.md:15 (link) — | [Scroll](chat/scroll.md) | Verifying the message list's scroll behavior: the harness, the browser procedure, the trace
 - docs/implemented-plans/chat-composer-rerender.md:149 (mention) — 4. Manual procedure in `docs/chat/scroll.md` (stick-to-bottom,
 - docs/implemented-plans/chat-scroll-redesign.md:22 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat/scroll.md`):
 - docs/implemented-plans/chat-stream-finalize-unify.md:373 (mention) — procedure in `docs/chat/scroll.md` (extended), not doctests
@@ -2817,11 +2833,11 @@ References:
 
 #### docs/chat/sessions.md
 
-Title: "Chat sessions" | 99 lines | current reference
+Title: "Chat sessions" | 90 lines | current reference
 
 Referenced by:
-- docs/chat.md:10 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
-- docs/design/interaction-model.md:15 (link) — chat ([`../chat/sessions.md`](../chat/sessions.md)); the reactor's chat path
+- docs/chat.md:9 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
+- docs/design/interaction-model.md:15 (link) — chat ([`../chat/sessions.md`](../chat/sessions.md)). The current design direction makes chat the
 - docs/glossary.md:72 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
 - docs/implemented-plans/architectural-review-followups.md:272 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat/sessions.md`
 - docs/implemented-plans/architectural-review.md:713 (mention) — then a `docs/chat/sessions.md` protocol doc for the
@@ -2844,14 +2860,14 @@ References:
 Title: "Calendar" | 138 lines | current reference
 
 Referenced by:
-- docs/connectors.md:36 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
+- docs/connectors.md:35 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
 - docs/connectors/google-auth.md:103 (link) — is the [calendar pull](calendar.md#verify).
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
-- docs/design/interaction-model.md:47 (link) — calendar, a prime early integration, is [`../connectors/calendar.md`](../connectors/calendar.md).
+- docs/design/interaction-model.md:45 (link) — calendar, a prime early integration, is [`../connectors/calendar.md`](../connectors/calendar.md).
 - docs/implemented-plans/doc-structure-connectors.md:49 (mention) — | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connecto
 - docs/implemented-plans/mvp-implementation-guide.md:695 (mention) — calendar.md          # Rules for calendar operations
 - docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/connectors/calendar.md` updated ([46]).
-- docs/plans/agent-docs.md:374 (mention) — `telegram-setup.md`, `calendar.md`.
+- docs/plans/agent-docs.md:374 (mention) — `calendar.md`.
 - docs/user-stories/catalog/2026-06-26.md:2281 (mention) — Key limitation from docs/connectors/calendar.md (line 77): "One-way only. Local .ics edits are not detected or pushed ba
 - ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md:21 (mention) — (`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
 - ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:60 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
@@ -2864,7 +2880,7 @@ References:
 Title: "Drive" | 271 lines | current reference
 
 Referenced by:
-- docs/connectors.md:38 (link) — | Google Drive | `google-drive.ts` | `gsheet`, `gdoc`, `gfolder`, `glink` | Two-way | [Drive](connectors/drive.md) |
+- docs/connectors.md:37 (link) — | Google Drive | `google-drive.ts` | `gsheet`, `gdoc`, `gfolder`, `glink` | Two-way | [Drive](connectors/drive.md) |
 - docs/implemented-plans/connector-sync-isolation.md:291 (mention) — 1. Update `docs/connectors/drive.md` and the Drive skill text in
 - docs/implemented-plans/doc-structure-connectors.md:61 (mention) — | `google-drive.md` | `connectors/drive.md` |
 - docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
@@ -2878,7 +2894,7 @@ References:
 Title: "Gmail" | 190 lines | current reference
 
 Referenced by:
-- docs/connectors.md:37 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](conne
+- docs/connectors.md:36 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](conne
 - docs/implemented-plans/doc-structure-connectors.md:60 (mention) — | `gmail-setup.md` | `connectors/gmail.md` |
 - docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/connectors/gmail.md` (the shorthand section currently describes it as legacy),
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
@@ -2909,17 +2925,6 @@ Referenced by:
 References:
 - → docs/connectors/calendar.md (link)
 - → docs/implemented-plans/google-auth-reauth-health.md (link)
-
-#### docs/connectors/telegram.md
-
-Title: "Telegram" | 121 lines | current reference
-
-Referenced by:
-- docs/connectors.md:35 (link) — | Telegram | `telegram.ts` | `chat-thread` | Two-way | [Telegram](connectors/telegram.md) |
-- docs/implemented-plans/doc-structure-connectors.md:62 (mention) — | `telegram-setup.md` | `connectors/telegram.md` |
-
-References:
-- → docs/secrets.md (mention)
 
 ### docs/design/
 
@@ -2982,7 +2987,7 @@ References:
 
 #### docs/design/interaction-model.md
 
-Title: "Interaction model" | 63 lines | design rationale
+Title: "Interaction model" | 61 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:22 (link) — - [`interaction-model.md`](interaction-model.md) — idle-by-default background engine AND definitely also a chatbot; proa
@@ -2995,7 +3000,6 @@ References:
 - → docs/scheduler.md (link)
 - → docs/design/processing.md (mention)
 - → docs/chat/sessions.md (link)
-- → src/core/reactor/DESIGN.md (mention)
 - → docs/plans/interface-as-cards.md (link)
 - → docs/notifications.md (link)
 - → docs/connectors.md (link)
@@ -3566,7 +3570,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:390 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:387 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -4452,7 +4456,6 @@ References:
 - → docs/connectors/google-auth.md (mention)
 - → docs/connectors/gmail.md (mention)
 - → docs/connectors/drive.md (mention)
-- → docs/connectors/telegram.md (mention)
 - → docs/secrets.md (mention)
 - → docs/server/configuration.md (mention)
 - → docs/server/boxes.md (mention)
@@ -5538,12 +5541,14 @@ References:
 
 #### docs/implemented-plans/plugins-design-notes.md
 
-Title: "Plugins — design notes" | 215 lines | shipped history | implemented
+Title: "Plugins — design notes" | 219 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/plugins-slice-3.md:114 (mention) — medium"* (`docs/implemented-plans/plugins-design-notes.md:193-197`) names
 - docs/implemented-plans/plugins.md:16 (link) — [plugins-design-notes.md](plugins-design-notes.md).
 - docs/implemented-plans/retire-type-specific-core-tags.md:71 (mention) — - **`docs/implemented-plans/plugins-design-notes.md:140`**: tags are local to the type. This plan honors it by deletion
 - docs/plugins.md:9 (link) — [design notes](implemented-plans/plugins-design-notes.md). The standing position
+- ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:15 (mention) — (`beebox/docs/implemented-plans/plugins-design-notes.md`, Candidates). The
 
 References:
 - → ../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md (frontmatter)
@@ -5557,6 +5562,7 @@ References:
 - → ../research/imbue-studio/starter-templates.md (link)
 - → docs/design/extensibility.md (link)
 - → AGENTS.md (mention)
+- → docs/implemented-plans/plugins-slice-3.md (link)
 
 #### docs/implemented-plans/plugins-slice-2.md
 
@@ -5579,6 +5585,31 @@ Title: "Plan Engineering Review — plugins slice 2" | 109 lines | implementatio
 References:
 - → docs/implemented-plans/plugins-slice-2.md (mention)
 
+#### docs/implemented-plans/plugins-slice-3.md
+
+Title: "Plugins slice 3: connectors stay core" | 390 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/plugins-design-notes.md:198 (link) — ([plugins-slice-3.md](plugins-slice-3.md)).
+- docs/plugins.md:83 (mention) — `docs/implemented-plans/plugins-slice-3.md`. A source a box is *about* (a
+
+References:
+- → ../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (link)
+- → ../issues/features/2026-09-06-connectors-via-composio-managed-auth.md (link)
+- → ../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md (link)
+- → docs/plugins.md (mention)
+- → docs/implemented-plans/plugins-design-notes.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/plugins.md (mention)
+- → docs/connectors.md (mention)
+
+#### docs/implemented-plans/plugins-slice-3.review.md **[ORPHAN]**
+
+Title: "Plan review — plugins slice 3" | 70 lines | implementation review
+
+References:
+- → docs/connectors.md (mention)
+
 #### docs/implemented-plans/plugins.design.md
 
 Title: "Plugins: design" | 128 lines | shipped history | implemented
@@ -5598,6 +5629,7 @@ Title: "Plugins: typed in-repo libraries a box uses through stubs" | 783 lines |
 Referenced by:
 - docs/implemented-plans/plugins-design-notes.md:14 (link) — for one. The plan is [plugins.md](plugins.md).
 - docs/implemented-plans/plugins-slice-2.md:9 (link) — Slice 1 ([plugins.md](plugins.md)) made a plugin a typed
+- docs/implemented-plans/plugins-slice-3.md:128 (mention) — (`docs/implemented-plans/plugins.md:592-595`). For a connector the
 - docs/implemented-plans/plugins.design.md:9 (link) — **Parent plan:** [plugins.md](plugins.md)
 - docs/implemented-plans/plugins.review.md:1 (mention) — <!-- Cross-model review of docs/implemented-plans/plugins.md, round 1. Reviewer: codex gpt-6-astra,
 - docs/plugins.md:8 (link) — and its decisions: [plugins plan](implemented-plans/plugins.md),
@@ -5982,6 +6014,42 @@ References:
 - → docs/install/agent.md (mention)
 - → src/services/AGENTS.md (mention)
 
+#### docs/implemented-plans/remove-telegram.md
+
+Title: "Remove Telegram" | 390 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/ios-companion-app.md:13 (mention) — When this plan was written, the lowest-hassle way to reach a box from a phone was the Telegram connector; it was removed
+- ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:11 (mention) — **Closed:** implemented on branch worktree-plugins-planning (commits titled "Remove Telegram: ..."; plan `beebox/docs/im
+
+References:
+- → ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md (frontmatter)
+- → ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md (link)
+- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
+- → ../issues/code-quality/2026-07-19-thread-authoritative-box-slug.md (link)
+- → ../issues/closed/features/2026-08-29-telegram-thread-session-context.md (link)
+- → docs/notifications.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/box-work.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/connectors.md (mention)
+- → docs/security-overview.md (mention)
+- → docs/security-report.md (mention)
+- → docs/secrets.md (mention)
+- → docs/glossary.md (mention)
+- → docs/install.md (mention)
+- → README.md (mention)
+- → src/connectors/AGENTS.md (mention)
+- → src/services/AGENTS.md (mention)
+- → src/core/reactor/DESIGN.md (mention)
+
+#### docs/implemented-plans/remove-telegram.review.md **[ORPHAN]**
+
+Title: "Plan review — remove Telegram" | 79 lines | implementation review
+
+References:
+- → docs/plans/source-available-release.md (mention)
+
 #### docs/implemented-plans/resilient-voice-recording.md
 
 Title: "Resilient voice recording and HQ transcription" | 1200 lines | shipped history | implemented
@@ -6219,7 +6287,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:195 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:302 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:300 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9047 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -7251,7 +7319,7 @@ References:
 Title: "Chat husks — web chat sessions as cards (phase 1)" | 85 lines | proposal | partial
 
 Referenced by:
-- docs/chat.md:23 (link) — - Husk cards (`_content/chat/web/*.chat.card`) have no current reference; the design is the [chat husks plan](plans/chat
+- docs/chat.md:22 (link) — - Husk cards (`_content/chat/web/*.chat.card`) have no current reference; the design is the [chat husks plan](plans/chat
 - docs/design/interface-as-cards-background.md:305 (mention) — | Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a
 - docs/implemented-plans/docs-reorg.md:46 (mention) — plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
 - ../issues/closed/bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md:23 (mention) — per-boot `reconcileChatHusks` (see `docs/plans/chat-husks.md` § Phase 2b).
@@ -7624,7 +7692,7 @@ Title: "Interface as cards — canonical Dashboard, Settings, and Browse" | 631 
 
 Referenced by:
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
-- docs/design/interaction-model.md:18 (link) — standing frame primitive ([interface-as-cards](../plans/interface-as-cards.md)).
+- docs/design/interaction-model.md:16 (link) — standing frame primitive ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/interface-as-cards-background.md:5 (link) — below describe earlier discussions; the current [implementation plan](../plans/interface-as-cards.md)
 - docs/design/representation.md:109 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
 - docs/implemented-plans/card-themes.md:18 (link) — [interface as cards](../plans/interface-as-cards.md),
@@ -7758,6 +7826,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:24 (mention) — The `ios-companion-app.md` plan already calls identity unification the hardest problem in its
 
 References:
+- → docs/implemented-plans/remove-telegram.md (mention)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 - → code-style.md (mention)
@@ -8070,7 +8139,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 170 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:622 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:618 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -8089,7 +8158,7 @@ Title: "Static site publishing with admin setup and human approval" | 294 lines 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - docs/plans/publish-shared-host-per-box.md:23 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:615 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:611 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -8235,9 +8304,10 @@ References:
 
 #### docs/plans/source-available-release.md
 
-Title: "Source-available release of beebox" | 535 lines | proposal | active
+Title: "Source-available release of beebox" | 536 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/remove-telegram.review.md:73 (mention) — `source-available-release.md` cites the removed admin flow as history;
 - docs/plans/installation-story.md:17 (mention) — Coordinates with `docs/plans/source-available-release.md`: this plan
 - ../issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md:41 (mention) — (`beebox/docs/plans/source-available-release.md`) records the leak
 - ../issues/closed/decisions/2026-07-08-release-cloud-provider-honesty.md:21 (mention) — feature gap. Two things to settle in `docs/plans/source-available-release.md`:
@@ -8384,7 +8454,7 @@ References:
 Title: "Prompt lenses" | 214 lines | current reference
 
 Referenced by:
-- docs/connectors.md:101 (link) — [prompt lens](prompts/lenses.md#cache-freshness-surfaced-conditionally).
+- docs/connectors.md:98 (link) — [prompt lens](prompts/lenses.md#cache-freshness-surfaced-conditionally).
 - docs/implemented-plans/doc-structure-prompts.md:59 (mention) — | `prompt-audits.md` | `prompts/lenses.md`; gains the three lenses the review page held alone; the cache-freshness lens
 - docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
 - docs/prompts/review.md:7 (link) — The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system pr
@@ -8737,7 +8807,7 @@ Title: "Health Checks" | 297 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:206 (link) — [`health-checks.md`](../server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
-- docs/connectors.md:75 (link) — [health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
+- docs/connectors.md:74 (link) — [health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 - docs/implemented-plans/box-growth-health-checks.md:454 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
@@ -8829,7 +8899,7 @@ References:
 
 #### docs/testing/doctests.md
 
-Title: "Doctests" | 144 lines | current reference
+Title: "Doctests" | 140 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:295 (mention) — doctests.md            does this function, route, or box operation behave?
@@ -9277,15 +9347,16 @@ No references in or out.
 
 #### src/connectors/AGENTS.md
 
-Title: "Connectors" | 27 lines
+Title: "Connectors" | 26 lines
 
 Referenced by:
 - AGENTS.md:43 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
-- docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive, Telegram) with the box filesy
+- docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive) with the box filesystem. Impl
 - docs/implemented-plans/chat-review.md:214 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/AGENTS.md:19`:
 - docs/implemented-plans/doc-structure-connectors.md:50 (mention) — | calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setu
 - docs/implemented-plans/docs-reorg.gap-analysis.md:26 (mention) — module's own comment — not in `src/connectors/AGENTS.md` or
 - docs/implemented-plans/file-layout.md:133 (mention) — - Per-directory instruction files: `src/connectors/AGENTS.md`,
+- docs/implemented-plans/remove-telegram.md:161 (mention) — `src/connectors/AGENTS.md`, `src/services/AGENTS.md`,
 - docs/implemented-plans/web-push-notifications.md:493 (mention) — (service-injection pattern, `src/services/AGENTS.md` / `src/connectors/AGENTS.md`)
 
 References:
@@ -9304,6 +9375,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:171 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
+- docs/implemented-plans/remove-telegram.md:152 (mention) — - **Agent-facing text:** `src/core/agent-guide/guide.md:309, 405`,
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
@@ -9335,27 +9407,27 @@ References:
 
 #### src/core/reactor/AGENTS.md
 
-Title: "Reactor" | 23 lines
+Title: "Reactor" | 22 lines
 
 Referenced by:
 - docs/implemented-plans/file-layout.md:135 (mention) — `src/core/reactor/AGENTS.md`, `src/frontend/src/components/chat/AGENTS.md`,
-- src/core/reactor/DESIGN.md:88 (mention) — - **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions
+- src/core/reactor/DESIGN.md:64 (mention) — - **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions
 
 References:
 - → src/core/reactor/DESIGN.md (link)
 
 #### src/core/reactor/DESIGN.md
 
-Title: "Reactor Design" | 133 lines
+Title: "Reactor Design" | 103 lines
 
 Referenced by:
 - AGENTS.md:39 (link) — - Backend domain and orchestration: `src/core/`; reactor details: [reactor design](src/core/reactor/DESIGN.md).
-- docs/design/interaction-model.md:17 (mention) — (`src/core/reactor/DESIGN.md`). The current design direction makes chat the
 - docs/design/processing.md:30 (mention) — `runReactor` (`src/core/reactor/DESIGN.md`): sync (`bbx wakeup` as its step
 - docs/glossary.md:54 (mention) — **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent pr
 - docs/implemented-plans/design-reconciliation.md:134 (mention) — (src/core/reactor/DESIGN.md, "Two Processing Paths"), and the current design
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — hint today is `reactor/DESIGN.md:78`).
 - docs/implemented-plans/docs-reorg.md:205 (mention) — `DESIGN.md`/`IMPLEMENTATION.md` — never cross-referenced. Decide canonical
+- docs/implemented-plans/remove-telegram.md:260 (mention) — *Chat jobs* section of `src/core/reactor/DESIGN.md:37`; the thread helpers
 - docs/user-stories/catalog/2026-08-21.md:934 (mention) — Files: `beebox/src/core/reactor/chat-jobs.ts`, `beebox/src/core/chat/reactor-sessions.ts`, `beebox/src/core/reactor/DESI
 - src/core/reactor/AGENTS.md:3 (link) — See [DESIGN.md](DESIGN.md) for the full architecture, flow, and rationale.
 - ../research/gstack/notes/design-consultation.md:6 (mention) — Six-phase conversation that ends with a written DESIGN.md and a CLAUDE.md update telling the agent to always read it. Th
@@ -9400,7 +9472,7 @@ No references in or out.
 Title: "Chat UI" | 169 lines
 
 Referenced by:
-- docs/chat.md:22 (mention) — - The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend
+- docs/chat.md:21 (mention) — - The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend
 - docs/implemented-plans/chat-stream-finalize-unify.md:347 (mention) — `CLAUDE.md` (`src/frontend/src/components/chat/AGENTS.md`, shipped with the scroll
 - docs/implemented-plans/file-layout.md:135 (mention) — `src/core/reactor/AGENTS.md`, `src/frontend/src/components/chat/AGENTS.md`,
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:115 (mention) — `beebox/src/frontend/src/components/chat/AGENTS.md`. Designs only; the code
@@ -9421,7 +9493,7 @@ Title: "Hub" | 70 lines
 
 Referenced by:
 - AGENTS.md:44 (link) — - Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpe
-- docs/chat/schedules.md:96 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- docs/chat/schedules.md:81 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
 - docs/implemented-plans/docs-reorg.md:320 (mention) — conventions documented at colocated homes (new `src/hub/AGENTS.md`,
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/mobile-token-handshake.md:82 (mention) — unacceptable."* `src/hub/AGENTS.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
@@ -9461,16 +9533,17 @@ No references in or out.
 
 #### src/services/AGENTS.md
 
-Title: "Services" | 111 lines
+Title: "Services" | 104 lines
 
 Referenced by:
 - AGENTS.md:43 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
-- docs/connectors.md:121 (mention) — See `src/services/AGENTS.md` for the full service layer documentation.
+- docs/connectors.md:113 (mention) — See `src/services/AGENTS.md` for the full service layer documentation.
 - docs/glossary.md:60 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:42 (mention) — the services real/fake pattern (`src/services/AGENTS.md`).
 - docs/implemented-plans/capture-mode.md:624 (mention) — `src/services/AGENTS.md`). Scripted word timestamps + fixture image
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/remove-open-mode.md:57 (mention) — services convention, `src/services/AGENTS.md`.)
+- docs/implemented-plans/remove-telegram.md:161 (mention) — `src/connectors/AGENTS.md`, `src/services/AGENTS.md`,
 - docs/implemented-plans/semantic-search.md:41 (mention) — - `src/services/AGENTS.md`: *"if a library or function touches external
 - docs/implemented-plans/web-push-notifications.md:203 (mention) — `src/services/AGENTS.md`): `sendNotification(subscription, payload)` →
 - docs/plans/asset-offbox-storage.md:255 (mention) — `src/services/AGENTS.md`.

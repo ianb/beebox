@@ -64,7 +64,7 @@ Later, when Rosa's procedure builds a story from several recordings, the story c
 
 The same principle applies to James's schedule photo. The box parsed it into calendar entries with specific dates and times. But the photo is the source of truth — the posted schedule on the wall at Hennepin Healthcare. If the box misread "Thursday evening" as "Thursday morning," the photo is what you'd check.
 
-Not every card has an original behind it. When Diana types a note into the group chat, the text *is* the original. When Sofia's swim schedule arrives as a structured PDF, the extraction is straightforward enough that keeping the PDF around is less important. But whenever the box is interpreting messy input — transcribing audio, reading a photo, parsing an email — the original should stay.
+Not every card has an original behind it. When Diana types a note into the chat, the text *is* the original. When Sofia's swim schedule arrives as a structured PDF, the extraction is straightforward enough that keeping the PDF around is less important. But whenever the box is interpreting messy input — transcribing audio, reading a photo, parsing an email — the original should stay.
 
 <!-- prerequisites: cards
      spirit: see the gears, it should feel like a place

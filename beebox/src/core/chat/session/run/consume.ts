@@ -1,6 +1,5 @@
 /**
- * The SDK message-pump skeleton shared in shape by ChatSession and
- * ChatThreadSession: iterate a run's messages, adapt each, hand it to the
+ * The SDK message-pump skeleton for ChatSession: iterate a run's messages, adapt each, hand it to the
  * session, surface iterator errors as an "error" signal, and run a teardown
  * step in a `finally` when the run ends. The per-message and teardown bodies
  * differ between the two sessions (durability, queue draining, chat-response
@@ -8,9 +7,9 @@
  * scaffolding, which was duplicated verbatim.
  */
 
-import type { ChatBackendRun } from "../../../services/claude-chat/core.js";
-import { adaptBackendMessage, type ChatMessage } from "./messages.js";
-import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
+import type { ChatBackendRun } from "../../../../services/claude-chat/core.js";
+import { adaptBackendMessage, type ChatMessage } from "../messages.js";
+import type { ChatBackendMessage } from "../../../../services/claude-chat-types.js";
 
 export interface PumpChatRunOptions {
   run: ChatBackendRun;
@@ -25,7 +24,7 @@ export interface PumpChatRunOptions {
 }
 
 /** Drive one SDK run's message stream through the supplied callbacks. */
-export async function pumpChatRun(opts: PumpChatRunOptions): Promise<void> {
+async function pumpChatRun(opts: PumpChatRunOptions): Promise<void> {
   const { run, adapt, onMessage, onError, onClose } = opts;
   try {
     for await (const sdkMsg of run.messages) {

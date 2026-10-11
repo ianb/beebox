@@ -38,7 +38,7 @@ interface LoadOptions<T> {
  * and "corrupt" mean opposite things. Missing is first run: the default is
  * correct and the connector legitimately starts from scratch. Corrupt is a
  * truncated or damaged file — resolving it to the default would silently
- * discard sync tokens, Telegram thread mappings, and alert latches, and the
+ * discard sync tokens and alert latches, and the
  * very next `updateTransientState` would write that loss back over the file.
  * A corrupt state file is a human problem: inspect it, or delete it to
  * deliberately choose the from-scratch resync.
@@ -141,8 +141,8 @@ interface UpdateOptions<T> {
  * locks, layered deliberately:
  *
  *   - **`withCardLock` (in-process) is the OUTER lock**, keyed on the resolved
- *     state-file path. Two modules mutating the same file (e.g. `telegram.ts`
- *     and `telegram-outbound.ts` both on `telegram.state.json`) share one
+ *     state-file path. Two modules mutating the same file (e.g. a connector's
+ *     sync module and its outbound module both on one `<name>.state.json`) share one
  *     lock. It must be outer because the cross-process lock cannot distinguish
  *     two racers in the *same* process — both would see a live holder with our
  *     own PID and spin until the retry budget throws. Serializing in-process

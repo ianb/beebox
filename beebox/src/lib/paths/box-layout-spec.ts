@@ -158,7 +158,7 @@ export const BOX_LAYOUT = [
     description: "Outbound cards staged for delivery (push notifications, replies). Flushed by `bbx finalize`.",
     agentDescription:
       "Cards that make something happen **outside** the box — an action serialized as a card for an " +
-      "external effector to pick up and execute (a Telegram message to send, etc.), flushed by " +
+      "external effector to pick up and execute (an email draft to push, etc.), flushed by " +
       "`bbx finalize`.",
   },
   {

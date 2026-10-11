@@ -73,6 +73,17 @@ The declarative fields are read without running anything. The two hooks are
 the whole hook surface; add a new hook kind only with a real consumer and a
 plan.
 
+## What stays core
+
+The connectors (Gmail, Google Calendar, Google Drive) stay core. They are
+the box's intake for mail, calendar and drive, and intake is medium; they
+share Google auth, the admin connect flow, the scheduler's auth alerts and
+the default schedules with the engine, and import 44 engine modules the
+boundary above forbids. The sizing and the decision are in
+`docs/implemented-plans/plugins-slice-3.md`. A source a box is *about* (a
+feed reader, say) is content and would be a plugin; it would be the real
+consumer for a `connectors` hook, which does not exist until then.
+
 ## The import boundary
 
 A file under `src/plugins/<name>/` may import only `beebox/{cards,schema,view-widgets}`

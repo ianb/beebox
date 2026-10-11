@@ -85,7 +85,7 @@ to a transcription vendor (Mistral by default; configurable). If you pick a
 non-Claude model (an OpenRouter model you added, or GLM), those turns go to
 OpenRouter or Z.ai instead, and your OpenRouter account's privacy settings
 decide which hosts see them. Connect
-Google or Telegram and those sync in both directions. Quick chat sends your
+Google and it syncs in both directions. Quick chat sends your
 message and bounded conversation context to TypeSafe through OpenRouter to
 choose a destination. Each wakeup pushes
 the box's git history to whatever remote you configured — and nowhere

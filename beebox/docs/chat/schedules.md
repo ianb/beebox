@@ -58,27 +58,12 @@ The agent's schedule-fired response reaches the UI over the shared WebSocket: th
 
 The `<schedule-fired>` message sent to the agent is a user-type message wrapped in XML tags. `stripUserDisplayTags()` (`src/frontend/src/components/chat/message-parsing.ts`) strips these tags for display — if a user message is empty after stripping, it's hidden entirely (visible only in debug view).
 
-### Telegram threads
-
-Telegram threads also support schedules via the `ChatSessionPool`. The pool listens for `turn-text` events from `ChatThreadSession`, parses `<schedule>` tags, and manages per-thread `ChatScheduleManager` instances.
-
-When a schedule fires in a Telegram thread:
-1. Pool sends a `<schedule-fired>` message to the thread session
-2. Agent responds with `<chat-response>` tags as usual
-3. Pool delivers responses to Telegram via the stored `deliverResponse` callback
-
-Each thread gets its own schedule file at `.beebox/thread-schedules/<threadRef>.json`. Schedules are cleared when a thread session expires (50 messages or 24 hours).
-
-No alarm or announce support — Telegram schedules are simple wakeup messages. For longer-term reminders, the agent should create a job card instead.
-
 ## Key files
 
 | File | Role |
 |------|------|
 | `src/core/chat/schedules/core.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
 | `src/core/chat/session/run/core.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
-| `src/core/chat/session/pool.ts` | Per-thread schedule managers for Telegram, `deliverResponse` callbacks |
-| `src/core/chat/session/thread.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
 | `src/webapp/routes/chat/register.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
 | `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
 | `src/webapp/trpc/routers/chat/control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
@@ -94,7 +79,3 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 ## Restart and lazy-hub behavior
 
 Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfired entries fire immediately). Because the timers live in that process, a lazy `bbx hub` (`lazy: true`, which idle-stops boxes) must not stop or fail to start a schedule-holding box: it keeps any box whose `chat-schedules.json` holds an entry running instead of idle-stopping it, and pre-starts such boxes at hub boot (independent of `keepRecent`), so a schedule fires on time even after a hub restart. See `src/hub/AGENTS.md` (Lazy mode) and `src/hub/supervisor/pending-schedules.ts`.
-
-## Known issues
-
-- **Telegram schedule delivery on restart**: If the server restarts, schedule timers are re-armed from disk but the `deliverResponse` callback (which sends to Telegram) is lost. The schedule fires but the response only goes to the session log, not to Telegram. This is acceptable for short-term timers.

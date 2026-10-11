@@ -100,7 +100,7 @@ pointed at the URL. The agent fetches; the person decides.
   bus factor, how it compares to what I have.
 - **The evaluator for a household.** Technical enough to run it, assessing
   for a partner or family. Asks: can several people share one box, how does
-  a non-technical person interact (Telegram, chat), what admin burden lands
+  a non-technical person interact (chat), what admin burden lands
   on me. Shared boxes are a design ruling (`design/identity.md`); what
   multi-user use actually looks like today is checked before this page
   claims it.
@@ -138,7 +138,7 @@ An interested potential user, in roughly the order they ask:
    triage, a voice memo becoming a todo, a clipping becoming notes, the
    questions it asks, the chat.
 6. **What can it do?** The capability list: connectors (Gmail, Drive,
-   Calendar, Telegram), chat and voice, triage, procedures, schedules, views
+   Calendar), chat and voice, triage, procedures, schedules, views
    and dashboards, courses, recipes, publishing, phone capture. Concretely:
    the kinds of things it holds (the card types).
 7. **How does it work?** Box is a directory; cards are markdown with
@@ -191,11 +191,11 @@ answers.
 /docs/12-compared-to-alternatives.md   question 10
 /docs/13-making-it-yours.md            question 11
 /docs/compared/<system>.md             one page per compared system, each opening with a caveat block
-/docs/capabilities/<name>.md           one page per capability: gmail, calendar, drive, telegram,
+/docs/capabilities/<name>.md           one page per capability: gmail, calendar, drive,
                                        chat, voice, triage, procedures, schedules, views, courses,
                                        recipes, publishing, phone-capture, questions
 /docs/concepts/<name>.md               glossary, cards, box, engine-and-box, wakeup, landmarks, trust
-/docs/install/<name>.md                docker, developer, agent-install, google, gmail, telegram
+/docs/install/<name>.md                docker, developer, agent-install, google, gmail
 /docs/security/<name>.md               overview, secrets, what-the-agent-can-do
 /docs/architecture/<nn>-<name>.md      the narrative chapters (two today)
 /docs/design/<name>.md                 the ten why-docs
@@ -371,7 +371,7 @@ to write from.
   `model-policy.md`, `chat-schedules.md`.
 - install: `agent-install.md`, `docker-install.md`, `developer-install.md`,
   `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
-  `telegram-setup.md`, `calendar.md`.
+  `calendar.md`.
 - security: `security-overview.md`, `secrets.md`.
 - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
   directory's `AGENTS.md` marks the rest as steering docs).
@@ -501,7 +501,7 @@ still says install guides live "in the repository for now".
 Round 3 (the use-case and chatbot-appraisal pages, 2026-09-12): eight
 findings, all adopted as small text edits: "built for and exercised"
 softened; routing cues added to the reading-agent instruction on 02; the
-teaching page no longer claims chat apps forget; Telegram is text-only, so
+teaching page no longer claims chat apps forget; a text-only channel is, so
 the household page photographs from the capture page; the clipping and
 recipe pages qualify the snapshot and substitution claims; "a phone app" is
 "an iPhone app"; the card filename example is now a parenthetical. A

@@ -19,7 +19,6 @@ import {
   NARRATION_OVERLAY,
   buildLandmarkSessionNote,
 } from "../../../core/chat/session/prompts.js";
-import { buildThreadSystemPrompt } from "../../../core/chat/session/thread.js";
 import {
   buildReactorSystemPrompt,
   buildReactorUserPrompt,
@@ -63,7 +62,6 @@ export interface AssembleOptions {
 
 export const SITUATIONS: Record<string, string> = {
   chat: "The web-UI chat session (voice or typed), run in the box cwd.",
-  "chat-thread": "A per-thread chat session (e.g. Telegram), one process per thread.",
   reactor: "A batch job-processing session spawned by the reactor during wakeup.",
 };
 
@@ -97,7 +95,7 @@ export async function assembleContext(
     layers.push(await schemaInstructionsLayer(boxRoot, options.cardType));
   }
 
-  if (situation === "chat" || situation === "chat-thread") {
+  if (situation === "chat") {
     notRendered.push(
       "Per-message: the `<chat-app>` state snapshot, `<user-selection>` blocks, `<attachments>` blocks (see session-context.ts / chat-session-prompts.ts).",
     );
@@ -136,7 +134,7 @@ async function systemPromptLayers(
   options: AssembleOptions,
 ): Promise<ContextLayer[]> {
   // The runtime appends the box timezone context to each situation's system
-  // prompt (chat: buildBackendStartOptions; chat-thread: startRun; reactor:
+  // prompt (chat: buildBackendStartOptions; reactor:
   // runAgent). Empty string when no timezone is configured, so assembly is
   // unchanged in that case — matching the runtime.
   const tzContext = await buildTimezoneContext(options.boxRoot);
@@ -152,19 +150,6 @@ async function systemPromptLayers(
       source: "src/core/chat/session/prompts.ts",
       loading: "always",
       text,
-    }];
-  }
-  if (situation === "chat-thread") {
-    // thread.ts appends the tz context after the thread system prompt.
-    return [{
-      name: "Chat-thread system prompt (placeholders unexpanded)",
-      source: "src/core/chat/session/thread.ts",
-      loading: "always",
-      text: buildThreadSystemPrompt({
-        threadRef: "${threadRef}",
-        chatDescription: "${chatDescription}",
-        sessionViewBaseUrl: "${sessionViewBaseUrl}",
-      }) + tzContext,
     }];
   }
   // reactor — runAgent appends the tz context after the system prompt.

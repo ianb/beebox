@@ -193,6 +193,10 @@ documented setup into a throwaway box.
 | figures | `figure`, the sketch compile route | p5, three, d3 externals list | later |
 | judgment | `judgment`, `bbx judge`, `src/core/judgment/` | a script-heavy plugin | later |
 
+The three connector rows were written before their coupling was measured.
+Measured on 2026-10-11 and decided: the connectors stay core
+([plugins-slice-3.md](plugins-slice-3.md)).
+
 Stays core as medium: inventory (a system interface card with its own tRPC router and pages, not a schema-only type as first assumed), intake types, email and (eventually) calendar base
 types, chat, capture, questions, landmarks, navigation, dashboard, settings,
 personality, guides, search, git, scheduler, procedures, publication,

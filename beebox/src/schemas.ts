@@ -44,11 +44,9 @@ import { IntakeJobSchema } from "./schemas/intake-job.js";
 import { GuideSchema } from "./schemas/guide/schema.js";
 import { ScheduledScriptSchema } from "./schemas/scheduled-script/schema.js";
 import { JudgmentSchema } from "./schemas/judgment/schema.js";
-import { TelegramMessageSchema } from "./schemas/telegram-message.js";
 import { PublicationSchema } from "./schemas/publication.js";
 import { ChatSchema } from "./schemas/chat.js";
 import { ChatThreadSchema } from "./schemas/chat-thread.js";
-import { ChatJobSchema } from "./schemas/chat-job.js";
 import { ContainsBackfillJobSchema } from "./schemas/contains-backfill-job.js";
 import { TodoReviewJobSchema } from "./schemas/todo-review-job.js";
 import { PersonalitySchema } from "./schemas/personality/schema.js";
@@ -119,7 +117,6 @@ export const cardSchemas = defineRegistry<CardSchema>({
     // synced & captured
     EmailThreadSchema,
     EmailMessageSchema,
-    TelegramMessageSchema,
     PublicationSchema,
     GdocSchema,
     GsheetSchema,
@@ -136,7 +133,6 @@ export const cardSchemas = defineRegistry<CardSchema>({
     PdfSchema,
     // system bookkeeping
     IntakeJobSchema,
-    ChatJobSchema,
     ContainsBackfillJobSchema,
     TodoReviewJobSchema,
     QuestionFollowupJobSchema,

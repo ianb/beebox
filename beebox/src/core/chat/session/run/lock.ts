@@ -1,4 +1,4 @@
-import { acquireBoxWork, type BoxWork } from "../../../lib/box-maintenance.js";
+import { acquireBoxWork, type BoxWork } from "../../../../lib/box-maintenance.js";
 /**
  * Run-lock helpers for ChatSession — acquire/release the chat-active lock
  * held for the duration of an SDK run.
@@ -13,7 +13,7 @@ import { acquireBoxWork, type BoxWork } from "../../../lib/box-maintenance.js";
 import {
   acquireRunLock as acquireChatRunLock,
   releaseRunLock as releaseChatRunLock,
-} from "./state.js";
+} from "../state.js";
 
 /**
  * Acquire the chat-active lock unless one is already held. Returns the lock

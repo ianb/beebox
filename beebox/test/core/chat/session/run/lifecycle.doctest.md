@@ -1,10 +1,9 @@
 # Chat run lifecycle
 
-`chat-session-lifecycle.ts` models the shared chat-run phases as a discriminated
+`run/lifecycle.ts` models the chat-run phases as a discriminated
 union and centralises the legal transitions. The pure predicates are the seam:
-they need no SDK run, so the phase graph is fully exercised here. Both
-`ChatSession` and `ChatThreadSession` assert against `isLegalChatPhaseTransition`
-at their write sites.
+they need no SDK run, so the phase graph is fully exercised here.
+`ChatSession` asserts against `isLegalChatPhaseTransition` at its write sites.
 
 ```ts setup
 import {
@@ -12,7 +11,7 @@ import {
   lifecycleBusy,
   lifecycleRun,
   IDLE,
-} from "../../../../src/core/chat/session/lifecycle.js";
+} from "../../../../../src/core/chat/session/run/lifecycle.js";
 ```
 
 ## Legal transitions — the run's happy path and teardown

@@ -28,7 +28,7 @@ model providers with automatic failover; Bee Box has no loop of its own and
 runs entirely on Claude Code or Codex, with no fallback if that provider is
 unavailable. OpenClaw treats every external system, including email, as a
 chat channel; Bee Box treats email, calendar, and files as typed cards, and
-only its Telegram connector is a real two-way conversation. OpenClaw can
+its real two-way conversation is the web chat. OpenClaw can
 route one gateway to several distinct agent personas; a Bee Box box holds one
 agent. OpenClaw ships an ambient "anything to report?" heartbeat and can
 infer open follow-ups from a conversation; Bee Box only acts on explicit

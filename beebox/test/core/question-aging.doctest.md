@@ -125,7 +125,7 @@ delete process.env.BBX_TIME;
 
 ## Expiry at the default 30-day window
 
-No push subscription or Telegram config exists here: expiry still runs, and only
+No push subscription exists here: expiry still runs, and only
 nudge delivery is gated on a channel.
 
 ```ts

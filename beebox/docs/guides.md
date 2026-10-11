@@ -11,7 +11,7 @@ where new material goes and how it is named.
 | Installing beebox: Docker, from source, with an agent | [install](install.md) |
 | Testing: the verification instruments | [testing](testing.md) |
 | Cards: format, schemas, validation, migrations | [cards](cards.md) |
-| Connectors: the framework, Google auth, Calendar, Gmail, Drive, Telegram | [connectors](connectors.md) |
+| Connectors: the framework, Google auth, Calendar, Gmail, Drive | [connectors](connectors.md) |
 | Chat: sessions, history, schedules, review, quick chat, composer, scroll | [chat](chat.md) |
 | Media: assets, image orientation, image transforms | [media](media.md) |
 | The prompt surface: review, lenses, logging | [prompts](prompts.md) |

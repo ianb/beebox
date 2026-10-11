@@ -87,10 +87,6 @@
   publish: install/drive.md
   description: "The three kinds of Drive card and how the Drive connector syncs them."
 
-- source: beebox/docs/connectors/telegram.md
-  publish: install/telegram.md
-  description: "Connecting a Telegram chat to a box."
-
 - source: beebox/docs/connectors/calendar.md
   publish: install/calendar.md
   description: "Google Calendar sync to and from .ics files in the box."

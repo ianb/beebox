@@ -14,9 +14,6 @@ export interface Connector {
   /** Unique name for this connector */
   name: string;
 
-  /** Card types this connector creates on sync */
-  produces: string[];
-
   /**
    * Subdirectories under _content/inbox/ that this connector owns. Used by
    * `bbx wakeup --connector <name>` to scope inbox scanning and to tag

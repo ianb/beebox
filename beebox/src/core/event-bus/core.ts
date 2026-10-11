@@ -1,7 +1,7 @@
 /**
  * SQLite-backed event bus with in-memory real-time dispatch.
  *
- * Producers call emit() from anywhere — schedules, chat, Telegram, CLI,
+ * Producers call emit() from anywhere — schedules, chat, CLI,
  * background agents, even separate processes. All they need is boxRoot.
  *
  * Consumers subscribe() with an optional cursor to replay missed events.

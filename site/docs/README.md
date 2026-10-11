@@ -55,8 +55,7 @@ description: "Documentation for Bee Box: a personal assistant built from a codin
 > what they are, scanning paper, and clipping the page you are reading with
 > the browser extension. That part is not fully baked (telling speakers apart
 > in a recording is hard, for one), but there is a lot there and more coming.
-> A Telegram connection exists and is rough. Connectors sync Gmail, Google
-> Calendar, and Google Drive.
+> Connectors sync Gmail, Google Calendar, and Google Drive.
 >
 > It runs on a computer you keep on, with your own coding-agent login, and it
 > is early: self-hosted, one maintainer, changing fast. The AI services it
@@ -132,9 +131,8 @@ the ones that bear on what the person is asking and open the pages named.
   ([questions](capabilities/questions.md), [triage](capabilities/triage.md),
   [how the box is taught](design/teaching.md))
 - **Groups get a box each.** Everyone in a box shares everything in it, and a
-  different group gets a different box; a household can talk to its box in one
-  chat. Primitive, and it works. ([who it is for](04-who-it-is-for.md),
-  [a household in one chat](uses/a-household-in-one-chat.md),
+  different group gets a different box; primitive, and it works.
+  ([who it is for](04-who-it-is-for.md),
   [identity](design/identity.md))
 - **Open, so it can be understood.** Source-available for the same reason the
   history is readable, and the process the agents work from is in the

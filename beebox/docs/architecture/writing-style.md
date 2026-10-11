@@ -41,7 +41,7 @@ Characters are introduced through how they use the system, not through biographi
 
 ## The system
 
-**Web chat is the primary surface.** Telegram (and potentially SMS, other platforms) are additional channels; a Telegram group is the one thread where the family talks together. Don't lead with Telegram as the main thing.
+**Web chat is the primary surface.** Don't lead with any other channel as the main thing.
 
 **Group-oriented, but not exclusively.** The group conversation is the primary shared surface, but one-on-one chat with the box is also available. Some things naturally belong in the group (schedule changes, grocery list, family logistics). Others are clearly one-on-one (personal goals, personal questions, Rosa's call list for her sister). Use whichever fits the example. The group is still the default and the thing that makes the system distinctive — but don't force everything through it.
 
@@ -91,4 +91,3 @@ Collect these per section. We'll eventually build a glossary from them and use t
 - **Locking characters to one example.** Sofia doesn't only care about suspension bridges. Rosa doesn't only tell stories. Keep examples varied or general enough to suggest range.
 - **Making the architecture section a disconnected list.** Each architecture point should reference something from the stories. "This is how..." or "When Diana..." — keep it connected.
 - **Over-explaining simple things.** If the box needs to create a weekly task, just say that. Don't editorialize about how significant it is.
-- **Treating Telegram as the primary interface.** It's one channel. The web chat is primary.

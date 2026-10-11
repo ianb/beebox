@@ -114,8 +114,7 @@ off by default — nothing runs until you turn it on.
 beebox is, by design, an agent that reads your private data,
 ingests untrusted external content, and acts with no tool allowlist.
 Those three together are the well-known "lethal trifecta": text written
-by someone else — an email body, a web clipping, a calendar invite, a
-Telegram message, even words inside a photographed image — can reach the
+by someone else — an email body, a web clipping, a calendar invite, even words inside a photographed image — can reach the
 agent's context and try to steer it. If that succeeds, the attacker
 isn't limited to reading one card; they have whatever the agent has,
 which is arbitrary shell as your box's user.
@@ -185,7 +184,6 @@ The summary:
   impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,
   broad `drive` scope by design). One shared OAuth token covers all
   boxes on a server — see accepted risks below.
-- **Telegram** — if you connect a bot: message text in and out.
 - **Web push** — notification text transits your browser's push service
   (Google/Mozilla/Apple).
 - **Your git remote** — every wakeup pushes the box's full history to
@@ -233,7 +231,7 @@ probe (a hash and a flag), the login/static assets needed to reach the
 login page, and — for its 15-minute first-run window — the setup route,
 gated by a token printed only to the server console. Everything else
 that skips the session wall carries its own dedicated credential
-(Telegram webhook secret, diagnostic bearer key).
+(the diagnostic bearer key).
 The full route-by-route table is
 [§1 of the structured report](security-report.md#1-endpoints-auth-abilities).
 

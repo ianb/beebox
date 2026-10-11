@@ -138,7 +138,6 @@ async function persistState(boxRoot: string, state: GmailTransientState): Promis
 
 class GmailConnector implements Connector {
   name = "gmail";
-  produces = ["email-thread", "email-message", "email-outbound"];
   inboxPaths = [`${BOX_DIRS.inbox}/email`];
   triggeredBy?: string;
 

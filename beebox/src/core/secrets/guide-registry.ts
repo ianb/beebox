@@ -30,7 +30,7 @@ export interface SecretGuide {
   what: string;
   /** The provider's key-management page — where a person gets one. */
   obtainUrl: string;
-  /** Numbered steps, in the register of the Telegram section's "Setup steps". */
+  /** Numbered steps, as plain imperative steps. */
   obtainSteps: string[];
 }
 
@@ -171,12 +171,6 @@ const guides: Record<string, SecretGuide> = {
       "In Google Cloud Console, open APIs & Services → Credentials and open the OAuth client you created",
       "Copy the client secret and paste it below",
     ],
-  },
-  "telegram-bot/": {
-    title: "Telegram bot",
-    what: "This box's Telegram bot token and webhook secret. Not pasted here — the Telegram section on this page sets it up.",
-    obtainUrl: "https://t.me/BotFather",
-    obtainSteps: ["Use the Telegram section above: it walks through @BotFather and stores the result under this name"],
   },
 };
 
