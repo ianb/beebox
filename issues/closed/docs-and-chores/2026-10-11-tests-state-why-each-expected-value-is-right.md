@@ -1,12 +1,32 @@
 ---
 title: "Tests state why each expected value is right; keep only the failures that exploration finds"
 workstream: test-oracles
+resolution: implemented
 area: testing
 labels: [testing, doctest, guidance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — reading two papers on agent-written tests and the real-testing skill, 2026-10-11
 ---
+
+**Closed (implemented), commits 7c17c6d3f and 91f07e366.** The sentence before an
+example says what rule it shows and where the expected value comes from; a
+`suggested:` value is pasted only when that sentence says why the exact value is
+right; exploration keeps only cases that failed; the cross-model reviewer treats
+a new expected value with no stated reason as a finding. Divergences from the
+issue's proposals, all human decisions of 2026-10-11:
+
+- The convention is prose with no marker.
+- No lint or doc-check enforcement: a mechanical check can only see whether
+  prose precedes a block, and 1203 of the suite's blocks follow a heading directly.
+- The rule applies to new and edited blocks only; no pass over existing doctests.
+- Stronger forms (a `why:` line with a closed source vocabulary, grounded
+  references the checker resolves, a reviewer prediction check) were proposed and
+  the human declined all of them.
+- Tour-check is untouched, as the issue scoped.
+- The `dev-doctest-unrunnable-value` knowledge audit passed both before and after
+  the change with both models, so it guards against drift; it does not show the
+  change altered behavior.
 
 Agents write almost all tests in this repository. Usually the same session
 writes the code and its test. Nothing in `beebox/docs/testing.md`,
@@ -73,5 +93,5 @@ scope: any rule that asks for more tests.
   Keep each guidance file net shorter (root `AGENTS.md`, "agent and skill files
   only ever grow").
 
-Related: [doctests use real types as generic fixtures](../code-quality/2026-10-10-doctests-use-real-types-as-generic-fixtures.md),
-[doctest usability review](../closed/exploration/2026-09-27-doctest-usability-review.md).
+Related: [doctests use real types as generic fixtures](../../code-quality/2026-10-10-doctests-use-real-types-as-generic-fixtures.md),
+[doctest usability review](../exploration/2026-09-27-doctest-usability-review.md).
