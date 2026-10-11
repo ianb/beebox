@@ -61,6 +61,19 @@ export interface PrunedSubtree {
    * reimplement the walk's stop rules (nested landmark, owned attach scope).
    */
   cardBoxPaths: ReadonlySet<string>;
+  /**
+   * Every `ordinary` card the walk reached, with its file mtime — the cards
+   * `entries` omits. The place page's "Also here" group lists them
+   * (`docs/plans/place-shows-cards.md`, Track A).
+   */
+  ordinary: OrdinaryCard[];
+}
+
+/** An ordinary-level card the pruned walk reached. */
+export interface OrdinaryCard {
+  /** Box-relative path, leading "/". */
+  boxPath: string;
+  mtimeMs: number;
 }
 
 // Directories a pruned walk never descends into, even when they hold cards —
@@ -96,6 +109,7 @@ export async function prunedSubtreeWith(
       nested: [],
       summary: { hasEntryPoint: false, primaryCount: 0, background: true },
       cardBoxPaths: new Set(),
+      ordinary: [],
     };
   }
 
@@ -105,6 +119,7 @@ export async function prunedSubtreeWith(
     entries: [],
     nested: [],
     cardBoxPaths: new Set(),
+    ordinary: [],
   };
   await walk(state, { physicalDir: landmarkScanDir(boxRoot, dir), isTop: true });
 
@@ -115,6 +130,7 @@ export async function prunedSubtreeWith(
     nested: state.nested,
     summary: { hasEntryPoint, primaryCount, background: false },
     cardBoxPaths: state.cardBoxPaths,
+    ordinary: state.ordinary,
   };
 }
 
@@ -177,6 +193,7 @@ interface WalkState {
   entries: ProminenceEntry[];
   nested: LandmarkSummary[];
   cardBoxPaths: Set<string>;
+  ordinary: OrdinaryCard[];
 }
 
 async function walk(state: WalkState, start: WalkItem): Promise<void> {
@@ -239,13 +256,16 @@ async function addCardEntry(state: WalkState, absPath: string): Promise<void> {
   const schema = state.ctx.cardSchemas.get(type);
   if (schema === undefined) return;
   const boxPath = boxPathOf(state.boxRoot, absPath);
-  const frontmatter = await unlessVanished(() => readFrontmatterCached(absPath));
-  if (frontmatter === undefined) return; // gone between readdir and read: not there, not an error
+  const read = await unlessVanished(() => readFrontmatterCached(absPath));
+  if (read === undefined) return; // gone between readdir and read: not there, not an error
   state.cardBoxPaths.add(boxPath);
-  const declaredRaw = frontmatter?.["prominence"];
+  const declaredRaw = read.fields?.["prominence"];
   const declared = isProminenceLevel(declaredRaw) ? declaredRaw : undefined;
   const level = effectiveLevel({ declared, typeDefault: schema.defaultProminence });
-  if (level === "ordinary") return;
+  if (level === "ordinary") {
+    state.ordinary.push({ boxPath, mtimeMs: read.mtimeMs });
+    return;
+  }
   state.entries.push({ boxPath, level, kind: "card" });
 }
 

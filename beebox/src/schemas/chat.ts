@@ -71,6 +71,10 @@ export const ChatSchema: CardSchema = cardSchema("chat", {
   brief: "A web chat session",
   fields: chatFields,
   category: "synced",
+  // Staging and session logs, for the agent rather than the reader: kept out
+  // of a place's "Also here" list and folded in Browse
+  // (docs/plans/place-shows-cards.md, Track A).
+  prominence: "background",
   instructions: `# Chat Husk Cards
 
 A \`chat\` card is the durable face of a web chat session — created automatically when a session starts, under \`_content/chat/web/\`. The \`session\` field is the association (renaming the file is safe and encouraged once the topic is clear: \`bbx mv\` to a meaningful name).

@@ -111,7 +111,7 @@ async function cardTitle(boxPath: string, boxRoot: string): Promise<string | nul
   if (!ns.ok) return null;
   let frontmatter: Record<string, unknown> | null;
   try {
-    frontmatter = await readFrontmatterCached(path.resolve(boxRoot, boxPath));
+    frontmatter = (await readFrontmatterCached(path.resolve(boxRoot, boxPath))).fields;
   } catch (e) {
     // Vanished or unreadable between the stat and the read: the filename
     // title still names it.

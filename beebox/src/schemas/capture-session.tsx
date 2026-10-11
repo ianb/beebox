@@ -53,6 +53,10 @@ export const CaptureSessionSchema: CardSchema = cardSchema("capture-session", {
   brief: "One recording session's captures",
   description: "Groups the images, audio clips, and files from one recording session, with an assembled timeline transcript as the body",
   category: "synced",
+  // Staging and session logs, for the agent rather than the reader: kept out
+  // of a place's "Also here" list and folded in Browse
+  // (docs/plans/place-shows-cards.md, Track A).
+  prominence: "background",
   searchable: true,
   fields: captureSessionFields,
   instructions: `# Capture Session Cards

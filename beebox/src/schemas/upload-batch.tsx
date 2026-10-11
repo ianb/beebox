@@ -92,6 +92,10 @@ export const UploadBatchSchema: CardSchema = cardSchema("upload-batch", {
   brief: "A bulk upload awaiting filing",
   description: "A bulk file-upload batch landed under a chat's tmp-upload/, awaiting the agent to file each file to its destination",
   category: "synced",
+  // Staging and session logs, for the agent rather than the reader: kept out
+  // of a place's "Also here" list and folded in Browse
+  // (docs/plans/place-shows-cards.md, Track A).
+  prominence: "background",
   searchable: true,
   fields: uploadBatchFields,
   instructions: `# Upload Batch Cards
