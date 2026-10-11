@@ -95,8 +95,8 @@ not ok 1 - line 12: JSON.parse(readFileSync(lockFile, "utf8"))
     }
 ```
 
-Check it against the sentence before the example before you paste it. Output
-the code produced is not evidence the code is right.
+Paste it only when the sentence before the example says why that exact value
+is right. Output the code produced is not evidence the code is right.
 
 ## Show the value, not a yes/no
 
