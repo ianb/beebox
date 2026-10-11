@@ -15,6 +15,7 @@ import {
   parseLandmarkFields,
 } from "../../../src/schemas/landmark.js";
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
+import { createCardSchemaMap } from "../../../src/schemas.js";
 import { findDestination } from "../../../src/core/landmark/destination.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
@@ -32,6 +33,7 @@ async function resolveIn(files: Record<string, string>, navigation, backdated: s
       landmarkDir: box.path("_content/recipes"),
       landmarkPath: "_content/recipes/Recipes.landmark.card",
       boxRoot: box.root,
+      cardSchemas: await createCardSchemaMap(box.root),
     });
   } finally {
     await box.cleanup();

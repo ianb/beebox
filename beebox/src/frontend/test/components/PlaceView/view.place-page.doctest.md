@@ -140,6 +140,24 @@ const html = await render({ payload: payload({
 => { buttons: 0, plainMore: true }
 ```
 
+## A tile shows its card's summary line under the title
+
+A row's `detail` (the card type's `summarize` line) shows under its title,
+so a loan tile says who has it without opening the card. A row without one
+shows the title alone.
+
+```ts
+const html = await render({ payload: payload({
+  openers: [],
+  groups: [{ label: "Also here", count: 2, alsoHere: true, children: [
+    { ref: "_content/lending/Stove.loan.card", label: null, title: "Camp stove", detail: "Idris has it · back by 2026-10-17", exists: true, source: "derived" },
+    { ref: "_content/lending/Rules.memo.card", label: null, title: "House rules", exists: true, source: "derived" },
+  ] }],
+}) });
+sectionText(html, "group")
+=> Also here 2 Camp stove Idris has it · back by 2026-10-17 House rules
+```
+
 ## Outside a chat, "Start something" is hidden
 
 The same place with openers, opened with no chat beside it.

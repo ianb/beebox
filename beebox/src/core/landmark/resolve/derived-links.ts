@@ -22,7 +22,6 @@ import { ALSO_HERE_CAP, ALSO_HERE_LABEL, alsoHere } from "../../../shared/also-h
 import { parseRef } from "../../../shared/ref-path/core.js";
 import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
 import { prunedSubtreeWith, type ProminenceEntry, type ProminenceWalkContext, type PrunedSubtree } from "../prominence-index.js";
-import { createCardSchemaMap } from "../../../schemas.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";
 import type { DerivedReadProblem } from "../summaries.js";
 import type { ResolvedGroup } from "./core.js";
@@ -55,7 +54,7 @@ export async function resolveDerivedTiers(
   for (const level of ["entry-point", "primary"] as const) {
     await addCardTier({ entries: derived.entries, level, links, seen, options, problems, listedLevels });
   }
-  await addNestedLandmarkTier(derived, { links, seen, boxRoot: options.boxRoot });
+  await addNestedLandmarkTier(derived, { links, seen, ctx: { boxRoot: options.boxRoot, cardSchemas: options.cardSchemas } });
   return { links, problems, listedLevels };
 }
 
@@ -106,16 +105,14 @@ async function addCardTier(
  */
 async function addNestedLandmarkTier(
   { entries, nested }: PrunedSubtree,
-  { links, seen, boxRoot }: { links: ResolvedLink[]; seen: Set<string>; boxRoot: string },
+  { links, seen, ctx }: { links: ResolvedLink[]; seen: Set<string>; ctx: ProminenceWalkContext },
 ): Promise<void> {
   const sorted = nested.toSorted((a, b) => naturalCompare(a.path, b.path));
-  // Built once, and only when there is a nested landmark to look into.
-  const cardSchemas = sorted.length > 0 ? await createCardSchemaMap(boxRoot) : null;
   for (const n of sorted) {
     // `n.path` has no leading "/" (box-relative, matching every other
     // resolved ref's format) — see the comment in `addCardTier` above.
     if (seen.has(n.path)) continue;
-    const entryPoint = cardSchemas === null ? null : await nestedEntryPoint({ boxRoot, cardSchemas }, n.dir);
+    const entryPoint = await nestedEntryPoint(ctx, n.dir);
     if (entryPoint !== null && seen.has(entryPoint)) continue;
     const entry = entries.find((e) => e.kind === "landmark" && e.boxPath === `/${n.path}`);
     seen.add(n.path);

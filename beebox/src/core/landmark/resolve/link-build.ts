@@ -11,19 +11,28 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { titleFromFilename } from "../../file-summary.js";
+import { summarize } from "../../loader-registry.js";
+import { typeFromFilename } from "../../card-io.js";
 import { isCardFile } from "../../../lib/paths/core.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { readFrontmatterCached } from "../prominence-cache.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";
 import type { PrunedSubtree } from "../prominence-index.js";
+import type { CardSchema } from "../../../cards/schema.js";
 
 export interface ResolvedLink {
   /** Box-relative path to the target card. */
   ref: string;
   /** Explicit landmark label; null means "fall back to title". */
   label: string | null;
-  /** Display title: the target card's `title:` field, else derived from the filename. */
+  /** Display title: the target card's summary title (`title:`, else what its type derives), else derived from the filename. */
   title: string;
+  /**
+   * The target card's summary line (`FileSummary.detail`): a second line its
+   * type writes about itself, such as a loan's holder and due date. Absent
+   * when the type writes none or the card could not be read.
+   */
+  detail?: string;
   /** True if the target file exists on disk. */
   exists: boolean;
   /**
@@ -50,6 +59,11 @@ export interface ResolveOptions {
   landmarkPath: string;
   /** Absolute path to the box root. */
   boxRoot: string;
+  /**
+   * The box's card schemas (built-in plus box-local), built once per
+   * resolution, so a linked card's type can write its title and summary line.
+   */
+  cardSchemas: Map<string, CardSchema>;
   /**
    * This landmark's pruned subtree (Track B), when the caller wants derived
    * children resolved alongside the hand-listed ones. Omitted by callers
@@ -99,19 +113,26 @@ export async function buildLink({ rawRef, label, source, prominence, options }: 
   } catch (_e) {
     return { ref: resolved + suffix, label, title: fallbackTitle, exists: false, source, ...prominenceField };
   }
-  const title = isFile ? await cardTitle(resolved, options.boxRoot) : null;
-  return { ref: resolved + suffix, label, title: title ?? fallbackTitle, exists: true, source, ...prominenceField };
+  const identity = isFile ? await cardIdentity(resolved, options) : null;
+  const detailField = identity?.detail === undefined ? {} : { detail: identity.detail };
+  return { ref: resolved + suffix, label, title: identity?.title ?? fallbackTitle, exists: true, source, ...prominenceField, ...detailField };
 }
 
 /**
- * The card's own `title:` field, which keeps punctuation a slugged filename
- * loses ("Cake carrier (Marisol's)"). Read through the prominence index's
- * per-file parse memo, so a landmark that resolves often re-parses only cards
- * that changed. Read only inside the box namespace fence, the same fence
- * `expand` applies before it reads a match's frontmatter: a title must not
- * leak from a file outside it. Null when there is no usable title.
+ * The card's title and summary line, from its type's `summarize` over its
+ * frontmatter. The title keeps punctuation a slugged filename loses ("Cake
+ * carrier (Marisol's)"). Read through the prominence index's per-file parse
+ * memo, so a landmark that resolves often re-parses only cards that changed.
+ * The cached read is raw YAML, so `type` is injected from the filename as
+ * loading a card does (`card-io.ts`); a card with no on-disk `type:` keeps its
+ * summary line. Read only inside the box namespace fence, the same fence
+ * `expand` applies before it reads a match's frontmatter: nothing may leak
+ * from a file outside it. Null when the card cannot be read.
  */
-async function cardTitle(boxPath: string, boxRoot: string): Promise<string | null> {
+async function cardIdentity(
+  boxPath: string,
+  { boxRoot, cardSchemas }: Pick<ResolveOptions, "boxRoot" | "cardSchemas">,
+): Promise<{ title: string; detail?: string } | null> {
   if (!isCardFile(boxPath)) return null;
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: boxPath, mode: "read" });
   if (!ns.ok) return null;
@@ -124,6 +145,13 @@ async function cardTitle(boxPath: string, boxRoot: string): Promise<string | nul
     console.warn(`[landmark] could not read title of ${boxPath}:`, e);
     return null;
   }
-  const title = frontmatter?.["title"];
-  return typeof title === "string" && title.trim().length > 0 ? title.trim() : null;
+  if (frontmatter === null) return null;
+  const type = typeFromFilename(boxPath);
+  const fields = type === undefined ? frontmatter : { ...frontmatter, type };
+  // An invalid card (one `bbx validate` already reports) keeps the base
+  // summary without `summarize` warning about it on every place-page load.
+  const schema = type === undefined ? undefined : cardSchemas.get(type);
+  const valid = schema?.summarize === undefined || schema.frontmatterSchema.safeParse(fields).success;
+  const summary = summarize({ path: boxPath, fields, ...(type === undefined ? {} : { type }) }, valid ? cardSchemas : new Map());
+  return summary.detail === undefined ? { title: summary.title } : { title: summary.title, detail: summary.detail };
 }

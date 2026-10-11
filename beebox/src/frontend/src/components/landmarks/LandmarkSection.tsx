@@ -33,6 +33,8 @@ export interface ResolvedLink {
   label: string | null;
   title: string;
   exists: boolean;
+  /** The card type's summary line, shown under the title. */
+  detail?: string;
 }
 
 export interface ResolvedGroup {
@@ -253,6 +255,12 @@ export function LandmarkSymbol({
   return <CardMark symbol={landmark.symbol} size={compact === true ? "md" : "lg"} boxSlug={boxSlug} fallback="📍" />;
 }
 
+/** The card type's summary line under a tile's title, in the `FileEntry` style. */
+function TileDetail({ detail }: { detail: string | undefined }) {
+  if (detail === undefined) return null;
+  return <Text as="div" size="xs" tone="subtle" truncate title={detail}>{detail}</Text>;
+}
+
 function LinkTile({
   link,
   boxSlug,
@@ -297,6 +305,7 @@ function LinkTile({
       <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
+          <TileDetail detail={link.detail} />
           {showPath ? <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text> : null}
         </Card>
       </button>
@@ -307,6 +316,7 @@ function LinkTile({
     <Link to={href(`/${boxSlug}/views/${link.ref}`)} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
+        <TileDetail detail={link.detail} />
         {showPath ? <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text> : null}
       </Card>
     </Link>

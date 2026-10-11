@@ -349,3 +349,39 @@ await box.write("_content/tidy/Log.chat.card", "---\nsession: s1\n---\n");
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A tile carries its card type's summary line
+
+Each row carries `detail`, the line the card's type writes about itself
+through `summarize` (docs/plans/place-shows-cards.md, Track B). A box-authored
+`loan` type writes who has it and when it is due. The loan cards do not
+write `type:` on disk; the type comes from the filename, as loading a card
+does, so the line is still there. A card whose type writes no line, and a
+loan that fails validation, have none.
+
+```ts
+import * as fs from "node:fs/promises";
+
+const box = await makeTmpBox({ deps: true });
+await fs.mkdir(box.path("src/schemas"), { recursive: true });
+await fs.writeFile(box.path("src/schemas/loan.ts"), `import { body, cardSchema } from "beebox/cards";
+import { z } from "beebox/schema";
+
+export default cardSchema("loan", {
+  fields: { item: z.string(), holder: z.string(), due: z.string(), body: body(z.string()) },
+  instructions: "# Loan Cards",
+  summarize: (card, base) => ({ ...base, title: card.item, detail: \`\${card.holder} has it · back by \${card.due}\` }),
+});
+`);
+await box.write("_content/lending/Lending.landmark.card", "---\nnavigation:\n  label: Lending\n---\n");
+await box.write("_content/lending/Stove.loan.card", "---\nitem: Camp stove\nholder: Idris\ndue: 2026-10-17\n---\n");
+await box.write("_content/lending/Broken.loan.card", "---\nitem: Ladder\n---\n");
+await box.write("_content/lending/Rules.memo.card", "---\ntitle: House rules\n---\n");
+const [also] = (await payload(box.root, { dir: "_content/lending", expandsAsGroups: true })).groups;
+also.children.map((c) => [c.title, c.detail ?? null]).toSorted()
+=> [["Broken", null], ["Camp stove", "Idris has it · back by 2026-10-17"], ["House rules", null]]
+```
+
+```ts cleanup
+await box.cleanup();
+```
