@@ -254,6 +254,13 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 | `src/tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `src/tricks/lib/` | Shared helpers used by `src/tricks/scripts/`. |
 
+Box code imports the engine only through the `exports` map in
+`beebox/package.json`. A new public subpath needs that entry, an
+`entryPoints` build in `src/scripts/build-cli/build/bundle.ts`, a `files`
+entry in `tsconfig.declarations.json` for its types, and, if plugin bundles
+import it, a row in `publicExportsExternal` (`build/plugins.ts`). A dev
+checkout links the source tree, so only a packaged install shows a missing step.
+
 ## What's *not* in a box
 
 - **No Bee Box application/server code.** A box stores state and config and may contain authored publication source in a `publication` card's attach folder; those site projects build to static files and never run inside the Bee Box server.
