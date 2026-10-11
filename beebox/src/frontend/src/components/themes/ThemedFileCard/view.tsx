@@ -75,7 +75,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
   const error = presentation?.error ?? theme.problem?.message;
   function handlePresentationRetry() { presentation?.retry(); }
   return <CardThemeSurface
-    theme={theme} title={title} symbol={symbol} boxSlug={boxSlug} mode={mode}
+    theme={theme} title={title} detail={data.detail} symbol={symbol} boxSlug={boxSlug} mode={mode}
     properties={<ThemedFileCardProperties
       data={data} theme={theme} boxSlug={boxSlug} renderers={renderers} active={active}
       hasExplicitView={hasExplicitView} onSelect={onSelect} onNavigate={onNavigate}

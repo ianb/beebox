@@ -14,7 +14,7 @@ import { useParams } from "@tanstack/react-router";
 import { Markdown } from "../Markdown/body";
 import { AttachedComments } from "../AttachedComments";
 import { makeEmbedComponents } from "../FigureEmbed";
-import { blankLeadingTitleHeading } from "@shared/leading-title-heading";
+import { shownCardBody } from "../../lib/card-field-faces";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../../lib/selection/quote-extract";
 import type { FileData } from "../../file-type-registry";
 import type { ReactNode } from "react";
@@ -73,9 +73,10 @@ function QuoteSpeakersLine({
 }
 
 /**
- * `title` is the card's displayed title. A body opening with the same
- * `# heading` would show it twice, so that line is blanked, not removed:
- * todo locators (counted from `bodyLineOffset`) keep their numbers.
+ * `title` is the card's displayed title (`bodyHeadingTitle`). A body opening
+ * with the same `# heading` would show it twice, so that line is blanked
+ * (`shownCardBody`). `hideEmptyBody` drops the "No body content" line, which a
+ * front that shows fields above the body passes.
  */
 export function CardBody({
   data,
@@ -88,10 +89,8 @@ export function CardBody({
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   hideEmptyBody: boolean;
 }): ReactNode {
-  const body = data.body === undefined || title === undefined
-    ? data.body
-    : blankLeadingTitleHeading(data.body, title);
-  const speakers = body === undefined ? [] : extractQuoteSpeakers(body);
+  const body = shownCardBody(data.body, title);
+  const speakers = body === null ? [] : extractQuoteSpeakers(body);
   const { boxSlug } = useParams({ strict: false });
   // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
   const components = useMemo(
@@ -105,7 +104,7 @@ export function CardBody({
 
       <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />
 
-      {body !== undefined && body.trim() !== "" ? (
+      {body !== null ? (
         <div data-card-section="body">
           <Markdown
             prose="block"

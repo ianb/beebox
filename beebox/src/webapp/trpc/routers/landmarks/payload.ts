@@ -21,7 +21,8 @@ import { parseLandmarkFields, type LandmarkNavigationData } from "../../../../sc
 import { readLandmarkSymbol } from "../../../../core/landmark/symbol.js";
 import { normalizeLandmarkDir, landmarkScanRelDir } from "../../../../core/landmark/root-dir.js";
 import { readLandmarkCard } from "../../../../core/landmark/card-cache.js";
-import { prunedSubtree, type PrunedSubtree } from "../../../../core/landmark/prominence-index.js";
+import { prunedSubtreeWith, type PrunedSubtree } from "../../../../core/landmark/prominence-index.js";
+import { createCardSchemaMap } from "../../../../schemas.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../../lib/box-namespace-resolve.js";
 import type { CardSymbolData } from "../../../../shared/card-symbol.js";
@@ -43,7 +44,11 @@ export interface LandmarkPayload {
   prominence: ProminenceLevel | null;
   /** Resolved listed + derived + unnamed-expand links, in tier order with dedup. */
   links: ResolvedLink[];
-  /** Named expands kept as collapsible groups (submenus). */
+  /**
+   * Named expands kept as collapsible groups (submenus). With
+   * `expandsAsGroups` (the place page), the last group is "Also here": the
+   * place's ordinary cards no link or other group shows (`resolveAlsoHere`).
+   */
   groups: ResolvedGroup[];
   /** Nesting depth relative to ancestor landmarks (root = 0). */
   depth: number;
@@ -119,12 +124,16 @@ export async function loadLandmarkPayload(
   const navigation = expandsAsGroups === true ? labelUnnamedExpands(fields.navigation) : fields.navigation;
   const dir = normalizeLandmarkDir(path.dirname(relPath));
   const landmarkDir = path.dirname(absPath);
-  const derived = derive ? await prunedSubtree(boxRoot, dir) : undefined;
+  // Built once per landmark: the walk and every linked card's summary use it.
+  const cardSchemas = await createCardSchemaMap(boxRoot);
+  const derived = derive ? await prunedSubtreeWith({ boxRoot, cardSchemas }, dir) : undefined;
   const { links, groups, derivedProblems } = await resolveLandmark(navigation, {
     landmarkDir,
     landmarkPath: relPath,
     boxRoot,
+    cardSchemas,
     ...(derived === undefined ? {} : { derived }),
+    alsoHere: expandsAsGroups === true,
   });
   const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
 

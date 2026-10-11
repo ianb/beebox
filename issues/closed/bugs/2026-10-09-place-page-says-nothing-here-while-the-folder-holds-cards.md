@@ -1,12 +1,14 @@
 ---
 title: "A place page says \"Nothing here yet\" while its folder holds the person's cards"
-workstream: unattached
-needs: [decision]
+workstream: place-shows-cards
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — D-chemistry, A-lending, B-inventory, C-reconnecting, F-newcomer journey walks, 2026-10-09
 ---
+
+**Closed:** Fixed on branch worktree-place-shows-cards (plan place-shows-cards): the place page lists unmarked cards under "Also here" and the empty copy no longer claims the folder is empty.
 
 Arrival now opens the root place page. After the agent saves a card, that page
 can still say "Nothing here yet. This place is the folder /. Ask in the chat to
@@ -49,14 +51,14 @@ What should a place page list for a card nobody marked?
    empty when it holds unmarked cards.
 
 Option 1 matches what the person expects of a "place". The tiers were designed
-so a place stays short ([landmark arrival](../../beebox/docs/implemented-plans/landmark-arrival.md),
+so a place stays short ([landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md),
 Track C), so the choice is a design call.
 
-Related: [first-screen-says-nothing-about-what-this-is](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
+Related: [first-screen-says-nothing-about-what-this-is](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
 (partly met by arrival; this is what the arrival page then shows).
 
 Reports: [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 26,
-[D-chemistry second walk](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 15,
+[D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 15,
 [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) rows 14 and 69,
 [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 65,
 [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 23.

@@ -2,12 +2,14 @@
  * PlaceView — the front of a landmark card: the place page.
  *
  * A person who opens a landmark card is visiting the place, so the front shows
- * what the place holds instead of its configuration: its openers ("Start something", where they can be sent), then its
- * resolved links in tiers and each `expand` as a group labeled in plain words.
+ * what the place holds instead of its configuration: the place summary (the
+ * card's body), its openers ("Start something", where they can be sent), then
+ * its resolved links in tiers and each `expand` as a group labeled in plain words.
  * The card header already shows the place's mark and label; an embed, which
  * has no header, draws them here. The fields stay under Properties
  * (`CardFacts`). See
- * docs/implemented-plans/landmark-arrival.md, Track C.
+ * docs/implemented-plans/landmark-arrival.md, Track C, and
+ * docs/implemented-plans/place-shows-cards.md, Track C.
  *
  * `PlaceView` fetches `landmarks.forDir` for the card's folder and owns the
  * loading and error states; `PlacePage` renders a loaded payload.
@@ -28,6 +30,7 @@ import { ErrorText } from "../ui/ErrorText";
 import { StatusMessage } from "../ui/StatusMessage";
 import { LandmarkGroup, LandmarkLinks, LandmarkSymbol } from "../landmarks/LandmarkSection";
 import { ChatOpeners } from "../openers/ChatOpeners";
+import { Markdown } from "../Markdown/body";
 import { bbxSource } from "../../lib/source-tag";
 import { useRefetchOnFileChange } from "../../hooks/useRefetchOnFileChange";
 import { placeSections, type PlacePayload, type PlaceTier } from "./sections";
@@ -52,11 +55,14 @@ function SectionHeading({ children }: { children: ReactNode }) {
   return <Text as="h3" size="xs" weight="medium" tone="muted" uppercase>{children}</Text>;
 }
 
-/** No links and no groups: say so, and name the folder the place is. */
+/**
+ * No links and no groups: say so, and name the folder the place is. The walk
+ * skips background cards and unknown types, so the folder may still hold files.
+ */
 function EmptyPlace({ folder, onNavigate }: { folder: string; onNavigate: (target: ViewTarget) => void }) {
   return (
     <div className="flex flex-col gap-1" data-place-section="empty">
-      <Text as="p">Nothing here yet.</Text>
+      <Text as="p">No cards to show here yet.</Text>
       <Text as="p" size="sm" tone="subtle">
         This place is the folder{" "}
         <InlineAction onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`${toDisplayPath(folder)}/`}</InlineAction>
@@ -71,9 +77,11 @@ function EmptyPlace({ folder, onNavigate }: { folder: string; onNavigate: (targe
  * the folder's landmark is a different card (two landmarks in one folder), the
  * page names both rather than show the other card's links as this one's.
  */
-export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading }: {
+export function PlacePage({ cardPath, payload, body, onNavigate, onGoToPlace, heading }: {
   cardPath: string;
   payload: PlacePayload;
+  /** The landmark card's body, the place summary; blank shows nothing. */
+  body?: string;
   /** Draw the place's mark and label: an embed has no card header that shows them. */
   heading?: boolean;
   onNavigate: (target: ViewTarget) => void;
@@ -90,6 +98,7 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
     );
   }
   const sections = placeSections(payload);
+  const folder = parentDir(cardPath);
   const start = startSomething({ payloadDir: payload.dir, openers: payload.openers, chat });
   const handleSendOpener = chat?.sendOpener;
   return (
@@ -98,6 +107,12 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
         <div className="flex items-center gap-3">
           <LandmarkSymbol landmark={payload} boxSlug={boxSlug} />
           <Heading level={2}>{payload.label}</Heading>
+        </div>
+      ) : null}
+
+      {body !== undefined && body.trim() !== "" ? (
+        <div data-place-section="summary">
+          <Markdown prose="block" onNavigate={onNavigate} basePath={cardPath}>{body}</Markdown>
         </div>
       ) : null}
 
@@ -117,15 +132,24 @@ export function PlacePage({ cardPath, payload, onNavigate, onGoToPlace, heading 
         </div>
       ) : null}
 
-      {sections.kind === "empty" ? <EmptyPlace folder={parentDir(cardPath)} onNavigate={onNavigate} /> : sections.sections.map((section) =>
+      {sections.kind === "empty" ? <EmptyPlace folder={folder} onNavigate={onNavigate} /> : sections.sections.map((section) =>
         section.kind === "links" ? (
           <div key={section.tier} className="flex flex-col gap-2" data-place-section={section.tier}>
             <SectionHeading>{TIER_HEADINGS[section.tier]}</SectionHeading>
             <LandmarkLinks links={section.links} boxSlug={boxSlug} onNavigate={onNavigate} compact hidePath />
           </div>
         ) : (
-          <div key={`group:${section.group.label}`} data-place-section="group">
-            <LandmarkGroup group={section.group} boxSlug={boxSlug} onNavigate={onNavigate} compact defaultOpen hidePath />
+          <div key={`group:${section.group.alsoHere === true ? "also-here" : "expand"}:${section.group.label}`} data-place-section="group">
+            <LandmarkGroup
+              group={section.group}
+              boxSlug={boxSlug}
+              onNavigate={onNavigate}
+              compact
+              defaultOpen
+              hidePath
+              // "Also here" lists the folder's cards, so its overflow opens the folder.
+              {...(section.group.alsoHere === true ? { onMore: () => onNavigate(browseCardTarget({ directory: folder })) } : {})}
+            />
           </div>
         ),
       )}
@@ -158,6 +182,7 @@ export function PlaceView({ data, onNavigate, mode }: RendererProps) {
       <PlacePage
         cardPath={cardPath}
         payload={landmark}
+        {...(data.body === undefined ? {} : { body: data.body })}
         heading={mode === "embed"}
         onNavigate={(target) => onNavigate(target)}
         {...(boxSlug === undefined ? {} : { onGoToPlace: () => { void openLandmarkChat(landmark.dir); } })}

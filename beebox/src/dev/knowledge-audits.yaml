@@ -3382,6 +3382,87 @@ tests:
   # landmark-link-attribute to specify "hand-listed" since templates
   # use template-ref. Both new/refined audits pass.
 
+  # Place summary: a landmark's body (docs/implemented-plans/place-shows-cards.md, Track C).
+  # The trigger to keep it current is in the always-loaded guide
+  # (landmarks.summary-on-change); what it holds is in card-landmark.md.
+  # Status (2026-10-11, Claude, worktree test1 clone): 4/4 pass on the final
+  # run. The first run failed landmark-body-after-card-save: with no Lending
+  # place in the box, the agent searched, found no loan, and said in plain
+  # words to update "the Lending page's short description" (SPEAKING avoids
+  # "landmark"). The audit now stages the place and the loan card, and counts
+  # plain words; with them the agent wrote the summary into the landmark body
+  # in the same turn (it read card-landmark.md after deciding to, 31k ctx).
+  - id: landmark-body-purpose
+    prompt: "What is the body of a landmark card for?"
+    expected_level: knows_about
+    watch_for: >
+      The place summary: a few lines on where things stand in the place, with
+      links to the cards, shown first on the place page above the cards.
+      Short (under about eight lines). Written for the person. NOT "a landmark
+      has no body".
+    should_read_any: ["node_modules/beebox/box-docs/card-landmark.md"]
+    correct_matches:
+      - "summary|where things stand"
+      - "link"
+    tags: [landmarks, landmark-body]
+
+  - id: landmark-body-after-card-save
+    prompt: "You just saved a new loan card in the Lending place. Is anything else to update?"
+    expected_level: knows_directly
+    watch_for: >
+      Says to check the Lending landmark's summary (its body) in the same turn:
+      write one if it has none, update it if the new loan makes it untrue.
+      Answerable from the always-loaded agent guide, without opening the
+      landmark type doc. Plain words ("the Lending page's summary") count.
+    fixture:
+      _content/lending/Lending.landmark.card: |
+        ---
+        navigation:
+          label: Lending
+        symbol:
+          glyph: 🤝
+        ---
+      _content/lending/Camp_stove_loan.memo.card: |
+        ---
+        title: Camp stove, lent to Idris
+        created: "2026-10-10T12:00:00+00:00"
+        ---
+        Idris has the camp stove until 2026-10-17.
+    correct_matches:
+      - '(?:landmark|place|lending)[\s\S]{0,160}(?:summary|body|description|where things stand)|(?:summary|body|description|where things stand)[\s\S]{0,160}(?:landmark|place|lending)'
+    tags: [landmarks, landmark-body]
+
+  - id: landmark-body-vs-briefing
+    prompt: >-
+      In the Lending place, where do I write a few lines telling the person who
+      has what right now, and where do I write guidance for other agents that
+      work there?
+    expected_level: knows_about
+    watch_for: >
+      The few lines for the person go in the Lending landmark card's body (the
+      place summary). Guidance for agents goes in the place's briefing card.
+      Does not put the person's summary in the briefing, or agent guidance in
+      the landmark body.
+    correct_matches:
+      - 'landmark[\s\S]{0,200}(?:body|summary)|(?:body|summary)[\s\S]{0,200}landmark'
+      - "briefing"
+    tags: [landmarks, landmark-body, briefing]
+
+  - id: landmark-body-keeps-person-words
+    prompt: >-
+      The Lending landmark's summary has a sentence the person wrote
+      themselves: "Never lend the ladder to Idris again." A new loan makes the
+      rest of the summary out of date. What do you do with that sentence when
+      you update the summary?
+    expected_level: knows_about
+    watch_for: >
+      Keeps the person's sentence as written and updates only the rest; would
+      ask the person before removing or rewording it.
+    correct_matches:
+      - "keep|leave|preserve"
+      - "ask"
+    tags: [landmarks, landmark-body]
+
   # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
   # clone after one check fix, 2 reads, 1 searches, 39k ctx. The first run was
   # right but said "keep coming back" in plain words (SPEAKING), which no listed

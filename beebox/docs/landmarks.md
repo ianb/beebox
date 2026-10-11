@@ -31,7 +31,7 @@ Both can coexist in the same directory. Chat openers belong to the landmark (`na
 
 ## Card schema
 
-A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
+A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a few agent-written lines on where things stand, shown first on the place page. The agent writes it when it makes a place and updates it when it changes the place's cards (`landmarks.summary-on-change` in the agent guide). The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
 
 ```yaml
 ---
@@ -157,8 +157,13 @@ what the place holds, not its configuration:
   from its query ("Every loan card here"; `src/core/landmark/expand-label.ts`).
   A group that matches nothing shows "None yet". A curated link whose target
   is gone keeps its row, struck through.
-- **An empty place** says "Nothing here yet." and links to its folder in
-  Browse.
+- **Also here** — the last group: the place's ordinary cards that no tier
+  or other group shows, the 10 most recently changed, then a "+N more" link
+  that opens the folder in Browse. Background cards (chat logs, capture and
+  upload staging) are not listed.
+- **An empty place** says "No cards to show here yet." and links to its
+  folder in Browse. The folder may still hold background cards or cards of
+  unknown types.
 
 The page reads `landmarks.forDir` with `expandsAsGroups: true`; the menus
 leave the flag off and keep the flat list. The landmark's fields show under

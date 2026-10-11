@@ -39,6 +39,8 @@ export interface FileData {
    * against a schema. Absent for non-card files, and treated as `null`.
    */
   schema?: CardSchemaFacts | null;
+  /** The card's summary line (`card.get` `detail`), shown under its title. */
+  detail?: string;
   /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
   content?: string;
 }
