@@ -192,7 +192,7 @@ convergence does not overwrite them merely to make a ledger look current.
 
 ## Writing a new migration
 
-1. **Write the script** at `src/scripts/migrate/<name>.ts`. `bbx engine migrate` runs it as `<script> <boxRoot> --apply`. Exit 0 on success, 2 when it ran but some cards could not be converted (the migration is recorded and those cards are reported), anything else for a hard failure that stops the queue (`runMigrationScript` in `src/core/migration-run.ts`). The shared card-walking harness (`_harness.ts`) and the warnings helper (`_warnings.ts`) were deleted with the retired migrators on 2026-10-08; restore them from git history when a new migrator walks cards.
+1. **Write the script** at `src/scripts/migrate/<name>.ts`. `bbx engine migrate` runs it as `<script> <boxRoot> --apply`. Exit 0 on success, 2 when it ran but some cards could not be converted (the migration is recorded and those cards are reported), anything else for a hard failure that stops the queue (`runMigrationScript` in `src/core/migration-run.ts`). Copy the shape of `src/scripts/migrate/briefing-openers/run.ts`: plan the whole box, apply, verify. The old card-walking harness was deleted on 2026-10-08, and no live migration uses it.
 
 2. **Be idempotent.** Detect the post-migration shape and skip cards already in it — second runs should report "already migrated N" rather than re-doing work or erroring. Two patterns we use:
    - Filename-based: skip cards whose name already has the new extension.
