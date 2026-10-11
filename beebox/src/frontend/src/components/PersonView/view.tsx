@@ -18,6 +18,7 @@ import { Text } from "../ui/Text";
 import { CardBody } from "../MarkdownCardView/CardBody";
 import { FrontmatterFields } from "../MarkdownCardView/FrontmatterFields";
 import { cardTitle } from "../../lib/card-title";
+import { withoutHeaderName } from "../../lib/readable-fields";
 import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { RendererProps } from "../../file-type-registry";
 import type { ReactNode } from "react";
@@ -151,7 +152,7 @@ export function PersonView({ data, onNavigate, mode }: RendererProps) {
   const title = bodyHeadingTitle(frontmatter);
   const bodyEmpty = isCardBodyEmpty(data.body, title);
   const front = splitCardFields(frontmatter, { hasBodyField: data.schema?.hasBodyField ?? null, bodyEmpty, mode }).front;
-  const rest = Object.fromEntries(Object.entries(front).filter(([key]) => !drawn.has(key)));
+  const rest = withoutHeaderName(Object.fromEntries(Object.entries(front).filter(([key]) => !drawn.has(key))), cardTitle(data));
   const summary = personSummary(person, embed);
   const hasRest = Object.keys(rest).length > 0;
 
@@ -161,7 +162,7 @@ export function PersonView({ data, onNavigate, mode }: RendererProps) {
 
       {hasRest ? (
         <div className="mb-4 pb-3 border-b border-card-rule" data-card-section="frontmatter">
-          <FrontmatterFields fields={rest} onNavigate={onNavigate} basePath={data.path} headerTitle={cardTitle(data)} />
+          <FrontmatterFields fields={rest} onNavigate={onNavigate} basePath={data.path} />
         </div>
       ) : null}
 

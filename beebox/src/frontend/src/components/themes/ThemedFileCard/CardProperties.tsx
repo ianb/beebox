@@ -4,6 +4,7 @@ import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../../lib/card-field-faces";
 import { FrontmatterFields } from "../../MarkdownCardView/FrontmatterFields";
 import { cardTitle } from "../../../lib/card-title";
+import { withoutHeaderName } from "../../../lib/readable-fields";
 import { CardMark } from "../../ui/CardMark";
 import { isRecord } from "@shared/is-record";
 import { readCardSymbol } from "@shared/card-symbol";
@@ -42,7 +43,7 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
   // A landmark's front is the place page, which draws its body but not its
   // fields. With an empty body (most landmarks) the split puts them on the
   // front, so Properties lists them for a landmark either way.
-  const properties = data.type === "landmark" ? { ...split.front, ...split.properties } : split.properties;
+  const properties = withoutHeaderName(data.type === "landmark" ? { ...split.front, ...split.properties } : split.properties, cardTitle(data));
   const contains = foundBy.contains;
   const evidence = foundBy["contains-evidence"];
   const prominence = prominenceText(foundBy.prominence, data.schema);
@@ -70,7 +71,7 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
     </div> : null}
     {Object.keys(properties).length > 0 ? <div className="mt-6" data-card-section="fields">
       <h3 className="text-sm font-semibold mb-2">Fields</h3>
-      <FrontmatterFields fields={properties} onNavigate={onNavigate} basePath={data.path} headerTitle={cardTitle(data)} />
+      <FrontmatterFields fields={properties} onNavigate={onNavigate} basePath={data.path} />
     </div> : null}
   </>;
 }

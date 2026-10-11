@@ -44,7 +44,7 @@ function RefLink({ refPath, label }: { refPath: string; label?: string }): React
   return (
     <button
       type="button"
-      onClick={() => nav.onNavigate({ path: resolved, viewer: null, params: {}, viewState: null }, { label: refPath })}
+      onClick={() => nav.onNavigate({ path: resolved, viewer: null, params: {}, viewState: null }, { label: label ?? refPath })}
       className="bbx-theme-link max-w-full cursor-pointer whitespace-pre-wrap text-left [overflow-wrap:anywhere]"
     >
       {displayPath}
@@ -62,7 +62,9 @@ function isHttpUrl(value: unknown): value is string {
 function CompactView({ value }: { value: CompactValue }): ReactNode {
   return (
     <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">
-      {value.ref === undefined ? value.text : <RefLink refPath={value.ref} label={value.text} />}
+      {value.ref !== undefined ? <RefLink refPath={value.ref} label={value.text} />
+        : isHttpUrl(value.text) ? <a href={value.text} target="_blank" rel="noreferrer" className="bbx-theme-link">{value.text}</a>
+        : value.text}
       {/* The label's soft ink, so a card theme mutes the aside as it mutes the labels. */}
       {value.aside === undefined ? null : <span className="text-warm-500 bbx-card-field-label"> ({value.aside})</span>}
     </span>
@@ -183,20 +185,15 @@ function FieldsTable({ fields, root }: { fields: Record<string, unknown>; root: 
 }
 
 /**
- * A card's fields as a person reads them. A `name` row whose value is the
- * card's header title (`headerTitle`) is left out: the header already shows
- * it. Only an equal value drops it, so a card headed by something else keeps
- * its `name` row.
+ * A card's fields as a person reads them. Callers drop the `name` row that
+ * repeats the header first (`withoutHeaderName`, `lib/readable-fields.ts`), so
+ * they frame only fields that remain.
  */
-export function FrontmatterFields({ fields, onNavigate, basePath, headerTitle }: {
+export function FrontmatterFields({ fields, onNavigate, basePath }: {
   fields: Record<string, unknown>;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath: string | undefined;
-  headerTitle?: string;
 }): ReactNode {
   const navCtx = useMemo<FieldsNavCtx>(() => ({ onNavigate, basePath }), [onNavigate, basePath]);
-  const shown = headerTitle !== undefined && fields.name === headerTitle
-    ? Object.fromEntries(Object.entries(fields).filter(([key]) => key !== "name"))
-    : fields;
-  return <FieldsNavContext.Provider value={navCtx}><FieldsTable fields={shown} root /></FieldsNavContext.Provider>;
+  return <FieldsNavContext.Provider value={navCtx}><FieldsTable fields={fields} root /></FieldsNavContext.Provider>;
 }

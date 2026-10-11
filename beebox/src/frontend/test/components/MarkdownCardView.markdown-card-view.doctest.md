@@ -124,6 +124,14 @@ cells(renderFields({ length: { value: "3", unit: "m" } }))
 => |Length|Value|3|Unit|m|
 ```
 
+A web address that reads as one value stays a link, as a bare URL field
+does.
+
+```ts
+/<a href="https:\/\/maps\.example\/shelf"[^>]*>https:\/\/maps\.example\/shelf<\/a>/.test(renderFields({ location: { text: "https://maps.example/shelf" } }))
+=> true
+```
+
 ## A body heading that repeats the title is hidden
 
 The card page shows the title from `title:`. A body that opens with the same
@@ -214,7 +222,8 @@ async function renderFront(frontmatter) {
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
   const html = renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() }, React.createElement(RouterProvider, { router })));
-  return cells(/data-card-section="frontmatter">(.*?)<\/dl>/s.exec(html)?.[1] ?? "");
+  const section = /data-card-section="frontmatter">(.*?)<\/dl>/s.exec(html);
+  return section === null ? null : cells(section[1]);
 }
 
 await renderFront({ name: "Camp stove", location: { text: "With Idris" }, quantity: { value: "1 stove" } })
@@ -222,6 +231,14 @@ await renderFront({ name: "Camp stove", location: { text: "With Idris" }, quanti
 
 await renderFront({ title: "Stove", name: "Camp stove", location: { text: "With Idris" } })
 => |Name|Camp stove|Location|With Idris|
+```
+
+A record with only its name has nothing beside the header, so the front draws
+no empty field section.
+
+```ts continue
+await renderFront({ name: "Camp stove" })
+=> null
 ```
 
 With a body, the fields stay in Properties:

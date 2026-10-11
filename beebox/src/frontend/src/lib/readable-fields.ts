@@ -13,6 +13,17 @@ export interface CompactValue {
 }
 
 /** `back-by` → "Back by": split on `-` and `_`, sentence case. */
+/**
+ * The fields without a `name` row whose value is the card's header title: the
+ * header already shows it. Only an equal value drops it, so a card headed by
+ * something else (a `title:`, a landmark's label) keeps its `name` row.
+ * Callers apply it before deciding whether any rows remain to frame.
+ */
+export function withoutHeaderName(fields: Record<string, unknown>, headerTitle: string): Record<string, unknown> {
+  if (fields["name"] !== headerTitle) return fields;
+  return Object.fromEntries(Object.entries(fields).filter(([key]) => key !== "name"));
+}
+
 export function fieldLabel(key: string): string {
   const words = key.split(/[_-]+/).filter((word) => word !== "").join(" ");
   if (words === "") return key;

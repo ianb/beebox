@@ -5,7 +5,7 @@ as the file stores them (`docs/plans/readable-card-fields.md`). These two
 rules decide it; the Source view keeps the keys and shapes as written.
 
 ```ts setup
-import { compactValue, fieldLabel } from "../../src/lib/readable-fields.js";
+import { compactValue, fieldLabel, withoutHeaderName } from "../../src/lib/readable-fields.js";
 ```
 
 ## Labels
@@ -91,4 +91,18 @@ compactValue({ name: "Idris", title: "Dr." })
 
 compactValue({ ref: "../people/Idris_Okafor.person.card" })
 => null
+```
+
+## The row that repeats the header
+
+A `name` row whose value is the card's header title is dropped before the
+fields are framed, so a card with nothing else to show gets no empty field
+section. A `name` that differs from the header stays.
+
+```ts
+withoutHeaderName({ name: "Camp stove", location: { text: "With Idris" } }, "Camp stove")
+=> { location: { text: "With Idris" } }
+
+withoutHeaderName({ name: "Camp stove" }, "Stove")
+=> { name: "Camp stove" }
 ```

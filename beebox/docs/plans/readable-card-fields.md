@@ -8,8 +8,8 @@ issues: []
 
 A card's type fields render through a generic renderer that shows raw data:
 "location: text: With Idris". This plan makes that renderer readable wherever
-it draws fields, and exports its row and value pieces so custom views can use
-them. The verbatim data stays one click away in the card's Source view.
+it draws fields, built from named row and value pieces a custom view can
+take up later. The verbatim data stays one click away in the card's Source view.
 
 **Issues addressed:** none filed. The problem was seen in the
 [place-shows-cards](../implemented-plans/place-shows-cards.md) exhibit, after
@@ -23,8 +23,8 @@ run (`bin/issues search`): "field labels raw", "frontmatter fields readable",
   custom views, but we can make the generic one better along the way, and
   maybe make components to support those generic renderers too."*
 - Readable everywhere the generic renderer runs, with Source as the raw view:
-  the planner's revised lean after plan review (finding 1, below). Not yet
-  confirmed.
+  asked "Should I build it, with fields readable everywhere and the Source
+  view as the raw view?", the boxholder answered *"sure"*.
 
 ## Design
 
@@ -131,9 +131,10 @@ No design decision depends on an external premise.
 
 - **Readable value**: how a field's value shows in the generic renderer,
   derived from its shape. Display only; nothing on disk.
-- Module `lib/readable-fields.ts` (pure rules). Exported components from
-  `FrontmatterFields.tsx`: `FieldsTable` (exists, now exported) and
-  `FieldValue` (today's `ValueView`, readable, exported).
+- Module `lib/readable-fields.ts` (pure rules: `fieldLabel`, `compactValue`,
+  `withoutHeaderName`). Named components in `FrontmatterFields.tsx`:
+  `FieldsTable` and `FieldValue` (today's `ValueView`, readable), unexported
+  until a custom view uses them.
 
 ## Tracks / scope
 
@@ -170,10 +171,11 @@ No design decision depends on an external premise.
   - `ValueView` → `FieldValue`: a compact object renders as its text (a
     `RefLink` when it has `ref`) with the aside in parentheses, muted; other
     branches unchanged except nested records use readable labels.
-  - `FrontmatterFields` gains `headerTitle?: string`. A root row whose key is
-    `name` and whose value equals `headerTitle` is skipped. The front callers
-    pass `cardTitle(data)`; Properties passes it too. Only a value match drops
-    the row, so a landmark headed by its label keeps a different `name` row.
+  - `withoutHeaderName(fields, cardTitle(data))` drops a `name` row whose
+    value equals the header title. The front callers and Properties apply it
+    before deciding whether any rows remain, so a name-only card draws no empty
+    field section. Only a value match drops the row, so a landmark headed by
+    its label keeps a different `name` row.
   - `FieldsTable` and `FieldValue` are named components in the module, kept
     unexported until a custom view uses them: an unused export fails the knip
     sweep, and `FieldsTable` needs the navigation context `FrontmatterFields`
@@ -263,3 +265,11 @@ required; cut to two exports. (3) `ref` beside `text` can be evidence; links
 only on identity shapes. (4) Date reformatting can alter verbatim evidence;
 dropped. (5) `bodyHeadingField` can differ from the header; drop by value
 match against `cardTitle`. (6) `ContactRow` layout differs; left alone.
+
+Diff review, codex gpt-6-sol, round 1: three findings, all verified and
+fixed. (1) A name-only card drew an empty field section (front) or an empty
+"Fields" heading (Properties), because the `name` row was dropped after
+callers decided rows existed; `withoutHeaderName` now runs first. (2) A
+compact value whose text is a URL lost its link; it renders as a link. (3) A
+named link opened a tab labeled with the ref path; the navigation hint now
+carries the visible name.
