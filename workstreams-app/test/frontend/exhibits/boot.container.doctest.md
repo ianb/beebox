@@ -97,3 +97,37 @@ JSON.stringify({
 })
 => {"storeButton":true,"appButton":false,"idleRefusal":false,"storeComment":true,"appComment":false,"idleComposer":false,"controlsBeforeTitle":true}
 ```
+
+## Figures enlarge on click
+
+The default renderer wraps each image figure in a button that opens the
+full-size view; the enlarged dialog is not in the page until the click. A
+non-image figure is a plain link with no button. The file name beside the
+label links to the raw file, which is the way to the browser's own zoom.
+
+```ts
+import { DefaultExhibit } from "../../../src/frontend/exhibits/boot/DefaultExhibit.js";
+
+const figures = renderToStaticMarkup(
+  createElement(DefaultExhibit, {
+    boot: boot({
+      manifest: {
+        title: "Shots",
+        created: "2026-08-15T00:00:00Z",
+        figures: [
+          { label: "A1", file: "before.png", caption: "The list before" },
+          { label: "A2", file: "trace.json" },
+        ],
+      },
+    }),
+  }),
+);
+JSON.stringify({
+  enlarge: figures.includes('aria-label="Enlarge A1"'),
+  imageInButton: /<button[^>]*Enlarge A1[^>]*><img/.test(figures),
+  dialogClosed: !figures.includes("<dialog"),
+  rawLink: figures.includes('href="before.png" rel="noreferrer" target="_blank"'),
+  dataIsLink: figures.includes('href="trace.json"') && !figures.includes("Enlarge A2"),
+})
+=> {"enlarge":true,"imageInButton":true,"dialogClosed":true,"rawLink":true,"dataIsLink":true}
+```
