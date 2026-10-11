@@ -17,14 +17,18 @@ Good models: `beebox/test/core/pdf/probe.text-layer-quality.doctest.md`
 (multi-line output).
 
 - **The prose is the document.** Open with the contract or the incident behind
-  the code. Put one sentence before each example saying what rule it shows.
+  the code. The sentence before each example says what rule it shows and where
+  the rule comes from: the issue or plan, the format, a calculation the reader
+  can redo, or the bug it replays. A value that is a choice (order, wording)
+  says so.
 - **One claim per example.** Passing with the code deleted, or re-proving
-  another example's branch, is a defect ([testing](../../../beebox/docs/testing.md)).
+  another example's branch, is a defect; so is a case kept only because it
+  passed ([testing](../../../beebox/docs/testing.md)).
 - **Show values.** Write objects as literals (`=> { kind: "box" }`), not
   `JSON.stringify(...)`. Prefer the value to `=> true`.
 - **Unknown or varying value:** write `=> ?`, run, and paste the `suggested:`
-  value after checking it is right. Varying parts arrive as wildcards
-  (`«int»`, `«date»`, `«*»`). Better still, pass fixed inputs (time, ids).
+  value once it matches that sentence. Varying parts arrive as wildcards
+  (`«int»`, `«date»`, `«*»`); better, pass fixed inputs (time, ids).
 - **Waiting:** `eventually(fn, { label })`, never a fixed sleep.
 - Blocks are separate tests; ` ```ts continue ` shares variables (prose between
   examples goes after a closing fence, never inside an open one), ` ```ts setup `
@@ -45,12 +49,10 @@ then rerun after the fix.
 
 ## Reading a failure
 
-- `not ok N - line 42: <expression>`: the example at markdown line 42.
-- `diff:` `-` is expected, `+` is actual; `suggested:` is the actual value,
-  ready to paste; `hint:` names a recognised mistake.
-- `DoctestSyntaxError file.md:39: …` means the file did not compile: it shows
-  the line and its block. Stack traces point at `.doctest.md` lines.
-- `still running after 60s: file.md:L …` names an example that is hanging.
+`not ok N - line 42: <expr>` names the markdown line; `diff:` has `-` expected
+and `+` actual; `suggested:` is the actual value, ready to paste after the
+check above. The rest, including `DoctestSyntaxError` and hangs, is in the
+syntax reference.
 
 ## Flake triage
 

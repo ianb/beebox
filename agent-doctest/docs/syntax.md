@@ -95,8 +95,8 @@ not ok 1 - line 12: JSON.parse(readFileSync(lockFile, "utf8"))
     }
 ```
 
-Check that the value is right before you paste it. A pasted value is the claim
-the test makes.
+Check it against the sentence before the example before you paste it. Output
+the code produced is not evidence the code is right.
 
 ## Show the value, not a yes/no
 

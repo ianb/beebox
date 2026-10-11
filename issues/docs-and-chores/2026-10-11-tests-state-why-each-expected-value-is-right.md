@@ -1,6 +1,6 @@
 ---
 title: "Tests state why each expected value is right; keep only the failures that exploration finds"
-workstream: unknown
+workstream: test-oracles
 area: testing
 labels: [testing, doctest, guidance]
 filed-by: agent

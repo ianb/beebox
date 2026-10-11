@@ -8456,3 +8456,54 @@ tests:
     correct_matches:
       - 'independent|separate|does not (?:change|affect)|doesn''t (?:change|affect)'
     tags: [dev-guidance, themes]
+
+  # Test oracles (test-oracles workstream, 2026-10-11): the sentence before a
+  # doctest example says where its expected value comes from, and a pasted
+  # `suggested:` value is checked against it. One knowledge entry, one
+  # behavior entry; run with --dev before and after the guidance change.
+  - id: dev-doctest-oracle-check
+    surface: dev
+    prompt: >
+      You wrote a new doctest example with `=> ?`, ran it, and the failure
+      shows `suggested: { a: "1" }`. What must be true before you paste that
+      value, and what does the prose before the example have to say?
+    expected_level: knows_about
+    should_read_any: [".claude/skills/doctest/SKILL.md", "agent-doctest/docs/syntax.md"]
+    watch_for: >
+      The pasted value is checked against the sentence before the example,
+      which states the rule the example shows and where the rule comes from
+      (the issue or plan, the format, a calculation, a replayed bug); the
+      code's own output is not evidence it is right. FAILS if it treats the
+      suggested value as correct because the code produced it, or says the
+      prose only needs to describe what the example does.
+    correct_matches:
+      - 'sentence|lead-in|prose|narrative'
+      - 'issue|plan|spec|format|calculat|replay|bug|source|where [\s\S]{0,40}comes from|independent'
+    response_not_matches:
+      - 'paste it (?:as[- ]is|directly|right away)'
+    tags: [dev-guidance, testing]
+
+  - id: dev-doctest-example-reason
+    surface: dev
+    prompt: >
+      Add one doctest example to a new file beebox/test/lib/cookies.doctest.md
+      for parseCookieHeaderAll in beebox/src/lib/cookies.ts, showing what
+      happens when the same cookie name appears twice in the header. You
+      cannot run it. Write exactly what you would add to the file: the prose
+      and the fenced block with its expected value.
+    expected_level: knows_about
+    should_read: ["beebox/src/lib/cookies.ts"]
+    watch_for: >
+      The block calls parseCookieHeaderAll with a header carrying one name
+      twice and expects both values in header order (e.g. { a: ["1", "2"] }).
+      The prose before the block says why both are kept and in that order:
+      browsers send one entry per matching path, most-specific first, and a
+      sibling box can shadow a cookie, so a credential check must try every
+      value (the source's own rationale). FAILS if the prose only restates
+      what the block does ("duplicate names collect their values") with no
+      reason, or if the value is wrong (a single value, or the last one).
+    correct_contains: ["parseCookieHeaderAll"]
+    correct_matches:
+      - '\[\s*"[^"]*"\s*,\s*"[^"]*"\s*\]'
+      - 'browser|per (?:matching )?path|most[- ]specific|shadow|sibling|cross-box|credential'
+    tags: [dev-guidance, testing]

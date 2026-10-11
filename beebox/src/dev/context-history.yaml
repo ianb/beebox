@@ -8409,6 +8409,22 @@ dev-checkout:
       peak: 27370
       added: 12607
       turns: 2
+  dev-doctest-oracle-check:
+    - date: 2026-10-11T19:10:54.365Z
+      boxCommit: 8fdcdc2bedb9db68194ba50dc63bd769e10e596f
+      repoCommit: 8fdcdc2bedb9db68194ba50dc63bd769e10e596f
+      initial: 10264
+      peak: 14878
+      added: 4614
+      turns: 3
+  dev-doctest-example-reason:
+    - date: 2026-10-11T19:10:54.365Z
+      boxCommit: 8fdcdc2bedb9db68194ba50dc63bd769e10e596f
+      repoCommit: 8fdcdc2bedb9db68194ba50dc63bd769e10e596f
+      initial: 10311
+      peak: 16841
+      added: 6530
+      turns: 3
 auditbox-legacy:
   views-render-test-command:
     - date: 2026-10-09T22:33:03.009Z
