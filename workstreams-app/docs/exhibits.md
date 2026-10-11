@@ -89,7 +89,9 @@ The developer opens an exhibit cold. Write every sentence for that reader.
 One mechanism, three levels of effort:
 
 1. **No `index.tsx` / `index.html`** — the default renderer: `doc.md` and the
-   manifest's figures as labeled images. Most exhibits want exactly this.
+   manifest's figures as labeled images. A click on an image opens it full
+   size in a modal view (scroll to pan, Escape or click to close); the file
+   name beside the label opens the raw file. Most exhibits want exactly this.
 2. **`index.html`** — served as-is, scripts allowed. Sibling files (`data.json`,
    images) are served from the directory, so relative `fetch` works. Namespace
    your `localStorage` keys: the whole origin shares them.
