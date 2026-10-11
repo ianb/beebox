@@ -22,7 +22,7 @@ export type ChannelName = (typeof CHANNELS)[number];
  * Channels that no longer exist. The log read schema still accepts them so a
  * delivery line written before removal parses instead of warning on every read.
  */
-export const RETIRED_CHANNELS = ["telegram"] as const;
+const RETIRED_CHANNELS = ["telegram"] as const;
 
 const DELIVERY_STATUSES = ["sent", "skipped", "failed"] as const;
 export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];

@@ -238,23 +238,6 @@ export async function setAndGrantSecret(opts: {
   probeSecretInBackground(opts.name);
 }
 
-/**
- * Revoke a box's grant AND drop the entry, in one locked pass — the disconnect
- * counterpart of {@link setAndGrantSecret} for a secret that belongs to exactly
- * one box. Idempotent by design: disconnect must succeed whether or not the box
- * ever had the secret, and must not leave a dangling grant behind.
- */
-export async function forgetBoxSecret(opts: { name: string; slug: string }): Promise<void> {
-  await mutateSecretStore({ purpose: "forget" }, (store) => {
-    const boxGrants = store.grants[opts.slug];
-    if (boxGrants !== undefined) {
-      delete boxGrants[opts.name];
-      if (Object.keys(boxGrants).length === 0) delete store.grants[opts.slug];
-    }
-    delete store.secrets[opts.name];
-  });
-}
-
 /** What {@link copyBoxGrants} did, per name — never a value. */
 export interface CopiedGrants {
   copied: { name: string; access: SecretAccessLevel }[];

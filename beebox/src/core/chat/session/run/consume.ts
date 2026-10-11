@@ -25,7 +25,7 @@ export interface PumpChatRunOptions {
 }
 
 /** Drive one SDK run's message stream through the supplied callbacks. */
-export async function pumpChatRun(opts: PumpChatRunOptions): Promise<void> {
+async function pumpChatRun(opts: PumpChatRunOptions): Promise<void> {
   const { run, adapt, onMessage, onError, onClose } = opts;
   try {
     for await (const sdkMsg of run.messages) {
