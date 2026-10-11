@@ -1,6 +1,6 @@
 ---
 title: "A place page says \"Nothing here yet\" while its folder holds the person's cards"
-workstream: unattached
+workstream: place-shows-cards
 needs: [decision]
 area: beebox
 filed-by: agent
