@@ -110,7 +110,8 @@ lines.
   and Properties (`CardProperties.tsx:72`). All three get the readable form.
 - `themes/card-themes.css:435-440`: `.bbx-card-fields`, `.bbx-card-field-label`
   carry theme colors. Kept on the same elements.
-- `ThemedFileCard/view.tsx:40` `cardTitle`: the header's title (`title:`, a
+- `ThemedFileCard/view.tsx:40` `cardTitle` (moved to `lib/card-title.ts` in
+  implementation, to avoid an import cycle through `PropertiesFace`): the header's title (`title:`, a
   landmark's label, `name:`, or the filename). Reuse to decide which row
   repeats the header.
 - Record entry shapes (`src/schemas/record.tsx:23-41`): `PersonEntry`
@@ -173,7 +174,10 @@ No design decision depends on an external premise.
     `name` and whose value equals `headerTitle` is skipped. The front callers
     pass `cardTitle(data)`; Properties passes it too. Only a value match drops
     the row, so a landmark headed by its label keeps a different `name` row.
-  - Export `FieldsTable` and `FieldValue` for custom views.
+  - `FieldsTable` and `FieldValue` are named components in the module, kept
+    unexported until a custom view uses them: an unused export fails the knip
+    sweep, and `FieldsTable` needs the navigation context `FrontmatterFields`
+    provides, so the first custom view that needs it decides the export shape.
 - **Vocabulary lock-ins.** `FieldValue`, prop `headerTitle`.
 - **First implementation chunk.** The renderer change and doctests: a record
   front shows "Location", "With Idris", no "text" label, no "Name" row; a card

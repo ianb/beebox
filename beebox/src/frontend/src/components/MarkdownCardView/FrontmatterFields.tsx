@@ -74,7 +74,7 @@ function CompactView({ value }: { value: CompactValue }): ReactNode {
  * list as a list, a lone `ref` as a link, a known small object as one value,
  * and any other object as nested rows with readable labels.
  */
-export function FieldValue({ value }: { value: unknown }): ReactNode {
+function FieldValue({ value }: { value: unknown }): ReactNode {
   if (isHttpUrl(value)) {
     return (
       <a
@@ -172,7 +172,7 @@ function FieldRow({ name, value, root }: { name: string; value: unknown; root: b
 }
 
 /** Field rows with readable labels; `root` marks a card's top level, where `todos` render as todos. */
-export function FieldsTable({ fields, root }: { fields: Record<string, unknown>; root: boolean }): ReactNode {
+function FieldsTable({ fields, root }: { fields: Record<string, unknown>; root: boolean }): ReactNode {
   const entries = Object.entries(fields);
   if (entries.length === 0) return null;
   return (
