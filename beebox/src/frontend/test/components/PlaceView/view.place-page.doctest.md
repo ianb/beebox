@@ -76,6 +76,36 @@ const html = await render({ payload: payload({ openers: [] }) }, startedLending)
 => { sections: ["empty"], text: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card." }
 ```
 
+## The place summary comes first
+
+The landmark card's body is the place summary (docs/plans/place-shows-cards.md,
+Track C). It renders as markdown above "Start something" and the tiers.
+
+```ts
+const html = await render({ payload: payload({
+  groups: [{ label: "Also here", count: 1, alsoHere: true, children: [{ ref: "_content/lending/Stove.loan.card", label: null, title: "Camp stove", exists: true, source: "derived" }] }],
+}), body: "The **stove** is with Idris until Friday.\n" }, startedLending);
+({ sections: sections(html), summary: sectionText(html, "summary") })
+=> { sections: ["summary", "start-something", "group"], summary: "The stove is with Idris until Friday." }
+```
+
+A blank body shows no summary section, and no "No body content" line.
+
+```ts
+const html = await render({ payload: payload({ openers: [] }), body: "  \n\n" });
+({ sections: sections(html), text: text(html) })
+=> { sections: ["empty"], text: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card." }
+```
+
+A card link in the summary resolves against the landmark's folder and is a
+link the person can follow.
+
+```ts
+const html = await render({ payload: payload({ openers: [] }), body: "Ask [Idris](Idris.person.card) first.\n" });
+html.match(/<a [^>]*>Idris<\/a>/)?.[0]
+=> <a class="bbx-theme-link" href="/test1/views/_content/lending/Idris.person.card">Idris</a>
+```
+
 ## Tiers and groups, with an empty group saying "None yet"
 
 A curated link whose card is gone keeps its row, struck through, so the place
