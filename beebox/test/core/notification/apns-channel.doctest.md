@@ -69,7 +69,6 @@ await logged(box)
 =>
 apns sent
 web-push skipped: no-audience
-telegram skipped: no-audience
 ```
 
 The push goes to the phone's own APNs host, with the payload the iOS client
@@ -129,7 +128,6 @@ await logged(box)
 =>
 apns failed: no device received the push (sent 0 of 1, pruned 1)
 web-push skipped: no-audience
-telegram skipped: no-audience
 
 JSON.stringify([devicePushRegistrations(box.root).length, listMobileDevices(box.root).map((d) => [d.label, d.push, d.revokedAt ?? null])])
 => [0,[["Jamie's iPhone",null,null]]]

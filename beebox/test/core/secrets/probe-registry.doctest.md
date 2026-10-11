@@ -130,56 +130,15 @@ no probe described: null
 mistral has one: lists Mistral models
 ```
 
-## Per-box families match by prefix — but only for connector-created entries
+## A value that is not the shape the credential needs is `failed`
 
-`telegram-bot/<box>` is one entry per box, so the registry matches the family
-rather than every slug. The connector flow that creates one marks it
-`owningBox` + `shareable: false`, and **the family probe requires those marks**:
-an agent can declare a slot with any name it likes, so matching on the name
-alone would let it pick which provider a value the boxholder pasted gets sent to.
+A multi-field credential (Deepgram's key and project id) is stored as JSON its
+consumer parses. When the stored value does not parse, the probe cannot be run,
+and the boxholder needs to know that, not a silent `unchecked`.
 
 ```ts continue
-const tgCalls = [];
-await setAndGrantSecret({
-  name: "telegram-bot/somebox",
-  value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }),
-  slug: "somebox",
-  access: "server",
-  owningBox: "somebox",
-  shareable: false,
-});
-const tg = await probeSecret({ name: "telegram-bot/somebox", deps: { fetch: recordingFetch(200, tgCalls) } });
-print(`verdict: ${tg.status}`);
-print(`called: ${tgCalls[0]?.url}`);
-=>
-verdict: ok
-called: https://api.telegram.org/bot111111:placeholder/getMe
-```
-
-A look-alike name an agent declared gets no probe at all — nothing leaves the
-machine.
-
-```ts continue
-const impostorCalls = [];
-await declareSecret({ name: "telegram-bot/impostor", note: "an agent asked for this", declaredBy: "somebox" });
-await setSecret({ name: "telegram-bot/impostor", value: JSON.stringify({ botToken: "222222:placeholder", webhookSecret: "x" }) });
-const impostor = await probeSecret({ name: "telegram-bot/impostor", deps: { fetch: recordingFetch(200, impostorCalls) } });
-print(`verdict: ${impostor.status} — ${impostor.reason}`);
-print(`requests made: ${impostorCalls.length}`);
-print(`nothing described either: ${describeSecretProbe({ name: "telegram-bot/impostor" })}`);
-=>
-verdict: unchecked — no verification is available for this credential
-requests made: 0
-nothing described either: null
-```
-
-A value that is not the shape the credential needs is a `failed` verification —
-the probe cannot be run, and the boxholder needs to know that, not a silent
-`unchecked`.
-
-```ts continue
-await setSecret({ name: "telegram-bot/somebox", value: "not-json-at-all" });
-const malformed = await probeSecret({ name: "telegram-bot/somebox", deps: { fetch: recordingFetch(200, []) } });
+await setSecret({ name: "deepgram", value: "not-json-at-all" });
+const malformed = await probeSecret({ name: "deepgram", deps: { fetch: recordingFetch(200, []) } });
 print(`verdict: ${malformed.status} — ${malformed.reason}`);
 =>
 verdict: failed — the stored value is not in the shape this credential needs

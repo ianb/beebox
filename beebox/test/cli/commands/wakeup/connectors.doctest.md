@@ -188,14 +188,14 @@ const mixed = [
     updated: [],
     skipped: { reason: "not-configured", detail: "Google is not authorized for this box" },
   })),
-  connector("telegram", async () => { throw new Error("socket hang up"); }),
+  connector("rss", async () => { throw new Error("socket hang up"); }),
 ];
 const result = await captureOutput(() => runConnectors("/unused", {
   connectors: mixed,
   runProcedureTriggers: async () => 0,
 }));
 JSON.stringify(result.connectors)
-=> [{"name":"google-drive","success":true,"created":2,"updated":1,"pushed":1,"jobs":1},{"name":"gmail","success":true,"created":0,"updated":0,"pushed":0,"jobs":0,"skipped":{"reason":"not-configured","detail":"Google is not authorized for this box"}},{"name":"telegram","success":false,"created":0,"updated":0,"pushed":0,"jobs":0,"error":"socket hang up"}]
+=> [{"name":"google-drive","success":true,"created":2,"updated":1,"pushed":1,"jobs":1},{"name":"gmail","success":true,"created":0,"updated":0,"pushed":0,"jobs":0,"skipped":{"reason":"not-configured","detail":"Google is not authorized for this box"}},{"name":"rss","success":false,"created":0,"updated":0,"pushed":0,"jobs":0,"error":"socket hang up"}]
 ```
 
 An unknown `--connector` name gets an entry too. It is the one "connector" that

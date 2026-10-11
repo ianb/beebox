@@ -173,25 +173,25 @@ await rm(dir, { recursive: true, force: true });
 
 ## Single-box secrets refuse a second grant, with an explanation
 
-A Telegram bot token routes to one webhook URL, so a second grant would not
+A bucket-scoped publish token works for one bucket only, so a second grant would not
 merely be unwise — it would break the box that already uses it.
 
 ```ts
 const dir = await useTempStore();
 await setSecret({
-  name: "telegram-bot/demo-box",
+  name: "bucket-token/demo-box",
   value: "placeholder-value-4",
   owningBox: "demo-box",
   shareable: false,
 });
-await grantSecret({ slug: "demo-box", name: "telegram-bot/demo-box", access: "server" });
+await grantSecret({ slug: "demo-box", name: "bucket-token/demo-box", access: "server" });
 print(`owner granted: ${(await boxSecretStatus("demo-box")).granted.length}`);
 => owner granted: 1
 ```
 
 ```ts continue
-await grantSecret({ slug: "other-box", name: "telegram-bot/demo-box", access: "server" });
-=> throws SecretNotShareableError: The secret "telegram-bot/demo-box" is marked single-box (it belongs to "demo-box") and cannot also be granted to "other-box". Some credentials bind to one box structurally — a Telegram bot token routes to a single webhook URL — so sharing one would break the box already using it. Create a separate secret for this box.
+await grantSecret({ slug: "other-box", name: "bucket-token/demo-box", access: "server" });
+=> throws SecretNotShareableError: The secret "bucket-token/demo-box" is marked single-box (it belongs to "demo-box") and cannot also be granted to "other-box". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.
 ```
 
 Granting a name that does not exist is refused too — a grant never conjures an
@@ -208,17 +208,17 @@ another box owns, and cannot hand an entry it does own to a third box.
 
 ```ts continue
 await setAndGrantSecret({
-  name: "telegram-bot/demo-box",
+  name: "bucket-token/demo-box",
   value: "placeholder-value-5",
   slug: "other-box",
   access: "server",
   owningBox: "other-box",
   shareable: false,
 });
-=> throws SecretNotShareableError: The secret "telegram-bot/demo-box" is marked single-box (it belongs to "demo-box") and cannot also be granted to "other-box". Some credentials bind to one box structurally — a Telegram bot token routes to a single webhook URL — so sharing one would break the box already using it. Create a separate secret for this box.
+=> throws SecretNotShareableError: The secret "bucket-token/demo-box" is marked single-box (it belongs to "demo-box") and cannot also be granted to "other-box". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.
 
 await setAndGrantSecret({
-  name: "telegram-bot/demo-box",
+  name: "bucket-token/demo-box",
   value: "placeholder-value-6",
   slug: "demo-box",
   access: "server",
@@ -228,13 +228,13 @@ await setAndGrantSecret({
 
 // The owner rotating its own value is the case this call exists for.
 await setAndGrantSecret({
-  name: "telegram-bot/demo-box",
+  name: "bucket-token/demo-box",
   value: "placeholder-value-7",
   slug: "demo-box",
   access: "server",
 });
 JSON.stringify((await listSecrets()).map((entry) => [entry.name, entry.owningBox, Object.keys(entry.grants)]))
-=> [["telegram-bot/demo-box","demo-box",["demo-box"]]]
+=> [["bucket-token/demo-box","demo-box",["demo-box"]]]
 ```
 
 ```ts cleanup

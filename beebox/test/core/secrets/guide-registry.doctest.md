@@ -41,14 +41,6 @@ pasteable.every(({ guide }) => /paste/i.test(guide.obtainSteps.at(-1) ?? ""))
 => true
 ```
 
-## Per-box families resolve by prefix, like every other registry
-
-```ts
-const tg = secretGuideFor("telegram-bot/test1");
-tg === null ? "none" : `${tg.key} → ${tg.guide.title}`
-=> telegram-bot/ → Telegram bot
-```
-
 ## A name the engine does not know has no guide
 
 That is the honest answer for an ad-hoc secret — the form falls back to its

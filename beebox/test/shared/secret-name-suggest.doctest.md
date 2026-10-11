@@ -8,7 +8,7 @@ would also match `openai` to `openrouter`.
 ```ts setup
 import { normalizeSecretName, suggestSecretName } from "../../src/shared/secret-name-suggest.js";
 
-const known = ["openrouter", "openai-thinking", "mistral", "telegram-bot/"];
+const known = ["openrouter", "openai-thinking", "mistral", "bucket-token/"];
 ```
 
 ## Case and punctuation typos normalise to the registered name
@@ -75,10 +75,10 @@ suggestSecretName("", known)
 
 ## Family prefixes are ignored as match targets
 
-`telegram-bot/` ends in `/` — nobody types that as a name.
+`bucket-token/` ends in `/` — nobody types that as a name.
 
 ```ts
-suggestSecretName("telegrambot", known)
+suggestSecretName("buckettoken", known)
 => null
 ```
 

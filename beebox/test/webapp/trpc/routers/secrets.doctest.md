@@ -197,8 +197,8 @@ bare "Bad Request".
 
 ```ts continue
 await setAndGrantSecret({
-  name: "telegram-bot/otherbox",
-  value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }),
+  name: "publish-token/otherbox",
+  value: "placeholder-bucket-token",
   slug: "otherbox",
   access: "server",
   owningBox: "otherbox",
@@ -208,21 +208,21 @@ await setAndGrantSecret({
 const machine = await owner.secrets.machineView();
 print(`names: ${machine.secrets.map((s) => s.name).join(", ")}`);
 print(`grants: ${JSON.stringify(machine.secrets.map((s) => s.grants))}`);
-print(`probe described: ${machine.secrets.map((s) => s.probe).join(" | ")}`);
+print(`probe described: ${machine.secrets.map((s) => s.probe ?? "none").join(" | ")}`);
 print(`no values anywhere: ${!JSON.stringify(machine).includes("placeholder")}`);
 =>
-names: openai, telegram-bot/otherbox
+names: openai, publish-token/otherbox
 grants: [{"«*»":"server"},{"otherbox":"server"}]
-probe described: lists OpenAI models | calls the Telegram bot's getMe
+probe described: lists OpenAI models | none
 no values anywhere: true
 ```
 
 ```ts continue
-print(await attempt(owner.secrets.grant({ box: slug, name: "telegram-bot/otherbox", access: "server" })));
-print(await explain(owner.secrets.grant({ box: slug, name: "telegram-bot/otherbox", access: "server" })));
+print(await attempt(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })));
+print(await explain(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })));
 =>
 BAD_REQUEST
-The secret "telegram-bot/otherbox" is marked single-box (it belongs to "otherbox") and cannot also be granted to "«*»". Some credentials bind to one box structurally — a Telegram bot token routes to a single webhook URL — so sharing one would break the box already using it. Create a separate secret for this box.
+The secret "publish-token/otherbox" is marked single-box (it belongs to "otherbox") and cannot also be granted to "«*»". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.
 ```
 
 ## Revoking, and removing machine-wide
@@ -300,9 +300,9 @@ Other owner surfaces are unchanged — the same open-access context still reache
 them:
 
 ```ts continue
-const telegram = await open.admin.telegramStatus();
-print(`telegramStatus: ${JSON.stringify(telegram.configured)}`);
-=> telegramStatus: false
+const account = await open.admin.localAccountStatus({ email: "nobody@example.com" });
+print(`localAccountStatus: ${JSON.stringify(account.exists)}`);
+=> localAccountStatus: false
 ```
 
 ```ts cleanup
