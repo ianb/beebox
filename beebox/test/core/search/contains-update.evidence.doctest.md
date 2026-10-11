@@ -92,9 +92,10 @@ content, by hashing a "basis". `contains-evidence` is derived *alongside*
 extended the evidence would flag the summary it was just written with as out of
 date.
 
-Note the basis only reaches frontmatter at all for card types with **no body**:
-a bodied card hashes its body. So for chat husks this exclusion is policy rather
-than a live bug, and the case that actually needs it is the frontmatter-only one.
+Note the basis reaches frontmatter only for a card with **no body text**: a
+card with body text hashes its body. So for chat husks this exclusion is policy
+rather than a live bug, and the cases that need it are the frontmatter-only
+ones.
 
 ```ts
 const bodied = (fields: Record<string, unknown>) => ({
@@ -125,6 +126,26 @@ itself basis-excluded, so it makes a poor control — use a content field.)
 computeContainsBasis({ card: flat({ source: "voice" }) })
   === computeContainsBasis({ card: flat({ source: "email" }) })
 => false
+```
+
+A bodied card whose body is empty hashes its fields instead, like a
+bodiless card. A person card with no notes keeps its facts in frontmatter, so
+an edit there must move the basis (issue
+`2026-10-11-contains-never-stale-for-bodied-card-with-empty-body`). Whitespace
+counts as empty.
+
+```ts continue
+const emptyBodied = (fields: Record<string, unknown>) => ({
+  schema: { bodyFieldName: "body" },
+  fields: { body: "\n", ...fields },
+});
+computeContainsBasis({ card: emptyBodied({ phone: "555-0100" }) })
+  === computeContainsBasis({ card: emptyBodied({ phone: "555-0199" }) })
+=> false
+
+computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris." }) })
+  === computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris.", "contains-evidence": "- met at the market" }) })
+=> true
 ```
 
 ## The one-sentence budget applies to `contains` only
