@@ -215,32 +215,19 @@ test("a docs-only diff names every command as skipped rather than hiding it", ()
 });
 
 test("skipTypecheckLint keys on what pre-commit never saw", () => {
-  assert.deepEqual(
-    skipTypecheckLintDecision({ mergeNoOp: true, mergeBroughtPaths: [], stragglers: [] }).value,
-    true,
-  );
-  assert.equal(
-    skipTypecheckLintDecision({
-      mergeNoOp: false,
-      mergeBroughtPaths: ["issues/bugs/x.md", "beebox/docs/a.md"],
-      stragglers: [],
-    }).value,
-    true,
-  );
-  assert.equal(
-    skipTypecheckLintDecision({
-      mergeNoOp: false,
-      mergeBroughtPaths: ["beebox/src/x.ts"],
-      stragglers: [],
-    }).value,
-    false,
-  );
-  // An uncommitted file ran no pre-commit at all, whatever the merge did.
-  assert.equal(
-    skipTypecheckLintDecision({ mergeNoOp: true, mergeBroughtPaths: [], stragglers: ["a.ts"] })
-      .value,
-    false,
-  );
+  const skip = (merges: { sha: string; paths: string[] }[], stragglers: string[]): boolean =>
+    skipTypecheckLintDecision({ merges, stragglers }).value;
+  assert.equal(skip([], []), true);
+  assert.equal(skip([{ sha: "a", paths: ["issues/bugs/x.md", "beebox/docs/a.md"] }], []), true);
+  assert.equal(skip([{ sha: "a", paths: ["beebox/src/x.ts"] }], []), false);
+  // An older merge's code is still unchecked when the newest merge brought only docs.
+  const merges = [
+    { sha: "new", paths: ["beebox/docs/a.md"] },
+    { sha: "old", paths: ["beebox/src/x.ts"] },
+  ];
+  assert.equal(skip(merges, []), false);
+  // An uncommitted file ran no pre-commit at all, whatever the merges did.
+  assert.equal(skip([], ["a.ts"]), false);
 });
 
 test("the skipped typecheck/lint commands are still listed, with the reason", () => {
