@@ -17,6 +17,7 @@
 import type { Scenario } from "./chat-scroll-steps";
 import { SPACER_SCENARIOS } from "./chat-scroll-scenarios-spacer";
 import { OPEN_THREAD_SCENARIOS } from "./chat-scroll-scenarios-open";
+import { PANE_SCENARIOS } from "./chat-scroll-scenarios-pane";
 
 export type { Step, Expectation, Scenario } from "./chat-scroll-steps";
 
@@ -239,20 +240,6 @@ const SCENARIOS_MAIN: Scenario[] = [
     },
   },
   {
-    name: "pane-close-preserves-reading-anchor",
-    description: "A reader partway through a narrow transcript hides the adjacent card pane. The transcript widens and rewraps, but the visible reading point must stay on screen.",
-    steps: [
-      { k: "wrapWidth", px: 460 },
-      { k: "userDrag", toTop: 900, observeReadingPosition: true },
-      { k: "resizeWidth", px: 900 },
-      { k: "wait", ms: 300 },
-    ],
-    expect: {
-      finalAtBottom: false,
-      driftWhileAwayAtMost: 8,
-    },
-  },
-  {
     name: "finalize-shrinks",
     description: "A streamed reply is replaced by a shorter finalized one. The reader is below the fold and reading; the shrink must not move their page.",
     steps: [
@@ -270,7 +257,7 @@ const SCENARIOS_MAIN: Scenario[] = [
 
 ];
 
-export const SCENARIOS: Scenario[] = [...SCENARIOS_MAIN, ...SPACER_SCENARIOS, ...OPEN_THREAD_SCENARIOS];
+export const SCENARIOS: Scenario[] = [...SCENARIOS_MAIN, ...PANE_SCENARIOS, ...SPACER_SCENARIOS, ...OPEN_THREAD_SCENARIOS];
 
 export function findScenario(name: string): Scenario | null {
   return SCENARIOS.find((s) => s.name === name) ?? null;

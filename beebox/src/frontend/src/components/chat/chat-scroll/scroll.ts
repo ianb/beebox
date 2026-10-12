@@ -20,7 +20,8 @@
  *     captured gap across an older-history prepend; hold the top-visible anchor
  *     when content above the viewport reflows; keep the bottom only if already
  *     there when the scroller box itself resizes (keyboard, composer,
- *     banners). The pure dispatcher is `decideReconcile` (scroll-reconcile.ts).
+ *     banners, a card pane changing its width). The pure dispatcher is
+ *     `decideReconcile` (scroll-reconcile.ts).
  *
  * The controller therefore keeps *geometry* state only — previous
  * `scrollHeight`, previous `fromBottom`, one anchor — and no *intent* state: it
@@ -103,6 +104,11 @@ function observeResize(opts: { refs: MutableRefObject<ScrollObservers>; key: key
 function applyReconcileAction(action: ReconcileAction, opts: {
   el: HTMLDivElement;
   anchorDelta: number;
+  /** Where the anchor's movement is measured from. Across a box resize, the
+   *  last settled position: the browser may already have clamped the live one.
+   *  Otherwise the live position, so a user scroll whose event has not arrived
+   *  yet is not undone. */
+  fromTop: number;
   prevFromBottom: number;
   prependGapRef: MutableRefObject<number | null>;
   anchorRef: MutableRefObject<Anchor | null>;
@@ -110,7 +116,7 @@ function applyReconcileAction(action: ReconcileAction, opts: {
   writeTop: (top: number, behavior: ScrollBehavior) => void;
   setUnseen: (v: boolean) => void;
 }): void {
-  const { el, anchorDelta, prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen } = opts;
+  const { el, anchorDelta, fromTop, prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen } = opts;
   if (action === "hold-prepend") {
     // Restore the captured bottom gap so inserting older messages above does
     // not move the view, then re-anchor to a now-visible message: the older
@@ -129,7 +135,7 @@ function applyReconcileAction(action: ReconcileAction, opts: {
     const live = contentElRef.current?.querySelector<HTMLDivElement>("[data-chat-live-turn-content]") ?? null;
     writeTop(currentBottomTop(el, live) - prevFromBottom, "instant");
   } else if (action === "hold-anchor") {
-    writeTop(el.scrollTop + anchorDelta, "instant");
+    writeTop(fromTop + anchorDelta, "instant");
   } else if (action === "flag-unseen") {
     setUnseen(true);
   }
@@ -255,6 +261,18 @@ function useMirroredFlag(initial: boolean): { ref: MutableRefObject<boolean>; va
   return { ref, value, set };
 }
 
+/** The geometry as of the last measure. A box resize keeps it until reconcile:
+ *  the browser's clamp can dispatch scroll before ResizeObserver. */
+interface Settled { scrollTop: number; scrollHeight: number; clientWidth: number; clientHeight: number; fromBottom: number }
+
+function settled(el: HTMLDivElement, fromBottom: number): Settled {
+  return { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientWidth: el.clientWidth, clientHeight: el.clientHeight, fromBottom };
+}
+
+function boxChanged(el: HTMLDivElement, prev: Settled): boolean {
+  return el.clientWidth !== prev.clientWidth || el.clientHeight !== prev.clientHeight;
+}
+
 function anchorChange({ anchor, el, prepend }: { anchor: Anchor | null; el: HTMLDivElement; prepend: boolean }): { live: number | null; anchorDelta: number } {
   const live = prepend ? null : anchorOffset(anchor, el);
   return { live, anchorDelta: anchor && live !== null ? live - anchor.top : 0 };
@@ -280,9 +298,7 @@ export function useChatScroll(): ChatScroll {
   const { ref: atBottomRef, value: atBottom, set: setAtBottomFlag } = useMirroredFlag(true);
   const { value: hasUnseenContent, set: setUnseen } = useMirroredFlag(false);
 
-  const prevScrollHeightRef = useRef(0);
-  const prevClientWidthRef = useRef(0), prevClientHeightRef = useRef(0);
-  const prevFromBottomRef = useRef(0);
+  const prevRef = useRef<Settled>({ scrollTop: 0, scrollHeight: 0, clientWidth: 0, clientHeight: 0, fromBottom: 0 });
   const prevScrollTopRef = useRef(0);
   const prependGapRef = useRef<number | null>(null);
   const prependTimerRef = useRef<number | null>(null);
@@ -299,11 +315,8 @@ export function useChatScroll(): ChatScroll {
     // Growth is noticed here, not only in reconcile: a scroll event (the
     // previous write's) can precede the resize callback in the same frame, and
     // it re-measures first — so per-frame growth never reads as `grew` there.
-    if (el.scrollHeight > prevScrollHeightRef.current + GROWTH_EPSILON) openHoldRef.current.touch();
-    prevFromBottomRef.current = fromBottom;
-    prevScrollHeightRef.current = el.scrollHeight;
-    prevClientWidthRef.current = el.clientWidth;
-    prevClientHeightRef.current = el.clientHeight;
+    if (el.scrollHeight > prevRef.current.scrollHeight + GROWTH_EPSILON) openHoldRef.current.touch();
+    prevRef.current = settled(el, fromBottom);
     const at = fromBottom <= AT_BOTTOM_PX;
     setAtBottomFlag(at);
     if (at) setUnseen(false);
@@ -377,9 +390,9 @@ export function useChatScroll(): ChatScroll {
     // Leave the pre-resize snapshot intact until reconciliation; a browser
     // clamp may dispatch scroll before ResizeObserver. Content coordinates
     // already exclude ordinary scrolling, so never rebase the anchor here.
-    const boxResized = el.clientWidth !== prevClientWidthRef.current || el.clientHeight !== prevClientHeightRef.current;
+    const boxResized = boxChanged(el, prevRef.current);
     const fromBottom = !boxResized
-      ? measure(el) : prevFromBottomRef.current;
+      ? measure(el) : prevRef.current.fromBottom;
     if (openHoldRef.current.active && movedUp(el, prevScrollTopRef) && fromBottom > AT_BOTTOM_PX) endOpenPhase("scrolled-up");
     recordScrollTrace("scroll", { top: Math.round(el.scrollTop), fb: Math.round(fromBottom), at: atBottomRef.current, open: openHoldRef.current.active });
     // Capture a reader-controlled position now; the delayed pass follows
@@ -391,19 +404,22 @@ export function useChatScroll(): ChatScroll {
   const reconcile = useCallback((source: "content" | "scroller") => {
     const el = scrollerElRef.current;
     if (!el) return;
-    const prevFromBottom = prevFromBottomRef.current;
-    const grew = el.scrollHeight > prevScrollHeightRef.current + GROWTH_EPSILON;
+    const prev = prevRef.current, prevFromBottom = prev.fromBottom;
+    const grew = el.scrollHeight > prev.scrollHeight + GROWTH_EPSILON;
     const prepend = source === "content" && prependGapRef.current !== null && grew;
 
+    // A card pane opening or closing changes only the width; the content
+    // observer can fire first, after the browser has clamped scrollTop.
+    const boxResized = boxChanged(el, prev);
     const anchor = anchorRef.current;
     const { live, anchorDelta } = anchorChange({ anchor, el, prepend });
 
     const action = decideReconcile({
-      source: el.clientHeight !== prevClientHeightRef.current ? "scroller" : source,
+      source: boxResized ? "scroller" : source,
       grew,
       prepend,
       anchorMoved: Math.abs(anchorDelta) > 1,
-      atBottomAfter: prevFromBottom + Math.max(0, el.scrollHeight - prevScrollHeightRef.current) <= AT_BOTTOM_PX,
+      atBottomAfter: prevFromBottom + Math.max(0, el.scrollHeight - prev.scrollHeight) <= AT_BOTTOM_PX,
       atBottomBefore: Math.abs(prevFromBottom) <= AT_BOTTOM_PX,
       openPhase: openHoldRef.current.active,
     });
@@ -411,7 +427,8 @@ export function useChatScroll(): ChatScroll {
     // The send ease is an explicit navigation operation, with its own target
     // measured each frame. Resize callbacks may measure but cannot supersede it.
     if (!anchorEaseCancelRef.current) {
-      applyReconcileAction(action, { el, anchorDelta, prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen });
+      const fromTop = boxResized ? prev.scrollTop : el.scrollTop;
+      applyReconcileAction(action, { el, anchorDelta, fromTop, prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen });
       if (anchor && live !== null) anchor.top = live;
       else anchorRef.current = anchorChild(el, contentElRef.current);
     } else if (prepend) {
@@ -426,10 +443,7 @@ export function useChatScroll(): ChatScroll {
     if (observersRef.current.scroller) observersRef.current.scroller.disconnect();
     scrollerElRef.current = el;
     if (el) {
-      prevScrollHeightRef.current = el.scrollHeight;
-      prevClientWidthRef.current = el.clientWidth;
-      prevClientHeightRef.current = el.clientHeight;
-      prevFromBottomRef.current = currentBottomTop(el, liveContentElRef.current) - el.scrollTop;
+      prevRef.current = settled(el, currentBottomTop(el, liveContentElRef.current) - el.scrollTop);
         el.addEventListener("scroll", handleScroll, { passive: true });
       const ro = new ResizeObserver(() => reconcile("scroller"));
       ro.observe(el);

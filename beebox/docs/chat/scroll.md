@@ -61,6 +61,19 @@ actual scroll-range measurement to check consumption. Real chat `/fakestream`
 sends check the composer wiring; they do not prove authoritative backend
 finalization.
 
+## Card pane open/close (2026-10-12)
+
+The chat shares a flex row with the card pane, so opening or closing a card
+changes only the scroller's width and rewraps every message. Closing a card
+while at the bottom left the reader 2304 px above it: the browser clamped
+`scrollTop` to the shorter content, then the content observer fired first and,
+seeing no height change, applied the anchor delta to the clamped position. A
+width change is now a box resize, and a box-resize anchor write starts from
+the last settled `scrollTop`. The scroller element is not replaced. The
+`pane-*` harness scenarios cover open and close, at the bottom and mid-log.
+In the real app, measure with a card open (`Here` menu → a card) on a
+transcript long enough to scroll.
+
 ## The browser procedure
 
 ### Setup
