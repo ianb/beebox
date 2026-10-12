@@ -85,6 +85,15 @@ JSON.stringify(Object.values(PLACEHOLDERS).map((p) => [template.split(p).length 
 => [[1,true],[1,true],[1,true]]
 ```
 
+Above the text hangs the same paper sign the hub shows for a closed box
+(`src/lib/closed-sign.ts`): it swings once on load and holds still under
+reduced motion. Its words hold for every state the text below can reach.
+
+```ts continue
+JSON.stringify({ sign: template.match(/<div class="bbx-sign swing">[\s\S]*?<strong class="bbx-sign-title">([^<]*)<\/strong><p>([^<]*)<\/p>/)?.slice(1), stillWhenReduced: /prefers-reduced-motion: reduce\) \{ \.bbx-sign\.swing \{ animation: none/.test(template) })
+=> {"sign":["Closed","for an update"],"stillWhenReduced":true}
+```
+
 The filled page, run with a stub DOM, rewrites the text in the reader's time
 and reloads as soon as the site answers without the deploy header.
 
