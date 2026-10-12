@@ -54,7 +54,7 @@ export async function resolveDerivedTiers(
   for (const level of ["entry-point", "primary"] as const) {
     await addCardTier({ entries: derived.entries, level, links, seen, options, problems, listedLevels });
   }
-  await addNestedLandmarkTier(derived, { links, seen, ctx: { boxRoot: options.boxRoot, cardSchemas: options.cardSchemas } });
+  await addNestedLandmarkTier(derived, { links, seen, ctx: { boxRoot: options.boxRoot, cardSchemas: options.cardSchemas, ...(options.subtrees === undefined ? {} : { subtrees: options.subtrees }) } });
   return { links, problems, listedLevels };
 }
 

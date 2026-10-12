@@ -92,14 +92,34 @@ export async function prunedSubtree(boxRoot: string, dir: string): Promise<Prune
   return prunedSubtreeWith({ boxRoot, cardSchemas: await createCardSchemaMap(boxRoot) }, dir);
 }
 
+/**
+ * One request's pruned subtrees by landmark dir. A caller that resolves many
+ * landmarks (`landmarks.list`) shares one, so a nested landmark's subtree,
+ * which its parent's nested-landmark row also reads, is walked once. Scope it
+ * to a single request: discovery stays fresh per call (see the header).
+ */
+export type SubtreeMemo = Map<string, Promise<PrunedSubtree>>;
+
 /** A box root plus its schema map, so a caller walking many directories builds the map once. */
 export interface ProminenceWalkContext {
   boxRoot: string;
   cardSchemas: LoadCardContext["cardSchemas"];
+  subtrees?: SubtreeMemo;
 }
 
 /** {@link prunedSubtree} with a caller-supplied schema map (Browse lists many subdirectories per request). */
-export async function prunedSubtreeWith(
+export async function prunedSubtreeWith(walkCtx: ProminenceWalkContext, dir: string): Promise<PrunedSubtree> {
+  const { subtrees } = walkCtx;
+  if (subtrees === undefined) return computePrunedSubtree(walkCtx, dir);
+  let pending = subtrees.get(dir);
+  if (pending === undefined) {
+    pending = computePrunedSubtree(walkCtx, dir);
+    subtrees.set(dir, pending);
+  }
+  return pending;
+}
+
+async function computePrunedSubtree(
   { boxRoot, cardSchemas }: ProminenceWalkContext,
   dir: string,
 ): Promise<PrunedSubtree> {

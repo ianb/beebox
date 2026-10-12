@@ -17,7 +17,7 @@ import { isCardFile } from "../../../lib/paths/core.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { readFrontmatterCached } from "../prominence-cache.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";
-import type { PrunedSubtree } from "../prominence-index.js";
+import type { PrunedSubtree, SubtreeMemo } from "../prominence-index.js";
 import type { CardSchema } from "../../../cards/schema.js";
 
 export interface ResolvedLink {
@@ -70,6 +70,8 @@ export interface ResolveOptions {
    * that only need identity, or that deliberately skip derivation.
    */
   derived?: PrunedSubtree;
+  /** The request's shared pruned-subtree memo; nested-landmark rows read their subtrees through it. */
+  subtrees?: SubtreeMemo;
   /**
    * The place page's view: append the "Also here" group of `derived`'s
    * ordinary cards (`resolveAlsoHere`). Ignored without `derived`.

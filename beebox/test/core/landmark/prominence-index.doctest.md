@@ -245,3 +245,30 @@ getParseCount()
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A large box stays cached
+
+A walk reads every card under its place, so the cache must hold a whole
+large box. A cap of 4,096 files once cleared the cache partway through every
+walk of a box with about 9,000 cards, and each walk parsed every card again.
+Here 4,500 cards, more than that old cap, are all parsed once and then never
+again.
+
+```ts
+const box = await makeTmpBox();
+await Promise.all(
+  Array.from({ length: 4500 }, (_, i) => box.write(`_content/d${i % 30}/Card${i}.memo.card`, "---\n---\n")),
+);
+
+resetParseCount();
+await prunedSubtree(box.root, "");
+const cold = getParseCount();
+resetParseCount();
+await prunedSubtree(box.root, "");
+({ cold, warm: getParseCount() })
+=> { cold: 4500, warm: 0 }
+```
+
+```ts cleanup
+await box.cleanup();
+```
