@@ -1,6 +1,7 @@
 ---
 title: "Fix or eliminate every flaky test: the 49 doctests that have failed on their own"
 workstream: flaky-tests
+resolution: implemented
 area: beebox
 labels: [tests, flake]
 filed-by: agent
@@ -120,8 +121,71 @@ Already fixed before this work, verified: `session.oversize-lines`
 (file deleted 10-09; product race fixed f1ba1944e).
 
 careful.txt: `file-watcher`, `hub.e2e`, `git-lock` and `bulk-upload` left
-(683994491). The two field-test files remain, pending a decision.
+(683994491).
 
-Not yet dispositioned: the rest of the list above. Each has not failed since
-its last listed date, across 11 to 315 passing hourly runs (fewer where a
-09-27 rename cut the count).
+## Resolution (2026-10-12)
+
+The developer decided three points on 2026-10-12:
+
+- The two field-test files stay in careful.txt. They run the real `bbx init`
+  and `bbx serve`, and making them deterministic would mock away what they
+  test. The careful.txt header now says that only such files belong there
+  (2dd633488). This replaces "careful.txt empty" in the done criterion above.
+- `git-lock` stays out of careful.txt with no code change. No mechanism was
+  found; its one recent failure happened during a machine-wide stall.
+- The remaining one-off entries close as "no recurrence", with the counts
+  below.
+
+Follow-on work from this issue:
+
+- Chat shutdown now waits for a send that is still opening its turn
+  (4454aba2c). That was the product cause of four chat flakes. A server close
+  during a first send let the start continue against a box being torn down.
+- The hub's fixed 30-second readiness limit, the cause of the
+  `supervisor.maintenance` failures and part of the field-test and hub.e2e
+  failures, is filed as
+  [a bug](../../bugs/2026-10-12-hub-readiness-limit-kills-slow-healthy-box-children.md).
+
+Earlier names of files fixed above:
+
+- `test/core/migration-timeout.doctest.md` is now `migrations.timeout`.
+- `test/webapp/chat-send-durable-claim.doctest.md` is now
+  `send-dedup.durable-claim`.
+- `test/hub/server-maintenance.doctest.md` is now `supervisor.maintenance`.
+- `test/core/last-audio.doctest.md` is now `last-audio-pending`.
+- `test/webapp/trpc-hq-preferences.doctest.md` became `chat.hq-preferences`,
+  then `chat.reserved-features`.
+
+Deleted since their last failure: `frontend/lib/ui-scan/annotations`,
+`core/migrations/one-root-migration` and `core/migrations/one-root-move-plan`.
+
+No recurrence. Each count is the number of passing hourly runs since the
+file's last failure, through renames; the current name follows where it
+changed:
+
+- `test/dev/launch-session.doctest.md`: 193
+- `test/core/loader-registry.doctest.md`: 214
+- `test/core/landmark/landmark-schema.doctest.md`: 214 (`resolve.schema`)
+- `test/cli/commands/validate-box-checks.doctest.md`: 214 (`box-checks`)
+- `test/webapp/trpc-presentation.doctest.md`: 214 (`presentation`)
+- `test/dev/auto-sweep-detach.doctest.md`: 73
+- `test/webapp/login-redirect.doctest.md`: 225 (`base-prefix.login-redirect`)
+- `test/webapp/mobile-spa-fallback.doctest.md`: 225 (`server-root.spa-fallback`)
+- `test/dev/workstream-list.doctest.md`: 90 (`workstreams.list`)
+- `test/lib/exec-with-timeout.doctest.md`: 290
+- `test/hub/child-output-log.doctest.md`: 315
+- `test/lib/git.doctest.md`: 84
+- `test/core/box-inventory.doctest.md`: 84
+- `test/webapp/routes/scan-upload.doctest.md`: 266
+- `test/core/migration-gitignore.doctest.md`: 151 (`gitignore`)
+- `test/webapp/views-compiler-v2.doctest.md`: 154 (`compiler.v2`)
+- `test/cli/lib/init.doctest.md`: 176 (`structure.init`)
+- `test/webapp/routes/chat-schedule-fire.doctest.md`: 152 (`schedule-fire`)
+- `test/cli/commands/view-test-command.doctest.md`: 68 (`command.test-command`)
+- `test/scenarios/cross-box-probe.doctest.md`: 84
+- `test/webapp/chat-send-run-start-failure.doctest.md`: 122 (`send-run.start-failure`)
+- `test/webapp/trpc/routers.namespace-fence-traversal.doctest.md`: 95
+- `test/core/procedure/engine.doctest.md`: 84
+
+Count a file as a flake only when it fails and the runs on either side
+pass it. A file that fails in several runs in a row is a test that stayed red.
