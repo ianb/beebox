@@ -154,3 +154,19 @@ programmatic writes, and custom scrollbar exist to decide when to stop
 following, which Bee Box never does; and its spec is Chromium-first and silent
 on the iOS keyboard, visual viewport, and rubber-band, so it says nothing
 about the unverified device half above.
+
+## Re-encounter 2026-10-12: a desktop repro
+
+The boxholder gave a repeatable case on desktop:
+
+1. Open a chat with a card open beside it.
+2. Scroll the chat to the bottom.
+3. Close the card. The chat widens to the full window.
+
+Result: the chat is no longer at the bottom.
+
+Expected: a resize keeps the reader at the same place in the log. In the boxholder's words: "scroll to the same percentage of the chat log, or some anchor." When the reader was at the bottom, that place is the bottom.
+
+This is the "card closing" case from the 2026-10-08 note. It is reproducible on demand, which the 2026-09-15 note said was missing. Take the trace with this repro before changing code. Check the `scroller-node` event first, then the three suggestions above. Mechanism 3 (treat a width change as a full invalidation) matches this case directly.
+
+The `chat-scroll-fixes` workstream that owned this issue no longer appears in `bin/workstreams list`.

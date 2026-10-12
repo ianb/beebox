@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-12T20:55:15Z
+Generated: 2026-10-12T22:08:00Z
 Total documents: 527
 
 ## Issues
@@ -2481,6 +2481,7 @@ Title: "Use Bee Box with Siri and Shortcuts" | 32 lines | current reference
 
 Referenced by:
 - docs/plans/ios-app-intent-capture.md:217 (mention) — The `external-input-arrival-tag` audit verifies direct understanding of the wrapper: real human text, box-level routing,
+- ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:30 (mention) — The usage guide `beebox/docs/box/siri-shortcuts.md` says to unlock a protected box before using Siri. This is inaccurate
 
 #### docs/box/speaking-to-the-person.md
 
@@ -7847,7 +7848,7 @@ Referenced by:
 - docs/plans/ios-app-intent-capture.review.md:42 (mention) — **Location in plan:** Tracks 3, paragraphs “Direction” and “First implementation chunk”; `beebox/docs/plans/ios-app-inte
 
 References:
-- → ../issues/features/2026-08-08-ios-siri-app-intent-capture.md (frontmatter)
+- → ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 - → docs/design/trust.md (mention)
 - → docs/mobile-contract.md (mention)
