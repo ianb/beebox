@@ -30,6 +30,7 @@ import * as path from "node:path";
 import type { EventBus } from "../event-bus/core.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
 import { isPublicationBuildOutputPath } from "../../shared/attach-path.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { clearWatchLimit, recordWatchLimit } from "./watch-limit.js";
 
 const watchers = new Map<string, BoxWatcher>();
@@ -83,11 +84,16 @@ export interface BoxWatcherLimits {
   coalesceMs?: number | undefined;
 }
 
+/** Watch one directory: `fs.watch` in production, reduced to what this module uses. */
+export type WatchDir = (dir: string, listener: (event: string, filename: string | Buffer | null) => void) => { close(): void; on(event: "error", listener: (error: Error) => void): unknown };
+
 /** Everything {@link ensureBoxWatcher} needs beyond the box root. */
 export interface EnsureBoxWatcherOptions extends BoxWatcherLimits {
   eventBus: EventBus;
   /** Additional authored-code directories outside `boxRoot` to watch. */
   additionalRoots?: Array<{ path: string; eventPathPrefix: string }>;
+  /** Replaces `fs.watch`; tests fire events on demand instead of awaiting the platform. */
+  watchDir?: WatchDir | undefined;
 }
 
 /** A watcher's resolved bounds — every field settled, none optional. */
@@ -108,7 +114,7 @@ function resolveLimits(limits: BoxWatcherLimits): ResolvedLimits {
 
 /** A watched directory: its watcher, plus the inode it was watching. */
 interface WatchedDir {
-  watcher: fs.FSWatcher;
+  watcher: ReturnType<WatchDir>;
   /** Identifies the directory across a replace — see `reconcile`. */
   ino: number;
 }
@@ -155,7 +161,7 @@ class BoxWatcher implements BoxWatcherHandle {
   private readonly limits: ResolvedLimits;
   private readonly roots: Array<{ path: string; eventPathPrefix: string }>;
 
-  constructor(private readonly boxRoot: string, opts: EnsureBoxWatcherOptions) {
+  constructor(private readonly boxRoot: string, private readonly opts: EnsureBoxWatcherOptions) {
     this.eventBus = opts.eventBus;
     this.limits = resolveLimits(opts);
     this.roots = [
@@ -259,16 +265,16 @@ class BoxWatcher implements BoxWatcherHandle {
         const stat = this.usableReservedStat(current, { reservation, stat: foundStat });
         if (stat === null) continue;
 
-        let watcher: fs.FSWatcher;
+        let watcher: ReturnType<WatchDir>;
         try {
-          watcher = fs.watch(current, (event, filename) => {
+          watcher = (this.opts.watchDir ?? fs.watch)(current, (event, filename) => {
             this.onEvent(current, { event, filename });
           });
         } catch (e: unknown) {
           this.releaseReservation(current, reservation);
           // ENOENT/ENOTDIR: the directory went away mid-walk. Anything else is
           // worth seeing — a watch we silently dropped is a dead region of the UI.
-          if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
+          if (errnoCode(e) !== "ENOENT" && errnoCode(e) !== "ENOTDIR") {
             console.warn(`[box-watcher] cannot watch ${path.relative(this.boxRoot, current)}:`, e);
           }
           continue;
@@ -299,7 +305,7 @@ class BoxWatcher implements BoxWatcherHandle {
             if (this.entryBudgetExhausted(current, emitDiscovered)) break;
           }
         } catch (e: unknown) {
-          if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
+          if (errnoCode(e) !== "ENOENT" && errnoCode(e) !== "ENOTDIR") {
             console.warn(`[box-watcher] cannot list ${path.relative(this.boxRoot, current)}:`, e);
           }
         }
@@ -462,11 +468,6 @@ class BoxWatcher implements BoxWatcherHandle {
     for (const window of this.windows.values()) clearTimeout(window.timer);
     this.windows.clear();
   }
-}
-
-/** The errno of a caught filesystem error, or null. */
-function errnoOf(e: unknown): string | null {
-  return e instanceof Error && "code" in e && typeof e.code === "string" ? e.code : null;
 }
 
 /**

@@ -1,6 +1,7 @@
 ---
 title: "Fix or eliminate every flaky test: the 49 doctests that have failed on their own"
-workstream: unattached
+workstream: flaky-tests
+resolution: implemented
 area: beebox
 labels: [tests, flake]
 filed-by: agent
@@ -79,3 +80,112 @@ top ten, the rest are one to five failures each and may be real
 regressions caught once; check the run's log before calling one a flake.
 Done means: every entry either fixed with the cause named, or removed with
 the reason, and `careful.txt` empty.
+
+## Progress (2026-10-12, worktree-flaky-tests)
+
+Count only lone failures. A file that failed while the runs on either side
+passed it is a flake candidate. A file that failed in a streak was a red,
+fixed later. By that count, `release.manifest` (the most frequent at 52) was
+never a flake: it went red four times, each time `package.json` `files`
+changed and the test's snapshot of that list did not.
+
+Fixed, with mechanism and commit:
+
+- `release.manifest`: files-list snapshot removed; globs expanded (6b9cbda61).
+- `hub/supervisor`: the test asserted a closure that box-maintenance-no-wedge
+  removed. It passed only inside the release race (f561654da).
+- `hub/supervisor.maintenance`: a cold real-server boot under load exceeded
+  the hub's 30 s `READY_TIMEOUT_MS` (2a3ecb9a2).
+- `lib/git-stale-lock`: the machine-wide `lsof` timed out under load
+  (1cf9bd509).
+- `core/migrations.timeout`: the 2 s budget also covered setup; the test now
+  cancels at the point under test (0edc6a71f).
+- `cli/lib/session-retention`: the fixture no longer discriminated at the
+  128 MB cap (3fc167201).
+- `core/box/file-watcher`: injected watcher (de19a242f, 43e5cb224).
+- `hub.e2e`: its shutdown wait was shorter than the hub's own kill window,
+  and a frontend build ran inside the test (3d45be34e).
+- `webapp/routes/bulk-upload`: worker outlived cleanup; non-persistent
+  schema watcher (925b527e4, 671f862a5, 0d9022a4a).
+- `chat/send-run.wedge-guards`, `chat.reserved-features`,
+  `chat.reload-loses-in-flight`, `send-dedup.durable-claim`: an unawaited
+  run's bootstrap commit outlived cleanup (3705fad53, 8d622bf43, 3ffc0f548).
+- `hub/server.router`: Retry-After counted down on the real clock
+  (c35a552df).
+- `deploy/nginx-site`: ECONNRESET during reload (58734e0b7).
+- `core/scan/promote-debounce`: mocked timers (0a31d42bd).
+- `core/last-audio-pending`: 100 ms poll (4864824f7).
+
+Already fixed before this work, verified: `session.oversize-lines`
+(50961ada5), `pdf/extract.integration` (a63151636), `chat.hq-preferences`
+(file deleted 10-09; product race fixed f1ba1944e).
+
+careful.txt: `file-watcher`, `hub.e2e`, `git-lock` and `bulk-upload` left
+(683994491).
+
+## Resolution (2026-10-12)
+
+The developer decided three points on 2026-10-12:
+
+- The two field-test files stay in careful.txt. They run the real `bbx init`
+  and `bbx serve`, and making them deterministic would mock away what they
+  test. The careful.txt header now says that only such files belong there
+  (2dd633488). This replaces "careful.txt empty" in the done criterion above.
+- `git-lock` stays out of careful.txt with no code change. No mechanism was
+  found; its one recent failure happened during a machine-wide stall.
+- The remaining one-off entries close as "no recurrence", with the counts
+  below.
+
+Follow-on work from this issue:
+
+- Chat shutdown now waits for a send that is still opening its turn
+  (4454aba2c). That was the product cause of four chat flakes. A server close
+  during a first send let the start continue against a box being torn down.
+- The hub's fixed 30-second readiness limit, the cause of the
+  `supervisor.maintenance` failures and part of the field-test and hub.e2e
+  failures, is filed as
+  [a bug](../../bugs/2026-10-12-hub-readiness-limit-kills-slow-healthy-box-children.md).
+
+Earlier names of files fixed above:
+
+- `test/core/migration-timeout.doctest.md` is now `migrations.timeout`.
+- `test/webapp/chat-send-durable-claim.doctest.md` is now
+  `send-dedup.durable-claim`.
+- `test/hub/server-maintenance.doctest.md` is now `supervisor.maintenance`.
+- `test/core/last-audio.doctest.md` is now `last-audio-pending`.
+- `test/webapp/trpc-hq-preferences.doctest.md` became `chat.hq-preferences`,
+  then `chat.reserved-features`.
+
+Deleted since their last failure: `frontend/lib/ui-scan/annotations`,
+`core/migrations/one-root-migration` and `core/migrations/one-root-move-plan`.
+
+No recurrence. Each count is the number of passing hourly runs since the
+file's last failure, through renames; the current name follows where it
+changed:
+
+- `test/dev/launch-session.doctest.md`: 193
+- `test/core/loader-registry.doctest.md`: 214
+- `test/core/landmark/landmark-schema.doctest.md`: 214 (`resolve.schema`)
+- `test/cli/commands/validate-box-checks.doctest.md`: 214 (`box-checks`)
+- `test/webapp/trpc-presentation.doctest.md`: 214 (`presentation`)
+- `test/dev/auto-sweep-detach.doctest.md`: 73
+- `test/webapp/login-redirect.doctest.md`: 225 (`base-prefix.login-redirect`)
+- `test/webapp/mobile-spa-fallback.doctest.md`: 225 (`server-root.spa-fallback`)
+- `test/dev/workstream-list.doctest.md`: 90 (`workstreams.list`)
+- `test/lib/exec-with-timeout.doctest.md`: 290
+- `test/hub/child-output-log.doctest.md`: 315
+- `test/lib/git.doctest.md`: 84
+- `test/core/box-inventory.doctest.md`: 84
+- `test/webapp/routes/scan-upload.doctest.md`: 266
+- `test/core/migration-gitignore.doctest.md`: 151 (`gitignore`)
+- `test/webapp/views-compiler-v2.doctest.md`: 154 (`compiler.v2`)
+- `test/cli/lib/init.doctest.md`: 176 (`structure.init`)
+- `test/webapp/routes/chat-schedule-fire.doctest.md`: 152 (`schedule-fire`)
+- `test/cli/commands/view-test-command.doctest.md`: 68 (`command.test-command`)
+- `test/scenarios/cross-box-probe.doctest.md`: 84
+- `test/webapp/chat-send-run-start-failure.doctest.md`: 122 (`send-run.start-failure`)
+- `test/webapp/trpc/routers.namespace-fence-traversal.doctest.md`: 95
+- `test/core/procedure/engine.doctest.md`: 84
+
+Count a file as a flake only when it fails and the runs on either side
+pass it. A file that fails in several runs in a row is a test that stayed red.

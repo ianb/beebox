@@ -38,7 +38,11 @@ export async function ensureSchemaWatcher(boxRoot: string): Promise<void> {
   const schemasDir = boxCodePaths(shape).schemasDir;
   if (watchers.has(boxRoot)) return; // re-check: an await above allows a concurrent caller to win the race.
   const watcher = watch(schemasDir, {
-    persistent: true,
+    // Never the thing that keeps a process alive: a serving process has its
+    // listener for that. A server whose startup failed partway (a plugin
+    // timing out under load) is never returned to its caller, so nothing
+    // closes this watcher; persistent, it held that process open forever.
+    persistent: false,
     ignoreInitial: true,
     // Only schema source files matter; ignore the generated package.json and
     // any dotfiles.

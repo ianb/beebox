@@ -8,15 +8,12 @@
 # Run this tier with `pnpm test:careful`. A path listed here that does not
 # exist fails the run rather than silently shrinking the tier.
 
-# 29 failures / 365 runs, 10 derived flakes — the suite's worst file.
+# Real-process end-to-end tests stay here by decision (2026-10-12). A file
+# belongs here only when making it deterministic would mock away the thing it
+# exists to test. Any other timing-sensitive file is a flake to fix, not to add.
+#
+# The field-test files run the real `bbx init` and `bbx serve`. They pass alone
+# and at 4 parallel copies but time out at 10, on tap's 300 s file limit and
+# the hub's 30 s readiness wait. No failures since 2026-09-11.
 test/field-test/run.doctest.md
-# 14 / 363, 4 flakes: same field-test harness, same real-clock waits.
 test/field-test/run.lifecycle.doctest.md
-# 10 / 361, 8 of them unimplicated — fs watch latency, not the code under test.
-test/core/box/file-watcher.doctest.md
-# 10 / 363, 7 unimplicated: boots a hub and waits on real ports.
-test/hub.e2e.doctest.md
-# 5 / 189, all 5 unimplicated — contends for a real git lock with its neighbours.
-test/lib/git-lock.doctest.md
-# its waitForSessionState helper polls with no deadline, so any server-side finalize failure presents as a whole-file SIGALRM timeout instead of a readable assertion failure (cost: three 10-30min triage runs on 2026-09-05 to find a one-line stale fixture path). If it times out again, suspect the batch never sealing and read the server stderr in the tap output before rerunning.
-test/webapp/routes/bulk-upload.doctest.md

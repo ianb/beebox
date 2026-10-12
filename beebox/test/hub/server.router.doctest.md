@@ -24,7 +24,7 @@ import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireBoxMaintenance } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -619,6 +619,13 @@ const provider = {
 };
 const closedHub = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }, { slug: "broken", boxRoot: "/nonexistent/broken" }] });
 const owner = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
+// Retry-After is the lease's remaining whole seconds at request time. The
+// lease runs 600s from acquire, so pin the hub's clock to that moment: 600
+// is then exact, and still tells the lease from the 60s default. Unpinned, a
+// request more than a second after acquire read 599 (2026-10-08).
+const realNow = Date.now;
+const leaseStart = Date.parse((await boxMaintenanceStatus(closedBox.root))?.until ?? "") - 600_000;
+Date.now = () => leaseStart;
 const closedResponse = await fetch(`${closedHub.base}/closed/api/x`);
 const closedBody = await closedResponse.json();
 // Retry-After counts down from the 600 s maintenance lease, so allow a loaded run a few seconds.
@@ -637,6 +644,8 @@ JSON.stringify({ status: page.status, type: page.headers.get("content-type"), re
 const posted = await fetch(`${closedHub.base}/closed/chat`, { method: "POST", headers: { accept: "text/html" } });
 JSON.stringify({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)").replace(/Retry in \d+ seconds/u, "Retry in <n> seconds") })
 => {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in <n> seconds.\n"}
+
+Date.now = realNow;
 
 await owner.beginChanges();
 await owner.release();

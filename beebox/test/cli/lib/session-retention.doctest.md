@@ -21,17 +21,23 @@ import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
 
 ## A big transcript, parsed under a 128 MB heap cap
 
-The fixture is ~2 400 lines carrying ~30 KB of payload each — a 58 MB
-transcript, which is small next to a real long-running session but already
-a large share of a 128 MB heap once every entry is retained. Asking for `tail: 200`
-retains 200 entries and the child finishes well under the cap. (The cap was 64 MB
-until tsx and the module graph grew enough to leave no margin; see
-`session.oversize-lines.doctest.md`.)
+The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120 MB
+transcript, which is small next to a real long-running session but more than
+a 128 MB heap can hold once every entry is retained. Asking for `tail: 200`
+retains 200 entries and the child finishes well under the cap.
+
+The cap only means something when the bounded and unbounded parses sit far
+from it on both sides. Measured on 2026-10-12: the bounded parse finishes under
+an 80 MB cap (its peak is tsx, the module graph and one window, whatever the
+file size), while a parse that retains every line dies under 160 MB. At the old
+30 KB payload the unbounded parse survived 128 MB, so the test passed against
+the regression it guards; at 64 MB the bounded parse died on GC timing. A
+bigger file moves only the unbounded side.
 
 ```ts
 const box = await makeTmpBox();
 const logPath = box.path("big.jsonl");
-await writeBigSessionLog({ logPath, lines: 2400, payloadBytes: 30_000 });
+await writeBigSessionLog({ logPath, lines: 2400, payloadBytes: 60_000 });
 
 const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
 print(`entries: ${out.entries}`);

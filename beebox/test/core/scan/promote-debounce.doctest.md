@@ -6,7 +6,9 @@ burst to end: every upload re-arms the settle window, and the pass runs once no
 new file has arrived for it.
 
 The window here is milliseconds rather than the production two minutes; the
-behavior under test is the re-arming, not the duration.
+behavior under test is the re-arming, not the duration. The first two sections
+run on a mocked clock: with real sleeps, a loaded host overran the 80ms and
+150ms waits and the pass fired inside the window (2026-10-08).
 
 ```ts setup
 import { createPromoteDebouncer } from "../../../src/core/scan/promote-debounce.js";
@@ -15,6 +17,7 @@ import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-uploa
 import { setTimeout as sleep } from "node:timers/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { acquireBoxWork, boxWorkEnvironment } from "../../../src/lib/box-maintenance.js";
+import { mock } from "node:test";
 
 function counting(opts) {
   const state = { runs: 0 };
@@ -27,22 +30,35 @@ function counting(opts) {
   });
   return state;
 }
+
+/**
+ * Advance the mocked clock in 10ms steps. The settle timer counts awake time,
+ * and it reads one jump longer than six of its ticks as the machine sleeping,
+ * so a single large jump would not count toward the window.
+ */
+function advance(ms) {
+  for (let elapsed = 0; elapsed < ms; elapsed += 10) mock.timers.tick(10);
+}
 ```
 
 ## Two uploads inside the window produce one pass
 
 ```ts
+mock.timers.enable({ apis: ["setInterval", "Date"], now: 0 });
 const c = counting({ settleMs: 250 });
 c.debouncer.notify();
-await sleep(80);
+advance(150);
 c.debouncer.notify();
 
-// Still inside the window measured from the SECOND upload.
-await sleep(150);
+// 350ms in: past the window measured from the first upload (it would have
+// fired by 310, its first tick past 250), still inside the one measured from
+// the second. 0 here is the re-arm; a debouncer that kept the first timer
+// reads 1.
+advance(200);
 c.runs
 => 0
 
-await sleep(400);
+advance(400);
 c.runs
 => 1
 ```
@@ -51,11 +67,12 @@ Nothing re-fires once the batch has settled — the pass runs when work arrives,
 not on a timer:
 
 ```ts continue
-await sleep(300);
+advance(300);
 c.runs
 => 1
 
 c.debouncer.cancel();
+mock.timers.reset();
 ```
 
 ## A cancelled debouncer never fires
@@ -64,18 +81,21 @@ Server close must not leave a promote pass scheduled against a box that is
 shutting down.
 
 ```ts
+mock.timers.enable({ apis: ["setInterval", "Date"], now: 0 });
 const c = counting({ settleMs: 100 });
 c.debouncer.notify();
 c.debouncer.cancel();
-await sleep(300);
+advance(300);
 c.runs
 => 0
 
 // And a notify after cancel stays cancelled.
 c.debouncer.notify();
-await sleep(300);
+advance(300);
 c.runs
 => 0
+
+mock.timers.reset();
 ```
 
 ## Server close waits for a pass already in flight

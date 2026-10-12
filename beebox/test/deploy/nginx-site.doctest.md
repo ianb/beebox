@@ -81,11 +81,21 @@ async function enabled(etc: string): Promise<string> {
   return described.join(", ");
 }
 
+/** Poll until the reloaded configuration serves the deploy page. A reload
+ *  retires the old workers, and one retiring can reset a connection it had
+ *  already accepted (ECONNRESET, 2026-10-09); that is the reload still in
+ *  progress, so it counts as "not yet" like an old-config response. */
 async function statusWithPage(port: number): Promise<number> {
   for (let attempt = 0; attempt < 40; attempt += 1) {
-    const response = await fetch(`http://127.0.0.1:${port}/any/path`);
-    await response.text();
-    if (response.headers.get("x-beebox-deploy") === "in-progress") return response.status;
+    const response = await fetch(`http://127.0.0.1:${port}/any/path`).catch((error: unknown) => {
+      const cause = error instanceof TypeError ? error.cause : undefined;
+      if (cause instanceof Error && "code" in cause && cause.code === "ECONNRESET") return null;
+      throw error;
+    });
+    if (response !== null) {
+      await response.text();
+      if (response.headers.get("x-beebox-deploy") === "in-progress") return response.status;
+    }
     await new Promise((done) => setTimeout(done, 50));
   }
   return -1;
