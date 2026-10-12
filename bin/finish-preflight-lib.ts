@@ -327,10 +327,12 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
 }
 
 export interface SkipInput {
-  /** Did `git merge main` change this branch's HEAD? */
-  mergeNoOp: boolean;
-  /** Paths the merge brought in (empty when it was a no-op). */
-  mergeBroughtPaths: string[];
+  /**
+   * Every merge on the branch's first-parent line (`main..HEAD`), with the
+   * paths each brought onto the branch — this run's merge and every earlier
+   * one. A fast-forward has no merge commit; the shell lists it here too.
+   */
+  merges: { sha: string; paths: string[] }[];
   /** Uncommitted paths — never verified by any earlier commit's pre-commit. */
   stragglers: string[];
 }
@@ -342,19 +344,30 @@ export interface SkipInput {
  * is the one that holds without it. Pre-commit runs typecheck and lint on
  * every worktree commit, so the branch's own commits are already covered — a
  * finish needs them again only when something arrived that pre-commit never
- * saw: code from the merge of main, or an uncommitted straggler.
+ * saw: code from a merge, or an uncommitted straggler.
+ *
+ * Every merge counts, not just this run's. A first preflight run that merged
+ * code from main and then stopped leaves a merge commit no hook checked; the
+ * second run's own merge is a no-op, and asking only about it skipped both
+ * checks (issues/closed/bugs/2026-10-10-finish-preflight-rerun-skips-typecheck-after-merge-brought-code.md).
+ * A later branch commit is not evidence the merged tree was checked: pre-commit
+ * skips docs-only commits and typechecks only the packages a commit stages.
  */
 export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; reason: string } {
   if (input.stragglers.length > 0) {
     return { value: false, reason: "uncommitted paths never ran pre-commit" };
   }
-  if (input.mergeNoOp) {
-    return { value: true, reason: "merge of main was a no-op; pre-commit covered every commit" };
+  const codeMerge = input.merges.find((merge) => hasCodeChange(merge.paths));
+  if (codeMerge !== undefined) {
+    return {
+      value: false,
+      reason: `merge ${codeMerge.sha.slice(0, 9)} brought code in, and no hook checks a merge`,
+    };
   }
-  if (!hasCodeChange(input.mergeBroughtPaths)) {
-    return { value: true, reason: "merge of main brought no code; pre-commit covered every commit" };
+  if (input.merges.length === 0) {
+    return { value: true, reason: "no merge on this branch; pre-commit covered every commit" };
   }
-  return { value: false, reason: "the merge of main brought code in" };
+  return { value: true, reason: "no merge on this branch brought code; pre-commit covered every commit" };
 }
 
 /** Below this many changed source lines a diff review finds nothing lint didn't. */

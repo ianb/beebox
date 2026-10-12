@@ -1,6 +1,6 @@
 ---
 title: "A second finish-preflight run skips typecheck and lint that the first run's merge made necessary"
-workstream: unattached
+workstream: finish-tooling
 area: bin
 labels: [finish, verification]
 filed-by: agent

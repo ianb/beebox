@@ -53,7 +53,7 @@ export interface Sheet {
 
 const SKIP_RULE =
   "pre-commit runs typecheck+lint on every worktree commit, so a finish needs them again " +
-  "only when code arrived that pre-commit never saw (the merge of main, or a straggler). " +
+  "only when code arrived that pre-commit never saw (any merge on the branch, or a straggler). " +
   "`--no-verify` leaves no git evidence and is not detectable.";
 
 function repoRoot(): string {
@@ -149,6 +149,27 @@ function mergeMain(root: string): Sheet["merge"] {
   return { status: "merged", broughtPaths: brought };
 }
 
+/**
+ * Every merge on the branch's own line and what it brought, newest first,
+ * plus this run's merge when it fast-forwarded and left no merge commit.
+ */
+function branchMerges(root: string, current: Sheet["merge"]): { sha: string; paths: string[] }[] {
+  const shas = git(["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"], root)
+    .split("\n")
+    .filter((sha) => sha !== "");
+  const merges = shas.map((sha) => ({
+    sha,
+    paths: git(["diff", "--name-only", `${sha}^1`, sha], root)
+      .split("\n")
+      .filter((path) => path !== ""),
+  }));
+  const head = git(["rev-parse", "HEAD"], root);
+  if (current.status === "merged" && !merges.some((merge) => merge.sha === head)) {
+    merges.unshift({ sha: head, paths: current.broughtPaths });
+  }
+  return merges;
+}
+
 /** Added+deleted lines vs main, total and restricted to non-doc, non-test files. */
 function diffSize(root: string): { lines: number; sourceLines: number } {
   const numstat = git(["diff", "--numstat", "main...HEAD"], root);
@@ -229,11 +250,7 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const grouped = groupPaths(changed, packages);
   const skip = mergeSkipped
     ? { value: false, reason: "main was not merged in (--no-merge) and is not contained" }
-    : skipTypecheckLintDecision({
-        mergeNoOp: merge.status === "up-to-date",
-        mergeBroughtPaths: merge.broughtPaths,
-        stragglers,
-      });
+    : skipTypecheckLintDecision({ merges: branchMerges(root, merge), stragglers });
   // Selected BEFORE the verification list is built: a selector that failed
   // changes which test command the sheet names (the full suite, not the
   // selected set), so the two cannot disagree.
