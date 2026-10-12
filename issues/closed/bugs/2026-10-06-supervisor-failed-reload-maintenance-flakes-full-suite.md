@@ -1,12 +1,13 @@
 ---
 title: "supervisor doctest: work is admitted right after a failed reload reports an exclusive maintenance phase, under full-suite load"
-workstream: unattached
+workstream: flaky-tests
 area: beebox
 labels: [tests, flaky]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-test-suite-health — the batch's one full `pnpm test` run, 2026-10-06
 priority: important
+resolution: implemented
 ---
 
 `beebox/test/hub/supervisor.doctest.md` failed in a full beebox suite run on
@@ -43,3 +44,25 @@ and `test/hub/supervisor*.doctest.md` in parallel. It passed alone. Full-suite
 load is not required: a few parallel files on a loaded machine are enough.
 The branch added launch timing fields to the supervisor; it changes no
 maintenance or reload logic.
+
+## Resolution (2026-10-12)
+
+The second reading in the report was right, and it is intended behavior.
+After the replacement fails readiness, `reloadSupervisedBox` marks the box
+unhealthy, writes the `exclusive` phase, and then releases the owner lock
+in `finally`. Since `box-maintenance-no-wedge` (2026-09-17), a phase record
+without a live owner refuses nothing. That plan lists "Dev reload
+replacement not ready" as one of the closure paths it removed on purpose.
+So the box reopens with unfinished maintenance. The test waited for
+`phase === "exclusive"` and expected `acquireBoxWork` to refuse. It passed
+only when the acquire ran in the window between `beginChanges()` and
+`release()`. No time-based expiry is involved.
+
+The test now waits for `owner === null`, then asserts the record
+(`exclusive`, unowned) and that work is admitted. `BoxReloadError` and
+`bbx maintenance` still said the box "remains closed for recovery". That
+stopped being true on 09-17, and both now say it reopens with unfinished
+maintenance.
+
+Repetition: 6 copies of the old file and 6 of the new, in parallel, 10
+rounds: old failed 25 of 60 at line 274, new failed 0 of 60.

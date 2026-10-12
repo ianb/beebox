@@ -267,13 +267,24 @@ JSON.stringify({ status: reloadStatus.status, pid: reloadStatus.pid, restarts: r
 await new Promise((resolve) => setImmediate(resolve));
 rejectReloadReady = true;
 reloadChildren[1].fireMessage({ type: "reload-request" });
-while (reloadSupervisor.getStatuses()[0].status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.phase !== "exclusive") await new Promise((resolve) => setImmediate(resolve));
-(await boxMaintenanceStatus(reloadFixture.root)).phase
-=> exclusive
+```
 
-await acquireBoxWork(reloadFixture.root, { reason: "test" })
-=> throws BoxMaintenanceError
+When the replacement fails readiness, the box is unhealthy and the controller
+releases its owner lock. Per `docs/implemented-plans/box-maintenance-no-wedge.md`, a
+failed reload must not leave the box refusing work: the phase record stays as
+unfinished maintenance, with no owner, and new work is admitted. Wait for
+the release itself; the brief window where the owner still holds `exclusive`
+is not a state to assert on.
 
+```ts continue
+while (reloadSupervisor.getStatuses()[0].status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.owner !== null) await new Promise((resolve) => setImmediate(resolve));
+const failedReload = await boxMaintenanceStatus(reloadFixture.root);
+// The record says changes began and did not complete: exclusive, unowned.
+JSON.stringify({ phase: failedReload.phase, owner: failedReload.owner })
+=> {"phase":"exclusive","owner":null}
+
+const afterFailedReload = await acquireBoxWork(reloadFixture.root, { reason: "test" });
+await afterFailedReload.release();
 ```
 
 ```ts cleanup

@@ -97,7 +97,7 @@ export async function runMaintenance(roots: string[], invocation: { command: str
           await handle.complete();
           completed.add(root);
         } else {
-          console.error(`Box remains closed for recovery: ${root}`);
+          console.error(`Box not verified; it reopens with unfinished maintenance: ${root}`);
           code = 1;
         }
       } catch (error) {
