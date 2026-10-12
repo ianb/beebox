@@ -6,8 +6,10 @@
  *   bin/finish-preflight             # short text block
  *   bin/finish-preflight --json      # the sheet
  *   bin/finish-preflight --no-merge  # re-read the sheet without merging again
+ *   bin/finish-preflight --help
  *
- * Exit: 0 sheet printed, 2 wrong place / broken private mount, 3 merge conflict.
+ * Exit: 0 sheet printed, 2 wrong place / broken private mount / bad arguments,
+ * 3 merge conflict.
  *
  * See beebox/docs/plans/change-based-test-selection.md, "Revision
  * 2026-08-25 — test economics", mechanism E2.
@@ -16,8 +18,16 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { parseArgs } from "node:util";
 import { changedPaths, git } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
+import {
+  MergeConflictError,
+  NotAWorktreeBranchError,
+  PreflightError,
+  PrivateMountUnhealthyError,
+  UsageError,
+} from "./finish-preflight-errors.js";
 import {
   hasCodeChange,
   isDocPath,
@@ -78,39 +88,6 @@ function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
     }
     return scripts.has(script);
   };
-}
-
-class PreflightError extends Error {
-  readonly exitCode: number;
-  constructor(message: string, exitCode: number) {
-    super(message);
-    this.name = "PreflightError";
-    this.exitCode = exitCode;
-  }
-}
-
-class PrivateMountUnhealthyError extends PreflightError {
-  constructor(readonly state: string) {
-    super(`private-issues mount is ${state} — heal it or return BLOCKED`, 2);
-    this.name = "PrivateMountUnhealthyError";
-  }
-}
-
-class MergeConflictError extends PreflightError {
-  constructor(readonly detail: { conflicted: string; stdout: string; stderr: string }) {
-    super(
-      `git merge main conflicted:\n${detail.conflicted}\n${detail.stdout}${detail.stderr}`,
-      3,
-    );
-    this.name = "MergeConflictError";
-  }
-}
-
-class NotAWorktreeBranchError extends PreflightError {
-  constructor(readonly branch: string) {
-    super(`on '${branch}' — /finish is for worktree branches only`, 2);
-    this.name = "NotAWorktreeBranchError";
-  }
 }
 
 function privateLeg(root: string): Sheet["privateLeg"] {
@@ -328,10 +305,32 @@ export function formatSheet(sheet: Sheet): string {
   return lines.join("\n");
 }
 
+const USAGE = `usage: bin/finish-preflight [--json] [--no-merge]
+
+Merges main into this worktree branch and prints the finish decision sheet.
+
+  --json      print the sheet as JSON
+  --no-merge  re-read the sheet without merging main again
+  -h, --help  print this and exit`;
+
+/** Strict, like finish-verify: `--help` must never merge main. */
 export function main(argv: string[]): number {
-  const json = argv.includes("--json");
-  const sheet = buildSheet({ merge: !argv.includes("--no-merge") });
-  console.log(json ? JSON.stringify(sheet, null, 2) : formatSheet(sheet));
+  let values;
+  try {
+    ({ values } = parseArgs({
+      args: argv,
+      strict: true,
+      options: { help: { type: "boolean", short: "h" }, json: { type: "boolean" }, "no-merge": { type: "boolean" } },
+    }));
+  } catch (e) {
+    throw new UsageError(e instanceof Error ? e.message : String(e), USAGE);
+  }
+  if (values.help === true) {
+    console.log(USAGE);
+    return 0;
+  }
+  const sheet = buildSheet({ merge: values["no-merge"] !== true });
+  console.log(values.json === true ? JSON.stringify(sheet, null, 2) : formatSheet(sheet));
   return 0;
 }
 

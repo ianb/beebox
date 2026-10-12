@@ -5,13 +5,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import {
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { constants } from "node:os";
 import { basename, join } from "node:path";
 import { gitCommonDir } from "./test-git.js";
@@ -38,10 +32,7 @@ const running = new Set<ChildProcess>();
  * an agent harness that kills our pid alone left tap running and holding a
  * test slot.
  */
-export function run(input: {
-  argv: string[];
-  cwd: string;
-}): Promise<RunOutput> {
+export function run(input: { argv: string[]; cwd: string }): Promise<RunOutput> {
   const [command, ...args] = input.argv;
   if (command === undefined) throw new EmptyCommandError();
   const child = spawn(command, args, {
@@ -79,14 +70,11 @@ export function killChildrenOnSignal(onExit: () => void): void {
           process.kill(-child.pid, signal);
         } catch (e) {
           // ESRCH: the group exited between its last output and this signal.
-          if (!(e instanceof Error && "code" in e && e.code === "ESRCH"))
-            throw e;
+          if (!(e instanceof Error && "code" in e && e.code === "ESRCH")) throw e;
         }
       }
       onExit();
-      console.error(
-        `finish-verify: ${signal}; stopped ${String(running.size)} running check(s)`,
-      );
+      console.error(`finish-verify: ${signal}; stopped ${String(running.size)} running check(s)`);
       process.exit(128 + constants.signals[signal]);
     });
   }
@@ -112,9 +100,7 @@ export function registerRun(root: string): {
       rmSync(join(dir, entry), { force: true });
       continue;
     }
-    const worktree: unknown = JSON.parse(
-      readFileSync(join(dir, entry), "utf-8"),
-    );
+    const worktree: unknown = JSON.parse(readFileSync(join(dir, entry), "utf-8"));
     others.push(`${String(worktree)} (pid ${String(pid)})`);
   }
   const mine = join(dir, `${String(process.pid)}.json`);

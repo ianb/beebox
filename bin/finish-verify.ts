@@ -8,6 +8,7 @@
  *   bin/finish-verify --help
  *
  * Exit: 0 green, 1 red, 2 bad arguments, 128+n when killed by signal n.
+ *
  * Output is one line per command, then `VERDICT: green|red`. A failing test
  * file is re-run once in isolation: passing there is a flake by the ledger's
  * definition (fail-then-pass at the same content hash) and is named, not
@@ -23,22 +24,18 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import {
-  killChildrenOnSignal,
-  registerRun,
-  run,
-} from "./finish-verify-process.js";
+import { killChildrenOnSignal, registerRun, run } from "./finish-verify-process.js";
 import type { Sheet } from "./finish-preflight.js";
 import type { VerificationCommand } from "./finish-preflight-lib.js";
 
 class PreflightFailedError extends Error {
   constructor(readonly detail: { status: number | null; stderr: string }) {
-    super(
-      `finish-preflight exited ${String(detail.status)}:\n${detail.stderr}`,
-    );
+    super(`finish-preflight exited ${String(detail.status)}:\n${detail.stderr}`);
     this.name = "PreflightFailedError";
   }
 }
+
+const KINDS: VerificationCommand["kind"][] = ["tests", "typecheck", "lint", "smoke", "site"];
 
 /** A usage mistake: exit 2 with the usage text, and run nothing. */
 class UsageError extends Error {
@@ -55,14 +52,6 @@ class BadOnlyKindError extends UsageError {
   }
 }
 
-const KINDS: VerificationCommand["kind"][] = [
-  "tests",
-  "typecheck",
-  "lint",
-  "smoke",
-  "site",
-];
-
 const USAGE = `usage: bin/finish-verify [--sheet <file>] [--only ${KINDS.join("|")}]
 
 Runs the checks bin/finish-preflight's sheet names and prints VERDICT: green|red.
@@ -74,14 +63,12 @@ Without --sheet it runs bin/finish-preflight --json first, which merges main.
 
 Exit: 0 green, 1 red, 2 bad arguments, 128+n when killed by signal n.`;
 
-interface Options {
+/** Strict: an unknown flag or stray argument is a usage error, never a full run. */
+export function parseOptions(argv: string[]): {
   help: boolean;
   sheet: string | undefined;
   only: VerificationCommand["kind"] | undefined;
-}
-
-/** Strict: an unknown flag or stray argument is a usage error, never a full run. */
-export function parseOptions(argv: string[]): Options {
+} {
   let values;
   try {
     ({ values } = parseArgs({
@@ -98,9 +85,7 @@ export function parseOptions(argv: string[]): Options {
     throw new UsageError(e instanceof Error ? e.message : String(e));
   }
   const only = KINDS.find((kind) => kind === values.only);
-  if (values.only !== undefined && only === undefined) {
-    throw new BadOnlyKindError(values.only);
-  }
+  if (values.only !== undefined && only === undefined) throw new BadOnlyKindError(values.only);
   return { help: values.help === true, sheet: values.sheet, only };
 }
 
@@ -139,15 +124,10 @@ export interface CommandResult {
  * Both shapes put test NAMES in the same position as paths, so a candidate
  * counts only when it exists on disk.
  */
-export function parseFailingFiles(
-  output: string,
-  exists: (path: string) => boolean,
-): string[] {
+export function parseFailingFiles(output: string, exists: (path: string) => boolean): string[] {
   const files = new Set<string>();
   for (const line of output.split("\n")) {
-    const match =
-      /^\s*not ok \d+ - (\S+)/.exec(line) ??
-      /^\s*test at (\S+?):\d+:\d+\s*$/.exec(line);
+    const match = /^\s*not ok \d+ - (\S+)/.exec(line) ?? /^\s*test at (\S+?):\d+:\d+\s*$/.exec(line);
     const candidate = match?.[1];
     if (candidate === undefined) continue;
     if (exists(candidate)) files.add(candidate);
@@ -158,9 +138,7 @@ export function parseFailingFiles(
 export function formatResult(result: CommandResult): string[] {
   const seconds = result.seconds.toFixed(1);
   if (result.ok) return [`ok   ${result.command.command} (${seconds}s)`];
-  const lines = [
-    `FAIL ${result.command.command} (${seconds}s) → ${result.outputPath}`,
-  ];
+  const lines = [`FAIL ${result.command.command} (${seconds}s) → ${result.outputPath}`];
   for (const file of result.files) {
     lines.push(
       file.outcome === "flake"
@@ -168,25 +146,17 @@ export function formatResult(result: CommandResult): string[] {
         : `     real  ${file.file} → ${file.outputPath ?? result.outputPath}`,
     );
   }
-  if (result.unattributed)
-    lines.push("     no failing file identified — treated as real");
+  if (result.unattributed) lines.push("     no failing file identified — treated as real");
   return lines;
 }
 
 /** Flake-only failures are green, and named. Anything else is red. */
-export function verdict(results: CommandResult[]): {
-  green: boolean;
-  flakes: string[];
-} {
+export function verdict(results: CommandResult[]): { green: boolean; flakes: string[] } {
   const flakes: string[] = [];
   let green = true;
   for (const result of results) {
     if (result.ok) continue;
-    if (
-      result.command.kind !== "tests" ||
-      result.unattributed ||
-      result.files.length === 0
-    ) {
+    if (result.command.kind !== "tests" || result.unattributed || result.files.length === 0) {
       green = false;
       continue;
     }
@@ -205,19 +175,11 @@ function readSheet(path: string | undefined): Sheet {
   }
   const preflight = spawnSync(
     process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(import.meta.dirname, "finish-preflight.ts"),
-      "--json",
-    ],
+    ["--import", "tsx", join(import.meta.dirname, "finish-preflight.ts"), "--json"],
     { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
   );
   if (preflight.status !== 0) {
-    throw new PreflightFailedError({
-      status: preflight.status,
-      stderr: preflight.stderr,
-    });
+    throw new PreflightFailedError({ status: preflight.status, stderr: preflight.stderr });
   }
   const parsed: Sheet = JSON.parse(preflight.stdout);
   return parsed;
@@ -237,14 +199,7 @@ async function runCommand(input: {
   const outputPath = join(outDir, `${String(input.index)}-${command.kind}.log`);
   writeFileSync(outputPath, output.text);
   if (output.status === 0) {
-    return {
-      command,
-      ok: true,
-      seconds,
-      outputPath,
-      files: [],
-      unattributed: false,
-    };
+    return { command, ok: true, seconds, outputPath, files: [], unattributed: false };
   }
 
   const files: FileOutcome[] = [];
@@ -253,26 +208,16 @@ async function runCommand(input: {
     const isolate = command.isolate;
     const isolateCwd = join(root, isolate.cwd);
     const failing = parseFailingFiles(output.text, (path) =>
-      existsRelative({
-        packageDir: join(root, isolate.packageDir),
-        path,
-        root,
-      }),
+      existsRelative({ packageDir: join(root, isolate.packageDir), path, root }),
     );
     if (failing.length === 0) unattributed = true;
     for (const [position, file] of failing.entries()) {
-      const rerun = await run({
-        argv: [...isolate.argv, file],
-        cwd: isolateCwd,
-      });
+      const rerun = await run({ argv: [...isolate.argv, file], cwd: isolateCwd });
       if (rerun.status === 0) {
         files.push({ file, outcome: "flake" });
         continue;
       }
-      const path = join(
-        outDir,
-        `${String(input.index)}-real-${String(position)}.log`,
-      );
+      const path = join(outDir, `${String(input.index)}-real-${String(position)}.log`);
       writeFileSync(path, rerun.text);
       files.push({ file, outcome: "real", outputPath: path });
     }
@@ -291,15 +236,8 @@ async function runCommand(input: {
  * `beebox/`. Checking the cwd alone identified no failing file at all
  * there, so every flake came back `real` and blocked the merge.
  */
-export function existsRelative(input: {
-  packageDir: string;
-  path: string;
-  root: string;
-}): boolean {
-  return (
-    existsSync(join(input.packageDir, input.path)) ||
-    existsSync(join(input.root, input.path))
-  );
+export function existsRelative(input: { packageDir: string; path: string; root: string }): boolean {
+  return existsSync(join(input.packageDir, input.path)) || existsSync(join(input.root, input.path));
 }
 
 export async function main(argv: string[]): Promise<number> {
@@ -326,12 +264,7 @@ export async function main(argv: string[]): Promise<number> {
         continue;
       }
       if (options.only !== undefined && command.kind !== options.only) continue;
-      const result = await runCommand({
-        command,
-        root: sheet.repoRoot,
-        outDir,
-        index: index++,
-      });
+      const result = await runCommand({ command, root: sheet.repoRoot, outDir, index: index++ });
       results.push(result);
       for (const line of formatResult(result)) console.log(line);
     }
@@ -350,9 +283,7 @@ if (process.argv[1] === import.meta.filename) {
   try {
     process.exitCode = await main(process.argv.slice(2));
   } catch (e) {
-    console.error(
-      `finish-verify: ${e instanceof Error ? e.message : String(e)}`,
-    );
+    console.error(`finish-verify: ${e instanceof Error ? e.message : String(e)}`);
     if (e instanceof UsageError) console.error(USAGE);
     process.exitCode = e instanceof UsageError ? 2 : 1;
   }

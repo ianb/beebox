@@ -40,14 +40,7 @@ test("docsOnly is an iff over every path, and a .doctest.md is not a doc", () =>
   assert.equal(isDocsOnly(["beebox/docs/a.doctest.md"]), false);
   // Any non-doctest .md counts, wherever it lives; doc assets under docs/ too.
   assert.equal(isDocsOnly(["AGENTS.md"]), true);
-  assert.equal(
-    isDocsOnly([
-      "issues/features/x.md",
-      "README.md",
-      "beebox/docs/architecture/images/a.png",
-    ]),
-    true,
-  );
+  assert.equal(isDocsOnly(["issues/features/x.md", "README.md", "beebox/docs/architecture/images/a.png"]), true);
   assert.equal(isDocsOnly(["site/docs-manifest.yaml"]), false);
   assert.equal(isDocsOnly([]), false);
 });
@@ -217,36 +210,22 @@ test("a docs-only diff names every command as skipped rather than hiding it", ()
   });
   assert.ok(commands.length > 0);
   // Every command is named and skipped, except the site build: docs are its input.
-  assert.ok(
-    commands
-      .filter((c) => c.kind !== "site")
-      .every((c) => c.skip === "docs-only diff"),
-  );
+  assert.ok(commands.filter((c) => c.kind !== "site").every((c) => c.skip === "docs-only diff"));
   assert.equal(commands.find((c) => c.kind === "site")?.skip, undefined);
 });
 
 test("skipTypecheckLint keys on what pre-commit never saw", () => {
-  const skip = (
-    merges: { sha: string; paths: string[] }[],
-    stragglers: string[],
-  ): boolean => skipTypecheckLintDecision({ merges, stragglers }).value;
+  const skip = (merges: { sha: string; paths: string[] }[], stragglers: string[]): boolean =>
+    skipTypecheckLintDecision({ merges, stragglers }).value;
   assert.equal(skip([], []), true);
-  assert.equal(
-    skip([{ sha: "a", paths: ["issues/bugs/x.md", "beebox/docs/a.md"] }], []),
-    true,
-  );
+  assert.equal(skip([{ sha: "a", paths: ["issues/bugs/x.md", "beebox/docs/a.md"] }], []), true);
   assert.equal(skip([{ sha: "a", paths: ["beebox/src/x.ts"] }], []), false);
   // An older merge's code is still unchecked when the newest merge brought only docs.
-  assert.equal(
-    skip(
-      [
-        { sha: "new", paths: ["beebox/docs/a.md"] },
-        { sha: "old", paths: ["beebox/src/x.ts"] },
-      ],
-      [],
-    ),
-    false,
-  );
+  const merges = [
+    { sha: "new", paths: ["beebox/docs/a.md"] },
+    { sha: "old", paths: ["beebox/src/x.ts"] },
+  ];
+  assert.equal(skip(merges, []), false);
   // An uncommitted file ran no pre-commit at all, whatever the merges did.
   assert.equal(skip([], ["a.ts"]), false);
 });
@@ -259,25 +238,13 @@ test("the skipped typecheck/lint commands are still listed, with the reason", ()
     skipTypecheckLint: { value: true, reason: "merge of main was a no-op" },
   });
   assert.equal(commands.find((c) => c.kind === "tests")?.skip, undefined);
-  assert.equal(
-    commands.find((c) => c.kind === "lint")?.skip,
-    "merge of main was a no-op",
-  );
+  assert.equal(commands.find((c) => c.kind === "lint")?.skip, "merge of main was a no-op");
 });
 
 test("Track O is skipped on a small or code-free diff", () => {
-  assert.equal(
-    trackORecommendation({ codeChanged: false, sourceLines: 900 }).recommended,
-    false,
-  );
-  assert.equal(
-    trackORecommendation({ codeChanged: true, sourceLines: 29 }).recommended,
-    false,
-  );
-  assert.equal(
-    trackORecommendation({ codeChanged: true, sourceLines: 30 }).recommended,
-    true,
-  );
+  assert.equal(trackORecommendation({ codeChanged: false, sourceLines: 900 }).recommended, false);
+  assert.equal(trackORecommendation({ codeChanged: true, sourceLines: 29 }).recommended, false);
+  assert.equal(trackORecommendation({ codeChanged: true, sourceLines: 30 }).recommended, true);
 });
 
 test("trailers are read off whole commit messages, deduped and sorted", () => {
@@ -343,8 +310,6 @@ test("the canonical site build runs for site/ or any markdown change, and is nev
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
   });
-  assert.equal(
-    code.some((c) => c.kind === "site"),
-    false,
-  );
+  assert.equal(code.some((c) => c.kind === "site"), false);
 });
+

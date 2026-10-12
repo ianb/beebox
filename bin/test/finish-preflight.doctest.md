@@ -6,7 +6,7 @@ arrival: git runs no pre-commit hook on a clean merge.
 
 ```ts setup
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -110,6 +110,28 @@ const docsFirst = preflight();
 const docsSecond = preflight();
 [docsFirst.skipTypecheckLint.value, docsSecond.skipTypecheckLint.value, typecheck(docsSecond)]
 => [true, true, "no merge on this branch brought code; pre-commit covered every commit"]
+```
+
+## Arguments
+
+`--help` prints the usage. It must not merge main: main gains a commit here,
+and the branch head must stay where it was. An unknown flag exits 2 for the
+same reason.
+
+```ts continue
+git("checkout", "-q", "main");
+commit("notes/later.md", "# later\n");
+git("checkout", "-q", "worktree-docs");
+const head = git("rev-parse", "HEAD");
+const cli = (arg: string) =>
+  spawnSync(process.execPath, ["--import", import.meta.resolve("tsx"), path.join(repo, "bin/finish-preflight.ts"), arg], {
+    cwd: root,
+    encoding: "utf8",
+  });
+const help = cli("--help");
+const unknown = cli("--jsno");
+[help.status, help.stdout.split("\n")[0], unknown.status, git("rev-parse", "HEAD") === head]
+=> [0, "usage: bin/finish-preflight [--json] [--no-merge]", 2, true]
 ```
 
 ```ts cleanup
