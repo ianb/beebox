@@ -1,240 +1,228 @@
 ---
-title: "iOS hands-free text capture with App Intents"
-status: partial
+title: "iOS text capture with Siri and Shortcuts"
+status: draft
 workstream: siri-app-intents
 issues:
   - ../../../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md
 ---
-# iOS hands-free text capture with App Intents
+# iOS text capture with Siri and Shortcuts
 
-This plan adds a text-capture action to Bee Box for Siri and Shortcuts. It uses the existing quick-chat outbox and delivery path, and labels the delivered message as generic external input so other platforms can use the same vocabulary later.
+This plan repairs and validates Bee Box's existing text capture action on iOS. It defines the exact Siri, Shortcuts, Spotlight, and Action Button scenarios the feature supports, preserves the current durable quick-chat path, and ends with a short physical-iPhone exercise list.
 
-**Issues addressed:** `2026-08-08-ios-siri-app-intent-capture`; `2026-07-20-android-per-box-device-lock-parity` is related but not addressed because it is a separate Android feature.
+**Issues addressed:** `2026-08-08-ios-siri-app-intent-capture`. The broader [quick-drop entry-points issue](../../../issues/features/2026-09-25-quick-drop-entry-points.md) remains open; this plan does not settle Mac, web, share-sheet, or media capture.
 
 ## Design
 
 ### Situations
 
-- When a person is driving and remembers something to keep, they want to say “add this to my box” and have the thought recorded without handling the phone.
-- When a person builds a Shortcut with text from another action, they want Bee Box to capture that text in the selected box.
-- When a person has more than one paired box, they want to know which selected box received the thought.
-- When a person invokes capture for a box that requires device unlock, they want Siri to say that box is unavailable rather than queue a message that Siri must not access.
-- When a person tries a phrase that does not provide text, they want a clear explanation instead of a false success or a discarded thought.
+- When Priya Marlowe is driving and remembers a thought, she wants to invoke Bee Box with Siri and speak the thought after Siri asks, so she can capture it without handling the phone.
+- When Priya has text from another Shortcut action, she wants to pass that text to Bee Box, so she can save it through the same selected-box path.
+- When Priya presses her Action Button or chooses Bee Box from Spotlight, she wants the same capture action and result, so she does not need to learn a different delivery flow for each system surface.
+- When Priya has selected a box that requires device unlock, she wants capture refused even if the phone is unlocked, so a hands-free entry point cannot bypass the box's access rule.
+- When Bee Box cannot confirm delivery, Priya wants a clear local-save or failure result, so she knows whether the words reached the phone or the box.
+- When Priya is speaking to Siri about a different app or recipient, she does not want Bee Box to capture incidental speech. The action runs only after Siri selects the Bee Box shortcut and the person supplies its required text.
 
 ### Right place, right time
 
-| Situation | Act, show, or quiet | Surface and card | Attention |
+| Situation | Act, show, or quiet | Surface and record | Attention |
 |---|---|---|---|
-| Siri supplies a text thought | Persist it, attempt quick-chat delivery, then report the actual result | Siri dialog; existing quick-chat record and transcript | Interrupts only to confirm capture or explain failure |
-| A Shortcut supplies text | Use the same capture action and result | Shortcuts result; same records | Returns to the Shortcut immediately after durable enqueue or bounded send |
-| Action Button runs the App Shortcut | Use the same action; do not claim to know it was the Action Button | Action Button → App Shortcut → Siri dialog | Same as the calling shortcut |
-| Selected box requires device unlock | Refuse before storing or sending | Siri dialog | Brief refusal; no queue entry |
-| No paired box or unavailable credential | Refuse before storing or claiming capture; direct the person to pair or reconnect in the app | Siri dialog | Brief explanation; no queue entry |
-| Text is absent or the invocation is not implemented | Return an explicit unsupported-input result | Siri/Shortcuts dialog | No write and no success wording |
+| Siri capture while hands are busy | Run the App Intent after the person invokes its phrase and supplies the prompted text | Siri dialog; existing quick-chat submission and transcript | Brief spoken result after persistence or server response |
+| Shortcut passes text | Capture the supplied text through the same App Intent | Shortcuts result; same quick-chat submission and transcript | Return control to the running Shortcut after the honest result |
+| Action Button or Spotlight starts capture | Run the same App Shortcut and parameter flow | System surface → App Shortcut → Siri/Shortcuts result | No separate confirmation or delivery path |
+| Selected box requires device unlock | Refuse before persistence or networking | Siri/Shortcut result; no outbox entry | Brief refusal |
+| Device is offline or routing needs a choice | Preserve the existing outbox/routing state and name it accurately | Siri/Shortcut result; outbox or server quick-chat record | Brief result; resolution waits in the Bee Box app |
+| Siri does not match the shortcut | Stay quiet; no intent result or capture is claimed | Siri; no new record | No Bee Box interruption |
 
 ### Spirit
 
-- **Serves:** “The best stuff comes from the people” — preserve the person's words at the moment they arrive.
-- **Risks:** “You should be able to see the gears” — a spoken “sent” could hide whether the server accepted the message or the phone only saved it. The result must distinguish server acceptance from a durable local queue, following engineering principle 4, “Resilient AND never silent.”
+- **Serves:** “The best stuff comes from the people” in `beebox/docs/architecture/spirit.md` — the capture preserves the person's supplied words.
+- **Risks:** “You should be able to see the gears” — a spoken success could hide local queueing or uncertain delivery. The intent must distinguish server acceptance from local persistence, and say nothing was saved if persistence fails.
 
 ### Trust
 
-The person explicitly invokes capture, so quick-chat's existing automatic capture tradeoff applies. The intent stores the exact supplied text without asking the box agent to interpret or confirm before keeping it. The box's routing decision remains in quick chat. A selected box with `requiresDeviceUnlock == true` is excluded from this path even if the phone happens to be unlocked; there is no Siri unlock flow and no fallback to another box. A refusal stores nothing. This preserves the human decision that locked boxes cannot be accessed through Siri.
+The person explicitly invokes capture and supplies its text. For this narrow quick-chat path, that is the existing automatic-capture tradeoff described in `beebox/docs/design/trust.md`: capture is frictionless, while durable records and honest delivery status preserve trust to keep. Do not ask the box agent to interpret the text before storing it. Do not advance to another box, unlock a protected box, or report delivery without evidence. A `needsChoice` result is saved for the selected box and waits for the person to choose in Bee Box.
 
 ### When it goes wrong or does nothing
 
-- If there is no selected paired box, say to pair a box in Bee Box. Do not store the text without a destination.
-- If the selected box requires device unlock, say it is unavailable through Siri and ask the person to unlock it in the app. Do not store or reroute the text.
-- If the credential is unavailable, refuse before storing because the selected box cannot be reached. Tell the person to reconnect it in the app; do not claim a capture.
-- If outbox persistence fails, say the thought was not saved. Do not claim a queued capture.
-- If persistence succeeds but quick-chat submit fails or times out, say the thought is saved on this phone and Bee Box could not confirm delivery. A timeout can race with server acceptance, so do not claim it is definitely waiting to send. Keep the same ID and retry using the existing outbox policy.
-- If the server returns a `needs-choice` record, tell the person it was saved for the box and needs a destination choice in the app. Do not imply it reached a chat.
-- If the server returns `sent`, report the server's accepted result. Do not read back the agent reply in this slice.
-- The text intent exposes no audio-recording or reply-reading mode. If the system cannot resolve a text parameter, ask for text and do not create an entry or claim capture. Do not add unsupported placeholder actions.
+- If Siri does not match the App Shortcut, Bee Box has not run. Do not infer a capture from Siri's transcript; use Console.app to look for an existing capture/refusal/submission event or inspect the persisted result.
+- If Siri invokes the intent but has no text, ask for it or return a refusal. Do not enqueue an empty thought.
+- If no box is selected, credentials are unavailable, or the selected box requires device unlock, refuse before persistence and name the reason. Never fall back to a different box.
+- If outbox persistence fails, say the thought was not saved.
+- If persistence succeeds but the server cannot be reached or delivery is uncertain, say it is saved on the phone and Bee Box could not confirm delivery. Preserve the stable ID for retry.
+- If the server returns `needsChoice`, say the thought was saved for the selected box and needs a destination choice in Bee Box. Do not say “sent.”
+- If the server returns `sent` with `queued == true`, say it is queued in the destination chat. If `queued` is false or absent, say it was sent to the selected box. Do not read the agent reply aloud.
+- If Siri treats a phrase as a recipient/message request or otherwise fails before `perform()`, do not call that an App Intent result. Record the phrase and device outcome for the physical test report.
 
 ### Walkthrough
 
-The person says “Add this to my box: pick up Malik after practice.” The App Shortcut resolves the string parameter and calls the main app target's App Intent with the app configured to support background execution without opening its UI. The intent obtains the app-lifetime `PairedBoxStore` and quick-chat capture service through App Intents dependency registration. The shared outbox restores its disk state without launching the normal all-box drain, then the intent refuses if the selected box is missing or requires device unlock. It reads the selected `PairedBox` and credential through the existing main-app store, creates one outbox entry with a stable ID, quick-chat-only `origin: "external"`, and `source: "apple-app-intents"`, and persists before the request. It submits through `quickChat.submit`, which routes using the existing box logic. The server stores the origin and source on the quick-chat record and delivers `<external-input source="apple-app-intents">pick up Malik after practice</external-input>` to the chosen chat. The wrapper also tells the agent this arrived through quick chat: the person addressed the box, the box chose the conversation, and a destination phrase is addressed to the box rather than the current chat. The intent says “Sent to [box]” only after the server reports `sent`; on timeout or an unresolved routing choice it says the thought is saved on the phone and Bee Box could not confirm delivery. The outbox retries a failed submit with the same ID when its existing launch/foreground retry path runs. The transcript remains the durable human-message record.
+Priya has selected her `hearth` box in Bee Box and invokes “Save a thought in Bee Box,” the phrase already transcribed correctly on the physical phone. Siri asks for the required Thought parameter. Priya says, “Ask Tomas about the school schedule.” Siri passes that text to `perform()`. The intent trims whitespace, reads the selected `PairedBox`, and refuses if the box is absent, has no credential, or requires device unlock (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:18-37`). For an eligible box, `BoxScreenStore.captureExternalThought` restores the outbox, stores the thought with a stable ID and external source, then attempts submission (`ios-app/BeeBox/Storage/BoxScreenStore.swift:191-204`). `QuickChatOutbox.store` persists before the request starts (`ios-app/BeeBox/Storage/QuickChatOutbox.swift:156-176`). The server's existing `quickChat.submit` operation routes the thought; no new endpoint or mobile-contract shape is needed. If the server reports `sent` with `queued == true`, Siri says it is queued; if it reports `sent` with `queued != true`, Siri says it was sent. If routing needs a choice or delivery is uncertain, Siri says so and the record remains available in Bee Box. If Siri never selected the App Shortcut, none of these steps ran and the person receives no Bee Box success claim.
 
 ## Smallest fix and budget
 
-The smallest plausible change is an App Intent that POSTs straight to quick chat and speaks a result. That omits durable capture on network failure, but it violates the agreed hands-free behavior: a dropped request can lose the thought. The selected design uses the existing outbox and adds only the metadata and reader support needed to make its origin durable and correctly understood.
+The smallest plausible fix is to install a build that follows Apple's current App Shortcut registration guidance, then test the existing phrase while observing the device logs. The shortcut already appears in Shortcuts and runs when tapped, so registration alone is not an established explanation for Siri failing to invoke it. The fuller plan corrects misleading result dialogs, keeps the known phrase stable for the first diagnostic run, and changes one phrase variable only if that run proves Siri did not enter the intent.
 
-Estimated changed source and test lines: 400–650 TypeScript/Swift source lines and 450–700 test lines across the iOS app and Bee Box. Authored documentation: about 250–350 lines for this plan, the mobile contract, issue test instructions, and review record. Generated output: none expected. The estimate includes sender attribution and frontend parser paths needed to render the new wrapper correctly. It remains below the 2,000-line BIG CHANGE threshold.
+Estimated changed source and test lines: 120–240 total additions plus deletions across Swift and XCTest. Authored documentation: 240–320 lines across the updated plan, usage-guide correction, and issue checklist. Generated output: none expected. This remains under the 2,000-line BIG CHANGE threshold. No backend or shared HTTP/bridge contract change is planned.
 
 ## Stated preferences this plan trades against
 
-- The human asked for a transparent first pass and explicitly accepted limiting supported paths. The plan exposes text capture and gives accurate queued/sent/error dialogs instead of adding speculative voice recording or reply reading.
-- The human said locked boxes cannot be accessed through Siri. The intent checks `requiresDeviceUnlock` before writing and does not choose a different box as fallback.
-- `ios-app/AGENTS.md` says quick chat is the native exception to the webview chat-send boundary and already calls `quickChat.submit` (§5.11). The plan uses that path rather than adding another HTTP endpoint or reusing Share Extension delivery.
-- `beebox/docs/engineering-principles.md` principle 4 (“Resilient AND never silent”) informs explicit failure dialogs and diagnostics. `beebox/docs/design/trust.md` (“Trust to keep: nothing is thrown away”) informs durable enqueue before networking.
-- The work introduces a shared input tag. It costs updates to readers and display parsing, but avoids misclassifying Siri captures as typed input and gives future Android or other assistant integrations the same origin vocabulary.
+- The boxholder decided that a box marked `requiresDeviceUnlock` stays unavailable through Siri. The intent already checks this before capture (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:27-30`); this plan keeps the same refusal for every invocation path and verifies no outbox write.
+- The boxholder asked for hands-free quick adding through Siri, Shortcuts, the Action Button, and likely other system surfaces. This plan supports those surfaces through one App Shortcut where Apple exposes it; it does not add separate semantics for each caller.
+- The boxholder said the previous implementation's “overall shape” was not up to the task. This plan narrows the result to text supplied to one App Intent and its existing delivery path, and makes unsupported inputs/surfaces explicit rather than claiming a general quick-drop system.
+- `beebox/docs/design/trust.md` says quick chat trades confirmation for frictionless capture only because “the thought is never lost.” The plan keeps write-before-network outbox semantics and truthful result wording, instead of adding a direct request that could lose offline text.
+- The main `issues/features/2026-09-25-quick-drop-entry-points.md:42-45` leaves “Quick chat versus capture” unresolved. This plan retains the existing quick-chat semantics only for the already-shipped text intent. A broader destination change must be decided in the umbrella design before new capture types are added.
 
 ## What already exists
 
-- `ios-app/BeeBox/Storage/QuickChatOutbox.swift:48-55` documents durable queueing, retries, and stable record IDs. `:105-153` loads and stores entries before requests. Reuse the persisted queue and ID semantics; split disk restore from launch draining so the intent can restore all entries but submit only its new entry.
-- `ios-app/BeeBox/Storage/BoxScreenStore.swift:178-195` restores the outbox and drains it at launch; `:314-330` submits each entry through `QuickChatClient`. Reuse the submit contract and have one app-lifetime owner shared by RootView and the intent; do not create two outbox instances for the same file.
-- `ios-app/BeeBox/Storage/PairedBoxStore.swift:14-39,216-247` loads paired boxes, restores credentials, exposes the selected box, and publishes the app-group snapshot. Reuse the main-app store as the single source of selection and credentials; the App Intent does not need a second box source.
-- `ios-app/BeeBox/Storage/SharedSelectedBoxSnapshot.swift:8-29,52-59` publishes selected-box metadata for the Share Extension, including `requiresDeviceUnlock`. The App Intent is in the main app target, so it can use the main-app `PairedBoxStore` directly.
-- `ios-app/BeeBox/Storage/PairedBoxCredentialStore.swift:28-49,61-80` reads and writes the per-box token in the shared Keychain access group. The existing `PairedBoxStore` restores it; do not copy credentials into the outbox or app-group snapshot.
-- `ios-app/BeeBox/Services/QuickChatAPI.swift:22-31,46-50` builds bearer-authenticated `quickChat.submit` requests with a stable UUID and origin. Extend this quick-chat-only contract for source metadata.
-- `ios-app/BeeBox/Models/NativeComposerContract.swift:21-25` and `ios-app/BeeBox/Views/ChatWebView.swift:6-10` define the webview bridge's `typed`/`voice` origin. Keep that bridge vocabulary unchanged; App Intent origin belongs to a separate quick-chat type.
-- `ios-app/BeeBox/Services/BoxLockManager.swift:100-117` defines the app's locked-box state and biometric unlock flow. The intent must not invoke that UI; it must reject a box whose metadata requires unlock.
-- `beebox/src/webapp/trpc/routers/quick-chat.ts:20-23,40-56` validates quick-chat input and delivers `<typed>` or `<speech>` wrappers from the stored origin. Extend the schema and delivery builder to preserve external source.
-- `beebox/src/core/chat/routing/quick-chat-record.ts:22-44` defines persisted origins and backward-compatible defaults. Add `external` and optional `source` while keeping old records valid.
-- Existing human-message recognition lives in `beebox/src/cli/lib/session-real-user.ts:17-24`; history backfill checks the tags in `beebox/src/core/chat/session/backfill.ts:16-53`; retro discovery delegates its count to `isRealUserMessage` at `beebox/src/core/retro/discovery/core.ts:85-89`. The note at `beebox/src/core/box/structure/defaults.ts:394-402` describes the retro rule and must stay accurate. Teach the actual classifier and backfill to recognize `<external-input>`.
-- Display and transcript wrappers are stripped by `beebox/src/cli/lib/session-text.ts:38-68`, which `beebox/src/core/chat/transcript-render.ts` uses, and frontend `beebox/src/frontend/src/components/chat/message-parsing.ts:38-55`. Extend the actual stripper and renderer so the tag is never shown as message prose.
-- `beebox/src/core/chat/session/prompts.ts:25-31,49-55` establishes voice-versus-typed reply behavior and describes `source="box-screen"`. Add a distinct external-input explanation that combines platform provenance with quick-chat semantics: the box chose the conversation, destination phrases are addressed to the box, no recording is attached, and the person may hear only Siri's short result, not the box reply.
-- `beebox/src/webapp/routes/chat/helpers.ts:247-255`, `beebox/src/cli/lib/session-entry.ts:58-69`, and `beebox/src/frontend/src/components/chat/message-parsing.ts:173-183` inject or extract sender identity only for typed/speech wrappers. Add external-input to these readers so the sender remains visible and attributed.
-- `beebox/src/webapp/routes/chat/user-message-sender.ts:26-34` applies sender attributes before persisting the user message. The wrapper recognizer must include `<external-input>` or a Siri message loses normal `user` and `user-email` metadata.
-- `beebox/src/frontend/src/machines/chatMachine/chat-shared.ts:52-80` normalizes quick-chat wrapper attributes for optimistic-message comparison. Include the new wrapper so server-injected sender attributes do not leave an accepted message unmatched.
-- `ios-app/BeeBox/BeeBoxApp.swift:4-15` owns app-lifetime state at the App boundary; `ios-app/BeeBox/Views/RootView.swift:4-16,161-170` currently creates the box-screen store inside the scene. Move quick-chat/outbox ownership to app lifetime and inject the same instance into RootView and App Intents.
-- `beebox/docs/mobile-contract.md:1268-1305` documents quick-chat request shapes, stored origin, idempotency, and outbox semantics. Update §5.11 and its contract index for the new fields and caller.
-- `ios-app/BeeBox.xcodeproj/project.pbxproj` manually lists app and test source membership. New Swift files must be added to each relevant group/build phase, then checked with `xcodebuild -list`.
+- `ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:4-14`: `CaptureThoughtIntent` has a required `thought: String`, background execution preference, and dependencies on the app-lifetime box and quick-chat stores. Reuse it; do not make a second intent for Siri versus Shortcuts.
+- Source: `@Parameter(title: "Thought") var thought: String` (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:12`).
+- `ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:57-65`: `BeeBoxAppShortcuts` exposes “Add a thought to …” and “Save a thought in …” phrases. Keep both unchanged in the first diagnostic build; use “Save a thought in Bee Box” for the baseline because it is the phrase already transcribed correctly on the phone. Only add one candidate phrase in a later build if logs show that Siri did not invoke the intent.
+- Source: `phrases: ["Add a thought to \(.applicationName)", "Save a thought in \(.applicationName)"]` (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:61`).
+- `ios-app/BeeBox/BeeBoxApp.swift:18-21`: app initialization registers both intent dependencies, but does not update shortcut parameters. Add the App Shortcuts registration beside these dependency registrations.
+- Source: `AppDependencyManager.shared.add(dependency: { await AppRuntime.pairedBoxStore })` and `AppDependencyManager.shared.add(dependency: { await AppRuntime.boxScreenStore })` (`ios-app/BeeBox/BeeBoxApp.swift:19-20`).
+- `ios-app/BeeBox/Storage/BoxScreenStore.swift:191-204`: `captureExternalThought` restores, stores, retries, and reports `.submitted` or `.savedLocally` without draining unrelated restored outbox entries. Reuse this operation for all supported text sources.
+- Source: `/// Capture one external thought through the same durable outbox as the box screen, without draining unrelated entries restored from disk.` (`ios-app/BeeBox/Storage/BoxScreenStore.swift:191-192`).
+- `ios-app/BeeBox/Storage/QuickChatOutbox.swift:156-176`: `store` writes the entry before any request and returns `nil` on persistence failure. Keep this ordering and stable ID.
+- Source: `guard await persist() else {` inside `store` and its `return entry` after persistence (`ios-app/BeeBox/Storage/QuickChatOutbox.swift:172-176`).
+- `ios-app/BeeBox/Storage/BoxScreenStore.swift:342-361`: `submitEntry` uses the stored ID and source when submitting, retains failed entries, and records the returned server state. Reuse this path; do not call chat-send APIs behind the webview.
+- Source: `view = try await client(box).submit(id: entry.id, message: entry.text, origin: entry.origin, source: entry.source, hqService: entry.hqService)` (`ios-app/BeeBox/Storage/BoxScreenStore.swift:346-350`).
+- `ios-app/BeeBoxTests/BoxScreenStoreTests.swift:155-178`: existing tests cover external capture persistence and protected-box refusal. Extend the current tests for the plan's required outcomes rather than duplicating storage tests.
+- Source: `XCTAssertEqual(client.submittedSources, ["apple-app-intents"])` and `XCTAssertTrue(entries.isEmpty)` (`ios-app/BeeBoxTests/BoxScreenStoreTests.swift:161,179`).
+- `ios-app/BeeBoxShareExtension/ShareViewController.swift:56-79,107-120`: the share extension is a separate, visible picker flow that loads a shared textual item and submits after explicit selection. It is not part of this App Intent slice.
+- Source: `switch selection` chooses `.chat` or `.save` before `extensionContext?.completeRequest(returningItems: nil)` (`ios-app/BeeBoxShareExtension/ShareViewController.swift:63-74`).
+- `beebox/docs/mobile-contract.md:1275-1321,1395`: §5.11 documents quick-chat submission, external origin/source, and its iOS implementation anchors. This plan does not change the request shape, so the shared contract remains unchanged.
+- Source: `External input requires a source; other origins reject source.` (`beebox/docs/mobile-contract.md:1281-1282`).
+- `beebox/docs/box/siri-shortcuts.md:7-12`: the guide correctly describes selected-box targeting but incorrectly says to unlock a protected box before Siri use. Correct the guide to say such a box is unavailable through this action, even if the phone itself is unlocked.
+- Source: `Open Bee Box and unlock that box before using Siri.` (`beebox/docs/box/siri-shortcuts.md:11-12`).
+- Issue search found the Siri capture bug and quick-drop umbrella as direct matches. The umbrella also names share-sheet, Mac, notification, photo, file, and voice capture work; those are not silently folded into this plan.
 
 ## Prior art (external)
 
-- **Adopted, Apple's App Intents:** App Intents expose app actions to Siri, Shortcuts, and system experiences; use an `AppShortcut` phrase and parameterized `AppIntent`. [AppIntent](https://developer.apple.com/documentation/AppIntents/AppIntent), [AppShortcut](https://developer.apple.com/documentation/appintents/appshortcut).
-- **Adopted, App Intents dependency injection:** register the shared capture service through `AppDependencyManager` and resolve it with `@Dependency`; Apple says to register dependencies early because intents can run soon after app launch. [Creating your first app intent](https://developer.apple.com/documentation/appintents/creating-your-first-app-intent?changes=latest_major&language=objc_5).
-- **Evaluated, execution mode:** `openAppWhenRun` is deprecated in current Apple documentation, which directs apps to `supportedModes`. Select the API available for the app's iOS 17 deployment floor and keep the UI closed. Confirm API availability in the installed Xcode during implementation. [openAppWhenRun](https://developer.apple.com/documentation/appintents/appintent/openappwhenrun?changes=_3).
-- **Evaluated, invocation source:** Apple's documented App Intent protocol exposes system context, but the searched API references do not document a reliable Siri-versus-Shortcuts-versus-Action-Button caller field. Record `source: "apple-app-intents"` for this entry point instead of inferring a surface. [AppIntent](https://developer.apple.com/documentation/AppIntents/AppIntent), [AppShortcut](https://developer.apple.com/documentation/appintents/appshortcut).
-- **Evaluated, Action Button:** Apple's documentation lists App Shortcuts as an Action Button action. It therefore shares this intent entry point and source value in the first slice. [App Intents overview](https://developer.apple.com/documentation/AppIntents?changes=l_8).
+- **Adopted, Apple App Intents:** App Shortcuts use phrases containing the app name and can surface in Siri and Spotlight; Apple recommends updating shortcut parameters during app initialization. Use the current registration guidance and keep only a small set of memorable phrases. [Accelerating app interactions with App Intents](https://developer.apple.com/documentation/appintents/acceleratingappinteractionswithappintents)
+- **Evaluated, Siri phrase matching:** Apple's WWDC22 sample supports parameterized phrases by enumerating predefined entity values; it does not define arbitrary free-form text after a phrase as a phrase parameter. Therefore this plan supports Siri's follow-up for the required string, not “phrase plus an unbounded thought” as a guaranteed one-utterance action. [Implement App Shortcuts with App Intents](https://developer.apple.com/videos/play/wwdc2022/10170/)
+- **Evaluated, App Schemas:** Apple's Notes `createNote` schema represents creating a note with content and optional attachments. Bee Box's current action submits a routed quick-chat thought and may wait for destination choice, so this plan does not claim that action is a note. WWDC26 presents schema-driven natural-language Siri actions for the iOS/iPadOS 27 generation; they depend on Apple Intelligence support, which Apple lists for iPhone 15 Pro models and iPhone 16 or later, plus supported software, language, and region. That is a different path from this app's iOS 17+ custom App Intent. [Notes schema](https://developer.apple.com/documentation/appintents/app-schema-domain-notes) · [Apple Intelligence device requirements](https://support.apple.com/en-la/121115) · [WWDC26 Siri schemas](https://developer.apple.com/videos/play/wwdc2026/240/)
+- **Evaluated, invocation surfaces:** Apple documents App Shortcuts across Siri and Spotlight and describes their use with the Action Button. Those surfaces can invoke the same intent; the intent cannot truthfully identify which one started it. This plan does not add a separate ControlWidget or widget extension. [WWDC24 App Intents session](https://developer.apple.com/videos/play/wwdc2024/10210/) · [App Shortcuts](https://developer.apple.com/documentation/appintents/acceleratingappinteractionswithappintents)
+- **Evaluated, inputs beyond text:** `IntentFile` lets Shortcuts pass a file-backed resource to an App Intent. It does not replace the share extension or define Bee Box storage for attachments. The existing quick-chat request is text-shaped, so file and media payloads need a separate product/data decision. [IntentFile](https://developer.apple.com/documentation/appintents/intentfile)
+- **Evaluated, comparable apps:** Bear describes Siri phrases that create notes; Things documents “In Things, remind me to …” and a Reminders inbox; Drafts opens an explicit dictation interface. These examples support clear action semantics and separating a dictation UI from an intent that receives text. [Bear Siri](https://bear.app/faq/how-to-use-bear-with-siri-on-ios/) · [Things Siri](https://culturedcode.com/things/support/articles/2877019/) · [Drafts dictation](https://docs.getdrafts.com/docs/editor/dictation)
 
 ## Ontology
 
-- **Quick chat outbox entry** (existing, `ios-app/BeeBox/Storage/QuickChatOutbox.swift:7-19`): one locally persisted message submission, identified by stable UUID and paired-box UUID; it is not a server chat record. It points to origin and source.
-- **Quick-chat record** (existing, `beebox/src/core/chat/routing/quick-chat-record.ts:36-50`): the server's idempotent routing/delivery state for one submitted thought; identified by the same UUID as the outbox entry. It is not the delivered transcript entry.
-- **Quick-chat origin** (existing on the server, `beebox/src/core/chat/routing/quick-chat-record.ts:22-24`; new distinct Swift type): how input reached quick chat: `typed`, `voice`, or `external`. It is not `NativeEmissionV2.Origin` and is not the platform name.
-- **Source** (new): the platform integration that supplied external text, `apple-app-intents` for this slice. It is not a claim that the request came specifically from Siri voice, Shortcuts, or Action Button.
-- **`<external-input>` wrapper** (new): the transcript marker for human-provided text supplied through an external assistant, with a `source` attribute. It is not speech audio and does not imply that the person can hear the assistant's reply.
-- **Selected box** (existing, `ios-app/BeeBox/Storage/PairedBoxStore.swift:34-39`): the paired destination chosen in the app, with paired-box metadata and its credential restored by the main-app store. It is not a Siri-specific box picker or fallback.
-- **Siri-eligible box** (derived): the selected paired box only when it exists and `requiresDeviceUnlock` is false. It is not another destination picker or an automatic fallback.
+- **App Shortcut** (existing, `ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:57-65`): the named system-discoverable wrapper around the one text-capture intent. It is not a record and does not prove an invocation occurred.
+- **Capture intent** (existing, `ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:4-55`): one App Intent that receives a text thought and submits it to the selected paired box. It is not an audio recording, file transfer, or guarantee that Siri invoked it.
+- **Thought text** (existing parameter, `ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:12`): the trimmed string supplied by Siri's parameter prompt or by a Shortcuts action. It is not an arbitrary guaranteed suffix of the trigger phrase.
+- **Selected box** (existing, `ios-app/BeeBox/Storage/PairedBoxStore.swift`): the paired destination selected in Bee Box. The intent does not pick another box if this one is unavailable.
+- **Quick-chat outbox entry** (existing, `ios-app/BeeBox/Storage/QuickChatOutbox.swift:13-54`): a local durable submission with a stable ID, selected box ID, text, origin, and source. It is not proof that the server accepted the thought.
+- **Quick-chat record** (existing, `beebox/src/core/chat/routing/quick-chat-record.ts`): the server's idempotent routing state for that outbox ID. Its `sent`, `needsChoice`, `sending`, or `discarded` state is distinct from local persistence.
+- **Invocation source** (existing, source string `apple-app-intents`): identifies the shared Apple App Intents integration. It does not distinguish Siri, Shortcuts, Spotlight, or Action Button.
+- **App Schema note** (not adopted): a structured note entity created under Apple's Notes domain. Bee Box does not currently expose the selected quick-chat operation as this entity.
 
 ## Tracks / scope
 
-### Track 1: Generic quick-chat origin and source contract
+### Track 1: Diagnose Siri invocation with one stable phrase
 
-**What.** Add `external` to quick-chat origins and add a required, bounded `source` field to external submit input and persisted records. Carry both values through retries, choices, delivery, and transcript generation. Emit `<external-input source="apple-app-intents">…</external-input>` for external input; preserve existing typed and voice wrappers unchanged.
+**What.** Keep one `CaptureThoughtIntent` and call App Shortcut registration during `BeeBoxApp.init()` as Apple currently recommends. Leave the existing phrase list unchanged in the first diagnostic build. Siri's supported flow is invocation followed by Siri's prompt for the thought. A Shortcut can instead supply text from an earlier action.
 
-**Why this needs to change.** The existing origin enum has only `typed` and `voice` (`quick-chat-record.ts:22-24`), and the server maps every non-voice origin to `<typed>` (`quick-chat.ts:52-56`). Siri text is neither keyboard typing nor a recording.
+**Why this needs to change.** `BeeBoxApp.init()` registers dependencies but does not call `BeeBoxAppShortcuts.updateAppShortcutParameters()` (`ios-app/BeeBox/BeeBoxApp.swift:18-21`). Apple recommends this registration, but the shortcut is already visible and tappable; treat the call as current-guidance compliance, not as the proven Siri fix. The issue says the physical iPhone displayed a transcript and then failed, which does not prove the intent ran (`issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:10-20`). First use the existing OS logs to determine whether any `perform()` branch ran. Preserve both existing phrases in this first build and test the already-transcribed “Save a thought in Bee Box.” If no intent event appears, add one candidate phrase in a later diagnostic build and repeat; do not combine phrase experiments.
 
-**Direction.** Keep legacy requests valid: missing `origin` remains `typed`; missing `source` remains absent for old records. Require `source` for `external`; reject `source` for typed/voice inputs. Accept only source values supported by the server; the first is `apple-app-intents`. Persist source in the `QuickChatRecord` so retries and `chooseQuickChat` use the original attribution. Construct the external wrapper only from validated source values; encode user text with the existing send-message framing conventions. On Swift, define a quick-chat-specific origin enum and use it in `QuickChatOutboxEntry` and `QuickChatAPI`; do not add `external` to `NativeEmissionV2.Origin`, the webview bridge schema, or the composer emission parser. Keep `channel: "ios-native"` unchanged.
+**Direction.** Call `BeeBoxAppShortcuts.updateAppShortcutParameters()` at app initialization as current Apple guidance recommends. Keep both existing phrases unchanged in the first test build. Do not put arbitrary text in the trigger phrase. Do not add a new log line: `CaptureThoughtIntent.perform()` already logs its refusal branches, `captureExternalThought` logs when it persists, and submission logs its returned state. Read those events live in Console.app on the connected iPhone, filtered to subsystem `app.beebox.ios`; reopening Bee Box is an alternate way to flush queued native logs to the paired box. Retain `openAppWhenRun = false` on the iOS 17 baseline and the existing iOS 26 `supportedModes` declaration; verify cold/background behavior on the phone. Apple's runtime-mode documentation says `supportedModes` is a system preference and can be overridden by execution context. [Runtime behavior](https://developer.apple.com/documentation/appintents/configuring-the-runtime-behavior-of-your-app-intents)
 
-**Vocabulary lock-ins.** Quick-chat-only `origin: "external"`; `source: "apple-app-intents"`; `<external-input source="…">`.
+**Vocabulary lock-ins.** `CaptureThoughtIntent`, `BeeBoxAppShortcuts`, `thought`, and source `apple-app-intents` remain stable. Do not add `source: siri` or claim exact caller attribution.
 
-**First implementation chunk.** Update the quick-chat zod inputs, record schema, submit/choose delivery arguments, wrapper construction, tests, and `mobile-contract.md` §5.11 fixtures. No open naming or compatibility decisions remain.
+**First implementation chunk.** Add the registration call without changing the known phrase, correct the protected-box dialog, handle `.sent` with `queued == true` as “Queued in …” instead of “Sent to …”, and cover dialog mapping for empty text, no box/credential, protected box, local-save, queued, `needsChoice`, and sent. Cover no-box through tests, not by unpairing the boxholder's phone. No new diagnostic line, App Schema, or entry surface is part of this chunk.
 
-### Track 2: Treat external input as human text everywhere
+### Track 2: Preserve one durable text-delivery path and honest results
 
-**What.** Update backend classifiers, history backfill/discovery, sender-attribute injection and extraction, transcript cleaning, retro discovery, husk snippet extraction, accepted-message identity, and frontend message parsing/rendering. Add the prompt rule for external input.
+**What.** Keep Siri and Shortcuts on `BoxScreenStore.captureExternalThought` → `QuickChatOutbox` → `QuickChatAPI` → `quickChat.submit`. Do not add a Siri-specific endpoint or a second outbox. Check every spoken result against the actual local or server state.
 
-**Why this needs to change.** Readers currently identify human chat by the two existing wrappers. If `<external-input>` is missed, a capture could disappear from chat history discovery or human-chat analysis, or its wrapper could leak into rendered text.
+**Why this needs to change.** The intent already calls this path (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:36-52`), and it writes before networking (`ios-app/BeeBox/Storage/QuickChatOutbox.swift:156-176`). The user-facing guide currently gives incorrect protected-box instructions (`beebox/docs/box/siri-shortcuts.md:7-12`).
 
-**Direction.** Centralize the accepted wrapper vocabulary in the narrowest existing shared parser helpers; use explicit tag matching rather than generic permissive XML scraping. `isRealUserMessage`, `backfill.ts`, history parsing, retro counts, review discovery, `injectUserAttr`, backend and frontend user-identity extraction, snippet cleanup, transcript rendering, accepted-message rendering, and frontend `stripUserDisplayTags` must all handle the new wrapper. Prompt text must say that this is text from an external assistant surface, has no recoverable recording, and does not imply that the person will hear the box reply. It must also preserve the existing quick-chat meaning that the thought was sent to the box and routed to a chat. Do not apply the “voice in implies voice out” rule to this wrapper.
+**Direction.** Keep the request and `mobile-contract.md` shape unchanged. For `.sent`, inspect `QuickChatView.queued`: the box screen's status line already distinguishes “Queued in” from “Sent to” (`ios-app/BeeBox/Storage/BoxScreenStore.swift:64-70`), while the intent currently says “Sent to” for both (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:43-46`). Correct the intent to match the existing state. Change protected-box wording to say the selected box is unavailable through this action and must be changed in Bee Box; do not suggest unlocking that same box will enable Siri. Add focused dialog tests for those branches. Update the guide and issue's physical test steps in the same plan, and leave the issue open until device checks pass.
 
-**Vocabulary lock-ins.** `<external-input>` always denotes real human text; `source` is provenance metadata, not free-form prompt instructions.
+**Vocabulary lock-ins.** Existing quick-chat states and the `external` / `apple-app-intents` provenance remain unchanged. “Saved on this phone,” “sent,” and “needs a destination choice” must remain distinct claims.
 
-**First implementation chunk.** Add parser/classifier doctests and representative frontend parsing tests with a realistic wrapper, then update all known readers and the system prompt. Tests must prove shell tags and attributes are removed from display while body text remains.
-
-### Track 3: iOS text capture App Intent over the outbox
-
-**What.** Add a discoverable App Intent with a text parameter and App Shortcut phrase. Run from the main app target in background mode without opening the UI. Resolve the selected box and its restored token from `PairedBoxStore`, reject unavailable/locked boxes, persist through the quick-chat outbox, and make a bounded quick-chat submit attempt.
-
-**Why this needs to change.** The issue asks for hands-free capture; the existing native composer and box screen require visible UI. The human chose quick chat rather than Share Extension's exact-session send path.
-
-**Direction.** Move quick-chat/outbox ownership from `RootView` to one application-lifetime `BoxScreenStore` created during `BeeBoxApp` initialization, register it and `PairedBoxStore` through `AppDependencyManager`, and inject the same `BoxScreenStore` into `RootView` and the intent. Split the outbox's restore-only operation from its launch-drain operation. The intent first restores disk state without attempts, refreshes `BoxScreenStore`'s paired-box list from `PairedBoxStore`, then checks the selected box's `requiresDeviceUnlock` flag before using its credential or making a request. It targets only that eligible box and the newly added entry. This prevents an empty in-memory outbox from overwriting previously queued thoughts and avoids sending unrelated entries from other boxes. Change the submit boundary to return the `QuickChatView` to the intent. Persist quick-chat-specific `origin: .external` and `source: "apple-app-intents"` with the stable outbox ID. Attempt `quickChat.submit` with a deadline safely below the system intent budget. Return “Sent to [box]” only for a server `sent` state. On timeout, say the thought is saved and delivery is unconfirmed; on `needs-choice`, say a destination choice is needed in the app. Return an error dialog if eligibility or persistence fails. Never trigger `BoxLockManager` authentication UI.
-
-The first slice supports text supplied by the Siri App Shortcut or a user-built Shortcut. It does not promise to distinguish Siri voice, Shortcuts, Spotlight, or Action Button invocation; Apple does not document a reliable caller identifier for this App Intent surface. Action Button assignment may run the same App Shortcut and therefore uses the same source. Do not add voice recording, entity-based box selection, or answer readback.
-
-**Vocabulary lock-ins.** Intent action “Add a thought to my box”; quick-chat-only origin `.external`; source `apple-app-intents`; one selected box; no fallback; one application-lifetime store; restore before write; durable local queue before networking.
-
-**First implementation chunk.** Move `BoxScreenStore` ownership to `BeeBoxApp`, register it and `PairedBoxStore` as app dependencies, and inject the same store into RootView and the intent. Split outbox restore from draining, return the server view from targeted submission, and test a pre-existing queued entry surviving a cold intent invocation. Add the App Intent and provider to the main app target, then test selected/no box, unlock-required box, persistence failure, successful server state, offline queue, unresolved routing, timeout wording, sender attribution, and retry metadata. Add BoxLog transitions at refusal, restore/persist, request deadline, and server-result boundaries; never log message text or credentials. No open product question remains. Validate background process availability and the real spoken result on device in manual testing.
+**First implementation chunk.** Add focused tests for queued-versus-sent and protected-box dialog wording, correct the guide, and replace the stale manual-test list with the exact physical exercise set below. Keep server and bridge contracts unchanged.
 
 ## Could this be simpler?
 
-The simplest version is a single App Intent that submits directly to `quickChat.submit` and reports its HTTP result. It is smaller, but loses thoughts when the request fails, which conflicts with the user's hands-free capture goal and `beebox/docs/design/trust.md`'s rule that nothing is thrown away. The fuller version reuses the existing durable outbox and its stable IDs; it adds source metadata and reader updates because engineering principle 4 (“Resilient AND never silent”) and the existing real-user classifiers require honest attribution and visibility. A new share extension, new server endpoint, background daemon, reply-reading flow, or generalized source registry buys nothing for this first use and is excluded.
+The smallest plausible version is to reinstall the current action and inspect Console.app while repeating the existing phrase list unchanged. The shortcut already appears and runs by tap, so adding a registration call without observing the intent would not isolate the failure. The selected implementation uses existing OS and forwarded logs to distinguish Siri matching from intent execution, then adds one candidate phrase only if the logs show the intent did not run. Correcting the queued and protected-box dialog text buys truthful results with no new capture abstraction; all supported callers still use the existing text operation.
 
 ## Subplans
 
-None. The remaining API availability and real-device behavior are verification items, not product choices that block implementation.
+None. App Schema adoption and the general quick-drop input model require decisions outside this text-only plan.
 
 ## Failure modes
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Selected box is absent or has no eligible destination | Intent coordinator unit test | Refuse before creating an entry; name pairing or unlock action | Clear spoken refusal |
-| Selected box requires device unlock | Eligibility unit test | Refuse before using its credential or making a request; no persistence and no fallback | Clear spoken refusal |
-| Keychain token is unavailable after reboot or has been removed | Credential/coordinator test | Refuse before storing because the selected box cannot be reached; ask the person to reconnect in the app | Clear refusal; no queue entry |
-| Outbox persistence fails | Repository failure test | Do not make the network request; report not saved | Clear spoken failure |
-| App Intent and app UI submit concurrently | Shared coordinator/outbox concurrency test | One app-lifetime outbox owns in-memory state; per-entry in-flight protection and server UUID idempotency prevent duplicate delivery | No duplicate message; unexpected conflict is returned as an error |
-| Request outlasts Siri's execution window | Bounded transport test and device timing check | Persist first; cancel the local attempt at the deadline; normal app launch/foreground retry uses the same ID | Says saved and delivery unconfirmed, not definitely waiting or sent |
-| Server accepts request but response is lost | Retry/idempotency doctest and outbox test | Retry the same UUID; server returns the existing record and does not deliver a second message | Queue stays visible until a successful response |
-| Server returns `needs-choice` | Intent result mapping test | Keep the server quick-chat record and direct the person to the app | Clear; does not call it delivered to chat |
-| External wrapper is missed by a real-user/history reader | Focused classifier/backfill/retro doctests | Update each known reader and shared wrapper parser | Tests fail rather than silently excluding the session |
-| Wrapper or source appears in message prose | Frontend and transcript-render tests | Strip wrapper shell and retain body | Tests fail visibly |
-| Source is malformed or caller supplies a fabricated source | tRPC validation test | Accept only the enumerated external source for this client contract | Clear request validation error |
+| App Shortcut is not registered or Siri fails to match its phrase | No automated test can establish Siri matching; a physical phone check with Console.app is required | Register at app initialization per current Apple guidance; preserve the known phrase in the first diagnostic build; change one phrase variable only if logs show no intent event | Clear in Siri only if it reports failure; Console.app separates matching from execution |
+| Siri invokes the intent without a thought | Existing store coverage does not test Siri's parameter prompt | Existing intent returns “Tell me what thought to save” for empty text | Clear, no write |
+| Intent dependencies are not available during a cold/background invocation | Existing simulator tests do not prove Siri's app lifecycle | Dependencies are registered in `BeeBoxApp.init()`; add the current App Shortcut registration call and cold-launch device check | Must be clear in the Siri result or existing Console.app events |
+| Selected box is protected or credential is missing | `BoxScreenStoreTests` cover protected refusal; intent-level result mapping coverage to add | Intent refuses before persistence | Clear, no outbox entry |
+| Outbox cannot persist text | Outbox/store tests exercise persistence failure handling | Existing `.persistenceFailed` result says the thought was not saved | Clear, no success claim |
+| Request times out after server acceptance | Existing idempotent quick-chat/outbox path uses stable IDs; add or retain focused state test | Retry uses the same ID; the intent says delivery could not be confirmed. Before dictating again after a Siri-side failure, inspect the outbox and server state because the first request may have been accepted | Clear, may already exist server-side; a manual second capture would have a new ID |
+| Server returns `needsChoice` | Existing quick-chat result tests cover state rendering; ensure intent dialog branch is asserted | Intent asks person to choose in Bee Box | Clear, saved but not sent |
+| One-utterance phrase is interpreted as a recipient request | Previous physical report observed “To who?”; simulator cannot reproduce phrase routing | Phrase set avoids the recipient construction; no result is claimed unless intent runs | Clear as a device test failure, no assumed capture |
+| Action Button or Spotlight invokes a different path or opens UI unexpectedly | No automated test; physical phone exercise required | Same App Shortcut is the declared action; no caller-specific behavior is assumed | Clear through observed surface, existing Console.app log event, and result |
 
-**Risk to validate:** Apple controls intent execution duration and process startup. The local outbox makes persistence independent of network completion, but a simulator cannot establish lock-screen Siri behavior or real-device execution timing.
+There is no planned network write outside the existing outbox and `quickChat.submit` operation. This plan does not introduce a new critical failure path without handling.
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field — ADDRESSED.** Quick-chat origin means `typed`, `voice`, or `external`; source means platform integration. Neither changes `NativeEmissionV2.Origin`, which remains `typed` or `voice`. The track contract and tests keep these distinct.
-- **Stale ref — ADDRESSED.** There is no content ref. `boxID` and stable message UUID identify the destination and submission; a missing/unpaired destination fails instead of redirecting.
-- **Two agents touching the same card — ADDRESSED.** No card is written directly by this feature. Existing quick-chat locking and send-message IDs govern server routing/delivery (`quick-chat-submit/submit.ts:201-211`; mobile contract §5.11).
-- **Hand-edit drift — ADDRESSED.** The server validates origin/source; transcript wrappers are system-built from validated values. Users do not author the tag.
-- **Fabricated free-form value — ADDRESSED.** `source` is a closed enum in the tRPC boundary, not copied as free-form markup.
-- **Validation error UX — ADDRESSED.** A missing/invalid text or server rejection becomes an explicit Siri result; no success dialog is returned.
-- **Partial migration / transition state — ADDRESSED.** Existing outbox entries decode with their current typed default; existing quick-chat records and clients keep `origin: typed` defaults and `source` remains optional for those records. Existing transcript tags remain supported. The new Swift quick-chat origin enum preserves the existing encoded strings; the webview bridge enum remains typed/voice only.
-- **Cold intent with old unsent entries — ADDRESSED.** The app-lifetime outbox restores without draining, before the new entry is appended; a test keeps older queued entries intact and verifies only the selected new entry is submitted.
-- **Sender attribution — ADDRESSED.** Server sender injection and transcript identity readers recognize the new wrapper, preserving `user` and `user-email` attributes.
-- **Multi-box selection — ADDRESSED.** Use exactly the currently selected `PairedBox`; no prompt or fallback to another paired box. A requires-unlock selection is unavailable through Siri.
-- **Unknown invocation surface — ADDRESSED.** Use source `apple-app-intents`; do not infer an exact entry surface from App Intents system context.
-- **Reply timing — ADDRESSED.** This is capture-only. The user is told the local/server capture state; the intent does not wait for or speak the agent response.
+- **Wrong intent or input:** ADDRESSED — only one capture intent exists; it takes one required text value. No photo/file/audio values are coerced into text.
+- **Stale box selection:** ADDRESSED — the intent reads `PairedBoxStore.selectedBox` at execution and verifies the box remains in `BoxScreenStore` before storing (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift:23-37`; `ios-app/BeeBox/Storage/BoxScreenStore.swift:193-198`). It does not fall back to another paired box.
+- **Two callers capture at once:** ADDRESSED by separate stable outbox IDs and server idempotency; tests must assert both entries survive and neither retries as the other. No user-authored card is involved.
+- **Hand-edit drift:** ADDRESSED — no box schema or hand-edited data shape is added. App phrases and dialog text live in Swift; the guide is corrected in the same plan.
+- **Fabricated free-form value:** ADDRESSED — only the string supplied to the required parameter is submitted. The intent does not infer a missing thought from the invocation phrase.
+- **Validation error UX:** ADDRESSED — empty, no box, credential, protected-box, persistence, local-save, queued, sent, and `needsChoice` outcomes each have explicit wording. Tests assert the relevant text/state mapping.
+- **Partial migration / transition state:** ADDRESSED — no persisted shape or server contract changes. Older app installs keep their current behavior until the new build is installed; the phone checklist begins by installing and launching the new build.
+- **Invocation before app launch:** DEFERRED to physical device validation — dependency registration and shortcut registration happen in app initialization, but only an installed build and Siri can establish the cold-start behavior.
 
 ## NOT in scope
 
-- Voice memo recording or audio upload: microphone behavior from App Intents is unresearched and not needed for text capture.
-- Reading a chat answer aloud: response routing and Siri's execution budget need a separate design.
-- App Entity box picker or asking the user to choose among boxes: the first slice follows the in-app selected box.
-- Exact source labels for Siri voice, Shortcuts, Spotlight, or Action Button: no reliable caller identity is documented for a shared intent.
-- Android capture or Android device-lock parity: separate platform issue `issues/features/2026-07-20-android-per-box-device-lock-parity.md`.
-- Share Extension send-path changes: the App Intent uses quick chat by human decision.
-- New endpoint or background daemon: existing quick-chat tRPC and outbox are sufficient.
-- Merging to `main`, release, or deployment: this plan is worktree-only until separately requested.
+- One-utterance free-form Siri text through Notes or Messages App Schemas: those schemas must honestly describe the operation; current quick chat is not a notes or recipient-based messaging action.
+- `ControlWidget`, Home Screen widget, Lock Screen widget, notification action, and Control Center control: they need a separate decision about whether a tap opens the app or asks for input; they cannot be treated as if a tap supplies free-form text.
+- Photo, video, audio, `IntentFile`, URL, webpage, and share-sheet capture: the current `quickChat.submit` request accepts text, and the umbrella issue calls out separate storage/routing work.
+- New capture inbox versus quick-chat destination: this plan keeps the existing quick-chat semantics for the existing App Intent; broader entry points wait on the umbrella design.
+- Voice memo recording or reading agent replies aloud: neither is required to prove text capture.
+- iOS/backend HTTP or bridge contract changes: no wire shape change is planned.
+- macOS, web, Chrome extension, and physical-device implementation: separate platforms or verification; the phone checklist tests only the iOS build.
 
 ## Open design questions
 
-None. During implementation, verify `supportedModes` availability for the iOS 17 deployment target and select the compatible background/no-foreground API. The initial source is fixed as `apple-app-intents`; the intent does not claim a more specific surface.
-
-## Implementation outcome
-
-The implementation is merged to `main`; the issue remains gated on physical-device testing. The App Intent uses the app-lifetime box store and outbox, refuses a locked or unavailable selected box before persistence, and reports sent, needs-choice, or unconfirmed states without reading a reply. The box outbox is restored without draining before a new intent entry is appended. Simulator build and XCTest, changed beebox tests, and the mobile-contract check pass. The wrapper interpretation audit passed on the clean primary test box. The Siri how-to audit now expects `knows_about` behavior and passed on a fresh test box: the agent read the package reference and answered the exact “How can I use you in Siri?” question. Physical Siri phrase matching, background launch, lock-screen behavior, and Shortcut execution remain unverified.
-
-The implementation tracks and knowledge-audit gate are complete. The plan remains partial until the physical-device checks listed in the linked issue pass. The issue stays open with `needs: [manual-testing]` until then.
+- Before adding files, links, or other quick-drop entry points, should they create a routed quick-chat message or a durable inbox capture? This plan deliberately retains the existing quick-chat destination for text and does not answer the umbrella issue's broader question.
+- App Schema adoption should be reconsidered only if Bee Box later has an action and record that honestly match a supported domain. The current recommendation is not to adopt one for this plan.
 
 ## Knowledge audits
 
-The `external-input-arrival-tag` audit verifies direct understanding of the wrapper: real human text, box-level routing, no recording, and no assumption that the reply will be heard. It passed on the clean primary test box on 2026-10-10 using Claude. The `siri-capture-how-to` audit asks “How can I use you in Siri?” and checks phrases, Shortcut setup, selected-box behavior, and no reply readback. It expects `knows_about`; Claude read `node_modules/beebox/box-docs/siri-shortcuts.md` and passed on a fresh test box on 2026-10-10. See the status comments beside the entries in `beebox/src/dev/knowledge-audits.yaml`.
+No new box-agent concept is introduced. This work changes the native iOS App Intent, its user-facing Siri/Shortcuts guide, and a developer issue checklist; it does not change box-loaded instructions or schemas, so no knowledge audit applies.
 
 ## What will hold this after it ships
 
-- `pnpm test:changed` in `beebox/` reaches the quick-chat schema/submit flow, wrapper handling, human-message detection, history/backfill, transcript rendering, and prompt-related doctests selected by the changed files.
-- Shared quick-chat request/record fixtures are parsed by the existing TypeScript contract doctest and `ios-app/BeeBoxTests/QuickChatAPITests.swift`; add an external-origin/source fixture and malformed-source case.
-- iOS unit tests cover eligibility, persistence-before-send, result wording, request identity, and retry metadata. Run the signing-free simulator build and XCTest commands in `ios-app/AGENTS.md`; build/test commands remain under the human's authorized verification scope when the plan is implemented.
-- `pnpm mobile-contract-check` enforces that mobile contract docs are co-staged with anchored Swift/backend files; the quick-chat fixture doctest and XCTest validate the actual wire shapes.
-- The knowledge audit checks agent interpretation of the wrapper and response expectation.
-- Native `BoxLog` transitions cover eligibility refusal, restore/persist failure, request deadline, and server result, with box ID and bounded status metadata only. An intent may run before `LogForwarder` has a selected box; logs can forward after the app next becomes active. Never log input text or credentials.
-- Real Siri phrase matching, background launch, locked-device behavior, and Action Button assignment require a physical iPhone and remain manual checks.
+- XCTest holds the intent's parameter-to-dialog outcome mapping and the protected-box/no-persistence invariant. Extend the existing outbox and `BoxScreenStore` coverage; do not build a new test framework.
+- XCTest holds deterministic intent-result mapping; it cannot establish system registration, Siri recognition, or background process launch.
+- A physical-iPhone checklist is the acceptance test for phrase matching, Siri's follow-up prompt, Shortcut input delivery, Action Button/Spotlight invocation, and background behavior. Read unified logs live in Console.app by selecting the connected iPhone and filtering subsystem `app.beebox.ios`. The relevant existing events include intent refusal reasons, `external quick chat stored`, and `quick chat submitted state=…`. Reopening Bee Box flushes native logs to the paired box's `client-debug.log`; background invocation logs may not reach that file until the app becomes active.
+- The mobile contract stays unchanged. Run the iOS simulator build and selected BeeBox XCTest targets during implementation; do not describe those as Siri verification.
 
 ## Implementation order
 
-1. **Server contract and fixtures.** Add `external`/`source` to quick-chat input and persisted records, preserve both through retries/choices, build the new wrapper, and update contract fixtures/docs. Commit this as one server-contract checkpoint.
-2. **Reader and prompt support.** Update backend human-message recognition, history/backfill, retro/review classifiers, `injectUserAttr`, backend/frontend identity extraction, transcript/snippet stripping, frontend wrapper parsing, and prompt semantics. Preserve quick-chat's box-routing meaning alongside the new platform source. Add focused tests and the knowledge audit. Commit after the selected beebox tests pass.
-3. **iOS outbox and intent.** Introduce a quick-chat-specific origin enum without widening the composer bridge; add source to `QuickChatOutboxEntry` with backward-compatible decoding; split outbox restore from launch drain; move `BoxScreenStore` to app lifetime and inject the same instance in RootView and App Intents; extend `QuickChatAPI`; add the App Intent/App Shortcuts provider in the main app target; gate `requiresDeviceUnlock`; use a bounded request and honest spoken result. Add project membership, targeted submit result mapping, metadata-only runtime logs, and iOS tests. Commit after build and XCTest pass.
-4. **Contract and manual-test reconciliation.** Update `mobile-contract.md` §5.11 and its contract index, issue status and device test script, then run changed tests, typecheck/lint as required by hooks, the mobile-contract co-staging check, and the simulator build/test. Get cross-model plan review before declaring the plan ready; implementation requires its own review when carried out.
+1. Register `BeeBoxAppShortcuts` in `BeeBoxApp.init()` without changing either existing phrase. Correct the queued and protected-box dialog wording and cover the result/refusal mapping. Keep the supported text path and iOS 17 fallback intact.
+2. Correct `beebox/docs/box/siri-shortcuts.md` and update the bug issue with the phone checklist. The guide must state the protected-box refusal accurately.
+3. Build/install on a physical iPhone and complete the baseline checklist. Use Console.app to determine whether `perform()` reached any logged branch. If the known phrase produces no Bee Box log event, change only the phrase in a subsequent diagnostic build (candidate: “Capture a thought with Bee Box”) and repeat before trying another phrase. Do not change registration and phrasing together, and do not broaden into App Schemas or new surfaces during this diagnostic pass.
+4. Close the Siri issue only after the supported scenarios pass on a physical phone. Leave the umbrella quick-drop issue open for its remaining surfaces and inputs.
 
 ## Rollout shape
 
-This is additive and needs no migration of old outbox entries or quick-chat records. Missing origin continues to mean `typed`; missing source is valid only for legacy typed/voice records. Existing `<typed>` and `<speech>` transcript records remain valid. The new wrapper is emitted only after server validation and is understood by every updated reader. The new origin lives only in quick chat; the `NativeEmissionV2` bridge continues to accept `typed` and `voice`.
+Implementation is ready when selected iOS XCTest coverage passes, the signing-appropriate iOS build succeeds, the updated guide matches the behavior, and the boxholder can complete the physical phone checklist below. A simulator pass is necessary for Swift changes but is not acceptance for Siri, Shortcuts, Spotlight, Action Button, background launch, or lock-screen behavior.
 
-Done when: quick-chat fixtures prove backward compatibility and external source persistence; focused doctests prove every reader treats the wrapper as human input and strips it from display; `pnpm test:changed` passes in `beebox/`; iOS simulator build and XCTest pass; `pnpm mobile-contract-check` passes; the knowledge audit passes; cross-model review findings are adjudicated; and the issue has `needs: [manual-testing]` with steps to try Siri text capture, a Shortcut with supplied text, Action Button assignment if available, no paired box, locked-required box, offline queue, and later retry. The manual test must confirm the selected box receives the thought once, queue wording is accurate, locked-required boxes create no outbox entry, and unsupported inputs do not report success.
+### Physical iPhone exercise list
+
+Use a dedicated paired test box and an installed build containing the change. Connect the iPhone to the Mac and open Console.app. Select the iPhone, filter on subsystem `app.beebox.ios`, and note the existing event(s) for each run. Record the model, iOS version, whether Bee Box had been launched since install, exact phrase/surface, spoken result, and whether exactly one server-side thought appeared. The existing success events are `external quick chat stored` and `quick chat submitted state=…`; refusal branches log their reason. Do not expect the App Intent itself to write immediately to the box's log while the app has no active scene.
+
+1. **Siri follow-up capture:** Select the test box, terminate Bee Box, say the known phrase “Siri, save a thought in Bee Box.” When Siri asks for the thought, say “Ask Tomas about the school schedule.” Expected: Console.app shows a Bee Box capture event if the intent ran, Siri reports the actual result, and the thought appears exactly once in the selected box. If no event appears, do not call the transcript proof of invocation; change only the phrase in a later build and repeat this test.
+2. **Shortcut-supplied text:** Build/run a Shortcut that passes a fixed test string into Bee Box's Add a Thought action. Expected: no second text prompt, the same selected box receives exactly one thought, and the result reports the real server state.
+3. **Action Button:** On a phone with an Action Button, assign the Bee Box App Shortcut and invoke it. Expected: the same text parameter flow and result as the Siri action; no claim that Bee Box can tell the Action Button was the caller. Check Console.app and inspect the outbox before repeating after any system-side failure.
+4. **Spotlight:** Find and run Bee Box's Add a Thought App Shortcut from Spotlight. Expected: the same parameter and delivery behavior as the other App Shortcut surfaces.
+5. **Protected selected box:** Mark the selected test box as requiring device unlock while leaving the phone unlocked. Invoke the supported Siri phrase. Expected: a refusal that says this box is unavailable through capture and no outbox entry or server-side thought. The message must not imply that unlocking this same box enables Siri.
+6. **Offline capture:** Use the Shortcuts app to run the Bee Box action with supplied fixed text while Airplane Mode is on; do not depend on Siri's own network availability for this outbox check. Expected: the result says local save/delivery unconfirmed, not sent. Restore connectivity and open Bee Box; expected: one server-side thought appears after retry, with no duplicate. After any failed Siri run, inspect the outbox and server before dictating again under a new ID.
+7. **No text:** Invoke the App Shortcut and cancel or leave its required parameter unanswered. Expected: Siri prompts or refuses; no success result, outbox entry, or server thought. No-box and missing-credential branches are covered by tests; do not unpair the boxholder's phone to exercise them.
+
+Do not count an utterance that Siri interprets as a message recipient request as a supported capture. Record it as a phrase-matching failure, and check Console.app for existing Bee Box events before attributing it to `perform()`. Change only one phrase variable per installed build.
