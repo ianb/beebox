@@ -628,7 +628,7 @@ JSON.stringify({ status: closedResponse.status, retryAfter: closedResponse.heade
 // sign that swings once, the sentence, and a refresh after Retry-After.
 const page = await fetch(`${closedHub.base}/closed/chat`, { headers: { accept: "text/html,application/xhtml+xml" } });
 const html = await page.text();
-JSON.stringify({ status: page.status, type: page.headers.get("content-type"), refresh: html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1], headline: html.match(/<h1>([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1].replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+JSON.stringify({ status: page.status, type: page.headers.get("content-type"), refresh: html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1], headline: html.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="bbx-sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1].replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
 => {"status":503,"type":"text/html; charset=utf-8","refresh":"600","headline":["Closed","for migration"],"swings":true,"script":false,"detail":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits"}
 
 // A form post that accepts HTML gets the sentence as text: a self-reload would repeat it as a GET.
@@ -669,6 +669,6 @@ retry gets a still sign; message text is escaped.
 
 ```ts
 const quick = renderUnavailablePage({ status: 503, retryAfter: 3, body: { error: "box_unavailable", message: "Box <b> is not running" } });
-JSON.stringify({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1>([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") })
+JSON.stringify({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") })
 => {"refresh":"3","swings":false,"headline":"Not open","escaped":true}
 ```
