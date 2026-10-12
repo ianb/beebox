@@ -45,6 +45,26 @@ and `beebox/docs/plans/narration-mode.md`.
 
 Option 1 can ship first. Option 2 can come later if the keyword is a burden.
 
+## A command can set up what follows
+
+A command can come first and govern the dictation after it. Example: "This is
+going to be a set of slides. Do it." Then the person dictates the slide
+content. The keyword works the same way in both cases. The difference is
+for the agent:
+
+- **Scope.** The command applies to every later message in the dictation, not
+  just once. The agent keeps it until the person ends the dictation or gives
+  another command.
+- **Transform, not transcript.** The current narration rules say to record
+  content in the person's wording and not to paraphrase. A setup command such
+  as "make these slides" overrides that rule: the agent shapes the dictation
+  into the requested form (slides, a list, a letter). The rules must say that
+  a setup command wins over the verbatim default.
+
+Open: whether a separate "begin" phrase makes the setup clearer, or whether
+the agent can tell a setup command ("this is going to be…") from a one-time
+command ("add that to the recipe") without help.
+
 ## Open questions
 
 - The keyword phrase, and whether it sends a checkpoint or a full send.
