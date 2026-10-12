@@ -18,9 +18,9 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "finish-verify-"));
 execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
 
 /** A sheet that names one check, run as a shell script in the fixture repo. */
-const sheetFile = (script: string): string => {
+const sheetFile = (script: string, kind = "typecheck"): string => {
   const file = path.join(root, "sheet.json");
-  const command = { kind: "typecheck", command: "fixture check", cwd: ".", argv: ["sh", "-c", script] };
+  const command = { kind, command: "fixture check", cwd: ".", argv: ["sh", "-c", script] };
   fs.writeFileSync(file, JSON.stringify({ repoRoot: root, verification: [command] }));
   return file;
 };
@@ -150,6 +150,26 @@ const red = cli(
 print(red.stdout.split("\n").filter((line) => line.startsWith("     ")).map((line) => line.trim()).join("\n"));
 red.status
 => unchanged from main: site/docs/a.md — main may fail the same way, or this branch removed what it references
+1
+```
+
+## A red smoke walk shows each step's time
+
+The smoke walk has one 120-second budget. In October 2026 it ran out three
+times: twice after a cold start, once while another worktree's finish-verify
+used the shared dev router. The report gave only the total, so a reader could
+not tell load from a broken step. A red smoke now shows the walk's step lines,
+each with the step's own time and its usual time.
+
+```ts
+const smoke = cli(
+  "--sheet",
+  sheetFile("echo 'ok   the app loads (9.0s; usual 2.0s)'; echo 'FAIL a card opens (40.0s; usual 8.0s; walk 120.0s)'; exit 1", "smoke"),
+);
+print(smoke.stdout.split("\n").filter((line) => line.startsWith("     ")).map((line) => line.trim()).join("\n"));
+smoke.status
+=> ok   the app loads (9.0s; usual 2.0s)
+FAIL a card opens (40.0s; usual 8.0s; walk 120.0s)
 1
 ```
 

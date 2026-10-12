@@ -105,6 +105,8 @@ export interface CommandResult {
   unattributed: boolean;
   /** Files a red non-test check names that are byte-identical to main. */
   unchangedFromMain?: string[];
+  /** A red smoke walk's per-step lines, each with its time and usual time. */
+  smokeSteps?: string[];
 }
 
 /**
@@ -175,6 +177,7 @@ export function formatResult(result: CommandResult): string[] {
     );
   }
   if (result.unattributed) lines.push("     no failing file identified — treated as real");
+  for (const step of result.smokeSteps ?? []) lines.push(`     ${step}`);
   for (const file of result.unchangedFromMain ?? []) {
     lines.push(
       `     unchanged from main: ${file} — main may fail the same way, or this branch removed what it references`,
@@ -256,6 +259,10 @@ async function runCommand(input: {
     }
   } else if (command.kind === "tests") {
     unattributed = true;
+  } else if (command.kind === "smoke") {
+    // Which step ran out, and whether every step ran slow (load) or one did.
+    const smokeSteps = output.text.split("\n").filter((line) => /^(ok {3}|FAIL )/.test(line));
+    return { command, ok: false, seconds, outputPath, files, unattributed, smokeSteps };
   } else {
     const text = output.text.replaceAll(`${root}/`, "");
     const named = mentionedFiles(text, (path) => existsSync(join(root, path)));
