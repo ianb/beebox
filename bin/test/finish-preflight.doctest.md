@@ -122,7 +122,7 @@ same reason.
 git("checkout", "-q", "main");
 commit("notes/later.md", "# later\n");
 git("checkout", "-q", "worktree-docs");
-const head = git("rev-parse", "HEAD");
+const before = git("rev-parse", "HEAD");
 const cli = (arg: string) =>
   spawnSync(process.execPath, ["--import", import.meta.resolve("tsx"), path.join(repo, "bin/finish-preflight.ts"), arg], {
     cwd: root,
@@ -130,10 +130,10 @@ const cli = (arg: string) =>
   });
 const help = cli("--help");
 const unknown = cli("--jsno");
-[help.status, help.stdout.split("\n")[0], unknown.status, git("rev-parse", "HEAD") === head]
-=> [0, "usage: bin/finish-preflight [--json] [--no-merge]", 2, true]
+[help.status, help.stdout.split("\n")[0], unknown.status, git("rev-list", "--count", `${before}..HEAD`)]
+=> [0, "usage: bin/finish-preflight [--json] [--no-merge]", 2, "0"]
 ```
 
-```ts cleanup
+```ts teardown
 fs.rmSync(root, { recursive: true, force: true });
 ```

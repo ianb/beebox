@@ -81,22 +81,20 @@ const child = spawn(
   { cwd: root, stdio: "ignore" },
 );
 const exited = new Promise<number | null>((resolve) => child.on("exit", (code) => resolve(code)));
-const deadline = Date.now() + 20_000;
-while (!fs.existsSync(pidFile) || fs.readFileSync(pidFile, "utf8").trim() === "") {
-  assert.ok(Date.now() < deadline, "the check never started");
-  await new Promise((resolve) => setTimeout(resolve, 50));
-}
-const grandchild = Number(fs.readFileSync(pidFile, "utf8"));
+const grandchild = await eventually(
+  () => fs.existsSync(pidFile) && Number(fs.readFileSync(pidFile, "utf8")) > 0 && Number(fs.readFileSync(pidFile, "utf8")),
+  { label: "the check started its background sleep", timeoutMs: 20_000 },
+);
 child.kill("SIGTERM");
 const code = await exited;
-await new Promise((resolve) => setTimeout(resolve, 200));
+await eventually(() => !alive(grandchild), { label: "the background sleep exited", timeoutMs: 5_000 });
 ```
 
 Exit 143 is 128 + SIGTERM's 15, the shell convention for death by signal.
 
 ``` continue
-[code, alive(grandchild)]
-=> [143, false]
+code
+=> 143
 ```
 
 ## A concurrent run is named
@@ -124,6 +122,37 @@ A finished run removes its own registration, so only the planted one remains.
 assert.deepEqual(fs.readdirSync(runs), [`${process.pid}.json`]);
 ```
 
-```ts cleanup
+## A failure in a file identical to main says so
+
+A site doc that links to a card page broke on main when the card type moved
+into a plugin. The next workstream's finish then failed its site build on
+that doc, which it had never touched, and nothing in the report said so. Now
+a red check that names a file with no difference from main gets a note.
+
+Here `site/docs/a.md` is committed on main unchanged, and `site/docs/b.md` is
+a branch edit. The check fails naming both; only `a.md` gets the note.
+
+```ts
+const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
+git("config", "user.email", "test@example.com");
+git("config", "user.name", "Test");
+fs.mkdirSync(path.join(root, "site/docs"), { recursive: true });
+fs.writeFileSync(path.join(root, "site/docs/a.md"), "[x](reference/cards/gone.md)\n");
+fs.writeFileSync(path.join(root, "site/docs/b.md"), "first\n");
+git("add", "site");
+git("commit", "-qm", "docs");
+git("checkout", "-qb", "worktree-demo");
+fs.writeFileSync(path.join(root, "site/docs/b.md"), "edited\n");
+const red = cli(
+  "--sheet",
+  sheetFile(`echo 'site/docs/a.md links to "reference/cards/gone.md"'; echo "${root}/site/docs/b.md: also"; exit 1`),
+);
+print(red.stdout.split("\n").filter((line) => line.startsWith("     ")).map((line) => line.trim()).join("\n"));
+red.status
+=> unchanged from main: site/docs/a.md — main may fail the same way, or this branch removed what it references
+1
+```
+
+```ts teardown
 fs.rmSync(root, { recursive: true, force: true });
 ```

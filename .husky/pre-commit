@@ -101,6 +101,11 @@ fi
 # Any commit touching markdown runs the fast doc reference/orphan check.
 if echo "$staged" | grep -q '\.md$'; then
   run_in beebox pnpm doc-check
+# An engine change with no doc staged can still break site/docs/ links: moving
+# a card type into a plugin deletes its generated reference page. Deletions
+# count, so this reads its own staged list.
+elif git -C "$REPO_DIR" diff --cached --name-only -- beebox/src | grep -q .; then
+  run_in beebox pnpm --silent doc-check --site-reference
 fi
 
 # Source file layout (beebox/docs/plans/file-layout.md): every package root

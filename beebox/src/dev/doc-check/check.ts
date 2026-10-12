@@ -22,11 +22,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { engineDocEntries } from "../../core/docs-gen/package-docs/core.js";
 import { buildGraphExtended, ROOT } from "../doc-graph-data/data.js";
 import { duplicateBasenames, buildBasenameLookup, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./link-repair.js";
 import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link.js";
 import { frontmatterProblems } from "./frontmatter.js";
 import { describeFilePathProblem, findFilePathProblems, repairFilePaths, type FilePathProblem } from "./file-paths.js";
+import { findSiteReferenceLinkProblems, referencePublishPath, SITE_DOCS_PREFIX } from "./site-reference-links.js";
 
 const MONO_ROOT = path.dirname(ROOT);
 
@@ -91,7 +93,7 @@ function markdownFilesIncludingDoctests(): string[] {
 // PUBLISHED tree (`concepts/glossary.md`), not the repo, and the site build
 // validates them. Scanning them here reports phantom breaks, and `--fix` once
 // rewrote them into repo paths (2026-09-12).
-const AGENT_DOCS_PREFIX = "site/docs/";
+const AGENT_DOCS_PREFIX = SITE_DOCS_PREFIX;
 
 function markdownFiles(): string[] {
   return markdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md") && !p.startsWith(AGENT_DOCS_PREFIX));
@@ -269,17 +271,35 @@ function schemaProblems(tracked: string[]): string[] {
   }));
 }
 
+// The one kind of site/docs/ link checked here: into the generated reference
+// pages (see site-reference-links.ts).
+function siteReferenceProblems(): string[] {
+  const sitePath = (rel: string): string => rel.slice(SITE_DOCS_PREFIX.length);
+  const siteDocs = markdownFilesIncludingDoctests().filter((p) => p.startsWith(SITE_DOCS_PREFIX));
+  const referencePaths = new Set([
+    ...engineDocEntries().map((e) => referencePublishPath(e.doc.filename)),
+    ...siteDocs.map(sitePath).filter((p) => p.startsWith("reference/")),
+  ]);
+  return siteDocs.flatMap((rel) =>
+    findSiteReferenceLinkProblems({ rel, content: fs.readFileSync(path.join(MONO_ROOT, rel), "utf8"), referencePaths }).map(
+      (p) => `broken site link: ${rel}:${p.line} -> ${p.href} (no generated page ${p.resolved}; did its card type move to a plugin?)`,
+    ),
+  );
+}
+
+function reportAndExit(problems: string[]): void {
+  if (problems.length === 0) return;
+  console.error("doc-check failed:");
+  for (const p of problems) console.error(`  ${p}`);
+  console.error("After fixing, regenerate the index: pnpm doc-graph. Conventions: docs/README.md.");
+  process.exit(1);
+}
+
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
   const all = markdownFiles();
-  const problems = [...claudeMdProblems(), ...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all)];
-
-  if (problems.length > 0) {
-    console.error("doc-check failed:");
-    for (const p of problems) console.error(`  ${p}`);
-    console.error("After fixing, regenerate the index: pnpm doc-graph. Conventions: docs/README.md.");
-    process.exit(1);
-  }
+  const problems = [...claudeMdProblems(), ...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all), ...siteReferenceProblems()];
+  reportAndExit(problems);
 }
 
 // --fix half of the backticked-path check: rewrite issues that moved to
@@ -391,5 +411,8 @@ function runFix(): void {
   if (claudeProblems.length > 0 || issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0 || missingPaths.length > 0) process.exit(1);
 }
 
+// `--site-reference` runs that check alone: pre-commit runs it for an engine
+// source change, which can delete a generated page without touching any doc.
 if (process.argv.includes("--fix")) runFix();
+else if (process.argv.includes("--site-reference")) reportAndExit(siteReferenceProblems());
 else runDefaultCheck();

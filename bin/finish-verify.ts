@@ -103,6 +103,8 @@ export interface CommandResult {
   files: FileOutcome[];
   /** A red command whose failing files could not be identified. */
   unattributed: boolean;
+  /** Files a red non-test check names that are byte-identical to main. */
+  unchangedFromMain?: string[];
 }
 
 /**
@@ -135,6 +137,32 @@ export function parseFailingFiles(output: string, exists: (path: string) => bool
   return [...files];
 }
 
+/**
+ * Repo files a check's output names, such as `site/docs/a.md` in a site
+ * build's broken-link error or `beebox/src/x.ts:12:3` in a typecheck error.
+ * A candidate counts only when it exists.
+ */
+export function mentionedFiles(output: string, exists: (path: string) => boolean): string[] {
+  const files = new Set<string>();
+  for (const match of output.matchAll(/(?:^|[\s"'(`])((?:[\w.@-]+\/)+[\w.-]+\.[a-z]{1,5})\b/gm)) {
+    const candidate = match[1];
+    if (candidate !== undefined && exists(candidate)) files.add(candidate);
+  }
+  return [...files];
+}
+
+/**
+ * The named files with no difference from main, committed or not. A red check
+ * in such a file was not caused by an edit to it: main may already fail the
+ * same way, or this branch removed something it references. Both cases need a
+ * different fix from an ordinary red, so the report says which files they are.
+ */
+function unchangedFromMain(root: string, files: string[]): string[] {
+  return files.filter(
+    (file) => spawnSync("git", ["diff", "--quiet", "main", "--", file], { cwd: root }).status === 0,
+  );
+}
+
 export function formatResult(result: CommandResult): string[] {
   const seconds = result.seconds.toFixed(1);
   if (result.ok) return [`ok   ${result.command.command} (${seconds}s)`];
@@ -147,6 +175,11 @@ export function formatResult(result: CommandResult): string[] {
     );
   }
   if (result.unattributed) lines.push("     no failing file identified — treated as real");
+  for (const file of result.unchangedFromMain ?? []) {
+    lines.push(
+      `     unchanged from main: ${file} — main may fail the same way, or this branch removed what it references`,
+    );
+  }
   return lines;
 }
 
@@ -223,6 +256,13 @@ async function runCommand(input: {
     }
   } else if (command.kind === "tests") {
     unattributed = true;
+  } else {
+    const text = output.text.replaceAll(`${root}/`, "");
+    const named = mentionedFiles(text, (path) => existsSync(join(root, path)));
+    const unchanged = unchangedFromMain(root, named);
+    if (unchanged.length > 0) {
+      return { command, ok: false, seconds, outputPath, files, unattributed, unchangedFromMain: unchanged };
+    }
   }
   return { command, ok: false, seconds, outputPath, files, unattributed };
 }
