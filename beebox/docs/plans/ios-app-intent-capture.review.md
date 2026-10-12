@@ -1,5 +1,7 @@
 # Plan Engineering Review — iOS text capture with Siri and Shortcuts
 
+> This review covered the bounded text-intent repair before the subsequent product discussion. The [latest product-shape review](ios-app-intent-capture.product-shape.review.md) identifies additional requirements and supersedes any implication that the current plan is ready for implementation.
+
 Independent review: Claude Fable, plan review rounds 1–2, 2026-10-12. Round 1 raised eight findings. The plan was revised and round 2 verified all eight; it found no new material contradiction. This review covers the plan only. It does not authorize implementation or substitute for the physical-iPhone checks.
 
 ## What already exists
