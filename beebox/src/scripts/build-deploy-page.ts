@@ -10,6 +10,7 @@
 import { build } from "esbuild";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { CLOSED_SIGN_CSS, closedSignHtml } from "../lib/closed-sign.ts";
 
 export const PLACEHOLDERS = {
   startedMs: "__BBX_STARTED_MS__",
@@ -58,12 +59,14 @@ export async function renderDeployPageTemplate(): Promise<string> {
 body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
   font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
 main { max-width: 32rem; padding: 2rem 1rem; }
+.bbx-sign { margin-bottom: 1.5rem; }${CLOSED_SIGN_CSS}
 h1 { font-size: 1.4rem; margin: 0 0 0.5rem; }
 p { margin: 0; color: var(--muted); }
 </style>
 </head>
 <body>
 <main>
+${closedSignHtml({ headline: "Closed", subline: "for an update", swing: true, title: "strong" })}
 <h1 id="bbx-headline">This site is updating</h1>
 <p id="bbx-detail">The update started at ${PLACEHOLDERS.startedUtc}. This page reloads every 30 seconds.</p>
 </main>
