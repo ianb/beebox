@@ -62,6 +62,7 @@ let closeListener = () => {};
 const delayed = {
   getSessionId: () => "delayed-session",
   isRunning: () => true,
+  whenStarted: () => Promise.resolve(),
   once: (_event: "close", listener: () => void) => { closeListener = listener; },
   stop: () => {},
 };
@@ -82,6 +83,44 @@ A stuck close is bounded and names the session the child had to leave behind:
 ```ts continue
 JSON.stringify(await stopChatSessionsAndWait([delayed], { timeoutMs: 5, periodMs: 1 }))
 => ["delayed-session"]
+```
+
+A session still starting is not running yet, but its start (the bootstrap docs
+commit, then the backend spawn) would finish after the box was torn down.
+Shutdown waits for the start, then stops the run it opened:
+
+```ts
+let finishStart = () => {};
+let running = false;
+let stopped = false;
+let onClose = () => {};
+const starting = {
+  getSessionId: () => "starting-session",
+  isRunning: () => running,
+  whenStarted: () => new Promise<void>((resolve) => { finishStart = () => { running = true; resolve(); }; }),
+  once: (_event: "close", listener: () => void) => { onClose = listener; },
+  stop: () => { stopped = true; onClose(); },
+};
+const startingShutdown = stopChatSessionsAndWait([starting], { timeoutMs: 1_000, periodMs: 1 });
+await new Promise((resolve) => setImmediate(resolve));
+// Not stopped yet: it has no run to stop until its start finishes.
+stopped
+=> false
+
+finishStart();
+await startingShutdown
+=> []
+
+stopped
+=> true
+```
+
+A start that never finishes is bounded by the same time limit and named:
+
+```ts continue
+const stuck = { ...starting, getSessionId: () => "stuck-session", whenStarted: () => new Promise<void>(() => {}) };
+await stopChatSessionsAndWait([stuck], { timeoutMs: 5, periodMs: 1 })
+=> ["stuck-session"]
 ```
 
 ## LRU eviction under the live cap
