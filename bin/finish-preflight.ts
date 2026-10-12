@@ -21,8 +21,8 @@ import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
 import { changedPaths, git } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
+import { mergeMain, type MergeResult } from "./finish-preflight-merge.js";
 import {
-  MergeConflictError,
   NotAWorktreeBranchError,
   PreflightError,
   PrivateMountUnhealthyError,
@@ -47,7 +47,7 @@ export interface Sheet {
   repoRoot: string;
   privateLeg: { active: boolean; state: string; repo: string | null };
   stragglers: string[];
-  merge: { status: "up-to-date" | "merged"; broughtPaths: string[] };
+  merge: MergeResult;
   changed: { all: string[]; byGroup: Record<string, string[]>; unknownGroups: string[] };
   docsOnly: boolean;
   codeChanged: boolean;
@@ -105,25 +105,6 @@ function privateLeg(root: string): Sheet["privateLeg"] {
   if (state === "valid") return { active: true, state, repo };
   // relink / invalid / anything else is a human decision, not an opt-out.
   throw new PrivateMountUnhealthyError(state);
-}
-
-function mergeMain(root: string): Sheet["merge"] {
-  const before = git(["rev-parse", "HEAD"], root);
-  const result = spawnSync("git", ["merge", "main"], { cwd: root, encoding: "utf-8" });
-  if (result.status !== 0) {
-    const conflicted = git(["diff", "--name-only", "--diff-filter=U"], root);
-    throw new MergeConflictError({
-      conflicted,
-      stdout: result.stdout,
-      stderr: result.stderr,
-    });
-  }
-  const after = git(["rev-parse", "HEAD"], root);
-  if (before === after) return { status: "up-to-date", broughtPaths: [] };
-  const brought = git(["diff", "--name-only", `${before}..HEAD`], root)
-    .split("\n")
-    .filter((p) => p !== "");
-  return { status: "merged", broughtPaths: brought };
 }
 
 /**
@@ -220,7 +201,9 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const mergeSkipped =
     !input.merge &&
     spawnSync("git", ["merge-base", "--is-ancestor", "main", "HEAD"], { cwd: root }).status !== 0;
-  const merge = input.merge ? mergeMain(root) : { status: "up-to-date" as const, broughtPaths: [] };
+  const merge: MergeResult = input.merge
+    ? mergeMain(root)
+    : { status: "up-to-date", broughtPaths: [], resolved: [] };
 
   const changed = changedPaths({ base: "main", cwd: root });
   const packages = new Set(packageOwnerDirs(root));
@@ -278,6 +261,9 @@ export function formatSheet(sheet: Sheet): string {
   lines.push(
     `merge main: ${sheet.merge.status}${sheet.merge.broughtPaths.length > 0 ? ` (+${sheet.merge.broughtPaths.length} paths)` : ""}`,
   );
+  if (sheet.merge.resolved.length > 0) {
+    list("  conflicts resolved by rule (check them in the diff review)", sheet.merge.resolved);
+  }
   lines.push(`changed (${sheet.changed.all.length} paths):`);
   for (const [group, paths] of Object.entries(sheet.changed.byGroup)) {
     lines.push(`  ${group}: ${paths.length}`);
