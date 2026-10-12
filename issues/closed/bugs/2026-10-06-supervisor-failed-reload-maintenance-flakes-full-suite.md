@@ -33,7 +33,7 @@ own after a failed reload, decide whether that is intended: work admitted
 into a box whose reload failed is a product question, not only a test one.
 
 Closed predecessor with a different mechanism:
-[supervisor and git-lock flakes](../closed/bugs/2026-08-18-supervisor-and-git-lock-doctests-flake-full-suite.md).
+[supervisor and git-lock flakes](2026-08-18-supervisor-and-git-lock-doctests-flake-full-suite.md).
 
 ## Re-encounter (2026-10-07)
 
