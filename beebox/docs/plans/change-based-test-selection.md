@@ -2,7 +2,8 @@
 title: "Test failure ledger, and change-based selection on the iteration loop"
 status: partial
 workstream: test-economics
-issues: []
+issues:
+  - ../../../issues/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md
 ---
 # Test failure ledger, and change-based selection on the iteration loop
 
@@ -786,6 +787,180 @@ escapes the posture accepts actually happen.
 5. **E** — `bin/finish-preflight` + `bin/finish-verify`, then the agent-file
    rewrite around them and the guidance change, last, because it is the
    point where agent behavior changes.
+
+---
+
+## Revision 2026-10-12 — broad selections
+
+Six sessions between 2026-10-07 and 2026-10-10 selected 499–621 files with
+`pnpm test:changed`, and the runs took 10–13 minutes. That is longer than the
+agent shell's 10-minute foreground limit. Agents moved the run to the
+background or split it by hand.
+Issue: `issues/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md`.
+The issue proposed a text-only change filter. This revision measures the
+problem, rejects the filter, and adds a smaller change.
+
+### What the ledger showed
+
+The ledger does not record wall time. The estimate is the sum of the run's
+per-file `durations` divided by `.taprc`'s `jobs: 6`. It agrees with the times
+that sessions reported to within 4%: agents-md 753 s against 771 s reported;
+schedule-run-summaries 616 s against ~640 s; theme-polish 12.2 min against
+12.5 min.
+
+"Load" below is the run's per-file time divided by the same file's median over
+full-suite schedule runs since 2026-10-01 with `concurrency: 0`.
+
+| Session | Files | Wall | Load | Edit that made the selection broad |
+| --- | ---: | ---: | ---: | --- |
+| schedule-run-summaries | 524 | 616 s | 1.07 | text only, `src/schemas/scheduled-script/instructions.ts` (517 importers) |
+| journey-walks-oct | 525–531 | 551–663 s | 0.95–1.15 | code, `src/schemas/landmark.ts`, `src/core/migrations.ts` |
+| theme-polish | 545 | 730 s | 1.26 | code, `src/shared/card-theme/core.ts` |
+| user-facing-language | 499 | 1036 s | 1.82 | text in `src/schemas/briefing.tsx`; code in `src/core/sdk-hooks.ts` |
+| agents-md | 621 | 753 s | 1.23 | code, a rename across 17 widely imported files |
+| hq-always | 544–545 | 921 s, then 388 s | 1.58, then 0.66 | code, a feature removal |
+
+- **The number of files is the main cause.** About 500 files take about
+  9.5 minutes at typical load. Load added 0–80%, and that took some runs past
+  10 minutes. The fastest runs (load 0.6–0.7) suggest that 500 files take
+  about 6.5 minutes on a quiet machine.
+- **`capJobs` did not apply.** It returns early for selected runs
+  (`bin/test-tiers.ts:279`: *"if (mode !== "full") return args;"*). Every run
+  above was `mode: "selected"`.
+- **The suite has doubled.** The 2026-08-09 baseline of 143.9 s was 484
+  files. The graph now has 1,016 entrypoints. The sum of per-file medians is
+  4,654 s, which is about 13 minutes at 6 jobs.
+- **190 source files have 300 or more test importers.** Examples:
+  `src/core/box/package.ts` (467), `test/helpers/doctest-helpers.ts` (393),
+  and most of `src/schemas/` and `src/shared/`. A change to any of them
+  selects about half of the suite.
+
+### The text-only filter, rejected
+
+The rule considered: a file whose token stream is unchanged when string and
+JSX text contents are masked does not select its importers.
+
+- **It rarely helps.** There were 301 landings from 2026-09-15 to 2026-10-12.
+  On the current graph, 69 of them select 300 or more files. The filter cuts
+  more than 30% from 7 of those 69. On those 7, about 520 files become about
+  200, which is still several minutes. Four of the six sessions in the issue
+  changed code, so the filter would not change them.
+- **It drops tests that fail on text edits.** In user-facing-language, a
+  text-only edit to `briefing.tsx` failed
+  `test/core/template-stock-hashes.doctest.md` (the template's stock hash
+  changed) and `test/scripts/migrate/briefing-openers.doctest.md`. Both import
+  the changed file directly, so a "keep direct importers" exception would keep
+  them. `test/core/agent-guide/lint.doctest.md` failed on four branches whose
+  landing diffs had text-only edits. It reads text through generated docs, so
+  no import-depth rule finds it. The exception would become a hand-maintained
+  list of tests that read text. Track 3 avoided that kind of list.
+- **Nothing later in the process runs the skipped tests soon.** `/finish`
+  runs `test:changed` (`bin/finish-preflight-lib.ts:190`: *"return pkg ===
+  "beebox" && !selectorFailed ? "test:changed" : "test";"*). Only the hourly
+  full run on `main` would catch a failure that the filter skipped. Since
+  2026-10-09, almost every hourly run has been red: 15 of 68 runs since
+  2026-10-05 failed `test/hub/supervisor.doctest.md`, and 12 failed
+  `test/scripts/release.manifest.doctest.md`. A new failure there would be
+  hard to see among the old ones.
+
+### Mechanism — the estimate line
+
+`bin/test-select.ts` prints one line before it lists or runs a non-empty
+selection:
+
+```
+test-select: 524 files, about 9 min at 6 jobs
+```
+
+When the estimate is 5 minutes or more, a second line follows:
+
+```
+test-select: likely to pass a 10-minute foreground limit under load; run it in the background
+```
+
+- **Per-file time.** This is the median `durations` entry for the file over
+  measured runs (`isMeasuredRun`: completed, not a marker) from the last
+  30 days. Zero entries are skipped: `parseTapFiles` records 0 when tap
+  prints no `time=` (`bin/test-ledger-lib.ts:133`: *"ms: time === undefined ? 0 : …"*). Runs of both modes count,
+  because the selected runs above have the same load as the full ones. A
+  file with no history gets the median of all the per-file medians. When
+  under half the selected files have history, there is no estimate. The join
+  is on package-relative paths (`test/…`), which is the form of both the
+  ledger's `durations` keys and the `files` array `test-select` hands to tap.
+- **Estimate.** The sum of per-file times divided by the jobs count, and
+  never less than the slowest file's time. The jobs count is `.taprc`'s
+  `jobs:` (6 today), read by a new `taprcJobs` beside `taprcPatterns`; when
+  `.taprc` sets none, it is `availableParallelism()`, which is tap's own
+  default. Replayed over the 148 selected runs of 100 or more files since
+  2026-10-01, each estimated from the records before it, the actual time was
+  1.06× the estimate at the median, 0.83× at p10, 1.73× at p90, and 2.92× at
+  worst.
+- **Threshold.** 5 minutes. At the replay's p90 of 1.73×, a 5-minute
+  estimate is about 8.7 minutes, under the 10-minute limit.
+- **Reading the ledger.** The whole ledger is read with `readRecords`. With
+  2,344 records (44 MB) this takes about 170 ms. It is read only when the
+  selection is not empty, so the empty-selection path keeps its 0.85 s.
+- **Failure.** The ledger gates nothing. If it cannot be read, or has no
+  history, the line says `N files` without an estimate, and the run continues.
+- **Where it prints.** On stderr in the list form (`test-select` without
+  `--run`), so stdout stays one path per line. On stdout in the `--run` form,
+  before tap starts. An agent that runs the command in the background sees the
+  line first. `finish-verify` captures it to its output file.
+
+The line does not stop or change the run. Once a foreground run has started,
+it cannot tell the agent anything in time. The guidance below is what changes
+behavior, and the line gives the agent the number at the start.
+
+### Guidance
+
+`beebox/AGENTS.md:17` and `docs/testing.md` ("Iteration runs the selected
+tests") get one rule: a change to a widely imported module can select half
+the suite and run for 10 minutes or more; `test:changed` prints the file
+count and estimate first, and the list form prints them in about a second;
+run it in the background when the estimate says so. The doctest skill is
+not changed: two places to keep in step are enough.
+
+### Progress output from `finish-verify` — handed off
+
+`finish-verify` runs each command with `spawnSync` and writes the output file
+after the command exits (`bin/finish-verify.ts:141`, `:182`). During a
+12-minute run, it shows nothing. The `finish-tooling` workstream is editing
+that file now, so this revision does not change it. The request is filed as
+`issues/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md`
+with `workstream: finish-tooling`.
+
+### Could this be simpler?
+
+The simplest version is the guidance sentence alone. The estimate line adds
+the number that tells an agent which case it is in. Without it, an agent
+must guess, or run every `test:changed` in the background. That rule would
+also make runs of 12 files slower to read. The line is about 90 lines of code
+(`bin/test-estimate.ts`, `taprcJobs`, the call in `test-select.ts`) plus
+tests.
+
+### NOT in scope
+
+- **The text-only filter.** Rejected above with its numbers.
+- **Reducing breadth.** The 190 widely imported files and the per-file cost
+  (4.6 s mean now, against about 0.9 s floor in 2026-08) are the causes
+  underneath. They belong to
+  `issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md`, which
+  this revision updates with the current numbers.
+- **The red hourly run.** `supervisor.doctest.md` and
+  `release.manifest.doctest.md` are their own failures, not this plan's.
+- **Changing `jobs`, `capJobs`, or the foreground limit.**
+
+### Failure modes
+
+| What can fail | Handling | Clear or silent? |
+| --- | --- | --- |
+| The ledger is missing, or under half the selected files have history in 30 days | `estimateSeconds` returns null; the line gives `N files` alone | Clear: no estimate is shown |
+| The ledger cannot be read | The error is caught; a `test-select: no estimate (…)` warning, then `N files` alone | Clear |
+| Some ledger lines are malformed | `readRecords` warns on a line that is not JSON and skips it (`bin/test-ledger-store.ts:52-70`); the estimator skips a record whose `durations` is not an object | A warning for bad JSON; a few fewer samples otherwise |
+| The estimate is low because the machine is loaded | The threshold assumes load up to 1.8 | Silent when load is higher; the agent finds out from the time limit, as now |
+| A new test file has no history | It gets the median of all per-file medians | Silent, and small: one file |
+| One slow file dominates a small selection | The estimate is at least the slowest file's time | Clear |
+| The list form's stdout is parsed by a caller | The estimate goes to stderr in that form | Clear |
 
 ---
 
