@@ -363,7 +363,7 @@ export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; r
   if (codeMerge !== undefined) {
     return {
       value: false,
-      reason: `merge ${codeMerge.sha.slice(0, 9)} brought code in, and a clean merge runs no pre-commit`,
+      reason: `merge ${codeMerge.sha.slice(0, 9)} brought code in; no hook typechecked the merged tree`,
     };
   }
   if (input.merges.length === 0) {

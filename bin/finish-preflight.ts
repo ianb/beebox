@@ -62,8 +62,8 @@ export interface Sheet {
 }
 
 const SKIP_RULE =
-  "pre-commit runs typecheck+lint on every worktree commit, so a finish needs them again " +
-  "only when code arrived that pre-commit never saw (any merge on the branch, or a straggler). " +
+  "pre-commit typechecks and lints what each worktree commit stages, so a finish needs them again " +
+  "only when code arrived outside those commits (any merge on the branch, or a straggler). " +
   "`--no-verify` leaves no git evidence and is not detectable.";
 
 function repoRoot(): string {
