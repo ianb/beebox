@@ -8,7 +8,12 @@
 # Run this tier with `pnpm test:careful`. A path listed here that does not
 # exist fails the run rather than silently shrinking the tier.
 
-# 29 failures / 365 runs, 10 derived flakes — the suite's worst file.
+# Real-process end-to-end tests stay here by decision (2026-10-12). A file
+# belongs here only when making it deterministic would mock away the thing it
+# exists to test. Any other timing-sensitive file is a flake to fix, not to add.
+#
+# The field-test files run the real `bbx init` and `bbx serve`. They pass alone
+# and at 4 parallel copies but time out at 10, on tap's 300 s file limit and
+# the hub's 30 s readiness wait. No failures since 2026-09-11.
 test/field-test/run.doctest.md
-# 14 / 363, 4 flakes: same field-test harness, same real-clock waits.
 test/field-test/run.lifecycle.doctest.md
