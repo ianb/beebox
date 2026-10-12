@@ -104,10 +104,7 @@ function observeResize(opts: { refs: MutableRefObject<ScrollObservers>; key: key
 function applyReconcileAction(action: ReconcileAction, opts: {
   el: HTMLDivElement;
   anchorDelta: number;
-  /** Where the anchor's movement is measured from. Across a box resize, the
-   *  last settled position: the browser may already have clamped the live one.
-   *  Otherwise the live position, so a user scroll whose event has not arrived
-   *  yet is not undone. */
+  /** Where the anchor's movement is measured from (`anchorBase`). */
   fromTop: number;
   prevFromBottom: number;
   prependGapRef: MutableRefObject<number | null>;
@@ -263,14 +260,25 @@ function useMirroredFlag(initial: boolean): { ref: MutableRefObject<boolean>; va
 
 /** The geometry as of the last measure. A box resize keeps it until reconcile:
  *  the browser's clamp can dispatch scroll before ResizeObserver. */
-interface Settled { scrollTop: number; scrollHeight: number; clientWidth: number; clientHeight: number; fromBottom: number }
+interface Settled { scrollTop: number; scrollHeight: number; offsetWidth: number; clientHeight: number; fromBottom: number }
 
 function settled(el: HTMLDivElement, fromBottom: number): Settled {
-  return { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientWidth: el.clientWidth, clientHeight: el.clientHeight, fromBottom };
+  return { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, offsetWidth: el.offsetWidth, clientHeight: el.clientHeight, fromBottom };
 }
 
+/** The scroller box resized. Width is the border box: a classic scrollbar
+ *  appearing as content first overflows narrows clientWidth, but that is
+ *  content growth, not a pane opening, and must not hold the bottom. */
 function boxChanged(el: HTMLDivElement, prev: Settled): boolean {
-  return el.clientWidth !== prev.clientWidth || el.clientHeight !== prev.clientHeight;
+  return el.offsetWidth !== prev.offsetWidth || el.clientHeight !== prev.clientHeight;
+}
+
+/** Where an anchor write starts. After a box resize clamped scrollTop to the
+ *  new maximum, the settled position; otherwise the live one, so a user
+ *  scroll whose event has not arrived yet is not undone. */
+function anchorBase(el: HTMLDivElement, prev: Settled): number {
+  const clamped = el.scrollTop >= el.scrollHeight - el.clientHeight - 1;
+  return boxChanged(el, prev) && clamped ? prev.scrollTop : el.scrollTop;
 }
 
 function anchorChange({ anchor, el, prepend }: { anchor: Anchor | null; el: HTMLDivElement; prepend: boolean }): { live: number | null; anchorDelta: number } {
@@ -298,7 +306,7 @@ export function useChatScroll(): ChatScroll {
   const { ref: atBottomRef, value: atBottom, set: setAtBottomFlag } = useMirroredFlag(true);
   const { value: hasUnseenContent, set: setUnseen } = useMirroredFlag(false);
 
-  const prevRef = useRef<Settled>({ scrollTop: 0, scrollHeight: 0, clientWidth: 0, clientHeight: 0, fromBottom: 0 });
+  const prevRef = useRef<Settled>({ scrollTop: 0, scrollHeight: 0, offsetWidth: 0, clientHeight: 0, fromBottom: 0 });
   const prevScrollTopRef = useRef(0);
   const prependGapRef = useRef<number | null>(null);
   const prependTimerRef = useRef<number | null>(null);
@@ -427,8 +435,7 @@ export function useChatScroll(): ChatScroll {
     // The send ease is an explicit navigation operation, with its own target
     // measured each frame. Resize callbacks may measure but cannot supersede it.
     if (!anchorEaseCancelRef.current) {
-      const fromTop = boxResized ? prev.scrollTop : el.scrollTop;
-      applyReconcileAction(action, { el, anchorDelta, fromTop, prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen });
+      applyReconcileAction(action, { el, anchorDelta, fromTop: anchorBase(el, prev), prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen });
       if (anchor && live !== null) anchor.top = live;
       else anchorRef.current = anchorChild(el, contentElRef.current);
     } else if (prepend) {

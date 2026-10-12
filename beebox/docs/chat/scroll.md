@@ -68,8 +68,11 @@ changes only the scroller's width and rewraps every message. Closing a card
 while at the bottom left the reader 2304 px above it: the browser clamped
 `scrollTop` to the shorter content, then the content observer fired first and,
 seeing no height change, applied the anchor delta to the clamped position. A
-width change is now a box resize, and a box-resize anchor write starts from
-the last settled `scrollTop`. The scroller element is not replaced. The
+change in the scroller's border-box width is now a box resize, and a
+box-resize anchor write starts from the last settled `scrollTop` when the
+browser clamped the live one. Border-box width, because a classic scrollbar
+appearing narrows `clientWidth` when content first overflows; that is growth,
+not a resize, and must not hold the bottom. The scroller element is not replaced. The
 `pane-*` harness scenarios cover open and close, at the bottom and mid-log.
 In the real app, measure with a card open (`Here` menu → a card) on a
 transcript long enough to scroll.
