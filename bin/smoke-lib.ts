@@ -217,6 +217,23 @@ export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
   };
 }
 
+/** Runs a step needs before its median is a usual time worth printing. */
+const USUAL_MIN_RUNS = 5;
+
+/**
+ * One step's time for the walk's output, next to its usual time from the log.
+ *
+ * The walk has one wall-clock budget. When it runs out, the reader has to
+ * tell load from a regression. A cold start or another worktree's finish on
+ * the shared dev router makes every step slower than usual. A broken step is
+ * slow, or fails, alone (issues/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md).
+ */
+export function formatStepTime(ms: number, usual: StepStats | undefined): string {
+  const own = `${(ms / 1000).toFixed(1)}s`;
+  if (usual === undefined || usual.ran < USUAL_MIN_RUNS) return own;
+  return `${own}; usual ${usual.medianSeconds.toFixed(1)}s`;
+}
+
 /**
  * How many runs a step must have survived before "it never fails" is evidence
  * rather than noise. Below this the report shows the counts and says nothing

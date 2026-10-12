@@ -63,6 +63,7 @@ import {
   parseArgs,
   record,
   report,
+  stepHistory,
   restartGeneration,
   routerPort,
   browseKey,
@@ -71,7 +72,7 @@ import {
   type Options,
 } from "./smoke-harness.js";
 import { isFreshGeneration } from "./smoke-probe.js";
-import type { SmokeStepRecord } from "./smoke-lib.js";
+import { formatStepTime, type SmokeStepRecord } from "./smoke-lib.js";
 import {
   cardViewRendered,
   currentPlaceLabel,
@@ -325,6 +326,7 @@ export async function main(argv: string[]): Promise<number> {
     steps.map((step) => [step.id, { id: step.id, outcome: "not-run", ms: 0 }]),
   );
   const injected = faultInjection();
+  const history = stepHistory();
   const finish = (verdict: "green" | "red", failure?: { step: string; message: string }): void => {
     record({
       ts: new Date().toISOString(),
@@ -348,9 +350,11 @@ export async function main(argv: string[]): Promise<number> {
     try {
       await budget.race(step.name, step.run());
     } catch (e) {
-      outcomes.set(step.id, { id: step.id, outcome: "fail", ms: Date.now() - at });
-      const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
-      process.stdout.write(`FAIL ${step.name} (${elapsed}s)\n`);
+      const ms = Date.now() - at;
+      outcomes.set(step.id, { id: step.id, outcome: "fail", ms });
+      const total = ((Date.now() - startedAt) / 1000).toFixed(1);
+      const own = formatStepTime(ms, history.get(step.id));
+      process.stdout.write(`FAIL ${step.name} (${own}; walk ${total}s)\n`);
       const failure =
         e instanceof SmokeFailureError
           ? e
@@ -363,10 +367,9 @@ export async function main(argv: string[]): Promise<number> {
       process.stdout.write("\nSMOKE: red\n");
       return 1;
     }
-    outcomes.set(step.id, { id: step.id, outcome: "ok", ms: Date.now() - at });
-    process.stdout.write(
-      `ok   ${step.name} (${((Date.now() - at) / 1000).toFixed(1)}s)\n`,
-    );
+    const ms = Date.now() - at;
+    outcomes.set(step.id, { id: step.id, outcome: "ok", ms });
+    process.stdout.write(`ok   ${step.name} (${formatStepTime(ms, history.get(step.id))})\n`);
   }
   finish("green");
   process.stdout.write(`\nSMOKE: green (${((Date.now() - startedAt) / 1000).toFixed(1)}s)\n`);
