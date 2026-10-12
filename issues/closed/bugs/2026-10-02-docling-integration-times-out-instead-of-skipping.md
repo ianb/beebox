@@ -1,12 +1,21 @@
 ---
 title: "pdf extract.integration doctest times out instead of skipping when Docling cannot finish offline"
-workstream: unattached
+workstream: flaky-tests
 area: beebox
 labels: [tests, environments]
 filed-by: agent
 discovered-in: worktree-knip-sweep — two full beebox suite runs on 2026-10-02, on a slow network link
 priority: important
+resolution: implemented
 ---
+
+Fixed by a63151636 (2026-10-06, "Docling integration: share the HF hub
+cache and run offline"). The test sets `UV_OFFLINE` and `HF_HUB_OFFLINE` for
+itself and every child, so the real extraction cannot download; the probe
+uses the same `--with` set as the real call; offline-missing model weights
+are a loud skip at the extraction. Evidence: the last failure in the hourly
+full suite was 2026-10-04; it passed in all 98 full-suite runs from the fix
+to 2026-10-12, and in 3 of 3 local runs with a real extraction (13–73 s).
 
 `test/core/pdf/extract.integration.doctest.md` says it skips loudly wherever
 Docling cannot run, and that its probe makes a cold environment "a fast skip,
