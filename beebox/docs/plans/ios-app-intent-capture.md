@@ -9,6 +9,8 @@ issues:
 
 > **Product review, 2026-10-12:** Subsequent human requirements include shared material with accompanying instructions and predictable box destinations. The [latest product-shape review](ios-app-intent-capture.product-shape.review.md) identifies gaps in this draft. Revise the design and implementation scope before implementing this plan.
 
+> **iOS research, 2026-10-12:** The boxholder explicitly wants Siri and a quick voice-note path. The [current iOS technique research](../../../research/ios-quick-capture-2026-10-12.md) recommends two-turn Siri text capture, native recording with system controls, and share material plus instructions. It identifies SiriKit and Notes-schema compatibility tradeoffs and includes a batched phone exercise list. Use it when revising this draft; the text-only scope below is not the proposed complete product.
+
 This plan repairs and validates Bee Box's existing text capture action on iOS. It defines the exact Siri, Shortcuts, Spotlight, and Action Button scenarios the feature supports, preserves the current durable quick-chat path, and ends with a short physical-iPhone exercise list.
 
 **Issues addressed:** `2026-08-08-ios-siri-app-intent-capture`. The broader [quick-drop entry-points issue](../../../issues/features/2026-09-25-quick-drop-entry-points.md) remains open; this plan does not settle Mac, web, share-sheet, or media capture.
