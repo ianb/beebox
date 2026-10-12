@@ -6,7 +6,14 @@ labels: [hub, flake]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-flaky-tests — three real-process doctest flakes shared this cause, 2026-10-12
+resolution: wontfix
 ---
+
+Closed as wontfix (2026-10-12), by the developer's decision: not observed outside
+tests. Real box boots on the developer's hub take 3 to 4 seconds (see
+Research). The tests that tripped the limit now use their own readiness check
+or stay in the careful tier. Reopen if a box is seen restarting or going
+unhealthy while it boots on a busy host.
 
 The supervisor gives each box child a fixed 30 seconds to answer HTTP
 readiness (`READY_TIMEOUT_MS`, `src/hub/supervisor/child-spawn.ts:58`). When the
