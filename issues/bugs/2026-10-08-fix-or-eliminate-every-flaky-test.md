@@ -79,3 +79,49 @@ top ten, the rest are one to five failures each and may be real
 regressions caught once; check the run's log before calling one a flake.
 Done means: every entry either fixed with the cause named, or removed with
 the reason, and `careful.txt` empty.
+
+## Progress (2026-10-12, worktree-flaky-tests)
+
+Count only lone failures. A file that failed while the runs on either side
+passed it is a flake candidate. A file that failed in a streak was a red,
+fixed later. By that count, `release.manifest` (the most frequent at 52) was
+never a flake: it went red four times, each time `package.json` `files`
+changed and the test's snapshot of that list did not.
+
+Fixed, with mechanism and commit:
+
+- `release.manifest`: files-list snapshot removed; globs expanded (6b9cbda61).
+- `hub/supervisor`: the test asserted a closure that box-maintenance-no-wedge
+  removed. It passed only inside the release race (f561654da).
+- `hub/supervisor.maintenance`: a cold real-server boot under load exceeded
+  the hub's 30 s `READY_TIMEOUT_MS` (2a3ecb9a2).
+- `lib/git-stale-lock`: the machine-wide `lsof` timed out under load
+  (1cf9bd509).
+- `core/migrations.timeout`: the 2 s budget also covered setup; the test now
+  cancels at the point under test (0edc6a71f).
+- `cli/lib/session-retention`: the fixture no longer discriminated at the
+  128 MB cap (3fc167201).
+- `core/box/file-watcher`: injected watcher (de19a242f, 43e5cb224).
+- `hub.e2e`: its shutdown wait was shorter than the hub's own kill window,
+  and a frontend build ran inside the test (3d45be34e).
+- `webapp/routes/bulk-upload`: worker outlived cleanup; non-persistent
+  schema watcher (925b527e4, 671f862a5, 0d9022a4a).
+- `chat/send-run.wedge-guards`, `chat.reserved-features`,
+  `chat.reload-loses-in-flight`, `send-dedup.durable-claim`: an unawaited
+  run's bootstrap commit outlived cleanup (3705fad53, 8d622bf43, 3ffc0f548).
+- `hub/server.router`: Retry-After counted down on the real clock
+  (c35a552df).
+- `deploy/nginx-site`: ECONNRESET during reload (58734e0b7).
+- `core/scan/promote-debounce`: mocked timers (0a31d42bd).
+- `core/last-audio-pending`: 100 ms poll (4864824f7).
+
+Already fixed before this work, verified: `session.oversize-lines`
+(50961ada5), `pdf/extract.integration` (a63151636), `chat.hq-preferences`
+(file deleted 10-09; product race fixed f1ba1944e).
+
+careful.txt: `file-watcher`, `hub.e2e`, `git-lock` and `bulk-upload` left
+(683994491). The two field-test files remain, pending a decision.
+
+Not yet dispositioned: the rest of the list above. Each has not failed since
+its last listed date, across 11 to 315 passing hourly runs (fewer where a
+09-27 rename cut the count).
