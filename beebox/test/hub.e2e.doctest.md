@@ -26,6 +26,7 @@ import { detectBoxTarget, scaffoldPackageRoot } from "../src/core/box/package.js
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../src/core/box/structure/core.js";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
 import { signSession } from "../src/webapp/auth.js";
+import { BOX_KILL_GRACE_MS } from "../src/hub/child-process-utils.js";
 
 const execFileP = promisify(execFile);
 
@@ -53,6 +54,14 @@ const ownerCookie = `bbx_session=${signSession({ email: "owner@example.com", nam
 const DIAG_KEY = "test-diag-key-for-e2e-doctest";
 process.env.BBX_DIAG_API_KEY = DIAG_KEY;
 const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
+
+// Assigned below. Declared here so the cleanup block can read them even when
+// a step fails before they are set: a `const` declared in a later block is in
+// its temporal dead zone for cleanup, which then throws a ReferenceError that
+// hides the real failure.
+let fixture = null;
+let hubConfigPath = null;
+let hubProcess = null;
 
 function pidAlive(pid) {
   try {
@@ -134,29 +143,19 @@ which self-heals a stale bundle by rebuilding before running; without a
 fresh bundle here, that rebuild would eat into the supervisor's own
 readiness timeout instead of happening once, up front, on our terms.
 
-The built **frontend** is a second undeclared dependency: the
-traffic-reaches-the-child probe below rides the SPA fallback, which
-serves `src/frontend/dist/index.html` — a file no dev worktree has
-(Vite serves the frontend live; only deploys run the production build).
-Build it once if absent; when present (CI, a prior run) this is a stat
-call. It is deliberately not rebuilt when stale — this test proves
-routing, not frontend freshness:
+The test needs no built frontend: the traffic probe below asks the child
+for a box API route, not the SPA fallback. (It once rode the fallback,
+which made a fresh checkout run a full Vite build inside this test.)
 
 ```ts
 await execFileP("node", ["src/scripts/build-cli/build/bundle.ts"], { cwd: PACKAGE_ROOT });
-
-const frontendIndex = path.join(PACKAGE_ROOT, "src/frontend/dist/index.html");
-const frontendBuilt = await fs.access(frontendIndex).then(() => true, () => false);
-if (!frontendBuilt) {
-  await execFileP("pnpm", ["run", "build:frontend"], { cwd: PACKAGE_ROOT });
-}
 ```
 
 ## The hub starts the box, `/healthz` reports it running, and traffic reaches it
 
 ```ts continue
-const fixture = await makeFixtureBox();
-const hubConfigPath = path.join(fixture.target, "..", `hub-e2e-config-${path.basename(fixture.target)}.json`);
+fixture = await makeFixtureBox();
+hubConfigPath = path.join(fixture.target, "..", `hub-e2e-config-${path.basename(fixture.target)}.json`);
 const requestedPort = await pickFreePort();
 await fs.writeFile(
   hubConfigPath,
@@ -164,7 +163,7 @@ await fs.writeFile(
 );
 
 const hubBin = path.join(PACKAGE_ROOT, "bin", "bbx");
-const hubProcess = execFile(hubBin, ["engine", "hub", "--config", hubConfigPath], { cwd: PACKAGE_ROOT });
+hubProcess = execFile(hubBin, ["engine", "hub", "--config", hubConfigPath], { cwd: PACKAGE_ROOT });
 let hubStdout = "";
 let hubStderr = "";
 let hubExited = null;
@@ -235,30 +234,37 @@ JSON.stringify({ status: canaryRes.status, box: canaryBody.status, slug: canaryB
 ```
 
 Traffic actually reaches the box through the hub (its own Fastify instance
-serves itself at `/fixture/...`, same as standalone `bbx serve --slug`). The
-box's `/healthz` is root-level, not under its slug prefix (see
-`server-root.ts`'s `registerRootInfoRoutes`) -- an unmatched path under
-`/fixture/...` falls through to the box's own SPA fallback, so hitting one
-still proves the request reached the CHILD process, not the hub answering
-on its own behalf:
+serves itself at `/fixture/...`, same as standalone `bbx serve --slug`).
+`/fixture/api/health` is a per-box route that only the child registers; the
+hub has no route of its own there, so a `{ status, checks }` body proves the
+request reached the CHILD process, not the hub answering on its own behalf:
 
 ```ts continue
-const proxied = await fetch(`http://127.0.0.1:${hubPort}/fixture/some-client-route`, {
+const proxied = await fetch(`http://127.0.0.1:${hubPort}/fixture/api/health`, {
   headers: { cookie: ownerCookie },
 });
 proxied.status
 => 200
 
-const proxiedBody = await proxied.text();
-proxiedBody.toLowerCase().includes("<!doctype html>")
+const proxiedBody = await proxied.json();
+Array.isArray(proxiedBody.checks)
 => true
 ```
 
 ## SIGTERM kills the hub AND its child -- no orphan
 
+On SIGTERM the hub signals each child and waits up to `BOX_KILL_GRACE_MS`
+for its process group to empty (a git write may be finishing) before it
+SIGKILLs the survivors and exits. That window is the hub's contract, so the
+wait here is the window plus margin. A fixed 5 s wait failed under load: a
+child still finishing startup work took 6–13 s to exit, inside the contract.
+
 ```ts continue
+const shutdownBudgetMs = BOX_KILL_GRACE_MS + 15_000;
 hubProcess.kill("SIGTERM");
-await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), { timeoutMs: 5000, intervalMs: 100, label: "the hub process to exit after SIGTERM" });
+await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), { timeoutMs: shutdownBudgetMs, intervalMs: 100, label: "the hub process to exit after SIGTERM" });
+// The hub exits only after its children are gone, so this is already true
+// unless a child escaped its process group; the short wait covers reaping.
 await waitFor(() => (pidAlive(childPid) ? null : true), { timeoutMs: 5000, intervalMs: 100, label: "the bbx serve child to exit with its hub" });
 
 pidAlive(hubProcess.pid)
@@ -274,14 +280,14 @@ pidAlive(childPid)
 // holding the port. One such orphan sat on 4310 for 25 minutes on 2026-08-14 and
 // made every later run in every worktree look like a regression. SIGTERM first
 // so the hub stops its own child; SIGKILL only if it will not go.
-if (hubProcess.pid !== undefined && pidAlive(hubProcess.pid)) {
+if (hubProcess !== null && hubProcess.pid !== undefined && pidAlive(hubProcess.pid)) {
   hubProcess.kill("SIGTERM");
   await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), {
-    timeoutMs: 5000,
+    timeoutMs: BOX_KILL_GRACE_MS + 15_000,
     intervalMs: 100,
     label: "the hub to exit during cleanup",
   }).catch(() => hubProcess.kill("SIGKILL"));
 }
-await fs.rm(fixture.target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-await fs.rm(hubConfigPath, { force: true });
+if (fixture !== null) await fs.rm(fixture.target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+if (hubConfigPath !== null) await fs.rm(hubConfigPath, { force: true });
 ```
