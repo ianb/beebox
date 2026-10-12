@@ -1,5 +1,5 @@
 ---
-title: "Dictation mode: speak a command in the middle of dictated content"
+title: "Narration (dictation) mode: speak a command in the middle of dictated content"
 workstream: unknown
 area: beebox
 labels: [voice, chat]
@@ -13,13 +13,18 @@ narration mode. Sometimes I speak *to the agent* in the middle of it ("put that
 in the recipe", "look up the date"). I want those words treated as a command
 to act on now, not as more content to capture.
 
-## The name
+## Where it lives
 
-"Narration mode" does not say who narrates to whom. "Dictation mode" says it:
-the person dictates and the agent takes it down. The command handling below
-could be added to narration mode, and the mode renamed to dictation mode.
+This is part of narration mode. It does not need a separate mode. Rename narration mode
+("narration" does not say who narrates to whom; "dictation mode" does).
 Narration mode today: `beebox/src/core/docs-gen/package-docs/narration-mode-doc.ts`
 and `beebox/docs/plans/narration-mode.md`.
+
+The command keyword works in every mode, like the other voice keywords.
+Narration mode promotes it: there the agent is silent by default, so the
+keyword is the main way to get action in the middle of a dictation. The narration
+guidance and any mode hint in the UI teach it. Other modes accept it without
+promoting it.
 
 ## Two ways to find a command
 
