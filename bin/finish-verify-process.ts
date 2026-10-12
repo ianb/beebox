@@ -19,6 +19,9 @@ class EmptyCommandError extends Error {
 
 export interface RunOutput {
   status: number;
+  /** stdout alone, for a child whose stdout is data (preflight's sheet). */
+  stdout: string;
+  /** stdout then stderr, for the log. */
   text: string;
 }
 
@@ -52,10 +55,8 @@ export function run(input: { argv: string[]; cwd: string }): Promise<RunOutput> 
     });
     child.on("close", (status) => {
       running.delete(child);
-      resolve({
-        status: status ?? 1,
-        text: `${Buffer.concat(stdout).toString()}${Buffer.concat(stderr).toString()}`,
-      });
+      const out = Buffer.concat(stdout).toString();
+      resolve({ status: status ?? 1, stdout: out, text: `${out}${Buffer.concat(stderr).toString()}` });
     });
   });
 }

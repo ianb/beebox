@@ -347,11 +347,13 @@ export interface SkipInput {
  * saw: code from a merge, or an uncommitted straggler.
  *
  * Every merge counts, not just this run's. A first preflight run that merged
- * code from main and then stopped leaves a merge commit no hook checked; the
- * second run's own merge is a no-op, and asking only about it skipped both
- * checks (issues/closed/bugs/2026-10-10-finish-preflight-rerun-skips-typecheck-after-merge-brought-code.md).
- * A later branch commit is not evidence the merged tree was checked: pre-commit
- * skips docs-only commits and typechecks only the packages a commit stages.
+ * code from main and then stopped leaves a merge commit that a clean merge's
+ * missing pre-commit never checked; the second run's own merge is a no-op, and
+ * asking only about it skipped both checks
+ * (issues/closed/bugs/2026-10-10-finish-preflight-rerun-skips-typecheck-after-merge-brought-code.md).
+ * No later commit counts as evidence that the merged tree was checked:
+ * pre-commit skips docs-only commits, and on any commit (a conflicted merge's
+ * included) it typechecks only the packages that commit stages.
  */
 export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; reason: string } {
   if (input.stragglers.length > 0) {
@@ -361,7 +363,7 @@ export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; r
   if (codeMerge !== undefined) {
     return {
       value: false,
-      reason: `merge ${codeMerge.sha.slice(0, 9)} brought code in, and no hook checks a merge`,
+      reason: `merge ${codeMerge.sha.slice(0, 9)} brought code in, and a clean merge runs no pre-commit`,
     };
   }
   if (input.merges.length === 0) {

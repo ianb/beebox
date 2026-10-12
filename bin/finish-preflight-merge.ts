@@ -101,9 +101,30 @@ export const appendBranchMigrations: ContentRule = ({ base, ours, theirs }) => {
   ].join("\n");
 };
 
-/** The audit ledger: every row from either side, once, oldest first. */
-const mergeLedger: ContentRule = ({ ours, theirs }) =>
-  formatHistory(mergeHistories(parseHistoryText(ours), parseHistoryText(theirs)));
+/** Every row of a ledger, as comparable text. */
+function ledgerRows(text: string): Set<string> {
+  const rows = new Set<string>();
+  for (const [box, audits] of Object.entries(parseHistoryText(text))) {
+    for (const [auditId, entries] of Object.entries(audits)) {
+      for (const entry of entries) rows.add(JSON.stringify([box, auditId, entry]));
+    }
+  }
+  return rows;
+}
+
+/**
+ * The audit ledger: every row from either side, once, oldest first. Applies
+ * only when both sides kept every base row as it was and only appended; a
+ * corrected or deleted row is a person's call.
+ */
+export const mergeLedger: ContentRule = ({ base, ours, theirs }) => {
+  const baseRows = ledgerRows(base);
+  for (const side of [ours, theirs]) {
+    const rows = ledgerRows(side);
+    if ([...baseRows].some((row) => !rows.has(row))) return null;
+  }
+  return formatHistory(mergeHistories(parseHistoryText(ours), parseHistoryText(theirs)));
+};
 
 const CONTENT_RULES: Record<string, { name: string; rule: ContentRule }> = {
   "beebox/src/dev/context-history.yaml": { name: "both sides' rows", rule: mergeLedger },

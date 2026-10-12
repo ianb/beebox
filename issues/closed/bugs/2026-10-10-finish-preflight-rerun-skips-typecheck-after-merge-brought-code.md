@@ -6,7 +6,19 @@ labels: [finish, verification]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261010-224248
+resolution: implemented
 ---
+
+**Closed 2026-10-12 (finish-tooling, commit 68364a3a6).** The decision now
+looks at every merge on the branch's first-parent line (`main..HEAD`), not
+only this run's. If any merge brought code, typecheck and lint run. The
+evidence chosen is git's own merge record. A later branch commit is not
+counted as proof that the merged tree was checked: pre-commit skips docs-only
+commits and typechecks only the packages a commit stages. This is stricter
+than the "since the last code commit" fallback. After a code-bringing merge,
+every finish runs both checks, and finish-verify then reuses a pass where the
+agent's rules allow. Test: `bin/test/finish-preflight.doctest.md`. It failed
+on the old code.
 
 `skipTypecheckLintDecision` in `bin/finish-preflight-lib.ts` asks whether
 *this* run's `git merge main` was a no-op. When an earlier preflight run already

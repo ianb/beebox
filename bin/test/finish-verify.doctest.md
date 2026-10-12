@@ -97,6 +97,33 @@ code
 => 143
 ```
 
+Without `--sheet`, finish-verify first runs preflight, which merges main and
+can take a while. A signal then must stop preflight's tree too. Preflight runs
+the fixture's `bin/private-issues` early, so here that script starts a
+background `sleep` and waits, which holds preflight in place.
+
+```ts
+const branchRepo = fs.mkdtempSync(path.join(os.tmpdir(), "finish-verify-preflight-"));
+const inRepo = (...args: string[]) => execFileSync("git", args, { cwd: branchRepo });
+inRepo("init", "-q", "-b", "worktree-demo");
+inRepo("-c", "user.email=t@example.com", "-c", "user.name=T", "commit", "-q", "--allow-empty", "-m", "start");
+const preflightPid = path.join(branchRepo, "sleep.pid");
+fs.mkdirSync(path.join(branchRepo, "bin"));
+fs.writeFileSync(path.join(branchRepo, "bin/private-issues"), `#!/bin/sh\nsleep 60 & echo $! > ${preflightPid}; wait\n`, { mode: 0o755 });
+const waiting = spawn(process.execPath, ["--import", import.meta.resolve("tsx"), verify], { cwd: branchRepo, stdio: "ignore" });
+const waitingExit = new Promise<number | null>((resolve) => waiting.on("exit", (code) => resolve(code)));
+const sleeper = await eventually(
+  () => fs.existsSync(preflightPid) && Number(fs.readFileSync(preflightPid, "utf8")) > 0 && Number(fs.readFileSync(preflightPid, "utf8")),
+  { label: "preflight started its private-issues check", timeoutMs: 20_000 },
+);
+waiting.kill("SIGTERM");
+const waitingCode = await waitingExit;
+await eventually(() => !alive(sleeper), { label: "preflight's sleep exited", timeoutMs: 5_000 });
+fs.rmSync(branchRepo, { recursive: true, force: true });
+waitingCode
+=> 143
+```
+
 ## A concurrent run is named
 
 Every worktree shares one dev router, so another worktree's finish-verify slows
@@ -129,8 +156,9 @@ into a plugin. The next workstream's finish then failed its site build on
 that doc, which it had never touched, and nothing in the report said so. Now
 a red check that names a file with no difference from main gets a note.
 
-Here `site/docs/a.md` is committed on main unchanged, and `site/docs/b.md` is
-a branch edit. The check fails naming both; only `a.md` gets the note.
+Here `site/docs/a.md` is committed on main unchanged, `site/docs/b.md` is a
+branch edit, and `site/docs/c.md` is new and untracked. The check fails naming
+all three; only `a.md` gets the note.
 
 ```ts
 const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
@@ -143,9 +171,11 @@ git("add", "site");
 git("commit", "-qm", "docs");
 git("checkout", "-qb", "worktree-demo");
 fs.writeFileSync(path.join(root, "site/docs/b.md"), "edited\n");
+// An untracked new file has no diff against main either, but it is not on main.
+fs.writeFileSync(path.join(root, "site/docs/c.md"), "new\n");
 const red = cli(
   "--sheet",
-  sheetFile(`echo 'site/docs/a.md links to "reference/cards/gone.md"'; echo "${root}/site/docs/b.md: also"; exit 1`),
+  sheetFile(`echo 'site/docs/a.md links to "reference/cards/gone.md"'; echo "${root}/site/docs/b.md: also"; echo 'site/docs/c.md: too'; exit 1`),
 );
 print(red.stdout.split("\n").filter((line) => line.startsWith("     ")).map((line) => line.trim()).join("\n"));
 red.status

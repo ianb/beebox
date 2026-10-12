@@ -160,8 +160,10 @@ export function mentionedFiles(output: string, exists: (path: string) => boolean
  * different fix from an ordinary red, so the report says which files they are.
  */
 function unchangedFromMain(root: string, files: string[]): string[] {
+  const git = (args: string[]): boolean => spawnSync("git", args, { cwd: root }).status === 0;
+  // `git diff main` ignores untracked files, so a new file would read as unchanged.
   return files.filter(
-    (file) => spawnSync("git", ["diff", "--quiet", "main", "--", file], { cwd: root }).status === 0,
+    (file) => git(["cat-file", "-e", `main:${file}`]) && git(["diff", "--quiet", "main", "--", file]),
   );
 }
 
@@ -204,18 +206,24 @@ export function verdict(results: CommandResult[]): { green: boolean; flakes: str
   return { green, flakes: [...new Set(flakes)] };
 }
 
-function readSheet(path: string | undefined): Sheet {
+/** Preflight runs like a check, in its own process group, so a signal stops its merge too. */
+async function readSheet(path: string | undefined): Promise<Sheet> {
   if (path !== undefined) {
     const parsed: Sheet = JSON.parse(readFileSync(path, "utf-8"));
     return parsed;
   }
-  const preflight = spawnSync(
-    process.execPath,
-    ["--import", "tsx", join(import.meta.dirname, "finish-preflight.ts"), "--json"],
-    { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
-  );
+  const preflight = await run({
+    argv: [
+      process.execPath,
+      "--import",
+      import.meta.resolve("tsx"),
+      join(import.meta.dirname, "finish-preflight.ts"),
+      "--json",
+    ],
+    cwd: process.cwd(),
+  });
   if (preflight.status !== 0) {
-    throw new PreflightFailedError({ status: preflight.status, stderr: preflight.stderr });
+    throw new PreflightFailedError({ status: preflight.status, stderr: preflight.text });
   }
   const parsed: Sheet = JSON.parse(preflight.stdout);
   return parsed;
@@ -293,10 +301,13 @@ export async function main(argv: string[]): Promise<number> {
     console.log(USAGE);
     return 0;
   }
-  const sheet = readSheet(options.sheet);
+  // Before preflight: a signal during its merge must reach it too.
+  let release = (): void => {};
+  killChildrenOnSignal(() => release());
+  const sheet = await readSheet(options.sheet);
   const outDir = mkdtempSync(join(tmpdir(), "finish-verify-"));
   const registration = registerRun(sheet.repoRoot);
-  killChildrenOnSignal(registration.release);
+  release = registration.release;
   if (registration.others.length > 0) {
     console.log(
       `note: finish-verify also running in ${registration.others.join(", ")} — the shared dev router is loaded; a slow smoke may be load`,

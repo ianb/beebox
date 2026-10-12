@@ -12,7 +12,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { appendBranchMigrations } from "../finish-preflight-merge.js";
+import { appendBranchMigrations, mergeLedger } from "../finish-preflight-merge.js";
 
 const repo = path.resolve(process.cwd(), "..");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "finish-preflight-merge-"));
@@ -78,6 +78,18 @@ const edited = migrations(entry("a", "a2.ts"), entry("branch-new", "b.ts"));
 const sameName = migrations(entry("a", "a.ts"), entry("main-new", "b.ts"));
 [appendBranchMigrations({ base, ours: edited, theirs }), appendBranchMigrations({ base, ours: sameName, theirs })]
 => [null, null]
+```
+
+The ledger rule likewise applies only to appends. A side that corrected or
+deleted an existing row made a choice, so the conflict stands for a person
+rather than keeping both versions of the row.
+
+```ts
+const baseLedger = ledger(row("2026-10-01T00:00:00Z", 100));
+const corrected = ledger(row("2026-10-01T00:00:00Z", 101), row("2026-10-03T00:00:00Z", 300));
+const appended = ledger(row("2026-10-01T00:00:00Z", 100), row("2026-10-02T00:00:00Z", 200));
+mergeLedger({ base: baseLedger, ours: corrected, theirs: appended })
+=> null
 ```
 
 ## A real merge: the ledger and the list resolve, and the merge commits
