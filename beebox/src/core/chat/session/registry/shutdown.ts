@@ -15,9 +15,11 @@ export interface ShutdownChatSession {
 
 /**
  * Stop every session and wait for each to close, all within one time limit.
- * A session still starting is not yet running: its start (the bootstrap docs
- * commit, then the backend spawn) would finish after the caller tore the box
- * down. So starts settle first, and a run they opened is stopped like any other.
+ * Live runs stop at once. A session still opening a turn is not running yet,
+ * but its start (the bootstrap docs commit, then the backend spawn) would
+ * finish after the caller tore the box down; so openings settle next, and a
+ * run they opened is stopped too. Stopping clears a session's queue, so a
+ * stopped run does not drain into a new send.
  */
 export async function stopChatSessionsAndWait(
   sessions: ShutdownChatSession[],
@@ -32,23 +34,31 @@ export async function stopChatSessionsAndWait(
     });
   });
   const label = (session: ShutdownChatSession): string => session.getSessionId() ?? `<pending-${String(sessions.indexOf(session) + 1)}>`;
-  try {
-    const unstarted = new Set(sessions);
-    const started = sessions.map((session) => session.whenStarted().then(() => { unstarted.delete(session); }));
-    if ((await Promise.race([Promise.all(started), expired])) === "timeout") return [...unstarted].map(label);
-
-    const closing = new Set<ShutdownChatSession>();
-    const waits = sessions.filter((session) => session.isRunning()).map((session) => {
-      closing.add(session);
-      const closed = new Promise<void>((resolve) => {
-        session.once("close", () => { closing.delete(session); resolve(); });
-      });
+  const stopped = new Set<ShutdownChatSession>();
+  const unfinished = new Set<ShutdownChatSession>();
+  const closes: Promise<void>[] = [];
+  const stopRunning = (): void => {
+    for (const session of sessions) {
+      if (stopped.has(session) || !session.isRunning()) continue;
+      stopped.add(session);
+      unfinished.add(session);
+      closes.push(new Promise<void>((resolve) => {
+        session.once("close", () => { unfinished.delete(session); resolve(); });
+      }));
       session.stop();
-      return closed;
-    });
-    if (waits.length === 0) return [];
-    await Promise.race([Promise.all(waits), expired]);
-    return [...closing].map(label);
+    }
+  };
+  try {
+    stopRunning();
+    const opening = new Set(sessions);
+    const started = sessions.map((session) => session.whenStarted().then(() => { opening.delete(session); }));
+    if ((await Promise.race([Promise.all(started), expired])) === "timeout") {
+      return [...new Set([...unfinished, ...opening])].map(label);
+    }
+    stopRunning();
+    if (closes.length === 0) return [];
+    await Promise.race([Promise.all(closes), expired]);
+    return [...unfinished].map(label);
   } finally {
     timeout.stop();
   }

@@ -115,12 +115,26 @@ stopped
 => true
 ```
 
-A start that never finishes is bounded by the same time limit and named:
+A start that never finishes is bounded by the same time limit and named.
+It does not hold back a session that is already running: that one is stopped
+at once, and it closes:
 
 ```ts continue
 const stuck = { ...starting, getSessionId: () => "stuck-session", whenStarted: () => new Promise<void>(() => {}) };
-await stopChatSessionsAndWait([stuck], { timeoutMs: 5, periodMs: 1 })
+let liveStopped = false;
+let liveOnClose = () => {};
+const live = {
+  getSessionId: () => "live-session",
+  isRunning: () => !liveStopped,
+  whenStarted: () => Promise.resolve(),
+  once: (_event: "close", listener: () => void) => { liveOnClose = listener; },
+  stop: () => { liveStopped = true; liveOnClose(); },
+};
+await stopChatSessionsAndWait([stuck, live], { timeoutMs: 5, periodMs: 1 })
 => ["stuck-session"]
+
+liveStopped
+=> true
 ```
 
 ## LRU eviction under the live cap
