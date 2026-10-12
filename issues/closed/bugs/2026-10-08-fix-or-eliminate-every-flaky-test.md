@@ -144,7 +144,7 @@ Follow-on work from this issue:
 - The hub's fixed 30-second readiness limit, the cause of the
   `supervisor.maintenance` failures and part of the field-test and hub.e2e
   failures, is filed as
-  [a bug](../../bugs/2026-10-12-hub-readiness-limit-kills-slow-healthy-box-children.md).
+  [a bug](2026-10-12-hub-readiness-limit-kills-slow-healthy-box-children.md).
 
 Earlier names of files fixed above:
 
