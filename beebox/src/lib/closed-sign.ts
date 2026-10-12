@@ -6,7 +6,7 @@
  * (scripts/build-deploy-page.ts). Both are self-contained documents, so the
  * sign carries its own colors (light and dark) and its reduced-motion rule.
  */
-import { escapeHtml } from "./escape-html.js";
+import { escapeHtml } from "./escape-html.ts";
 
 export const CLOSED_SIGN_CSS = `
 .bbx-sign { --sign-paper: #f5efe2; --sign-ink: #332e27; --sign-soft: #4f4439; --sign-edge: #d6c8af; --sign-string: #8a7a62;

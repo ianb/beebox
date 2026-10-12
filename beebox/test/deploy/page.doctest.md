@@ -74,6 +74,17 @@ text(3 * 60 * minute, 228).detail
 
 ## The built page
 
+`deploy/deploy.sh` runs `src/scripts/build-deploy-page.ts` with plain `node`
+(no tsx), whose type stripping does not map a `.js` import to its `.ts` file;
+every relative import that script reaches must name the `.ts` file. Loading it
+the same way proves that.
+
+```ts
+import { execFileSync } from "node:child_process";
+execFileSync("node", ["--input-type=module", "-e", "await import('./src/scripts/build-deploy-page.ts')"], { encoding: "utf8" })
+=> 
+```
+
 `src/scripts/build-deploy-page.ts` bundles the browser code into one
 self-contained HTML template. The server helper fills its placeholders with
 `sed`, so the helper must use the same three names.

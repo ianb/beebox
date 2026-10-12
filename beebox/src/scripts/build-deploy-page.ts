@@ -10,7 +10,7 @@
 import { build } from "esbuild";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CLOSED_SIGN_CSS, closedSignHtml } from "../lib/closed-sign.js";
+import { CLOSED_SIGN_CSS, closedSignHtml } from "../lib/closed-sign.ts";
 
 export const PLACEHOLDERS = {
   startedMs: "__BBX_STARTED_MS__",
