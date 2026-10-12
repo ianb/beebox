@@ -1,6 +1,7 @@
 ---
 title: "field-test-inject-email.doctest.md can exceed tap's 300s default before its own 15-minute subprocess budget is used up"
-workstream: unattached
+workstream: flaky-tests
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -64,3 +65,15 @@ Give `test:manual` (or this file specifically, via a `tap` per-file
 `--timeout`) a budget that matches what the file's own doc comment and
 `WAKEUP_TIMEOUT_MS` already assume — e.g. 10–15 minutes — rather than
 inheriting the general suite's contention-sized 300s default.
+
+## Resolution (2026-10-12)
+
+`test:manual` now passes `--timeout=1200` (`beebox/package.json`), which
+overrides `.taprc`'s 300s (`tap config get timeout` reads 1200 with the flag).
+Twenty minutes sits above the file's own 15-minute `WAKEUP_TIMEOUT_MS`, so a
+real hang in the wakeup child fails with that budget's readable error rather
+than tap's bare `timeout!`. The 300s figure was sized for contention in the
+parallel suite, and this tier runs `-j1` against real services. The three
+inject-email runs since the failure (2026-09-23, 09-30, 10-07) passed in 158s,
+65s and 98s; the 300s overrun has not recurred, which fits variance in the
+real agent turn rather than a hang.
