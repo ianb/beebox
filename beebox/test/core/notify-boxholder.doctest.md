@@ -16,7 +16,6 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { notifyBoxholder, notifyChannels } from "../../src/core/notify-boxholder.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
-import { createFakeTelegram } from "../../src/services/telegram.js";
 import { createEventBus } from "../../src/core/event-bus/core.js";
 import { readRecent, notificationLogPath } from "../../src/core/notification/log.js";
 import { writePresence } from "../../src/core/notification/presence.js";
@@ -30,11 +29,9 @@ for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY
 const NOW = new Date("2026-09-26T12:00:00Z");
 const SUB = { endpoint: "https://push.example/phone", keys: { p256dh: "p", auth: "a" } };
 
-// A box whose boxholder subscribed a browser and set a Telegram chat.
+// A box whose boxholder subscribed a browser.
 async function reachableBox() {
   const box = await makeTmpBox({ git: true });
-  await box.seed("_config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
-  box.commitAll("seed");
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
   return box;
 }
@@ -60,27 +57,23 @@ async function failing(box) {
 }
 ```
 
-## `loud` with a subscribed browser and a Telegram chat: two sends
+## `loud` with a subscribed browser: one send
 
-APNs has no audience until paired phones register, so it is a skip. The
-other two channels send.
+APNs has no audience until paired phones register, so it is a skip. Web push
+sends.
 
 ```ts
 const box = await reachableBox();
 const push = createFakePush();
-const tg = createFakeTelegram({ username: "bot" });
-const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push, tg } });
+const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push } });
 
 await logged(box)
 =>
 apns skipped: no-audience
 web-push sent
-telegram sent
 ```
 
-The push carries the rendered deep link and makes a sound. Telegram gets the
-title, the body, and the same link, root-relative because no public URL is
-set:
+The push carries the rendered deep link and makes a sound:
 
 ```ts continue
 const slug = await boxSlug(box.root);
@@ -88,15 +81,6 @@ push.sent[0]?.payload.url === `/${slug}/browse/_content/inbox/field-trip.email.c
 => true
 
 push.sent[0]?.payload.silent
-=> false
-
-tg.sent[0]?.text.replace(slug, "<box>")
-=>
-Field trip form due Friday
-The school emailed: the form is due Friday.
-/<box>/browse/_content/inbox/field-trip.email.card
-
-tg.sent[0]?.silent
 => false
 ```
 
@@ -118,16 +102,6 @@ await failing(box)
 => all ok
 ```
 
-With `PUBLIC_URL` set, the Telegram link is absolute:
-
-```ts continue
-process.env.PUBLIC_URL = "https://box.example.com/";
-await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push, tg }, channel: "telegram" });
-delete process.env.PUBLIC_URL;
-tg.sent[1]?.text.split("\n").at(-1).replace(slug, "<box>")
-=> https://box.example.com/<box>/browse/_content/inbox/field-trip.email.card
-```
-
 ```ts cleanup
 await box.cleanup();
 ```
@@ -141,32 +115,29 @@ stale presence file counts as nobody, and the next `quiet` sends.
 ```ts
 const box = await reachableBox();
 const push = createFakePush();
-const tg = createFakeTelegram({ username: "bot" });
 await writePresence(box.root, { activeWeb: 1, now: new Date(NOW.getTime() - 30_000) });
-await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push, tg } });
+await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push } });
 
 await logged(box)
 =>
 apns skipped: present
 web-push skipped: present
-telegram skipped: present
 
-JSON.stringify([push.sent.length, tg.sent.length])
-=> [0,0]
+push.sent.length
+=> 0
 
 await writePresence(box.root, { activeWeb: 1, now: new Date(NOW.getTime() - 120_000) });
-await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push, tg } });
-JSON.stringify([push.sent.length, tg.sent.length])
-=> [1,1]
+await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push } });
+push.sent.length
+=> 1
 ```
 
-A `quiet` Telegram message is sent with `disable_notification`, and a `quiet`
-push carries `silent`, which the service worker passes to `showNotification`,
-so neither makes a sound:
+A `quiet` push carries `silent`, which the service worker passes to
+`showNotification`, so it makes no sound:
 
 ```ts continue
-JSON.stringify([tg.sent[0]?.silent, push.sent[0]?.payload.silent])
-=> [true,true]
+push.sent[0]?.payload.silent
+=> true
 
 await failing(box)
 => all ok
@@ -184,17 +155,16 @@ health check names the notification.
 ```ts
 const box = await makeTmpBox({ git: true });
 JSON.stringify(await notifyChannels(box.root))
-=> {"apns":false,"webPush":false,"telegram":false}
+=> {"apns":false,"webPush":false}
 
 const result = await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW });
 await logged(box)
 =>
 apns skipped: no-audience
 web-push skipped: no-audience
-telegram skipped: no-audience
 
 await failing(box)
-=> notifications-no-channel: 1 notification(s) in the last 24 hours had no channel to reach the boxholder (open the paired iPhone app, subscribe a browser to push, or set healthAlerts.telegramChat): "Field trip form due Friday"
+=> notifications-no-channel: 1 notification(s) in the last 24 hours had no channel to reach the boxholder (open the paired iPhone app or subscribe a browser to push): "Field trip form due Friday"
 ```
 
 ```ts cleanup
@@ -204,17 +174,16 @@ await box.cleanup();
 ## A channel counts as reachable only when a send could go out
 
 `notifyChannels` needs someone to send to and what the send needs: an
-injected service, or else VAPID keys for web push and the bot secret for
-Telegram. A subscribed browser without VAPID keys, or a Telegram chat without
-the bot secret, is not a way to reach the person.
+injected service, or else VAPID keys for web push. A subscribed browser
+without VAPID keys is not a way to reach the person.
 
 ```ts
 const box = await reachableBox();
 JSON.stringify(await notifyChannels(box.root))
-=> {"apns":false,"webPush":false,"telegram":false}
+=> {"apns":false,"webPush":false}
 
-JSON.stringify(await notifyChannels(box.root, { services: { push: createFakePush(), tg: createFakeTelegram({ username: "bot" }) } }))
-=> {"apns":false,"webPush":true,"telegram":true}
+JSON.stringify(await notifyChannels(box.root, { services: { push: createFakePush() } }))
+=> {"apns":false,"webPush":true}
 
 process.env.BBX_VAPID_PUBLIC_KEY = "public";
 process.env.BBX_VAPID_PRIVATE_KEY = "private";
@@ -254,14 +223,13 @@ tried nor logged.
 ```ts
 const box = await reachableBox();
 const push = createFakePush();
-const tg = createFakeTelegram({ username: "bot" });
-await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push, tg }, channel: "telegram" });
+await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push }, channel: "web-push" });
 
 await logged(box)
-=> telegram sent
+=> web-push sent
 
-JSON.stringify([push.sent.length, tg.sent.length])
-=> [0,1]
+push.sent.length
+=> 1
 ```
 
 ```ts cleanup
@@ -270,20 +238,17 @@ await box.cleanup();
 
 ## A failing push: one `failed` line and a health check
 
-Telegram still sends; the push failure is recorded with its reason and
-reported for 24 hours.
+The push failure is recorded with its reason and reported for 24 hours.
 
 ```ts
 const box = await reachableBox();
 const push = createFakePush({ failEndpoints: [SUB.endpoint] });
-const tg = createFakeTelegram({ username: "bot" });
-await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push, tg } });
+await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push } });
 
 await logged(box)
 =>
 apns skipped: no-audience
 web-push failed: no device received the push (sent 0, pruned 0, failed 1)
-telegram sent
 
 await failing(box)
 => notifications-undelivered: 1 notification(s) could not be delivered in the last 24 hours: "Field trip form due Friday" (web-push: no device received the push (sent 0, pruned 0, failed 1))
@@ -309,11 +274,10 @@ opening for append rather than by reading, reports it.
 ```ts
 const box = await reachableBox();
 await fs.mkdir(notificationLogPath(box.root), { recursive: true });
-const tg = createFakeTelegram({ username: "bot" });
-const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push: createFakePush(), tg } });
+const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push: createFakePush() } });
 
 result.deliveries.map((d) => `${d.channel} ${d.status}`).join(", ")
-=> apns skipped, web-push sent, telegram sent
+=> apns skipped, web-push sent
 
 (await notificationHealthChecks(box.root, { now: NOW })).find((c) => c.name === "notification-log-writable").ok
 => false

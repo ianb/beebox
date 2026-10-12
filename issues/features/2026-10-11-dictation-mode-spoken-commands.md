@@ -1,0 +1,86 @@
+---
+title: "Narration (dictation) mode: speak a command in the middle of dictated content"
+workstream: unknown
+area: beebox
+labels: [voice, chat]
+filed-by: agent
+discovered-by: Ian
+discovered-in: main session — boxholder idea, 2026-10-11
+---
+
+**Job:** I dictate a long stream of content and the agent stays silent, as in
+narration mode. Sometimes I speak *to the agent* in the middle of it ("put that
+in the recipe", "look up the date"). I want those words treated as a command
+to act on now, not as more content to capture.
+
+## Where it lives
+
+This is part of narration mode. It does not need a separate mode. Rename narration mode
+("narration" does not say who narrates to whom; "dictation mode" does).
+Narration mode today: `beebox/src/core/docs-gen/package-docs/narration-mode-doc.ts`
+and `beebox/docs/plans/narration-mode.md`.
+
+The command keyword works in every mode, like the other voice keywords.
+Narration mode promotes it: there the agent is silent by default, so the
+keyword is the main way to get action in the middle of a dictation. The narration
+guidance and any mode hint in the UI teach it. Other modes accept it without
+promoting it.
+
+## Two ways to find a command
+
+1. **A "do it" keyword (simpler; the boxholder's lean).** A spoken keyword
+   sends the message, with a tag that says the words just before the keyword
+   are a command. Example: "…and the sauce needs an hour. Add that to the
+   lasagna recipe, do it." The agent finds where the command starts; the tag
+   gives only a rough boundary. This uses the existing keyword machinery.
+   Keywords already arrive as tags such as `<send-message phrase="…" />` and
+   `<send-checkpoint-message phrase="…" />` (closed
+   [checkpoint keyword](../closed/features/2026-09-30-checkpoint-voice-keyword.md)).
+   It probably sends as a checkpoint: the person is still dictating after the
+   command. Open: the phrase. It must be rare in normal speech and easy
+   to say mid-sentence; "do it" itself is common in speech.
+2. **Classify the live transcript.** In addition to keyword spotting, run Jev
+   on the last part of the live transcript at a fixed interval. Give it rules
+   for speech that leaves the frame (addressed to the agent, imperative,
+   about the box, not about the content). When it finds a command, flag it and
+   send the message to the agent. No keyword to learn. Costs: a model call
+   every interval, latency, false positives during content that is itself
+   imperative (a recipe's "add the flour"), and a live transcript of lower
+   quality than HQ.
+
+Option 1 can ship first. Option 2 can come later if the keyword is a burden.
+
+## A command can set up what follows
+
+A command can come first and govern the dictation after it. Example: "This is
+going to be a set of slides. Do it." Then the person dictates the slide
+content. The keyword works the same way in both cases. The difference is
+for the agent:
+
+- **Scope.** The command applies to every later message in the dictation, not
+  just once. The agent keeps it until the person ends the dictation or gives
+  another command.
+- **Transform, not transcript.** The current narration rules say to record
+  content in the person's wording and not to paraphrase. A setup command such
+  as "make these slides" overrides that rule: the agent shapes the dictation
+  into the requested form (slides, a list, a letter). The rules must say that
+  a setup command wins over the verbatim default.
+
+Open: whether a separate "begin" phrase makes the setup clearer, or whether
+the agent can tell a setup command ("this is going to be…") from a one-time
+command ("add that to the recipe") without help.
+
+## Open questions
+
+- The keyword phrase, and whether it sends a checkpoint or a full send.
+- What the agent does after the command: act silently with an `<ack>`, or
+  answer in a `<callout>`. Narration rules already allow a callout when
+  "the user explicitly asked you for something".
+- How HQ retranscription treats the keyword (see
+  [keyword finish and HQ fixup](../closed/features/2026-08-06-keyword-finish-and-hq-transcribe-fixup.md)
+  and the hq-always workstream's "keyword lost in retranscription" marker).
+- iOS parity: the keyword list and mode state cross the bridge
+  ([iOS record button does not show mode](../bugs/2026-09-29-ios-record-button-does-not-show-mode-or-state.md)).
+
+Related: [listening/note mode](2026-08-29-listening-note-mode.md),
+[voice keyword for photo capture](2026-03-04-voice-keyword-photo-capture.md).

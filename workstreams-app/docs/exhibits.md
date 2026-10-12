@@ -2,8 +2,10 @@
 
 An **exhibit** is a directory you create; the app renders it. It is how an agent
 shows work to the developer — rendered documents, labeled screenshots, small
-interactive pages — with an explicit **ask** on every item. Design and
-vocabulary: `beebox/docs/plans/workstream-exhibits.md`.
+interactive pages. An exhibit shows; it asks nothing. Questions go in chat.
+History and the original design (which still describes asks, dispositions, and the queue):
+`beebox/docs/implemented-plans/workstream-exhibits.md`. The current contract is
+this document and `beebox/docs/implemented-plans/exhibits-rethink.md`.
 
 ## Create one
 
@@ -20,11 +22,12 @@ vocabulary: `beebox/docs/plans/workstream-exhibits.md`.
 Content survives a worktree cull; removing the worktree removes only the link.
 A sibling `coding-feedback/` directory holds CODING_FEEDBACK notes (`bin/coding-feedback`); the app never lists or serves it.
 
-`bin/exhibits add --title <t> --ask <type> --prose <p> [--option <label>]…
-[files…]` does all of that: it derives the workstream from the checkout you run
+`bin/exhibits add --title <t> [--prose <p>] [--caption <text>]… [files…]`
+does all of that: it derives the workstream from the checkout you run
 it in, copies the files in under names the app can route to (`Screen Shot
 2026-08-15.png` lands as `screen-shot-2026-08-15.png`), labels the figures `A1`,
-`A2`, … in argument order, maps one `.md` or `.markdown` argument to the
+`A2`, … in argument order, puts the n-th `--caption` on the n-th figure file
+(more captions than figures is refused before anything is created), maps one `.md` or `.markdown` argument to the
 renderer-required `doc.md` name (and refuses multiple documents), and prints
 the URL — one line on stdout, so it pastes straight into chat. Write the
 directory by hand when you want something the CLI does not do; the contract is
@@ -35,11 +38,7 @@ the files, not the tool.
 ```json
 {
   "title": "Dashboard density options",
-  "ask": {
-    "type": "decide",
-    "prose": "Pick a density; I will apply it to every card list and delete the others.",
-    "options": ["Comfortable (A1)", "Compact (A2)"]
-  },
+  "prose": "Two densities for the card list. **Comfortable** is today; compact fits two more cards on a phone screen.",
   "created": "2026-08-15T18:00:00Z",
   "figures": [
     { "label": "A1", "file": "comfortable.png", "caption": "Current spacing" },
@@ -50,61 +49,87 @@ the files, not the tool.
 
 The manifest is Zod-validated. A directory with content but no usable manifest
 renders an error page naming the file and the issues — never a bare listing.
-Every exhibit carries exactly one ask.
-
-## Ask types, and using them honestly
-
-| Type | Means | The developer does |
-|---|---|---|
-| `decide` | Pick among the enumerated `options` | Chooses one |
-| `confirm` | You are proceeding unless told otherwise | Vetoes if wrong |
-| `react` | You want impressions | Writes freeform |
-| `fyi` | Nothing is needed | Reads, or does not |
-
-The queue only works if the type is honest — `fyi` is not a dumping ground and a
-real decision tagged `fyi` is a decision that never gets made. The ask's prose
-says what happens *after* each answer. Figures get short labels (`A1`, `B3`) so
-feedback in chat can address them precisely.
+The manifest is `{ title, created, prose?, figures? }`. `prose` is optional and
+rendered as Markdown under the title. Manifests written before the ask was
+removed keep rendering: their old ask prose shows as `prose`, and the rest of
+the ask is ignored.
 
 ## Writing a good exhibit
 
-- **The ask is honest, and it says what happens next.** The prose states the
-  consequence of each answer ("pick a density; I apply it everywhere and delete
-  the other"), not just the question. An over-applied tag rots the queue it
-  feeds — the `manual-testing` flag did exactly that
-  ([2026-07-29](../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)):
-  once a marker stops meaning anything, the human stops reading it. `fyi` is the
-  one with no cost to the developer, so it is the one that tempts.
-- **Figures get labels and captions.** The label is the handle feedback uses;
-  the caption says what to look at. Two screenshots with no captions are a
-  spot-the-difference puzzle you are asking the developer to solve.
-- **Present it live, in label terms.** When the developer is in chat, run
-  `bin/exhibits add --open`: they get the page, you get to say "A3 has too much
-  white space" and be understood. `bin/exhibits list` is the other half — a
-  later session runs it to find which asks came back answered.
+- **Figures get labels and captions.** The label (`A1`, `B3`) is the handle
+  the developer uses to name a figure in chat; the caption says what to look
+  at. Two screenshots with no captions are a spot-the-difference puzzle you
+  are asking the developer to solve. Supply captions with `--caption`.
+- **Present it live.** Run `bin/exhibits add --open` when the developer is in
+  chat, and put the URL on the first line of your message.
+
+## Writing for someone who did not read the plan
+
+The developer opens an exhibit cold. Write every sentence for that reader.
+
+- **Say where you are and what you see.** A caption names the page or control
+  in the app as a person using the box would ("the Properties panel of a
+  recipe card, after tapping Appearance"), then what to look at. Not "B2:
+  Properties now; Appearance is folded".
+- **Say what changes for a person using the box.** When the figures show a
+  choice, each one is described by what the person gets, not by its
+  implementation ("the list stays readable at phone width" rather than
+  "stack-as-flex-column").
+- **No plan vocabulary.** Track names, slice numbers, field names, branch
+  names, and nouns the plan introduced do not appear unless the figure shows
+  them on screen. If a noun needs the plan to decode, define it in one clause
+  or drop it.
+- **Ask in chat, decide in chat.** The exhibit shows what is; it does not
+  propose, default, or ask. What you will do next and any question go in your
+  final message, with the exhibit URL on its first line. Several choices are
+  several labeled figures; the developer replies naming a label.
 
 ## The three page tiers
 
 One mechanism, three levels of effort:
 
 1. **No `index.tsx` / `index.html`** — the default renderer: `doc.md` and the
-   manifest's figures as labeled images. Most exhibits want exactly this.
+   manifest's figures as labeled images. A click on an image opens it full
+   size in a modal view (scroll to pan, Escape or click to close); the file
+   name beside the label opens the raw file. Most exhibits want exactly this.
 2. **`index.html`** — served as-is, scripts allowed. Sibling files (`data.json`,
    images) are served from the directory, so relative `fetch` works. Namespace
-   your `localStorage` keys: the whole origin shares them.
+   your `localStorage` keys: the whole origin shares them. One line opts the
+   page into the Reply and Comment controls; see "Controls on a raw page".
 3. **`index.tsx`** — default-export a React component. It renders inside the
-   container (shell, breadcrumb, ask header), with React 18, Tailwind, and the
+   container (shell, breadcrumb, title and prose), with React 18, Tailwind, and the
    client below already provided. Drop the file in; no build step, no
    registration, HMR picks up edits.
 
-**The container answers the ask for the default and module tiers.** Whenever
-their manifest states an ask, the disposition control is appended *below* the
-page's own content. It writes `data/disposition.json` and appends a
-`disposition` event, so an instrument is answerable without writing a line of
-form code. A manifest with no `ask` (only a committed app may omit it) gets no
-control, because nothing is waiting on an answer. Raw `index.html` is served
-unchanged and receives no container; it must implement its own answer control.
-A page that wants richer interaction writes through the client below.
+**The container adds a "Reply in the session" button for the default and
+module tiers.** Store exhibits on those two tiers get the button under the
+title. It calls the focus route (see Access) and brings the workstream's live
+terminal tab forward, so a reaction is typed where the agent is listening. When
+there is no live session the page shows the reason. Raw `index.html` is served
+unchanged and receives no container; it gets the button by opting into the
+control bar below, or may call the route itself. A page that wants richer
+interaction writes through the client below.
+
+### Controls on a raw page
+
+A raw `index.html` page gets the same Reply and Comment controls as the
+container by referencing one module:
+
+```html
+<script type="module" src="/controls.ts"></script>
+```
+
+The bar is fixed to the bottom of the window, 48px tall when idle, and grows
+upward when the composer opens. Leave `padding-bottom: 48px` on the page's
+scrolling element so the bar never covers the last line, and keep the page's
+own fixed elements out of the bottom 48px: the bar sits above everything. The
+bar renders in a shadow root with its own stylesheet, so the page's styles and
+the bar's do not touch; the page itself is not edited. Commenting reads
+selections in ordinary text in the page's body (not inside an iframe or a
+shadow root), and the heading above a selection is the nearest `h1`–`h6`
+before it in document order. A committed app under `apps/` gets no bar (it has
+no workstream to route a comment to); a page without the line is served
+exactly as before.
 
 Page *source* is never served as content: `.ts`/`.tsx`/`.jsx` requests are
 refused, and paths cannot leave the exhibit directory.
@@ -146,37 +171,22 @@ are refused — and no path can leave the exhibit directory.
 
 Everything a page writes lands as files in the exhibit directory, which is the
 point: a later agent session reads `data/`, `events.jsonl`, and `captures/`
-straight from disk. The developer's answer is not special: the default renderer
-writes `data/disposition.json` as
-`{ askType, choice?, comment?, decidedAt }` and appends a `disposition` event.
+straight from disk.
 
 ## Committed apps
 
 A durable tool belongs in the main checkout at `dev/apps/<name>/`, served at
 `/apps/<name>/`. Same manifest, same tiers, same client — but the code is
 tracked and merges to main, while its runtime data still lands in the store
-(`apps/<name>/`), so using an app never dirties a checkout. A committed app may
-omit `ask`: it appears in the app list, not the ask queue.
-
-## The ask queue
-
-The workstreams app answers "what is waiting on me" at
-`/main/workstreams/asks`: every unanswered ask across every workstream plus the
-committed apps, grouped `decide`, `confirm`, `react`, with FYI collapsed and
-answered asks listed with the time they were decided. It is a read of the same
-files — `exhibit.json` and `data/disposition.json` — so an exhibit whose
-manifest does not parse appears as a broken row rather than disappearing.
-
-That surface never writes: answering happens on the exhibits origin, and its
-links point there. They carry no token, so a browser that has not been through
-`bin/exhibits url` once will get the origin's 401 hint instead of a page — the
-token stays out of the workstreams UI on purpose.
+(`apps/<name>/`), so using an app never dirties a checkout. It appears in the
+app list.
 
 ## Access
 
 The exhibits surface is a second origin on `http://127.0.0.1:<EXHIBITS_PORT>/`
 (default 3230), loopback only, and the router does not proxy it. It is not the
-workstreams origin: pages here script freely and hold no workstreams authority.
+workstreams origin: pages here script freely and hold two narrow authorities,
+the focus route and the comment routes ([Comments](#comments)).
 
 A request needs the machine-scoped token, once, as `?token=<t>`; the origin
 exchanges it for a session cookie and redirects to the clean URL. The token is
@@ -191,6 +201,48 @@ request (`PUT`, `POST`) that declares an `Origin` must declare this one, or it
 is refused with a 403. A request with no `Origin` — curl, an agent, a script —
 is allowed, because a browser always sends it on a cross-origin write. Pages on
 this origin need do nothing: their own `fetch` carries the right `Origin`.
+
+The focus route is `POST /api/<ws>/<exhibit>/focus`, with no body. It runs
+`bin/workstreams focus <ws>` and brings that workstream's live terminal tab
+forward. It answers 204, or 409 `{ message, detail }` when there is no live
+session (`detail` is the CLI's last stderr line). Granted 2026-10-10, with the
+comment routes. It cannot resume, close, or archive a workstream and takes no
+text. The `Origin` check keeps other origins out but
+cannot tell a click from a page's own script, so an agent-written page can
+trigger it. The container button and the raw page's control bar use it; a raw
+page may also call the route itself.
+
+## Comments
+
+A person reading an exhibit can leave a remark on it, typed or spoken, from
+the page: the **Comment** control above the title turns commenting on; a
+selection anywhere in the title, prose, or page opens a composer carrying the
+selected text and the nearest heading above it, and "comment on the whole
+exhibit" opens one with no selection. **Speak** records a short dictation and
+transcribes it into the box (it needs `BBX_OPENAI_API_KEY` in the app's
+environment; without it the page says so and the remark can still be typed).
+
+The remark goes to the same store as document comments, addressed to the
+exhibit's workstream (`main` for a main-checkout exhibit). Read it as you read
+any comment at pickup:
+
+```bash
+bin/comments list --workstream <workstream>
+bin/comments show exhibit:<workstream>/<exhibit>
+bin/comments clear exhibit:<workstream>/<exhibit> [--id <id>]
+```
+
+`exhibit:<workstream>/<exhibit>` is the address `bin/comments` prints and
+accepts for an exhibit wherever it takes a path. Nothing is read back on the
+page: a comment is a message, and the agent clears it.
+
+The control appears on the default and `index.tsx` tiers, which the container
+renders, and on a raw `index.html` page that opts into the control bar
+("Controls on a raw page" above). A raw page may also call the routes directly: `POST /api/<ws>/<exhibit>/comments` with
+`{ body, origin?, quoted?, section?, fragment? }` answers 201 `{ id, workstream }`,
+and `POST /api/transcribe` with `{ audio: <base64>, mimeType? }` answers
+`{ text }`. Committed apps have no workstream and are refused with 409.
+Design: [exhibit comments](../../beebox/docs/implemented-plans/exhibit-comments.md).
 
 ## Writing pages the checks will not see
 

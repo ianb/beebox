@@ -14,6 +14,8 @@ import { buildExhibitsApp } from "../../src/server/exhibits/app/handler.js";
 import type { ExhibitsAssets } from "../../src/server/exhibits/assets.js";
 import { EXHIBITS_COOKIE } from "../../src/server/exhibits/app/auth.js";
 import { STORE_MARKER } from "../../src/server/exhibits/store.js";
+import { CommentsCliError } from "../../src/server/comments-service.js";
+import { MAX_AUDIO_BYTES, TranscriptionNotConfiguredError } from "../../src/server/transcribe-contract.js";
 
 const TOKEN = "exhibits-test-token-0123456789";
 const EXHIBITS_PORT = 3230;
@@ -39,12 +41,38 @@ async function makeStore(): Promise<string> {
   return root;
 }
 
+/** The focus runner is injected; this stub records calls and fails on demand. */
+const focusCalls: string[] = [];
+let focusFailure: string | null = null;
+
+/** So are the comment writer and the transcriber; these record and fail on demand. */
+const commentAdds: unknown[] = [];
+let commentFailure: string | null = null;
+let transcribeFailure: Error | null = null;
+
 async function makeApp(storeRoot: string) {
   return buildExhibitsApp({
     storeRoot,
     appsRoot: path.join(storeRoot, "unused-apps-root"),
     token: TOKEN,
     port: EXHIBITS_PORT,
+    runFocus: async (request) => {
+      focusCalls.push(`${request.verb} ${request.name}`);
+      if (focusFailure !== null) throw new Error(focusFailure);
+    },
+    comments: {
+      add: async (input) => {
+        if (commentFailure !== null) throw new CommentsCliError(commentFailure);
+        commentAdds.push(input);
+        return { id: `c-${String(commentAdds.length)}` };
+      },
+    },
+    transcribe: {
+      transcribe: async ({ audio }) => {
+        if (transcribeFailure !== null) throw transcribeFailure;
+        return { text: `heard ${String(audio.byteLength)} bytes` };
+      },
+    },
     createAssets: async () => fakeAssets(),
   });
 }
@@ -130,6 +158,130 @@ JSON.stringify({
 => {"foreign":403,"refusalNamesOrigin":true,"sameOrigin":200,"namedHost":200,"opaque":403,"noOrigin":200,"crossOriginRead":200}
 ```
 
+## Reply in the session: bring a workstream's terminal tab forward
+
+`POST /api/<ws>/<exhibit>/focus` runs `bin/workstreams focus <ws>` through the
+injected runner. Success is 204. A runner failure is a 409 whose `detail` is the
+CLI's last stderr line, so the page can show why there is no live session. The
+committed-app namespace and `main` have no session row: they are refused with
+409 before the runner is called. A foreign `Origin` is refused like any write.
+
+```ts continue
+const focused = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
+focusFailure = "workstreams focus: no live session for demo-ws — use resume";
+const noSession = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
+focusFailure = null;
+const callsBeforeRefusals = focusCalls.length;
+const appsFocus = await app.inject({ method: "POST", url: "/api/apps/story-eval/focus", headers: authorized });
+const mainFocus = await app.inject({ method: "POST", url: "/api/main/anything/focus", headers: authorized });
+const unknownFocus = await app.inject({ method: "POST", url: "/api/no-such-ws/nothing/focus", headers: authorized });
+const foreignFocus = await app.inject({
+  method: "POST",
+  url: `${scope}/focus`,
+  headers: { ...authorized, origin: "http://localhost:5173" },
+});
+const anonymousFocus = await app.inject({ method: "POST", url: `${scope}/focus` });
+JSON.stringify({
+  focused: [focused.statusCode, focused.body],
+  noSession: [noSession.statusCode, noSession.json()],
+  apps: [appsFocus.statusCode, appsFocus.json().detail.startsWith("Committed apps")],
+  main: mainFocus.statusCode,
+  unknown: unknownFocus.statusCode,
+  foreign: foreignFocus.statusCode,
+  anonymous: anonymousFocus.statusCode,
+  calls: focusCalls,
+  refusalsSpawnedNothing: focusCalls.length === callsBeforeRefusals,
+  noAppsDirectoryMade: await fs.stat(path.join(store, "apps")).then(() => false, () => true),
+})
+=> {"focused":[204,""],"noSession":[409,{"message":"Could not bring the session forward.","detail":"workstreams focus: no live session for demo-ws — use resume"}],"apps":[409,true],"main":409,"unknown":404,"foreign":403,"anonymous":401,"calls":["focus demo-ws","focus demo-ws"],"refusalsSpawnedNothing":true,"noAppsDirectoryMade":true}
+```
+
+## A remark on the page goes to the comment store, addressed to the workstream
+
+`POST /api/<ws>/<exhibit>/comments` writes through the injected comment service
+(`bin/comments`, in production) with the exhibit as its target and the
+workstream as the comment's recipient — `main` included, since a main-checkout
+session reads with `bin/comments list --workstream main`. Fields the page did
+not send are absent, not `undefined`. Apps are refused before the store is
+touched, so no directory appears; a missing exhibit is 404; a writer failure is
+409 with the CLI's last line.
+
+```ts continue
+const remark = await app.inject({
+  method: "POST",
+  url: `${scope}/comments`,
+  headers: json,
+  payload: { body: "The caption is wrong.", origin: "voice", quoted: "A1 shows", section: "Figures" },
+});
+await fs.mkdir(path.join(store, "main/notes"), { recursive: true });
+const onMain = await app.inject({ method: "POST", url: "/api/main/notes/comments", headers: json, payload: { body: "ok" } });
+const appsComment = await app.inject({ method: "POST", url: "/api/apps/story-eval/comments", headers: json, payload: { body: "x" } });
+const noExhibit = await app.inject({ method: "POST", url: "/api/demo-ws/nothing/comments", headers: json, payload: { body: "x" } });
+const badName = await app.inject({ method: "POST", url: "/api/demo-ws/..%2Fx/comments", headers: json, payload: { body: "x" } });
+const empty = await app.inject({ method: "POST", url: `${scope}/comments`, headers: json, payload: { body: "" } });
+commentFailure = "comments: comment store /tmp/x is missing its .dev-comments marker";
+const unsaved = await app.inject({ method: "POST", url: `${scope}/comments`, headers: json, payload: { body: "x" } });
+commentFailure = null;
+const foreignComment = await app.inject({
+  method: "POST",
+  url: `${scope}/comments`,
+  headers: { ...json, origin: "http://localhost:5173" },
+  payload: { body: "x" },
+});
+JSON.stringify({
+  remark: [remark.statusCode, remark.json()],
+  recorded: commentAdds[0],
+  onMain: [onMain.statusCode, commentAdds[1]],
+  apps: [appsComment.statusCode, appsComment.json().message],
+  noAppsDirectoryMade: await fs.stat(path.join(store, "apps")).then(() => false, () => true),
+  missing: noExhibit.statusCode,
+  badName: badName.statusCode,
+  empty: [empty.statusCode, empty.json().issues],
+  unsaved: [unsaved.statusCode, unsaved.json()],
+  foreign: foreignComment.statusCode,
+  writes: commentAdds.length,
+})
+=> {"remark":[201,{"id":"c-1","workstream":"demo-ws"}],"recorded":{"target":{"exhibit":{"workstream":"demo-ws","exhibit":"instrument"}},"body":"The caption is wrong.","origin":"voice","workstream":"demo-ws","quoted":"A1 shows","section":"Figures"},"onMain":[201,{"target":{"exhibit":{"workstream":"main","exhibit":"notes"}},"body":"ok","origin":"typed","workstream":"main"}],"apps":[409,"Apps have no workstream to send a comment to."],"noAppsDirectoryMade":true,"missing":404,"badName":400,"empty":[400,["body: Too small: expected string to have >=1 characters"]],"unsaved":[409,{"message":"The comment was not saved.","detail":"bin/comments failed: comments: comment store /tmp/x is missing its .dev-comments marker"}],"foreign":403,"writes":2}
+```
+
+## A spoken remark is transcribed on this origin
+
+`POST /api/transcribe` is the dashboard's transcription with the same byte cap:
+over the cap is 413 before the service is called, a service with no key is 412,
+and the message is the contract's own wording so the page can show it as is.
+
+```ts continue
+const audio = Buffer.from("not really audio").toString("base64");
+const heard = await app.inject({ method: "POST", url: "/api/transcribe", headers: json, payload: { audio } });
+const tooBig = await app.inject({
+  method: "POST",
+  url: "/api/transcribe",
+  headers: json,
+  payload: { audio: Buffer.alloc(MAX_AUDIO_BYTES + 1).toString("base64") },
+});
+transcribeFailure = new TranscriptionNotConfiguredError();
+const noKey = await app.inject({ method: "POST", url: "/api/transcribe", headers: json, payload: { audio } });
+transcribeFailure = null;
+const notBase64Shape = await app.inject({ method: "POST", url: "/api/transcribe", headers: json, payload: { mimeType: "audio/webm" } });
+JSON.stringify({
+  heard: [heard.statusCode, heard.json()],
+  tooBig: [tooBig.statusCode, tooBig.json().error.startsWith("That recording is 700 kB")],
+  noKey: [noKey.statusCode, noKey.json().error.startsWith("BBX_OPENAI_API_KEY is not set")],
+  malformed: notBase64Shape.statusCode,
+})
+=> {"heard":[200,{"text":"heard 16 bytes"}],"tooBig":[413,true],"noKey":[412,true],"malformed":400}
+```
+
+A workstream named like an `Object.prototype` member is an ordinary workstream:
+it reaches the runner rather than hitting an inherited property.
+
+```ts continue
+await fs.mkdir(path.join(store, "constructor/page"), { recursive: true });
+const inherited = await app.inject({ method: "POST", url: "/api/constructor/page/focus", headers: authorized });
+JSON.stringify({ status: inherited.statusCode, called: focusCalls.at(-1) })
+=> {"status":204,"called":"focus constructor"}
+```
+
 ## Documents round-trip
 
 `PUT` replaces a whole JSON document; `GET` hands it back. The key names the
@@ -198,7 +350,7 @@ from disk.
 
 ```ts continue
 await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "ratings", data: { figure: "A1" } }) });
-await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "disposition", data: { choice: "A" } }) });
+await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "choices", data: { choice: "A" } }) });
 await Promise.all(
   Array.from({ length: 8 }, (_unused, index) =>
     app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "burst", data: index }) })),
@@ -212,7 +364,7 @@ JSON.stringify({
   stamped: parsed.every((entry) => typeof entry.at === "string" && !Number.isNaN(Date.parse(entry.at))),
   burst: parsed.filter((entry) => entry.log === "burst").map((entry) => entry.data).toSorted((a, b) => a - b),
 })
-=> {"lines":10,"logs":["ratings","disposition"],"data":{"figure":"A1"},"stamped":true,"burst":[0,1,2,3,4,5,6,7]}
+=> {"lines":10,"logs":["ratings","choices"],"data":{"figure":"A1"},"stamped":true,"burst":[0,1,2,3,4,5,6,7]}
 ```
 
 An envelope that is not `{ log, data }` is refused with the Zod issues, not

@@ -7,7 +7,7 @@ Connectors sync external services with the box filesystem. Each implements the `
 Connectors that call external APIs accept an optional service parameter in their factory function:
 
 ```typescript
-export function createTelegramConnector(boxRoot: string, telegram?: TelegramService): Connector
+export function createGmailConnector(boxRoot: string, service?: GoogleGmailService): Connector
 ```
 
 When no service is provided, connectors create real implementations from config files at sync time. When a fake service is injected (in tests), all API calls go through the fake instead.
@@ -20,7 +20,6 @@ A connector sync rebuilds a card's frontmatter+body wholesale from its template.
 
 ## Currently service-injected
 
-- **telegram/connector.ts** — uses `TelegramService`
 - **gmail/connector.ts** — uses `GoogleGmailService` (Gmail REST API via shared Google OAuth). Also honors `BBX_FAKE_GMAIL=<state file>` so a *subprocess* (`bbx engine wakeup`) can run on a fake mailbox, which in-process injection can't reach — fail-closed: without the `_config/test-box` marker it throws rather than serving fake mail to a real box (`src/field-test/fake-gmail-gate.ts`).
 - **google-drive/connector.ts** — uses `GoogleDriveService`
 - **google-calendar/connector.ts** — uses `GoogleCalendarService`. ICS parsing via `ical.js` stays in the connector — pure transformation, not an external dependency. `fetchAvailableCalendars` in `google-calendar/config.ts` also takes a `GoogleCalendarService`; build one from auth with `createGoogleCalendarService(createGoogleAuthService(auth))` when calling from a CLI or route without an injected service.

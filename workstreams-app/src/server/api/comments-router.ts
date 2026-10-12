@@ -81,7 +81,10 @@ export const commentsRouter = router({
       fragment: z.string().max(4096).optional(),
     }))
     .output(z.object({ id: z.string() }))
-    .mutation(async ({ input, ctx }) => passingCliErrors(() => ctx.services.comments.add(input))),
+    .mutation(async ({ input, ctx }) => {
+      const { relPath, worktree, ...rest } = input;
+      return passingCliErrors(() => ctx.services.comments.add({ target: { relPath, worktree }, ...rest }));
+    }),
 
   /**
    * Audio in, text out — nothing stored, nothing retained.

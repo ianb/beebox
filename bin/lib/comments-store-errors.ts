@@ -18,6 +18,7 @@ export type CommentPathRefusal =
   | { kind: "escapes"; relPath: string }
   | { kind: "unnormalized"; relPath: string }
   | { kind: "bad-worktree-name"; worktree: string }
+  | { kind: "bad-exhibit-name"; exhibit: string }
   | { kind: "outside-store"; relPath: string }
   | { kind: "symlinked-ancestor"; at: string }
   | { kind: "unreadable-append"; problem: string }
@@ -35,6 +36,8 @@ function refusalDetail(reason: CommentPathRefusal): string {
       return `path is not normalized: ${reason.relPath}`;
     case "bad-worktree-name":
       return `not a worktree name: ${reason.worktree}`;
+    case "bad-exhibit-name":
+      return `not an exhibit name: ${reason.exhibit}`;
     case "outside-store":
       return `resolves outside the store: ${reason.relPath}`;
     case "symlinked-ancestor":

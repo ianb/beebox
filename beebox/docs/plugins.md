@@ -43,7 +43,7 @@ src/plugins/<name>/
   plugin.ts     default-exports definePlugin({...}); Node-safe
   view.tsx      optional; browser-safe; the stub re-exports it
   README.md     What it is · Setup · Conventions · Migration · Uninstall
-  SKILL.md      body only; the engine writes the frontmatter
+  skill.ts      exports the skill body as a string; the engine writes the frontmatter
   <own files>
 src/plugins.ts  the registry; add the member here
 ```
@@ -72,6 +72,17 @@ export default definePlugin({
 The declarative fields are read without running anything. The two hooks are
 the whole hook surface; add a new hook kind only with a real consumer and a
 plan.
+
+## What stays core
+
+The connectors (Gmail, Google Calendar, Google Drive) stay core. They are
+the box's intake for mail, calendar and drive, and intake is medium; they
+share Google auth, the admin connect flow, the scheduler's auth alerts and
+the default schedules with the engine, and import 44 engine modules the
+boundary above forbids. The sizing and the decision are in
+`docs/implemented-plans/plugins-slice-3.md`. A source a box is *about* (a
+feed reader, say) is content and would be a plugin; it would be the real
+consumer for a `connectors` hook, which does not exist until then.
 
 ## The import boundary
 
@@ -159,14 +170,20 @@ replacement, and the README's Migration section names the script to run.
 
 ## Conventions
 
-- Default type names are the convention cross-card checks rely on. A box may
-  rename a type; the README says which checks that disables.
-- Markdoc tags are declared on the schema and valid only in that type's body
-  (slice 2 of the plan; until then, tags stay in the core table).
-- A plugin ships no secrets; a script's `secrets.json` is the box's.
-- Health checks are read-only. Lint hooks receive a `LintContext` and import
-  nothing from the engine.
-- Each plugin has a doctest that writes its README's stubs into a temp box
-  and runs `bbx validate`, so the docs cannot drift from what compiles.
-- Migration is manual and agent-run. A plugin may ship a mechanical update
-  script; the README tells the agent to run it.
+`test/plugins.doctest.md` loops every registered plugin and checks the rules
+marked (checked). The rest are convention only.
+
+- **name**: equals the directory under `src/plugins/`, kebab-case (checked).
+- **docs**: names the README, which has the five sections What it is, Setup, Conventions, Migration, Uninstall (checked).
+- **stubs**: every base key has a stub `src/schemas/<key>.ts` in the README; every view has a stub `src/views/<name>.tsx` and a `view.tsx` entry (checked).
+- **stubs validate**: the README stubs written into an empty temp box compile, load, and pass `bbx validate` with exit 0 and no error lines (checked).
+- **scoped tags**: keys are kebab-case and not in the core table (checked; `RedeclaredTagError` also fires at load).
+- **render names**: a plugin's tag render names are unique against the widget's component map (convention). Core names, from `buildRenderConfig` in `src/frontend/src/components/Markdown/body.tsx`: Fragment, Para, Blockquote, Link, Img, QuoteInline, QuoteBlock, SourceInline, SourceBlock, Purpose, Correction, Task, CaptureImage, Silence, RedactedInline, RedactedBlock, TodoInline, TodoBlock, SeeAlso, UnknownTagInline, UnknownTagBlock.
+- **CSS**: classes are prefixed `bbx-<plugin>-` (convention).
+- **tricks**: a trick a README asks the agent to write is named `<plugin>-<verb>` (convention).
+- **tags on a type**: a box-local type or plugin base declares tags on the schema with `markdocTags`. They validate only in that type's body and render as components only through a view passing `tags` to `Markdown`; elsewhere they show as authored text.
+- **setup doctest**: each plugin's setup doctest writes the README stubs into a temp box (`readmeStubs(name)` in `test/helpers/plugin-readme.ts`) and runs `bbx validate`, so the docs cannot drift from what compiles.
+- **migration**: manual and agent-run. A plugin may ship a mechanical update script; the README tells the agent to run it.
+- **skill**: the body lives in `skill.ts`, exported as a string; the engine writes the frontmatter.
+- **types**: default type names are what cross-card checks rely on. A box may rename a type; the README says which checks that disables.
+- **secrets and hooks**: a plugin ships no secrets; a script's `secrets.json` is the box's. Health checks are read-only. Lint hooks receive a `LintContext` and import nothing from the engine.

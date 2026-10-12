@@ -29,18 +29,18 @@ import {
   captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
   loadCurrentModel, loadSessionId, saveCurrentModel,
 } from "../state.js";
-import { pumpSessionRun } from "../consume.js";
+import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "../model.js";
 import { preflightChatBackend } from "../../../agent/auth-preflight.js";
 import { liveProviderRefusal } from "../../../provider-env/core.js";
-import { createRunLockHolder, withChatRunAdmission } from "../run-lock.js";
+import { createRunLockHolder, withChatRunAdmission } from "./lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
   composeTurnContent,
 } from "./start.js";
 import type { ChatSessionOptions } from "../options.js";
 import { createHealthGate } from "../../../session-context.js";
-import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "../lifecycle.js";
+import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
@@ -59,6 +59,7 @@ export class ChatSession extends EventEmitter {
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
   private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
+  private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
   private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
@@ -78,7 +79,7 @@ export class ChatSession extends EventEmitter {
   private resolvedContextDir: string | null | undefined = undefined;
   /** Coined-id state: does the next run create this conversation? See `coined-run.ts`. */
   private readonly coined: CoinedRunState;
-  /** The chat-active lock held while a run is in flight (`run-lock.ts`). */
+  /** The chat-active lock held while a run is in flight (`lock.ts`). */
   private readonly runLock = createRunLockHolder(() => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }));
   /** Holds each turn's `result` until the transcript flush lands on disk. */
   private readonly durability = createTurnDurabilityGate(
@@ -203,6 +204,9 @@ export class ChatSession extends EventEmitter {
     });
   }
 
+  /** Settles once every send now preparing a turn or starting its run has finished or failed. */
+  whenStarted(): Promise<unknown> { return Promise.allSettled(this.opening); }
+
   /**
    * Return to `idle` after a run failed to start, and deal with anything that
    * queued behind it. While the start was in flight the session read as busy,
@@ -305,9 +309,13 @@ export class ChatSession extends EventEmitter {
    * tokens in the text.
    */
   async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
-    const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
-    try { return await work.run(() => this.sendAdmitted(message)); }
-    finally { await work.release(); }
+    const opening = (async () => {
+      const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
+      try { return await work.run(() => this.sendAdmitted(message)); }
+      finally { await work.release(); }
+    })();
+    this.opening.add(opening);
+    try { return await opening; } finally { this.opening.delete(opening); }
   }
 
   private async sendAdmitted(message: string | ChatSendInput): Promise<boolean> {
@@ -426,17 +434,11 @@ export class ChatSession extends EventEmitter {
     return loadSessionHistory(this.boxRoot, { sessionId: this.sessionId, slice, fresh: opts?.fresh ?? false });
   }
 
-  getSessionId(): string | null {
-    return this.sessionId;
-  }
+  getSessionId(): string | null { return this.sessionId; }
 
-  isRunning(): boolean {
-    return this.liveRun() !== null;
-  }
+  isRunning(): boolean { return this.liveRun() !== null; }
 
-  isBusy(): boolean {
-    return this.preparingTurn || lifecycleBusy(this.state);
-  }
+  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state); }
 
   /**
    * Stop the current run gracefully. Clears the pending queue so the

@@ -5,10 +5,13 @@ import { controlAddress } from "@shared/ui-scan/control-address";
 import type { FileViewMode } from "../../file-view-types";
 import type { CardSymbolData } from "@shared/card-symbol";
 import { CardMark } from "../../ui/CardMark";
+import { Text } from "../../ui/Text";
 
 export interface CardThemeSurfaceProps {
   theme: ResolvedCardTheme;
   title: string;
+  /** The card type's summary line (`card.get` `detail`), shown under the title. */
+  detail?: string | undefined;
   /** The card's symbol, drawn before the title; `null` draws nothing. */
   symbol: CardSymbolData | null;
   boxSlug: string | undefined;
@@ -38,7 +41,7 @@ export function useShowCardFront(): () => void {
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
-export function CardThemeSurface({ theme, title, symbol, boxSlug, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
+export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
   const [back, setBack] = useState(false);
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
   // React's `useId` spells its values with colons, which the control address
@@ -105,6 +108,7 @@ export function CardThemeSurface({ theme, title, symbol, boxSlug, mode, children
           <CardMark symbol={symbol} size="md" boxSlug={boxSlug} />
           <h2 className="min-w-0">{title}</h2>
         </div>}
+        {detail === undefined ? null : <Text as="p" size="sm" tone="subtle" material truncate title={detail} className="mt-1">{detail}</Text>}
         {actions ? <div className="flex gap-2 mt-2 print:hidden">{actions}</div> : null}
       </header>
       {problem}

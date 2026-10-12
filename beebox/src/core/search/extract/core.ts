@@ -261,6 +261,10 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
       return {
         extra: compact([str(fields["name"]), str(fields["description"]), str(fields["notes"])]),
       };
+    case "briefing":
+      // The purpose statement lives in frontmatter, not the body, so it is
+      // folded in or a directory briefing's purpose is unsearchable.
+      return { extra: compact([str(fields["purpose"])]) };
     case "image":
       // text: carries the OCR'd content the analysis step keeps (amounts,
       // account numbers, names) — the needles people search for.
@@ -271,8 +275,6 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
       return { extra: compact([str(fields["description"])]) };
     case "gsheet":
       return { extra: tabTitles(fields["sheets"]) };
-    case "telegram-message":
-      return { extra: compact([str(fields["text"])]) };
     default:
       return { extra: [] };
   }

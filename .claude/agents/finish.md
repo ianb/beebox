@@ -14,9 +14,9 @@ write CODING_FEEDBACK using `bin/coding-feedback help` and
 mechanics; you own review and whether passing verification remains applicable.
 
 ## 1. Preflight — `bin/finish-preflight`
-Confirms the worktree, classifies the private leg, lists stragglers, merges `main`,
-prints the decision sheet every later step keys on (`--json` for exact fields).
-Exit 2 (wrong branch / broken private mount) or 3 (merge conflict) → BLOCKED.
+Confirms the worktree, lists stragglers, merges `main` (resolving conflicts it has
+a rule for; check those in step 4), prints the decision sheet (`--json` for fields).
+Exit 2 (wrong place / private mount) or 3 (other merge conflict) → BLOCKED.
 
 ## 2. Stragglers — the sheet lists them and commits nothing
 Caller said intentional (or obviously this session's work) → commit, with a
@@ -48,8 +48,7 @@ or named tests for a narrower impact). Reserve a broad rerun for broad effects.
 Docs-only close-out needs its pre-commit doc-check, not application tests. Report
 which evidence was reused, the intervening delta, and why it remains applicable.
 
-The verifier captures output outside the worktree and reruns failing test files
-once in isolation. Green proceeds; a named flake (passes alone at the same
+The verifier reruns failing test files once in isolation. Green proceeds; a named flake (passes alone at the same
 content hash) is green: report it, no flake issue (`beebox/test/careful.txt` owns
 curation). Red means fix and recheck or BLOCKED with the output path, never a
 suite rerun to chase green. Code changes require a passing smoke: real box/browser,
@@ -98,7 +97,8 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
   README's disposition table.
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
   duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
-  `pnpm --dir beebox doc-check --fix`, then `pnpm doc-graph` in `beebox/`.
+  `pnpm --dir beebox doc-check --fix` and `pnpm --dir beebox doc-graph`. `--fix` only
+  repairs `.md` links and closed-issue backticks: grep the old path; check moved files' links.
 
 ## 6. Close resolved issues
 Start with the sheet's `issues`, the plan's frontmatter `issues:`, the briefing,
@@ -112,7 +112,7 @@ For each issue this work **actually resolves**: `git mv issues/<category>/<x>.md
 issues/closed/<category>/`, then in the moved file add `resolution:
 implemented|wontfix|superseded`, set `workstream:` to the bare workstream name, and
 put a closing note atop the body naming the resolving commit and any divergence from
-what the issue proposed. Then `pnpm --dir beebox doc-check --fix` at the root.
+what the issue proposed. Then repair links as in step 5.
 Never close an issue with `needs: [manual-testing]` — only the boxholder clears
 that. Ambiguous, or a deliberate punch-list → leave open and name it. **Private
 issues** close the same way inside `private-issues/`, where `doc-check --fix`
@@ -150,11 +150,9 @@ SessionEnd and the SessionStart sweep own it.
 ## 8. Report
 Report the merge hash/count, checks and reused evidence (including flakes), plan
 MET/PARTIAL/UNMET tally, Track O findings, and scope limits. Passing tests do not
-mean browser-verified. No advice to exit or clean up. For multiple UI screenshots,
-report one labeled exhibit URL, not raw paths; create an `fyi` exhibit before
-landing if missing. Captions must explain what the figures demonstrate. A
-single incidental debug capture does not trigger this. Write the CODING_FEEDBACK
-entry (see the top), then end with the status line the
+mean browser-verified. No advice to exit or clean up. Multiple UI screenshots →
+one labeled exhibit URL, captions saying what each figure shows (create an `fyi`
+one before landing if missing). Write CODING_FEEDBACK, then end with the line the
 caller parses: `RESULT: MERGED`, or `RESULT: BLOCKED` + what blocks, what you
 completed, what the human must decide — saying plainly that nothing merged if you
 stopped before step 7. With the private leg active, EVERY report also carries

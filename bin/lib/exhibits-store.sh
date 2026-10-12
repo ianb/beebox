@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Exhibit store lifecycle. SOURCE this file; don't execute it.
 #
-# The store is the third persistence class (docs/plans/workstream-exhibits.md,
+# The store is the third persistence class (docs/implemented-plans/workstream-exhibits.md,
 # Track A): per-workstream directories at WT_EXHIBITS_ROOT/<name>, OUTSIDE
 # git and OUTSIDE every worktree, mounted into each checkout as a gitignored
 # symlink at <checkout>/exhibits. Deleting a worktree therefore only ever

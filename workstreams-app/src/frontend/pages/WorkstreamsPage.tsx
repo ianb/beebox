@@ -2,12 +2,13 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { ScheduledSection } from "../components/ScheduledWorkstreams.js";
 import { isScheduled, WorkstreamActions } from "../components/WorkstreamActions.js";
+import { AllExhibitsLink, ExhibitLinks } from "../components/ExhibitLinks.js";
 import { WorkstreamIssueSummary } from "../components/WorkstreamIssueSummary.js";
 import { Button, Pill } from "../components/ui.js";
 import { relativeTime } from "../lib/format.js";
 import { trpc } from "../trpc.js";
 import { usePageIdentity } from "../lib/page-identity.js";
-import type { Issue, Workstream } from "../types.js";
+import type { Issue, Workstream, WorkstreamListItem } from "../types.js";
 
 function launchStateFor(row: Workstream): { section: string; note: string } | null {
   if (row.routing.state === "launching") return { section: "Launching", note: "setting up worktree and agent" };
@@ -49,25 +50,25 @@ function AgentState({ item }: { item: Workstream }) {
   return <span className={`agent-state ${active ? "agent-state-live" : ""}`}>{label}</span>;
 }
 
-function WorkstreamRow({ row, issues }: { row: Workstream; issues: Issue[] }) {
+function WorkstreamRow({ row, issues, exhibitsOrigin }: { row: WorkstreamListItem; issues: Issue[]; exhibitsOrigin: string }) {
   const state = workstreamStateFor(row);
   const related = issues.filter((issue) => issue.frontmatter.workstream === row.name || issue.frontmatter.discoveredIn === row.name);
   const activity = row.routing.lastActivityAt ? relativeTime(row.routing.lastActivityAt) : "age unknown";
-  return <li className="workstream-row"><div className="workstream-row-main"><Link to="/$name" params={{ name: row.name }} className="workstream-name">{row.name}</Link><span className="workstream-description">{row.session.description ?? "No description"}</span><span className="workstream-note">{state.note} · {activity}</span><span className="workstream-status"><Pill tone={row.routing.action === "new-stream-preferred" ? "warning" : row.routing.action === "manual-forward" ? "manual" : "info"}>{row.routing.action}</Pill><AgentState item={row} />{row.boxState.keepUnmerged ? <Pill tone="warning">keep unmerged</Pill> : row.boxState.testSetup ? <Pill tone="warning">test1 {row.boxState.pristine ? "pristine" : "dirtied"}</Pill> : null}</span><WorkstreamActions row={row} /></div>{related.length > 0 ? <div className="workstream-issues">{related.map((issue) => <WorkstreamIssueSummary key={`${issue.visibility}:${issue.relPath}`} issue={issue} owned={issue.frontmatter.workstream === row.name} discovered={issue.frontmatter.discoveredIn === row.name} />)}</div> : null}</li>;
+  return <li className="workstream-row"><div className="workstream-row-main"><Link to="/$name" params={{ name: row.name }} className="workstream-name">{row.name}</Link><span className="workstream-description">{row.session.description ?? "No description"}</span><span className="workstream-note">{state.note} · {activity}</span><span className="workstream-status"><Pill tone={row.routing.action === "new-stream-preferred" ? "warning" : row.routing.action === "manual-forward" ? "manual" : "info"}>{row.routing.action}</Pill><AgentState item={row} />{row.boxState.keepUnmerged ? <Pill tone="warning">keep unmerged</Pill> : row.boxState.testSetup ? <Pill tone="warning">test1 {row.boxState.pristine ? "pristine" : "dirtied"}</Pill> : null}</span><WorkstreamActions row={row} /></div>{row.exhibits.length > 0 ? <div className="workstream-exhibits"><ExhibitLinks entries={row.exhibits} origin={exhibitsOrigin} /><AllExhibitsLink workstream={row.name} origin={exhibitsOrigin} /></div> : null}{related.length > 0 ? <div className="workstream-issues">{related.map((issue) => <WorkstreamIssueSummary key={`${issue.visibility}:${issue.relPath}`} issue={issue} owned={issue.frontmatter.workstream === row.name} discovered={issue.frontmatter.discoveredIn === row.name} />)}</div> : null}</li>;
 }
 
 const SECTION_ORDER = ["Launching", SCHEDULED_SECTION, "Launch needs attention", "In progress", "Merged ✓, session still open", "Untouched", "Held for testing", "Dormant", "Stale", "Recently culled", "Removed with unmerged work", "Archived"];
 
-function WorkstreamsContent({ rows, issues, warnings }: { rows: Workstream[]; issues: Issue[]; warnings: Array<{ message: string }> }) {
+function WorkstreamsContent({ rows, issues, warnings, exhibitsOrigin }: { rows: WorkstreamListItem[]; issues: Issue[]; warnings: Array<{ message: string }>; exhibitsOrigin: string }) {
   const search = useSearch({ strict: false });
   const query = typeof search.q === "string" ? search.q : undefined;
   const navigate = useNavigate();
   const [text, setText] = useState(query ?? "");
   const filtered = text.trim() ? rows.filter((row) => `${row.name} ${row.session.description ?? ""}`.toLowerCase().includes(text.trim().toLowerCase())) : rows;
-  const sections = new Map<string, Workstream[]>();
+  const sections = new Map<string, WorkstreamListItem[]>();
   for (const name of SECTION_ORDER) sections.set(name, []);
   for (const row of filtered) sections.get(workstreamStateFor(row).section)?.push(row);
-  return <>{warnings.length > 0 ? <section className="warning-state" role="alert"><p>Workstream inventory warnings.</p><ul>{warnings.map((warning, index) => <li key={`${index}:${warning.message}`}>{warning.message}</li>)}</ul></section> : null}<form className="workstream-search" role="search" onSubmit={(event) => { event.preventDefault(); void navigate({ to: "/streams", search: text ? { q: text } : {} }); }}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Search names and descriptions" aria-label="Search workstreams" /><Button intent="primary">Search</Button></form>{text && filtered.length === 0 ? <p className="empty-state">No matching workstreams.</p> : null}{SECTION_ORDER.map((name) => { const section = sections.get(name) ?? []; if (section.length === 0) return null; if (name === SCHEDULED_SECTION) return <ScheduledSection key={name} rows={section} issues={issues} />; return <section className="workstream-section" key={name}><h2>{name} <small>{section.length}</small></h2><ul>{section.map((row) => <WorkstreamRow key={row.name} row={row} issues={issues} />)}</ul></section>; })}</>;
+  return <>{warnings.length > 0 ? <section className="warning-state" role="alert"><p>Workstream inventory warnings.</p><ul>{warnings.map((warning, index) => <li key={`${index}:${warning.message}`}>{warning.message}</li>)}</ul></section> : null}<form className="workstream-search" role="search" onSubmit={(event) => { event.preventDefault(); void navigate({ to: "/streams", search: text ? { q: text } : {} }); }}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Search names and descriptions" aria-label="Search workstreams" /><Button intent="primary">Search</Button></form>{text && filtered.length === 0 ? <p className="empty-state">No matching workstreams.</p> : null}{SECTION_ORDER.map((name) => { const section = sections.get(name) ?? []; if (section.length === 0) return null; if (name === SCHEDULED_SECTION) return <ScheduledSection key={name} rows={section} issues={issues} exhibitsOrigin={exhibitsOrigin} />; return <section className="workstream-section" key={name}><h2>{name} <small>{section.length}</small></h2><ul>{section.map((row) => <WorkstreamRow key={row.name} row={row} issues={issues} exhibitsOrigin={exhibitsOrigin} />)}</ul></section>; })}</>;
 }
 
 export function WorkstreamsPage() {
@@ -75,7 +76,7 @@ export function WorkstreamsPage() {
   const workstreams = trpc.workstreams.list.useQuery(undefined, { staleTime: 10_000, refetchOnWindowFocus: true });
   const issues = trpc.issues.list.useQuery(undefined, { staleTime: 10_000, refetchOnWindowFocus: true });
   const error = workstreams.error ? `Couldn’t load workstreams: ${workstreams.error.message}` : issues.error ? `Couldn’t load workstream issues: ${issues.error.message}` : null;
-  return <main className="workstreams-page"><WorkstreamsHeader />{workstreams.isLoading || issues.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /><span /><span /></section> : error ? <section className="error-state"><p>{error}</p><Button onClick={() => { void workstreams.refetch(); void issues.refetch(); }}>Retry</Button></section> : <WorkstreamsContent rows={workstreams.data?.items ?? []} issues={issues.data?.items ?? []} warnings={workstreams.data?.warnings ?? []} />}</main>;
+  return <main className="workstreams-page"><WorkstreamsHeader />{workstreams.isLoading || issues.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /><span /><span /></section> : error ? <section className="error-state"><p>{error}</p><Button onClick={() => { void workstreams.refetch(); void issues.refetch(); }}>Retry</Button></section> : <WorkstreamsContent rows={workstreams.data?.items ?? []} issues={issues.data?.items ?? []} warnings={workstreams.data?.warnings ?? []} exhibitsOrigin={workstreams.data?.exhibitsOrigin ?? ""} />}</main>;
 }
 
 export function WorkstreamsHeader() {

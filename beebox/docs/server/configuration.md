@@ -209,4 +209,4 @@ trusted internal header — the box's own `allowedEmails` check runs
 regardless, so hub auth and per-box authorization are independent layers.
 
 Webhooks (`/webhook/<slug>/...`) are unauthenticated by design so external
-services (Telegram, etc.) can reach them.
+services can reach them.

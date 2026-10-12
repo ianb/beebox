@@ -3,7 +3,7 @@
  * stays a raw route because it's a browser redirect flow, not a tRPC call:
  *   GET /auth/google-services/callback — exchange the OAuth code for tokens.
  *
- * Every other admin endpoint (claude / telegram / google status+setup, box
+ * Every other admin endpoint (claude / google status+setup, box
  * config) now lives in the `admin` tRPC router as owner-gated procedures.
  */
 
@@ -112,5 +112,5 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
 }
 
 /**
- * Per-box admin routes (Telegram, box config). Registered under each box prefix.
+ * Per-box admin routes (box config). Registered under each box prefix.
  */

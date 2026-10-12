@@ -169,9 +169,10 @@ steps:
               below owns them) — a proposed briefing correction becomes a question card
               quoting the evidence, with learning: {sink: briefing, ref: the
               ROOT briefing card, proposal: the one-sentence belief} declared
-              on the question so a confirmed answer records as a
-              {% correction %} block (the current briefing vocabulary — the
-              old <agent-needs-to-know> element is retired).
+              on the question so a confirmed answer records as a bullet
+              under the briefing's `## Corrections` heading (the current
+              briefing vocabulary — the `{% correction %}` tag and the old
+              <agent-needs-to-know> element are retired).
             - Set ref on a belief to the observation's thread card ref when it has
               one (threadRef in the ledger entry).
             - An observation may answer an item in the personality card's
@@ -203,8 +204,8 @@ steps:
             - question: _bookkeeping/questions/<Name>.question.card, following the
               existing examples in the box; include the evidence quote and the
               proposed change in the memo, set directive: to what the
-              follow-up agent should do (add a {% correction %} block to the
-              root briefing, or the relevant guide/personality edit), and set
+              follow-up agent should do (add a bullet under `## Corrections`
+              in the root briefing, or the relevant guide/personality edit), and set
               learning: declaring the sink so the confirmed or declined belief
               gets recorded — this is the same two-product contract every
               question card uses (see `node_modules/beebox/box-docs/card-question.md`).

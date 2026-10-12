@@ -47,3 +47,23 @@ const broken = await caller(box.root).card.get({ path: "_content/Broken.memo.car
 ```ts cleanup
 await box.cleanup();
 ```
+
+## `card.get` returns the type's summary line
+
+`detail` is the line the card's type writes about itself (`summarize`), shown
+under the title on the card page (docs/implemented-plans/place-shows-cards.md, Track B).
+A record's line is where it is and how many; a doc writes none.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("_content/Solder.record.card", "---\nname: Solder\nlocation:\n  text: Tray 3\nquantity:\n  value: 2 spools\n---\n");
+await box.write("_content/Plan.doc.card", "---\ntitle: Plan\n---\nThe plan.\n");
+const record = await caller(box.root).card.get({ path: "_content/Solder.record.card" });
+const doc = await caller(box.root).card.get({ path: "_content/Plan.doc.card" });
+[record.detail, "detail" in doc]
+=> ["Tray 3 · 2 spools", false]
+```
+
+```ts cleanup
+await box.cleanup();
+```

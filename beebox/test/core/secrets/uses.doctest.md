@@ -24,19 +24,17 @@ async function useTempStore() {
 }
 ```
 
-## The built-in registry: exact names and `family/` prefixes
+## The built-in registry
 
 Each line is derived from a real `resolveSecret` call site, so the boxholder can
 see what the engine will spend a key on before granting it. Lookup is the same
 one the probe and format registries use — exact name first, then the longest
-matching `family/` prefix — so a per-box instance inherits its family's reasons.
+matching `family/` prefix.
 
 ```ts
 print(builtinSecretUses("openai-thinking").join(" | "));
-print(builtinSecretUses("telegram-bot/demo-box")[0]);
 =>
 speech generation for chat (text-to-speech) | audio transcription (Whisper) | minting short-lived realtime-transcription keys for the browser
-receiving this box's Telegram messages (the webhook secret authenticates Telegram's callbacks)
 ```
 
 A name the engine does not read has no built-in reasons — a guess would be

@@ -85,11 +85,13 @@ function RendererToggle({ renderers, active, onSelect, compact, path }: {
 
 /** Chat-mode header: name + full path (truncated, hover for full), open-in-sidebar + open-in-browse icons. */
 function ChatHeader({
-  target, title, renderers, active, onSelect, onOpenInPanel, onTrashed,
+  target, title, detail, renderers, active, onSelect, onOpenInPanel, onTrashed,
 }: {
   target: ViewTarget;
   /** The card's frontmatter title, when it has one — wins over the filename. */
   title: string | null;
+  /** The card type's summary line (`card.get` `detail`), under the title. */
+  detail: string | undefined;
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
@@ -102,6 +104,7 @@ function ChatHeader({
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
+        {detail === undefined ? null : <div className="text-xs text-warm-600 truncate" title={detail}>{detail}</div>}
         <div className="text-xs text-warm-500 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact path={path} />
@@ -282,7 +285,7 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
   if (mode === "chat") {
     return (
       <div className="border rounded-lg overflow-hidden bg-white">
-        <ChatHeader target={target} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} onTrashed={onClose} />
+        <ChatHeader target={target} title={cardTitle(data)} detail={data.detail} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} onTrashed={onClose} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
     );

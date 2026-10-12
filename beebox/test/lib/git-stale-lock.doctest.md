@@ -13,14 +13,42 @@ actually using, because that makes the holder's commit fail.
 import { open, utimes, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import * as childProcess from "node:child_process";
+import { promisify } from "node:util";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { stageAndCommitPaths } from "../../src/lib/git/core/operations.js";
-import {
-  inspectIndexLock,
-  recoverStaleIndexLock,
-  INDEX_LOCK_STALE_MS,
-  formatAge,
-} from "../../src/lib/git-stale-lock.js";
+import { inspectIndexLock, INDEX_LOCK_STALE_MS, formatAge } from "../../src/lib/git-stale-lock.js";
+
+const execFileAsync = promisify(childProcess.execFile);
+
+// On macOS the holder probe is `lsof`, which by default scans every process on
+// the machine. In a loaded full suite that scan outran its 5s budget, and the
+// probe then answered `unknown-holder` — correctly, but not what these
+// sections are about. The only process that can hold a lock this file plants
+// is this one, so the real `lsof` is narrowed to it with `-a -p`.
+function lsofThisProcess(args, options) {
+  const at = args.indexOf("--");
+  if (at < 0) throw new Error(`unexpected lsof arguments: ${args.join(" ")}`);
+  const narrowed = [...args.slice(0, at), "-a", "-p", String(process.pid), ...args.slice(at)];
+  return execFileAsync("lsof", narrowed, options);
+}
+
+// What `execFile` rejects with when its timeout kills the child.
+function lsofTimedOut() {
+  return Promise.reject(Object.assign(new Error("Command failed: lsof"), {
+    killed: true, signal: "SIGTERM", code: null, stdout: "", stderr: "",
+  }));
+}
+
+// Import `modulePath` with `lsof` calls routed to `lsof`; every other command
+// runs for real.
+function withLsof(t, modulePath, lsof) {
+  const execFile = (...args) => childProcess.execFile(...args);
+  execFile[promisify.custom] = (file, args, options) =>
+    file === "lsof" ? lsof(args, options) : execFileAsync(file, args, options);
+  return t.mockImport(modulePath, { "node:child_process": { ...childProcess, execFile } });
+}
+
+const STALE_LOCK = "../../src/lib/git-stale-lock.ts";
 
 const lockPathOf = (box) => join(box.root, ".git", "index.lock");
 
@@ -40,6 +68,7 @@ async function plantLock(box, ageMs) {
 A repository with nothing in the way reports `absent`:
 
 ```ts
+const { recoverStaleIndexLock } = await withLsof(t, STALE_LOCK, lsofThisProcess);
 const box = await makeTmpBox({ git: true });
 (await inspectIndexLock(box.root)).state
 => absent
@@ -73,6 +102,7 @@ Backdated well past the staleness window, with no process holding it — the
 condition a SIGKILLed `git` leaves behind:
 
 ```ts
+const { inspectIndexLock, recoverStaleIndexLock } = await withLsof(t, STALE_LOCK, lsofThisProcess);
 const box = await makeTmpBox({ git: true });
 await plantLock(box, INDEX_LOCK_STALE_MS + 60_000);
 
@@ -112,6 +142,7 @@ with it whatever its mtime says, and deleting it under that process makes its
 final `rename()` fail — so an open descriptor vetoes removal outright:
 
 ```ts
+const { inspectIndexLock, recoverStaleIndexLock } = await withLsof(t, STALE_LOCK, lsofThisProcess);
 const box = await makeTmpBox({ git: true });
 const lockPath = await plantLock(box, INDEX_LOCK_STALE_MS + 60 * 60_000);
 
@@ -141,6 +172,31 @@ const now = await recoverStaleIndexLock(box.root);
 await box.cleanup();
 ```
 
+## A probe that cannot answer removes nothing
+
+When the holder probe fails — here `lsof` killed by its timeout, which is what
+a heavily loaded machine produces — the verdict is `unknown-holder`, not
+"nobody holds it". An old lock the probe could not check stays where it is:
+
+```ts
+const { inspectIndexLock, recoverStaleIndexLock } = await withLsof(t, STALE_LOCK, lsofTimedOut);
+const box = await makeTmpBox({ git: true });
+const lockPath = await plantLock(box, INDEX_LOCK_STALE_MS + 60_000);
+
+(await inspectIndexLock(box.root)).state
+=> unknown-holder
+```
+
+```ts continue
+const left = await recoverStaleIndexLock(box.root);
+[left.state, existsSync(lockPath)].join(" ")
+=> unknown-holder true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## A lock being actively written survives the settle window
 
 The holder probe can miss a live `git`: git closes the lock's descriptor in
@@ -151,6 +207,7 @@ the settle window is being written, so it comes back out the far side as
 earlier.
 
 ```ts
+const { recoverStaleIndexLock } = await withLsof(t, STALE_LOCK, lsofThisProcess);
 const box = await makeTmpBox({ git: true });
 const lockPath = await plantLock(box, INDEX_LOCK_STALE_MS + 60_000);
 
@@ -177,6 +234,7 @@ crashed git left wedged heals on the next write instead of failing every writer
 until a human intervenes:
 
 ```ts
+const { stageAndCommitPaths } = await withLsof(t, "../../src/lib/git/core/operations.ts", lsofThisProcess);
 const box = await makeTmpBox({ git: true });
 await plantLock(box, INDEX_LOCK_STALE_MS + 60_000);
 await box.write("after-the-crash.md", "written while the abandoned lock stood\n");

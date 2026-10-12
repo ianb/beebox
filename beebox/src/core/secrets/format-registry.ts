@@ -71,11 +71,6 @@ const secretFormats: Record<string, SecretFormat> = {
     minLength: 20,
   },
   "google-oauth-client-secret": { hint: "The OAuth client secret — one token, no spaces.", minLength: 10, maxLength: 200 },
-  "telegram-bot/": {
-    hint: 'JSON holding the bot token and webhook secret: {"botToken": "123456:…", "webhookSecret": "…"}. Normally written by the Telegram section, not by hand.',
-    pattern: /^{/,
-    minLength: 20,
-  },
 };
 
 function toEntry(key: string, format: SecretFormat): SecretFormatEntry {

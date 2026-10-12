@@ -15,7 +15,7 @@ open, and how it stays quiet when you do.
   notification with no sound, or a loud one with sound. A tap opens the
   matching place in the box: a chat, a card, a question, or the dashboard.
 - Delivers to the paired iPhone app, to a browser that has allowed web push,
-  and to Telegram. Each message goes only to the channels that fit its loudness.
+  Each message goes only to the channels that fit its loudness.
 - Stays silent while you are looking at the box: if a web session of yours was
   active in the last two minutes, a quiet or loud message shows as a banner in
   the open app instead of being pushed.
@@ -44,8 +44,7 @@ if nobody is at the box.
 
 For the iPhone app and web push, keys held once for the whole server, set up by
 whoever runs the machine. See [../install/index.md](../install/index.md) and
-[../concepts/connectors.md](../concepts/connectors.md). Telegram needs its own
-connection. The watch's judging model is the same routing model quick chat
+[../concepts/connectors.md](../concepts/connectors.md). The watch's judging model is the same routing model quick chat
 uses, reached through OpenRouter, so it needs an OpenRouter key granted to the
 box; without one, a watch that depends on a judgment waits and says so.
 

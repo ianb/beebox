@@ -50,6 +50,7 @@ import { MicCapture } from "./transcription-mic";
 import {
   type ConnectionHandle,
   type ServiceCallbacks,
+  discardSocket,
   socketFinalText,
   socketFinalWords,
   startDeepgramConnection,
@@ -233,24 +234,12 @@ class TranscriptionSession {
     }, WATCHDOG_INTERVAL_MS);
   }
 
-  /** Detach handlers and close a socket without firing machine events. */
-  private discardSocket(handle: ConnectionHandle | null) {
-    if (!handle) return;
-    const ws = handle.ws;
-    ws.onopen = null;
-    ws.onerror = null;
-    ws.onclose = null;
-    ws.onmessage = null;
-    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-      ws.close();
-    }
-  }
-
   /** A live socket went away: keep recording, and reconnect. */
   private dropLink() {
     if (!this.connection || this.disposed || this.stopping) return;
-    this.text.fold();
-    this.discardSocket(this.connection);
+    this.text.openGap();
+    this.sendTextNow();
+    discardSocket(this.connection);
     this.connection = null;
     this.replay.markGap({ padFrames: REPLAY_PAD_CHUNKS });
     this.sendBack({ type: "CONNECTION_DEGRADED", cause: "network" });
@@ -261,8 +250,9 @@ class TranscriptionSession {
   private abandonLive(event: { type: "WS_ERROR" | "SERVER_ERROR"; message: string }) {
     this.liveAbandoned = true;
     this.linking = false;
-    this.text.fold();
-    this.discardSocket(this.connection);
+    this.text.openGap();
+    this.sendTextNow();
+    discardSocket(this.connection);
     this.connection = null;
     this.sendBack(event);
   }
@@ -286,7 +276,7 @@ class TranscriptionSession {
       const handle = await this.connectOnce();
       if (handle !== null) {
         if (this.linkWanted()) this.adopt(handle);
-        else this.discardSocket(handle);
+        else discardSocket(handle);
         return;
       }
       if (!this.linkWanted()) return;
@@ -302,7 +292,7 @@ class TranscriptionSession {
     try {
       return await openOnce(() => this.startConnection(service), {
         attemptTimeoutMs: OPEN_TIMEOUT_MS,
-        discard: (handle) => this.discardSocket(handle),
+        discard: discardSocket,
       });
     } catch (e) {
       // e.g. minting a Deepgram/OpenAI key while the box is restarting.
@@ -311,11 +301,17 @@ class TranscriptionSession {
     }
   }
 
+  /** The segment text as it stands, with no interim (the gap marker shows the loss). */
+  private sendTextNow() {
+    this.sendBack({ type: "TEXT_UPDATE", finalText: this.text.textWith(""), interimText: "", finalWords: this.text.wordsWith(null) });
+  }
+
   /** Make an open socket the live one. Synchronous, so no frame interleaves the replay. */
   private adopt(next: ConnectionHandle) {
     this.linking = false;
     this.connection = next;
     this.attachActorHandlers(next.ws);
+    if (this.text.connected({ covered: this.replay.coversGap() })) this.sendTextNow();
     for (const frame of this.replay.sinceGap()) next.sendPcm(frame);
     this.lastDrainedAt = performance.now();
     const first = !this.connectedFired;
@@ -411,7 +407,7 @@ class TranscriptionSession {
       this.mic.dispose();
       this.mic = null;
     }
-    this.discardSocket(this.connection);
+    discardSocket(this.connection);
     this.connection = null;
   }
 }

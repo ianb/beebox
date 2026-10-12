@@ -133,7 +133,7 @@ comes back `invalid_grant`:
   `google-auth: Google authorization expired or was revoked … Reconnect at
   /<box>/admin?reconnect=google`.
 - The boxholder gets **one** notification per breakage over whatever channels
-  are configured (Telegram, Web Push), with the same link. There's no re-nag —
+  are configured (the iPhone app, Web Push), with the same link. There's no re-nag —
   the health condition persists until it's fixed.
 - Gmail, Calendar and Drive sync pause; the rest of the box keeps working.
 

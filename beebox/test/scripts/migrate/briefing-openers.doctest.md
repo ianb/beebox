@@ -127,6 +127,21 @@ navigation:
 ---
 ```
 
+A landmark's body, the place summary, survives the frontmatter rewrite.
+
+```ts
+const r = plan({ text: briefing("openers:\n  - Log a loan\n"),
+  landmark: { path: "_content/lending/Lending.landmark.card", text: landmark() + "The stove is with Idris.\n" } });
+r.writes["_content/lending/Lending.landmark.card"]
+=> ---
+navigation:
+  label: Lending
+  openers:
+    - Log a loan
+---
+The stove is with Idris.
+```
+
 ## Case 4: the landmark's list is authoritative
 
 An equal list (after trimming) only leaves the briefing.

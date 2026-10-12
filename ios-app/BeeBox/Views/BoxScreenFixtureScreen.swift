@@ -186,7 +186,13 @@ private struct FixtureQuickChatClient: QuickChatClient {
         )
     }
 
-    func submit(id: UUID, message: String, origin _: QuickChatOrigin?, source _: String? = nil) async throws -> QuickChatView {
+    func submit(
+        id: UUID,
+        message: String,
+        origin _: QuickChatOrigin?,
+        source _: String? = nil,
+        hqService _: String? = nil
+    ) async throws -> QuickChatView {
         try offline()
         var view = Self.needsChoice
         view.id = id

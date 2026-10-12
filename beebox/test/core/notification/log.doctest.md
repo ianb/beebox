@@ -40,7 +40,7 @@ form.
 const box = await makeTmpBox();
 appendIntent(box.root, { intent: { ...intent("a1", "Vet at 3"), target: { kind: "chat-new" }, tag: "vet" }, now: NOW });
 appendDelivery(box.root, { notificationId: "a1", delivery: { channel: "web-push", status: "sent" }, now: NOW });
-appendDelivery(box.root, { notificationId: "a1", delivery: { channel: "telegram", status: "failed", detail: "chat not found" }, now: NOW });
+appendDelivery(box.root, { notificationId: "a1", delivery: { channel: "apns", status: "failed", detail: "BadDeviceToken" }, now: NOW });
 appendIntent(box.root, { intent: intent("b2", "Two questions"), now: NOW });
 appendDelivery(box.root, { notificationId: "b2", delivery: { channel: "apns", status: "skipped", detail: "no-audience" }, now: NOW });
 
@@ -49,7 +49,7 @@ fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n")[0]
 
 (await readRecent(box.root, { days: 1, now: NOW })).map(summary).join("\n")
 =>
-a1 Vet at 3: web-push=sent telegram=failed(chat not found)
+a1 Vet at 3: web-push=sent apns=failed(BadDeviceToken)
 b2 Two questions: apns=skipped(no-audience)
 
 summary(await getIntent(box.root, "b2"))
@@ -74,6 +74,31 @@ fs.appendFileSync(notificationLogPath(box.root), "{not json\n");
 appendIntent(box.root, { intent: intent("c3", "After the bad line"), now: NOW });
 (await readRecent(box.root, { days: 1, now: NOW })).map((n) => n.intent.id).join(" ")
 => a1 b2 c3
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A delivery on a retired channel is read, not skipped
+
+Telegram was a channel until it was removed. A box's log can still hold
+`telegram` delivery lines, and the read schema accepts them: the line is
+grouped under its intent and no warning is printed.
+
+```ts
+const box = await makeTmpBox();
+appendIntent(box.root, { intent: intent("t1", "Sent before removal"), now: NOW });
+fs.appendFileSync(notificationLogPath(box.root), JSON.stringify({ kind: "delivery", at: NOW.toISOString(), notificationId: "t1", channel: "telegram", status: "sent" }) + "\n");
+const warnings = [];
+const origWarn = console.warn;
+console.warn = (...args) => { warnings.push(args.join(" ")); };
+const read = (await readRecent(box.root, { days: 1, now: NOW })).map(summary).join("\n");
+console.warn = origWarn;
+[read, warnings.length].join("\n")
+=>
+t1 Sent before removal: telegram=sent
+0
 ```
 
 ```ts cleanup
@@ -149,13 +174,13 @@ so nothing is lost, and new appends start a fresh file:
 appendIntent(box.root, { intent: intent("new", "Fresh file"), now: NOW });
 const staleFd = fs.openSync(notificationLogPath(box.root), "a");
 await rotateIfNeeded(box.root, { now: new Date(NOW.getTime() + 31 * DAY) });
-fs.writeSync(staleFd, JSON.stringify({ kind: "delivery", at: NOW.toISOString(), notificationId: "new", channel: "telegram", status: "sent" }) + "\n");
+fs.writeSync(staleFd, JSON.stringify({ kind: "delivery", at: NOW.toISOString(), notificationId: "new", channel: "web-push", status: "sent" }) + "\n");
 fs.closeSync(staleFd);
 appendIntent(box.root, { intent: intent("later", "After rotation"), now: NOW });
 
 (await readRecent(box.root, { days: 1, now: NOW })).map(summary).join("\n")
 =>
-new Fresh file: telegram=sent
+new Fresh file: web-push=sent
 later After rotation: (no deliveries)
 ```
 

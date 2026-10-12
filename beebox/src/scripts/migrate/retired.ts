@@ -10,3 +10,5 @@
  * Invoked as `<boxRoot> --apply` like any migrator. Does nothing, prints
  * nothing, exits 0.
  */
+
+process.exitCode = 0;

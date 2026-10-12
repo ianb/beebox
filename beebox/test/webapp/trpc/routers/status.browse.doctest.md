@@ -29,7 +29,9 @@ function ctxFor(boxRoot: string): TestCtx {
 
 An `entry-point`/`primary`/`background`-declared card reports that level; an
 undeclared card falls back to its type's default — `ordinary` for a memo,
-`background` for a landmark (its type default, per Track A).
+`background` for a landmark (its type default, per Track A) and for a chat
+husk (`docs/implemented-plans/place-shows-cards.md`, Track A), so Browse folds it into
+"more" when the folder has a primary card.
 
 ```ts
 const server = await makeTestServer();
@@ -38,13 +40,14 @@ await server.seed("_content/Primary.memo.card", "---\nprominence: primary\n---\n
 await server.seed("_content/Plain.memo.card", "---\n---\n");
 await server.seed("_content/Log.contains-backfill-job.card", "---\ndescription: test\nitems: []\n---\n");
 await server.seed("_content/Box.landmark.card", "---\nnavigation:\n  label: Box\n---\n");
+await server.seed("_content/Hello.chat.card", "---\nsession: s1\n---\n");
 
 const listing = await statusRouter.createCaller(ctxFor(server.boxRoot)).browse({ path: "_content" });
 listing.cards
   .map((c) => `${c.name}:${c.prominence}`)
   .sort()
   .join(" ")
-=> Box:background Entry:entry-point Log:background Plain:ordinary Primary:primary
+=> Box:background Entry:entry-point Hello:background Log:background Plain:ordinary Primary:primary
 ```
 
 The listed directory itself is not background — nothing here cascaded it.
@@ -70,7 +73,7 @@ const server2 = await makeTestServer();
 // `_content/recipes/`, and macOS's case-insensitive filesystem would
 // collide a same-named-but-cased directory into it.
 await server2.seed("_content/Cookbook/Cookbook.landmark.card", "---\nnavigation:\n  label: Cookbook\n---\n");
-await server2.seed("_content/Cookbook/Soup.recipe.card", "---\nprominence: primary\n---\n");
+await server2.seed("_content/Cookbook/Soup.memo.card", "---\nprominence: primary\n---\n");
 await server2.seed("_content/Plain/Notes.memo.card", "---\n---\n");
 
 const listing2 = await statusRouter.createCaller(ctxFor(server2.boxRoot)).browse({ path: "_content" });

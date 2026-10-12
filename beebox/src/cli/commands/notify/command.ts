@@ -177,7 +177,7 @@ async function check(boxRoot: string, opts: { route: NotifyRoute; services: Noti
     route.kind === "server"
       ? (await onServer(() => route.client.notifications.channels.query())).reach
       : await notifyChannels(boxRoot, { services });
-  const byChannel: Record<ChannelName, boolean> = { apns: can.apns, "web-push": can.webPush, telegram: can.telegram };
+  const byChannel: Record<ChannelName, boolean> = { apns: can.apns, "web-push": can.webPush };
   for (const channel of CHANNELS) console.log(`${channel}: ${byChannel[channel] ? "yes" : "no"}`);
   return CHANNELS.some((channel) => byChannel[channel]) ? 0 : 1;
 }
@@ -255,7 +255,7 @@ export const notifyCommand = new Command("notify")
   .option("--target <target>", "Where a tap lands: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard (with --dry-run, default chat:new)")
   .option("--loudness <loudness>", "dot (badge only), quiet (no sound; held back while the person is in the app), or loud", "quiet")
   .option("--tag <tag>", "Collapse key: a later notification with the same tag replaces this one")
-  .option("--channel <channel>", "Deliver on this channel only (apns, web-push, telegram); for testing")
+  .option("--channel <channel>", "Deliver on this channel only (apns, web-push); for testing")
   .option("--check", "Print which channels can reach the person and send nothing; exit 1 when none can")
   .option("--dry-run", "Print the intent, who each channel would reach, the presence reading, and the channels a send would try; send and log nothing")
   .option("--presence <n>", "With --dry-run: assume this many active web sessions in place of the live reading")

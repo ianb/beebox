@@ -68,3 +68,12 @@ Related: [change-based test selection](../../beebox/docs/plans/change-based-test
 sizes this lever in its NOT-in-scope section and measures itself against it in
 Track 0 — if selection's realistic saving turns out comparable to this, this work
 is the better investment and selection should be shelved.
+
+## Update (2026-10-12)
+
+The suite is now 1,016 test files. The sum of per-file medians over the
+hourly full runs since 2026-10-01 is 4,654 s: a mean of 4.6 s per file, and
+about 13 minutes at 6 jobs. 190 source files are imported by 300 or more
+tests, so an edit to one of them selects about half of the suite for
+`test:changed` (about 9.5 minutes). See the change-based-test-selection
+plan, "Revision 2026-10-12 — broad selections".

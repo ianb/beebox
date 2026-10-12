@@ -32,14 +32,12 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "question" }, { listUI: { icon: QuestionIcon } });
   registerFileType({ type: "email-message" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "email-thread" }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ type: "recipe" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "record" }, { listUI: { icon: CardIcon } });
   registerFileType({ type: "gsheet" }, { listUI: { icon: CardIcon } });
   registerFileType({ type: "doc" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "gdoc" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "procedure" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "procedure-run" }, { listUI: { icon: JobIcon } });
-  registerFileType({ type: "chat-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "intake-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "question-followup-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "briefing" }, { listUI: { icon: DocumentIcon } });
@@ -48,7 +46,6 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "guide" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "file" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: EXTRACTED_CARD_TYPE }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ type: "telegram-message" }, { listUI: { icon: DocumentIcon } });
 
   registerFileType({ match: (p: string) => p.endsWith(".md") }, { listUI: { icon: DocumentIcon } });
   registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") || p.endsWith(".avif") }, { listUI: { icon: ImageIcon } });

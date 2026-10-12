@@ -6,8 +6,10 @@
  *   bin/finish-preflight             # short text block
  *   bin/finish-preflight --json      # the sheet
  *   bin/finish-preflight --no-merge  # re-read the sheet without merging again
+ *   bin/finish-preflight --help
  *
- * Exit: 0 sheet printed, 2 wrong place / broken private mount, 3 merge conflict.
+ * Exit: 0 sheet printed, 2 wrong place / broken private mount / bad arguments,
+ * 3 merge conflict.
  *
  * See beebox/docs/plans/change-based-test-selection.md, "Revision
  * 2026-08-25 — test economics", mechanism E2.
@@ -16,8 +18,16 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { parseArgs } from "node:util";
 import { changedPaths, git } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
+import { mergeMain, type MergeResult } from "./finish-preflight-merge.js";
+import {
+  NotAWorktreeBranchError,
+  PreflightError,
+  PrivateMountUnhealthyError,
+  UsageError,
+} from "./finish-preflight-errors.js";
 import {
   hasCodeChange,
   isDocPath,
@@ -37,7 +47,7 @@ export interface Sheet {
   repoRoot: string;
   privateLeg: { active: boolean; state: string; repo: string | null };
   stragglers: string[];
-  merge: { status: "up-to-date" | "merged"; broughtPaths: string[] };
+  merge: MergeResult;
   changed: { all: string[]; byGroup: Record<string, string[]>; unknownGroups: string[] };
   docsOnly: boolean;
   codeChanged: boolean;
@@ -52,8 +62,8 @@ export interface Sheet {
 }
 
 const SKIP_RULE =
-  "pre-commit runs typecheck+lint on every worktree commit, so a finish needs them again " +
-  "only when code arrived that pre-commit never saw (the merge of main, or a straggler). " +
+  "pre-commit typechecks and lints what each worktree commit stages, so a finish needs them again " +
+  "only when code arrived outside those commits (any merge on the branch, or a straggler). " +
   "`--no-verify` leaves no git evidence and is not detectable.";
 
 function repoRoot(): string {
@@ -80,39 +90,6 @@ function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
   };
 }
 
-class PreflightError extends Error {
-  readonly exitCode: number;
-  constructor(message: string, exitCode: number) {
-    super(message);
-    this.name = "PreflightError";
-    this.exitCode = exitCode;
-  }
-}
-
-class PrivateMountUnhealthyError extends PreflightError {
-  constructor(readonly state: string) {
-    super(`private-issues mount is ${state} — heal it or return BLOCKED`, 2);
-    this.name = "PrivateMountUnhealthyError";
-  }
-}
-
-class MergeConflictError extends PreflightError {
-  constructor(readonly detail: { conflicted: string; stdout: string; stderr: string }) {
-    super(
-      `git merge main conflicted:\n${detail.conflicted}\n${detail.stdout}${detail.stderr}`,
-      3,
-    );
-    this.name = "MergeConflictError";
-  }
-}
-
-class NotAWorktreeBranchError extends PreflightError {
-  constructor(readonly branch: string) {
-    super(`on '${branch}' — /finish is for worktree branches only`, 2);
-    this.name = "NotAWorktreeBranchError";
-  }
-}
-
 function privateLeg(root: string): Sheet["privateLeg"] {
   const result = spawnSync(join(root, "bin/private-issues"), ["status", "."], {
     cwd: root,
@@ -130,23 +107,25 @@ function privateLeg(root: string): Sheet["privateLeg"] {
   throw new PrivateMountUnhealthyError(state);
 }
 
-function mergeMain(root: string): Sheet["merge"] {
-  const before = git(["rev-parse", "HEAD"], root);
-  const result = spawnSync("git", ["merge", "main"], { cwd: root, encoding: "utf-8" });
-  if (result.status !== 0) {
-    const conflicted = git(["diff", "--name-only", "--diff-filter=U"], root);
-    throw new MergeConflictError({
-      conflicted,
-      stdout: result.stdout,
-      stderr: result.stderr,
-    });
-  }
-  const after = git(["rev-parse", "HEAD"], root);
-  if (before === after) return { status: "up-to-date", broughtPaths: [] };
-  const brought = git(["diff", "--name-only", `${before}..HEAD`], root)
+/**
+ * Every merge on the branch's own line and what it brought, newest first,
+ * plus this run's merge when it fast-forwarded and left no merge commit.
+ */
+function branchMerges(root: string, current: Sheet["merge"]): { sha: string; paths: string[] }[] {
+  const shas = git(["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"], root)
     .split("\n")
-    .filter((p) => p !== "");
-  return { status: "merged", broughtPaths: brought };
+    .filter((sha) => sha !== "");
+  const merges = shas.map((sha) => ({
+    sha,
+    paths: git(["diff", "--name-only", `${sha}^1`, sha], root)
+      .split("\n")
+      .filter((path) => path !== ""),
+  }));
+  const head = git(["rev-parse", "HEAD"], root);
+  if (current.status === "merged" && !merges.some((merge) => merge.sha === head)) {
+    merges.unshift({ sha: head, paths: current.broughtPaths });
+  }
+  return merges;
 }
 
 /** Added+deleted lines vs main, total and restricted to non-doc, non-test files. */
@@ -222,18 +201,16 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const mergeSkipped =
     !input.merge &&
     spawnSync("git", ["merge-base", "--is-ancestor", "main", "HEAD"], { cwd: root }).status !== 0;
-  const merge = input.merge ? mergeMain(root) : { status: "up-to-date" as const, broughtPaths: [] };
+  const merge: MergeResult = input.merge
+    ? mergeMain(root)
+    : { status: "up-to-date", broughtPaths: [], resolved: [] };
 
   const changed = changedPaths({ base: "main", cwd: root });
   const packages = new Set(packageOwnerDirs(root));
   const grouped = groupPaths(changed, packages);
   const skip = mergeSkipped
     ? { value: false, reason: "main was not merged in (--no-merge) and is not contained" }
-    : skipTypecheckLintDecision({
-        mergeNoOp: merge.status === "up-to-date",
-        mergeBroughtPaths: merge.broughtPaths,
-        stragglers,
-      });
+    : skipTypecheckLintDecision({ merges: branchMerges(root, merge), stragglers });
   // Selected BEFORE the verification list is built: a selector that failed
   // changes which test command the sheet names (the full suite, not the
   // selected set), so the two cannot disagree.
@@ -284,6 +261,9 @@ export function formatSheet(sheet: Sheet): string {
   lines.push(
     `merge main: ${sheet.merge.status}${sheet.merge.broughtPaths.length > 0 ? ` (+${sheet.merge.broughtPaths.length} paths)` : ""}`,
   );
+  if (sheet.merge.resolved.length > 0) {
+    list("  conflicts resolved by rule (check them in the diff review)", sheet.merge.resolved);
+  }
   lines.push(`changed (${sheet.changed.all.length} paths):`);
   for (const [group, paths] of Object.entries(sheet.changed.byGroup)) {
     lines.push(`  ${group}: ${paths.length}`);
@@ -311,10 +291,32 @@ export function formatSheet(sheet: Sheet): string {
   return lines.join("\n");
 }
 
+const USAGE = `usage: bin/finish-preflight [--json] [--no-merge]
+
+Merges main into this worktree branch and prints the finish decision sheet.
+
+  --json      print the sheet as JSON
+  --no-merge  re-read the sheet without merging main again
+  -h, --help  print this and exit`;
+
+/** Strict, like finish-verify: `--help` must never merge main. */
 export function main(argv: string[]): number {
-  const json = argv.includes("--json");
-  const sheet = buildSheet({ merge: !argv.includes("--no-merge") });
-  console.log(json ? JSON.stringify(sheet, null, 2) : formatSheet(sheet));
+  let values;
+  try {
+    ({ values } = parseArgs({
+      args: argv,
+      strict: true,
+      options: { help: { type: "boolean", short: "h" }, json: { type: "boolean" }, "no-merge": { type: "boolean" } },
+    }));
+  } catch (e) {
+    throw new UsageError(e instanceof Error ? e.message : String(e), USAGE);
+  }
+  if (values.help === true) {
+    console.log(USAGE);
+    return 0;
+  }
+  const sheet = buildSheet({ merge: values["no-merge"] !== true });
+  console.log(values.json === true ? JSON.stringify(sheet, null, 2) : formatSheet(sheet));
   return 0;
 }
 

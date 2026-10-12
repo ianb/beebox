@@ -7,9 +7,9 @@
  * never touch chat. Frontmatter carries the session metadata and the
  * manifests of child image/audio/file cards (which live in the session's
  * attach scope). The markdown body is the assembled transcript: transcribed
- * speech interleaved, in timeline order, with `{% image %}` markers (where a
- * photo was taken) and `{% silence %}` markers (gaps) — see
- * `src/shared/markdoc-config/tags/core.ts`.
+ * speech interleaved, in timeline order, with a markdown link to each
+ * photo's image card (where it was taken) and `— Ns silence —` lines (gaps);
+ * `src/core/capture/prepare/timeline.ts` writes it.
  *
  * The chat agent — not a background procedure — annotates and files these
  * cards; see `instructions` below.
@@ -45,7 +45,7 @@ const captureSessionFields = {
   partial: z.boolean().optional(),
   /** One or more clips still need transcription (provider failure at prepare time). */
   "transcription-failed": z.boolean().optional(),
-  /** The assembled transcript (markdown + `{% image %}` / `{% silence %}`). */
+  /** The assembled transcript: markdown with image-card links and silence lines. */
   body: body(z.string()),
 };
 
@@ -53,6 +53,10 @@ export const CaptureSessionSchema: CardSchema = cardSchema("capture-session", {
   brief: "One recording session's captures",
   description: "Groups the images, audio clips, and files from one recording session, with an assembled timeline transcript as the body",
   category: "synced",
+  // Staging and session logs, for the agent rather than the reader: kept out
+  // of a place's "Also here" list and folded in Browse
+  // (docs/implemented-plans/place-shows-cards.md, Track A).
+  prominence: "background",
   searchable: true,
   fields: captureSessionFields,
   instructions: `# Capture Session Cards
@@ -70,8 +74,8 @@ Frontmatter:
 - \`transcription-failed\` — one or more clips still need transcription (the transcription provider was unavailable when this was prepared). The capture was still delivered rather than held hostage to the outage; a later \`bbx transcribe\`/HQ pass can fill in the missing text.
 
 Body — the assembled transcript, a timeline of transcribed speech interleaved with:
-- \`{% image ref="attach/photo-001.image.card" /%}\` — where a photo was taken (description/filename come from the referenced image card).
-- \`{% silence duration="15s" /%}\` — gaps of 10+ seconds.
+- \`[photo-001](attach/photo-001.image.card)\` — where a photo was taken; follow the link for the image card's description and filename.
+- \`— 15s silence —\` — a gap of 10+ seconds, as a line of its own.
 
 This body is generated, not hand-written — don't edit it directly; if something needs correcting, fix the source (a child card's transcript/description) and re-derive, or note the correction in your own annotation instead.
 

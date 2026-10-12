@@ -7,10 +7,10 @@ to log as skipped. It is pure: the caller supplies who each channel can reach
 ```ts setup
 import { channelsToTry } from "../../../src/core/notification/channels.js";
 
-const ALL = { apns: true, "web-push": true, telegram: true };
-const NONE = { apns: false, "web-push": false, telegram: false };
-// The audience this chunk can have: no APNs yet, a subscribed browser, a Telegram chat.
-const NO_APNS = { apns: false, "web-push": true, telegram: true };
+const ALL = { apns: true, "web-push": true };
+const NONE = { apns: false, "web-push": false };
+// The audience a box can have before any phone pairs: no APNs, a subscribed browser.
+const NO_APNS = { apns: false, "web-push": true };
 
 function row(loudness, audience, activeWeb) {
   const plan = channelsToTry({ intent: { loudness }, audience, presence: { activeWeb } });
@@ -32,10 +32,10 @@ only `apns` is a candidate, and presence never suppresses it.
 ```ts
 matrix(ALL)
 =>
-loud  present=0  try [apns web-push telegram]  skip []
-loud  present=1  try [apns web-push telegram]  skip []
-quiet present=0  try [apns web-push telegram]  skip []
-quiet present=1  try []  skip [apns:present web-push:present telegram:present]
+loud  present=0  try [apns web-push]  skip []
+loud  present=1  try [apns web-push]  skip []
+quiet present=0  try [apns web-push]  skip []
+quiet present=1  try []  skip [apns:present web-push:present]
 dot   present=0  try [apns]  skip []
 dot   present=1  try [apns]  skip []
 ```
@@ -48,10 +48,10 @@ the only line, since `apns` is its only candidate.
 ```ts
 matrix(NO_APNS)
 =>
-loud  present=0  try [web-push telegram]  skip [apns:no-audience]
-loud  present=1  try [web-push telegram]  skip [apns:no-audience]
-quiet present=0  try [web-push telegram]  skip [apns:no-audience]
-quiet present=1  try []  skip [apns:present web-push:present telegram:present]
+loud  present=0  try [web-push]  skip [apns:no-audience]
+loud  present=1  try [web-push]  skip [apns:no-audience]
+quiet present=0  try [web-push]  skip [apns:no-audience]
+quiet present=1  try []  skip [apns:present web-push:present]
 dot   present=0  try []  skip [apns:no-audience]
 dot   present=1  try []  skip [apns:no-audience]
 ```
@@ -65,10 +65,10 @@ present person turns a `quiet` into `present` skips: the open app showed it.
 ```ts
 matrix(NONE)
 =>
-loud  present=0  try []  skip [apns:no-audience web-push:no-audience telegram:no-audience]
-loud  present=1  try []  skip [apns:no-audience web-push:no-audience telegram:no-audience]
-quiet present=0  try []  skip [apns:no-audience web-push:no-audience telegram:no-audience]
-quiet present=1  try []  skip [apns:present web-push:present telegram:present]
+loud  present=0  try []  skip [apns:no-audience web-push:no-audience]
+loud  present=1  try []  skip [apns:no-audience web-push:no-audience]
+quiet present=0  try []  skip [apns:no-audience web-push:no-audience]
+quiet present=1  try []  skip [apns:present web-push:present]
 dot   present=0  try []  skip [apns:no-audience]
 dot   present=1  try []  skip [apns:no-audience]
 ```
@@ -87,7 +87,7 @@ function onScreenRow(loudness) {
 
 ["loud", "quiet", "dot"].map(onScreenRow).join("\n")
 =>
-loud  try []  skip [apns:present web-push:present telegram:present]
-quiet try []  skip [apns:present web-push:present telegram:present]
+loud  try []  skip [apns:present web-push:present]
+quiet try []  skip [apns:present web-push:present]
 dot   try [apns]  skip []
 ```

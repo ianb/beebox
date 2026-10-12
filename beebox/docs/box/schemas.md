@@ -60,6 +60,12 @@ Key patterns:
   declares one. Record the specific fact instead: a named boolean
   (`archived: true`), a date named for what it is (`due`, see
   [Dates](#dates)), or `sources: [{ ref }]` for what the card was derived from.
+- `markdocTags` (optional) declares Markdoc tags valid in this type's body in addition to the
+  core table, keyed by authored tag name: `markdocTags: { garnish: { render: "Garnish", attributes: {...} } }`.
+  A key already in the core table throws `RedeclaredTagError`. `bbx validate` accepts the tag in
+  cards of this type only; in any other card it reports `Undefined tag`. Scoped tags render as
+  components only through a view that passes the type's `tags` to the `Markdown` widget;
+  everywhere else they render as the authored text.
 - `brief` (five words or fewer) is the type's entry in the agent guide's card-type list, read on
   every turn; `description` (one line) is its row in the docs index. Without a `brief` the guide
   lists the `description`.

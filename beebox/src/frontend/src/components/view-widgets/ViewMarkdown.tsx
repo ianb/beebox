@@ -15,7 +15,8 @@
  */
 
 import { useCallback } from "react";
-import { Markdown } from "../Markdown/body";
+import type { Schema } from "@markdoc/markdoc";
+import { Markdown, type MarkdownComponentOverrides } from "../Markdown/body";
 import { useViewHost } from "../../lib/view-host";
 import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 
@@ -24,9 +25,13 @@ export interface ViewMarkdownProps {
   children: string;
   /** The card the text is the body of (a `ViewCard` has both fields). */
   card: { path: string; bodyLineOffset: number };
+  /** The type's scoped tags (`CardSchemaConfig.markdocTags`), rendered as components via `components`. */
+  tags?: Readonly<Record<string, Schema>>;
+  /** Component overrides by the name a tag's transform emits. */
+  components?: MarkdownComponentOverrides;
 }
 
-export function ViewMarkdown({ children, card }: ViewMarkdownProps) {
+export function ViewMarkdown({ children, card, tags, components }: ViewMarkdownProps) {
   const { openCard } = useViewHost();
   // Markdown hands over a resolved, box-rooted target; `openCard` takes a
   // ref, so the target goes back as a box-absolute ref with its query.
@@ -34,7 +39,7 @@ export function ViewMarkdown({ children, card }: ViewMarkdownProps) {
     openCard(`/${serializeViewUrl(target)}`, hint?.label === undefined ? undefined : { label: hint.label });
   }, [openCard]);
   return (
-    <Markdown prose="block" onNavigate={onNavigate} basePath={card.path} card={card}>
+    <Markdown prose="block" onNavigate={onNavigate} basePath={card.path} card={card} tags={tags} components={components}>
       {children}
     </Markdown>
   );

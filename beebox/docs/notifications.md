@@ -29,7 +29,7 @@ Vocabulary:
   `card:<path>`, `question:<path>`, `admin:<section>`, `dashboard`. One parser
   (`target.ts`) renders it as each channel's link.
 - **Channel.** A way to deliver: `apns` (the iPhone app), `web-push`
-  (browsers), `telegram`. Each has a real and a fake service and an audience.
+  (browsers). Each has a real and a fake service and an audience.
 - **Presence.** How many web sessions for this box had a person interacting
   in the last two minutes, from a client heartbeat, in `.beebox/presence.json`.
   A missing or stale file counts as nobody present, so an error falls toward
@@ -45,11 +45,11 @@ Vocabulary:
 
 `channelsToTry` (`src/core/notification/channels.ts`) is the whole rule:
 
-| Loudness | iPhone (`apns`) | Browser (`web-push`) | Telegram | While a person is present |
-|---|---|---|---|---|
-| `dot` | badge | not tried | not tried | still badges |
-| `quiet` | passive banner | muted notification | message without sound | nothing sent; the open app shows it |
-| `loud` | banner with sound | notification | message | sent anyway |
+| Loudness | iPhone (`apns`) | Browser (`web-push`) | While a person is present |
+|---|---|---|---|
+| `dot` | badge | not tried | still badges |
+| `quiet` | passive banner | muted notification | nothing sent; the open app shows it |
+| `loud` | banner with sound | notification | sent anyway |
 
 A channel with nobody to reach is `skipped: no-audience`; one whose server keys
 are missing is `skipped: unconfigured`. A caller that knows its target is on

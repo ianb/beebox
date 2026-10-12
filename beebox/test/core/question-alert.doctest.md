@@ -96,7 +96,6 @@ await lastLogged(box)
 quiet → question:_bookkeeping/questions/Form.question.card
 apns skipped: no-audience
 web-push sent
-telegram skipped: no-audience
 
 push.sent[0]?.payload.url === `/${await boxSlug(box.root)}/browse/_bookkeeping/questions/Form.question.card`
 => true

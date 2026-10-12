@@ -58,7 +58,7 @@ audio).
 
 Frontmatter:
 - \`source:\` — origin of the memo: \`text\`, \`voice\`, \`email\`,
-  \`dropbox\`, \`telegram\`, etc.
+  \`dropbox\`, etc.
 - \`context:\` — optional \`{url?, title?, text?}\` for memos that
   originate from a browser selection or a referenced page.
 - \`transcription:\` — for voice memos: \`{text, language?, transcribed-at?}\`

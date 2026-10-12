@@ -62,23 +62,6 @@ const registry: Record<string, Predicate> = {
 };
 
 /**
- * Store names that do not match their connector name. `telegram-bot/<slug>`
- * predates this check (the store name was chosen to say what the credential is,
- * the connector name to say what syncs), so the mapping is stated rather than
- * derived.
- */
-const storeNameAliases: Record<string, string> = { telegram: "telegram-bot" };
-
-/**
- * Connector families that exist ONLY in the per-box `name/<slug>` form. Telegram
- * reads exactly `telegram-bot/<slug>` (`telegram-helpers.ts`), so a flat
- * `telegram-bot` grant would make this probe say "configured" while the
- * connector still finds nothing — a script that runs and fails instead of
- * skipping cleanly.
- */
-const perBoxOnly = new Set(["telegram-bot"]);
-
-/**
  * Is this connector's credential in the machine store, granted to this box AND
  * holding a value? A granted-but-empty slot is a declared intention, not a
  * configured connector, so it counts as missing — the script would fail the
@@ -90,10 +73,8 @@ async function storeSecretPresent(boxRoot: string, name: string): Promise<boolea
   const slug = await boxSlug(boxRoot);
   const grants = loaded.value.grants[slug];
   if (grants === undefined) return false;
-  const base = storeNameAliases[name] ?? name;
-  // Both the flat name and the per-box `name/<slug>` instance count, except for
-  // families that only ever exist per box.
-  const candidates = perBoxOnly.has(base) ? [`${base}/${slug}`] : [base, `${base}/${slug}`];
+  // Both the flat name and the per-box `name/<slug>` instance count.
+  const candidates = [name, `${name}/${slug}`];
   for (const candidate of candidates) {
     if (grants[candidate] === undefined) continue;
     const value = loaded.value.secrets[candidate]?.value;

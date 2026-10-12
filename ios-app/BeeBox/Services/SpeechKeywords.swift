@@ -382,25 +382,52 @@ enum SpeechKeywords {
     }
 }
 
+/// What a voice send captured, before any HQ pass: the composed live text,
+/// the text typed before dictation, and the send keyword (if one was spoken).
+struct VoiceSendText: Equatable {
+    var liveTranscript: String
+    var priorInput: String
+    var action: SpeechKeywordAction
+    var matchedPhrase: String
+    /// False for the Send button: nothing was spoken to restore.
+    var appendsKeywordTag: Bool
+}
+
 enum VoicePreparationResolver {
     static func text(for preparation: VoicePreparation, hqTranscript: String?) -> String {
+        text(
+            VoiceSendText(
+                liveTranscript: preparation.liveTranscript,
+                priorInput: preparation.priorInput,
+                action: preparation.action,
+                matchedPhrase: preparation.matchedPhrase,
+                appendsKeywordTag: preparation.appendsKeywordTag != false
+            ),
+            hqTranscript: hqTranscript
+        )
+    }
+
+    /// The text a voice send delivers: the live transcript when there is no
+    /// HQ text, else the typed prefix joined to the HQ text with the send
+    /// keyword rule applied.
+    static func text(_ send: VoiceSendText, hqTranscript: String?) -> String {
         guard let hqTranscript else {
-            return preparation.liveTranscript
+            return send.liveTranscript
         }
-        if preparation.appendsKeywordTag == false {
-            return join(preparation.priorInput, hqTranscript)
+        if send.appendsKeywordTag == false {
+            return join(send.priorInput, hqTranscript)
         }
         // The live keyword fired the send: an HQ keyword counts only when it
         // is the same command; otherwise the live tag is appended.
         let detected = SpeechKeywords.detect(hqTranscript)
         let processed = detected.flatMap {
-            SpeechKeywords.sameTag($0.action, preparation.action) ? $0.processedTranscript : nil
+            SpeechKeywords.sameTag($0.action, send.action) ? $0.processedTranscript : nil
         } ?? SpeechKeywords.appendSendKeywordTag(
             to: hqTranscript,
-            action: preparation.action,
-            matchedPhrase: preparation.matchedPhrase
+            action: send.action,
+            matchedPhrase: send.matchedPhrase
         )
-        return join(preparation.priorInput, processed)
+        return join(send.priorInput, processed)
     }
 
     private static func join(_ first: String, _ second: String) -> String {
@@ -416,10 +443,22 @@ enum VoicePreparationResolver {
     }
 }
 
-enum NativeVoiceKeywordSendPlan: Equatable {
-    case live(text: String)
-    case hq
+/// A quick chat thought's final text and HQ engine
+/// (docs/plans/ios-quick-chat-hq.md). Non-blank HQ text from the phone's own
+/// pass gives the HQ text and its engine; anything else — the pass skipped,
+/// no recording, a blank result — gives the live transcript and no engine.
+enum QuickChatVoiceText {
+    static func resolve(
+        _ send: VoiceSendText,
+        hq: (text: String, service: String)?
+    ) -> (text: String, hqService: String?) {
+        guard let hq, hq.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+            return (send.liveTranscript, nil)
+        }
+        return (VoicePreparationResolver.text(send, hqTranscript: hq.text), hq.service)
+    }
 }
+
 
 private struct Choice {
     var words: [String]

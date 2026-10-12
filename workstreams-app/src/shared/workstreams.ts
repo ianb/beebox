@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { exhibitInventoryEntrySchema } from "./exhibits.js";
 import { issueSchema, planSchema, quotaSchema, testingQueueSchema } from "./documents.js";
 
 const removedStateSchema = z.object({
@@ -107,6 +108,17 @@ export const workstreamListResultSchema = z.object({
   })),
 });
 
+/** A list row as the dashboard shows it: the summary plus the workstream's exhibits. */
+export const workstreamListItemSchema = workstreamSummarySchema.extend({
+  exhibits: z.array(exhibitInventoryEntrySchema),
+});
+
+export const workstreamListOutputSchema = workstreamListResultSchema.extend({
+  items: z.array(workstreamListItemSchema),
+  /** Origin of the exhibits listener; each entry's `path` joins onto it. */
+  exhibitsOrigin: z.string(),
+});
+
 export const workstreamIssueSchema = z.object({
   issue: issueSchema,
   owned: z.boolean(),
@@ -117,6 +129,8 @@ export const workstreamIssueSchema = z.object({
 export const workstreamDetailSchema = z.object({
   workstream: workstreamSummarySchema,
   issues: z.array(workstreamIssueSchema),
+  exhibits: z.array(exhibitInventoryEntrySchema),
+  exhibitsOrigin: z.string(),
 });
 
 export const dashboardSchema = z.object({
@@ -129,5 +143,6 @@ export const dashboardSchema = z.object({
 });
 
 export type WorkstreamSummary = z.infer<typeof workstreamSummarySchema>;
+export type WorkstreamListItem = z.infer<typeof workstreamListItemSchema>;
 export type WorkstreamListResult = z.infer<typeof workstreamListResultSchema>;
 export type WorkstreamIssue = z.infer<typeof workstreamIssueSchema>;

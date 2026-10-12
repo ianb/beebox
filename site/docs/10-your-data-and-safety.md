@@ -48,7 +48,7 @@ cards to the same routing model, with a request that the provider not retain
 it; it needs the same OpenRouter key. Push to the iPhone app goes through
 Apple, and push to a browser through that browser's vendor; a notification
 carries a title, a short body, and where a tap should land. Google services,
-Telegram, web push, and publishing send data only if you connect them. A
+web push, and publishing send data only if you connect them. A
 published site is stored and served by the Cloudflare account you connect, and
 is visible to whoever has its address. Gmail access is limited to
 reading and drafting; the system never asks for permission to send mail on

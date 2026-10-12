@@ -27,11 +27,12 @@ function plan(input: { directories?: DirectoryInput[]; localFiles?: string[]; le
 const dir = (d: string, claude: DirectoryInput["claude"], agents: DirectoryInput["agents"]): DirectoryInput => ({ dir: d, claude, agents });
 ```
 
-The registry entry uses the name the resolver checks:
+The registry entry uses the name the resolver checks (later migrations
+follow it in the list):
 
 ```ts
-MIGRATIONS.at(-1)?.name === AGENTS_MD_MIGRATION
-=> true
+MIGRATIONS.find((m) => m.name === AGENTS_MD_MIGRATION)?.script
+=> src/scripts/migrate/agents-md/run.ts
 ```
 
 ## Every directory state

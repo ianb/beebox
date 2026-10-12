@@ -32,8 +32,8 @@ decides what each part becomes.
 what it is asking, why, which cards are involved, and what to do with your
 answer. Answering creates a follow-up job.
 
-**Chat.** Chat is the central surface, in the web interface or through
-Telegram, and threads resume across processing cycles. You can also ask for a
+**Chat.** Chat is the central surface, in the web interface, and
+threads resume across processing cycles. You can also ask for a
 page: a custom screen built to show your own cards the way you want to see
 them (see [views](capabilities/views.md)).
 

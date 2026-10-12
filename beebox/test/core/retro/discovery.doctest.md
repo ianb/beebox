@@ -74,7 +74,7 @@ async function seedSession(
 ## Discovery: chat vs job sessions, quiescence, watermark
 
 A webapp chat session (typed user messages, quiet for hours) qualifies. A
-telegram session sends raw text — no `<typed>` tags — so its chat
+thread session (retired; its registry file remains on boxes that used it) sent raw text — no `<typed>` tags — so its chat
 registry entry is what qualifies it (and contributes thread provenance).
 A wakeup run (untagged, unregistered) is non-chat. A conversation still
 active within the quiescence window is deferred. A session already
@@ -88,7 +88,7 @@ await seedSession(box.root, { sessionId: "chat-old", age: 5 * HOUR, entries: [
   typedEntry("Please stop using bullet lists in answers", "2026-06-09T07:00:00Z"),
   agentEntry("Got it — prose from here on.", "2026-06-09T07:00:10Z"),
 ] });
-await seedSession(box.root, { sessionId: "chat-telegram", age: 3 * HOUR, entries: [
+await seedSession(box.root, { sessionId: "chat-threaded", age: 3 * HOUR, entries: [
   plainUserEntry("What's on my calendar?", "2026-06-09T09:00:00Z"),
   agentEntry("Two meetings this afternoon.", "2026-06-09T09:00:05Z"),
 ] });
@@ -100,7 +100,7 @@ await seedSession(box.root, { sessionId: "chat-live", age: 5 * 60 * 1000, entrie
   typedEntry("Still talking…", "2026-06-09T11:55:00Z"),
 ] });
 await box.write(".beebox/chat-thread-sessions.json", JSON.stringify({
-  "_content/chat/telegram/Ian/thread.chat-thread.card": { sessionId: "chat-telegram" },
+  "_content/chat/messaging/Ian/thread.chat-thread.card": { sessionId: "chat-threaded" },
 }));
 
 const state = emptyRetroState();
@@ -112,7 +112,7 @@ await seedSession(box.root, { sessionId: "chat-done-before", age: 9 * HOUR, entr
 const result = await discoverSessions(box.root, { now: NOW, quiescenceMs: QUIET, state });
 result.qualified.map((s) => `${s.sessionId} (${s.userMessages} msg, thread: ${s.threadRef})`).join("\n")
 => chat-old (1 msg, thread: null)
-chat-telegram (1 msg, thread: _content/chat/telegram/Ian/thread.chat-thread.card)
+chat-threaded (1 msg, thread: _content/chat/messaging/Ian/thread.chat-thread.card)
 
 [result.nonChat, result.alreadyProcessed, result.missingTranscripts].join(",")
 => 1,1,0
@@ -182,7 +182,7 @@ const report = renderRunReport({
   generatedAt: "2026-06-09T12:00:00Z",
   examined: [
     { sessionId: "chat-old", threadRef: null, userMessages: 1, mtime: "2026-06-09T07:00:10Z" },
-    { sessionId: "chat-telegram", threadRef: "_content/chat/telegram/Ian/thread.chat-thread.card", userMessages: 1, mtime: "2026-06-09T09:00:05Z" },
+    { sessionId: "chat-threaded", threadRef: "_content/chat/messaging/Ian/thread.chat-thread.card", userMessages: 1, mtime: "2026-06-09T09:00:05Z" },
   ],
   deferredActive: ["chat-live"],
   alreadyProcessed: 1,
@@ -198,7 +198,7 @@ const report = renderRunReport({
 // Template prose is not the claim; keep every examined-session list line and the skip lines.
 report.split("\n").filter((line) => /^(- \x60|Skipped|Chat registries)/.test(line)).join("\n")
 => - `chat-old` (2026-06-09T07:00:10Z, 1 user message)
-- `chat-telegram` (2026-06-09T09:00:05Z, 1 user message) — _content/chat/telegram/Ian/thread.chat-thread.card
+- `chat-threaded` (2026-06-09T09:00:05Z, 1 user message) — _content/chat/messaging/Ian/thread.chat-thread.card
 Skipped: 1 already processed; 1 non-chat (wakeup/job/procedure runs); 1 deferred (active within the quiescence window); 2 beyond the per-run cap (next run picks them up).
 Chat registries: `.beebox/chat-thread-sessions.json`.
 ```

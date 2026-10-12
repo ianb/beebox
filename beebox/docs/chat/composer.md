@@ -64,11 +64,17 @@ pending request completes.
 HQ request work stays in `InteractiveChat/voice-keyword-send.ts`; the machine
 owns visible coordination state and emitted commands.
 
-Every voice send with a recording requests the HQ pass (`docs/plans/hq-always.md`);
+Every voice send with a recording requests the HQ pass (`docs/implemented-plans/hq-always.md`);
 there is no setting. The box decides availability: with no usable HQ key the
 job fails at once and the live text is sent, marked `<speech stt="live">`. A
 box pass costs about $0.006 per dictated minute on `whisper` or `whisper-llm`
 and $0.003 on `whisper-llm-mini` (OpenAI list prices).
+
+When live text goes down mid-recording, the live transcript shows `[…]` where
+words are missing (`docs/implemented-plans/live-gap-marker.md`). A reconnect that replays
+the whole outage removes it once new live text arrives; a longer outage keeps
+it. If the live text is what gets sent, the marker goes to the agent as
+`<unsure>[…]</unsure>`. Spoken commands never match across it.
 
 ### Mobile keyboard coordination
 

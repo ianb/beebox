@@ -128,8 +128,14 @@ document archive entry needs a body and \`dates\` but maybe no
 A new record is unreviewed. Set \`reviewed: true\` only when the boxholder
 has verified it is accurate, and \`archived: true\` when the boxholder has
 finalized it for long-term storage. Leave both absent otherwise.`,
-  // A record is listed and found under its name.
-  summarize: (card, base) => ({ ...base, title: card.name }),
+  // A record is listed and found under its name. Its summary line says where
+  // it is and how many: what a tile needs to find the tray without opening it.
+  summarize: (card, base) => {
+    const detail = [card.location?.text, card.quantity?.value]
+      .filter((part): part is string => part !== undefined && part.trim() !== "")
+      .join(" · ");
+    return { ...base, title: card.name, ...(detail === "" ? {} : { detail }) };
+  },
 });
 
 export type RecordFields = InferCardFields<typeof RecordSchema>;

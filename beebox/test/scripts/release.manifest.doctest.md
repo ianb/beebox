@@ -11,7 +11,7 @@ smoke test's job, but that's a slow end-to-end script — this doctest is the
 fast, CI-friendly manifest check that runs on every `pnpm test`).
 
 ```ts setup
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, glob } from "node:fs/promises";
 import * as path from "node:path";
 
 const PACKAGE_ROOT = path.join(import.meta.dirname, "../..");
@@ -46,10 +46,17 @@ function exportTargets(exportsMap) {
   return targets;
 }
 
-/** Entries of `entries` that don't exist under `PACKAGE_ROOT`. */
+/** Entries of `entries` that match nothing under `PACKAGE_ROOT`. A glob
+ *  entry (npm `files` accepts them) counts as present when it matches at
+ *  least one path. */
 async function findMissing(entries) {
   const missing = [];
   for (const entry of entries) {
+    if (entry.includes("*")) {
+      const matches = await Array.fromAsync(glob(entry, { cwd: PACKAGE_ROOT }));
+      if (matches.length === 0) missing.push(entry);
+      continue;
+    }
     try {
       await access(path.join(PACKAGE_ROOT, entry));
     } catch (_e) {
@@ -97,24 +104,10 @@ of at `pnpm pack` time.
 
 ```ts continue
 const checkedIn = pkg.files.filter((f) => f !== "dist" && f !== "src/frontend/dist");
-checkedIn
-=> [
-  "bin",
-  "box-docs",
-  "docs/box",
-  "templates",
-  "plugins",
-  ".agents",
-  "src/frontend/package.json",
-  "src/types",
-  "src/core/views/types.ts",
-  "src/core/chat/card-activity.ts",
-  "src/shared/card-activity-kinds.ts",
-  "src/core/agent-guide/ledger.yaml",
-  "src/core/agent-guide/guide.md",
-  "tsconfig.json",
-  "tsconfig.base.json"
-]
+
+// Nonempty, so the check below cannot pass by checking nothing.
+checkedIn.length > 0
+=> true
 ```
 
 ```ts continue

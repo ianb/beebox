@@ -6,7 +6,7 @@
  * identity to friendlier tab text (docs/plans/vocab-glossary-sweep.md Track
  * C item 8): the generic "Card" renderer shows the card's own type ("Recipe")
  * when nothing more specific is registered, or "Details" when a
- * type-specific renderer (Recipe, Concept Map, …) already claims the
+ * type-specific renderer (Concept Map, …) already claims the
  * headline slot; "Source" reads as "Original text" for card files.
  * Everything else passes through unchanged.
  */

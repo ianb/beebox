@@ -107,7 +107,7 @@ Also: \`bbx drive inspect <url>\` (preview one item), \`bbx drive sync\` (all Dr
  */
 export const EMAIL_SKILL = `---
 name: email
-description: Draft or reply to an email for the user to review and send. Use when asked to email someone, reply to a message, follow up by email, or send anything that isn't a chat or Telegram reply.
+description: Draft or reply to an email for the user to review and send. Use when asked to email someone, reply to a message, follow up by email, or send anything that isn't a chat reply.
 ---
 
 # Email
@@ -143,7 +143,7 @@ description: Find where the user is, or teach the box a named place (Home, Offic
 
 # User location
 
-The boxholder can share their device location from the web UI. It is **on-demand only** — it never appears in your context automatically, so query it when the conversation needs it. It comes from the browser, so it stays \`unknown\` on Telegram and other channels.
+The boxholder can share their device location from the web UI. It is **on-demand only** — it never appears in your context automatically, so query it when the conversation needs it. It comes from the browser, so it stays \`unknown\` outside the web UI.
 
 - **Read it:** \`bbx location get\` prints the last-known fix as \`lat,lng (±accuracy, captured <age> ago, web)\`, prefixed with the place name (\`Home — …\`) when the fix is inside a known place. Add \`--json\` for structured output (\`place\`, \`lat\`, \`lng\`, \`accuracy\`, \`capturedAt\`, \`ageMs\`, \`stale\`).
 - **Not shared:** prints \`unknown\` when the boxholder hasn't shared location. Don't guess or fabricate a location — report that it's unknown.

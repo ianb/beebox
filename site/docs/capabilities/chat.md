@@ -1,5 +1,5 @@
 ---
-description: "A conversational interface to your box, in the browser or on Telegram, that streams the agent's reply and remembers where you left off."
+description: "A conversational interface to your box, in the browser, that streams the agent's reply and remembers where you left off."
 ---
 # Chat
 

@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { isRecord } from "../../../../shared/is-record.js";
-import { safeFilename } from "../../../../job-cards/chat-utils.js";
+import { safeFilename } from "../../../../lib/safe-filename.js";
 import {
   buildSheetData,
   serializeSheetData,

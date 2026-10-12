@@ -2,19 +2,20 @@
  * Briefing card schema — core situational context for a box.
  *
  * A briefing mixes **structured records in frontmatter** with a **prose
- * body**. The records — `key-people:` and `properties:` — are lists of
- * fielded entries (a person or a property is a record, not prose). Chat
- * openers live on the place's landmark (`navigation.openers`), not here. The body holds the
- * genuinely free-text material: the `{% purpose %}` statement,
- * `{% correction %}` instructions, and plain prose / headings
- * for things like "Legal" and "Finances" that were always free-form.
+ * body**. The frontmatter holds `purpose:` (one short statement of what the
+ * box or directory is for) and the records — `key-people:` and
+ * `properties:` — as lists of fielded entries (a person or a property is a
+ * record, not prose). Chat openers live on the place's landmark
+ * (`navigation.openers`), not here. The body holds the free-text material:
+ * plain prose and headings such as "Legal", "Finances", and "Corrections".
+ * No briefing-specific Markdoc tags exist; the `{% purpose %}` and
+ * `{% correction %}` tags were retired by the `body-tags-2026-10` migration.
  *
- * `compileBriefing` emits the frontmatter records, the root place's openers,
- * and the body's Markdoc as markdown for inclusion in AGENTS.md (via `@`-include). The body
- * emitter lives at `src/core/markdoc/emit/core.ts`. The frontend renders the
- * records from frontmatter (default card viewer's field table) and the
- * body's `{% purpose %}`/`{% correction %}` tags as styled blocks via
- * `src/frontend/src/components/BriefingTags.tsx`.
+ * `compileBriefing` emits the purpose, the body's markdown, the frontmatter
+ * records, and the root place's openers as markdown for inclusion in
+ * AGENTS.md (via `@`-include). The body emitter lives at
+ * `src/core/markdoc/emit/core.ts`. The frontend renders the frontmatter in
+ * the default card viewer's field table and the body as markdown.
  *
  * Root briefing: `briefing.briefing.card` at box root.
  * Directory briefings: `briefing.briefing.card` in any subdirectory.
@@ -44,6 +45,7 @@ export const BriefingSchema = cardSchema("briefing", {
   description: "Core situational context for the box or a directory — what every agent needs to know; one per directory",
   category: "authored",
   fields: {
+    purpose: z.string().optional(),
     "key-people": z.array(KeyPersonEntry).optional(),
     properties: z.array(PropertyEntry).optional(),
     body: body(z.string()),
@@ -94,25 +96,33 @@ properties:
 
 When the purpose is still the stock stub (\`What this box is for.\`)
 and the person opens with "let me tell you what this box is for", ask
-them, then write their answer into \`{% purpose %}\`.
+them, then write their answer into the \`purpose:\` frontmatter field.
 
 When you record the box's purpose, also edit the root landmark,
 \`_content/Box.landmark.card\`: remove its stock onboarding openers
 ("Let me tell you what this box is for.", "What can you do?") from
-\`navigation.openers\`, or replace them with openers for that purpose.
+\`navigation.openers\` or replace them with openers for that purpose, and
+write its body, the place summary the person sees first.
 
-**Body tags** (free-text material; use as block tags):
+**Purpose** — the \`purpose:\` frontmatter field: one sentence or a
+short paragraph saying what this box (or directory) is for. Required
+at the box root; optional in directory briefings if the directory
+doesn't need its own purpose statement.
 
-- \`{% purpose %}\` — what this box (or directory) is for. Required at
-  the box root; optional in directory briefings if the directory
-  doesn't need its own purpose statement.
-- \`{% correction %}\` — an instruction that overrides default agent
-  behaviour, added in response to an observed mistake. Optional
-  \`test\` attribute describing how to verify the correction is being
-  followed.
+**Corrections** — a \`## Corrections\` section in the body, one bullet
+per instruction that overrides default agent behaviour, added in
+response to an observed mistake. When there is a way to check that the
+correction is being followed, say so in the same bullet.
 
-For prose sections like "Legal" or "Finances" (which were always
-free-form anyway), use plain markdown headings:
+\`\`\`markdown
+## Corrections
+
+- Read an item through before archiving it. Check: no archive commit
+  touches a card the session never opened.
+\`\`\`
+
+For prose sections like "Legal" or "Finances", use plain markdown
+headings:
 
 \`\`\`markdown
 ## Legal
@@ -173,9 +183,9 @@ function openerLine(opener: string): string {
 
 /**
  * Compile a briefing into the markdown form that gets `@`-included into
- * AGENTS.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`,
- * prose) followed by the frontmatter records (`key-people:`,
- * `properties:`) and the place's `openers` as `**Label:** …` lines. Prepends
+ * AGENTS.md: the `purpose:` as a `**Purpose:** …` line, the body's markdown,
+ * then the frontmatter records (`key-people:`, `properties:`) and the
+ * place's `openers` as `**Label:** …` lines. Prepends
  * a section header. `directoryLabel` is used for directory briefings (e.g.,
  * `"_bookkeeping/archive/financial"`); `openers` are the place's
  * `navigation.openers`, read from its landmark by the caller.
@@ -187,6 +197,8 @@ export function compileBriefing(fields: BriefingFields, options?: { directoryLab
     : "## Box Briefing";
 
   const sections: string[] = [];
+  const purpose = fields.purpose?.trim() ?? "";
+  if (purpose !== "") sections.push(`**Purpose:** ${purpose}`);
   const bodyMarkdown = emitBodyAsMarkdown(fields.body);
   if (bodyMarkdown !== "") sections.push(bodyMarkdown.trimEnd());
 
@@ -231,11 +243,8 @@ make sure it reaches me wherever I am.`;
 export function createBriefingTemplate(): string {
   return `---
 type: briefing
+purpose: What this box is for.
 ---
-{% purpose %}
-What this box is for.
-{% /purpose %}
-
 ${REACHING_ME_DEFAULT}
 `;
 }

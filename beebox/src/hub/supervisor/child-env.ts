@@ -52,7 +52,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "UV_TORCH_BACKEND", // `uvx docling` (services/docling/core.ts) must resolve the same PyTorch build the host prefetched; the container image sets cpu.
 
   // --- Box-legitimate config/secrets a `bbx serve` child reads directly ---
-  "PUBLIC_URL", // src/lib/public-url.ts, telegram-helpers.ts, script-env.ts fallback.
+  "PUBLIC_URL", // src/lib/public-url.ts, script-env.ts fallback.
   "BBX_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
   "BBX_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
   "BBX_AUTH_FILE", // src/webapp/local-users.ts + auth-capabilities.ts -- shared credential/capability store path, not a credential.

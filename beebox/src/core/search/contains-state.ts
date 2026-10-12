@@ -8,9 +8,10 @@
  *
  * The basis deliberately excludes `contains`/`title` (the derived fields
  * themselves), `type`, and `status` (operational flips like new→read must
- * not flag a still-true `contains` as stale). Bodied cards hash their body;
- * frontmatter-only cards hash their remaining fields; declared input files
- * (gdoc snapshots) always count.
+ * not flag a still-true `contains` as stale). A card with body text hashes
+ * its body; a card with no body text (a bodiless type, or a bodied type left
+ * empty) hashes its remaining fields; declared input files (gdoc snapshots)
+ * always count.
  *
  * Kept separate from the index manifest so index rebuilds (schema bumps,
  * corruption) don't wipe staleness memory. A fresh clone has no sidecar, so
@@ -34,15 +35,17 @@ import { errorMessage } from "../../shared/error-guards.js";
 const STATE_FILENAME = "contains-state.json";
 // v2: containsText records the *effective* contains (per-kind description
 // fallback), not just the literal field. Old sidecars rebuild via heal.
-const STATE_VERSION = 2;
+// v3: an empty body hashes the fields, not "". Rebuilding fresh keeps every
+// empty-body card from reading as stale at once.
+const STATE_VERSION = 3;
 
 /**
  * Fields that never count toward the contains basis — the derived ones. If a
  * field that is written *because* `contains` was rewritten counted toward the
  * basis, writing it would move the basis and flag the just-written `contains`
- * stale. (`contains-evidence` is derived alongside `contains`; note the basis
- * only reaches frontmatter for card types with no body — see
- * computeContainsBasis — so for bodied cards this is policy, not a live bug.)
+ * stale. (`contains-evidence` is derived alongside `contains`; the basis
+ * reaches frontmatter for any card with no body text — see
+ * computeContainsBasis.)
  */
 const BASIS_EXCLUDED_FIELDS = new Set([
   "contains",
@@ -110,7 +113,9 @@ export function computeContainsBasis(input: {
   const bodyName = card.schema.bodyFieldName;
   const body = bodyName === null ? null : card.fields[bodyName];
   const parts: string[] = [];
-  if (typeof body === "string") {
+  // An empty body says nothing, so the fields are the content (a person card
+  // with no notes). Hashing "" would let field edits go unnoticed.
+  if (typeof body === "string" && body.trim() !== "") {
     parts.push(body);
   } else {
     parts.push(canonicalFields(card));

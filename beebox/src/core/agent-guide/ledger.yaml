@@ -176,7 +176,7 @@ registry:
       - THE_LAW_OF_QUOTING
       - ABOUT_CARDS
       - src/core/chat/session/prompts.ts
-      - src/schemas/recipe.tsx
+      - src/plugins/recipe/base.ts
       - docs/box/provenance.md
       - docs/box-guidance.md
       - docs/prompts/review.md
@@ -487,12 +487,6 @@ rows:
     bin: delete
     reason: They work only in a live chat session, and the chat system prompt, loaded there, states each with when to use it; bbx-commands.md has the rest. The draft had this indirect.
     audits: [chat-screenshot-when, chat-last-audio-when]
-  - id: commands.seen-note
-    rule: "While processing a chat-thread card, a note to yourself goes in the `text:` of the `kind: seen` entry you append, not in `bbx chat self-note`."
-    handle: COMMANDS
-    bin: indirect
-    reason: Applies only to chat-thread processing, and the chat-thread card rule already shows the `text:` note; nothing moved.
-    audits: [chat-thread-seen-note]
     mechanics: card-chat-thread rule
   - id: commands.health
     rule: "`bbx health` is the agent's to run; `inconclusive` means the check reached no verdict, not that the work failed, so the work is not redone."
@@ -505,8 +499,8 @@ rows:
     rule: "`bbx finish <job-file>` is the required closing step of a job: it deletes the job card and commits."
     handle: COMMANDS
     bin: indirect
-    reason: Applies only while processing a job, and the reactor prompt and each job type's card rule already say it where the job runs; nothing moved.
-    audits: [chat-job-processing]
+    reason: Applies only while processing a job, and the reactor prompt and each job type's card rule already say it where the job runs; nothing moved. Its audit went with the chat-job type (remove-telegram, 2026-10-11).
+    audits: []
     mechanics: the reactor prompt (src/core/reactor/prompts.ts) and each job type's card rule
   - id: commands.calendar
     rule: "`bbx calendar [timespan]` lists upcoming events (default 7d; also today, 3d, 2w, 1m)."
@@ -833,7 +827,7 @@ rows:
     reason: Every question an agent considers can already have been asked, and re-asking an answered question wastes the boxholder's attention; the schema's instructions say it too, but the agent reads them only after deciding to ask.
     audits: [question-ask-decision-rule, question-dismissed-expired-meaning]
   - id: questions.alert
-    rule: A new question is sent to the boxholder when the box has Telegram or push set up, so the agent does not also chase it in chat or a todo.
+    rule: A new question is sent to the boxholder when the box has push set up, so the agent does not also chase it in chat or a todo.
     handle: QUESTIONS
     bin: core
     reason: Read from the code (`src/core/question-alert.ts`); without it an agent adds a reminder todo or a chat nudge beside every question it asks, doubling what the system already sends.
@@ -905,6 +899,12 @@ rows:
     bin: core
     reason: The recurrence signal shows up in ordinary chat, before any landmark work is in view, so nothing else would prompt the agent to notice it; the two halves bound both slips (a cluttered page and an invisible new structure).
     audits: [landmarks-recurrence-signal, landmarks-dont-create-quietly, landmarks-not-everywhere, landmarks-criteria]
+  - id: landmarks.summary-on-change
+    rule: When you add, move, or change cards in a place, check its landmark's summary (the body) in the same turn; write one if none, update it if it no longer holds.
+    handle: LANDMARKS
+    bin: core
+    reason: The trigger is saving an ordinary card, a turn that never opens the landmark's type doc, so a rule kept only in card-landmark.md is never met there (place-shows-cards plan review, finding 1). "Write one if none" seeds existing places, which have no body.
+    audits: [landmark-body-after-card-save]
   - id: landmarks.read-first
     rule: Read box-docs/landmark-curation.md before suggesting or editing a landmark.
     handle: LANDMARKS

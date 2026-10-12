@@ -100,7 +100,7 @@ dependency), so it is more foundation than conflict.
 
 ## Read: TiddlyWiki's plugin system (2026-08-19)
 
-Reviewed against the source — [`research/tiddlywiki/plugins.md`](../../research/tiddlywiki/plugins.md).
+Reviewed against the source — [`research/tiddlywiki/plugins.md`](../../../research/tiddlywiki/plugins.md).
 Three findings bear on the open questions above.
 
 **"What a plugin can extend" has a good answer: an enumerated vocabulary, at two

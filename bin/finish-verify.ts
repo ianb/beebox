@@ -5,6 +5,9 @@
  *   bin/finish-verify                       # reads bin/finish-preflight --json itself
  *   bin/finish-verify --sheet <file>
  *   bin/finish-verify --only tests          # re-verify after a post-green commit
+ *   bin/finish-verify --help
+ *
+ * Exit: 0 green, 1 red, 2 bad arguments, 128+n when killed by signal n.
  *
  * Output is one line per command, then `VERDICT: green|red`. A failing test
  * file is re-run once in isolation: passing there is a flake by the ledger's
@@ -20,22 +23,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
+import { killChildrenOnSignal, registerRun, run } from "./finish-verify-process.js";
 import type { Sheet } from "./finish-preflight.js";
 import type { VerificationCommand } from "./finish-preflight-lib.js";
-
-class EmptyCommandError extends Error {
-  constructor() {
-    super("empty command");
-    this.name = "EmptyCommandError";
-  }
-}
-
-class MissingSheetFileError extends Error {
-  constructor() {
-    super("--sheet needs a file");
-    this.name = "MissingSheetFileError";
-  }
-}
 
 class PreflightFailedError extends Error {
   constructor(readonly detail: { status: number | null; stderr: string }) {
@@ -44,11 +35,58 @@ class PreflightFailedError extends Error {
   }
 }
 
-class BadOnlyKindError extends Error {
-  constructor() {
-    super("--only takes tests, typecheck, lint, smoke or site");
+const KINDS: VerificationCommand["kind"][] = ["tests", "typecheck", "lint", "smoke", "site"];
+
+/** A usage mistake: exit 2 with the usage text, and run nothing. */
+class UsageError extends Error {
+  constructor(readonly detail: string) {
+    super(`bad arguments: ${detail}`);
+    this.name = "UsageError";
+  }
+}
+
+class BadOnlyKindError extends UsageError {
+  constructor(readonly kind: string) {
+    super(`--only takes ${KINDS.join(", ")}; got '${kind}'`);
     this.name = "BadOnlyKindError";
   }
+}
+
+const USAGE = `usage: bin/finish-verify [--sheet <file>] [--only ${KINDS.join("|")}]
+
+Runs the checks bin/finish-preflight's sheet names and prints VERDICT: green|red.
+Without --sheet it runs bin/finish-preflight --json first, which merges main.
+
+  --sheet <file>  read the decision sheet from a file instead
+  --only <kind>   run only that kind of check
+  -h, --help      print this and exit
+
+Exit: 0 green, 1 red, 2 bad arguments, 128+n when killed by signal n.`;
+
+/** Strict: an unknown flag or stray argument is a usage error, never a full run. */
+export function parseOptions(argv: string[]): {
+  help: boolean;
+  sheet: string | undefined;
+  only: VerificationCommand["kind"] | undefined;
+} {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      args: argv,
+      strict: true,
+      allowPositionals: false,
+      options: {
+        help: { type: "boolean", short: "h" },
+        sheet: { type: "string" },
+        only: { type: "string" },
+      },
+    }));
+  } catch (e) {
+    throw new UsageError(e instanceof Error ? e.message : String(e));
+  }
+  const only = KINDS.find((kind) => kind === values.only);
+  if (values.only !== undefined && only === undefined) throw new BadOnlyKindError(values.only);
+  return { help: values.help === true, sheet: values.sheet, only };
 }
 
 export interface FileOutcome {
@@ -65,6 +103,10 @@ export interface CommandResult {
   files: FileOutcome[];
   /** A red command whose failing files could not be identified. */
   unattributed: boolean;
+  /** Files a red non-test check names that are byte-identical to main. */
+  unchangedFromMain?: string[];
+  /** A red smoke walk's per-step lines, each with its time and usual time. */
+  smokeSteps?: string[];
 }
 
 /**
@@ -97,6 +139,34 @@ export function parseFailingFiles(output: string, exists: (path: string) => bool
   return [...files];
 }
 
+/**
+ * Repo files a check's output names, such as `site/docs/a.md` in a site
+ * build's broken-link error or `beebox/src/x.ts:12:3` in a typecheck error.
+ * A candidate counts only when it exists.
+ */
+export function mentionedFiles(output: string, exists: (path: string) => boolean): string[] {
+  const files = new Set<string>();
+  for (const match of output.matchAll(/(?:^|[\s"'(`])((?:[\w.@-]+\/)+[\w.-]+\.[a-z]{1,5})\b/gm)) {
+    const candidate = match[1];
+    if (candidate !== undefined && exists(candidate)) files.add(candidate);
+  }
+  return [...files];
+}
+
+/**
+ * The named files with no difference from main, committed or not. A red check
+ * in such a file was not caused by an edit to it: main may already fail the
+ * same way, or this branch removed something it references. Both cases need a
+ * different fix from an ordinary red, so the report says which files they are.
+ */
+function unchangedFromMain(root: string, files: string[]): string[] {
+  const git = (args: string[]): boolean => spawnSync("git", args, { cwd: root }).status === 0;
+  // `git diff main` ignores untracked files, so a new file would read as unchanged.
+  return files.filter(
+    (file) => git(["cat-file", "-e", `main:${file}`]) && git(["diff", "--quiet", "main", "--", file]),
+  );
+}
+
 export function formatResult(result: CommandResult): string[] {
   const seconds = result.seconds.toFixed(1);
   if (result.ok) return [`ok   ${result.command.command} (${seconds}s)`];
@@ -109,6 +179,12 @@ export function formatResult(result: CommandResult): string[] {
     );
   }
   if (result.unattributed) lines.push("     no failing file identified — treated as real");
+  for (const step of result.smokeSteps ?? []) lines.push(`     ${step}`);
+  for (const file of result.unchangedFromMain ?? []) {
+    lines.push(
+      `     unchanged from main: ${file} — main may fail the same way, or this branch removed what it references`,
+    );
+  }
   return lines;
 }
 
@@ -130,53 +206,39 @@ export function verdict(results: CommandResult[]): { green: boolean; flakes: str
   return { green, flakes: [...new Set(flakes)] };
 }
 
-interface RunOutput {
-  status: number;
-  text: string;
-}
-
-function run(input: { argv: string[]; cwd: string }): RunOutput {
-  const [command, ...args] = input.argv;
-  if (command === undefined) throw new EmptyCommandError();
-  const result = spawnSync(command, args, {
-    cwd: input.cwd,
-    encoding: "utf-8",
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  if (result.error !== undefined) throw result.error;
-  return { status: result.status ?? 1, text: `${result.stdout ?? ""}${result.stderr ?? ""}` };
-}
-
-function readSheet(argv: string[]): Sheet {
-  const index = argv.indexOf("--sheet");
-  if (index !== -1) {
-    const path = argv[index + 1];
-    if (path === undefined) throw new MissingSheetFileError();
+/** Preflight runs like a check, in its own process group, so a signal stops its merge too. */
+async function readSheet(path: string | undefined): Promise<Sheet> {
+  if (path !== undefined) {
     const parsed: Sheet = JSON.parse(readFileSync(path, "utf-8"));
     return parsed;
   }
-  const preflight = spawnSync(
-    process.execPath,
-    ["--import", "tsx", join(import.meta.dirname, "finish-preflight.ts"), "--json"],
-    { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
-  );
+  const preflight = await run({
+    argv: [
+      process.execPath,
+      "--import",
+      import.meta.resolve("tsx"),
+      join(import.meta.dirname, "finish-preflight.ts"),
+      "--json",
+    ],
+    cwd: process.cwd(),
+  });
   if (preflight.status !== 0) {
-    throw new PreflightFailedError({ status: preflight.status, stderr: preflight.stderr });
+    throw new PreflightFailedError({ status: preflight.status, stderr: preflight.text });
   }
   const parsed: Sheet = JSON.parse(preflight.stdout);
   return parsed;
 }
 
-function runCommand(input: {
+async function runCommand(input: {
   command: VerificationCommand;
   root: string;
   outDir: string;
   index: number;
-}): CommandResult {
+}): Promise<CommandResult> {
   const { command, root, outDir } = input;
   const cwd = join(root, command.cwd);
   const started = Date.now();
-  const output = run({ argv: command.argv, cwd });
+  const output = await run({ argv: command.argv, cwd });
   const seconds = (Date.now() - started) / 1000;
   const outputPath = join(outDir, `${String(input.index)}-${command.kind}.log`);
   writeFileSync(outputPath, output.text);
@@ -194,7 +256,7 @@ function runCommand(input: {
     );
     if (failing.length === 0) unattributed = true;
     for (const [position, file] of failing.entries()) {
-      const rerun = run({ argv: [...isolate.argv, file], cwd: isolateCwd });
+      const rerun = await run({ argv: [...isolate.argv, file], cwd: isolateCwd });
       if (rerun.status === 0) {
         files.push({ file, outcome: "flake" });
         continue;
@@ -205,6 +267,17 @@ function runCommand(input: {
     }
   } else if (command.kind === "tests") {
     unattributed = true;
+  } else if (command.kind === "smoke") {
+    // Which step ran out, and whether every step ran slow (load) or one did.
+    const smokeSteps = output.text.split("\n").filter((line) => /^(ok {3}|FAIL )/.test(line));
+    return { command, ok: false, seconds, outputPath, files, unattributed, smokeSteps };
+  } else {
+    const text = output.text.replaceAll(`${root}/`, "");
+    const named = mentionedFiles(text, (path) => existsSync(join(root, path)));
+    const unchanged = unchangedFromMain(root, named);
+    if (unchanged.length > 0) {
+      return { command, ok: false, seconds, outputPath, files, unattributed, unchangedFromMain: unchanged };
+    }
   }
   return { command, ok: false, seconds, outputPath, files, unattributed };
 }
@@ -222,25 +295,39 @@ export function existsRelative(input: { packageDir: string; path: string; root: 
   return existsSync(join(input.packageDir, input.path)) || existsSync(join(input.root, input.path));
 }
 
-export function main(argv: string[]): number {
-  const sheet = readSheet(argv);
-  const onlyIndex = argv.indexOf("--only");
-  const only = onlyIndex === -1 ? null : argv[onlyIndex + 1];
-  if (only !== null && !["tests", "typecheck", "lint", "smoke", "site"].includes(only ?? "")) {
-    throw new BadOnlyKindError();
+export async function main(argv: string[]): Promise<number> {
+  const options = parseOptions(argv);
+  if (options.help) {
+    console.log(USAGE);
+    return 0;
   }
+  // Before preflight: a signal during its merge must reach it too.
+  let release = (): void => {};
+  killChildrenOnSignal(() => release());
+  const sheet = await readSheet(options.sheet);
   const outDir = mkdtempSync(join(tmpdir(), "finish-verify-"));
+  const registration = registerRun(sheet.repoRoot);
+  release = registration.release;
+  if (registration.others.length > 0) {
+    console.log(
+      `note: finish-verify also running in ${registration.others.join(", ")} — the shared dev router is loaded; a slow smoke may be load`,
+    );
+  }
   const results: CommandResult[] = [];
   let index = 0;
-  for (const command of sheet.verification) {
-    if (command.skip !== undefined) {
-      console.log(`skip ${command.command}  (${command.skip})`);
-      continue;
+  try {
+    for (const command of sheet.verification) {
+      if (command.skip !== undefined) {
+        console.log(`skip ${command.command}  (${command.skip})`);
+        continue;
+      }
+      if (options.only !== undefined && command.kind !== options.only) continue;
+      const result = await runCommand({ command, root: sheet.repoRoot, outDir, index: index++ });
+      results.push(result);
+      for (const line of formatResult(result)) console.log(line);
     }
-    if (only !== null && command.kind !== only) continue;
-    const result = runCommand({ command, root: sheet.repoRoot, outDir, index: index++ });
-    results.push(result);
-    for (const line of formatResult(result)) console.log(line);
+  } finally {
+    registration.release();
   }
   if (results.length === 0) console.log("nothing to run");
   const { green, flakes } = verdict(results);
@@ -252,9 +339,10 @@ export function main(argv: string[]): number {
 
 if (process.argv[1] === import.meta.filename) {
   try {
-    process.exitCode = main(process.argv.slice(2));
+    process.exitCode = await main(process.argv.slice(2));
   } catch (e) {
     console.error(`finish-verify: ${e instanceof Error ? e.message : String(e)}`);
-    process.exitCode = 1;
+    if (e instanceof UsageError) console.error(USAGE);
+    process.exitCode = e instanceof UsageError ? 2 : 1;
   }
 }

@@ -7,12 +7,13 @@
 import { defineRegistry } from "./shared/registry.js";
 import type { PluginDefinition } from "./cards/plugin-definition.js";
 import coursewarePlugin from "./plugins/courseware/plugin.js";
+import recipePlugin from "./plugins/recipe/plugin.js";
 
 export const plugins = defineRegistry<PluginDefinition>({
   directory: "./plugins",
   entry: "plugin",
   ordered: false,
-  members: { courseware: coursewarePlugin },
+  members: { courseware: coursewarePlugin, recipe: recipePlugin },
 });
 
 export function pluginByName(name: string): PluginDefinition | undefined {

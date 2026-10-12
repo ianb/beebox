@@ -16,12 +16,13 @@ import {
   MAX_WATCHED_DIRS,
   MAX_NOTIFICATION_WORK,
   COALESCE_MS,
+  type WatchDir,
 } from "../../../src/core/box/file-watcher.js";
 import { watchLimitStatus } from "../../../src/core/box/watch-limit.js";
 import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/watch-limit.js";
 import { createEventBus, type EventBus } from "../../../src/core/event-bus/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -56,7 +57,7 @@ async function waitForWatch(root: string, bus: EventBus, relativeDir: string): P
     },
   });
   try {
-    const deadline = Date.now() + 5000;
+    const deadline = Date.now() + 60_000;
     let attempt = 0;
     while (!seen && Date.now() < deadline) {
       await writeFile(marker, String(attempt++));
@@ -66,6 +67,29 @@ async function waitForWatch(root: string, bus: EventBus, relativeDir: string): P
   } finally {
     subscription.unsubscribe();
   }
+}
+
+/**
+ * A `watchDir` the test drives. Real notifications arrive whenever the
+ * platform gets to them — seconds late on a loaded host — so a test of what
+ * the watcher *does* with an event fires that event itself, then awaits
+ * `watcher.settled()` for the reconcile it queued. `fire` throws for a
+ * directory with no live watch: the platform would deliver nothing there, so
+ * a test that fires one has a wrong premise.
+ */
+function fakeWatch(): { watchDir: WatchDir; fire(dir: string, event: string, filename: string): void } {
+  const live = new Map<string, (event: string, filename: string | null) => void>();
+  return {
+    watchDir: (dir, listener) => {
+      live.set(dir, listener);
+      return { close: () => { live.delete(dir); }, on: () => undefined };
+    },
+    fire(dir, event, filename) {
+      const listener = live.get(dir);
+      if (!listener) throw new Error(`no live watch on ${dir}`);
+      listener(event, filename);
+    },
+  };
 }
 
 /** Seed `count` files spread over `dirs` directories under the box root. */
@@ -174,15 +198,16 @@ const subscription = bus.subscribe({
     if (event.event === "file-change") seen.push(event.data.path);
   },
 });
+const fake = fakeWatch();
 const watcher = ensureBoxWatcher(contentRoot, {
   eventBus: bus,
   additionalRoots: [{ path: sourceDir, eventPathPrefix: "src" }],
+  watchDir: fake.watchDir,
 });
 await watcher.ready;
-await waitForWatch(box.root, bus, join("src", "views"));
 
 await writeFile(join(viewsDir, "catalog.tsx"), "export default function Catalog() { return null; }");
-await waitFor(() => seen.includes("src/views/catalog.tsx"), 5000, "package view change");
+fake.fire(viewsDir, "change", "catalog.tsx");
 seen.includes("src/views/catalog.tsx")
 => true
 ```
@@ -235,6 +260,12 @@ await box.cleanup();
 
 Consumers key on `path` alone, so that is what has to be right.
 
+This is the one test that takes delivery from the real platform watcher, so
+it is the one that would catch `fs.watch` wiring breaking. Delivery has no
+latency bound — seconds on a loaded host — so its deadlines are generous;
+they cost nothing when the event arrives. Every later event-driven test uses
+`fakeWatch` instead.
+
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
@@ -248,7 +279,7 @@ await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
 await writeFile(join(box.root, "store", "Note.memo.card"), "---\nstatus: new\n---\nhi\n");
-await waitFor(() => seen.includes("store/Note.memo.card"), 5000, "the card file-change event");
+await waitFor(() => seen.includes("store/Note.memo.card"), 60_000, "the card file-change event");
 
 seen.includes("store/Note.memo.card")
 => true
@@ -270,12 +301,13 @@ const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
 
-const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+const fake = fakeWatch();
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
 await watcher.ready;
-await waitForWatch(box.root, bus, "store");
 
 await mkdir(join(box.root, "store", "Trip.attach"), { recursive: true });
-await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach"), 5000, "the new directory watch");
+fake.fire(join(box.root, "store"), "rename", "Trip.attach");
+await watcher.settled();
 
 watcher.watchedDirs().includes("store/Trip.attach")
 => true
@@ -299,15 +331,18 @@ const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store", "Trip.attach", "old"), { recursive: true });
 
-const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+const fake = fakeWatch();
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
 await watcher.ready;
-await waitForWatch(box.root, bus, "store");
 
 const { rm, rename } = await import("node:fs/promises");
 await rm(join(box.root, "store", "Trip.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "Staging", "fresh"), { recursive: true });
 await rename(join(box.root, "store", "Staging"), join(box.root, "store", "Trip.attach"));
-await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5000, "the replacement subtree watches");
+// One notification, after the swap: FSEvents may coalesce the remove, create
+// and rename into this. It is the harder case, because the stale watch for
+// the old inode is still in place when the reconcile runs.
+fake.fire(join(box.root, "store"), "rename", "Trip.attach");
 await watcher.settled();
 
 testDirs(watcher)
@@ -334,9 +369,9 @@ await mkdir(join(box.root, "store"), { recursive: true });
 const seen: string[] = [];
 bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
 
-const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+const fake = fakeWatch();
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
 await watcher.ready;
-await waitForWatch(box.root, bus, "store");
 
 // Build the tree out of sight, then swap it in whole — no watch can have seen
 // the file being written.
@@ -344,7 +379,7 @@ const { rename } = await import("node:fs/promises");
 await mkdir(join(box.root, "staging"), { recursive: true });
 await writeFile(join(box.root, "staging", "Photo.md"), "hi\n");
 await rename(join(box.root, "staging"), join(box.root, "store", "Trip.attach"));
-await waitFor(() => seen.includes("store/Trip.attach/Photo.md"), 5000, "the discovered file event");
+fake.fire(join(box.root, "store"), "rename", "Trip.attach");
 await watcher.settled();
 
 seen.includes("store/Trip.attach/Photo.md")
@@ -369,17 +404,17 @@ const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
 await mkdir(join(box.root, "junk", "sub", "noisy"), { recursive: true });
 
-const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+const fake = fakeWatch();
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
 await watcher.ready;
-await waitForWatch(box.root, bus, "store");
 
 const { symlink } = await import("node:fs/promises");
 await symlink(join(box.root, "junk", "sub"), join(box.root, "store", "link"));
-// Create a real directory after the link and wait for *it*. Asserting an
-// absence is only meaningful once we know the notifications arrived — a bare
-// sleep would pass vacuously whenever delivery was merely slow.
+// A real directory beside the link, reconciled the same way, shows the
+// reconcile ran: an absent `store/link` then means it was refused.
 await mkdir(join(box.root, "store", "real"), { recursive: true });
-await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000, "the real directory watch");
+fake.fire(join(box.root, "store"), "rename", "link");
+fake.fire(join(box.root, "store"), "rename", "real");
 await watcher.settled();
 
 testDirs(watcher)
@@ -398,11 +433,11 @@ Repeats inside the 50 ms window collapse, but the *last* write still reaches
 consumers. Merely dropping duplicates would leave a client that refetched on the
 first event holding content a later write had already superseded.
 
-The event count is deliberately not the contract: FSEvents may combine several
-writes into one notification before Node sees them, especially under load.
-Instead, model a consumer that refetches on each hint. First prove it observed
-`v2`, then write three more versions inside the open throttle window and require
-that a later hint advances the consumer all the way to `v5`.
+The fake watcher delivers each `change` synchronously, so four changes fired in
+one tick all land inside the first window on any host, however loaded. The
+first emits at once; the other three collapse into one trailing event when the
+window closes. Without the trailing edge the count stays at 1, and the consumer
+that refetched on the first event never learns about `v5`.
 
 ```ts
 const box = await makeTmpBox();
@@ -411,32 +446,29 @@ await mkdir(join(box.root, "store"), { recursive: true });
 const card = join(box.root, "store", "Note.memo.card");
 await writeFile(card, "---\nstatus: new\n---\nv1\n");
 
-const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+const fake = fakeWatch();
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
 await watcher.ready;
-await waitForWatch(box.root, bus, "store");
+const store = join(box.root, "store");
 
 let events = 0;
-let observed = "";
-let reads = Promise.resolve();
 bus.subscribe({
   listener: (e) => {
-    if (e.event !== "file-change" || e.data.path !== "store/Note.memo.card") return;
-    events++;
-    reads = reads.then(async () => { observed = await readFile(card, "utf8"); });
+    if (e.event === "file-change" && e.data.path === "store/Note.memo.card") events++;
   },
 });
 
-await writeFile(card, "---\nstatus: new\n---\nv2\n");
-await waitFor(() => observed.endsWith("v2\n"), 5000, "the consumer to observe v2");
+for (let i = 0; i < 4; i++) fake.fire(store, "change", "Note.memo.card");
+// The leading event is synchronous; the other three are held in the window.
+events
+=> 1
 
-for (const v of ["v3", "v4", "v5"]) {
-  await writeFile(card, `---\nstatus: new\n---\n${v}\n`);
-}
-await waitFor(() => observed.endsWith("v5\n"), 5000, "the trailing event to expose v5");
-await reads;
-
-`final content: ${observed.endsWith("v5\n")} | bounded: ${events <= 4}`
-=> final content: true | bounded: true
+// The trailing emission waits on the 50 ms timer, not the platform; the
+// deadline only bounds a hang.
+await waitFor(() => events === 2, 60_000, "the trailing event");
+// One trailing event for three collapsed changes, not one each.
+events
+=> 2
 ```
 
 ```ts cleanup
@@ -494,9 +526,9 @@ for (let i = 0; i < 64; i++) {
   await writeFile(join(box.root, ".incoming", `file-${i}.txt`), "x");
 }
 
-const watcher = ensureBoxWatcher(box.root, { eventBus: bus, maxNotificationWork: 16 });
+const fake = fakeWatch();
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus, maxNotificationWork: 16, watchDir: fake.watchDir });
 await watcher.ready;
-await waitForWatch(box.root, bus, "store");
 
 let events = 0;
 bus.subscribe({ listener: (e) => { if (e.event === "file-change") events++; } });
@@ -510,7 +542,7 @@ console.error = (...args: unknown[]) => {
 try {
   const { rename } = await import("node:fs/promises");
   await rename(join(box.root, ".incoming"), join(box.root, "store", "arrived"));
-  await waitFor(() => capLogs.length === 1, 10_000, "the notification work limit");
+  fake.fire(join(box.root, "store"), "rename", "arrived");
   await watcher.settled();
 } finally {
   console.error = originalConsoleError;

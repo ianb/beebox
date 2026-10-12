@@ -104,12 +104,6 @@ export function summarizeGmailFilters({ config, gmail }: { config: BoxConfig; gm
   return ready("Not configured", "warning");
 }
 
-export function summarizeTelegram(status: Admin["telegramStatus"]): AdminSectionStatus {
-  if (!status.configured) return ready("Not connected", "neutral");
-  if ("error" in status) return ready(`Bot not answering: ${status.error}`, "danger");
-  return "botUsername" in status ? ready(`Connected as @${status.botUsername}`, "success") : ready("Connected", "success");
-}
-
 export function summarizeSecrets(status: RouterOutput["secrets"]["boxStatus"]): AdminSectionStatus {
   if (status.granted.length === 0) return ready("No keys", "neutral");
   const keys = `${plural(status.granted.length, "key")} on this box`;

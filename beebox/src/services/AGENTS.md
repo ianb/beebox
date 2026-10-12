@@ -39,7 +39,7 @@ export interface FakeFooService extends FooService {
 - **Always named-params, never positional.** Even for one-input fakes — call `createFakeFoo({ items: [...] })`, not `createFakeFoo([...])`. Keeps call sites uniform and lets you add fields later without breaking callers.
 - **Extend the interface as tests need it.** If tests want to inspect what happened (sent messages, fetched URLs, written files), declare a `FakeFooService extends FooService` with the relevant fields. If tests don't need it, returning the bare `FooService` is fine.
 - **Provide a `describe(): string` method on the fake.** Returns a multi-line, stable, human-readable snapshot of the fake's current state. Doctests then `print(fake.describe())` and match. Avoids per-test `JSON.stringify` boilerplate and makes failures legible.
-- **Fakes are domain-specific**, not generic `Partial<T>` overrides. Constructor params reflect what the service needs to function (e.g. `createFakeTelegram({ username: "bot" })` requires a username because `getMe()` returns it).
+- **Fakes are domain-specific**, not generic `Partial<T>` overrides. Constructor params reflect what the service needs to function (e.g. `createFakeClaudeCli({ loggedIn: true })` takes the login state because `authStatus()` returns it).
 - **Optional `| undefined`** — all service fields in the `Services` container and in route option interfaces must use `?: T | undefined` (not just `?: T`) because of `exactOptionalPropertyTypes` in tsconfig.
 - **No `!.` in doctests** — the doctest runner doesn't support TypeScript's non-null assertion. Use `?.` instead: `svc.items[0]?.name`.
 
@@ -49,14 +49,13 @@ export interface FakeFooService extends FooService {
 
 ```typescript
 export interface Services {
-  telegram?: TelegramService | undefined;
   claudeCli?: ClaudeCliService | undefined;
   calendar?: GoogleCalendarService | undefined;
   // ... all optional, not every box configures every service
 }
 ```
 
-In production, services are `undefined` and routes/connectors create real implementations from config. In tests, fakes are injected via `makeTestServer({ services: { telegram: createFakeTelegram(...) } })`.
+In production, services are `undefined` and routes/connectors create real implementations from config. In tests, fakes are injected via `makeTestServer({ services: { calendar: createFakeGoogleCalendar(...) } })`.
 
 ## Threading through callers
 
@@ -71,12 +70,7 @@ interface ChatRoutesOptions {
 }
 
 // Connector factory parameter
-export function createTelegramConnector(boxRoot: string, telegram?: TelegramService): Connector
-
-// Fallback inside the connector
-private getTelegram(botToken: string): TelegramService {
-  return this.telegramService ?? createTelegramService(botToken);
-}
+export function createGmailConnector(boxRoot: string, service?: GoogleGmailService): Connector
 ```
 
 ## Testing with fakes
@@ -84,9 +78,9 @@ private getTelegram(botToken: string): TelegramService {
 Route tests use `makeTestServer()` from `test/helpers/doctest-server.ts`:
 
 ```typescript
-const tg = createFakeTelegram({ username: "my_bot" });
-const ctx = await makeTestServer({ services: { telegram: tg } });
-// ... inject requests, inspect tg.sent, tg.webhookUrl, etc.
+const cal = createFakeGoogleCalendar({ calendars: [...] });
+const ctx = await makeTestServer({ services: { calendar: cal } });
+// ... inject requests, inspect cal.events, etc.
 await ctx.cleanup();
 ```
 
@@ -96,7 +90,6 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 
 | File | Interface | Real factory | Fake factory |
 |------|-----------|-------------|-------------|
-| `telegram.ts` | `TelegramService` | `createTelegramService(token)` | `createFakeTelegram({ username })` |
 | `claude-cli.ts` | `ClaudeCliService` | `createClaudeCliService()` | `createFakeClaudeCli({ loggedIn? })` |
 | `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client, { boxRoot? })` | `createFakeGoogleAuth({ accessToken? })` |
 | `google-calendar/core.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |

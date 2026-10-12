@@ -1,6 +1,6 @@
 # Reactor Integration Tests
 
-Integration tests for the reactor with fake agents. Tests batch/chat
+Integration tests for the reactor with fake agents. Tests batch
 processing, lock management, and cycle behavior.
 
 ```ts setup
@@ -11,7 +11,6 @@ import { finishJob } from "../../../src/core/finish-job.js";
 import { createFakeAgent } from "../fake-agent.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createIntakeJobTemplate } from "../../../src/schemas/intake-job.js";
-import { createChatJobTemplate } from "../../../src/schemas/chat-job.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -24,12 +23,6 @@ const intakeJob = (description, opts) =>
     description,
     items: [],
     ...(opts ?? {}),
-  });
-const chatJob = (description, threadRef) =>
-  createChatJobTemplate({
-    connector: "telegram",
-    description,
-    threadRef,
   });
 
 // Override the reactor's slow real subsystems with no-ops. None of these
@@ -187,210 +180,6 @@ agentCreated
 
 result.jobsRemaining
 => 1
-
-await box.cleanup();
-```
-
-## Chat processing with fake agent
-
-### Chat job uses per-job agent with session
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
-await box.write("_bookkeeping/jobs/msg.chat.job.card", chatJob("Reply to user", "store/threads/conv1.card"));
-await box.write(".beebox/chat-sessions.json", JSON.stringify({
-  "store/threads/conv1.card": {
-    sessionId: "stale-session",
-    createdAt: "2020-01-01T00:00:00.000Z",
-    lastUsedAt: "2020-01-02T00:00:00.000Z",
-    messageCount: 1,
-  },
-}));
-box.commitAll("Add chat job");
-
-let agents = [];
-const agentFactory = (opts) => {
-  const agent = createFakeAgent({
-    name: opts.name,
-    sessionId: opts.sessionId,
-    resume: opts.resume,
-    act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/msg.chat.job.card" });
-      return { success: true };
-    },
-  });
-  agents.push(agent);
-  return agent;
-};
-
-const result = await runReactor({
-  boxRoot: box.root,
-  ...testOverrides,
-  createAgent: agentFactory,
-  type: "chat",
-});
-
-result.success
-=> true
-
-result.jobsProcessed
-=> 1
-
-// Agent was created with a session ID
-agents.length
-=> 1
-
-agents[0].invocations[0].prompt.includes("Reply to user")
-=> true
-
-// Telegram chat jobs carry the same per-message situational snapshot as web
-// chat, with their own channel vocabulary.
-/^<chat-app .*local-time="[^"]+" channel="telegram"/.test(agents[0].invocations[0].prompt)
-=> true
-
-agents[0].invocations[0].prompt.includes('last-activity=')
-=> true
-
-// Web-only UI feature flags are not sent to the Telegram reactor.
-/\b(?:narration|prose|hq-dictation)=/.test(agents[0].invocations[0].prompt)
-=> false
-
-await box.cleanup();
-```
-
-### Multiple chat jobs get separate agent invocations
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("store/threads/a.card", `---\nstatus: new\n---\nThread A`);
-await box.write("store/threads/b.card", `---\nstatus: new\n---\nThread B`);
-await box.write("_bookkeeping/jobs/a.chat.job.card", chatJob("Reply A", "store/threads/a.card"));
-await box.write("_bookkeeping/jobs/b.chat.job.card", chatJob("Reply B", "store/threads/b.card"));
-box.commitAll("Add chat jobs");
-
-let agents = [];
-const agentFactory = (opts) => {
-  const jobFile = agents.length === 0 ? "a.chat.job.card" : "b.chat.job.card";
-  const agent = createFakeAgent({
-    name: opts.name,
-    sessionId: opts.sessionId,
-    resume: opts.resume,
-    act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/${jobFile}` });
-      return { success: true };
-    },
-  });
-  agents.push(agent);
-  return agent;
-};
-
-const result = await runReactor({
-  boxRoot: box.root,
-  ...testOverrides,
-  createAgent: agentFactory,
-  type: "chat",
-});
-
-result.jobsProcessed
-=> 2
-
-// Each chat job got its own agent
-agents.length
-=> 2
-
-await box.cleanup();
-```
-
-### Session resume across reactor cycles
-
-A second message in the same thread must resume the session the first
-cycle actually created. The fake agent enforces real SDK semantics via
-`knownSessions`: resuming an id no earlier agent created fails with
-"No conversation found" — so this test catches the store drifting from
-the ids the SDK really knows about.
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
-await box.write("_bookkeeping/jobs/msg1.chat.job.card", chatJob("First message", "store/threads/conv1.card"));
-box.commitAll("Add first chat job");
-
-const knownSessions = new Set();
-let agents = [];
-let jobToFinish = "msg1.chat.job.card";
-const agentFactory = (opts) => {
-  const agent = createFakeAgent({
-    name: opts.name,
-    sessionId: opts.sessionId,
-    resume: opts.resume,
-    knownSessions,
-    act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/${jobToFinish}` });
-      return { success: true };
-    },
-  });
-  agents.push(agent);
-  return agent;
-};
-
-const reactorOpts = {
-  boxRoot: box.root,
-  ...testOverrides,
-  createAgent: agentFactory,
-  type: "chat",
-};
-
-const cycle1 = await runReactor(reactorOpts);
-cycle1.success
-=> true
-
-// The stored session id is the id the agent actually created
-const stored1 = JSON.parse(
-  await fs.readFile(path.join(box.root, ".beebox/chat-sessions.json"), "utf-8"),
-);
-stored1["store/threads/conv1.card"].sessionId === agents[0].sessionId
-=> true
-
-knownSessions.has(agents[0].sessionId)
-=> true
-
-// Second message in the same thread, next reactor cycle
-await box.write("_bookkeeping/jobs/msg2.chat.job.card", chatJob("Second message", "store/threads/conv1.card"));
-box.commitAll("Add second chat job");
-jobToFinish = "msg2.chat.job.card";
-
-const cycle2 = await runReactor(reactorOpts);
-cycle2.success
-=> true
-
-cycle2.jobsProcessed
-=> 1
-
-// Cycle 2 resumed the exact session cycle 1 created
-agents.length
-=> 2
-
-agents[1].sessionId === agents[0].sessionId
-=> true
-
-agents[1].invocations[0].resumed
-=> true
-
-// Resumed messages still carry current time/channel context, while
-// session-start-only context is not repeated.
-agents[1].invocations[0].prompt.includes('channel="telegram"')
-=> true
-
-agents[1].invocations[0].prompt.includes('last-activity=')
-=> false
-
-// Session record survived and counted both messages
-const stored2 = JSON.parse(
-  await fs.readFile(path.join(box.root, ".beebox/chat-sessions.json"), "utf-8"),
-);
-stored2["store/threads/conv1.card"].messageCount
-=> 2
 
 await box.cleanup();
 ```

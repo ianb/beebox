@@ -109,3 +109,18 @@ Answer from that output:
 
 If none of 1–3 turns up evidence either way (no full-suite runs logged this
 week), re-defer one more cycle rather than closing on no data.
+
+**2026-10-10 (retrospective 20261010-224248):** the smoke walk's 120 s budget
+shows the same pattern at finish time. "A card opens and renders" missed the
+budget after a cold start (agents-md/20261009T233917Z-landed.md, passed at
+119.3 s on rerun; agents-md/20261010T045428Z-landed.md) and while another
+worktree's finish-verify used the shared dev router
+(hq-always/20261010T143901Z-landed.md, 70 s once it finished). Per-step timing
+in the smoke report would separate load from a real red.
+
+**2026-10-12 (finish-tooling):** done for the smoke walk's report only. Each
+step's line now gives its own time and its median from the run log
+(`ok   a card opens and renders (39.8s; usual 21.8s)`), and a red step's
+line adds the walk total. When smoke is red, `bin/finish-verify` prints those
+lines under its FAIL line, and it names any other finish-verify run that
+shares the dev router. The budgets and the rest of this issue are unchanged.

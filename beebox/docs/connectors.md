@@ -32,7 +32,6 @@ authorization for the three Google connectors: [Google auth](connectors/google-a
 
 | Connector | File | Card types | Direction | Page |
 |---|---|---|---|---|
-| Telegram | `telegram.ts` | `chat-thread` | Two-way | [Telegram](connectors/telegram.md) |
 | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
 | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](connectors/gmail.md) |
 | Google Drive | `google-drive.ts` | `gsheet`, `gdoc`, `gfolder`, `glink` | Two-way | [Drive](connectors/drive.md) |
@@ -74,13 +73,11 @@ connector has gone quiet or keeps failing; the scheduler alerts once per
 episode and the dashboard shows a warning. See
 [health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 
-Telegram also has a webhook route (`routes/telegram.ts`) for real-time message delivery, separate from the polling in `sync()`.
-
 ## Configuration
 
 A connector with non-credential config reads it from
 `_config/connectors/<name>.json`; the shape, and whether one exists at all, is
-on the connector's page (Telegram has none; Drive's configuration is its
+on the connector's page (Drive's configuration is its
 cards). Credentials come from the machine [secret store](secrets.md).
 Transient state (sync cursors, mappings) lives in
 `_bookkeeping/connectors/<name>.state.json` or `<name>-state.json`,
@@ -105,24 +102,19 @@ When and how an agent tells the user about staleness is a
 Connectors that call external APIs accept an optional service parameter:
 
 ```typescript
-export function createTelegramConnector(boxRoot: string, telegram?: TelegramService): Connector
+export function createGmailConnector(
+  boxRoot: string,
+  service?: GoogleGmailService,
+): Connector
 ```
 
 When no service is provided, connectors create real implementations from config files. When a fake is injected (in tests), all API calls go through the fake.
-
-Inside the connector, a helper pattern provides the fallback:
-
-```typescript
-private getTelegram(botToken: string): TelegramService {
-  return this.telegramService ?? createTelegramService(botToken);
-}
-```
 
 See `src/services/AGENTS.md` for the full service layer documentation.
 
 ## Writing a new connector
 
-1. Implement the `Connector` interface (`name`, `produces`, `sync()`)
+1. Implement the `Connector` interface (`name`, `sync()`)
 2. Declare and resolve credentials via the machine secret store
    ([`docs/secrets.md`](secrets.md)) rather than a new `<name>.secret.json`
    file

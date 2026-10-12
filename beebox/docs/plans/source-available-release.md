@@ -472,8 +472,9 @@ introduces none, so they don't apply. The two that do:
   `AdminPage` already has a working Claude OAuth section
   (`src/frontend/src/components/admin/ClaudeCodeSection.tsx` +
   `admin.claudeStatus/Login/Logout`), and the Telegram flow
-  (`admin.ts:60-78`) is a proven "validate a key, then persist a secret file"
-  template a new OpenAI/Deepgram/Mistral section could copy directly — low-risk,
+  (`admin.ts:60-78`, removed 2026-10-11; the pattern survives in git history)
+  was a proven "validate a key, then persist a secret file"
+  template a new OpenAI/Deepgram/Mistral section could copy — low-risk,
   fits the existing architecture. The boxholder's larger idea — *a scratch,
   isolated admin chat that handles auth/key setup conversationally* (an agent
   that walks a new operator through plugging in providers) — is a bigger,

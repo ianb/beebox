@@ -2,7 +2,7 @@
 
 With `BBX_NOTIFY_FAKE=1` every channel sends through its fake service, and a
 channel with nobody to reach gets a synthetic member, so a dev box exercises
-the whole delivery path with no phone, browser, or Telegram chat. The log
+the whole delivery path with no phone or browser. The log
 records each delivery as `sent` with detail `fake`, and the Admin recent list
 and `bbx health` read it like any other.
 
@@ -36,21 +36,20 @@ async function debugLines(box) {
 
 ## An empty box reaches every channel
 
-The box has no paired phone, no push subscription, no Telegram chat, and no
+The box has no paired phone, no push subscription, and no
 keys. In fake mode none of that matters:
 
 ```ts
 const box = await makeTmpBox({ git: true });
 process.env.BBX_NOTIFY_FAKE = "1";
 JSON.stringify(await notifyChannels(box.root))
-=> {"apns":true,"webPush":true,"telegram":true}
+=> {"apns":true,"webPush":true}
 
 await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
 await logged(box)
 =>
 apns sent: fake
 web-push sent: fake
-telegram sent: fake
 ```
 
 Both push channels leave their debug lines, the APNs one naming the
@@ -94,7 +93,6 @@ await logged(box)
 =>
 apns skipped: present
 web-push skipped: present
-telegram skipped: present
 ```
 
 ```ts cleanup
@@ -118,7 +116,6 @@ delete process.env.BBX_PUSH_FAKE;
 =>
 apns sent: fake
 web-push sent: fake
-telegram sent: fake
 1
 ```
 

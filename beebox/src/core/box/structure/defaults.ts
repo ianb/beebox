@@ -27,6 +27,7 @@ import {
 import { TEMPLATE_STOCK_HASHES } from "../../template-stock-hashes.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { boxSlug } from "../../../lib/box-slug.js";
+import { splitCardContent } from "../../../cards/frontmatter.js";
 
 /**
  * Translate a single-template install result into the legacy `installed[]`
@@ -242,16 +243,19 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   if (existing !== undefined) {
     const existingRelPath = path.join("_content", existing);
     let hasRole: boolean;
+    let content: string;
     try {
-      const fields = parseLandmarkFields(await fs.readFile(path.join(contentDir, existing), "utf-8"));
+      content = await fs.readFile(path.join(contentDir, existing), "utf-8");
+      const fields = parseLandmarkFields(content);
       hasRole = fields !== null && (fields.navigation !== undefined || (fields.destinations?.length ?? 0) > 0);
     } catch (e) {
       console.warn(`Could not read root landmark ${existing} in ${contentDir}:`, e);
       return null;
     }
     if (hasRole) return null; // a real landmark — leave the user's content alone
-    // Inert/unparseable — repair in place, preserving the existing filename.
-    await fs.writeFile(path.join(contentDir, existing), templateContent);
+    // Inert/unparseable — repair in place, keeping the filename and any place summary (not legacy XML).
+    const { body, hasFrontmatter } = splitCardContent(content);
+    await fs.writeFile(path.join(contentDir, existing), templateContent + (hasFrontmatter && !/^\s*(<landmark|$)/.test(body) ? body : ""));
     return existingRelPath;
   }
 

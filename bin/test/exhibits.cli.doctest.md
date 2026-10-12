@@ -1,7 +1,7 @@
 # The exhibits CLI (bin/exhibits)
 
 `bin/exhibits` is the agent-facing surface of the exhibit medium
-(`docs/plans/workstream-exhibits.md` Track D): it creates an exhibit directory
+(`docs/implemented-plans/workstream-exhibits.md` Track D): it creates an exhibit directory
 in the store, writes a manifest the app's Zod schemas accept, and prints one
 line — the URL — on stdout so it is pasteable into chat.
 
@@ -78,10 +78,7 @@ const added = await run([
   "add",
   "--workstream", "demo",
   "--title", "Dashboard Density Options",
-  "--ask", "decide",
-  "--prose", "Pick a density; I apply it everywhere and delete the other.",
-  "--option", "Comfortable (A1)",
-  "--option", "Compact (A2)",
+  "--prose", "Two densities, **comfortable** and compact.",
   shot,
   shot2,
   join(root, "notes.md"),
@@ -93,7 +90,8 @@ JSON.stringify({
   stdout: added.stdout.trim(),
   progressOnStderr: added.stderr.includes("[exhibits]"),
   title: manifest.title,
-  ask: manifest.ask,
+  prose: manifest.prose,
+  hasAsk: "ask" in manifest,
   figures: manifest.figures,
   createdLooksIso: /^\d{4}-\d{2}-\d{2}T/u.test(manifest.created),
   copied: (await readFile(join(dir, "comfortable.png"), "utf8")) === "png-bytes",
@@ -101,7 +99,7 @@ JSON.stringify({
   originalNameAbsent: await lstat(join(dir, "notes.md")).then(() => false, () => true),
   progressNamesDocument: added.stderr.includes("document: true"),
 })
-=> {"code":0,"stdoutLines":1,"stdout":"http://127.0.0.1:3230/demo/dashboard-density-options/?token=TOKEN-0123456789abcdef","progressOnStderr":true,"title":"Dashboard Density Options","ask":{"type":"decide","prose":"Pick a density; I apply it everywhere and delete the other.","options":["Comfortable (A1)","Compact (A2)"]},"figures":[{"label":"A1","file":"comfortable.png"},{"label":"A2","file":"compact.png"}],"createdLooksIso":true,"copied":true,"copiedDocument":true,"originalNameAbsent":true,"progressNamesDocument":true}
+=> {"code":0,"stdoutLines":1,"stdout":"http://127.0.0.1:3230/demo/dashboard-density-options/?token=TOKEN-0123456789abcdef","progressOnStderr":true,"title":"Dashboard Density Options","prose":"Two densities, **comfortable** and compact.","hasAsk":false,"figures":[{"label":"A1","file":"comfortable.png"},{"label":"A2","file":"compact.png"}],"createdLooksIso":true,"copied":true,"copiedDocument":true,"originalNameAbsent":true,"progressNamesDocument":true}
 ```
 
 The manifest must satisfy the app's own schema, not just look right — the CLI
@@ -117,37 +115,43 @@ JSON.stringify({ valid: exhibitManifestSchema.safeParse(written).success })
 ```
 
 Refusals, all fail-closed: an existing slug is never overwritten (the message
-suggests the `-2` retry), `decide` without at least two options is not a
-decision, `apps` and traversal-shaped names are refused as workstreams, and a
+suggests the `-2` retry), `--ask` and `--option` are refused because exhibits
+carry no ask, `apps` and traversal-shaped names are refused as workstreams, and a
 title whose slug is `coding-feedback` (the CODING_FEEDBACK notes directory) is
 refused.
 
 ```ts
 const collision = await run([
   "add", "--workstream", "demo", "--title", "Dashboard Density Options",
-  "--ask", "fyi", "--prose", "again",
+  "--prose", "again",
 ]);
-const noOptions = await run([
+const askRefused = await run([
   "add", "--workstream", "demo", "--title", "Undecided", "--ask", "decide", "--prose", "pick",
 ]);
+const optionRefused = await run([
+  "add", "--workstream", "demo", "--title", "Undecided", "--option", "A",
+]);
 const reserved = await run([
-  "add", "--workstream", "apps", "--title", "Sneaky", "--ask", "fyi", "--prose", "p",
+  "add", "--workstream", "apps", "--title", "Sneaky", "--prose", "p",
 ]);
 const feedbackSlug = await run([
-  "add", "--workstream", "demo", "--title", "Coding Feedback", "--ask", "fyi", "--prose", "p",
+  "add", "--workstream", "demo", "--title", "Coding Feedback", "--prose", "p",
 ]);
 const traversal = await run([
-  "add", "--workstream", "../escape", "--title", "Sneaky", "--ask", "fyi", "--prose", "p",
+  "add", "--workstream", "../escape", "--title", "Sneaky", "--prose", "p",
 ]);
 const multipleDocs = await run([
   "add", "--workstream", "demo", "--title", "Multiple Docs",
-  "--ask", "fyi", "--prose", "read these", join(root, "notes.md"), join(root, "appendix.markdown"),
+  "--prose", "read these", join(root, "notes.md"), join(root, "appendix.markdown"),
 ]);
 const unknown = await run(["frobnicate"]);
 JSON.stringify({
   collision: collision.code !== 0 && collision.stderr.includes("dashboard-density-options-2"),
-  collisionKeptOriginal: JSON.parse(await readFile(join(dir, "exhibit.json"), "utf8")).ask.type === "decide",
-  noOptions: noOptions.code !== 0 && noOptions.stderr.includes("at least two --option"),
+  collisionKeptOriginal: JSON.parse(await readFile(join(dir, "exhibit.json"), "utf8")).prose === "Two densities, **comfortable** and compact.",
+  askRefused: askRefused.code !== 0
+    && askRefused.stderr.includes("add: exhibits no longer carry an ask; say what you want in chat (see workstreams-app/docs/exhibits.md)"),
+  askRefusedCreatedNothing: await lstat(join(store, "demo/undecided")).then(() => false, () => true),
+  optionRefused: optionRefused.code !== 0 && optionRefused.stderr.includes("no longer carry an ask"),
   reserved: reserved.code !== 0 && reserved.stderr.includes("reserved"),
   feedbackSlug: feedbackSlug.code !== 0 && feedbackSlug.stderr.includes("reserved")
     && await lstat(join(store, "demo/coding-feedback")).then(() => false, () => true),
@@ -156,7 +160,7 @@ JSON.stringify({
   multipleDocsCreatedNothing: await lstat(join(store, "demo/multiple-docs")).then(() => false, () => true),
   unknownCommand: unknown.code === 1 && unknown.stderr.includes("unknown command"),
 })
-=> {"collision":true,"collisionKeptOriginal":true,"noOptions":true,"reserved":true,"feedbackSlug":true,"traversal":true,"multipleDocs":true,"multipleDocsCreatedNothing":true,"unknownCommand":true}
+=> {"collision":true,"collisionKeptOriginal":true,"askRefused":true,"askRefusedCreatedNothing":true,"optionRefused":true,"reserved":true,"feedbackSlug":true,"traversal":true,"multipleDocs":true,"multipleDocsCreatedNothing":true,"unknownCommand":true}
 ```
 
 The workstream defaults from the cwd's checkout: a worktree on branch
@@ -165,10 +169,10 @@ The workstream defaults from the cwd's checkout: a worktree on branch
 
 ```ts
 const derived = await run(
-  ["add", "--title", "Derived", "--ask", "fyi", "--prose", "just showing you"],
+  ["add", "--title", "Derived", "--prose", "just showing you"],
   worktree,
 );
-const fromMain = await run(["add", "--title", "From Main", "--ask", "fyi", "--prose", "fyi"], mono);
+const fromMain = await run(["add", "--title", "From Main", "--prose", "fyi"], mono);
 JSON.stringify({
   derivedUrl: derived.stdout.trim().endsWith("/demo/derived/?token=TOKEN-0123456789abcdef"),
   derivedInStore: (await lstat(join(store, "demo/derived/exhibit.json"))).isFile(),
@@ -180,36 +184,30 @@ JSON.stringify({
 ```
 
 `url` reprints a stable URL for an existing exhibit and refuses one that isn't
-there. `list --json` reports every exhibit; `answered` flips once the renderer
-has written `data/disposition.json`, which is how a later agent session finds
-the answers waiting for it.
+there. `list --json` reports every exhibit as `{ workstream, name, title,
+created, permanent }`.
 
 ```ts
 const url = await run(["url", "demo/derived"]);
 const missing = await run(["url", "demo/nope"]);
-const before = JSON.parse((await run(["list", "--json", "--workstream", "demo"])).stdout);
-await mkdir(join(dir, "data"), { recursive: true });
-await writeFile(
-  join(dir, "data/disposition.json"),
-  JSON.stringify({ askType: "decide", choice: "Compact (A2)", decidedAt: "2026-08-15T12:00:00Z" }),
-);
-const after = JSON.parse((await run(["list", "--json", "--workstream", "demo"])).stdout);
+const listed0 = await run(["list", "--json", "--workstream", "demo"]);
+const rows0 = JSON.parse(listed0.stdout);
 const table = await run(["list", "--workstream", "demo"]);
 JSON.stringify({
   url: url.stdout.trim() === "http://127.0.0.1:3230/demo/derived/?token=TOKEN-0123456789abcdef",
   urlLines: url.stdout.trimEnd().split("\n").length,
   missingRefused: missing.code !== 0 && missing.stderr.includes("no exhibit at"),
-  names: before.map((r: { name: string }) => r.name),
-  answeredBefore: before.map((r: { answered: boolean }) => r.answered),
-  answeredAfter: after.map((r: { answered: boolean }) => r.answered),
-  decidedAt: after.find((r: { name: string }) => r.name === "dashboard-density-options").decidedAt,
-  tableHasHeader: table.stdout.includes("WORKSTREAM") && table.stdout.includes("answered"),
+  code: listed0.code,
+  names: rows0.map((r: { name: string }) => r.name),
+  keys: Object.keys(rows0[0]).toSorted(),
+  titles: rows0.map((r: { title: string }) => r.title),
+  tableHasHeader: table.stdout.includes("WORKSTREAM") && table.stdout.includes("CREATED"),
 })
-=> {"url":true,"urlLines":1,"missingRefused":true,"names":["dashboard-density-options","derived"],"answeredBefore":[false,false],"answeredAfter":[true,false],"decidedAt":"2026-08-15T12:00:00Z","tableHasHeader":true}
+=> {"url":true,"urlLines":1,"missingRefused":true,"code":0,"names":["dashboard-density-options","derived"],"keys":["created","name","permanent","title","workstream"],"titles":["Dashboard Density Options","Derived"],"tableHasHeader":true}
 ```
 
 `--permanent` is the other tier: a tracked skeleton at `dev/apps/<slug>/` in the
-current checkout, whose ask is optional (a durable tool is not a question). Its
+current checkout, which carries no prose unless asked. Its
 URL is the `/apps/<slug>/` one it gets once the branch merges, and the stderr
 says so. Committed apps show up in `list` marked permanent, with their runtime
 data read from the store's reserved `apps/` namespace.
@@ -231,9 +229,44 @@ JSON.stringify({
   starterPage: (await readFile(join(appDir, "index.html"), "utf8")).includes("committed app"),
   storeAppsDir: await lstat(join(store, "apps")).then(() => true, () => false),
   beforeMerge: listed.some((r: { name: string }) => r.name === "threshold-tuner"),
-  afterMerge: listedAfterMerge.find((r: { name: string }) => r.name === "threshold-tuner"),
+  afterMerge: {
+    ...listedAfterMerge.find((r: { name: string }) => r.name === "threshold-tuner"),
+    created: "<created>",
+  },
 })
-=> {"url":true,"shipsByMerge":true,"manifestKeys":["created","title"],"manifestTitle":"Threshold Tuner","starterPage":true,"storeAppsDir":false,"beforeMerge":false,"afterMerge":{"workstream":"apps","name":"threshold-tuner","title":"Threshold Tuner","ask":"","answered":false,"permanent":true}}
+=> {"url":true,"shipsByMerge":true,"manifestKeys":["created","title"],"manifestTitle":"Threshold Tuner","starterPage":true,"storeAppsDir":false,"beforeMerge":false,"afterMerge":{"workstream":"apps","name":"threshold-tuner","title":"Threshold Tuner","created":"<created>","permanent":true}}
+```
+
+`--caption` is repeatable: the n-th caption goes on the n-th figure file, in
+argument order. Fewer captions than figures leaves the rest uncaptioned. More
+captions than figures is refused with the counts, and the refusal happens
+before the exhibit directory is created, so the slug stays free.
+
+```ts
+const captioned = await run([
+  "add", "--workstream", "demo", "--title", "Captioned",
+  "--caption", "Comfortable spacing on the card list",
+  "--caption", "Compact spacing, two lines tighter",
+  shot, shot2,
+]);
+const capManifest = JSON.parse(await readFile(join(store, "demo/captioned/exhibit.json"), "utf8"));
+const partial = await run([
+  "add", "--workstream", "demo", "--title", "Partly Captioned", "--caption", "Only the first", shot, shot2,
+]);
+const partialManifest = JSON.parse(await readFile(join(store, "demo/partly-captioned/exhibit.json"), "utf8"));
+const tooMany = await run([
+  "add", "--workstream", "demo", "--title", "Too Many Captions",
+  "--caption", "one", "--caption", "two", "--caption", "three", shot, shot2, join(root, "notes.md"),
+]);
+JSON.stringify({
+  code: captioned.code,
+  figures: capManifest.figures,
+  partial: partialManifest.figures,
+  tooManyRefused: tooMany.code !== 0
+    && tooMany.stderr.includes("add: 3 captions for 2 figures — one caption per figure, in file order"),
+  tooManyLeftNothing: await lstat(join(store, "demo/too-many-captions")).then(() => false, () => true),
+})
+=> {"code":0,"figures":[{"label":"A1","file":"comfortable.png","caption":"Comfortable spacing on the card list"},{"label":"A2","file":"compact.png","caption":"Compact spacing, two lines tighter"}],"partial":[{"label":"A1","file":"comfortable.png","caption":"Only the first"},{"label":"A2","file":"compact.png"}],"tooManyRefused":true,"tooManyLeftNothing":true}
 ```
 
 Copied files are renamed to something the app can route to. The server validates
@@ -245,7 +278,7 @@ const shot3 = join(root, "Screen Shot 2026-08-15.png");
 await writeFile(shot3, "png-bytes");
 const shaped = await run([
   "add", "--workstream", "demo", "--title", "Named Files",
-  "--ask", "fyi", "--prose", "just showing you", shot3,
+  "--prose", "just showing you", shot3,
 ]);
 const shapedDir = join(store, "demo/named-files");
 const shapedManifest = JSON.parse(await readFile(join(shapedDir, "exhibit.json"), "utf8"));
@@ -262,23 +295,64 @@ JSON.stringify({
 => {"code":0,"figures":[{"label":"A1","file":"screen-shot-2026-08-15.png"}],"onDisk":true,"routable":true,"saidSo":true}
 ```
 
-`answered` means the disposition parses AND is one — the rule the app applies
-(`workstreams-app/src/server/exhibits/disposition.ts`). A truncated answer is a
-live ask with a stated problem, not a silently closed one.
+A manifest that does not parse is not skipped: its row stays in the list with
+`title: null`, `created: null`, and a `problem`, and `list` exits 1 after
+printing everything, so an incomplete inventory is never taken for a complete
+one.
 
 ```ts
-await mkdir(join(store, "demo/named-files/data"), { recursive: true });
-await writeFile(join(store, "demo/named-files/data/disposition.json"), '{"askType":"fyi","dec');
-const rows = JSON.parse((await run(["list", "--json", "--workstream", "demo"])).stdout);
-const row = rows.find((r: { name: string }) => r.name === "named-files");
-const table = await run(["list", "--workstream", "demo"]);
+await writeFile(join(store, "demo/named-files/exhibit.json"), '{"title":"Named Fi');
+const broken = await run(["list", "--json", "--workstream", "demo"]);
+const brokenRows = JSON.parse(broken.stdout);
+const brokenRow = brokenRows.find((r: { name: string }) => r.name === "named-files");
+const brokenTable = await run(["list", "--workstream", "demo"]);
 JSON.stringify({
-  answered: row.answered,
-  problem: row.problem,
-  hasDecidedAt: "decidedAt" in row,
-  table: table.stdout.includes("waiting (unreadable answer)"),
+  code: broken.code,
+  stillListsOthers: brokenRows.length > 1,
+  row: brokenRow,
+  tableCode: brokenTable.code,
+  tableProblem: brokenTable.stdout.includes("PROBLEM: exhibit.json does not parse"),
 })
-=> {"answered":false,"problem":"disposition.json is not a readable answer","hasDecidedAt":false,"table":true}
+=> {"code":1,"stillListsOthers":true,"row":{"workstream":"demo","name":"named-files","title":null,"created":null,"permanent":false,"problem":"exhibit.json does not parse"},"tableCode":1,"tableProblem":true}
+```
+
+A directory with no `exhibit.json`, or a manifest that is valid JSON but lacks a
+string `title` or `created`, is also a problem row (the app rejects both), and
+`list` exits 1.
+
+```ts
+await writeFile(join(store, "demo/named-files/exhibit.json"), '{"title":"T"}');
+await mkdir(join(store, "demo/no-manifest"), { recursive: true });
+const incomplete = await run(["list", "--json", "--workstream", "demo"]);
+const incompleteRows = JSON.parse(incomplete.stdout);
+const pick = (n: string) => {
+  const r = incompleteRows.find((x: { name: string }) => x.name === n);
+  return { title: r.title, created: r.created, problem: r.problem };
+};
+JSON.stringify({
+  code: incomplete.code,
+  lacking: pick("named-files"),
+  missing: pick("no-manifest"),
+})
+=> {"code":1,"lacking":{"title":"T","created":null,"problem":"exhibit.json lacks a title or created string"},"missing":{"title":null,"created":null,"problem":"exhibit.json is missing"}}
+```
+
+Two inputs that sanitize to the same name are refused before the exhibit
+directory is created, so the slug stays free.
+
+```ts
+await mkdir(join(root, "a"), { recursive: true });
+await writeFile(join(root, "a/Shot One.png"), "a");
+await writeFile(join(root, "shot-one.png"), "b");
+const clash = await run([
+  "add", "--workstream", "demo", "--title", "Clashing Names",
+  join(root, "a/Shot One.png"), join(root, "shot-one.png"),
+]);
+JSON.stringify({
+  refused: clash.code !== 0 && clash.stderr.includes("becomes 'shot-one.png', which is already in this exhibit"),
+  leftNothing: await lstat(join(store, "demo/clashing-names")).then(() => false, () => true),
+})
+=> {"refused":true,"leftNothing":true}
 ```
 
 The URL always carries a token. The supervisor mints one and reuses whatever it

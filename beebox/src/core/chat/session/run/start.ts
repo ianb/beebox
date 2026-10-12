@@ -30,6 +30,8 @@ import {
 import type { FeatureStore } from "./features.js";
 import type { ChatBackendStartOptions, ChatContentBlock } from "../../../../services/claude-chat/core.js";
 import type { ChatSessionOptions } from "../options.js";
+import { buildLandmarkBoxContext } from "../landmark-context.js";
+import { UnsafeAgentContextIncludeError } from "../../../agent-context-includes.js";
 
 const log = makeLog("ChatSession");
 
@@ -107,6 +109,21 @@ async function pickContextDir(ctx: StartContext): Promise<string | null> {
 }
 
 /**
+ * The landmark chat's box context, or "" when one of the root's includes
+ * escapes the box. Any other failure still fails the start. The chat still starts, as it did before box
+ * context existed, without the guide and briefing; the log names why.
+ */
+async function landmarkBoxContextOrEmpty(boxRoot: string): Promise<string> {
+  try {
+    return await buildLandmarkBoxContext(boxRoot);
+  } catch (e) {
+    if (!(e instanceof UnsafeAgentContextIncludeError)) throw e;
+    log("start", `Landmark box context unavailable, starting without it: ${e.message} (${e.specifier})`);
+    return "";
+  }
+}
+
+/**
  * Compute the `ChatBackendStartOptions` for a fresh run (no resume id, no
  * model override) and the landmark binding it resolved to. The caller
  * stores `resolvedContextDir` back on the instance cache.
@@ -116,14 +133,18 @@ export async function buildBackendStartOptions(
 ): Promise<{ startOpts: ChatBackendStartOptions; resolvedContextDir: string | null }> {
   const baseSystemPrompt = await resolveSystemPrompt(ctx);
   const contextDir = await pickContextDir(ctx);
-  const systemPrompt = contextDir
-    ? baseSystemPrompt + buildLandmarkSessionNote(contextDir)
-    : baseSystemPrompt;
   const cwd = contextDir ? path.join(ctx.boxRoot, contextDir) : ctx.boxRoot;
   const engine = await resolveStartEngine(ctx.boxRoot, {
     sessionId: ctx.sessionId,
     requested: ctx.options.engine ?? null,
   });
+  // A Claude landmark chat starts below the box root, where the root's `@`
+  // includes (agent guide, briefing) do not load, so they ride the system
+  // prompt. Codex already gets them: codex-chat appends the root's includes.
+  const landmarkBoxContext = contextDir && engine === "claude" ? await landmarkBoxContextOrEmpty(ctx.boxRoot) : "";
+  const systemPrompt = contextDir
+    ? baseSystemPrompt + landmarkBoxContext + buildLandmarkSessionNote(contextDir)
+    : baseSystemPrompt;
   const baseEnv = await buildScriptEnv(ctx.boxRoot, {
     CLAUDECODE: undefined,
     // Only when a real id exists — a pending-new session must not advertise a
@@ -156,6 +177,7 @@ export async function buildBackendStartOptions(
   }
   if (contextDir) {
     startOpts.additionalDirectories = [ctx.boxRoot];
+    startOpts.boxRoot = ctx.boxRoot;
   }
   return { startOpts, resolvedContextDir: contextDir };
 }

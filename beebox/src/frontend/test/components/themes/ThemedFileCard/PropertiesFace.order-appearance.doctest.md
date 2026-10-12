@@ -75,6 +75,7 @@ const memo = await render({
   type: "memo",
   schema: { hasBodyField: true, defaultProminence: "ordinary" },
   frontmatter: { title: "Porch", contains: "Porch repair quotes", status: "new", theme: { name: "paper", stock: "cream" } },
+  body: "Three quotes so far.\n",
 }, { canEdit: true });
 ```
 

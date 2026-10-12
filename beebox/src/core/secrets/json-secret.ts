@@ -4,8 +4,8 @@
  * A stored secret's value is an OPAQUE STRING — the store never learns a
  * credential's shape, which is what keeps one entry, one grant, and one
  * rotation true for every provider. Credentials that are structurally several
- * fields (Deepgram's management key + project id, Telegram's bot token +
- * webhook secret, the publish connector's R2 triple) are therefore stored as a
+ * fields (Deepgram's management key + project id, the publish connector's
+ * R2 triple) are therefore stored as a
  * JSON string that the CONSUMER parses, validating with its own zod schema at
  * the parse boundary.
  *

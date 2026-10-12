@@ -4,8 +4,8 @@
  * only in the bracketed prefix; `makeLog` factors out the implementation and
  * takes the prefix as an argument so each module keeps its own label.
  *
- *   const log = makeLog("ChatSessionPool");
- *   log("drainQueue", count);   // → [ChatSessionPool:drainQueue] 3
+ *   const log = makeLog("ChatSession");
+ *   log("drainQueue", count);   // → [ChatSession:drainQueue] 3
  */
 export function makeLog(prefix: string): (context: string, ...args: unknown[]) => void {
   return (context: string, ...args: unknown[]): void => {

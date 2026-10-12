@@ -1,7 +1,7 @@
 /**
  * Inbound third-party response validation (Track D.2).
  *
- * The Google/Telegram service real implementations parse raw API responses
+ * The Google service real implementations parse raw API responses
  * with unchecked `.json<T>()` casts — a compile-time assertion with zero
  * runtime checking, so an API shape drift lands in a card as silent
  * `undefined`s instead of a loud failure. {@link validateResponse} runs a

@@ -9,7 +9,7 @@
 
 import { planNotification, type ChannelFlags, type NotifyPlan, type NotifyServices } from "../../../core/notify-boxholder.js";
 import { formatTarget } from "../../../core/notification/target.js";
-import type { ChannelName } from "../../../core/notification/intent.js";
+import { CHANNELS, type ChannelName } from "../../../core/notification/intent.js";
 import type { NotifyRequestParsed } from "./command.js";
 
 function plural(n: number, word: string): string {
@@ -23,9 +23,8 @@ function audienceLines(plan: NotifyPlan): string[] {
   const reach: Record<ChannelName, string> = {
     apns: `${plural(audience.apnsDevices.length, "device")}${devices === "" ? "" : ` (${devices})`}${unconfigured(configured.apns)}`,
     "web-push": `${plural(audience.webPushEndpoints, "subscription")}${unconfigured(configured.webPush)}`,
-    telegram: `${audience.telegramChat === undefined ? "no chat" : `chat ${audience.telegramChat}`}${unconfigured(configured.telegram)}`,
   };
-  return (["apns", "web-push", "telegram"] as const).map((c) => `  ${c}: ${reach[c]}`);
+  return CHANNELS.map((c) => `  ${c}: ${reach[c]}`);
 }
 
 export async function printDryRun(

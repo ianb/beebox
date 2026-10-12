@@ -4,15 +4,14 @@
  * See DESIGN.md for the full flow and rationale. In brief:
  *
  * 1. Acquire lock (prevent concurrent reactors)
- * 2. Optionally reset chat sessions
- * 3. Loop up to maxCycles times:
+ * 2. Loop up to maxCycles times:
  *    a. Sync (bbx wakeup) — pulls from external sources, creates jobs
  *    b. generateDocs — refresh agent docs (fast mtime-cached no-op)
  *    c. Find job cards in _bookkeeping/jobs/
- *    d. Run jobs via batch or chat processing (each worked by an agent)
+ *    d. Run jobs in a batch (each worked by an agent)
  *    e. Stop if no jobs remain or none were processed (stuck)
- * 4. Finalize (bbx finalize) — flush outbound cards
- * 5. Optionally poll (sleep + recurse)
+ * 3. Finalize (bbx finalize) — flush outbound cards
+ * 4. Optionally poll (sleep + recurse)
  */
 
 import { setTimeout as sleep } from "node:timers/promises";
@@ -25,11 +24,6 @@ import {
 import { createAgent as realCreateAgent } from "../../agent/invoke/core.js";
 import { generateDocs as realGenerateDocs } from "../../docs-gen/generate/core.js";
 import { fmt } from "../../../lib/format.js";
-import {
-  loadChatSessions,
-  saveChatSessions,
-  resetAllSessions,
-} from "../../chat/reactor-sessions.js";
 import { runOneCycle, type RunCycleParams } from "./cycle.js";
 import { boxEngineUnavailability, engineWaitReason } from "../../schedule/engine-wait.js";
 import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
@@ -54,8 +48,6 @@ export interface ReactorOptions {
    * connector made) are left for a run that does match them.
    */
   connectorFilter?: string | undefined;
-  /** Reset all persisted chat sessions before processing */
-  resetSessions?: boolean | undefined;
   onLog?: ((text: string) => void) | undefined;
   /** Agent factory — override for testing. Defaults to the real createAgent(). */
   createAgent?: typeof realCreateAgent | undefined;
@@ -104,7 +96,6 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     skipLowPriority,
     typeFilter,
     connectorFilter,
-    shouldResetSessions,
     onLog,
     agentFactory,
     runSync,
@@ -118,14 +109,6 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
   if (!lockAcquired) {
     onLog?.(fmt.dim("Another reactor is already running, skipping.\n"));
     return { success: true, jobsProcessed: 0, jobsRemaining: 0, skipped: "locked" };
-  }
-
-  // Handle --reset-sessions
-  if (shouldResetSessions) {
-    const sessions = await loadChatSessions(boxRoot);
-    resetAllSessions(sessions);
-    await saveChatSessions(boxRoot, sessions);
-    onLog?.(fmt.ok("Chat reactor sessions reset.\n"));
   }
 
   let totalProcessed = 0;
@@ -214,7 +197,6 @@ interface NormalizedReactorOptions {
   skipLowPriority: boolean;
   typeFilter: string | undefined;
   connectorFilter: string | undefined;
-  shouldResetSessions: boolean;
   onLog: ((text: string) => void) | undefined;
   agentFactory: typeof realCreateAgent;
   runSync: typeof realRunSync;
@@ -233,7 +215,6 @@ function normalizeReactorOptions(options: ReactorOptions): NormalizedReactorOpti
     skipLowPriority: options.skipLowPriority ?? false,
     typeFilter: options.type,
     connectorFilter: options.connectorFilter,
-    shouldResetSessions: options.resetSessions ?? false,
     onLog: options.onLog,
     agentFactory: options.createAgent ?? realCreateAgent,
     runSync: options.runSync ?? realRunSync,
