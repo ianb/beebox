@@ -30,9 +30,11 @@ screen continues below the fold and the button lights up
 4. **Compensations**, all "measure delta, write delta" on a resize: restore the
    captured gap across an older-history prepend, hold the reading anchor when
    content above the viewport reflows, and keep the bottom visible on a viewport
-   resize only when already there. Away from the bottom, keyboard/composer
+   resize only when already there. A width change (a card pane opening or
+   closing) is a viewport resize too. Away from the bottom, keyboard/composer/pane
    resizing preserves the reading point, subject to the browser's legal scroll
-   range. The anchor is a visible text character inside a message (an element
+   range; across a resize the anchor write starts from the last settled
+   `scrollTop`, because the browser may clamp before the observer fires. The anchor is a visible text character inside a message (an element
    fallback for non-text content), measured in scroll-content coordinates so
    ordinary scrolling never looks like reflow. A send ease owns writes while
    active; reconciliation still measures geometry but cannot cancel it. The pure

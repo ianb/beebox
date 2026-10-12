@@ -1,6 +1,6 @@
 ---
 title: "Chat scroll is still bad after the write-on-user-action rewrite — the device half was never verified"
-workstream: chat-scroll-fixes
+workstream: chat-scroll-resize
 area: beebox
 priority: important
 labels: [ui, chat, scroll]
@@ -170,3 +170,27 @@ Expected: a resize keeps the reader at the same place in the log. In the boxhold
 This is the "card closing" case from the 2026-10-08 note. It is reproducible on demand, which the 2026-09-15 note said was missing. Take the trace with this repro before changing code. Check the `scroller-node` event first, then the three suggestions above. Mechanism 3 (treat a width change as a full invalidation) matches this case directly.
 
 The `chat-scroll-fixes` workstream that owned this issue no longer appears in `bin/workstreams list`.
+
+## 2026-10-12 — desktop pane resize fixed (chat-scroll-resize)
+
+Trace of the repro (1400×900, card open, 200-message transcript at the
+bottom): the scroller element is **not** replaced (`scroller-node` silent,
+same node before and after). Closing the card widened the scroller from
+700 px to 1400 px and shortened the content from 20840 px to 18440 px. The browser
+clamped `scrollTop` to the new maximum, which was still the bottom. Then the content
+observer fired first; because only the width changed, the cycle was not
+treated as a viewport resize. `hold-anchor` added the anchor's −2304 px
+movement to the already clamped `scrollTop`, so the view ended 2304 px above
+the bottom.
+
+Fix: a width change is a box resize (a reader at the bottom takes
+`hold-from-bottom`), and a box-resize anchor write starts from the last
+settled `scrollTop` instead of the clamped live one (mechanism 2, limited to
+resizes). Mechanism 1 (anchor by message key) was not needed: the message
+nodes survive a pane change. After the fix, real-app close and open at the
+bottom both end at fb 0. Mid-log open and close keep the top reading line, and
+the round trip returns to the same `scrollTop`. Window resizes keep both. Harness:
+3 new `pane-*` scenarios, 34/34 at desktop and phone widths.
+
+Desktop only. The device half above (iOS keyboard, `visualViewport`,
+rubber-band, momentum) is untouched, so this issue stays open for it.
