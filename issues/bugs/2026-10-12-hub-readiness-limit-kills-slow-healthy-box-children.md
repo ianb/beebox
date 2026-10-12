@@ -44,3 +44,25 @@ readiness on that channel. The supervisor could then tell "still booting" (the
 process is alive and has not reported) from "stuck" (no progress). That would
 need a decision about what counts as progress, and about what limit, if any,
 still applies.
+
+## Research (2026-10-12)
+
+The developer asked whether this happens outside tests. The child logs of
+the four local boxes on the developer's hub (`<box>/.beebox/hub-child.log`,
+2026-07-07 to 2026-10-12, 205 child boots) show no readiness kill.
+
+- A child that the hub kills before it is ready would get SIGTERM before it
+  prints "Server running". The parse found two such places. Neither is a
+  kill: one is the first line of the log file, and in the other an old
+  child closes after its replacement has started.
+- Where the log shows the boot time directly (from one child's SIGTERM to
+  the next child's "Server running" during a reload), boots take about 3
+  to 4 seconds. That leaves a margin of 7 to 10 times under the 30-second
+  limit.
+- Other gaps between boots are idle time, not boot time. The hub is lazy
+  (`idleMs` 300000), so it stops a box after 5 minutes without use and
+  starts it on the next request.
+
+The only observed failures are in tests that start 8 to 10 real servers on
+one machine at the same time. Those tests now use their own readiness check,
+or stay in the careful tier. Production hub logs were not examined.
