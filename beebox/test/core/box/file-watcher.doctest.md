@@ -22,7 +22,7 @@ import { watchLimitStatus } from "../../../src/core/box/watch-limit.js";
 import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/watch-limit.js";
 import { createEventBus, type EventBus } from "../../../src/core/event-bus/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -433,12 +433,11 @@ Repeats inside the 50 ms window collapse, but the *last* write still reaches
 consumers. Merely dropping duplicates would leave a client that refetched on the
 first event holding content a later write had already superseded.
 
-The event count is deliberately not the contract: whether `v3` lands inside
-`v2`'s window depends on how long the consumer's read took. Instead, model a
-consumer that refetches on each hint. First prove it observed `v2`, then write
-three more versions back to back and require that a later hint advances the
-consumer all the way to `v5`. Each write fires one `change`, the most a
-platform delivers; FSEvents may deliver fewer.
+The fake watcher delivers each `change` synchronously, so four changes fired in
+one tick all land inside the first window on any host, however loaded. The
+first emits at once; the other three collapse into one trailing event when the
+window closes. Without the trailing edge the count stays at 1, and the consumer
+that refetched on the first event never learns about `v5`.
 
 ```ts
 const box = await makeTmpBox();
@@ -453,31 +452,23 @@ await watcher.ready;
 const store = join(box.root, "store");
 
 let events = 0;
-let observed = "";
-let reads = Promise.resolve();
 bus.subscribe({
   listener: (e) => {
-    if (e.event !== "file-change" || e.data.path !== "store/Note.memo.card") return;
-    events++;
-    reads = reads.then(async () => { observed = await readFile(card, "utf8"); });
+    if (e.event === "file-change" && e.data.path === "store/Note.memo.card") events++;
   },
 });
 
-await writeFile(card, "---\nstatus: new\n---\nv2\n");
-fake.fire(store, "change", "Note.memo.card");
-await waitFor(() => observed.endsWith("v2\n"), 60_000, "the consumer to observe v2");
+for (let i = 0; i < 4; i++) fake.fire(store, "change", "Note.memo.card");
+// The leading event is synchronous; the other three are held in the window.
+events
+=> 1
 
-for (const v of ["v3", "v4", "v5"]) {
-  await writeFile(card, `---\nstatus: new\n---\n${v}\n`);
-  fake.fire(store, "change", "Note.memo.card");
-}
-// The trailing emission waits on a 50 ms timer, not the platform; the
+// The trailing emission waits on the 50 ms timer, not the platform; the
 // deadline only bounds a hang.
-await waitFor(() => observed.endsWith("v5\n"), 60_000, "the trailing event to expose v5");
-await reads;
-
-`final content: ${observed.endsWith("v5\n")} | bounded: ${events <= 4}`
-=> final content: true | bounded: true
+await waitFor(() => events === 2, 60_000, "the trailing event");
+// One trailing event for three collapsed changes, not one each.
+events
+=> 2
 ```
 
 ```ts cleanup
