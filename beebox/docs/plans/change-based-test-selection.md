@@ -3,7 +3,7 @@ title: "Test failure ledger, and change-based selection on the iteration loop"
 status: partial
 workstream: test-economics
 issues:
-  - ../../../issues/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md
+  - ../../../issues/closed/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md
 ---
 # Test failure ledger, and change-based selection on the iteration loop
 
@@ -796,7 +796,7 @@ Six sessions between 2026-10-07 and 2026-10-10 selected 499–621 files with
 `pnpm test:changed`, and the runs took 10–13 minutes. That is longer than the
 agent shell's 10-minute foreground limit. Agents moved the run to the
 background or split it by hand.
-Issue: `issues/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md`.
+Issue: `issues/closed/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md`.
 The issue proposed a text-only change filter. This revision measures the
 problem, rejects the filter, and adds a smaller change.
 

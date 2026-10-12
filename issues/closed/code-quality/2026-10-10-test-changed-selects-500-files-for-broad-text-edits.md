@@ -1,13 +1,16 @@
 ---
 title: "test:changed selects 500+ files for edits to broadly imported text, and the run outlasts the 10-minute shell limit"
 workstream: test-selection-breadth
+resolution: implemented
 area: beebox
 labels: [testing, test-selection]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261010-224248
-design: ../../beebox/docs/plans/change-based-test-selection.md
+design: ../../../beebox/docs/plans/change-based-test-selection.md
 ---
+
+Closed by 6599ffbf3. Divergence: no text-only selection filter (rejected by the boxholder). `test:changed` prints the selected file count and an estimated time from ledger medians, and hints to run in the background at 300 s or more.
 
 Selection follows imports, so an edit to a module many files import selects
 most of the suite even when the edit changes only text. Six sessions in three
@@ -46,6 +49,6 @@ Decision (boxholder, 2026-10-12): no text-only filter. `test:changed`
 prints the file count and an estimated time first, and the guidance says to
 run it in the background when the estimate is 5 minutes or more. Progress
 output from `finish-verify` is filed for the `finish-tooling` workstream:
-[finish-verify shows nothing while a long check runs](../features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md).
+[finish-verify shows nothing while a long check runs](../../features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md).
 The causes underneath (widely imported modules, per-file cost) belong to
-[per-file cost floor](2026-08-09-test-suite-per-file-cost-floor.md).
+[per-file cost floor](../../code-quality/2026-08-09-test-suite-per-file-cost-floor.md).
