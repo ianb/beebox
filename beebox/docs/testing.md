@@ -28,6 +28,14 @@ suite runs on its own schedule instead
 ([recurring work](development/workflow.md#recurring-work)), bisected to the
 landing that broke it.
 
+**A broad selection runs in the background.** An edit to a module that
+hundreds of tests import selects about half the suite, which takes about
+10 minutes. `test:changed` prints the file count and an estimated time
+first, from the ledger's per-file times. At 5 minutes or more it says to run
+the command in the background, because load can make the run pass an agent
+shell's 10-minute foreground limit. `node --import tsx ../bin/test-select.ts`
+prints the same line and the selection without running it.
+
 ## Instruments
 
 | Instrument | Question it answers | Gate? | Cost |

@@ -22,14 +22,16 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { join } from "node:path";
-import { changedPaths, git, treeHash } from "./test-git.js";
+import { estimateLines, estimateSeconds } from "./test-estimate.js";
+import { changedPaths, git, gitCommonDir, treeHash } from "./test-git.js";
 import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
 import { isAccounted } from "./test-graph-query.js";
-import { hashFileset, packageRelative, type LedgerRecord } from "./test-ledger-lib.js";
-import { appendLedgerRecord } from "./test-ledger.js";
+import { hashFileset, ledgerPaths, packageRelative, type LedgerRecord } from "./test-ledger-lib.js";
+import { appendLedgerRecord, readRecords } from "./test-ledger.js";
 import { selectTests, spawnerEdges } from "./test-select-lib.js";
-import { carefulExclusions } from "./test-tiers.js";
+import { carefulExclusions, taprcJobs } from "./test-tiers.js";
 
 const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
 
@@ -82,6 +84,23 @@ function parseArgs(argv: string[]): Args {
   const base = baseIndex === -1 ? "main" : argv[baseIndex + 1];
   if (base === undefined) throw new MissingBaseRefError();
   return { base, run: argv.includes("--run"), cache: !argv.includes("--no-cache") };
+}
+
+/**
+ * The file count and estimated time, printed before a non-empty selection is
+ * listed or run. The ledger gates nothing: if it cannot be read, the line
+ * gives the count alone.
+ */
+function selectionEstimate(files: string[]): string[] {
+  const jobs = taprcJobs(PACKAGE_ROOT) ?? availableParallelism();
+  let seconds: number | null = null;
+  try {
+    const records = readRecords(ledgerPaths(gitCommonDir()).ledger);
+    seconds = estimateSeconds({ files, records, jobs, now: new Date() });
+  } catch (e) {
+    console.warn(`test-select: no estimate (${String(e)})`);
+  }
+  return estimateLines({ count: files.length, seconds, jobs });
 }
 
 /**
@@ -184,10 +203,14 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  const estimate = selectionEstimate(files);
   if (!args.run) {
+    // stderr: stdout stays one path per line, which finish-preflight parses.
+    for (const line of estimate) console.error(line);
     for (const file of files) console.log(file);
     return 0;
   }
+  for (const line of estimate) console.log(line);
   return runSelected(files);
 }
 
