@@ -9,7 +9,7 @@ disk alone has no row and would reset the UI to the registry default (`off`).
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { appendHistory, getFeaturesForSession, updateFeaturesForSession } from "../../../../src/core/chat/session/history.js";
-import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
+import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 
 async function waitFor(condition: () => boolean | Promise<boolean>): Promise<void> {
@@ -41,6 +41,10 @@ reserved id; reading that id must still report the seeded value.
 
 ```ts
 const backend = createFakeChatBackend();
+const realStart = backend.start.bind(backend);
+const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
+  backend.start = (opts) => { const run = realStart(opts); resolve(run); return run; };
+});
 const server = await makeTestServer({ chatBackend: backend });
 const api = caller(server);
 await server.seed(
@@ -96,6 +100,10 @@ const accepted = await server.request({
   url: "/api/chat/send",
   payload: { session: proseOff, message: "hello", messageId: "seed-start" },
 });
+// The run starts behind a bootstrap git commit whose time depends on host
+// load (over 10s on 2026-10-11), so wait for the backend to start, then
+// give only the history write that follows it the deadline.
+await runStarted;
 await waitFor(async () =>
   getChatRuntime(server.boxRoot)?.registry.getReservation(proseOff) === null
     && (await getFeaturesForSession(server.boxRoot, proseOff))?.prose === "off"
