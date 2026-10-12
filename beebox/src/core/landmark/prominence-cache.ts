@@ -22,8 +22,13 @@ import * as fs from "node:fs/promises";
 import { readCardFrontmatter } from "../card-io.js";
 import { parseLandmarkFields, type LandmarkFields } from "../../schemas/landmark.js";
 
-/** Cap on remembered files per cache — see `card-cache.ts`'s identical constant for the rationale. */
-const MAX_ENTRIES = 4096;
+/**
+ * Cap on remembered files per cache; overflow clears the cache, as in
+ * `card-cache.ts`. The pruned walk reads every card in the box, so this cap
+ * must exceed a large box's card count: at 4,096, a box of about 9,000 cards
+ * cleared the cache on every walk and re-parsed every card each time.
+ */
+const MAX_ENTRIES = 65_536;
 
 interface CacheEntry<T> {
   key: string;

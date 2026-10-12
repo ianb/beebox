@@ -21,7 +21,7 @@ import { parseLandmarkFields, type LandmarkNavigationData } from "../../../../sc
 import { readLandmarkSymbol } from "../../../../core/landmark/symbol.js";
 import { normalizeLandmarkDir, landmarkScanRelDir } from "../../../../core/landmark/root-dir.js";
 import { readLandmarkCard } from "../../../../core/landmark/card-cache.js";
-import { prunedSubtreeWith, type PrunedSubtree } from "../../../../core/landmark/prominence-index.js";
+import { prunedSubtreeWith, type PrunedSubtree, type SubtreeMemo } from "../../../../core/landmark/prominence-index.js";
 import { createCardSchemaMap } from "../../../../schemas.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../../lib/box-namespace-resolve.js";
@@ -103,7 +103,13 @@ type LandmarkLoad =
  */
 export async function loadLandmarkPayload(
   relPath: string,
-  { boxRoot, derive, expandsAsGroups }: { boxRoot: string; derive: boolean; expandsAsGroups?: boolean },
+  { boxRoot, derive, expandsAsGroups, subtrees }: {
+    boxRoot: string;
+    derive: boolean;
+    expandsAsGroups?: boolean;
+    /** A memo shared across one request's landmarks (`list`), so no subtree is walked twice. */
+    subtrees?: SubtreeMemo;
+  },
 ): Promise<LandmarkLoad> {
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relPath, mode: "read" });
   if (!ns.ok) {
@@ -126,13 +132,15 @@ export async function loadLandmarkPayload(
   const landmarkDir = path.dirname(absPath);
   // Built once per landmark: the walk and every linked card's summary use it.
   const cardSchemas = await createCardSchemaMap(boxRoot);
-  const derived = derive ? await prunedSubtreeWith({ boxRoot, cardSchemas }, dir) : undefined;
+  const walkSubtrees = subtrees === undefined ? {} : { subtrees };
+  const derived = derive ? await prunedSubtreeWith({ boxRoot, cardSchemas, ...walkSubtrees }, dir) : undefined;
   const { links, groups, derivedProblems } = await resolveLandmark(navigation, {
     landmarkDir,
     landmarkPath: relPath,
     boxRoot,
     cardSchemas,
     ...(derived === undefined ? {} : { derived }),
+    ...walkSubtrees,
     alsoHere: expandsAsGroups === true,
   });
   const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
