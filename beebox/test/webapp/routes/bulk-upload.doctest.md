@@ -380,6 +380,15 @@ JSON.stringify({ status: done.statusCode, staged: done.body.staged, sessionId: d
 => {"status":200,"staged":true,"sessionId":true}
 ```
 
+The seal happens before the response, not later in the worker: read first
+thing after the response, the batch is already out of `open`. The worker may
+have moved it on to any later state, so the check is only that it is not open.
+
+```ts continue
+(await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId }))?.state !== "open"
+=> true
+```
+
 A further upload after finalize is refused — the session is no longer open:
 
 ```ts continue
