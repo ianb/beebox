@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-10T13:56:17Z
-Total documents: 510
+Generated: 2026-10-12T22:04:16Z
+Total documents: 511
 
 ## Issues
 
@@ -2433,6 +2433,14 @@ Referenced by:
 
 References:
 - → docs/box/tricks.md (mention)
+
+#### docs/box/siri-shortcuts.md
+
+Title: "Use Bee Box with Siri and Shortcuts" | 32 lines | current reference
+
+Referenced by:
+- docs/plans/ios-app-intent-capture.md:217 (mention) — The `external-input-arrival-tag` audit verifies direct understanding of the wrapper: real human text, box-level routing,
+- ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:30 (mention) — The usage guide `beebox/docs/box/siri-shortcuts.md` says to unlock a protected box before using Siri. This is inaccurate
 
 #### docs/box/speaking-to-the-person.md
 
@@ -5425,7 +5433,7 @@ References:
 
 #### docs/implemented-plans/plugins-design-notes.md
 
-Title: "Plugins — design notes" | 215 lines | shipped history | draft
+Title: "Plugins — design notes" | 215 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/plugins.md:16 (link) — [plugins-design-notes.md](plugins-design-notes.md).
@@ -5446,7 +5454,7 @@ References:
 
 #### docs/implemented-plans/plugins.design.md
 
-Title: "Plugins: design" | 128 lines | shipped history | draft
+Title: "Plugins: design" | 128 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/plugins.md:29 (link) — Design subplan: [plugins.design.md](plugins.design.md). It covers the two
@@ -7570,10 +7578,11 @@ Referenced by:
 - docs/plans/ios-app-intent-capture.review.md:42 (mention) — **Location in plan:** Tracks 3, paragraphs “Direction” and “First implementation chunk”; `beebox/docs/plans/ios-app-inte
 
 References:
-- → ../issues/features/2026-08-08-ios-siri-app-intent-capture.md (frontmatter)
+- → ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 - → docs/design/trust.md (mention)
 - → docs/mobile-contract.md (mention)
+- → docs/box/siri-shortcuts.md (mention)
 
 #### docs/plans/ios-app-intent-capture.review.md **[ORPHAN]**
 
