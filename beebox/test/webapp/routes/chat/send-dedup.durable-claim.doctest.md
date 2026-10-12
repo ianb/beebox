@@ -62,6 +62,19 @@ function openSendGate(): SendGate {
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => { setTimeout(resolve, ms); });
 
+/**
+ * Resolves when the server first asks `backend` to start a run, whether that
+ * start succeeds or throws. A send's run starts unawaited, behind a bootstrap
+ * git commit; cleanup that deletes the box before then leaves the commit's
+ * child holding the process open until the file times out (2026-10-10).
+ */
+function nextStart(backend: ChatBackend): Promise<void> {
+  const realStart = backend.start.bind(backend);
+  return new Promise<void>((resolve) => {
+    backend.start = (opts) => { resolve(); return realStart(opts); };
+  });
+}
+
 /** What survived to disk, or "(no file)" when nothing was ever persisted. */
 async function readDedupState(boxRoot: string): Promise<string> {
   try {
@@ -125,6 +138,7 @@ spawn, and this section asserted the two clients sharing one `{turnId}`.
 
 ```ts
 const backend = createFakeChatBackend();
+const started = nextStart(backend);
 const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
@@ -152,6 +166,7 @@ const [a, b] = await Promise.all([first, second]);
 
 ```ts cleanup
 gate.restore();
+await started;
 await ctx.cleanup();
 ```
 
@@ -190,6 +205,7 @@ covered by `chat-send-run-start-failure.doctest.md`.
 
 ```ts
 const backend = createFakeChatBackend();
+const started = nextStart(backend);
 const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
@@ -224,6 +240,7 @@ const retry = await ctx.request({
 ```
 
 ```ts cleanup
+await started;
 await ctx.cleanup();
 ```
 
@@ -246,6 +263,7 @@ client, and what Track A's failure-mode work covers.)
 ```ts
 const backend = createFakeChatBackend();
 backend.failNextStart = new Error("spawn EBADF");
+const started = nextStart(backend);
 const crashed = await makeTestServer({ chatBackend: backend });
 ```
 
@@ -257,6 +275,8 @@ const failed = await crashed.request({
 });
 const persisted = await readDedupState(crashed.boxRoot);
 
+// Crash once the run has failed to start, the state this section is about.
+await started;
 await crashed.server.close();
 const restarted = await restartOver(crashed.boxRoot, createFakeChatBackend());
 const retry = await restarted.post({ session: "new", message: "buy milk", messageId: "restart-1" });
