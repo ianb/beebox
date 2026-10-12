@@ -1,12 +1,34 @@
 ---
 title: "Full-suite red: test/webapp/trpc/routers/chat.hq-preferences.doctest.md"
-workstream: card-view-fixes
+workstream: flaky-tests
+resolution: superseded
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-card-view-fixes — the hourly full-suite run on main
 ---
+
+Closed 2026-10-12: the failing file no longer exists. Commit 0345b5488
+(2026-10-09, HQ transcription for every dictated message) removed the HQ
+dictation setting and deleted `chat.hq-preferences.doctest.md` with it. Its
+last failure was the 2026-10-09 19:23 run, before that commit was tested.
+
+Eight runs from 2026-09-29 to 2026-10-09 failed this file, each with five or
+fewer failing files. They show two mechanisms:
+
+- 2026-09-29 21:52 and 2026-10-05 21:23: a lost toggle. `setFeature("off")`
+  just after the chat started read back `on`, because the seed write
+  overwrote it. That race in the product was fixed by f1ba1944e (2026-10-06
+  01:38, close the reserved-feature handoff when the seed is taken). It has
+  not recurred.
+- The other six: a `waitFor` with a 10s deadline after the send timed out
+  while the run's bootstrap git commit (`generateDocs`, with the box's
+  pre-commit hook) was still in flight. This is load, not a red. The
+  sibling `chat.reserved-features.doctest.md` was copied from this file and
+  failed the same way. Commit 8d622bf43 fixed it by awaiting the fake
+  backend's start before the deadline begins.
+
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `c71e1344`. Bisecting the landings since the last tested
