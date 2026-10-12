@@ -1,12 +1,20 @@
 ---
 title: "session-retention doctest's 64 MB child dies of heap exhaustion most runs"
-workstream: test-suite-health
+workstream: flaky-tests
+resolution: implemented
 area: beebox
 labels: [tests, flaky]
 filed-by: agent
 discovered-in: worktree-knip-sweep — full beebox suite run on 2026-10-07
 priority: normal
 ---
+
+Closed 2026-10-12. `46496b763` stopped the heap-death flake by raising the cap
+to 128 MB (0 failures in 43 full-suite runs since). That cap no longer caught
+the regression: a parse that holds every entry survived the 58 MB fixture.
+`3fc167201` doubles the per-line payload so the bounded parse passes under
+80 MB and the unbounded parse dies under 160 MB. The doctest now fails against
+that mutation. 10/10 alone, 12/12 at 4 parallel.
 
 `test/cli/lib/session-retention.doctest.md:30` failed in the full
 `pnpm -C beebox test` run on 2026-10-07. The `parseUnderHeapCap` child
