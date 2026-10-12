@@ -1,6 +1,6 @@
 ---
 title: "Fix or eliminate every flaky test: the 49 doctests that have failed on their own"
-workstream: unattached
+workstream: flaky-tests
 area: beebox
 labels: [tests, flake]
 filed-by: agent
