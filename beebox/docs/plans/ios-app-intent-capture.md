@@ -3,7 +3,7 @@ title: "iOS hands-free text capture with App Intents"
 status: partial
 workstream: siri-app-intents
 issues:
-  - ../../../issues/features/2026-08-08-ios-siri-app-intent-capture.md
+  - ../../../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md
 ---
 # iOS hands-free text capture with App Intents
 

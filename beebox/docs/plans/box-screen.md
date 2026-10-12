@@ -11,7 +11,7 @@ When I open the app with a thought in my head, I want to type or say it at once,
 
 Today the iOS app loads the full web chat and the last conversation first. Quick chat sits behind that load, as a web form in a sheet. The web Quick chat page skips the box load, but its send and recovery behavior loses messages and overwrites drafts. This plan adds a box screen with an inline composer on iOS and web, moves routing and delivery to one server operation, and reshapes the app bar's menus so that the box screen holds what concerns the whole box.
 
-**Issues addressed:** `issues/features/2026-09-25-quick-drop-entry-points.md` (partly: the in-app door and the after-drop state; it stays open for the doors outside the app). Related and not closed by this plan: `issues/features/2026-08-08-ios-siri-app-intent-capture.md` (a later caller of the same server operation), `issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md` (half 2 is this routing; the issue also owns Gmail admission), `issues/bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md`, `issues/bugs/2026-08-20-capture-success-is-invisible.md`, `issues/features/2026-08-30-chat-input-everywhere.md`, `issues/features/2026-09-25-notifications-and-proactive-design.md`. Queue search for "cold start", "launch screen", "home screen", "box selector", and "quick chat" found no other open item about the launch path.
+**Issues addressed:** `issues/features/2026-09-25-quick-drop-entry-points.md` (partly: the in-app door and the after-drop state; it stays open for the doors outside the app). Related and not closed by this plan: `issues/bugs/2026-08-08-ios-siri-app-intent-capture.md` (a later caller of the same server operation), `issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md` (half 2 is this routing; the issue also owns Gmail admission), `issues/bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md`, `issues/bugs/2026-08-20-capture-success-is-invisible.md`, `issues/features/2026-08-30-chat-input-everywhere.md`, `issues/features/2026-09-25-notifications-and-proactive-design.md`. Queue search for "cold start", "launch screen", "home screen", "box selector", and "quick chat" found no other open item about the launch path.
 
 ## Smallest fix and budget
 
@@ -322,7 +322,7 @@ No critical gap: every new codepath has a planned test and a visible state, exce
 
 ## NOT in scope
 
-- Siri, Shortcuts, the Action Button, a widget, and a Control Center control: they call `quickChat.submit` later. Their own questions are in `issues/features/2026-08-08-ios-siri-app-intent-capture.md`.
+- Siri, Shortcuts, the Action Button, a widget, and a Control Center control: they call `quickChat.submit` later. Their own questions are in `issues/bugs/2026-08-08-ios-siri-app-intent-capture.md`.
 - The share extension: it keeps its picker. Giving it an automatic destination is a small follow-up once `submit` exists.
 - Photos, files, and capture from the box screen: routing judges text only, and uploaded files under `_tmp/` are swept (`uploads.ts:17`). A photo thought needs its own storage rule.
 - High-quality transcription on the box screen: `ChatAPI.transcribeAudio` resolves a chat session first (`ChatAPI.swift:110`), and the setting is reported by the web chat.
