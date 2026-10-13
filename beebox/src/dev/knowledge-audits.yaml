@@ -241,8 +241,11 @@ tests:
   # Status (2026-10-12, Codex): final stable-prompt run passed 6/6 overall, including
   # these 4/4 cases and interrupted recording partial-audio semantics. Material and
   # retained-recording cases used no reads; later context read the installed guide.
-  # Claude run was blocked before assessment by a missing session JSONL in the collector;
-  # see issues/bugs/2026-10-12-knowledge-audit-claude-missing-session-log.md.
+  # Status (2026-10-12, Claude): collector fixed; all 6 completed on the same
+  # synthetic box and produced a report. Automated checks passed 4/6; arrival
+  # and how-to each had one wording mismatch. Manual report inspection found
+  # correct whole-box input and no spoken box reply in both responses.
+  # No matching rules or agent guidance changed in this collector follow-up.
   - id: external-input-source-material
     prompt: >
       <external-input source="apple-app-intents" source-ref="_content/inbox/capture-41.memo.card" input-kind="words">

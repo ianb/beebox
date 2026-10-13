@@ -14,7 +14,7 @@ import { Command, InvalidArgumentError } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import { loadTests, getTestsPath, runTest } from "./lib/test-runner/runner/run-test.js";
+import { loadTests, getTestsPath, runTest, KnowledgeAuditTranscriptError } from "./lib/test-runner/runner/run-test.js";
 import { assertStandaloneBox, assertCleanAuditBox, auditBoxStatus, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";
@@ -293,4 +293,8 @@ program
     console.log(content);
   });
 
-program.parse();
+await program.parseAsync().catch((error: unknown) => {
+  if (!(error instanceof KnowledgeAuditTranscriptError)) throw error;
+  console.error(error.message);
+  process.exitCode = 1;
+});

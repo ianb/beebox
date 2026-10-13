@@ -1,11 +1,25 @@
 ---
 title: Claude knowledge audit crashes when the session log is absent
-workstream: unattached
+workstream: siri-app-intents
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-siri-app-intents — capture guidance knowledge audits
 ---
+
+Resolved on 2026-10-12: the audit runner invokes Claude and collects its
+transcript with a canonical physical working directory. Symbolic-link
+collection and absent-transcript regressions pass. A genuinely missing
+transcript produces a session/path diagnostic and a nonzero CLI exit before
+checks are evaluated. No empty successful observation is substituted.
+
+The real Claude Siri audit run completed all six audits on a synthetic `/tmp`
+box and wrote its report. Four passed automated checks; two had wording-only
+mismatches ("input from a person ... request to the whole box" and "Siri doesn't
+read the box's reply aloud"). Inspection confirmed the intended behavior in
+both responses. This verifies collection, not physical iPhone behavior.
+
 
 A Claude knowledge audit crashed before producing a report on a fresh synthetic
 box outside the repository. The collector attempted to open
