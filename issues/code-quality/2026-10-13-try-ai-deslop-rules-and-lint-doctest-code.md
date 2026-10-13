@@ -55,24 +55,9 @@ can therefore hold patterns the linter rejects everywhere else. Example: a
 helper with untyped parameters in
 `beebox/src/frontend/test/components/themes/ThemedFileCard/PropertiesFace.order-appearance.doctest.md`.
 
-Tensions:
-
-- Doctest code is documentation. Some code-only rules do not fit it:
-  bare expressions as checked values, top-level `await`, and `continue`
-  blocks that share scope.
-- A Markdown processor (`@eslint/markdown` code blocks) would have to
-  rebuild the setup/continue scope that agent-doctest builds
-  (`agent-doctest/src/doctest-hooks/doctest-split.ts`, `doctest-generate.ts`).
-  Without it, blocks lint out of context, with false "undefined" errors.
-  agent-doctest already generates a module per file. Linting or typechecking
-  that generated module may be simpler.
-- Typechecking may give more than linting: a doctest that calls a changed
-  API with the wrong shape fails only at run time now.
-- Doctest-specific checks from
-  `beebox/.claude/rules/doctest.md` could be lint rules: `=> true` from a
-  comparison, `JSON.stringify` in a checked expression, a block with no prose
-  before it. Compare with deslop's `no-poor-substring-tests` and
-  `no-repeated-expect-call`, which are test-file versions of the same idea.
-
-Start by measuring: lint or typecheck the generated modules for a sample of
-doctests, and count findings per rule, before deciding.
+The mechanism (checking the module agent-doctest generates, with its line
+map) has its own issue:
+[typecheck and lint generated doctest modules](2026-10-13-typecheck-and-lint-generated-doctest-modules.md).
+What stays here: which of the deslop rules fit doctest code once that check
+exists. `no-poor-substring-tests` and `no-repeated-expect-call` are test-file
+versions of rules in `beebox/.claude/rules/doctest.md`.
