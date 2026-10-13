@@ -51,6 +51,10 @@ that keep my voice and skip the ones that do not.*
   edits no longer apply. Stale detection is easy for the edit-tool shape: the
   old text no longer matches. Open: what happens to a durable suggestion
   that goes stale, and what runs the cull (on write to the card, or on read).
+  Also undecided: whether suggestion files go into git history at all. Most
+  are short-lived, and commits of them would be noise. Gitignoring
+  `*.attach/edits/` would keep them out, but then a durable suggestion is
+  lost with the machine.
 - **The rules.** Where the standing rules for the boxholder's casual input
   live, and where the rules for each destination form (slide, email, card
   body) live. Presumably a box procedure the agent reads, with no code that
