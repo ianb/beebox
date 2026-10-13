@@ -231,22 +231,6 @@ export async function sweepStaleChildren(): Promise<void> {
         }
       }
     }
-    if (typeof data.socketDir === "string") {
-      try {
-        const dashPidStr = await fs.readFile(path.join(data.socketDir, "dashboard.pid"), "utf8");
-        const dashPid = Number.parseInt(dashPidStr.trim(), 10);
-        if (Number.isFinite(dashPid) && pidAlive(dashPid)) {
-          log(`sweep: killing leftover dashboard pid ${dashPid} from ${file}`);
-          try {
-            process.kill(dashPid, "SIGTERM");
-          } catch (_e) {
-            /* gone */
-          }
-        }
-      } catch (_e) {
-        /* no dashboard pidfile, fine */
-      }
-    }
     await fs.unlink(fullPath).catch(() => {});
   }
 }

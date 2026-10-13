@@ -70,11 +70,6 @@ export interface ReadyLifecycle {
   readonly fastifyPid: number | undefined;
   readonly frontendPort: number;
   readonly backendPort: number;
-  readonly dashboardPort: number | null;
-  readonly dashboardUrl: string | null;
-  readonly socketDir: string;
-  readonly profileDir: string;
-  readonly browseEnv: NodeJS.ProcessEnv;
   readonly logFile: string;
   /**
    * What the backend source looked like when this generation was spawned.
@@ -111,7 +106,7 @@ export interface ReadyLifecycle {
  * - `"exited"` — an unexpected child exit; `onChildExit` tears down DETACHED
  *   (fire-and-forget), since no caller is awaiting an unexpected death.
  * - `"requested"` — an explicit/idle stop (`stopWorktree`, which AWAITS its
- *   pidfile-remove + dashboard-stop, because the retry endpoint relies on that
+ *   pidfile-remove, because the retry endpoint relies on that
  *   completion), OR a start that finished but found itself superseded and
  *   self-cleaned (`startWorktree` awaits its own cleanup before resolving).
  *   Note `stopWorktree` on a still-`starting` handle does NOT block on that
@@ -127,8 +122,6 @@ export interface StoppingLifecycle {
   readonly reason: "exited" | "requested";
   readonly vitePid: number | undefined;
   readonly fastifyPid: number | undefined;
-  readonly dashboardPort: number | null;
-  readonly browseEnv: NodeJS.ProcessEnv | null;
   // The SIGTERM→SIGKILL escalation timer for this generation's children,
   // stored so a test's fake clock can reach it and so a caller holding this
   // handle directly (not just by name) could cancel it. In practice `stopping`

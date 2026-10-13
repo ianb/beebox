@@ -64,8 +64,8 @@ export interface BoxTarget {
  *   surface (`POST /<w>/<box>/api/scan/check`, `PUT
  *   /<w>/<box>/api/scan/files/<sha256>`) whose scan-token bearer the hub's
  *   scan gate and the box child each verify independently.
- * - `control`: MUTATING router control (`/__router/{stop,retry}` and the
- *   dashboard cold-start) — owner session AND a CSRF-safe origin.
+ * - `control`: MUTATING router control (`/__router/{stop,retry}`) — owner
+ *   session AND a CSRF-safe origin.
  * - `control-read`: read-only router infra (`/__router/status`, the `/` worktree
  *   index) — owner session, no CSRF requirement. `json` distinguishes the
  *   machine endpoint (`/__router/status`, always a JSON 401 on deny) from the
@@ -228,8 +228,7 @@ function classifyRouterControl(pathname: string): RouterRoute {
   }
   if (
     pathname.startsWith("/__router/stop/") ||
-    pathname.startsWith("/__router/retry/") ||
-    pathname.startsWith("/__router/dashboard/")
+    pathname.startsWith("/__router/retry/")
   ) {
     return { kind: "control" };
   }

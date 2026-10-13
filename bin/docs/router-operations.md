@@ -70,14 +70,14 @@ whoever started the process. Start a post-mortem here. The shapes worth
 grepping:
 
 ```
-[router <iso>] [<worktree>] frontend=<port> backend=<port> dashboard=<port> base=/<worktree>/
+[router <iso>] [<worktree>] frontend=<port> backend=<port> base=/<worktree>/
 [router <iso>] [<worktree>] ready
 [router <iso>] [<worktree>] startup failed in <phase>: <message> (load1 <n>)
 [router <iso>] [<worktree>] <vite|fastify> exited code=<n> signal=<s>
 [router <iso>] deny <method> <path> route=<kind> reason=<reason>
 ```
 
-`<phase>` is a closed set — `dashboard-start`, `pidStore.write`, `waitForHttp`,
+`<phase>` is a closed set — `spawn`, `pidStore.write`, `waitForHttp`,
 `childExit` — and it is what distinguishes a machine that was too loaded to
 answer in time from a child that died. The `load1` stamp on a failure is the
 host's one-minute load average at that moment, so contention is recorded rather

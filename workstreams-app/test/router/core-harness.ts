@@ -130,15 +130,12 @@ export interface FakeChild extends SpawnedChild {
   reject(err: unknown): void;
 }
 
-function makeChild(pid: number, { autoResolve, rejectOnMicrotask }: { autoResolve: boolean; rejectOnMicrotask: unknown | undefined }): FakeChild {
+function makeChild(pid: number, { rejectOnMicrotask }: { rejectOnMicrotask: unknown | undefined }): FakeChild {
   let rejectFn: (e: unknown) => void = () => {};
-  let resolveFn: (v: unknown) => void = () => {};
-  const base = new Promise<unknown>((res, rej) => {
-    resolveFn = res;
+  const base = new Promise<unknown>((_res, rej) => {
     rejectFn = rej;
   });
   let exitListener: ((c: number | null, s: NodeJS.Signals | null) => void) | null = null;
-  if (autoResolve) resolveFn(null);
   if (rejectOnMicrotask !== undefined) {
     // Reject on the microtask immediately after the spawn effect returns —
     // pinning invariant #3's catch-at-spawn-site (the core's very next line).
@@ -175,19 +172,14 @@ export class FakeSpawner {
   rejectLifecycleWith: unknown | undefined = undefined;
 
   spawn = (command: string, { args, options }: { args: string[]; options: SpawnOptions }): SpawnedChild => {
-    const isDashboard = args.includes("dashboard");
-    const child = makeChild(this.nextPid++, {
-      // Dashboard commands are awaited; resolve them.
-      autoResolve: isDashboard,
-      rejectOnMicrotask: isDashboard ? undefined : this.rejectLifecycleWith,
-    });
+    const child = makeChild(this.nextPid++, { rejectOnMicrotask: this.rejectLifecycleWith });
     this.calls.push({ command, args, options, child });
     return child;
   };
 
-  /** The lifecycle (non-dashboard) spawns, in order: [0]=fastify, [1]=vite. */
+  /** The lifecycle spawns, in order: [0]=fastify, [1]=vite. */
   lifecycleCalls(): SpawnCall[] {
-    return this.calls.filter((c) => !c.args.includes("dashboard"));
+    return [...this.calls];
   }
 }
 
@@ -313,7 +305,6 @@ export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Har
     killGraceMs: 2_000,
     logDir: path.join(tmp, "logs"),
     browseDir: path.join(tmp, "browse"),
-    agentBrowserBin: path.join(tmp, "agent-browser.js"),
     devNoHub: options?.devNoHub === true,
     routerPid: 4242,
     log: LOG ? (m) => console.log(m) : () => {},

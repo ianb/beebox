@@ -36,11 +36,6 @@ function readyVariant(): ReadyLifecycle {
     fastifyPid: 222,
     frontendPort: 5001,
     backendPort: 5002,
-    dashboardPort: 5003,
-    dashboardUrl: "http://localhost:5003/",
-    socketDir: "/tmp/sock",
-    profileDir: "/tmp/prof",
-    browseEnv: {},
     logFile: "/tmp/x.log",
     sourceToken: null,
     lastActivity: 0,
@@ -56,8 +51,6 @@ function stoppingVariant(reason: "exited" | "requested"): StoppingLifecycle {
     reason,
     vitePid: 111,
     fastifyPid: 222,
-    dashboardPort: 5003,
-    browseEnv: {},
     killTimer: null,
   };
 }

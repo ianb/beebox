@@ -22,7 +22,7 @@ import { FakeProbeTimeoutError, makeHarness, ticks, type Harness } from "./core-
 test("only waitForHttp earns an automatic retry", () => {
   assert.equal(retryDecision({ phase: "waitForHttp", attempts: 0, now: 1_000 }).retryAfter, 3_000);
   // Everything else is a statement about the worktree, not about the host.
-  for (const phase of ["childExit", "spawn", "pidStore.write", "dashboard-start"]) {
+  for (const phase of ["childExit", "spawn", "pidStore.write"]) {
     assert.equal(retryDecision({ phase, attempts: 0, now: 1_000 }).retryAfter, null, phase);
   }
 });

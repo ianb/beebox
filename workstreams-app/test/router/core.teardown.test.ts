@@ -269,9 +269,6 @@ test("pidfile serialization: a write cannot be clobbered by a concurrent stale r
     fastifyPid,
     frontendPort: 1,
     backendPort: 2,
-    dashboardPort: null,
-    socketDir: "/s",
-    profileDir: "/p",
     routerPid: 9,
     startedAt: 0,
   });
