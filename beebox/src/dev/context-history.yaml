@@ -8500,3 +8500,52 @@ siri-doc-audit.QUMfJu:
       peak: 39900
       added: 642
       turns: 2
+bbx-siri-capture-audit-20261012:
+  external-input-arrival-tag:
+    - date: 2026-10-13T01:55:35.796Z
+      boxCommit: e70d8e1d11cdcf16194e6798ec5e9fe2b9fca476
+      repoCommit: d0a4cc2c1b7a75a2c107f6dbf9c455e2173d8d9a
+      initial: 39166
+      peak: 39166
+      added: 0
+      turns: 2
+  siri-capture-how-to:
+    - date: 2026-10-13T01:55:35.796Z
+      boxCommit: e70d8e1d11cdcf16194e6798ec5e9fe2b9fca476
+      repoCommit: d0a4cc2c1b7a75a2c107f6dbf9c455e2173d8d9a
+      initial: 39218
+      peak: 41074
+      added: 1856
+      turns: 3
+  external-input-source-material:
+    - date: 2026-10-13T01:55:35.796Z
+      boxCommit: e70d8e1d11cdcf16194e6798ec5e9fe2b9fca476
+      repoCommit: d0a4cc2c1b7a75a2c107f6dbf9c455e2173d8d9a
+      initial: 39226
+      peak: 39226
+      added: 0
+      turns: 2
+  external-input-retained-recording:
+    - date: 2026-10-13T01:55:35.796Z
+      boxCommit: e70d8e1d11cdcf16194e6798ec5e9fe2b9fca476
+      repoCommit: d0a4cc2c1b7a75a2c107f6dbf9c455e2173d8d9a
+      initial: 39251
+      peak: 39251
+      added: 0
+      turns: 2
+  external-input-recording-with-instructions:
+    - date: 2026-10-13T01:55:35.796Z
+      boxCommit: e70d8e1d11cdcf16194e6798ec5e9fe2b9fca476
+      repoCommit: d0a4cc2c1b7a75a2c107f6dbf9c455e2173d8d9a
+      initial: 39237
+      peak: 39237
+      added: 0
+      turns: 2
+  siri-capture-later-context:
+    - date: 2026-10-13T01:55:35.796Z
+      boxCommit: e70d8e1d11cdcf16194e6798ec5e9fe2b9fca476
+      repoCommit: d0a4cc2c1b7a75a2c107f6dbf9c455e2173d8d9a
+      initial: 39192
+      peak: 42077
+      added: 2885
+      turns: 5

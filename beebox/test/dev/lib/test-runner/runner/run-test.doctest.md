@@ -5,7 +5,7 @@ and every subagent transcript. Short reads stay quiet; if either transcript is
 actually longer than the page, the audit announces what it omitted.
 
 ```ts setup
-import { mkdir, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, realpath, stat, symlink, writeFile } from "node:fs/promises";
 import { PACKAGE_ROOT } from "../../../../../src/lib/package-root.js";
 import { dirname, join } from "node:path";
 import { MAX_SESSION_ENTRIES } from "../../../../../src/cli/lib/session.js";
@@ -47,13 +47,14 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
 const shortId = "short-audit";
-await writeLog(getSessionLogPath(box.root, shortId), 2);
+const canonicalBox = await realpath(box.root);
+await writeLog(getSessionLogPath(canonicalBox, shortId), 2);
 const shortWarnings = await captureWarnings(async () => { await extractBehavior(box.root, shortId); });
 shortWarnings.length
 => 0
 
 const longId = "long-audit";
-const mainLog = getSessionLogPath(box.root, longId);
+const mainLog = getSessionLogPath(canonicalBox, longId);
 await writeLog(mainLog, MAX_SESSION_ENTRIES + 1);
 const subagentLog = join(dirname(mainLog), longId, "subagents", "agent-a.jsonl");
 await writeLog(subagentLog, MAX_SESSION_ENTRIES + 1);
@@ -64,6 +65,28 @@ longWarnings.length
 
 longWarnings.every((warning) => warning.includes(`has ${String(MAX_SESSION_ENTRIES + 1)} entries; using the first ${String(MAX_SESSION_ENTRIES)}.`))
 => true
+```
+
+Claude stores transcripts under the physical directory. A symbolic-link cwd
+must find that transcript, including its response, instead of the lexical path.
+An absent transcript rejects collection before any audit checks can pass.
+
+```ts continue
+const linkedCwd = box.path("linked-cwd");
+const physicalCwd = box.path("physical-cwd");
+await mkdir(physicalCwd);
+await symlink(physicalCwd, linkedCwd, "dir");
+const linkedLog = getSessionLogPath(await realpath(physicalCwd), "linked-audit");
+await mkdir(dirname(linkedLog), { recursive: true });
+await writeFile(linkedLog, JSON.stringify({
+  type: "assistant", uuid: "linked-response", timestamp: "2026-08-06T12:00:00Z",
+  message: { role: "assistant", content: [{ type: "text", text: "Captured response" }] },
+}) + "\n");
+(await extractBehavior(linkedCwd, "linked-audit")).responseText
+=> Captured response
+
+await extractBehavior(linkedCwd, "missing-audit")
+=> throws KnowledgeAuditTranscriptError: Claude knowledge-audit transcript is missing for session missing-audit: «*». No audit checks were evaluated.
 ```
 
 ```continue
