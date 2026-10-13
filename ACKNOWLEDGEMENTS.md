@@ -10,6 +10,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 ## Ideas we adopted
 
+### Just Press Record
+
+- **Source:** [Open Planet Software's recording integrations](https://openplanet.zendesk.com/hc/en-gb/articles/48116180645521-One-tap-recording-integrations) (proprietary product; no source code or assets copied).
+- **What we took:** Distinct Start and Stop recording tasks across Siri, Shortcuts, and system controls, with audio preserved independently of transcription.
+- **Where it landed:** `ios-app/BeeBox/Intents/VoiceNoteIntents.swift`, `Services/VoiceNoteCoordinator.swift`, and `ios-app/BeeBoxControls/BeeBoxControls.swift`.
+
 ### Visual references for expressive themes
 
 - **Sources:** [removed], *[removed]* (2025); [removed], *[removed]* (r/[removed]); [[removed]](https://[removed].booth.pm/), [pink cloud and star illustration](https://www.instagram.com/p/DcDO6wYM6pv/). Attribution follows the reference images supplied by the boxholder.

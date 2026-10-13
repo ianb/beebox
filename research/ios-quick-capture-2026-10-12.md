@@ -26,6 +26,8 @@ App Shortcuts provide discoverable app actions without requiring the person to c
 
 Register/update parameters at launch as Apple's sample does. Use `.applicationName`, appropriate app-name synonyms, and short phrases that avoid recipient-like ambiguity. Correct transcription does not prove intent selection. The existing action already appears and runs in Shortcuts: missing registration is a defect, but is not an established explanation for this phone's Siri failure. Keep a named user Shortcut as an alternate invocation path; Apple documents running one by saying its name. [Apple sample](https://developer.apple.com/documentation/appintents/acceleratingappinteractionswithappintents), [Run shortcuts with Siri](https://support.apple.com/en-nz/guide/shortcuts/apd07c25bb38/ios).
 
+Implementation check: set `CFBundleSpokenName` to “Bee Box”. Apple's [app-name guidance](https://developer.apple.com/library/archive/qa/qa1950/_index.html) permits that key for all apps. Its [synonym documentation](https://developer.apple.com/documentation/sirikit/specifying-synonyms-for-your-app-name) says `INAlternativeAppNames` recognition requires an Intents extension; this App Intents implementation has none. Do not treat an unverified synonym list as a repair for the observed Siri failure. Registration and phone phrase checks remain required.
+
 Candidate fallback: Dictate Text → Bee Box capture, pinned to a box, invoked by its chosen Shortcut name or the Action Button. This captures text, not audio. Its dictation termination and no-touch behavior need a phone check; do not sell it as a recorder.
 
 ### SiriKit notes: a real compatibility option, with a sunset

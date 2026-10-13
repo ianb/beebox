@@ -1,6 +1,6 @@
 ---
 title: "iOS quick capture: Siri, voice, and sharing with context"
-status: draft
+status: active
 workstream: siri-app-intents
 issues:
   - ../../../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md
@@ -11,7 +11,7 @@ This plan gives a person fast ways to get words and material into a predictable 
 
 **Issues addressed:** [Siri capture failure](../../../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md). This implements the iOS portion of [quick-drop entry points](../../../issues/features/2026-09-25-quick-drop-entry-points.md); that umbrella remains open for other platforms and broader routing design. [Incomplete shared webpages](../../../issues/bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md) remains separate: preserving a URL is not claiming its page was downloaded.
 
-The [dated iOS research](../../../research/ios-quick-capture-2026-10-12.md) supports the techniques below. The [earlier product-shape review](ios-app-intent-capture.product-shape.review.md) explains why the previous text-only repair was insufficient. This revision supersedes that repair's scope. Implementation is not authorized by this document.
+The [dated iOS research](../../../research/ios-quick-capture-2026-10-12.md) supports the techniques below. The [earlier product-shape review](ios-app-intent-capture.product-shape.review.md) explains why the previous text-only repair was insufficient. This revision supersedes that repair's scope. The boxholder authorized this reviewed BIG CHANGE implementation on 2026-10-12, including removal of superseded implementation pieces. Landing still requires a finish request.
 
 ## Design
 
@@ -104,7 +104,8 @@ Search found no existing composite box-level acceptance operation, capture-speci
 
 All techniques were researched before this revision. Availability is SDK evidence, not proof of device behavior.
 
-- **Adopt:** two-turn App Shortcut text input, registration, app-name token/synonyms. [WWDC22](https://developer.apple.com/videos/play/wwdc2022/10170/), [Apple sample](https://developer.apple.com/documentation/appintents/acceleratingappinteractionswithappintents).
+- **Adopt:** two-turn App Shortcut text input, registration, app-name token and spoken name. Synonym recognition needs an Intents extension
+according to Apple's current documentation; this implementation has none. [WWDC22](https://developer.apple.com/videos/play/wwdc2022/10170/), [Apple sample](https://developer.apple.com/documentation/appintents/acceleratingappinteractionswithappintents).
 - **Adopt:** iOS 18+ AudioRecordingIntent and required ongoing Live Activity. [Apple recording intent](https://developer.apple.com/documentation/appintents/audiorecordingintent).
 - **Adopt:** controls for Lock Screen, Control Center, and Action Button, backed by the same recording tasks. [WWDC24 controls](https://developer.apple.com/videos/play/wwdc2024/10157/).
 - **Adapt:** start/stop recording tasks and visible ongoing state. Just Press Record documents these surfaces and an unlock requirement. This is product precedent, not an Apple background guarantee. [Vendor guide](https://openplanet.zendesk.com/hc/en-gb/articles/48116180645521-One-tap-recording-integrations).
@@ -133,7 +134,7 @@ Implementation adds ACKNOWLEDGEMENTS for adapted external product patterns, not 
 
 **Direction:** implement a small coordinator over shared byte staging, atomic manifests, and existing card writers. Proposed wire contract (names lock in when fixtures are written):
 
-- `POST /api/quick-captures/:captureId` is one file-backed multipart acceptance request, containing a version-1 declaration and the complete declared bytes. Declaration: `{version:1, capturedAt, source, input?:string, material?: URL | clipping | image | audio, parentCaptureId?:UUID}`. File material has item UUID, MIME, byte length, digest, safe display name; no local path. Context events have parentCaptureId and input, with no material in version 1. Owner derives from auth. Empty input with no material is invalid.
+- `POST /api/quick-captures/:captureId` is one file-backed multipart acceptance request, containing a version-1 declaration and the complete declared bytes. Declaration: `{version:1, capturedAt, source, input?:string, material?: URL | clipping | image | audio, parentCaptureId?:UUID, recordingInterrupted?:true}`. File material has item UUID, MIME, byte length, digest, safe display name; no local path. Context events have parentCaptureId and input, with no material in version 1. Owner derives from auth. Empty input with no material is invalid.
 - Native builds a multipart body file in the app group and schedules one background upload task before completing the share extension. Text/URL-only input uses the same logical operation without binary parts. Server parses into durable staging, verifies exact count/length/digest and immutable payload identity, then seals atomically. It rejects incomplete or extra parts. There is no client-side final accept call after an upload finishes.
 - Success returns `{id, state:"accepted"}` only after durable complete-set seal. Identical replay returns the same receipt; changed input/material conflicts rather than overwriting. The server can finish acceptance and begin processing with no app/extension alive. Missing response leaves local state pending until receipt recovery.
 - tRPC `quickCapture.capabilities/list/detail/retry` exposes version support, receipts, and status. Later context enters the same acceptance operation with a distinct event ID and parentCaptureId, including offline. The native event owns its draft/manifest; transfer waits for the parent receipt. No global latest resolver.
@@ -272,7 +273,7 @@ Doctests cover acceptance completeness, conflict/replay, worker resume, role fra
 
 ## Rollout shape
 
-Tests first during implementation: new `test/webapp/routes/quick-capture.doctest.md` for all declared bytes and owner replay; `test/core/quick-capture/acceptance.doctest.md` for seal/source crash recovery; `test/core/quick-capture/context.doctest.md` for original-ID ordering and moves/deletion; `test/core/quick-capture/dispatch.doctest.md` for save-only and material framing. Extend existing quick-chat submit tests for referenced capture dispatch/choice/expiry and existing media writer tests for reuse. Add `QuickCaptureStoreTests`, `CaptureDestinationTests`, `VoiceNoteCoordinatorTests`; update shared mobile fixtures. Exact filenames may follow repository module ownership; cases and boundaries are required.
+Tests first during implementation: new `test/webapp/routes/quick-capture.doctest.md` for all declared bytes and owner replay; `test/core/quick-capture/acceptance.doctest.md` for seal/source crash recovery; `test/core/quick-capture/worker.context.doctest.md` for original-ID ordering and moves/deletion; `test/core/quick-capture/worker.dispatch.doctest.md` for save-only and material framing. Extend existing quick-chat submit tests for referenced capture dispatch/choice/expiry and existing media writer tests for reuse. Add `QuickCaptureStoreTests`, `CaptureDestinationTests`, `VoiceNoteCoordinatorTests`; update shared mobile fixtures. Exact filenames may follow repository module ownership; cases and boundaries are required.
 
 Add capability negotiation for version 1 before clients switch. Keep old quick-chat and share APIs; do not reinterpret historic data. New optional memo fields need no rewrite of legacy cards. Implement new native manifest version independently from old outbox. Do not change old native composer emission or capture staging meaning. If existing cards' meaning needs change, apply bbx-migration and revise this plan first.
 
@@ -288,5 +289,20 @@ Use paired synthetic boxes A/B and distinctive markers. Record installed OS/buil
 4. **Share/context:** share screenshot, keyboard-dictate “Find the problem shown here,” submit. Verify correct image and words in one item. Share URL and clipping without instructions: saved material, no invented command. Try unsupported multiple items; show the limit before acceptance and keep the entered words.
 5. **Destination:** default A, browse B, Siri capture reaches A. Pinned Shortcut B and share override B reach B. Remove default/pinned target; no silent fallback. A voice note started in A finishes in A after browsing changes.
 6. **Recovery/follow-up:** offline text/audio/screenshot-plus-words receive saved-on-phone states. Force quit after acceptance, restore network, reopen; one server item each. Add context while offline to a phone-only original and confirm both survive relaunch in order. Add context to an older item with newer captures present; original ID/box receives it. Repeat after source filing and during needs-choice; pending context stays visible.
+   Request deletion of an offline pending item: show Discard requested, never Sent;
+   reconnect and confirm deletion without a later revived upload. Save an interrupted
+   note and confirm its detail/source says it may end early.
 
-No implementation tests or device checks have been run as part of writing this plan. Cross-model plan review is recorded in the sibling review artifact.
+### Execution record
+
+Implementation started after the boxholder approved the reviewed scope on 2026-10-12. The accepted transport is one file-backed multipart request. The native capture default uses its own shared preference key. Source memos use share-id and existing context/attachments; no capture-materials card field was added.
+
+Removed the superseded BoxScreenStore.captureExternalThought method/result enum and obsolete tests, plus its AppDependency registration. Replaced the old selected-box/server-waiting Siri action and usage guide. The regular box-screen quick-chat path, old outbox decoder/recovery, and explicit URL/text chat/landmark share modes remain because they still have callers and data to recover.
+
+Recording uses finalized ten-second AAC segments and merges playable segments on Save. Sudden termination can leave an unfinished final segment unavailable; the app reports Interrupted and preserves completed segments. Control widgets open the foreground task; they never own an extension recorder. This is the planned foreground fallback rather than a claim of untouched locked recording.
+
+Local verification: integrated simulator build passed without diagnostics; selected XCTest passed 70 cases, including storage, default destination, voice reducer/recovery, and preserved quick-chat/share behavior. Eight selected backend doctests passed 152 assertions. Full backend/frontend TypeScript, changed-file ESLint, layout, docs, mobile-contract and whitespace checks passed. Six real Codex knowledge audits passed against final guidance. Claude claude-opus-5-5 implementation review and four bounded follow-ups are adjudicated in the sibling implementation review. These are separate from physical Siri/microphone/lock-screen proof. The phone batch above remains required before declaring the workstream fully verified.
+
+Removed-pairing recovery exposes retained phone copies and interrupted audio for explicit inspection/export without reassigning their destination. Protected rows mask words before unlock; protection upgrades survive pairing removal. Unreadable recording manifests never authorize overwriting the retained draft. Simulator tests verify protection policy and setter requests, not effective locked-device encryption.
+
+The implementation grew beyond the estimate to roughly 6,000 added/deleted lines including tests and documentation, within the approved BIG CHANGE behavior. Recovery and protection edge cases account for the additional work. The security report amendment remains an uncommitted DRAFT under its human-review rule. Cross-model plan and implementation reviews are recorded in sibling artifacts. The workstream remains active pending matched-build physical-phone acceptance; no landing/deployment was authorized.

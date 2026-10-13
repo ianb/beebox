@@ -3,13 +3,14 @@ title: "Siri cannot invoke the iOS thought capture shortcut by voice"
 workstream: siri-app-intents
 area: beebox
 priority: important
+needs: [manual-testing]
 filed-by: agent
 discovered-in: worktree-siri-app-intents — implementing Siri text capture
 ---
 
 > **Reopened 2026-10-12:** The App Shortcut appears in Shortcuts and works when tapped, but Siri did not invoke it on a physical iPhone. Siri showed the correct transcript for “Save a thought in Bee Box” and then said “I didn't get that, try again?” The previous manual-testing gate was removed because the feature is not ready for another Siri test.
 
-When the developer is hands-free and a thought arrives, they want to speak or pass text to Bee Box and have it reach the selected box without opening the app.
+When the developer is hands-free and a thought arrives, they want to speak or pass text to Bee Box and have it reach the capture default without opening the app.
 
 ## Re-encounter (2026-10-12)
 
@@ -29,32 +30,80 @@ The user also reported that saying the whole thought after “Add a thought to B
 
 The usage guide `beebox/docs/box/siri-shortcuts.md` says to unlock a protected box before using Siri. This is inaccurate: `CaptureThoughtIntent.perform()` refuses a box marked `requiresDeviceUnlock` even when the phone is unlocked. Correct the guide with the implementation follow-up.
 
-## Implemented
+## Implementation follow-up (2026-10-12)
 
-- A text-only App Intent in the main iOS app target uses the existing quick-chat outbox and delivery path.
-- Capture targets the selected paired box. A box marked `requiresDeviceUnlock` is refused before persistence, even when the phone itself is unlocked. The intent never falls back to another box.
-- The server stores the message as human input with origin `external` and source `apple-app-intents`. The source names the shared App Intents integration; the framework does not reliably reveal whether Siri, Shortcuts, Spotlight, or the Action Button invoked it.
-- The spoken result distinguishes server acceptance, a destination choice, local save with unconfirmed delivery, and refusal. The intent does not record audio or read the box's reply.
-- The initial request is bounded to 20 seconds. An uncertain delivery remains in the phone outbox under the same message ID and retries through the existing quick-chat path.
+The reviewed [quick-capture plan](../../beebox/docs/plans/ios-app-intent-capture.md)
+supersedes the earlier text-only implementation. Registration now runs at app
+launch and pairing changes; the displayed/spoken app name is Bee Box. This
+repairs registration, but does not prove why Siri failed before `perform()`.
+
+- Siri triggers a required thought prompt, persists locally, then says
+  “Saved on your phone for <box>.” It no longer waits for chat routing.
+- Capture default is independent of the browsed box. A pinned Shortcut/share
+  override is explicit; a removed target never falls back. Protected boxes
+  remain refused by Siri/App Intents even while the phone is unlocked.
+- Voice notes retain actual AAC audio and a separate derived transcript. Shares
+  keep one image/URL/clipping plus optional human instructions. Later context
+  identifies the original capture and box, including while offline.
+- One multipart upload seals complete source bytes before processing. Save-only
+  material starts no chat task. Retries preserve IDs; offline discard remains
+  pending until an owner tombstone prevents late-upload revival.
+- Removed the old `BoxScreenStore.captureExternalThought`, result enum, tests,
+  and dependency registration. Normal box-screen quick chat and old persisted
+  outbox recovery remain applicable.
 
 ## Manual testing
 
-This is the original validation plan from the feature implementation. It is
-history, not a current readiness gate. Repeat the Siri steps only after fixing
-shortcut registration.
+Use the matched iOS build **and a box server containing this implementation**.
+An older server must show Unsupported while keeping local content. This branch
+is not landed or deployed. Record phone OS/build and use synthetic paired boxes
+A/B. Open Capture to verify saved source bytes and words, not just dialogs.
+Local checks passed: 70 XCTest cases, 152 backend assertions, six Codex guidance
+audits, TypeScript/lint/contract checks and simulator build. Cross-model findings
+are fixed/adjudicated; these checks do not prove the original Siri failure is gone.
+The [usage guide](../../beebox/docs/box/siri-shortcuts.md) gives installed action
+names and fallback setup.
 
-Use a physical iPhone with the implementation installed and a paired test box.
+1. **Siri:** with app closed, say “Save a thought in Bee Box,” answer its prompt
+   with “Phone test alpha,” and touch nothing. Expect saved-on-phone naming A
+   and one exact thought. Repeat “Add a thought to Bee Box,” and locked where
+   Siri is enabled. Separately run a named Shortcut containing Dictate Text →
+   Add a Thought to Bee Box; record whether Siri matched the app or asked an
+   unrelated recipient question.
+2. **Voice:** say “Start a voice note in Bee Box,” speak a marker, then “Stop and
+   save my voice note in Bee Box.” Expect playable audio and separate transcript.
+   Repeat cold start, screen locking during recording, interruption, and
+   Action Button/control/Live Activity where available. An interrupted draft
+   must say it may end early and offer Save or Discard; no silent replacement.
+3. **Refusals:** deny microphone, then disable Live Activities in a separate
+   run; no false Recording/Saved result. Restore permissions. Siri to a protected
+   box refuses even unlocked. Explicit share/main recording uses authentication;
+   its Stop link opens the same unlock flow.
+4. **Share:** screenshot plus keyboard-dictated “Find the problem shown here”
+   becomes one item with correct image and words. URL/clipping without words
+   saves without a task. Unsupported multiple items show the limit before
+   acceptance and keep the entered words.
+5. **Destination:** default A while browsing B still captures to A. Pinned
+   Shortcut/share override B goes to B. Remove a default/pinned target: no
+   fallback. A recording keeps its original box and pauses if that box is removed.
+   Captures from removed boxes keeps phone copies accessible; protected copies
+   require unlock, and export never silently sends to another box. Also protect an
+   already-captured box before removing it: recovery rows must hide its words.
+   With a private interrupted draft retained, invoke Siri text while locked,
+   then reopen: the original recording must not be overwritten or treated as absent.
+6. **Recovery/context:** capture text/audio/screenshot offline; force quit after
+   acceptance, restore network, reopen, and find one server item each. Add context
+   offline to a phone-only original; reconnect while staying in app and confirm
+   both arrive in order. Follow up an older/filed item with newer items present,
+   including needs-choice: original identity/chat remains fixed. Request offline
+   deletion: Discard requested until confirmation, then no revived upload.
 
-1. With two boxes paired, select the second one in Bee Box. Terminate the app, invoke the App Shortcut with Siri using “Add a thought to Bee Box,” and provide a short test thought. Confirm Siri reports the result and the thought appears once in the selected box.
-2. Make a Shortcut that supplies text to the Bee Box capture action. Run it and confirm the supplied text reaches the same selected box once.
-3. If an Action Button is available, assign the App Shortcut, invoke it, and confirm the same capture behavior.
-4. Mark the selected box as requiring device unlock. Invoke capture while the phone is unlocked. Confirm Siri refuses and no outbox entry or box message is created. Repeat from the lock screen if the device permits Siri there.
-5. With the selected box eligible, enable Airplane Mode and invoke capture. Confirm Siri says delivery is unconfirmed rather than sent. Restore connectivity, open Bee Box, and confirm the thought retries and appears once.
-6. Invoke capture with no paired box on a test install. Confirm the refusal does not claim the thought was saved.
-7. Try the phrase with no thought text. Confirm Siri asks for text or returns a clear refusal without reporting success.
+Simulator build, XCTest, browser source checks and synthetic transcription do
+not prove Siri matching, microphone handoff, locked launch, or extension transfer
+continuation. Keep this issue open until the physical-device batch passes or the
+boxholder accepts documented platform limitations.
 
-The simulator build and XCTest suite cannot verify Siri phrase matching, background launch, lock-screen behavior, or Shortcut execution. This issue stays open until those physical-device checks pass.
+## Deferred
 
-## Later
-
-Voice memo recording, reading agent replies aloud, richer box selection, and exact attribution between Siri, Shortcuts, Spotlight, and Action Button are separate follow-up work.
+One-utterance schema/SiriKit capture and spoken agent replies remain separate.
+Attribution names acquisition APIs, without guessing Siri versus Action Button.

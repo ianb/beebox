@@ -30,8 +30,7 @@ There are two routes, and they are separate.
   `~/.config/beebox/secrets.json`, and only for a box that has been granted
   the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
   worktree's test box has the grants of `test1`. Check them with
-  `bbx secrets status` run inside the worktree's test box
-  (`~/src/box-worktrees/<name>/test1/`). It shows names and grants, never
+  `bbx secrets status ~/src/box-worktrees/<name>/test1/`. It shows names and grants, never
   values.
 - **Dev scripts and experiments** outside a box can use the provider keys in
   the worktree's `beebox/.env`, which every worktree copies from main. Load

@@ -14,6 +14,7 @@
 import type { AnyRouter } from "@trpc/server";
 import { defineRegistry } from "../../shared/registry.js";
 import { router } from "./procedures.js";
+import { quickCaptureRouter } from "./routers/quick-capture.js";
 import { quickChatRouter } from "./routers/quick-chat.js";
 import { historyRouter } from "./routers/history.js";
 import { statusRouter } from "./routers/status.js";
@@ -60,6 +61,7 @@ import { notificationsRouter } from "./routers/notifications.js";
 
 const routerMembers = {
   quickChat: quickChatRouter,
+  quickCapture: quickCaptureRouter,
   history: historyRouter,
   status: statusRouter,
   card: cardRouter,

@@ -18,6 +18,7 @@ import { registerChatRoutes } from "./routes/chat/register.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerBoxIdentityAssetRoutes } from "./routes/box-identity-assets.js";
+import { registerQuickCaptureRoutes } from "./routes/quick-capture/register.js";
 import { registerCaptureRoutes } from "./routes/capture/register.js";
 import { registerSecretsRoutes } from "./routes/secrets.js";
 import { registerBulkUploadRoutes } from "./routes/bulk-upload/register.js";
@@ -335,6 +336,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route
   // (registered at the root, see server.ts).
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+  await registerQuickCaptureRoutes({ server: instance, boxRoot: box.boxRoot, services: options.services ?? {} });
   // The loopback secret resolver. It sits in the box scope like every other
   // route, but does its OWN auth: the box auth hook above accepts five
   // credentials and this interface accepts exactly one of them (the agent
