@@ -224,7 +224,9 @@ export function observeAssignedSession(opts: {
       console.error(`[${opts.logPrefix}] Could not retain assigned chat identity:`, error instanceof Error ? error.name : "UnknownError");
     });
   };
-  const timer = startAwakeTimeout({ timeoutMs: 10 * 60 * 1000, onTimeout: detach });
+  // This bounds background listener retention; it must not keep a finished
+  // worker or server alive while a session still has no assigned identity.
+  const timer = startAwakeTimeout({ timeoutMs: 10 * 60 * 1000, onTimeout: detach, unref: true });
   registry.on("session-assigned", handler);
   session.once("error", detach); session.once("close", detach);
   return detach;

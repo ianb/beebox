@@ -97,6 +97,8 @@ JSON.stringify({ state: voiceAfter.state, hq: voiceAfter.voice.hq, handoff: voic
 ```
 
 ```ts cleanup
+await registry.shutdown();
+eventBus.close();
 await box.cleanup();
 ```
 
@@ -148,5 +150,7 @@ settled.voice.hq.state
 ```
 
 ```ts cleanup
+await registry.shutdown();
+eventBus.close();
 await box.cleanup();
 ```
