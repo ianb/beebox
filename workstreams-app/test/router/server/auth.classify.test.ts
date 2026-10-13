@@ -53,7 +53,6 @@ test("classifier: exhaustive route-shape mapping", () => {
   // control (mutating)
   assert.deepEqual(c("POST", "/__router/stop/main"), { kind: "control" });
   assert.deepEqual(c("POST", "/__router/retry/main"), { kind: "control" });
-  assert.deepEqual(c("GET", "/__router/dashboard/main"), { kind: "control" });
 
   // control-read
   assert.deepEqual(c("GET", "/__router/status"), { kind: "control-read", json: true });

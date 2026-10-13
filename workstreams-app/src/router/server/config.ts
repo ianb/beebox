@@ -15,8 +15,8 @@ import { writeRouterLogLine } from "./log-file.js";
 
 export const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
 // This module lives at <repo>/workstreams-app/src/router/. Keep the repository
-// anchor explicit because launch paths, the favicon, and agent-browser all
-// depend on it rather than on the process cwd.
+// anchor explicit because launch paths and the favicon depend on it rather
+// than on the process cwd.
 export const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..", "..", "..");
 // Where /main/ is served from. Defaults to the canonical checkout so that a
 // router started from a worktree (e.g. while iterating on router.ts itself)
@@ -77,8 +77,6 @@ export const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 // Verbose worktree-lifecycle logging (e.g. WS-upgrade refusals to idle-stopped
 // worktrees — designed behavior, not anomalies, so silent by default).
 export const ROUTER_DEBUG = process.env.BBX_ROUTER_DEBUG === "1";
-
-export const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
 
 // The /dev/ space: a place the *dev-repo agent* (Claude Code, not a box) builds
 // things for you to view in the browser — HTML visualizations, rendered

@@ -69,7 +69,6 @@ import {
   parkedWorktreeFor,
 } from "./failed-page.js";
 import {
-  AGENT_BROWSER_BIN,
   BROWSE_DIR,
   DEV_NO_HUB,
   IDLE_TIMEOUT_MS,
@@ -328,7 +327,6 @@ async function main(): Promise<void> {
     killGraceMs: KILL_GRACE_MS,
     logDir: LOG_DIR,
     browseDir: BROWSE_DIR,
-    agentBrowserBin: AGENT_BROWSER_BIN,
     devNoHub: DEV_NO_HUB,
     routerPid: process.pid,
     log,
@@ -413,7 +411,7 @@ async function main(): Promise<void> {
   log(`durable log: ${routerLogPath() ?? "unavailable"}`);
   await acquireRouterPidFile();
   // Two-stage sweep. sweepStaleChildren clears THIS state dir's pidfile-tracked
-  // children (current generation + dashboard daemons). reclaimOrphans then
+  // children (the current generation). reclaimOrphans then
   // pattern-matches what pidfiles can't see: leaked older generations and
   // agent-browsers orphaned by a previous router's crash/restart. It's
   // session-safe (skips vite/fastify still parented by a live router — e.g. an

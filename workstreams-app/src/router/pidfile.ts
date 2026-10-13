@@ -22,9 +22,6 @@ export interface PidRecord {
   fastifyPid: number | undefined;
   frontendPort: number;
   backendPort: number;
-  dashboardPort: number | null;
-  socketDir: string;
-  profileDir: string;
   routerPid: number;
   startedAt: number;
 }

@@ -123,7 +123,7 @@ export const WORKTREE_UNAVAILABLE = "worktree-unavailable";
 /**
  * What a non-browser client is told. Deliberately small: `worktree` was in the
  * URL the caller sent, `phase` is a closed vocabulary (`waitForHttp`,
- * `childExit`, `spawn`, `pidStore.write`, `dashboard-start`) and `retry` is a
+ * `childExit`, `spawn`, `pidStore.write`) and `retry` is a
  * path, not a secret. No captured child output, no ports, no filesystem paths —
  * the 2026-08-18 filing asked for exactly this line to be drawn: *"Don't leak
  * more than the caller may know."*
