@@ -73,7 +73,11 @@ final class VoiceNoteCoordinatorTests: XCTestCase {
             do {
                 _ = try await coordinator.stopAndSave(boxes: boxes)
                 XCTFail("Removed original must not be accepted or transferred")
-            } catch {}
+            } catch CaptureDestinationStore.DestinationError.removed {
+                // Both automatic and explicit target resolution must refuse removal.
+            } catch {
+                XCTFail("Unexpected save error: \(error)")
+            }
         }
         XCTAssertEqual(coordinator.phase, .interrupted)
         XCTAssertEqual(coordinator.draft?.id, originalID)
