@@ -1,6 +1,6 @@
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
 import { themeOriginLabel } from "../../../themes/registry";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { FileData, FileRenderer } from "../../../file-type-registry";
 import { rendererDisplayLabel } from "../../../lib/renderer-display-label";
 import { Button } from "../../ui/Button";
@@ -14,6 +14,9 @@ import { Text } from "../../ui/Text";
 import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
 import { LandmarkSystemThemePicker } from "../SystemThemePicker";
 import { isCardPath } from "../../file-view-data";
+import { isRecord } from "@shared/is-record";
+import { resolveRelativePath } from "../../../lib/view-url";
+import { copyFileText, copyImageFile } from "../../../lib/copy-file-to-clipboard";
 
 export interface ThemedFileCardPropertiesProps {
   data: FileData;
@@ -95,6 +98,38 @@ function ViewChooser({ data, renderers, active, hasExplicitView, onSelect }: The
         >{rendererDisplayLabel({ registeredName: renderer.name, filePath: data.path, hasTypeSpecificRenderer: first?.name !== "Card" })}</Button>)}
       </div>
       {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => choose(null)}>Use preferred view</Button></div> : null}
+      <CopyContents data={data} />
     </section>
   );
+}
+
+type CopyState = "idle" | "copied" | "failed";
+
+/** One copy button; says "Copied" or "Copy failed" for two seconds after a click. */
+function CopyButton({ label, copy }: { label: string; copy: () => Promise<void> }) {
+  const [state, setState] = useState<CopyState>("idle");
+  function handleClick() {
+    copy().then(() => setState("copied"), () => setState("failed")).finally(() => {
+      setTimeout(() => setState("idle"), 2000);
+    });
+  }
+  return <Button size="sm" intent="ghost" onClick={handleClick} aria-live="polite">
+    {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : label}
+  </Button>;
+}
+
+/** The image file an image card points at, resolved against the card's path. */
+function imageCardFile(data: FileData): string | null {
+  if (data.type !== "image" || !isRecord(data.frontmatter?.filename)) return null;
+  const ref = data.frontmatter.filename.ref;
+  return typeof ref === "string" ? resolveRelativePath(data.path, ref) : null;
+}
+
+/** Copy the file's whole original text, and for an image card the image too. */
+function CopyContents({ data }: { data: FileData }) {
+  const image = imageCardFile(data);
+  return <div className="mt-2 flex flex-wrap gap-2">
+    <CopyButton label="Copy original text" copy={() => copyFileText(data.path)} />
+    {image === null ? null : <CopyButton label="Copy image" copy={() => copyImageFile(image)} />}
+  </div>;
 }
