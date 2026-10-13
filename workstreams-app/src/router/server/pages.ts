@@ -97,7 +97,6 @@ export async function renderIndex(core: RouterCore): Promise<string> {
           : ready
             ? `<span class="badge running">running · idle ${Math.round((Date.now() - ready.lastActivity) / 1000)}s</span>`
             : "<span class=\"badge cold\" title=\"will lazy-start on first request\">cold</span>";
-      const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">agent-browser ↗</a>`;
       const devLink = `<a href="/${escapeHtml(w.name)}/dev/" class="dash" title="agent-built visualizations &amp; markdown doc browser for ${escapeHtml(w.name)} (served from disk, no start)">dev ↗</a>`;
       const stopForm = w.running
         ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
@@ -113,7 +112,7 @@ export async function renderIndex(core: RouterCore): Promise<string> {
         <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
         <span class="statuscell">${status}</span>
         ${diffCell}
-        <div class="actions">${dashLink}${devLink}${stopForm}</div>
+        <div class="actions">${devLink}${stopForm}</div>
       </li>`;
     })
     .join("");
@@ -257,12 +256,8 @@ export async function renderStatusJson(
         state: "ready",
         frontendPort: ready.frontendPort,
         backendPort: ready.backendPort,
-        dashboardPort: ready.dashboardPort,
-        dashboardUrl: ready.dashboardUrl,
         vitePid: ready.vitePid,
         fastifyPid: ready.fastifyPid,
-        socketDir: ready.socketDir,
-        profileDir: ready.profileDir,
         startedAt: handle.startedAt,
         lastActivity: ready.lastActivity,
         idleMs: Date.now() - ready.lastActivity,

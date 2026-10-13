@@ -143,7 +143,7 @@ transition) — guarded by `worktrees.get(name) === handle`. (Moved to
 `router-core.ts` from `router.ts` in Phase B, 2026-07-11, then here in the
 2026-08-28 size split.)
 
-A cold start runs for seconds (spawn → dashboard → `waitForHttp`, up to 30s).
+A cold start runs for seconds (spawn → `waitForHttp`, up to 30s).
 During that window the generation it belongs to can be superseded: a
 `/__router/stop/<name>` unlinks the handle from the map, and a later request may
 register a fresh generation in its place. If the slow start then publishes its
@@ -166,11 +166,11 @@ outrace the guard.
 
 **Correction (2026-07-11, cross-phase review): the failure catch's SCOPE was
 not wide enough.** Only `waitForHttp`'s own `try`/`catch` reached this guarded
-check — a rejection from the dashboard-start spawn or `pidStore.write`, both of
-which run *after* both children are spawned but *before* that `try`, bypassed
-it entirely: neither child got killed, no pidfile cleanup ran, and no terminal
-transition happened, leaking both processes. The fix widens the `try` to cover
-dashboard-start through `waitForHttp` as one region sharing the same catch (a
+check — a rejection from `pidStore.write`, which runs *after* both children
+are spawned but *before* that `try`, bypassed it entirely: neither child got
+killed, no pidfile cleanup ran, and no terminal transition happened, leaking
+both processes. The fix widens the `try` to cover `pidStore.write` through
+`waitForHttp` as one region sharing the same catch (a
 `failurePhase` variable tracks which stage failed, for the captured-error
 page), so every completion path — not just the readiness probes — now reaches
 this guard.
@@ -299,6 +299,6 @@ only visible across all three:
 Deliberate non-goals recorded at close-out: status accuracy for the in-flight
 `stopping` phase (handles are unlinked before the transition, so it's never
 observed on the map); formalizing the proxy-retry body-replay machinery (it
-stays a request-level concern, see its section above); and the name-scoped
-dashboard-socket hazard a superseded self-clean can trip
-(`issues/closed/bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md`).
+stays a request-level concern, see its section above). (A third, the
+name-scoped dashboard-socket hazard a superseded self-clean could trip, went
+away with the per-worktree agent-browser dashboard itself, removed 2026-10-12.)

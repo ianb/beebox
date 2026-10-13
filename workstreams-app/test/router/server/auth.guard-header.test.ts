@@ -93,7 +93,7 @@ test("writeDeny: a /__router/* login redirect still carries the header", () => {
     redirectToLogin: true,
     route: { kind: "control" },
   };
-  writeDeny(req("/__router/dashboard/main"), { res: fakeRes(captured), decision: deny });
+  writeDeny(req("/__router/stop/main"), { res: fakeRes(captured), decision: deny });
   assert.equal(captured.status, 302);
   assert.equal(captured.headers["x-bbx-router-guarded"], "1");
   assert.equal(typeof captured.headers["location"], "string");

@@ -49,9 +49,7 @@ The wrapper detects the worktree from `$PWD`, defaults to box `test1` and port
 
 Each worktree has isolated daemons/profiles under
 `~/.cache/beebox/browse/<worktree>/`, backed by `AGENT_BROWSER_SOCKET_DIR` and
-`AGENT_BROWSER_PROFILE`. Its auto-started browser dashboard URL is in
-`bin/workstreams status` (`.worktrees[<wt>].dashboardUrl`) and the router home
-page's dashboard link.
+`AGENT_BROWSER_PROFILE`.
 
 ## Does it need the dev router?
 

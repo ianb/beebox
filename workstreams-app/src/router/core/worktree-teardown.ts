@@ -1,7 +1,7 @@
 // The worktree-lifecycle operations that do NOT start a generation: activity
 // tracking and the idle timer, source-freshness reporting, and every teardown
-// path (unexpected child exit, explicit/idle stop, dashboard stop, full-router
-// shutdown, clearing a failed record).
+// path (unexpected child exit, explicit/idle stop, full-router shutdown,
+// clearing a failed record).
 //
 // Split out of router-core.ts, which now owns only the map, `ensureRunning`,
 // and the assembly of these pieces into a `RouterCore`. Each function takes the
@@ -53,11 +53,6 @@ export interface ChildPids {
  *  down to a single one while still noticing a merge within seconds. */
 const STALE_CHECK_INTERVAL_MS = 5_000;
 
-export function browseDirsFor(state: CoreState, name: string): { socketDir: string; profileDir: string } {
-  const base = path.join(state.config.browseDir, name);
-  return { socketDir: path.join(base, "socket"), profileDir: path.join(base, "profile") };
-}
-
 /**
  * The secret store a worktree's box reads — its own, beside the browse dirs
  * (`<state>/secrets/<name>.json`), so a test box never touches the
@@ -86,19 +81,6 @@ export function killChildren(state: CoreState, { vitePid, fastifyPid }: ChildPid
     effects.killGroup(vitePid, "SIGKILL");
     effects.killGroup(fastifyPid, "SIGKILL");
   });
-}
-
-// Stop the agent-browser dashboard daemon owning `browseEnv`'s socket dir.
-export async function stopDashboardCmd(state: CoreState, browseEnv: NodeJS.ProcessEnv): Promise<void> {
-  const { effects, config } = state;
-  await effects
-    .spawn("node", {
-      args: [config.agentBrowserBin, "dashboard", "stop"],
-      options: { env: browseEnv, stdio: "ignore", timeout: 5000 },
-    })
-    .catch(() => {
-      /* nothing to stop, fine */
-    });
 }
 
 // Record activity and (re)arm the idle timer. Only a `ready` handle has an
@@ -191,13 +173,7 @@ export function onChildExit(state: CoreState, handle: WorktreeHandle): void {
     reason: "exited",
     vitePid,
     fastifyPid,
-    dashboardPort: ready.dashboardPort,
-    browseEnv: ready.browseEnv,
     killTimer,
-  });
-  stopDashboard(state, handle).catch((err: unknown) => {
-    // Best-effort: the dashboard daemon may already be gone with its worktree.
-    log(`[${name}] dashboard stop after child exit failed: ${errMessage(err)}`);
   });
   effects.pidStore.remove(name, { vitePid, fastifyPid }).catch((err: unknown) => {
     // Best-effort: a concurrent generation may already own (or have removed) the slot.
@@ -240,36 +216,10 @@ export async function stopWorktree(state: CoreState, name: string): Promise<void
     reason: "requested",
     vitePid,
     fastifyPid,
-    dashboardPort: ready.dashboardPort,
-    browseEnv: ready.browseEnv,
     killTimer,
   });
   await effects.pidStore.remove(name, { vitePid, fastifyPid });
-  await stopDashboard(state, handle).catch((err: unknown) => {
-    // Best-effort: the daemon may already be gone; the stop itself has succeeded.
-    state.log(`[${name}] dashboard stop failed: ${errMessage(err)}`);
-  });
   config.onStateChange?.();
-}
-
-// Stop the agent-browser dashboard for a handle in a phase that owns one
-// (`ready` or `stopping`). Other phases carry no dashboard, so this is a no-op.
-export async function stopDashboard(state: CoreState, handle: WorktreeHandle): Promise<void> {
-  const { effects, config, log } = state;
-  const lc = handle.lifecycle;
-  const dashboard =
-    lc.phase === "ready" || lc.phase === "stopping"
-      ? { dashboardPort: lc.dashboardPort, browseEnv: lc.browseEnv }
-      : null;
-  if (!dashboard || !dashboard.dashboardPort || !dashboard.browseEnv) return;
-  try {
-    await effects.spawn("node", {
-      args: [config.agentBrowserBin, "dashboard", "stop"],
-      options: { env: dashboard.browseEnv, stdio: "ignore", timeout: 5000 },
-    });
-  } catch (err) {
-    log(`[${handle.name}] dashboard stop failed: ${errMessage(err)}`);
-  }
 }
 
 export async function stopAllChildren(state: CoreState): Promise<void> {
