@@ -30,6 +30,9 @@ that keep my voice and skip the ones that do not.*
   show deletions and insertions. The boxholder accepts each one.
 - **Each suggestion carries a short reason.** It can also carry alternate
   edits that the boxholder scrolls through.
+- **A batch of edits can have alternates too.** Example: "these changes give
+  a formal style; this other set gives a casual style." It is not clear how
+  to express a set of alternate batches in the tool call.
 - **Suggestions can be stored and attached to a document.** The boxholder
   accepts that stored suggestions become stale when the text changes.
 - **A review can produce many suggestions at once.** The boxholder accepts
@@ -38,9 +41,16 @@ that keep my voice and skip the ones that do not.*
 
 ## Open questions
 
-- **Storage and anchoring.** An inline annotation in the Markdown (as `{%
-  todo %}` did for todos), a sidecar file, or only in the open session. Stale
-  detection is easy for the edit-tool shape: the old text no longer matches.
+- **Storage and culling.** The boxholder's direction: attachments, one file
+  per suggestion at `A_Card.attach/edits/*.json`, each file probably one
+  edit tool call plus an envelope (reason, alternates, author, date). Inline
+  annotation in the Markdown is too noisy, so it is ruled out. Most
+  suggestions have a short life, so they need culling. The envelope marks
+  whether a suggestion is durable (for example, motivated by input from the
+  boxholder) or not. Non-durable suggestions are deleted as soon as their
+  edits no longer apply. Stale detection is easy for the edit-tool shape: the
+  old text no longer matches. Open: what happens to a durable suggestion
+  that goes stale, and what runs the cull (on write to the card, or on read).
 - **The rules.** Where the standing rules for the boxholder's casual input
   live, and where the rules for each destination form (slide, email, card
   body) live. Presumably a box procedure the agent reads, with no code that
