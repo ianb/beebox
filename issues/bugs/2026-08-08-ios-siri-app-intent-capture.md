@@ -55,8 +55,8 @@ repairs registration, but does not prove why Siri failed before `perform()`.
 ## Manual testing
 
 Use the matched iOS build **and a box server containing this implementation**.
-An older server must show Unsupported while keeping local content. This branch
-is not landed or deployed. Record phone OS/build and use synthetic paired boxes
+An older server must show Unsupported while keeping local content. Record
+phone OS/build and use synthetic paired boxes
 A/B. Open Capture to verify saved source bytes and words, not just dialogs.
 Local checks passed: 70 XCTest cases, 152 backend assertions, six Codex guidance
 audits, TypeScript/lint/contract checks and simulator build. Cross-model findings

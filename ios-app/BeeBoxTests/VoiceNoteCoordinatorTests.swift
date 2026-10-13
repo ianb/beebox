@@ -132,8 +132,14 @@ final class VoiceNoteCoordinatorTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: root) }
         let id = coordinator.draft!.id
         try FileManager.default.removeItem(at: root.appendingPathComponent("voice/segment-0.m4a"))
-        do { _ = try await coordinator.exportInterruptedAudio(); XCTFail("Missing audio cannot be exported") }
-        catch {}
+        do {
+            _ = try await coordinator.exportInterruptedAudio()
+            XCTFail("Missing audio cannot be exported")
+        } catch VoiceNoteCoordinator.Failure.storageUnavailable {
+            // Missing completed segments leave no playable duration.
+        } catch {
+            XCTFail("Unexpected export error: \(error)")
+        }
         XCTAssertEqual(coordinator.draft?.id, id)
         XCTAssertEqual(coordinator.phase, .interrupted)
         XCTAssertNil(try store.record(id))
@@ -176,8 +182,14 @@ final class VoiceNoteCoordinatorTests: XCTestCase {
         let originalAudio = root.appendingPathComponent("voice/recording.m4a")
         try writeSilentAAC(at: originalAudio)
         try seedIncompleteCapture(coordinator: coordinator, store: store, box: box, attempts: 1)
-        do { _ = try await coordinator.stopAndSave(boxes: [box]); XCTFail("Incomplete attempted capture must not be reused") }
-        catch {}
+        do {
+            _ = try await coordinator.stopAndSave(boxes: [box])
+            XCTFail("Incomplete attempted capture must not be reused")
+        } catch QuickCaptureStore.StoreError.conflict {
+            // Previously attempted draft identity cannot be reused for a new save.
+        } catch {
+            XCTFail("Unexpected save error: \(error)")
+        }
         XCTAssertEqual(coordinator.draft?.id, id)
         XCTAssertTrue(FileManager.default.fileExists(atPath: originalAudio.path))
         XCTAssertEqual(try store.record(id)?.status.state, "interrupted-draft")

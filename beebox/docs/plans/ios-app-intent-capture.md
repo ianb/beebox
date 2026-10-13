@@ -1,6 +1,6 @@
 ---
 title: "iOS quick capture: Siri, voice, and sharing with context"
-status: active
+status: partial
 workstream: siri-app-intents
 issues:
   - ../../../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md
@@ -61,7 +61,7 @@ Priya shares a screenshot, sees default box A, and dictates “Find the problem 
 
 The smallest Siri bug fix is registration plus correct dialogs and a device check. It would still omit actual audio, screenshot instructions, stable capture destination, and explicit later context. This plan implements those requested behaviors together.
 
-**BIG CHANGE — proposed, not yet approved for implementation.** Estimate additions plus deletions: 1,500–2,200 Swift source lines (shared store, delivery, recording, controls, share/detail UI), 800–1,200 backend/shared/schema lines, 700–1,000 test lines. Authored documentation: 450–650 lines including plan, review, mobile contract, and guides. Generated output: none expected; project-file target entries are counted as source. Total exceeds 2,000 lines. The next implementation go-ahead must explicitly cover this scale, or the human can choose a smaller complete scenario set. These are estimates, not permission to grow scope.
+**BIG CHANGE — approved for implementation on 2026-10-12.** The estimate was 1,500–2,200 Swift source lines (shared store, delivery, recording, controls, share/detail UI), 800–1,200 backend/shared/schema lines, and 700–1,000 test lines, plus 450–650 lines of authored documentation. The implementation grew beyond the estimate to roughly 6,000 added/deleted lines including tests and documentation, within the approved behavior. Recovery and protection edge cases account for the additional work.
 
 Commit-sized tracks below are dependency order, not partial ship boundaries. The media durability and phone lifecycle work drive the size. No SiriKit extension or iOS 27 toolchain change is included.
 
@@ -205,25 +205,25 @@ None currently. Contract and source fields and single-request transport are spec
 
 ## Failure modes
 
-All new handling/tests below are proposed, not already implemented. No unresolved silent failure is accepted.
+Implementation and automated coverage are complete for the local/server paths below. Physical-device cases remain acceptance gates; test evidence is also recorded in the execution record.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Siri transcribes trigger but selects no intent | Physical failure known; repeat exact phrases | Registration repair plus documented named Shortcut fallback planned | No Bee Box success; phone gate |
-| Browsed box B changes capture from default A | New resolver XCTest planned | Independent explicit default planned | A named in acknowledgment |
-| Target removed or protected | Existing text guard; new cross-surface cases planned | No fallback; stop retry, preserve already accepted local data | Actionable refusal/repair |
-| One image fails to copy/upload | Composite store/API doctests planned | Refuse acceptance of incomplete manifest; keep draft | Visible pending/error, no sent claim |
-| Two processes update one pending item | Native store concurrency XCTest planned | Coordinated immutable source and status update | Conflict visible; no overwrite |
-| Server seals, response is lost | Accept replay doctest planned | Stable ID + digest receipt replay | Saved-on-phone until receipt recovered |
-| Server restarts after seal before source commit | Worker resume doctest planned | Sealed ledger resumes; raw bytes owned until commit | Accepted, preparing or failed |
-| Router/chat unavailable after acceptance | Existing routing tests; new receipt test planned | Saved source independent of dispatch, visible needs-choice/pending | Saved versus delivered distinct |
-| Mic activation fails or Live Activity disabled | Reducer tests plus phone | No recording claim; explicit foreground recovery | Refusal and cause |
-| Recording interrupted/terminated | Recovery XCTest plus phone | Playable partial draft and explicit Interrupted | No complete transcript claim |
-| Transcription fails or is empty | New worker doctest | Audio retained; retry; no invented input | Saved audio, transcript unavailable |
-| Retry after dedup window | New coordinator doctest | Bounded automatic retry, terminal Needs retry, reconcile before replay | Manual recovery, preserve source |
-| Context races unresolved parent route | Context/order doctest planned | Wait same choice; immutable separate message IDs | Pending context visible |
-| Source moved/deleted | Move/delete context doctest planned | Resolve stable ID; explicit Gone if deleted | No newest-item fallback |
-| Image/clipping contains instructions | Prompt fixture + knowledge audit planned | Material framing separate from authored input | No fabricated task |
+| Siri transcribes trigger but selects no intent | Physical phrase test remains open; XCTest cannot verify Siri matching | Registration at launch and pairing changes; documented named Shortcut fallback | No Bee Box success claim; phone gate |
+| Browsed box B changes capture from default A | `CaptureDestinationTests` passed | Independent explicit capture default | A named in acknowledgment |
+| Target removed or protected | Destination and capture-store tests passed; physical protected-box cases remain | No fallback; stop retry, preserve already accepted local data | Actionable refusal/repair |
+| One image fails to copy/upload | `QuickCaptureStoreTests` and acceptance doctest passed | Refuse acceptance of incomplete manifest; keep draft | Visible pending/error, no sent claim |
+| Two processes update one pending item | `QuickCaptureStoreTests` concurrency cases passed | Coordinated immutable source and status update | Conflict visible; no overwrite |
+| Server seals, response is lost | Acceptance/replay doctest passed | Stable ID + digest receipt replay | Saved-on-phone until receipt recovered |
+| Server restarts after seal before source commit | Quick-capture worker doctests passed | Sealed ledger resumes; raw bytes owned until commit | Accepted, preparing or failed |
+| Router/chat unavailable after acceptance | Dispatch/context doctests and existing routing tests passed | Saved source independent of dispatch, visible needs-choice/pending | Saved versus delivered distinct |
+| Mic activation fails or Live Activity disabled | Coordinator XCTest passed; phone permission/control checks remain | No recording claim; explicit foreground recovery | Refusal and cause |
+| Recording interrupted/terminated | Recovery XCTest passed; phone interruption checks remain | Playable partial draft and explicit Interrupted | No complete transcript claim |
+| Transcription fails or is empty | Worker dispatch doctest passed | Audio retained; no invented input; bounded retry | Saved audio, transcript unavailable |
+| Retry after dedup window | Acceptance/recovery tests passed | Bounded automatic retry, terminal Needs retry, reconcile before replay | Manual recovery, preserve source |
+| Context races unresolved parent route | Context/order doctests passed | Wait same choice; immutable separate message IDs | Pending context visible |
+| Source moved/deleted | Context/delete doctests passed | Resolve stable ID; explicit Gone if deleted | No newest-item fallback |
+| Image/clipping contains instructions | Material-framing fixture and six Codex guidance audits passed | Material framing separate from authored input | No fabricated task |
 | Force quit cancels background transfer | Physical phone gate | Recover on reopening; no always-running claim | Pending local item remains visible |
 
 ## Agent-flow / user-flow edge cases
@@ -247,9 +247,9 @@ All new handling/tests below are proposed, not already implemented. No unresolve
 - Cross-box routing after acceptance, automatic default switching, global latest-item guessing: violate predictable ownership.
 - New notification policy, triage classifier, agent trust ladder, or redesign of all quick-chat UI: reuse existing owners.
 
-## Open design questions
+## Remaining acceptance gates
 
-The plan makes proposed choices, pending human acceptance of the revised scope: dedicated capture default, retained memo source, automatic routing of human text versus save-only material, and the stated BIG CHANGE size. No first implementation chunk depends on a missing technique decision.
+The boxholder approved the dedicated capture default, retained memo source, automatic routing of human text versus save-only material, and the BIG CHANGE scope. Implementation and review are complete; the physical-device outcomes below remain unverified.
 
 Hardware-dependent outcomes remain acceptance gates, not settled API claims: Siri phrase selection, microphone handoff and unlock, cold recording start, control execution, dictation in the share sheet. If two-step Siri or foreground recording fallback fails on the target phone, stop and revise that adapter; do not declare the product done via tapping Shortcuts. One-utterance support is later, not promised.
 
@@ -305,4 +305,4 @@ Local verification: integrated simulator build passed without diagnostics; selec
 
 Removed-pairing recovery exposes retained phone copies and interrupted audio for explicit inspection/export without reassigning their destination. Protected rows mask words before unlock; protection upgrades survive pairing removal. Unreadable recording manifests never authorize overwriting the retained draft. Simulator tests verify protection policy and setter requests, not effective locked-device encryption.
 
-The implementation grew beyond the estimate to roughly 6,000 added/deleted lines including tests and documentation, within the approved BIG CHANGE behavior. Recovery and protection edge cases account for the additional work. The security report amendment remains an uncommitted DRAFT under its human-review rule. Cross-model plan and implementation reviews are recorded in sibling artifacts. The workstream remains active pending matched-build physical-phone acceptance; no landing/deployment was authorized.
+The security report amendment was reviewed by Ian Bicking and committed as `931ebba0f`. Cross-model plan and implementation reviews are recorded in sibling artifacts. The finish request authorizes landing; the workstream remains partial pending matched-build physical-phone acceptance.
