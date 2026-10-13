@@ -1,12 +1,32 @@
 ---
 title: "Full-suite red: test/core/capture/resume.doctest.md"
 workstream: siri-app-intents
+resolution: implemented
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-siri-app-intents — the hourly full-suite run on main
 ---
+
+Resolved in `80ee9b015` on 2026-10-12. The new pending session-identity
+observer held a referenced ten-minute interval. The fake backend never
+assigned an identity, so the assertions passed but Node did not exit.
+A local isolated run reproduced the timeout with a reduced TAP budget.
+
+The observer now uses an unreferenced awake timeout. Other timeout callers
+retain their existing default behavior. The resume fixture also shuts down
+its registry and closes its event bus before deleting the box.
+
+Focused verification passed 21 assertions across resume, observer lifecycle,
+and awake-timeout command tests. The observer regression arms the real
+listener in a child without detaching it, then verifies normal process exit.
+It also checks that unrelated assignments are ignored and the matching
+identity is persisted once. Full backend/frontend typecheck and changed-file
+lint passed. Physical iPhone testing is unrelated to this process-lifetime fix.
+
+## Original report
+
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `ee2ec3be`. Bisecting the landings since the last tested
