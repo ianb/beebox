@@ -9,7 +9,7 @@ discovered-in: worktree-jev-triage — auditing destination todo guidance
 priority: normal
 ---
 
-Resolved on 2026-10-12: the audit runner invokes Claude and collects its
+Resolved in `cc8aeeac7` on 2026-10-12: the audit runner invokes Claude and collects its
 transcript with a canonical physical working directory. Symbolic-link
 collection and absent-transcript regressions pass. A genuinely missing
 transcript produces a session/path diagnostic and a nonzero CLI exit before
