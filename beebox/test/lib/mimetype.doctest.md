@@ -23,6 +23,16 @@ print(mimetypeToExtension("video/webm"));
 .webm
 ```
 
+## Voice capture formats
+
+```ts
+print(mimetypeToExtension("audio/aac"));
+print(mimetypeToExtension("audio/x-m4a"));
+=>
+.aac
+.m4a
+```
+
 ## Formerly webapp-only formats (pdf, text, json)
 
 ```ts

@@ -8,8 +8,10 @@
 
 const MIMETYPE_EXTENSIONS: Record<string, string> = {
   "audio/webm": ".webm",
+  "audio/aac": ".aac",
   "audio/mp3": ".mp3",
   "audio/mpeg": ".mp3",
+  "audio/x-m4a": ".m4a",
   "audio/wav": ".wav",
   "audio/ogg": ".ogg",
   "audio/m4a": ".m4a",

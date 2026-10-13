@@ -3,12 +3,13 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { quickCaptureDeclarationSchema } from "../../shared/quick-capture.js";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
+import { mimetypeToExtension } from "../../lib/mimetype.js";
 import { errorMessage, errnoCode } from "../../shared/error-guards.js";
 import { transcribeAudio } from "../transcription/dispatch/core.js";
 import { readQuickChatRecord } from "../chat/routing/quick-chat-store.js";
 import { deliveryExpired, type QuickChatRecord } from "../chat/routing/quick-chat-record.js";
 import { submitQuickChat, submitQuickChatFollowup, type QuickChatContext } from "../chat/routing/quick-chat-submit/submit.js";
-import { audioExtension, materializeCaptureSource, writeSourceTranscription, reconcileCaptureSource } from "./source.js";
+import { materializeCaptureSource, writeSourceTranscription, reconcileCaptureSource } from "./source.js";
 import { captureDirectory, listCaptures, readCapture, withCaptureLock, writeCapture, requireCaptureOwner, QuickCaptureError, type CaptureRecord } from "./store.js";
 
 const RETRY_HORIZON_MS = 7 * 24 * 60 * 60 * 1000;
@@ -78,7 +79,7 @@ async function prepareVoice(ctx: CaptureWorkerContext, record: CaptureRecord): P
   try {
     const result = await (ctx.transcribe ?? transcribeAudio)({
       boxRoot: ctx.boxRoot, audioBuffer: await fs.readFile(path.join(captureDirectory(ctx.boxRoot, record.id), "material")),
-      filename: `recording.${audioExtension(material.mimeType)}`,
+      filename: `recording${mimetypeToExtension(material.mimeType)}`,
     });
     if (result.text.trim() === "") throw new QuickCaptureError({ reason: "empty-transcript" });
     delete record.transcriptionTerminal;
