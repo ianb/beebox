@@ -9,12 +9,13 @@ import { createImageTemplate } from "../../schemas/image/schema.js";
 import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
+import { mimetypeToExtension } from "../../lib/mimetype.js";
 import { isRecord } from "../../shared/is-record.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { resolveContainedRef } from "../ref-exists.js";
 import { realpathContained } from "../../lib/box-containment.js";
 import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.js";
-import { quickCaptureDeclarationSchema, type QuickCaptureMaterial } from "../../shared/quick-capture.js";
+import { quickCaptureDeclarationSchema } from "../../shared/quick-capture.js";
 import { captureDirectory, readCapture, withCaptureLock, writeCapture, QuickCaptureError, type CaptureRecord } from "./store.js";
 
 async function resolveSource(boxRoot: string, ref: string): Promise<string> {
@@ -93,7 +94,7 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
     if (material?.kind === "clipping") fields["context"] = { text: material.text, ...(material.title === undefined ? {} : { title: material.title }) };
     if (material?.kind === "image") {
       await fs.mkdir(attachAbs, { recursive: true });
-      const ext = imageExtension(material.mimeType);
+      const ext = mimetypeToExtension(material.mimeType).slice(1);
       const imageAttachRel = `${attachRel}/image.attach`;
       await fs.mkdir(path.join(boxRoot, imageAttachRel), { recursive: true });
       await fs.copyFile(path.join(captureDirectory(boxRoot, record.id), "material"), path.join(boxRoot, imageAttachRel, `image.${ext}`));
@@ -105,7 +106,7 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
     }
     if (material?.kind === "audio") {
       await fs.mkdir(attachAbs, { recursive: true });
-      const name = `recording.${audioExtension(material.mimeType)}`;
+      const name = `recording${mimetypeToExtension(material.mimeType)}`;
       await fs.copyFile(path.join(captureDirectory(boxRoot, record.id), "material"), path.join(attachAbs, name));
       paths.push(`${attachRel}/${name}`);
       if (declaration.recordingInterrupted === true) body += `${body === "" ? "" : "\n\n"}## Recording status\nThis recording was interrupted and may end early.\n` ;
@@ -138,23 +139,4 @@ export async function writeSourceTranscription(args: { boxRoot: string; sourceRe
     await writeFileAtomic(abs, { content: serializeCardText({ schema: parsed.schema, fields: parsed.fields }) });
     await stageAndCommitPaths(args.boxRoot, { paths: [args.sourceRef], message: "Record quick capture transcription" });
   });
-}
-function imageExtension(mime: Extract<QuickCaptureMaterial, { kind: "image" }>["mimeType"]): string {
-  switch (mime) {
-    case "image/png": return "png";
-    case "image/jpeg": return "jpg";
-    case "image/webp": return "webp";
-    case "image/heic":
-    case "image/heif": return "heic";
-  }
-}
-export function audioExtension(mime: Extract<QuickCaptureMaterial, { kind: "audio" }>["mimeType"]): string {
-  switch (mime) {
-    case "audio/wav": return "wav";
-    case "audio/webm": return "webm";
-    case "audio/mpeg": return "mp3";
-    case "audio/aac": return "aac";
-    case "audio/mp4":
-    case "audio/x-m4a": return "m4a";
-  }
 }
