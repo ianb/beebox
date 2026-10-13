@@ -1,6 +1,6 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: eab6a0cc55c0ff9078ea83cbb725571c797c7f6a
+generated-at-rev: 89c8a302abf1923ef8dc5bbc8578946e4aa01553
 date: 2026-10-12
 model: gpt-6-sol
 reviewed-by: Ian Bicking
@@ -13,7 +13,7 @@ multipart capture endpoint, receipt/recovery procedures, retained media and
 native shared-container storage, and their use of existing transcription and
 routing providers. This draft reflects the siri-app-intents implementation;
 the full-inventory baseline remains `c8428cca5`; the provenance header identifies
-the current code for this scoped draft. It does not re-audit
+the current code for this scoped amendment. It does not re-audit
 unrelated changes, the surface map, or the private security tier.
 
 **Scoped amendment (2026-10-06, Codex telemetry), reviewed by Ian:** The
@@ -454,7 +454,7 @@ gathered here so the lifecycle reads as one story.
 | What | State | Severity | Reachability | Notes |
 |---|---|---|---|---|
 | App-group capture source, draft AAC segments and multipart bodies (`ios-app/BeeBox/Storage/QuickCaptureStore.swift`, `Services/VoiceNoteCoordinator.swift`, `Services/QuickCaptureUploadCoordinator.swift`) | mitigated | medium | local | Immutable local acceptance keeps box identity and bytes without credentials in the manifest. Protected-box files request complete protection; other files request protection until first authentication. Local protection upgrades survive pairing removal, and recovery rows hide protected words before unlock. Simulator checks verify policy requests; effective locked-device Data Protection remains a phone gate. Siri/App Intents refuse protected boxes even when the phone is unlocked; explicit main/share UI uses device authentication. Confirmed receipt removes the temporary multipart copy; original media remains for local playback until explicit deletion. Removed-pairing copies and interrupted drafts can be exported only by explicit foreground action through the OS share/file UI, behind their original protection gate; there is no automatic reassignment or new provider destination. |
-| Retained source and acceptance ledger (`src/core/quick-capture/store.ts`, `source.ts`, `worker.ts`) | mitigated | medium | authed | Material is retained in a Git-backed source outside automatic inbox intake. Receipt ownership and stable IDs survive recovery; supplied words and derived audio transcript are distinct. Save-only images/URLs/clippings do not start chat work. Source deletion removes active bytes and prevents replay; it does not erase prior Git history or already delivered messages. |
+| Retained source and acceptance ledger (`src/core/quick-capture/store.ts`, `source.ts`, `worker.ts`) | mitigated | medium | authed | Material is retained in a Git-backed source outside automatic inbox intake. Receipt ownership and stable IDs survive recovery; source refs pass shared namespace containment and real-path checks before reads or transcription updates. Supplied words and derived audio transcript are distinct. Save-only images/URLs/clippings do not start chat work. Source deletion removes active bytes and prevents replay; it does not erase prior Git history or already delivered messages. |
 | Capture transcription and routing egress (`src/core/quick-capture/worker.ts`, `src/core/chat/routing/quick-chat-submit/submit.ts`) | mitigated | medium | authed | User-initiated audio is automatically sent to the box's configured transcription backend, then nonempty transcript or supplied words use existing Jev routing and the selected chat engine. Providers and per-box grants remain those in §3; this is a new trigger, not a new destination. Empty audio transcripts retain audio without automatic repeated paid transcription. Shared material is evidence, not authority; framing and prompt guidance do not contain prompt injection (§7a). |
 
 ## 7. Cross-cutting threats
