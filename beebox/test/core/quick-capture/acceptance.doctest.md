@@ -6,7 +6,7 @@ owner scoped, and accepted only with all declared bytes.
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
-import { readCapture, captureDirectory } from "../../../src/core/quick-capture/store.js";
+import { readCapture, captureDirectory, writeCapture, QuickCaptureError } from "../../../src/core/quick-capture/store.js";
 import { reconcileCaptureSource } from "../../../src/core/quick-capture/source.js";
 import { processCapture } from "../../../src/core/quick-capture/worker.js";
 import { readFile, writeFile, rename, mkdir, rm } from "node:fs/promises";
@@ -85,6 +85,11 @@ await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:saved});
 const first = await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id);
 first.state
 => saved
+
+await writeCapture(box.root,{...first,sourceRef:"../../etc/passwd"});
+await reconcileCaptureSource(box.root,id)
+=> throws QuickCaptureError: The saved source reference is invalid.
+await writeCapture(box.root,first);
 
 await mkdir(box.path("_content/filed"),{recursive:true});
 await rename(box.path(first.sourceRef),box.path("_content/filed/source.memo.card"));

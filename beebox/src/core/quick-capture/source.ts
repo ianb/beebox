@@ -11,15 +11,18 @@ import { withCardLock } from "../../lib/card-lock.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { isRecord } from "../../shared/is-record.js";
 import { errnoCode } from "../../shared/error-guards.js";
-import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
+import { resolveContainedRef } from "../ref-exists.js";
+import { realpathContained } from "../../lib/box-containment.js";
 import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.js";
 import { quickCaptureDeclarationSchema, type QuickCaptureMaterial } from "../../shared/quick-capture.js";
 import { captureDirectory, readCapture, withCaptureLock, writeCapture, QuickCaptureError, type CaptureRecord } from "./store.js";
 
-function resolveSource(boxRoot: string, ref: string): string {
-  const resolved = resolveRefPath({ fromPath: undefined, ref: parseRef(ref).path, kind: "card" });
-  if (resolved === null) throw new QuickCaptureError({ reason: "invalid-source-ref" });
-  return path.join(boxRoot, resolved);
+async function resolveSource(boxRoot: string, ref: string): Promise<string> {
+  const contained = resolveContainedRef({ boxRoot, ref, fromPath: "" });
+  if (contained === null) throw new QuickCaptureError({ reason: "invalid-source-ref" });
+  const safe = await realpathContained(boxRoot, contained);
+  if (safe === null) throw new QuickCaptureError({ reason: "invalid-source-ref" });
+  return path.join(boxRoot, safe);
 }
 /** Only memo cards owned by this coordinator participate in identity lookup. */
 export async function findCaptureSource(boxRoot: string, record: CaptureRecord): Promise<string | null> {
@@ -27,7 +30,7 @@ export async function findCaptureSource(boxRoot: string, record: CaptureRecord):
   const candidates = record.sourceRef === undefined ? [expected] : [record.sourceRef, expected];
   const schemas = await createCardSchemaMap(boxRoot);
   for (const ref of candidates) {
-    const abs = resolveSource(boxRoot, ref);
+    const abs = await resolveSource(boxRoot, ref);
     let content: string;
     try { content = await fs.readFile(abs, "utf8"); }
     catch (error) { if (errnoCode(error) === "ENOENT") continue; throw error; }
@@ -74,7 +77,7 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
     return existing;
   }
   const rel = existing ?? `_content/captures/${record.id}.memo.card`;
-  const abs = resolveSource(boxRoot, rel);
+  const abs = await resolveSource(boxRoot, rel);
   const attachRel = rel.replace(/\.memo\.card$/, ".attach");
   const attachAbs = path.join(boxRoot, attachRel);
   const paths = [rel];
@@ -121,7 +124,7 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
   return rel;
 }
 export async function writeSourceTranscription(args: { boxRoot: string; sourceRef: string; text?: string; language?: string; attemptedAt: string; error?: string; permanent?: boolean }): Promise<void> {
-  const abs = resolveSource(args.boxRoot, args.sourceRef);
+  const abs = await resolveSource(args.boxRoot, args.sourceRef);
   await withCardLock(abs, async () => {
     const parsed = parseCardText(await fs.readFile(abs, "utf8"), { source: abs, schemas: await createCardSchemaMap(args.boxRoot) });
     if (args.text !== undefined) {

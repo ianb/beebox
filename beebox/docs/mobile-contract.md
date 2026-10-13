@@ -1388,6 +1388,9 @@ tombstone has no source/capturedAt payload; other views retain those fields.
 outside automatic intake inbox. Optional memo `share-id` is the stable source
 identity; existing memo context carries URL/clipping evidence. File media uses
 existing image/audio handling. Source materialization/commit precedes dispatch.
+Stored source refs are resolved through the shared containment helper and checked
+against the box's real path before source reads or transcription updates; an
+escaping ref fails closed.
 Material without authored input is saved without inventing an agent task.
 Voice audio persists before asynchronous transcription; empty/failed transcript
 retains playable audio and an explicit retry state. An empty transcript has no
