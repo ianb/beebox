@@ -143,7 +143,7 @@ transition) — guarded by `worktrees.get(name) === handle`. (Moved to
 `router-core.ts` from `router.ts` in Phase B, 2026-07-11, then here in the
 2026-08-28 size split.)
 
-A cold start runs for seconds (spawn → `waitForHttp`, up to 30s).
+A cold start runs for seconds (spawn → `waitForHttp`, up to `READY_BUDGET_MS`, 180s).
 During that window the generation it belongs to can be superseded: a
 `/__router/stop/<name>` unlinks the handle from the map, and a later request may
 register a fresh generation in its place. If the slow start then publishes its

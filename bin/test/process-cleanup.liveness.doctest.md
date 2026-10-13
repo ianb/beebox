@@ -125,6 +125,18 @@ log.includes(`reclaim agent-browser pid ${deadDaemon} (dead-wt, no live session)
 => true
 ```
 
+A `dashboard.pid` vouches for nothing. The router's per-worktree dashboard
+daemon was removed, so a daemon that file still names is a leftover from an
+older router, reaped even in a worktree whose session is live.
+
+```ts continue
+const leftoverDashboard = await browserFor("claude-wt");
+await writeFile(join(browseRoot, "claude-wt", "socket/dashboard.pid"), `${leftoverDashboard}\n`);
+await sweep();
+JSON.stringify({ leftoverDashboard: alive(leftoverDashboard), claudeCurrent: alive(claudeCurrent) })
+=> {"leftoverDashboard":false,"claudeCurrent":true}
+```
+
 Once that session exits, its daemon is an orphan like any other.
 
 ```ts

@@ -159,7 +159,10 @@ async function currentDaemonPids(worktree: string): Promise<Set<number>> {
   }
   await Promise.all(
     entries
-      .filter((f) => f.endsWith(".pid"))
+      // `dashboard.pid` was written by the router's per-worktree agent-browser
+      // dashboard, removed 2026-10-12. Nothing starts one now, so a daemon it
+      // names is a leftover from an older router and must not be vouched for.
+      .filter((f) => f.endsWith(".pid") && f !== "dashboard.pid")
       .map(async (f) => {
         try {
           const pid = Number((await fs.readFile(path.join(sockDir, f), "utf8")).trim());
