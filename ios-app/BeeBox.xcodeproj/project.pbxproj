@@ -108,6 +108,28 @@
 		B0C500162F00000100000002 /* BoxScreenStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500162F00000100000001 /* BoxScreenStoreTests.swift */; };
 		B0C500122F00000100000002 /* QuickChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500122F00000100000001 /* QuickChatAPITests.swift */; };
 		B0C500022F00000100000002 /* RootSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500022F00000100000001 /* RootSurfaceTests.swift */; };
+		C4331E176A00CFF16ADC7BA4 /* VoiceNoteActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF4E9D07B219D273E629A1 /* VoiceNoteActivityAttributes.swift */; };
+		C428879F89E20A2A203B18AE /* VoiceNoteActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AF4E9D07B219D273E629A1 /* VoiceNoteActivityAttributes.swift */; };
+		C43C81DB35616C02BAE9C693 /* CaptureDestinationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43C6D1AA7DBA571D9671605 /* CaptureDestinationStore.swift */; };
+		C429CF906F295C78110DEAE1 /* CaptureDestinationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43C6D1AA7DBA571D9671605 /* CaptureDestinationStore.swift */; };
+		C41666D23A3AE5DFEC3C317A /* QuickCaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BA5A04D2507311C2280E86 /* QuickCaptureStore.swift */; };
+		C4C34FCA9F5F3D6A403F0FEC /* QuickCaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BA5A04D2507311C2280E86 /* QuickCaptureStore.swift */; };
+		C49DCDBDE899F03E1800CD25 /* QuickCaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C3A42552A620FF76110EEC /* QuickCaptureAPI.swift */; };
+		C4723FB257A703242087ED35 /* QuickCaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C3A42552A620FF76110EEC /* QuickCaptureAPI.swift */; };
+		C4E3F92CA02936DC43A99923 /* QuickCaptureUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DB5CE6C4F199DE84DD438A /* QuickCaptureUploadCoordinator.swift */; };
+		C4958279F291D9130ABCC123 /* QuickCaptureUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DB5CE6C4F199DE84DD438A /* QuickCaptureUploadCoordinator.swift */; };
+		C47746C0C7B6A97F75951778 /* VoiceNoteCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CEB26A5066346621FA0F8B /* VoiceNoteCoordinator.swift */; };
+		C4281C74C8E9ADBB9B050373 /* QuickCaptureURLInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46491603A784BA39775A0DF /* QuickCaptureURLInbox.swift */; };
+		C44B71DF950EE81AB8CF7193 /* QuickCaptureViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AC1F34A70875749D051B7C /* QuickCaptureViews.swift */; };
+		C4DE618902672E287F7978B6 /* VoiceNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BA8720247CA738CA52DCEC /* VoiceNoteView.swift */; };
+		C471E620097631C3E1032E53 /* VoiceNoteIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49C18409AAE4752571B159C /* VoiceNoteIntents.swift */; };
+		C42A6BD5BE9217740766A27D /* QuickCaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A4074CD7C13AD6A9597820 /* QuickCaptureStoreTests.swift */; };
+		C428AAD4030C5B7408730586 /* CaptureDestinationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47F5E79C404B71BEB3EC0DB /* CaptureDestinationTests.swift */; };
+		C4403927037FD2442096B582 /* VoiceNoteCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C471C14FA18B6EEF29A2DD6C /* VoiceNoteCoordinatorTests.swift */; };
+		C44CABD9EE9A859242DEC47D /* QuickChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C500102F00000100000001 /* QuickChatView.swift */; };
+		C4D12871DDAB07BD753308C9 /* BoxRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000012C3C000100000001 /* BoxRequest.swift */; };
+		C48468E556191E0C86B5A2DB /* BeeBoxControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45483E955389DDC242BA267; };
+		C4A39068F637DE770285A41A /* BeeBoxControls.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C441F3223F31C2796FE1A30E; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -125,6 +147,7 @@
 			remoteGlobalIDString = E2A000302D7B000100000001;
 			remoteInfo = BeeBoxShareExtension;
 		};
+		C43F19E977FE6399992DCB28 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = 5A1000702C3C000100000001; proxyType = 1; remoteGlobalIDString = C44A33CE8067C626636E3DE2; remoteInfo = BeeBoxControls; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -134,6 +157,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				C4A39068F637DE770285A41A /* BeeBoxControls.appex in Embed Foundation Extensions */,
 				E2A000012D7B000100000001 /* BeeBoxShareExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -245,6 +269,23 @@
 		B0C500162F00000100000001 /* BoxScreenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxScreenStoreTests.swift; sourceTree = "<group>"; };
 		B0C500122F00000100000001 /* QuickChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatAPITests.swift; sourceTree = "<group>"; };
 		B0C500022F00000100000001 /* RootSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSurfaceTests.swift; sourceTree = "<group>"; };
+		C4AF4E9D07B219D273E629A1 /* VoiceNoteActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNoteActivityAttributes.swift; sourceTree = "<group>"; };
+		C43C6D1AA7DBA571D9671605 /* CaptureDestinationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDestinationStore.swift; sourceTree = "<group>"; };
+		C4BA5A04D2507311C2280E86 /* QuickCaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCaptureStore.swift; sourceTree = "<group>"; };
+		C4C3A42552A620FF76110EEC /* QuickCaptureAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCaptureAPI.swift; sourceTree = "<group>"; };
+		C4DB5CE6C4F199DE84DD438A /* QuickCaptureUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCaptureUploadCoordinator.swift; sourceTree = "<group>"; };
+		C4CEB26A5066346621FA0F8B /* VoiceNoteCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNoteCoordinator.swift; sourceTree = "<group>"; };
+		C46491603A784BA39775A0DF /* QuickCaptureURLInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCaptureURLInbox.swift; sourceTree = "<group>"; };
+		C4AC1F34A70875749D051B7C /* QuickCaptureViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCaptureViews.swift; sourceTree = "<group>"; };
+		C4BA8720247CA738CA52DCEC /* VoiceNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNoteView.swift; sourceTree = "<group>"; };
+		C49C18409AAE4752571B159C /* VoiceNoteIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNoteIntents.swift; sourceTree = "<group>"; };
+		C4A4074CD7C13AD6A9597820 /* QuickCaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCaptureStoreTests.swift; sourceTree = "<group>"; };
+		C47F5E79C404B71BEB3EC0DB /* CaptureDestinationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDestinationTests.swift; sourceTree = "<group>"; };
+		C471C14FA18B6EEF29A2DD6C /* VoiceNoteCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNoteCoordinatorTests.swift; sourceTree = "<group>"; };
+		C45483E955389DDC242BA267 /* BeeBoxControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeeBoxControls.swift; sourceTree = "<group>"; };
+		C4282BC2FB01E48E30D3E894 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C4FD31EBADC0B0727077CFCE /* BeeBoxControls.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeeBoxControls.entitlements; sourceTree = "<group>"; };
+		C441F3223F31C2796FE1A30E /* BeeBoxControls.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BeeBoxControls.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -269,12 +310,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C40C7CF789BFA8EFC7735580 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		5A1000302C3C000100000001 = {
 			isa = PBXGroup;
 			children = (
+				C4C39BDAA9540C84AA0C0AA3 /* BeeBoxControls */,
 				5A1000312C3C000100000001 /* BeeBox */,
 				E2A000602D7B000100000001 /* BeeBoxShareExtension */,
 				5A1001122C3C000100000001 /* BeeBoxTests */,
@@ -303,6 +346,7 @@
 		5A1000322C3C000100000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				C441F3223F31C2796FE1A30E /* BeeBoxControls.appex */,
 				5A1000102C3C000100000001 /* BeeBox.app */,
 				5A1001102C3C000100000001 /* BeeBoxTests.xctest */,
 				E2A000102D7B000100000001 /* BeeBoxShareExtension.appex */,
@@ -313,6 +357,7 @@
 		5A1000402C3C000100000001 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				C4AF4E9D07B219D273E629A1 /* VoiceNoteActivityAttributes.swift */,
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				F1A000052E00000100000001 /* NotificationTarget.swift */,
 				B0C500012F00000100000001 /* RootSurface.swift */,
@@ -331,6 +376,8 @@
 		5A1000412C3C000100000001 /* Storage */ = {
 			isa = PBXGroup;
 			children = (
+				C4BA5A04D2507311C2280E86 /* QuickCaptureStore.swift */,
+				C43C6D1AA7DBA571D9671605 /* CaptureDestinationStore.swift */,
 				5A1000132C3C000100000001 /* PairedBoxStore.swift */,
 				5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */,
 				5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */,
@@ -348,6 +395,8 @@
 		5A1000422C3C000100000001 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				C4BA8720247CA738CA52DCEC /* VoiceNoteView.swift */,
+				C4AC1F34A70875749D051B7C /* QuickCaptureViews.swift */,
 				5A1000142C3C000100000001 /* RootView.swift */,
 				B0C500142F00000100000001 /* BoxScreenView.swift */,
 				5A1000152C3C000100000001 /* PairBoxView.swift */,
@@ -368,6 +417,10 @@
 		5A1000432C3C000100000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				C46491603A784BA39775A0DF /* QuickCaptureURLInbox.swift */,
+				C4CEB26A5066346621FA0F8B /* VoiceNoteCoordinator.swift */,
+				C4DB5CE6C4F199DE84DD438A /* QuickCaptureUploadCoordinator.swift */,
+				C4C3A42552A620FF76110EEC /* QuickCaptureAPI.swift */,
 				C83000022C3C000100000001 /* BoxLockManager.swift */,
 				C9B000022D8A000100000001 /* BackgroundExecutionHold.swift */,
 				5A1000192C3C000100000001 /* ChatAPI.swift */,
@@ -398,6 +451,7 @@
 		FA1100022F00000100000001 /* Intents */ = {
 			isa = PBXGroup;
 			children = (
+				C49C18409AAE4752571B159C /* VoiceNoteIntents.swift */,
 				FA1100012F00000100000001 /* CaptureThoughtIntent.swift */,
 			);
 			path = Intents;
@@ -406,6 +460,9 @@
 		5A1001122C3C000100000001 /* BeeBoxTests */ = {
 			isa = PBXGroup;
 			children = (
+				C471C14FA18B6EEF29A2DD6C /* VoiceNoteCoordinatorTests.swift */,
+				C47F5E79C404B71BEB3EC0DB /* CaptureDestinationTests.swift */,
+				C4A4074CD7C13AD6A9597820 /* QuickCaptureStoreTests.swift */,
 				C83000042C3C000100000001 /* BoxLockTests.swift */,
 				C9B000042D8A000100000001 /* BackgroundExecutionHoldTests.swift */,
 				5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */,
@@ -461,6 +518,7 @@
 			path = BeeBoxShareExtension;
 			sourceTree = "<group>";
 		};
+		C4C39BDAA9540C84AA0C0AA3 /* BeeBoxControls */ = {isa = PBXGroup; children = (C45483E955389DDC242BA267, C4282BC2FB01E48E30D3E894, C4FD31EBADC0B0727077CFCE, ); path = BeeBoxControls; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -477,6 +535,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				C420ED2D8E851E1E76F6C302 /* PBXTargetDependency */,
 				E2A000212D7B000100000001 /* PBXTargetDependency */,
 			);
 			name = BeeBox;
@@ -519,6 +578,7 @@
 			productReference = E2A000102D7B000100000001 /* BeeBoxShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C44A33CE8067C626636E3DE2 /* BeeBoxControls */ = {isa = PBXNativeTarget; buildConfigurationList = C4E8B3239E2623BA01FC826E; buildPhases = (C4F74E86680F67E61E22AD18, C40C7CF789BFA8EFC7735580, C49C42FFFC2E57C81406E460, ); buildRules = (); dependencies = (); name = BeeBoxControls; productName = BeeBoxControls; productReference = C441F3223F31C2796FE1A30E; productType = "com.apple.product-type.app-extension"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -554,6 +614,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				C44A33CE8067C626636E3DE2 /* BeeBoxControls */,
 				5A1000502C3C000100000001 /* BeeBox */,
 				5A1001502C3C000100000001 /* BeeBoxTests */,
 				E2A000302D7B000100000001 /* BeeBoxShareExtension */,
@@ -591,6 +652,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C49C42FFFC2E57C81406E460 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
@@ -616,6 +678,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C471E620097631C3E1032E53 /* VoiceNoteIntents.swift in Sources */,
+				C4DE618902672E287F7978B6 /* VoiceNoteView.swift in Sources */,
+				C44B71DF950EE81AB8CF7193 /* QuickCaptureViews.swift in Sources */,
+				C4281C74C8E9ADBB9B050373 /* QuickCaptureURLInbox.swift in Sources */,
+				C47746C0C7B6A97F75951778 /* VoiceNoteCoordinator.swift in Sources */,
+				C4E3F92CA02936DC43A99923 /* QuickCaptureUploadCoordinator.swift in Sources */,
+				C49DCDBDE899F03E1800CD25 /* QuickCaptureAPI.swift in Sources */,
+				C41666D23A3AE5DFEC3C317A /* QuickCaptureStore.swift in Sources */,
+				C43C81DB35616C02BAE9C693 /* CaptureDestinationStore.swift in Sources */,
+				C4331E176A00CFF16ADC7BA4 /* VoiceNoteActivityAttributes.swift in Sources */,
 				5A1000012C3C000100000001 /* BeeBoxApp.swift in Sources */,
 				5A1000022C3C000100000001 /* PairedBox.swift in Sources */,
 				F1A000042E00000100000001 /* NotificationTarget.swift in Sources */,
@@ -684,6 +756,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C4403927037FD2442096B582 /* VoiceNoteCoordinatorTests.swift in Sources */,
+				C428AAD4030C5B7408730586 /* CaptureDestinationTests.swift in Sources */,
+				C42A6BD5BE9217740766A27D /* QuickCaptureStoreTests.swift in Sources */,
 				5A100AC02C3C000100000001 /* AudioSessionRoutingTests.swift in Sources */,
 				5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */,
 				5A1009A32C3C000100000001 /* OnDeviceHqTranscriberTests.swift in Sources */,
@@ -717,6 +792,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C4D12871DDAB07BD753308C9 /* BoxRequest.swift in Sources */,
+				C44CABD9EE9A859242DEC47D /* QuickChatView.swift in Sources */,
+				C4958279F291D9130ABCC123 /* QuickCaptureUploadCoordinator.swift in Sources */,
+				C4723FB257A703242087ED35 /* QuickCaptureAPI.swift in Sources */,
+				C4C34FCA9F5F3D6A403F0FEC /* QuickCaptureStore.swift in Sources */,
+				C429CF906F295C78110DEAE1 /* CaptureDestinationStore.swift in Sources */,
 				E2A000022D7B000100000001 /* ShareViewController.swift in Sources */,
 				E2A000032D7B000100000001 /* ShareExtensionAPI.swift in Sources */,
 				E2A000042D7B000100000001 /* PairedBox.swift in Sources */,
@@ -725,6 +806,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C4F74E86680F67E61E22AD18 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (C48468E556191E0C86B5A2DB, C428879F89E20A2A203B18AE, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -738,6 +820,7 @@
 			target = E2A000302D7B000100000001 /* BeeBoxShareExtension */;
 			targetProxy = E2A000202D7B000100000001 /* PBXContainerItemProxy */;
 		};
+		C420ED2D8E851E1E76F6C302 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = C44A33CE8067C626636E3DE2; targetProxy = C43F19E977FE6399992DCB28; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1025,6 +1108,8 @@
 			};
 			name = Release;
 		};
+		C42E22DD348F58A0AD6D6FD8 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BeeBoxControls/BeeBoxControls.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 44AJ3D25ZD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = BeeBoxControls/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", ); MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = app.beebox.ios.controls; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Debug; };
+		C4890F810094BAA9A0B880D4 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BeeBoxControls/BeeBoxControls.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 44AJ3D25ZD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = BeeBoxControls/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", ); MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = app.beebox.ios.controls; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1064,6 +1149,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		C4E8B3239E2623BA01FC826E /* Build configuration list for PBXNativeTarget BeeBoxControls */ = {isa = XCConfigurationList; buildConfigurations = (C42E22DD348F58A0AD6D6FD8, C4890F810094BAA9A0B880D4, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = 5A1000702C3C000100000001 /* Project object */;

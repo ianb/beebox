@@ -32,6 +32,7 @@ struct BoxScreenView: View {
             ScrollViewReader { proxy in
                 List {
                     refreshNotice
+                    QuickCaptureSection(box: box, boxes: boxes, onOpen: onOpen)
                     needsSection
                     sentSection
                     recentSection

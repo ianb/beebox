@@ -1,147 +1,117 @@
-# Plan Engineering Review — iOS App Intent capture
+# Plan Engineering Review — iOS quick capture
 
-Independent review: Claude Fable, plan review rounds 1–3, 2026-10-09. The reviewer checked the plan against its cited Swift/TypeScript sources and traced a cold Siri invocation plus wrapper delivery. Round 1 identified eight findings; rounds 2–3 verified their fixes. No findings remain.
+Reviewed 2026-10-12 by Codex, with independent **Claude Fable** cross-model review. Target: [revised plan](ios-app-intent-capture.md). This replaces the prior narrow text-repair review; the earlier document remains in Git history. The [product-shape review](ios-app-intent-capture.product-shape.review.md) and [iOS research](../../../research/ios-quick-capture-2026-10-12.md) remain context.
 
 ## What already exists
 
-- The iOS app already has a durable, idempotent quick-chat outbox and a main-app quick-chat client. The plan reuses them and adds origin/source fields.
-- The server already stores quick-chat routing records and emits typed/speech transcript wrappers. The plan adds one external-input wrapper and updates its readers.
-- The outbox is currently restored and drained together by `QuickChatOutbox.load()`. The plan explicitly separates restore from drain and requires one app-lifetime store shared by RootView and the intent.
+Text capture has a durable native quick-chat outbox, but Siri matching failed on the physical phone. Share extension handles URL/text and authenticated protected boxes. Capture and bulk-upload supply media staging/writers and restart recovery, with existing chat-directed processing policies. `share.saveTextual` already provides idempotent box-level save-only URL/text acceptance. Its lack of files and accompanying human words does not make it nonexistent.
 
 ## Ontology (verified against the code's own names)
 
-`QuickChatOutboxEntry`, `QuickChatRecord`, `PairedBox`, and `NativeEmissionV2.Origin` are existing code names. The plan separates quick-chat origin from the composer bridge enum and defines `source` as platform provenance. `<external-input>` is a new human-message wrapper.
+Paired box and chat session are separate destinations. Proposed capture UUID is receipt identity; source memo stores it in an optional `share-id`, consistent with existing external share convention. Existing webpage `capture-id` belongs to Clerk and is not scanned for native capture follow-up. Material role stays in coordinator manifests; source memo reuses context and attach scope. Context event has a separate delivery UUID referring to original capture and box. These coordinator records are proposed, not existing server capabilities.
 
 ## Prior art (external) — verified
 
-- Apple documents App Intents for Siri, Shortcuts, and other system experiences; App Shortcuts provide phrases and parameters: [AppIntent](https://developer.apple.com/documentation/AppIntents/AppIntent), [AppShortcut](https://developer.apple.com/documentation/appintents/appshortcut).
-- Apple documents `AppDependencyManager`/`@Dependency` for intent dependencies and advises early registration: [Creating your first app intent](https://developer.apple.com/documentation/appintents/creating-your-first-app-intent?changes=latest_major&language=objc_5).
-- Current Apple documentation deprecates `openAppWhenRun` in favor of `supportedModes`; the plan leaves the deployment-floor availability check to implementation: [openAppWhenRun](https://developer.apple.com/documentation/appintents/appintent/openappwhenrun?changes=_3).
-- The reviewed API references do not establish a reliable caller identity for Siri vs. Shortcuts vs. Action Button. The plan records `apple-app-intents` for this shared entry point.
+The dated research checks Apple primary documentation and installed SDK availability. App Shortcut trigger-plus-prompt is the supported baseline; arbitrary initial-utterance string binding is not. AudioRecordingIntent requires an ongoing Live Activity. Controls are iOS 18+. Cold/locked recording launch, Siri microphone handoff, and share-sheet keyboard dictation remain physical-phone gates. Neither schema-backed one-utterance capture nor always-background recording is promised by this plan.
 
 ## Stated preferences this plan trades against
 
-The plan follows the human's selected quick-chat path instead of the issue's Share Extension send proposal. It rejects `requiresDeviceUnlock` boxes without falling back. It keeps the first slice text-only, reports local persistence separately from server acceptance, and uses a generic external origin with platform source metadata.
+The human wants fast behavior, Siri/voice, predictable boxes, and screenshot-plus-words or follow-up. The revised plan preserves those instead of limiting the work to registration repair. The retained source and shared queue cost more than a text-only fix. The plan declares BIG CHANGE and awaits approval for implementation at that scale. Protected Siri refusal remains distinct from authenticated sharing.
 
 ## Could this be simpler? (verified)
 
-The direct-submit App Intent is the smallest version, but it can lose a thought when networking fails. Reusing the outbox is the smallest approach that keeps a durable local copy and stable retry ID. The source field and reader updates are required to preserve attribution and render the new wrapper as human text.
+A registration fix and named Dictate Text Shortcut would cover some short thoughts, but would omit audio preservation and contextual screenshot capture. A foreground recorder is a credible simpler platform adapter; the chosen plan also exposes native recording tasks/controls with an explicit foreground fallback. Cross-model scope opinions do not authorize deleting desired entry experiences. The server contract was simplified to one file-backed request, and the first share release was reduced to one material item plus words.
 
 ## Failure modes
 
-The first review found a real cold-start data-loss path: an un-restored outbox's `store()` could write its empty in-memory list over earlier entries. The plan now requires an app-lifetime shared owner, restore without drain, targeted submission of the new entry, and a regression test that preserves old queued entries. It also covers locked/missing boxes, persistence failure, timeout ambiguity, server idempotency, routing choice, malformed source, sender identity, and wrapper stripping.
+The important corrected gaps were extension-exit delivery, duplicate intake, offline context loss, wrong shared selection fallback, and false voice framing. Proposed handling and concrete cases are in the plan's Failure modes table. No implementation or device success is claimed. Phone-only acceptance is explicitly separate from local persistence/contract verification.
 
 ## Agent-flow / user-flow edge cases
 
-The review traced a Siri message through `quickChat.submit`, record persistence, sender-attribute injection, transcript output, identity extraction, and rendering. The plan requires the external prompt to preserve quick-chat semantics: the person addressed the box, the box chose the chat, and destination phrases are not requests to the current chat. It also states that no recording exists and the person may hear only Siri's short result.
+A saved screenshot can be inert material. Words supplied later refer to its explicit identity, including offline and after filing. Recorded transcript is derived human input with retained audio, without implying a live conversation. A removed target cannot redirect a pending capture. Inbox discovery is independent of memo status: sources must remain outside inbox to avoid an unintended second agent intake.
 
 ## Findings
 
-### 1. Cold intent could overwrite old queued thoughts
+### Extension delivery depended on a live client sequence
 
-**Location in plan:** Tracks 3, paragraphs “Direction” and “First implementation chunk”; `beebox/docs/plans/ios-app-intent-capture.md:145-151`.
+**Location in plan:** Track 1 acceptance contract and Track 2 delivery.
+**Citation:** Earlier draft proposed declaration, per-item PUT, then a final accept request. `ios-app/BeeBoxShareExtension/ShareViewController.swift:74`: `extensionContext?.completeRequest(returningItems: nil)`.
+**Issue:** A multi-call sequence after extension dismissal needed client completion/relaunch orchestration that the plan had not specified.
+**Why it matters:** Saved-on-phone could become a share that waits indefinitely for opening the main app.
+**Suggested action/adjudication:** **Accepted and corrected:** one persisted multipart body, one background upload scheduled before dismissal, one server complete-set seal. Missing response recovers the receipt. The reviewer's categorical claim that multi-request delivery is impossible is broader than the evidence; the smaller contract removes the dependency anyway.
 
-**Citation:** “Split the outbox's restore-only operation from its launch-drain operation.”
+### Source memos could trigger a second intake
 
-**Issue:** `QuickChatOutbox.load()` both restores and attempts every entry; `store()` persists the in-memory array. A cold intent that writes before restore could erase prior offline captures.
+**Location in plan:** Source memo ontology and Track 3.
+**Citation:** `beebox/src/cli/commands/wakeup/steps.ts:308-310`: `entry.endsWith(".card")` and `!existingRefs.has(relPath)`; `beebox/src/core/state.ts:96-98` scans inbox recursively. Memo status/share identity is not an intake guard.
+**Issue:** Writing source into inbox and separately submitting its words could run two agents on the same capture.
+**Why it matters:** Unwanted autonomous processing of save-only material or duplicate work.
+**Suggested action/adjudication:** **Accepted and corrected:** retain sources under `_content/captures/`, outside inbox; coordinator owns transcription and explicit dispatch. Reject the proposed remedy of using a memo status to suppress intake: current discovery does not read it. Keep text source memos as a product choice so detail and explicit later context work uniformly; no second intake follows merely from retaining a source.
 
-**Why it matters:** The feature's core promise is that a hands-free thought survives a failed request.
+### Capture default missed the extension's selection fallback
 
-**Suggested action:** Use one application-lifetime store, restore before writing, keep launch drain separate, and test a cold invocation with a prior unsent entry. **Adjudication:** Included and verified in rounds 2–3.
+**Location in plan:** Track 2 destination.
+**Citation:** `ios-app/BeeBox/Storage/SharedSelectedBoxSnapshot.swift:58`: `return boxes.first { $0.id == selectedBoxID } ?? boxes.first`.
+**Issue:** Fixing app selection alone would leave wrong-box behavior in sharing.
+**Why it matters:** Browsing/pairing changes could redirect captures independently of the intended default.
+**Suggested action/adjudication:** **Accepted and corrected:** captureDefaultBoxID lives under its own app-group preference key, independent of selectedBoxID and whole-snapshot rewrites. Multiple boxes without default require setup; removal never falls back.
 
-### 2. RootView and intent could own separate outboxes
+### Existing share modes and save-only API were omitted
 
-**Location in plan:** Track 3, Direction; `beebox/docs/plans/ios-app-intent-capture.md:145`.
+**Location in plan:** What already exists and Track 6.
+**Citation:** `beebox/src/webapp/trpc/routers/share/router.ts:41`: `saveTextual: authedProcedure`; `:67`: `Share ID already belongs to different content`.
+**Issue:** The earlier revision omitted a reusable convention and left existing chat/landmark choices unspecified.
+**Why it matters:** Implementation could remove existing destinations or mislabel a new acceptance coordinator as replacing all sharing.
+**Suggested action/adjudication:** **Accepted and corrected:** cite and preserve existing URL/text Send to chat and Save in landmark under alternate destination choices. New default capture uses the unified coordinator because it needs contextual media and follow-up. Reject routing new save-only URL/text through an unrelated second acceptance path solely to avoid source storage; the existing route remains for its existing explicit mode.
 
-**Citation:** “inject the same `BoxScreenStore` into `RootView` and the intent.”
+### Voice-note transcript framing was false
 
-**Issue:** RootView currently creates its own box-screen store, and its lifecycle methods run from a scene. A second instance would race over the same outbox file.
+**Location in plan:** Track 3 dispatch.
+**Citation:** `beebox/src/core/chat/session/prompts.ts:55`: `No audio recording is attached.`
+**Issue:** Current external-input framing describes text without retained audio; live speech framing also implies the wrong interaction.
+**Why it matters:** Agent could deny access to source audio or assume an immediate spoken reply is wanted.
+**Suggested action/adjudication:** **Accepted and corrected:** acquisition source enum and optional source/recording metadata in external-input; identify retained memo/audio and no live presence. Fixture checks no speech wrapper or false no-recording statement.
 
-**Why it matters:** Two in-memory queues can overwrite each other's state or submit stale entries.
+### New source fields duplicated existing conventions
 
-**Suggested action:** Move ownership to app lifetime and inject one instance in both paths. **Adjudication:** Included and verified.
+**Location in plan:** Ontology, Track 3 source lookup.
+**Citation:** `beebox/src/schemas/webpage.tsx:53`: `"capture-id": z.string().uuid().optional()` belongs to Clerk; memo context already supports URL/title/text and an attach scope.
+**Issue:** Generic lookup by capture-id could match a different integration; a new material array on cards duplicated the canonical manifest.
+**Why it matters:** Wrong original-item lookup or unnecessary schema growth.
+**Suggested action/adjudication:** **Accepted and corrected:** optional memo share-id, typed memo-only ownership lookup, existing context/attachments, canonical role manifest read by detail and dispatch. No capture-materials field.
 
-### 3. External wrapper could lose sender identity
+### Offline context had no local owner
 
-**Location in plan:** Tracks 2 and 3; `beebox/docs/plans/ios-app-intent-capture.md:88-90,133,151`.
+**Location in plan:** Tracks 2, 3, 6.
+**Citation:** Earlier draft defined only server `addContext` while promising later input about a saved item.
+**Issue:** A phone-only original or offline follow-up could not reach that mutation.
+**Why it matters:** The explanation could be lost or require returning later to reconstruct it.
+**Suggested action/adjudication:** **Accepted and corrected:** context event is durably persisted in the same native store, using the same single-request acceptance contract with parentCaptureId. Delivery waits for the original receipt. Parent failure leaves visible blocked context. Reject disabling Add context until connected as the complete remedy: it would narrow the desired recovery behavior.
 
-**Citation:** “The wrapper recognizer must include `<external-input>` or a Siri message loses normal `user` and `user-email` metadata.”
+### Defer all native recording system surfaces
 
-**Issue:** Sender injection and extraction currently recognize only typed/speech wrappers.
-
-**Why it matters:** The message can appear without a sender, or be attributed inconsistently between transcript and frontend.
-
-**Suggested action:** Update server injection, CLI/frontend identity extraction, and comparison normalization with tests. **Adjudication:** Included and verified.
-
-### 4. `source` needed to preserve quick-chat meaning
-
-**Location in plan:** Design walkthrough and Track 2 Direction; `beebox/docs/plans/ios-app-intent-capture.md:57,87,133`.
-
-**Citation:** “the box chose the conversation, and a destination phrase is addressed to the box rather than the current chat.”
-
-**Issue:** Existing `source="box-screen"` also tells the agent that the thought went to the box and might not be viewed in the current chat. The external wrapper uses source for platform provenance.
-
-**Why it matters:** The agent could mistake a box-level thought for a request addressed to the selected chat.
-
-**Suggested action:** State the quick-chat semantics explicitly in the external-input prompt paragraph while using the platform source. **Adjudication:** Included and verified.
-
-### 5. Timeout result could claim a false delivery state
-
-**Location in plan:** Design failures and Track 3 Direction; `beebox/docs/plans/ios-app-intent-capture.md:48-50,145,170`.
-
-**Citation:** “Bee Box could not confirm delivery.”
-
-**Issue:** Cancelling the client request does not prove the server did not accept the message.
-
-**Why it matters:** Saying “waiting to send” could be false after server acceptance.
-
-**Suggested action:** Report local save and unconfirmed delivery, then retry with the same idempotency key. **Adjudication:** Included and verified.
-
-### 6. Selection must have one source
-
-**Location in plan:** Track 3 Direction and multi-box edge case; `beebox/docs/plans/ios-app-intent-capture.md:141,145,190`.
-
-**Citation:** “Resolve the selected box and its restored token from `PairedBoxStore`.”
-
-**Issue:** The first draft mixed app-group snapshot selection with `PairedBoxStore` credentials. That would allow stale selection metadata.
-
-**Why it matters:** The intent could send a thought to a box other than the one the app currently selects.
-
-**Suggested action:** Use the main-app `PairedBoxStore` for selection and credentials; treat the app-group snapshot as Share Extension support only. **Adjudication:** Corrected after round 2; round 3 verified the track, ontology, and edge-case row.
-
-### 7. Native runtime diagnostics were missing
-
-**Location in plan:** Track 3 and “What will hold this after it ships”; `beebox/docs/plans/ios-app-intent-capture.md:151,220`.
-
-**Citation:** “Add BoxLog transitions at refusal, restore/persist, request deadline, and server-result boundaries.”
-
-**Issue:** A background intent adds state transitions that need diagnosis after the phone leaves Xcode.
-
-**Why it matters:** The shared log forwarder may only upload once the app becomes active.
-
-**Suggested action:** Add metadata-only BoxLog entries, never log input text or credentials, and document delayed forwarding. **Adjudication:** Included and verified.
-
-### 8. Citation, principle, and check scope errors
-
-**Location in plan:** “Stated preferences,” “What already exists,” and “What will hold this”; `beebox/docs/plans/ios-app-intent-capture.md:70,85-86,218`.
-
-**Citation:** “`pnpm mobile-contract-check` enforces that mobile contract docs are co-staged with anchored Swift/backend files.”
-
-**Issue:** The first draft misnumbered “nothing disappears,” used comments/consumers as implementation citations, and described the mobile-contract check as validating wire shapes.
-
-**Why it matters:** A six-month reader could rely on false process and implementation claims.
-
-**Suggested action:** Attribute nothing-disappears to trust design, cite implementation sites, and state that fixtures/tests verify wire shapes while the script checks co-staging. **Adjudication:** Corrected and verified in rounds 2–3; reader citations now point to `isRealUserMessage`, backfill, its retro caller, and `stripSpeechWrappers`.
+**Location in plan:** Track 5 and Smallest fix and budget.
+**Citation:** Cross-model round 1 recommends foreground recorder only and deferring AudioRecordingIntent/Live Activity/controls.
+**Issue:** Scope opinion: foreground is smaller and native background start remains unproven.
+**Why it matters:** The chosen system surfaces account for part of the BIG CHANGE estimate and device risk.
+**Suggested action/adjudication:** **Scope choice retained, surfaced for human approval:** native recording task/Live Activity/controls are direct researched fits for fast voice capture, with foreground fallback. They are not promised to bypass device unlocking. The foreground-only variant is a legitimate smaller scope choice, not a demonstrated defect. No implementation authority inferred.
 
 ## NOT in scope (verified)
 
-Voice memo capture, reply readback, entity-based box selection, exact invocation-surface labels, Android implementation, Share Extension changes, new endpoint/daemon, and landing/deployment are explicitly deferred.
+SiriKit/Notes schema adapter, new toolchain, Watch, arbitrary document/video import, multi-item shares, file-bearing follow-up, voice replies, webpage extraction, and global latest-item reference guessing are explicitly deferred. Broader quick-drop umbrella remains open.
 
 ## Things I checked and found clean
 
-- Human decisions override the issue's direct-session proposal and optional App Entity idea.
-- Existing typed/voice quick-chat clients and records retain backward-compatible defaults.
-- The new quick-chat origin does not widen `NativeEmissionV2.Origin` or the webview bridge.
-- Locked-required boxes are refused without attempting app authentication or selecting a fallback.
-- Timeout wording remains honest about possible server acceptance.
-- The final selection source, wrapper readers, and no-text behavior were checked in the final verification round. No named issue remains.
+Registration omission and current phrases match source. Selected-box fallback is real in both snapshots. Existing text outbox writes before networking. Shared app group exists in both targets. Quick-chat conflict/replay and expiry behavior supports immutable delivery IDs. Source fields and processing are proposed additions, not claimed free reuse. Phone list tests original material and destination, not merely a spoken acknowledgment. The plan preserves iOS 17 fallback and old outbox decoding.
+
+Not checked as implementation evidence: signing, actual mic/Live Activity lifecycle, Siri phrase matching, server worker/runtime behavior of the proposed coordinator, or physical device checks. Those require implementation and the final device batch.
+
+## Cross-model recheck
+
+Round 1: Claude Fable; raw response `scratch/cross-model/2026-10-12T23-14-30-400Z-claude.md`. Corrections above were checked against source before adoption. Round 2: Claude Fable, `scratch/cross-model/2026-10-12T23-24-08-974Z-claude.md`. It confirmed the seven major corrections and identified four final details: extension session configuration/delegate routing, default persistence across snapshot rewrites, explicit Siri acknowledgment timing, and existing audit updates. All were incorporated.
+
+The default now uses a separate app-group preference key. Extension sessions explicitly name their shared container and main-app callback routing. Siri acknowledgment is uniformly local and prompt; later delivery is visible in detail. Existing external-input and Siri guide audits are updated, alongside the memo description. These are proposed design choices, not running behavior.
+
+Rejected the round-2 research-link nit: `../../../research/` from `beebox/docs/plans/` resolves to the repo-root research file and was checked directly. Confirmed `beebox/src/core/list-cards.ts:20` uses `glob("**/*.card")` with exclusions that do not exclude `_content/captures/`, so retained sources remain discoverable.
+
+Round 3: Claude Fable, `scratch/cross-model/2026-10-12T23-30-42-320Z-claude.md`. Verification-only: all four corrections passed. No remaining plan defect identified in that bounded check. Remaining gates are human approval of the BIG CHANGE scope and the implementation/device evidence described in the plan.

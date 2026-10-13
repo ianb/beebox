@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../procedures.js";
+import { observeAssignedSession } from "../../../core/chat/session/deliver-user-message.js";
 import type { TrpcContext } from "../context.js";
 import { quickChatHqServiceSchema, QUICK_CHAT_ORIGINS, QUICK_CHAT_SOURCES, quickChatView, quickChatViewSchema, type QuickChatRecord, type QuickChatView } from "../../../core/chat/routing/quick-chat-record.js";
 import {
@@ -13,6 +14,7 @@ import { CHAT_CHANNELS, type ChatChannel } from "../../../shared/chat-channel.js
 import type { SendOutcome } from "../../chat-runtime.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { toError } from "../../../shared/error-guards.js";
+import { frameExternalCapture } from "../../../core/quick-capture/framing.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 
 const idSchema = z.string().uuid();
@@ -45,12 +47,12 @@ function deliveryOutcome(outcome: SendOutcome): QuickChatDeliveryOutcome {
 }
 
 /** The box's chat runtime as quick chat delivers through it: the send route's own target resolution and sender. */
-function quickChatChat(ctx: TrpcContext, channel: ChatChannel | undefined): QuickChatChat | undefined {
+export function quickChatChat(ctx: Pick<TrpcContext, "boxRoot" | "user">, channel?: ChatChannel): QuickChatChat | undefined {
   const runtime = getChatRuntime(ctx.boxRoot);
   if (runtime === undefined) return undefined;
   return {
     reserve: (opts) => runtime.registry.reserve(opts),
-    async deliver({ delivery, messageId, message, origin, source, hqService }) {
+    async deliver({ delivery, messageId, message, origin, source, sourceRef, retainedRecording, recordingInterrupted, captureInputKind, hqService, onSessionAssigned }) {
       const fresh = delivery.session === "new";
       const resolved = await runtime.resolveSendTarget({ sessionParam: delivery.session, exactSession: delivery.exactSession,
         contextDir: fresh ? delivery.contextDir : undefined, requestSeedFeatures: undefined, ...(fresh ? { engine: delivery.engine } : {}) });
@@ -62,14 +64,21 @@ function quickChatChat(ctx: TrpcContext, channel: ChatChannel | undefined): Quic
       // marker (docs/plans/hq-always.md). No recording reaches the box, so there is no server pass.
       const tag = origin === "voice" ? "speech" : "typed";
       const framedMessage = origin === "external"
-        ? `<external-input source="${source}">${message}</external-input>`
+        ? frameExternalCapture({ message, source, sourceRef, retainedRecording, recordingInterrupted, captureInputKind })
         : origin === "voice"
           ? `<speech source="box-screen" ${hqService === undefined ? "stt=\"live\"" : `stt-service="${hqService}"`}>${message}</speech>`
           : `<${tag} source="box-screen">${message}</${tag}>`;
-      return deliveryOutcome(await runtime.sendUserMessage({ target: resolved.target, message: framedMessage, messageId, user: ctx.user, channel }));
+      const stopWatching = fresh && onSessionAssigned !== undefined
+        ? observeAssignedSession({ registry: runtime.registry, session: resolved.target.session, onAssigned: onSessionAssigned, logPrefix: "quick-chat" }) : undefined;
+      const result = deliveryOutcome(await runtime.sendUserMessage({ target: resolved.target, message: framedMessage, messageId, user: ctx.user, channel }));
+      if (result.kind !== "accepted") stopWatching?.();
+      const actualId = result.kind === "accepted" || !fresh
+        ? resolved.target.id ?? (onSessionAssigned === undefined ? null : resolved.target.session.getSessionId()) : null;
+      return (result.kind === "accepted" || result.kind === "duplicate") && actualId !== null ? { ...result, sessionId: actualId } : result;
     },
   };
 }
+
 
 function context(ctx: TrpcContext, channel: ChatChannel | undefined): QuickChatContext {
   return { boxRoot: ctx.boxRoot, jev: ctx.services.jev, chat: quickChatChat(ctx, channel) };

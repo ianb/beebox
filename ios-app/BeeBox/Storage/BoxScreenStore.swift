@@ -98,11 +98,6 @@ extension QuickChatView {
 /// rows.
 @MainActor
 final class BoxScreenStore: ObservableObject {
-    enum ExternalCaptureResult {
-        case persistenceFailed
-        case submitted(QuickChatView)
-        case savedLocally
-    }
     enum Refresh: Equatable {
         case idle
         case refreshing
@@ -186,22 +181,6 @@ final class BoxScreenStore: ObservableObject {
         await outbox.load()
         await outbox.forgetBoxes(except: Set(boxes.map(\.id)))
         resumeRetries()
-    }
-
-    /// Capture one external thought through the same durable outbox as the box
-    /// screen, without draining unrelated entries restored from disk.
-    func captureExternalThought(_ text: String, box: PairedBox) async -> ExternalCaptureResult {
-        await outbox.restore()
-        guard boxes.contains(where: { $0.id == box.id }), box.requiresDeviceUnlock == false,
-              let entry = await outbox.store(text: text, origin: .external, source: "apple-app-intents", boxID: box.id) else {
-            return .persistenceFailed
-        }
-        BoxLog.info("external quick chat stored", category: .composer, targetBoxID: box.id)
-        await outbox.retry(id: entry.id)
-        if let answer = answers.values.flatMap(\.self).first(where: { $0.view.id == entry.id })?.view {
-            return .submitted(answer)
-        }
-        return .savedLocally
     }
 
     /// The outbox retries on its backoff only while the app is in the foreground.

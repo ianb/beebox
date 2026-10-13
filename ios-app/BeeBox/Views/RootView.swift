@@ -20,6 +20,8 @@ struct RootView: View {
     /// a cold launch.
     @State private var backgroundStay: BackgroundStay?
     @State private var showingPairSheet = false
+    @State private var voiceCaptureBox: PairedBox?
+    @State private var voiceCaptureMessage: String?
     @State private var navigationFailure: ChatWebView.NavigationFailure?
     /// A notification tap's target, waiting for the chat webview to load it.
     @State private var navigationRequest: ChatWebView.NavigationRequest?
@@ -69,6 +71,8 @@ struct RootView: View {
                 NativeComposerFixtureScreen()
             } else if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--box-screen-fixture=") }) {
                 BoxScreenFixtureScreen()
+            } else if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--quick-capture-fixture=") }) {
+                QuickCaptureFixtureScreen()
             } else if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--capture-fixture=") }) {
                 NativeCaptureFixtureScreen()
             } else {
@@ -77,6 +81,11 @@ struct RootView: View {
             #else
             rootContent
             #endif
+        }
+        .safeAreaInset(edge: .bottom) {
+            if !ProcessInfo.processInfo.arguments.contains(where: { $0.contains("-fixture=") }) {
+                OrphanedQuickCaptures(boxes: store.boxes)
+            }
         }
     }
 
@@ -120,6 +129,19 @@ struct RootView: View {
         }
         .sheet(isPresented: $showingPairSheet) {
             PairBoxView()
+        }
+        .sheet(item: $voiceCaptureBox) { box in
+            NavigationStack {
+                VoiceNoteView(coordinator: .shared, box: box, boxes: store.boxes)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { voiceCaptureBox = nil } } }
+            }
+        }
+        .alert("Voice Note", isPresented: Binding(get: { voiceCaptureMessage != nil }, set: { if !$0 { voiceCaptureMessage = nil } })) {
+            Button("OK") { voiceCaptureMessage = nil }
+        } message: { Text(voiceCaptureMessage ?? "") }
+        .onReceive(QuickCaptureURLInbox.shared.$pendingURL.compactMap { $0 }) { url in
+            QuickCaptureURLInbox.shared.clear(url)
+            Task { await handleVoiceCaptureURL(url) }
         }
         .onChange(of: store.selectedBox?.id) { _, newBoxID in
             if let newBoxID {
@@ -189,7 +211,9 @@ struct RootView: View {
                 )
             }
             if phase == .active {
+                VoiceNoteCoordinator.shared.updatePairedBoxes(store.boxes)
                 boxScreenStore.setForeground(true)
+                Task { await QuickCaptureUploadCoordinator.shared.recover(boxes: store.boxes) }
                 returnToForeground()
                 Task {
                     await LogForwarder.shared.setActive(true)
@@ -226,6 +250,35 @@ struct RootView: View {
                 return
             }
             evaluatePendingEmissionRedelivery()
+        }
+    }
+
+    @MainActor
+    private func handleVoiceCaptureURL(_ url: URL) async {
+        let action = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "action" }?.value ?? "start"
+        guard ["start", "stop", "toggle", "show"].contains(action) else {
+            voiceCaptureMessage = "This voice-note action is unavailable."
+            return
+        }
+        do {
+            let activeID = VoiceNoteCoordinator.shared.draft?.boxID
+            if action == "show", activeID == nil { return }
+            let existing = activeID != nil && ["stop", "toggle", "show"].contains(action)
+            let stopping = action == "stop" || (action == "toggle" && VoiceNoteCoordinator.shared.isRecording)
+            var box = try CaptureDestinationStore().resolve(boxes: store.boxes,
+                pinnedBoxID: existing ? activeID : nil, allowsProtected: existing)
+            if VoiceNoteCoordinator.shared.draft?.requiresDeviceUnlock == true { box.requiresDeviceUnlock = true }
+            // Links are foreground UI. Protected drafts require the same unlock
+            // as their recording screen; App Intents retain their separate refusal.
+            if stopping && !boxLockManager.isLocked(box) {
+                let label = try await VoiceNoteCoordinator.shared.stopAndSave(boxes: store.boxes)
+                voiceCaptureMessage = "Saved on your phone for \(label)."
+            } else {
+                voiceCaptureBox = box
+            }
+        } catch {
+            voiceCaptureMessage = error.localizedDescription
+            BoxLog.warn("voice task URL refused error=\(type(of: error))", category: .capture)
         }
     }
 
