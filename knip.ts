@@ -85,10 +85,11 @@ const config: KnipConfig = {
         "markdown-it",
         "pkg",
       ],
-      // Two doctests dynamic-import a module from inside a template literal
-      // that a spawned subprocess evaluates, so the specifier is relative to
-      // the package root rather than to the .md file. The edge is real; only
-      // knip's resolution of it from this location fails.
+      // Three doctests import modules from inside a template literal that a
+      // spawned subprocess evaluates, so the specifier is relative to the
+      // package root rather than to the .md file. The edge is real; only
+      // knip's resolution of it from this location fails. The last three are
+      // test/core/chat/session/deliver-user-message.doctest.md's child script.
       //
       // `./old.js` and `./new.js` are the same fixture-string case as the
       // markdown libraries above: test/dev/layout/move/ts-edit.doctest.md
@@ -96,6 +97,9 @@ const config: KnipConfig = {
       ignoreUnresolved: [
         "./src/webapp/auth-capabilities.ts",
         "./src/webapp/box-config-write.ts",
+        "./src/core/chat/session/deliver-user-message.ts",
+        "./src/core/chat/session/registry/core.ts",
+        "./src/services/claude-chat/core.ts",
         "./old.js",
         "./new.js",
       ],
