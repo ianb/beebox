@@ -26,6 +26,15 @@ a deferral was the boxholder's decision or the planner's proposal.
   that can be checked.
 - Issues may need the same rule.
 
+## Privacy (boxholder decision, 2026-10-14)
+
+Verbatim words can carry private specifics, and a commit puts them in
+history for good. The rule: when a quote could leak private information,
+the agent asks the boxholder before it commits the quote. The boxholder
+can then approve the quote, trim it, or send it to `private-issues/`. A
+paraphrase does not avoid the question: it is not a quote, so it does not
+go in the quoted section at all.
+
 ## What "known provenance" excludes
 
 - A paraphrase presented as a quote.
@@ -51,9 +60,6 @@ a deferral was the boxholder's decision or the planner's proposal.
   filed from chat (most of them) would then carry the request verbatim.
 - **Briefings.** The launch-worktree-session skill could require quoted
   boxholder words to stay quoted, so provenance survives the handoff.
-- **Privacy.** Verbatim words can carry private specifics. Public plans and
-  issues still follow the private-issues rules, so some quotes must be cut
-  down or kept in `private-issues/`.
 
 ## Related
 
