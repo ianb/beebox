@@ -5,14 +5,14 @@
  * (s/m/h/d/w). Budgets are "LIMIT/WINDOW" pairs of duration strings.
  */
 
-export class InvalidDurationError extends Error {
+class InvalidDurationError extends Error {
   constructor(input: string) {
     super(`Invalid duration: "${input}". Use format like "5m", "1h", "1d", "2w".`);
     this.name = "InvalidDurationError";
   }
 }
 
-export class UnknownDurationUnitError extends Error {
+class UnknownDurationUnitError extends Error {
   constructor(unit: string) {
     super(`Unknown duration unit: "${unit}"`);
     this.name = "UnknownDurationUnitError";

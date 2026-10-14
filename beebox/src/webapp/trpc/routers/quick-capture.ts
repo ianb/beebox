@@ -20,7 +20,7 @@ import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 
 const id = z.string().uuid().transform(value => value.toLowerCase());
 const idInput = z.object({ id });
-export const quickCaptureViewSchema = z.object({
+const quickCaptureViewSchema = z.object({
   id, state: z.enum(QUICK_CAPTURE_STATES), capturedAt: z.string().optional(), source: z.enum(QUICK_CAPTURE_SOURCES).optional(),
   recordingInterrupted: z.literal(true).optional(),
   input: z.string().optional(), material: quickCaptureMaterialSchema.optional(), parentCaptureId: id.optional(),

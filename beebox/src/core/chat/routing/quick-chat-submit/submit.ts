@@ -294,7 +294,7 @@ export async function submitQuickChatFollowup(ctx: QuickChatContext, input: {
 
 
 /** Persist the actual harness-assigned chat without changing or re-sending human input. */
-export async function bindQuickChatSession(boxRoot: string, input: { id: string; sessionId: string }): Promise<void> {
+async function bindQuickChatSession(boxRoot: string, input: { id: string; sessionId: string }): Promise<void> {
   await withQuickChatLock({ boxRoot, id: input.id }, async () => {
     const record = await readQuickChatRecord(boxRoot, input.id);
     if (record === null || (record.state !== "sent" && record.state !== "sending") || record.delivery === null) return;

@@ -259,6 +259,5 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
 }
 
 export { UserMessage } from "../user-message/view";
-export { UserMessageText } from "../user-message-text";
 export { groupMessages, extractChatImages, type MessageGroup } from "../message-parsing";
 export type { OnZoomView } from "../markdown-rendering";

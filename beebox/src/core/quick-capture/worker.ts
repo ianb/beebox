@@ -168,16 +168,6 @@ export async function processCapture(ctx: CaptureWorkerContext, id: string): Pro
     return processLocked(ctx, record);
   });
 }
-/** Periodic and startup reconciliation; terminal failures need explicit retry. */
-export async function recoverCaptures(ctx: CaptureWorkerContext): Promise<void> {
-  const now = getBoxTime(ctx.boxRoot).getTime();
-  const records = (await listCaptures(ctx.boxRoot)).toSorted((a, b) => a.acceptedAt.localeCompare(b.acceptedAt) || a.id.localeCompare(b.id));
-  for (const record of records) {
-    const automatic = record.state === "accepted" || record.state === "preparing" || record.state === "sending" || (record.state === "blocked" && record.blockedByGone !== true)
-      || (record.state === "failed" && record.nextAttemptAt !== undefined && Date.parse(record.nextAttemptAt) <= now);
-    if (automatic) await processCapture(ctx, record.id);
-  }
-}
 
 function failureMetadata(error: unknown): { name: string; code?: string } {
   const code = errnoCode(error);

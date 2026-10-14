@@ -4,7 +4,7 @@ import { themePatternMatches, validateThemePattern } from "./pattern.js";
 
 export { themePatternMatches, validateThemePattern } from "./pattern.js";
 
-export { THEME_CATALOG, systemCardThemes, themeComposition, type ThemeDescriptor, type ThemeName, type ThemeStock } from "./catalog.js";
+export { THEME_CATALOG, systemCardThemes, type ThemeDescriptor, type ThemeName, type ThemeStock } from "./catalog.js";
 
 /** The deliberately small persisted selector. Catalog membership is host-validated. */
 export const ThemeChoiceSchema = z.object({

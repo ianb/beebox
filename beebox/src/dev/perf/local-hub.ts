@@ -32,7 +32,7 @@ function worktreeName(): string {
   return path.basename(path.dirname(PACKAGE_ROOT));
 }
 
-export function perfStateDir(): string {
+function perfStateDir(): string {
   return path.join(os.homedir(), ".cache", "beebox", "perf", worktreeName());
 }
 
@@ -142,7 +142,7 @@ export async function readDaemonPid(): Promise<number | undefined> {
   }
 }
 
-export async function readGeneration(): Promise<number> {
+async function readGeneration(): Promise<number> {
   try {
     return Number((await fs.readFile(perfHubPaths.generation(), "utf-8")).trim());
   } catch (e) {
