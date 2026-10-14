@@ -80,8 +80,7 @@ The sidecar makes an individual capture self-describing to an agent; it does
 not make a list of file paths a good human handoff. When screenshots are the
 evidence for UI work, package the useful set with `bin/exhibits add` and share
 the exhibit URL. Give the exhibit prose/captions enough context to distinguish
-before/after and each state or viewport. Use `--ask fyi` for evidence that asks
-nothing of the developer; choose another ask only when you genuinely need it.
+before/after and each state or viewport.
 An incidental diagnostic screenshot does not need an exhibit.
 
 ## Escape hatch — anything not covered here
