@@ -33,22 +33,23 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.293`, Codex `0.161.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.296`, Codex `0.162.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.296` (SDK), `2.1.296` (Claude Code), `0.162.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.299` (SDK), `2.1.299` (Claude Code), `0.162.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved on 2026-10-09 — Agent SDK
-  to `0.3.293`, Codex to `0.161.0`. Next: `0.3.294` / `0.3.295` (settle
-  2026-10-10 at 16:36Z / 18:22Z; verify 0.3.295's `--flag=value` option
-  passing), `0.3.296` (2026-10-11T16:59Z), Codex `0.162.0` / `0.162.1`
-  (2026-10-10T18:55Z / 2026-10-11T19:44Z). Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`
-  (`claude-haiku-5-5` now verified on the pin).
+- **Current recommendation:** Both families moved on 2026-10-13 — Agent SDK
+  to `0.3.296` (taking `0.3.294` and `0.3.295`), Codex to `0.162.1` (taking
+  `0.162.0`). These had settled on 2026-10-10 and 10-11, but the runner started
+  no session on 10-10 through 10-12 because nothing new was published:
+  `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
+  Next: `0.3.299` (settles 2026-10-16T00:23Z), **whose changelog did not exist
+  at review time** — a re-read is owed. Open:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -75,15 +76,26 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### Codex 0.162.1 — pending, nothing relevant (published 2026-10-09T19:44Z)
+### 0.3.299 / Claude Code 2.1.299 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+
+Published 2026-10-14T00:23Z, ~1h before this turn; `0.3.297` / `0.3.298` were
+never published. Neither changelog nor the GitHub releases had a section. Bound
+from the `sdk.d.ts` diff against `0.3.296` (bundled CLI 2.1.299): an
+elicitation request gains `property_order`; usage-tip keys gain `max_effort`,
+`workflow`, `always_on_context` and `large_tool_results`; queued-message and
+interrupt doc wording changes for held re-runs. Nothing beebox compiles
+against changed.
+- **Action:** Settled path; takeable 2026-10-16T00:23Z — after the re-read.
+
+### Codex 0.162.1 — APPLIED 2026-10-13, nothing relevant (published 2026-10-09T19:44Z)
 
 Fixes a TUI crash on multi-line asynchronous questions, and startup failures
 from feature-setting differences between a running background server and CLI
 defaults. beebox drives Codex through `@openai/codex-sdk` with no TUI and no
-background server. Settled path; takeable 2026-10-11T19:44Z.
+background server. Applied 2026-10-13 with `0.162.0`; the deploy gate passed on `codex-cli 0.162.1`.
 - **Sources:** [rust-v0.162.1](https://github.com/openai/codex/releases/tag/rust-v0.162.1)
 
-### 0.3.296 / Claude Code 2.1.296 — pending (published 2026-10-09T16:59Z, ~8h at this turn)
+### 0.3.296 / Claude Code 2.1.296 — APPLIED 2026-10-13 (published 2026-10-09T16:59Z)
 
 - **SDK:** `initialize` reports `claude_code_version`; `AgentDefinition` gains
   `autoCompactWindow`; the `sandbox` option now merges with an inline
@@ -100,10 +112,10 @@ background server. Settled path; takeable 2026-10-11T19:44Z.
   for `BASH_ARGV0` assignment tricks; secret redaction in shared transcripts
   and debug logs catches more values; `--debug` logs each command hook's
   outcome and duration (useful for slow `.claude/` hooks).
-- **Action:** Settled path; takeable 2026-10-11T16:59Z.
+- **Action:** Applied 2026-10-13 (two days late; see the recommendation). Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.296, `pnpm -C beebox test` (12,384 pass, 2 skip).
 - **Sources:** [SDK 0.3.296](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03296), [Claude Code 2.1.296](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21296)
 
-### Codex 0.162.0 — pending (published 2026-10-08T18:55Z, ~5h at this turn)
+### Codex 0.162.0 — APPLIED 2026-10-13 with 0.162.1 (published 2026-10-08T18:55Z)
 
 - **Linux sandbox hardening** (startup with several denied files; writable
   sandbox-construction executables rejected; ripgrep config can no longer weaken
@@ -114,10 +126,10 @@ background server. Settled path; takeable 2026-10-11T19:44Z.
   overrides kept); `apply_patch` preserves CRLF; `Retry-After` honored. New:
   managed Git worktree tools (behind the worktrees feature), `/copy`, clickable
   URLs, custom-provider web access and remote compaction. None used by beebox.
-- **Action:** Settled path; takeable 2026-10-10T18:55Z.
+- **Action:** Applied 2026-10-13 with `0.162.1`.
 - **Sources:** [rust-v0.162.0](https://github.com/openai/codex/releases/tag/rust-v0.162.0)
 
-### 0.3.295 / Claude Code 2.1.295 — pending (published 2026-10-08T18:22Z, ~6h at this turn)
+### 0.3.295 / Claude Code 2.1.295 — APPLIED 2026-10-13 with 0.3.296 (published 2026-10-08T18:22Z)
 
 - **SDK, verify when taken:** option values are now sent in the same argument
   as their flag (`--flag=value`). beebox passes options only through `query()`,
@@ -141,15 +153,15 @@ background server. Settled path; takeable 2026-10-11T19:44Z.
   background sessions no longer inherit `FORCE_COLOR=3`; a file is no longer
   treated as read after a `cat` that printed nothing, and Edit no longer trusts
   an unchanged mtime.
-- **Action:** Settled path; takeable 2026-10-10T18:22Z.
+- **Action:** Applied 2026-10-13 with `0.3.296`; the `--flag=value` option passing held under the steering probe and the suite.
 - **Sources:** [SDK 0.3.295](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03295), [Claude Code 2.1.295](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21295)
 
-### 0.3.294 / Claude Code 2.1.294 — pending, nothing relevant (published 2026-10-08T16:36Z)
+### 0.3.294 / Claude Code 2.1.294 — APPLIED 2026-10-13 with 0.3.296, nothing relevant (published 2026-10-08T16:36Z)
 
 SDK parity-only. 2.1.294 fixes `prompt` and `agent` hooks written as
 instructions allowing what they should block, and how Stop/SubagentStop prompt
 hooks are judged. Checked: `.claude/` defines no `prompt` or `agent` hooks.
-Settled path; takeable 2026-10-10T16:36Z.
+Applied 2026-10-13 with `0.3.296`.
 
 ### Codex 0.161.0 — APPLIED 2026-10-09 (published 2026-10-07T15:58Z)
 
