@@ -441,9 +441,6 @@ importers:
       d3:
         specifier: ^7.9.0
         version: 7.9.0
-      fraction.js:
-        specifier: ^5.3.4
-        version: 5.3.4
       p5:
         specifier: ^2.3.0
         version: 2.3.0

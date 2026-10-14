@@ -3,8 +3,8 @@ import { z } from "zod";
 
 export const QUICK_CAPTURE_SOURCES = ["apple-app-intents", "apple-share-extension", "apple-voice-recording", "apple-native-input"] as const;
 export const QUICK_CAPTURE_MAX_FILE_BYTES = 50 * 1024 * 1024;
-export const QUICK_CAPTURE_MAX_INPUT_CHARACTERS = 10000;
-export const QUICK_CAPTURE_MAX_CLIPPING_CHARACTERS = 100000;
+const QUICK_CAPTURE_MAX_INPUT_CHARACTERS = 10000;
+const QUICK_CAPTURE_MAX_CLIPPING_CHARACTERS = 100000;
 // JSON can use six bytes per UTF-16 unit; allow maximum clipping + words + metadata.
 export const QUICK_CAPTURE_MAX_DECLARATION_BYTES = 6 * (QUICK_CAPTURE_MAX_INPUT_CHARACTERS + QUICK_CAPTURE_MAX_CLIPPING_CHARACTERS) + 8192;
 const title = z.string().max(500).optional();
