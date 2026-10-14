@@ -139,8 +139,8 @@ Each entry in `knowledge-audits.yaml` has these fields:
   - `knows_about` — should know which docs to read, then answer.
   - `discoverable` — should be able to find the answer by exploring the filesystem.
 - `correct_contains` / `correct_contains_any` — strings that must appear in the response.
-  Keep a literal only for a term the guide itself teaches; a free-text answer
-  needs `correct_matches`, and an action needs `cards_contain` on its result.
+  Keep a literal only for a term the guide itself teaches; grade a free-text
+  answer with `correct_matches`, and a box audit's card write with `cards_contain`.
 - `correct_matches` — case-insensitive regexes that must match the response; use
   when the required relationship has legitimate wording variation that a list
   of exact substrings would overfit.
