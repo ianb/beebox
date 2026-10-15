@@ -24,6 +24,7 @@ async function dedupIds(boxRoot: string): Promise<string[]> {
   try {
     return Object.keys(JSON.parse(await readFile(join(boxRoot, ".beebox", "message-dedup.json"), "utf-8"))).sort();
   } catch (_e) {
+    // No file means nothing was ever claimed — the expected state after a refusal.
     return [];
   }
 }
