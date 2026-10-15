@@ -86,15 +86,29 @@ export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
 # --extension / AGENT_BROWSER_EXTENSIONS; a .crx can't be sideloaded via CLI).
 # Opt-in: agent-browser drops --headless=new whenever an extension is present, so
 # every browse would otherwise spawn a visible window (and break headless/CI).
-# Append so a caller's own AGENT_BROWSER_EXTENSIONS still applies. Build first:
-# (cd beebox-clerk && pnpm build).
-clerk_ext="${REPO_DIR}/beebox-clerk/dist/chrome-mv3"
+# Append so a caller's own AGENT_BROWSER_EXTENSIONS still applies.
+#
+# It loads the test build in dist-browse/ (`pnpm build:browse`), which grants
+# localhost at install: an automated browser cannot click Chrome's permission
+# prompt or the toolbar button, so the real build could neither read the page
+# nor enable a box. The build is redone here whenever a Clerk source is newer
+# than it, so a session never tests stale extension code. A browser that is
+# already running keeps the copy it loaded: `bin/browse close` after a rebuild.
+clerk_dir="${REPO_DIR}/beebox-clerk"
+clerk_ext="${clerk_dir}/dist-browse/chrome-mv3"
 if [[ -n "${BROWSE_CLERK:-}" ]]; then
-  if [[ -f "${clerk_ext}/manifest.json" ]]; then
-    export AGENT_BROWSER_EXTENSIONS="${AGENT_BROWSER_EXTENSIONS:+${AGENT_BROWSER_EXTENSIONS},}${clerk_ext}"
-  else
-    echo "browse: BROWSE_CLERK set but extension not built — run (cd beebox-clerk && pnpm build)" >&2
+  clerk_manifest="${clerk_ext}/manifest.json"
+  if [[ ! -f "${clerk_manifest}" ]] \
+    || [[ -n "$(find "${clerk_dir}/src" "${clerk_dir}/public" "${clerk_dir}/wxt.config.ts" "${clerk_dir}/package.json" -newer "${clerk_manifest}" -print -quit)" ]]; then
+    clerk_log="${clerk_dir}/.last-browse-build.log"
+    if ! (cd "${clerk_dir}" && pnpm --silent build:browse >"${clerk_log}" 2>&1); then
+      echo "browse: Clerk test build failed; see ${clerk_log}" >&2
+      exit 1
+    fi
+    echo "browse: rebuilt the Clerk test build (close the browser to load it)" >&2
   fi
+  export AGENT_BROWSER_EXTENSIONS="${AGENT_BROWSER_EXTENSIONS:+${AGENT_BROWSER_EXTENSIONS},}${clerk_ext}"
+  export BROWSE_CLERK_EXTENSION_DIR="${clerk_ext}"
 fi
 
 # Superseded agent-browser daemons are reaped by cli.ts, through the shared

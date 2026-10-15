@@ -23,7 +23,7 @@ import { routingDisposition, selectRoutingDestination, thoughtAsksForNewChat, ty
 import { judgeQuickChat } from "./judge.js";
 import {
   deliveryExpired, deliverySessionId, quickChatChoiceIds,
-  type QuickChatDelivery, type QuickChatOrigin, type QuickChatSource, type QuickChatReason, type QuickChatRecord, type SendingQuickChatRecord,
+  type QuickChatDelivery, type QuickChatOrigin, type QuickChatPage, type QuickChatSource, type QuickChatReason, type QuickChatRecord, type SendingQuickChatRecord,
 } from "../quick-chat-record.js";
 import { readQuickChatRecord, saveQuickChatRecord, withQuickChatLock } from "../quick-chat-store.js";
 
@@ -83,12 +83,13 @@ export class QuickChatDestinationFixedError extends Error {
 const GENERAL_CANDIDATE: RoutingCandidate = { id: "general", label: "New general chat", target: { kind: "new-session", contextDir: "" } };
 const CHAT_NOT_RUNNING = "Chat is not running on the box. Retry in a moment.";
 
-type RecordBase = Pick<QuickChatRecord, "id" | "message" | "createdAt" | "origin" | "source" | "sourceRef" | "retainedRecording" | "recordingInterrupted" | "captureInputKind" | "hqService" | "candidates" | "probabilities" | "model" | "confidence" | "preferenceApplied">;
+type RecordBase = Pick<QuickChatRecord, "id" | "message" | "createdAt" | "origin" | "source" | "sourceRef" | "retainedRecording" | "recordingInterrupted" | "captureInputKind" | "hqService" | "page" | "candidates" | "probabilities" | "model" | "confidence" | "preferenceApplied">;
 
 function baseOf(record: QuickChatRecord): RecordBase {
-  const { id, message, createdAt, origin, source, sourceRef, retainedRecording, recordingInterrupted, captureInputKind, hqService, candidates, probabilities, model, confidence, preferenceApplied } = record;
+  const { id, message, createdAt, origin, source, sourceRef, retainedRecording, recordingInterrupted, captureInputKind, hqService, page, candidates, probabilities, model, confidence, preferenceApplied } = record;
   return {
     id, message, createdAt, origin, ...(source === undefined ? {} : { source }), ...(sourceRef === undefined ? {} : { sourceRef }), ...(retainedRecording === undefined ? {} : { retainedRecording }), ...(recordingInterrupted === undefined ? {} : { recordingInterrupted }), ...(captureInputKind === undefined ? {} : { captureInputKind }), ...(hqService === undefined ? {} : { hqService }),
+    ...(page === undefined ? {} : { page }),
     candidates, probabilities,
     ...(model === undefined ? {} : { model }),
     ...(confidence === undefined ? {} : { confidence }),
@@ -179,7 +180,7 @@ async function attemptDelivery(ctx: QuickChatContext, current: SendingQuickChatR
 }
 
 /** Judge a new message: post it, ask about it, or, when routing is unavailable, offer recent chats. */
-async function route(ctx: QuickChatContext, base: Pick<RecordBase, "id" | "message" | "createdAt" | "origin" | "source" | "sourceRef" | "retainedRecording" | "recordingInterrupted" | "captureInputKind" | "hqService">): Promise<QuickChatRecord> {
+async function route(ctx: QuickChatContext, base: Pick<RecordBase, "id" | "message" | "createdAt" | "origin" | "source" | "sourceRef" | "retainedRecording" | "recordingInterrupted" | "captureInputKind" | "hqService" | "page">): Promise<QuickChatRecord> {
   let candidates: RoutingCandidate[];
   try { candidates = await loadRoutingCandidates(ctx.boxRoot); }
   catch (error) {
@@ -188,7 +189,7 @@ async function route(ctx: QuickChatContext, base: Pick<RecordBase, "id" | "messa
     return needsChoice({ ...base, candidates: [GENERAL_CANDIDATE], probabilities: {} }, { reason: "routing-unavailable" });
   }
   let judgment: Awaited<ReturnType<typeof judgeQuickChat>>;
-  try { judgment = await judgeQuickChat(ctx, { message: base.message, candidates }); }
+  try { judgment = await judgeQuickChat(ctx, { message: base.message, ...(base.page === undefined ? {} : { page: base.page }), candidates }); }
   catch (error) {
     if (!(error instanceof JevError) && !(error instanceof RoutingCatalogError)) throw error;
     console.warn(`[quick-chat] routing judgment failed for ${base.id}: ${error.message}`);
@@ -203,7 +204,7 @@ async function route(ctx: QuickChatContext, base: Pick<RecordBase, "id" | "messa
   return startSending(ctx, { base: judged, selected: selection.selected });
 }
 
-export async function submitQuickChat(ctx: QuickChatContext, input: { id: string; message: string; origin: QuickChatOrigin; source?: QuickChatSource; sourceRef?: string; retainedRecording?: boolean; recordingInterrupted?: boolean; captureInputKind?: "words" | "transcript"; hqService?: string }): Promise<QuickChatRecord> {
+export async function submitQuickChat(ctx: QuickChatContext, input: { id: string; message: string; origin: QuickChatOrigin; source?: QuickChatSource; sourceRef?: string; retainedRecording?: boolean; recordingInterrupted?: boolean; captureInputKind?: "words" | "transcript"; hqService?: string; page?: QuickChatPage }): Promise<QuickChatRecord> {
   return withQuickChatLock({ boxRoot: ctx.boxRoot, id: input.id }, async () => {
     let previous = await readQuickChatRecord(ctx.boxRoot, input.id);
     if (previous !== null) {
@@ -218,7 +219,7 @@ export async function submitQuickChat(ctx: QuickChatContext, input: { id: string
     }
     const routed = await route(ctx, { id: input.id, message: input.message, origin: input.origin, ...(input.source === undefined ? {} : { source: input.source }),
       ...(input.sourceRef === undefined ? {} : { sourceRef: input.sourceRef }), ...(input.retainedRecording === undefined ? {} : { retainedRecording: input.retainedRecording }), ...(input.recordingInterrupted === undefined ? {} : { recordingInterrupted: input.recordingInterrupted }), ...(input.captureInputKind === undefined ? {} : { captureInputKind: input.captureInputKind }),
-      ...(input.hqService === undefined ? {} : { hqService: input.hqService }), createdAt: getBoxTime(ctx.boxRoot).toISOString() });
+      ...(input.hqService === undefined ? {} : { hqService: input.hqService }), ...(input.page === undefined ? {} : { page: input.page }), createdAt: getBoxTime(ctx.boxRoot).toISOString() });
     return routed.state === "needs-choice" ? save(ctx.boxRoot, routed) : routed;
   });
 }
@@ -246,6 +247,14 @@ export async function chooseQuickChat(ctx: QuickChatContext, input: { id: string
       case "discarded":
         return record;
     }
+  });
+}
+
+/** Deliver a stored message again, as a repeat `submit` with its own text does. Other states are returned unchanged. */
+export async function retryQuickChat(ctx: QuickChatContext, input: { id: string }): Promise<QuickChatRecord> {
+  return withQuickChatLock({ boxRoot: ctx.boxRoot, id: input.id }, async () => {
+    const record = await existing(ctx, input.id);
+    return record.state === "sending" ? attemptDelivery(ctx, record) : record;
   });
 }
 

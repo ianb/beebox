@@ -174,6 +174,17 @@ export async function checkClaudeAuth(options?: CheckClaudeAuthOptions): Promise
  * the run. Fakes leave `requiresClaudeAuth` unset and always proceed. Returns
  * `true` when the run may proceed.
  */
+/**
+ * Refuse the run: the session's listeners see the error. A sender with no
+ * listener (quick chat) would otherwise leave only "Run not ready after start"
+ * in the server log, so the reason is logged too.
+ */
+function refuse(session: { emit(event: "error", error: Error): boolean }, error: Error): false {
+  console.error(`[chat-preflight] run refused: ${error.message}`);
+  session.emit("error", error);
+  return false;
+}
+
 export async function preflightChatBackend(params: {
   backend: {
     requiresClaudeAuth?: boolean | undefined;
@@ -195,10 +206,7 @@ export async function preflightChatBackend(params: {
       await checkCodexAuth({ codexCli: params.codexCli });
       return true;
     } catch (error) {
-      if (error instanceof CodexReadinessError) {
-        params.session.emit("error", error);
-        return false;
-      }
+      if (error instanceof CodexReadinessError) return refuse(params.session, error);
       throw error;
     }
   }
@@ -211,10 +219,7 @@ export async function preflightChatBackend(params: {
       await providerEnvAdditions({ boxRoot: params.boxRoot, model: params.model, purpose: "chat-preflight" });
       return true;
     } catch (e) {
-      if (e instanceof ProviderSetupError) {
-        params.session.emit("error", e);
-        return false;
-      }
+      if (e instanceof ProviderSetupError) return refuse(params.session, e);
       throw e;
     }
   }
@@ -223,10 +228,7 @@ export async function preflightChatBackend(params: {
     await checkClaudeAuth({ claudeCli: params.claudeCli });
     return true;
   } catch (e) {
-    if (e instanceof ClaudeAuthError) {
-      params.session.emit("error", e);
-      return false;
-    }
+    if (e instanceof ClaudeAuthError) return refuse(params.session, e);
     throw e;
   }
 }

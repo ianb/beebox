@@ -24,6 +24,7 @@ import {
 } from "../../command-types.js";
 import { isCardFile, isMarkdownFile } from "../../../lib/paths/core.js";
 import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
+import { stageablePaths } from "../../../lib/git/check-ignore.js";
 import { invariant } from "../../../shared/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./operations.js";
 import { errorMessage } from "../../../shared/error-guards.js";
@@ -248,7 +249,8 @@ async function commitMoves({
     summary = `Move ${results.length} item(s) to ${path.relative(ctx.boxRoot, rawDestPath)}`;
   }
   await stageAndCommitPaths(ctx.boxRoot, {
-    paths: allFilesToStage,
+    // A card moved out of an ignored folder has an old path git never knew.
+    paths: await stageablePaths(ctx.boxRoot, allFilesToStage),
     message: summary,
     trailers: {
       "Moved-By": "bbx mv",

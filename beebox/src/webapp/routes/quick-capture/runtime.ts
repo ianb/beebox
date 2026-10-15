@@ -6,7 +6,7 @@ import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-time
 import { getBoxTime } from "../../../lib/time.js";
 import { listCaptures } from "../../../core/quick-capture/store.js";
 import { processCapture, type CaptureWorkerContext } from "../../../core/quick-capture/worker.js";
-import { quickChatChat } from "../../trpc/routers/quick-chat.js";
+import { quickChatChat } from "../../trpc/quick-chat-delivery.js";
 
 export function captureWorkerContext(args: { boxRoot: string; services: Services; owner: string | null }): CaptureWorkerContext {
   return { boxRoot: args.boxRoot, jev: args.services.jev,

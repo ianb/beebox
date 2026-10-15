@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "build:browse": "CLERK_DEV_HOST_PERMISSIONS='http://localhost/*' wxt build",
     "postinstall": "wxt prepare",
     "test": "tap --include='test/**/*.test.ts'",
     "typecheck": "tsc --noEmit",

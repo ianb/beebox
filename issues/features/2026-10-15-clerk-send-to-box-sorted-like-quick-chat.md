@@ -1,6 +1,6 @@
 ---
 title: "Clerk: \"send this to the box\" sorted to the right place, like quick chat, and feed items captured without the feed"
-workstream: unattached
+workstream: clerk-quick-send
 needs: [design]
 area: beebox-clerk
 labels: [clerk, quick-chat, capture]
@@ -85,3 +85,16 @@ in the `web-search-fetch` workstream.
 - [Agent knows whether Clerk is installed](2026-09-05-agent-knows-which-client-and-whether-clerk-is-installed.md).
 - [Clerk retry duplicate cards (closed)](../closed/bugs/2026-09-29-clerk-capture-retry-writes-duplicate-cards.md):
   a capture that also routes must still be idempotent.
+
+## Progress
+
+- 2026-10-15: research recorded in
+  [feed-item capture survey](../../research/feed-item-capture-2026-10-15.md);
+  plan at [clerk-quick-send](../../beebox/docs/implemented-plans/clerk-quick-send.md).
+  Boxholder: the page stays a card, in an incoming location (not only
+  `_tmp`), referenced from the chat.
+- 2026-10-15: part 1 implemented on `worktree-clerk-quick-send` (Send to box,
+  `clerk.send`, git-ignored `_content/incoming/`). Part 2 deferred by the
+  boxholder: send the full page now, design trimming from real captures; a
+  first finder is parked on branch `wip-clerk-feed-items`. This issue stays
+  open for part 2.

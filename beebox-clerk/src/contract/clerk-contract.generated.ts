@@ -61,3 +61,35 @@ export interface TabArrangementResult {
   open: string;
   transferId: string;
 }
+
+/** Request body for `clerk.send`. */
+export interface SendPayload {
+  id: string;
+  note: string;
+  url: string;
+  title: string;
+  siteName?: string;
+  byline?: string;
+  excerpt?: string;
+  readableMarkdown: string;
+  frozenHtml?: string;
+}
+
+/** Where a `clerk.send` stands: sent, waiting for a choice, or not delivered yet. */
+export interface SendResult {
+  card: string;
+  state: "needs-choice" | "sending" | "sent" | "discarded";
+  destination?: {
+    label: string;
+    sessionId?: string;
+  };
+  queued?: boolean;
+  reason?: "uncertain" | "routing-unavailable" | "destination-gone";
+  lastError?: string;
+  expired?: boolean;
+  choices?: Array<{
+    candidateId: string;
+    label: string;
+    detail?: string;
+  }>;
+}

@@ -145,7 +145,7 @@ lost completion response retries the message ID, never routes another chat.
 import { EventEmitter } from "node:events";
 import { writeFile } from "node:fs/promises";
 import { setChatRuntime, clearChatRuntime } from "../../../src/webapp/chat-runtime.js";
-import { quickChatChat } from "../../../src/webapp/trpc/routers/quick-chat.js";
+import { quickChatChat } from "../../../src/webapp/trpc/quick-chat-delivery.js";
 class ScriptedLostResponse extends Error { constructor() {super("Synthetic completion response lost.");this.name="ScriptedLostResponse";} }
 function codexRuntime(box, mode) {
   let assigned=null;
