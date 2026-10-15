@@ -40,15 +40,17 @@ Codex entries here are labeled as such; they carry their own pin.
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.299` (SDK), `2.1.299` (Claude Code), `0.162.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.300` (SDK), `2.1.300` (Claude Code), `0.162.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Both families moved on 2026-10-13 — Agent SDK
   to `0.3.296` (taking `0.3.294` and `0.3.295`), Codex to `0.162.1` (taking
   `0.162.0`). These had settled on 2026-10-10 and 10-11, but the runner started
   no session on 10-10 through 10-12 because nothing new was published:
   `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
-  Next: `0.3.299` (settles 2026-10-16T00:23Z), **whose changelog did not exist
-  at review time** — a re-read is owed. Open:
+  Next: `0.3.299` (settles 2026-10-16T00:23Z), then `0.3.300`
+  (2026-10-16T14:28Z; **check its transcript rows first**, see its entry). No
+  session will start for either unless a newer release is published (same
+  issue). Open:
   `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -76,16 +78,57 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.299 / Claude Code 2.1.299 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+### 0.3.300 / Claude Code 2.1.300 — pending (published 2026-10-14T14:28Z); check before applying
 
-Published 2026-10-14T00:23Z, ~1h before this turn; `0.3.297` / `0.3.298` were
-never published. Neither changelog nor the GitHub releases had a section. Bound
-from the `sdk.d.ts` diff against `0.3.296` (bundled CLI 2.1.299): an
-elicitation request gains `property_order`; usage-tip keys gain `max_effort`,
-`workflow`, `always_on_context` and `large_tool_results`; queued-message and
-interrupt doc wording changes for held re-runs. Nothing beebox compiles
-against changed.
-- **Action:** Settled path; takeable 2026-10-16T00:23Z — after the re-read.
+- **Check before applying (RUNTIME):** 2.1.300 *"changed local session
+  transcripts to also record each API request's system prompt, tools and
+  parameters."* beebox reads SDK `.jsonl` transcripts (`core/usage.ts`,
+  `core/chat/session/deliver-user-message.ts`, `transcript-paths.ts`). The
+  readers stream line by line (`jsonlLines`), so a large row does not load a
+  whole file, but the run that takes this version should look at one fresh
+  transcript: the new row type, its size per turn, and that `core/usage.ts`
+  and the chat history views skip it.
+- **SDK changes, checked clear:** `updatedInput` from PreToolUse /
+  PermissionRequest hook callbacks is now validated and unknown keys dropped
+  (beebox hooks in `core/sdk-hooks.ts` return no `updatedInput`);
+  `thinking: disabled` / `maxThinkingTokens: 0` become adaptive on models that
+  cannot turn thinking off (beebox sets neither); `importSessionToStore` keeps
+  rows with U+2028/U+2029; the 0.3.292 `suppressAlwaysAllowRule` is reverted.
+- **Claude Code, RUNTIME:** resuming an SDK session no longer loses messages a
+  compaction kept after an output-limit cut, or the compaction summary after a
+  retried reply (compactions from this version on) — beebox resumes chat
+  sessions; exit now force-kills background commands 1.5 s after asking.
+- **Claude Code, HARNESS:** SessionEnd hooks now run on exit with a background
+  command still running; `--worktree` no longer starts from the wrong commit
+  when a tag or branch looks like a commit ID, and its starting git status names
+  the new worktree's branch; plugin `WorktreeCreate`/`WorktreeRemove` hooks now
+  run with `--worktree` (this repo's are settings hooks); Claude stops polling
+  or sleeping on a background command's output file.
+- **Action:** Settled path after the check above; takeable 2026-10-16T14:28Z.
+- **Sources:** [SDK 0.3.300](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03300), [Claude Code 2.1.300](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21300)
+
+### 0.3.299 / Claude Code 2.1.299 — pending (published 2026-10-14T00:23Z); re-read 2026-10-14, not act-now
+
+`0.3.297` / `0.3.298` were never published to npm (their changelog lines are
+parity-only).
+- **Checked, not act-now:** *"Fixed a regression in 2.1.296 where cloud and
+  headless sessions could run an approved tool call twice if a new message
+  arrived as the session resumed after a restart."* The pin bundles 2.1.296.
+  The path is the hosted interrupted-turn re-run
+  (`CLAUDE_CODE_RESUME_INTERRUPTED_TURN`), which beebox does not set.
+- **SDK:** CronCreate/CronList `nextFireAt`; elicitation `property_order`;
+  queued content-block messages no longer run together without a line break
+  when merged (beebox chat queues steering messages; formatting only); reserved
+  MCP server names refused.
+- **Claude Code, RUNTIME:** memory no longer grows without bound when debug
+  output goes to an unread stderr (beebox passes no debug flags); SDK sessions
+  leave auto mode when the host switches to a model without it; streams through
+  a custom `ANTHROPIC_BASE_URL` wait 300 s, not 180 s.
+- **Claude Code, HARNESS:** idle compaction for 200K+ token terminal
+  conversations idle ~54 min (`"idleCompaction": false` turns it off);
+  `/usage` warnings for max effort and workflows; a sandboxed shell can no
+  longer write into a `--plugin-dir` folder.
+- **Action:** Settled path; takeable 2026-10-16T00:23Z.
 
 ### Codex 0.162.1 — APPLIED 2026-10-13, nothing relevant (published 2026-10-09T19:44Z)
 
