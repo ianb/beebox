@@ -41,7 +41,8 @@ const PAGES: Page[] = [
   { path: "/history", label: "History", target: "_config/interface/history.card", heading: { name: "History", level: 2 }, landmarks: ["Commit details"] },
   { path: "/inventory", label: "Storage", target: "_config/interface/inventory.card", heading: { name: "Storage", level: 2 }, landmarks: ["Storage summary", "Storage area view"] },
   { path: "/settings", label: "Settings", target: "_config/interface/settings.card", heading: { name: "Settings", level: 2 }, landmarks: ["Password", "Scan uploaders"] },
-  { path: "/admin", label: "Admin", target: "_config/interface/admin.card", heading: { name: "Admin", level: 2 }, landmarks: ["Allowed users", "Secrets"] },
+  // /admin opens on its Overview tab: one region per group, sections behind each.
+  { path: "/admin", label: "Admin", target: "_config/interface/admin.card", heading: { name: "Admin", level: 2 }, landmarks: ["People", "Secrets"] },
   { path: "/capture?session=new&engine=codex", label: "Capture", button: /^(Exit capture|Discard and exit capture)$/, landmarks: [] },
 ];
 

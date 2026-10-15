@@ -56,3 +56,18 @@ both viewports, and `system-themes` aborted at "Could not resolve button
 \"Properties\"" at both viewports, because `_content/theme-tour/` still has no
 `markdown-note.md` and no `Theme_Tour.landmark.card`. The Properties control
 itself is present on every card page. The priority may be stale.
+
+## Re-encounter, 2026-10-14 - weekly tour check run 20261014-221119
+
+Same two misses, plus a third tour. `expressive-themes` opens
+`_content/theme-tour/expressive-<name>.memo.card` for nine themes. Every one
+shows "Card not found", so each checkpoint misses its "A room for useful
+things" heading and both of its `expect.custom` claims, at both viewports (72
+findings). Those nine fixtures were added on 2026-10-08 (`9e10a86e7`,
+`7593281a4`, `6bd6eeaea`) and are also absent from stock `test1`. The fixture
+set and the tours drifted apart again, as the possible resolution above
+predicts.
+
+- Artifacts: `beebox/test/tours/.artifacts/expressive-themes/2026-10-15T03-37-01-735Z/`,
+  `card-themes/2026-10-15T04-24-51-767Z/` (`markdown-file`, `markdown-workspace`),
+  `system-themes/2026-10-15T03-56-42-581Z/` (aborted at "Properties").
