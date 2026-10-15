@@ -10,9 +10,7 @@ import {
 import {
   buildCommentaryPayload,
   commentaryOpenUrl,
-  type CommentaryCapture,
 } from "../domain/commentary.js";
-import { isCaptureResultMessage } from "../domain/capture-messages.js";
 import {
   captureErrorReason,
   isUrlUnderBoxUrl,
@@ -24,7 +22,13 @@ import {
   type RelayTabArrangementMessage,
   type TabArrangementResult,
 } from "../domain/relay-messages.js";
-import { ClerkApiError, postCommentary } from "../platform/clerk-api.js";
+import { capturePage } from "../platform/capture-page.js";
+import {
+  ClerkApiError,
+  chooseSendDestination,
+  postCommentary,
+  postSend,
+} from "../platform/clerk-api.js";
 import { loadConfig } from "../platform/config-storage.js";
 import { syncRelayRegistration } from "../platform/relay-registration.js";
 import {
@@ -34,6 +38,7 @@ import {
 } from "../platform/tab-transfer-actions/actions.js";
 import { clearTabTransfer } from "../platform/tab-transfer-storage.js";
 import { tabArrangementAction } from "../platform/tab-arrangement-executor/executor.js";
+import { createSendActions } from "../platform/send-actions.js";
 
 class NoActiveBoxError extends Error {
   constructor() {
@@ -55,40 +60,6 @@ class CommentUnavailableError extends Error {
   }
 }
 
-// The heavy capture code (Defuddle + single-file-core) isn't in any always-on
-// content script — inject it into the active tab on demand, then await the
-// result it messages back (a file injection can't return a value directly).
-// The "comment" click is a user gesture, so activeTab covers the injection.
-const CAPTURE_SCRIPT = "content-scripts/commentary-capture.js";
-const CAPTURE_TIMEOUT_MS = 60000;
-
-function tryCaptureCommentary(tabId: number): Promise<CommentaryCapture | null> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (value: CommentaryCapture | null) => {
-      if (settled) return;
-      settled = true;
-      chrome.runtime.onMessage.removeListener(listener);
-      clearTimeout(timer);
-      resolve(value);
-    };
-    const timer = setTimeout(() => finish(null), CAPTURE_TIMEOUT_MS);
-    function listener(message: unknown): void {
-      if (!isCaptureResultMessage(message)) return;
-      finish("error" in message ? null : message.capture);
-    }
-    chrome.runtime.onMessage.addListener(listener);
-
-    chrome.scripting
-      .executeScript({ target: { tabId }, files: [CAPTURE_SCRIPT] })
-      .catch((e: unknown) => {
-        // Injection failed (chrome://, Web Store, missing host access, …).
-        console.debug("[beebox-clerk] capture injection failed:", e);
-        finish(null);
-      });
-  });
-}
-
 async function commentOnPage(tabId: number, destinationDir: string | undefined): Promise<void> {
   // "Comment" runs for several seconds (capture + freeze + upload), during which
   // the popup almost always closes — so its failure response goes nowhere. Make
@@ -101,7 +72,7 @@ async function commentOnPage(tabId: number, destinationDir: string | undefined):
     // Timed so the cost is visible in the service-worker console: capture is the
     // in-page extract+freeze, post is the upload to the box.
     const tCaptureStart = performance.now();
-    const capture = await tryCaptureCommentary(tabId);
+    const capture = await capturePage(tabId);
     if (capture === null) throw new CommentUnavailableError();
     const tCaptureEnd = performance.now();
     const payload = buildCommentaryPayload({
@@ -127,7 +98,29 @@ async function commentOnPage(tabId: number, destinationDir: string | undefined):
   }
 }
 
+// In memory on purpose: a kept send lives only as long as this worker (see
+// send-actions.ts).
+const sendActions = createSendActions({
+  requireActiveBox,
+  capture: capturePage,
+  post: (box, payload) => postSend(box, { payload }),
+  choose: chooseSendDestination,
+  toast: (tabId, toast) => {
+    toastInTab(tabId, toast);
+  },
+  newId: () => crypto.randomUUID(),
+});
+
 async function dispatch(message: ClerkMessage): Promise<ActionResponse> {
+  if (message.type === "sendToBox") {
+    return { ok: true, result: await sendActions.sendToBox(message) };
+  }
+  if (message.type === "retrySend") {
+    return { ok: true, result: await sendActions.retrySend(message.id) };
+  }
+  if (message.type === "chooseSend") {
+    return { ok: true, result: await sendActions.chooseSend(message) };
+  }
   const box = await requireActiveBox();
   if (message.type === "commentOnPage") {
     await commentOnPage(message.tabId, message.destinationDir);

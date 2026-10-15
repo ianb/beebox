@@ -14,6 +14,16 @@ const dateVersion =
   `0.1.${built.getFullYear() % 100}.` +
   `${(built.getMonth() + 1) * 100 + built.getDate()}`;
 
+// Local browser testing only: `CLERK_DEV_HOST_PERMISSIONS="http://localhost/*"`
+// grants those hosts at install, so an automated browser can read the page and
+// enable a box without Chrome's permission prompt or a toolbar click. Unset in
+// every real build, which keeps host access per-origin and user-granted.
+function readDevHostPermissions(env: Record<string, string | undefined>): string[] {
+  const raw = env["CLERK_DEV_HOST_PERMISSIONS"];
+  return raw === undefined ? [] : raw.split(",").filter((host) => host !== "");
+}
+const devHostPermissions = readDevHostPermissions(process.env);
+
 export default defineConfig({
   srcDir: "src",
   outDir: "dist",
@@ -34,6 +44,7 @@ export default defineConfig({
     // Host access is granted per-origin when the user enables a box —
     // never broadly at install time.
     optional_host_permissions: ["http://*/*", "https://*/*"],
+    ...(devHostPermissions.length > 0 ? { host_permissions: devHostPermissions } : {}),
     // Shares the beebox "box" mark (frontend public/icons/icon-512.png),
     // resized to the Chrome extension sizes — clerk is the box's browser
     // companion, so it carries the same icon rather than a placeholder square.

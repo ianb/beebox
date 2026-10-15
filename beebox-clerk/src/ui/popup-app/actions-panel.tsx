@@ -1,41 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import type { EnabledBox } from "../../domain/config.js";
-import type { ActionResponse, ClerkMessage, SharedTabsResult } from "../../domain/messages.js";
+import type { ClerkMessage, SharedTabsResult } from "../../domain/messages.js";
 import type { CommentaryDestination } from "../../contract/clerk-contract.generated.js";
 import { getCommentaryDestinations } from "../../platform/clerk-api.js";
 import { commentBlockedReason } from "../../domain/commentary.js";
-
-interface Notice {
-  kind: "ok" | "error" | "auth";
-  text: string;
-}
+import { NoticeLine, toNotice, type Notice } from "./notice-line.js";
+import { sendAction } from "./send-action.js";
+import { SendSection } from "./send-section.js";
 
 interface CurrentTab {
   id: number;
   windowId: number;
   url: string;
   title: string;
-}
-
-function sendAction(message: ClerkMessage): Promise<ActionResponse> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response: ActionResponse | undefined) => {
-      if (chrome.runtime.lastError || response === undefined) {
-        const detail = chrome.runtime.lastError?.message ?? "no response from background";
-        resolve({ ok: false, status: 0, message: detail });
-        return;
-      }
-      resolve(response);
-    });
-  });
-}
-
-function toNotice(response: ActionResponse, okText: string): Notice {
-  if (response.ok) return { kind: "ok", text: okText };
-  if (response.status === 401 || response.status === 403) {
-    return { kind: "auth", text: "Session expired — open the box to sign in." };
-  }
-  return { kind: "error", text: response.message };
 }
 
 interface ActionsPanelProps {
@@ -165,6 +142,7 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
 
   return (
     <div className="mb-3 space-y-3 border-b border-gray-200 pb-3">
+      <SendSection boxUrl={box.boxUrl} tabId={tab?.id ?? null} blockedReason={blocked} />
       <CommentSection
         busyLabel={busy}
         blockedReason={blocked}
@@ -302,26 +280,4 @@ function DestinationPicker({ destinations, selectedDir, onSelectDir }: Destinati
       {soleDestination.label}
     </p>
   );
-}
-
-interface NoticeLineProps {
-  notice: Notice;
-  onOpenBox: () => void;
-}
-
-function NoticeLine({ notice, onOpenBox }: NoticeLineProps) {
-  if (notice.kind === "ok") {
-    return <p className="text-sm text-teal-700">{notice.text}</p>;
-  }
-  if (notice.kind === "auth") {
-    return (
-      <p className="text-sm text-red-700">
-        {notice.text}{" "}
-        <button onClick={onOpenBox} className="underline">
-          Open box
-        </button>
-      </p>
-    );
-  }
-  return <p className="break-words text-sm text-red-700">{notice.text}</p>;
 }

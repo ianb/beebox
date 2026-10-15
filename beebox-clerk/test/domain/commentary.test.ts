@@ -1,6 +1,7 @@
 import { test } from "tap";
 import {
   buildCommentaryPayload,
+  capturedPageFields,
   commentaryOpenUrl,
   commentBlockedReason,
   type ReadablePage,
@@ -104,4 +105,14 @@ test("commentBlockedReason passes http(s) pages and explains everything else", a
   t.match(commentBlockedReason("chrome-extension://abc/options.html"), /http and https/);
   t.match(commentBlockedReason("chrome://extensions/"), /http and https/);
   t.match(commentBlockedReason(undefined), /No page/);
+});
+
+test("capturedPageFields shapes the fields commentary and send share", async (t) => {
+  t.same(capturedPageFields({ page: { ...fullPage, byline: null }, frozenHtml: "" }), {
+    url: "https://example.com/article",
+    title: "An Article",
+    readableMarkdown: "# An Article\n\nBody.",
+    siteName: "Example Site",
+    excerpt: "Summary.",
+  });
 });
