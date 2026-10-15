@@ -1272,11 +1272,12 @@ See §1.3 (full request/response/errors).
   `test/core/notification/target.doctest.md` against the Swift target mirror.
 - **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
 
-### 5.11 Quick chat — `quickChat.submit`, `choose`, `discard`, `home`
+### 5.11 Quick chat — `quickChat.submit`, `choose`, `retry`, `discard`, `home`
 
 - **Direction:** native → box, bearer-authenticated tRPC (not batched). `POST
   /api/trpc/quickChat.submit` `{id,message,origin?,source?,hqService?,channel?}`, `POST /api/trpc/quickChat.choose`
-  `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
+  `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.retry` `{id,channel?}`, `POST
+  /api/trpc/quickChat.discard` `{id}`, and `GET
   /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. `origin` is `"typed"`,
   `"voice"`, or `"external"`, how the person entered the thought; an absent `origin` (a build from
   before it) is `"typed"`. External input requires a source; other origins reject `source`.
@@ -1292,10 +1293,12 @@ See §1.3 (full request/response/errors).
   thought `stt="live"`. Each mutation answers a
   `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. A view may carry
   `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
-  whose `message` is the person's note and may be empty. The native box screen ignores `page`
-  for now and retries such a row through `submit`, which refuses an empty message; the web box
-  screen shows the title and retries with `quickChat.retry` `{id,channel?}`
-  ([issue](../../issues/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md)). Each
+  whose `message` is the person's note and may be empty. Both box screens show the title,
+  linked to `url`, above the note, and hide an empty note. Retry on a `sending` row calls
+  `retry`, which delivers the stored record with its own words; `submit` refuses an empty
+  message. A box from before `retry` answers 404 `No procedure found on path …`; the phone then
+  resubmits the same id and message through `submit` when the message is not empty, and
+  otherwise shows the error. A missing record is also 404, with a different message. Each
   `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
   first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
   landmark resolves for its directory. Shapes:
@@ -1303,8 +1306,9 @@ See §1.3 (full request/response/errors).
   `src/webapp/trpc/routers/quick-chat.ts` (inputs, `quickChatHomeSchema`).
 - **Fixtures:** `test/mobile-contract/fixtures/quick-chat/`, parsed field for field by
   `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md` and by
-  `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the three request bodies
-  against `submit-request.json`, `choose-request.json`, and `discard-request.json`.
+  `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the request bodies
+  against `submit-request.json`, `choose-request.json`, `retry-request.json`, and
+  `discard-request.json`. `view-sending-page-no-note.json` is a Clerk page with no note.
 - **Native caller:** the box screen, which has no web session mounted. This is the native
   quick-chat composer path (`ios-app/AGENTS.md`, bridge discipline). Older App Intent
   outbox entries with `origin: "external", source: "apple-app-intents"` still replay here;
@@ -1525,7 +1529,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
-| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,source?,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; external requires `origin:"external",source:"apple-app-intents"`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| Q1 | `quickChat.submit` / `choose` / `retry` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,source?,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id,channel:"ios-native"}` / `{id}`; external requires `origin:"external",source:"apple-app-intents"`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
 | Q2 | Quick capture (§5.12) | native/extension→box | one complete multipart POST plus owner-scoped tRPC capabilities/list/detail/retry/choose/delete | `Storage/QuickCaptureStore.swift`; `Services/QuickCaptureAPI.swift`; `Services/QuickCaptureUploadCoordinator.swift`; `Intents/CaptureThoughtIntent.swift`; `Intents/VoiceNoteIntents.swift` | `shared/quick-capture.ts`; `routes/quick-capture/`; `trpc/routers/quick-capture.ts`; `core/quick-capture/` | LOUD; local source retained |
 | W3 | Box screen navigation (§3.5) | web→native | main-frame navigation to `<baseURL>/box`, cancelled by native | `Views/ChatWebView.swift` · `isBoxScreenURL`, `Coordinator.mainFramePolicy(for:)` | the `/<box>/box` route; the landmark menu's box row | SILENT-degraded |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
