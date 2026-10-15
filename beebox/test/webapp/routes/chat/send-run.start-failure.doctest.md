@@ -1,8 +1,8 @@
 # `POST /api/chat/send` — a run that fails to start is accepted, and says so on the turn stream
 
-Acceptance is the durable record, not the engine spawn. The route persists the
-user message + the message-id claim and answers `{turnId}` immediately; the run
-starts afterwards, with nothing awaiting it
+Acceptance is the durable record, not the engine spawn. Once the session takes
+the turn, the route persists the user message + the message-id claim and
+answers `{turnId}`; the run starts afterwards, with nothing awaiting it
 (`docs/implemented-plans/emission-model.md`, Track A).
 
 So a run that fails to start (an SDK spawn hitting the file-descriptor ceiling —
