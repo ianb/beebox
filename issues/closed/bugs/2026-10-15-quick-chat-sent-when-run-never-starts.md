@@ -1,12 +1,15 @@
 ---
 title: "Quick chat records a thought as sent when the chat run never starts"
-workstream: unattached
+workstream: clerk-quick-send
+resolution: implemented
 area: beebox
 labels: [quick-chat, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-clerk-quick-send — a Clerk send to a new chat in the worktree box
 ---
+
+**Closed:** A send whose run cannot start (no Claude login, missing provider setup, or a live third-party run whose model or key was removed) is now refused before admission: 409 with the reason, nothing recorded, no message-id claimed. Quick chat stores it as not delivered with Retry. Code: `beebox/src/core/chat/session/run/{core.ts,start-refusal.ts}`, `beebox/src/webapp/routes/chat/send-run.ts`. Resolved in cfc3b0098 and 87c44d075. A refusal emits "error" only when the session has a listener (a queued drain has none; the queue is restored). The web composer now gets a 409 with the reason instead of 200 plus a turn-stream error, and shows a rejected send that keeps the text.
 
 A quick chat thought (box screen, iOS, or a Clerk send) can be stored as
 `sent` while no agent turn ever runs. The person sees "Sent to <chat>"; the

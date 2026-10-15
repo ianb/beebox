@@ -12,6 +12,7 @@ import { processCapture } from "../../../src/core/quick-capture/worker.js";
 import { readFile, writeFile, rename, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 const id = "11111111-1111-4111-8111-111111111111";
 const imageId = "22222222-2222-4222-8222-222222222222";
 const declaration = {version:1 as const,capturedAt:"2026-10-12T12:00:00Z",source:"apple-app-intents" as const,input:"Keep exact words"};
@@ -63,14 +64,22 @@ await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:image,bytes
 
 const record = await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id);
 [record.state,record.sourceRef,record.sourceCommitted]
-=> ["needs-choice","_content/captures/11111111-1111-4111-8111-111111111111.memo.card",true]
+=> ["needs-choice","_content/incoming/11111111-1111-4111-8111-111111111111.memo.card",true]
+```
+
+A capture with words is routed to a chat, which files it, so its source waits
+in the git-ignored incoming folder: written, and not in git yet.
+
+```ts continue
+execFileSync("git",["status","--porcelain","--untracked-files=all"],{cwd:box.root,encoding:"utf8"}).split("\n").filter(Boolean)
+=> []
 
 await readFile(join(captureDirectory(box.root,id),"material"),"utf8")
 => abc
 
 const replay = await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id);
 [replay.state,replay.sourceRef]
-=> ["needs-choice","_content/captures/11111111-1111-4111-8111-111111111111.memo.card"]
+=> ["needs-choice","_content/incoming/11111111-1111-4111-8111-111111111111.memo.card"]
 
 await box.cleanup();
 ```

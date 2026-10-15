@@ -1,6 +1,6 @@
 # Quick chat wire contract: shared fixtures
 
-The iOS box screen and App Intent call `quickChat.submit`, `choose`, `discard`, and `home`
+The iOS box screen and App Intent call `quickChat.submit`, `choose`, `retry`, `discard`, and `home`
 directly with the device token. The request and response shapes are pinned by
 golden fixtures in `test/mobile-contract/fixtures/quick-chat/`, which the
 native `QuickChatAPI` tests decode and encode too, so a change on either side
@@ -18,7 +18,7 @@ import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { quickChatViewSchema } from "../../../../src/core/chat/routing/quick-chat-record.js";
 import {
-  quickChatChooseInput, quickChatDiscardInput, quickChatHomeSchema, quickChatSubmitInput,
+  quickChatChooseInput, quickChatDiscardInput, quickChatHomeSchema, quickChatRetryInput, quickChatSubmitInput,
 } from "../../../../src/webapp/trpc/routers/quick-chat.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 
@@ -58,6 +58,7 @@ for (const name of names) {
   if (name.endsWith("request.json") && name.startsWith("submit-")) results[name] = check(quickChatSubmitInput, body);
   else if (name === "choose-request.json") results[name] = check(quickChatChooseInput, body);
   else if (name === "discard-request.json") results[name] = check(quickChatDiscardInput, body);
+  else if (name === "retry-request.json") results[name] = check(quickChatRetryInput, body);
   else if (name === "home.json") results[name] = check(quickChatHomeSchema, body.result.data);
   else if (name.startsWith("view-")) results[name] = check(quickChatViewSchema, body.result.data);
   else results[name] = "unknown fixture kind";
@@ -67,6 +68,7 @@ results
   "choose-request.json": "ok",
   "discard-request.json": "ok",
   "home.json": "ok",
+  "retry-request.json": "ok",
   "submit-external-request.json": "ok",
   "submit-request.json": "ok",
   "view-discarded.json": "ok",
@@ -75,31 +77,35 @@ results
   "view-needs-choice-uncertain.json": "ok",
   "view-sending-expired.json": "ok",
   "view-sending-not-delivered.json": "ok",
+  "view-sending-page-no-note.json": "ok",
   "view-sent-no-session.json": "ok",
   "view-sent-queued.json": "ok",
   "view-sent.json": "ok",
 }
 ```
 
-The view fixtures cover each state and reason the box screen distinguishes.
+The view fixtures cover each state and reason the box screen distinguishes, and
+a page sent from the Clerk with no note: an empty message beside `page`.
 
 ```ts
 const faces = [];
 for (const name of (await readdir(DIR)).filter((file) => file.startsWith("view-")).toSorted()) {
-  const { state, reason, lastError, expired, queued, destination } = (await fixture(name)).result.data;
-  faces.push([state, reason ?? null, lastError === undefined ? null : "lastError", expired ?? null, queued ?? null, destination?.sessionId === undefined ? null : "session"]);
+  const { state, reason, lastError, expired, queued, destination, page, message } = (await fixture(name)).result.data;
+  faces.push([state, reason ?? null, lastError === undefined ? null : "lastError", expired ?? null, queued ?? null, destination?.sessionId === undefined ? null : "session",
+    page === undefined ? null : `page${message === "" ? ", no note" : ""}`]);
 }
 faces
 => [
-  ["discarded", null, null, null, null, null],
-  ["needs-choice", "destination-gone", null, null, null, null],
-  ["needs-choice", "routing-unavailable", null, null, null, null],
-  ["needs-choice", "uncertain", null, null, null, null],
-  ["sending", null, "lastError", true, null, "session"],
-  ["sending", null, "lastError", null, null, "session"],
-  ["sent", null, null, null, null, null],
-  ["sent", null, null, null, true, "session"],
-  ["sent", null, null, null, null, "session"],
+  ["discarded", null, null, null, null, null, null],
+  ["needs-choice", "destination-gone", null, null, null, null, null],
+  ["needs-choice", "routing-unavailable", null, null, null, null, null],
+  ["needs-choice", "uncertain", null, null, null, null, null],
+  ["sending", null, "lastError", true, null, "session", null],
+  ["sending", null, "lastError", null, null, "session", null],
+  ["sending", null, "lastError", null, null, "session", "page, no note"],
+  ["sent", null, null, null, null, null, null],
+  ["sent", null, null, null, true, "session", null],
+  ["sent", null, null, null, null, "session", null],
 ]
 ```
 
@@ -107,6 +113,7 @@ The request fixtures go over the real HTTP tRPC adapter as the phone sends
 them. With no OpenRouter key the submitted thought is stored as
 `routing-unavailable`, its response envelope parses as a view, and the discard
 fixture ends it. `home` answers an envelope that parses as the home schema.
+`retry` of a record that is not `sending` answers it unchanged.
 
 ```ts
 const server = await makeTestServer();
@@ -118,9 +125,40 @@ const home = await server.request({ method: "GET", url: "/api/trpc/quickChat.hom
 [home.statusCode, check(quickChatHomeSchema, home.body.result.data), home.body.result.data.open.length]
 => [200, "ok", 1]
 
+const retry = await server.request({ method: "POST", url: "/api/trpc/quickChat.retry", payload: await fixture("retry-request.json") });
+[retry.statusCode, check(quickChatViewSchema, retry.body.result.data), retry.body.result.data.state]
+=> [200, "ok", "needs-choice"]
+
 const discard = await server.request({ method: "POST", url: "/api/trpc/quickChat.discard", payload: await fixture("discard-request.json") });
 [discard.statusCode, discard.body.result.data.state]
 => [200, "discarded"]
+```
+
+A box from before `retry` answers 404 for it, with a message the phone tells
+apart from a missing record's 404 (`QuickChatAPI.APIError.isUnknownProcedure`)
+before it falls back to a repeated `submit`.
+
+The server logs each failed procedure; these two are failures by design, so
+the log is captured and shown.
+
+```ts continue
+const logged: string[] = [];
+const { error: logError } = console;
+console.error = (...args: unknown[]) => { logged.push(args.map(String).join(" ")); };
+let unknown, missing;
+try {
+  unknown = await server.request({ method: "POST", url: "/api/trpc/quickChat.noSuchProcedure", payload: await fixture("retry-request.json") });
+  missing = await server.request({ method: "POST", url: "/api/trpc/quickChat.retry", payload: { id: "00000000-0000-4000-8000-000000000000", channel: "ios-native" } });
+} finally { console.error = logError; }
+({ unknown: [unknown.statusCode, unknown.body.error.message], missing: [missing.statusCode, missing.body.error.message], logged })
+=> {
+  unknown: [404, "No procedure found on path \"quickChat.noSuchProcedure\""],
+  missing: [404, "This message is no longer stored."],
+  logged: [
+    "[trpc] unknown quickChat.noSuchProcedure failed: No procedure found on path \"quickChat.noSuchProcedure\"",
+    "[trpc] mutation quickChat.retry failed: This message is no longer stored.",
+  ],
+}
 ```
 
 ```ts cleanup

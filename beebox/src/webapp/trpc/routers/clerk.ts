@@ -21,7 +21,7 @@ import {
   sendInput,
   sendOutput,
 } from "../clerk-contract.js";
-import { ensureIncomingDir, incomingCardName, INCOMING_DIR } from "../../../core/clerk-incoming.js";
+import { ensureIncomingDir, incomingCardName, INCOMING_DIR } from "../../../core/incoming.js";
 import { readQuickChatRecord } from "../../../core/chat/routing/quick-chat-store.js";
 import { submitQuickChat } from "../../../core/chat/routing/quick-chat-submit/submit.js";
 import type { QuickChatView } from "../../../core/chat/routing/quick-chat-record.js";

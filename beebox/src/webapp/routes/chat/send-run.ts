@@ -182,12 +182,15 @@ export function startAckedRun(
     admitted = true;
     settleAdmission({ admitted: true });
   };
-  const send = (): Promise<boolean> => chatSession.send(input, { onAdmitted: admit });
+  // A run refused before admission (no login, no provider key) answers with its reason, not "busy".
+  let refusedReason: string | null = null;
+  const refuse = (reason: string): void => { refusedReason = reason; };
+  const send = (): Promise<boolean> => chatSession.send(input, { onAdmitted: admit, onRefused: refuse });
   void (work ? work.run(send) : send())
     .then((sent) => {
-      if (!sent) capture.fail("Failed to send message");
+      if (!sent) capture.fail(refusedReason ?? "Failed to send message");
       else if (!admitted) console.error("[chat] send() reported success without admitting the turn");
-      settleAdmission({ admitted: false, reason: "The chat is busy with another message; this one was not sent" });
+      settleAdmission({ admitted: false, reason: refusedReason ?? "The chat is busy with another message; this one was not sent" });
     })
     .catch((e: unknown) => {
       console.error("[chat] send failed to start a run:", e);

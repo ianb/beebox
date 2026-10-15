@@ -460,7 +460,7 @@ with `pnpm knowledge-audit run --box <worktree test1> --filter clerk-send`.
 - **Found on the way:** box children lacked `USER`, so macOS Claude Code
   missed its keychain login and every first chat run was refused, silently
   (fixed on this branch); quick chat then recorded the thought as sent
-  ([issue](../../../issues/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md)).
+  ([issue](../../../issues/closed/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md)).
 
 ## Implementation order
 

@@ -134,7 +134,9 @@ export const quickCaptureRouter = router({
         declaration: { version: 1, capturedAt: now }, acceptedAt: now, state: "gone", attempts: 0, discardedBeforeAcceptance: true };
       if (existing !== null) await owned(ctx, input.id);
       await reconcileCaptureSourceLocked(ctx.boxRoot, record);
-      const ref = record.declaration.parentCaptureId === undefined && record.sourceCommitted === true
+      // Looked up even before the source is marked written: a crash between writing
+      // the memo and recording that would otherwise leave the memo behind.
+      const ref = record.declaration.parentCaptureId === undefined
         ? await findCaptureSource(ctx.boxRoot, record) ?? (record.state === "gone" ? record.sourceRef ?? null : null) : null;
       // Tombstone first: a crash cannot make a stale upload resurrect the deleted source.
       if (ref !== null) record.sourceRef = ref;

@@ -17,6 +17,9 @@ final class BoxScreenStoreTests: XCTestCase {
         var submittedSources: [String?] = []
         var submittedHqServices: [String?] = []
         var chosen: [String] = []
+        var retried: [UUID] = []
+        /// What `retry` throws instead of answering, such as a box without it.
+        var retryError: Error?
         /// Runs inside `home`, before it answers, so a test can land an answer
         /// while a refresh is in flight.
         var duringHome: (@MainActor () async -> Void)?
@@ -54,6 +57,16 @@ final class BoxScreenStoreTests: XCTestCase {
 
         func discard(id: UUID) async throws -> QuickChatView {
             view(id: id, message: "gone", state: .discarded)
+        }
+
+        func retry(id: UUID) async throws -> QuickChatView {
+            retried.append(id)
+            if let retryError {
+                throw retryError
+            }
+            var answer = view(id: id, message: "", state: .sent)
+            answer.destination = destination
+            return answer
         }
 
         func home() async throws -> QuickChatHome {
@@ -192,9 +205,27 @@ final class BoxScreenStoreTests: XCTestCase {
         XCTAssertEqual(store.sent(boxID: box.id).map(\.id), [open.id])
     }
 
-    func testRetryingANotDeliveredRecordResubmitsTheSameIdAndText() async {
+    func testRetryingANotDeliveredRecordCallsRetryWithItsId() async {
+        let client = FakeClient()
+        var pageOnly = view(id: UUID(), message: "", state: .sending)
+        pageOnly.page = .init(title: "Cedar raised bed kits", url: "https://example.com/garden/cedar-beds")
+        client.homeAnswer.open = [pageOnly]
+        let (store, _) = makeStore(client)
+        await store.refresh(boxID: box.id)
+
+        await store.retry(pageOnly, boxID: box.id)
+
+        XCTAssertEqual(client.retried, [pageOnly.id])
+        XCTAssertTrue(client.submitted.isEmpty)
+        XCTAssertNil(store.actionErrors[pageOnly.id])
+        XCTAssertEqual(store.sent(boxID: box.id).map(\.id), [pageOnly.id])
+    }
+
+    /// A box from before `quickChat.retry` answers 404 for the procedure.
+    func testRetryOnABoxWithoutRetryResubmitsTheSameIdAndText() async {
         let client = FakeClient()
         client.submitAnswer = .sent
+        client.retryError = QuickChatAPI.APIError.server(status: 404, message: #"No procedure found on path "quickChat.retry""#)
         let notDelivered = view(id: UUID(), message: "Order filters", state: .sending)
         client.homeAnswer.open = [notDelivered]
         let (store, _) = makeStore(client)
@@ -202,10 +233,29 @@ final class BoxScreenStoreTests: XCTestCase {
 
         await store.retry(notDelivered, boxID: box.id)
 
+        XCTAssertEqual(client.retried, [notDelivered.id])
         XCTAssertEqual(client.submitted.map(\.0), [notDelivered.id])
         XCTAssertEqual(client.submitted.map(\.1), ["Order filters"])
         XCTAssertEqual(client.submittedOrigins, [nil], "a retry keeps the origin the server stored")
         XCTAssertEqual(store.sent(boxID: box.id).map(\.id), [notDelivered.id])
+    }
+
+    func testRetryDoesNotResubmitAnEmptyMessageOrAMissingRecord() async {
+        let client = FakeClient()
+        let pageOnly = view(id: UUID(), message: "", state: .sending)
+        let missing = view(id: UUID(), message: "Order filters", state: .sending)
+        client.homeAnswer.open = [pageOnly, missing]
+        let (store, _) = makeStore(client)
+        await store.refresh(boxID: box.id)
+
+        client.retryError = QuickChatAPI.APIError.server(status: 404, message: #"No procedure found on path "quickChat.retry""#)
+        await store.retry(pageOnly, boxID: box.id)
+        client.retryError = QuickChatAPI.APIError.server(status: 404, message: "Quick chat message not found.")
+        await store.retry(missing, boxID: box.id)
+
+        XCTAssertTrue(client.submitted.isEmpty)
+        XCTAssertNotNil(store.actionErrors[pageOnly.id])
+        XCTAssertEqual(store.actionErrors[missing.id], "Quick chat message not found.")
     }
 
     func testAFailedRefreshKeepsTheCachedHomeAndTheNextLaunchDrawsFromTheCache() async throws {

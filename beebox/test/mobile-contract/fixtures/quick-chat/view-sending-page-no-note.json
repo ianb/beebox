@@ -1,0 +1,19 @@
+{
+  "result": {
+    "data": {
+      "id": "5f0c2a9e-3b1d-4c7a-9e2f-8d6b1a4c3e70",
+      "message": "",
+      "createdAt": "2026-10-06T14:02:11.000Z",
+      "state": "sending",
+      "destination": {
+        "label": "Garden raised beds",
+        "sessionId": "7e1f3a5c-9b2d-4f6a-8c0e-2a4c6e8a0b30"
+      },
+      "lastError": "Chat is not running on the box. Retry in a moment.",
+      "page": {
+        "title": "Cedar raised bed kits",
+        "url": "https://example.com/garden/cedar-beds"
+      }
+    }
+  }
+}

@@ -6,7 +6,11 @@ client finalize call to lose when a share extension exits.
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { buildMultipartForm } from "../../../src/lib/multipart.js";
-import { readCapture } from "../../../src/core/quick-capture/store.js";
+import { readCapture, writeCapture } from "../../../src/core/quick-capture/store.js";
+import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
+import { materializeCaptureSource } from "../../../src/core/quick-capture/source.js";
+import { access } from "node:fs/promises";
+import { join } from "node:path";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 import { createHash } from "node:crypto";
 const id="11111111-1111-4111-8111-111111111111";
@@ -209,6 +213,25 @@ const deleted=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delet
 
 await upload(ctx,declaration)
 => {statusCode:410,body:{error:"This capture was deleted. It cannot be recreated by retrying."}}
+
+await ctx.cleanup();
+```
+
+A crash can land between writing the source memo and recording that it was
+written. Deleting the capture then still finds the memo by its `share-id` and
+removes it.
+
+```ts
+const ctx=await makeTestServer();
+await acceptQuickCapture({boxRoot:ctx.boxRoot,id,owner:null,declaration:{...declaration,input:"Keep this"}});
+const record=await readCapture(ctx.boxRoot,id);
+const written=await materializeCaptureSource(ctx.boxRoot,record);
+await writeCapture(ctx.boxRoot,{...record,state:"preparing"});
+const exists=(rel)=>access(join(ctx.boxRoot,rel)).then(()=>true,()=>false);
+const before=await exists(written);
+await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
+({written,before,after:await exists(written)})
+=> {written:"_content/incoming/11111111-1111-4111-8111-111111111111.memo.card",before:true,after:false}
 
 await ctx.cleanup();
 ```

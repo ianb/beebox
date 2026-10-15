@@ -101,7 +101,7 @@ _content/
 ├── Box.landmark.card        root landmark (chat can be scoped to the box root)
 ├── MAP.md
 ├── inbox/                   incoming items awaiting triage
-├── incoming/                pages sent from the Clerk, not filed yet (git-ignored)
+├── incoming/                pages and captures sent to the box, not filed yet (git-ignored)
 ├── chat/                    chat-thread cards
 ├── docs/                    box-specific docs (optional, agent-authored)
 ├── people/                  person cards
@@ -161,7 +161,7 @@ is state** — a card's directory determines its lifecycle stage. From
 | `_content/inbox/staged/` | Intake-complete; waiting for the triage agent. |
 | `_content/inbox/triaged/` | Per-category holding spots (`<category>/`), plus `_unsure/` for low-confidence items paired with a question card. |
 | `_content/inbox/triaged/_unsure/` | Low-confidence triage results; paired with a question card. |
-| `_content/incoming/` | Pages sent from the Clerk, waiting for the chat that quick chat chose to file them. Git-ignored by its own `.gitignore`; a card enters git when it is filed. Not triaged. |
+| `_content/incoming/` | Pages sent from the Clerk and phone captures with words, waiting for the chat that quick chat chose to file them. Git-ignored by its own `.gitignore`; a card enters git when it is filed. Not triaged. |
 | `_content/recipes/` | Recipe collection (free-form subdirectory tree). |
 | `_content/todos/` | Active todo lists — human action items. |
 | `_content/drive/` | Google Drive sync (spreadsheets as JSON, docs as markdown). |
