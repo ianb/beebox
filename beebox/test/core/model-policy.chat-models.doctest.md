@@ -218,10 +218,10 @@ verbatim. **Nothing here can produce a name an engine does not know.**
 
 ```ts
 JSON.stringify([
-  resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: null }),
-  resolveSmallModelForEngine({ engine: "codex", pinned: null, boxDefault: null }),
-  resolveSmallModelForEngine({ engine: "codex", pinned: tierId("claude", "balanced"), boxDefault: null }),
-  resolveSmallModelForEngine({ engine: "claude", pinned: tierId("claude", "strongest"), boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "claude", pinned: null, added: [], boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: null, added: [], boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: tierId("claude", "balanced"), added: [], boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "claude", pinned: tierId("claude", "strongest"), added: [], boxDefault: null }),
 ].map(label))
 => ["claude efficient","codex efficient","codex balanced","claude strongest"]
 ```

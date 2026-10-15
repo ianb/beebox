@@ -1,12 +1,15 @@
 ---
 title: "Background agent runs (jobs, procedures, reviews) do not follow the box's OpenRouter default; they need the host's Claude subscription"
-workstream: unattached
+workstream: background-provider
+resolution: implemented
 area: beebox
 labels: [providers]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — 2026-10-15
 ---
+
+**Closed 2026-10-15** by commits 64dc34fa7 and 7916dfedf (plan: `beebox/docs/implemented-plans/background-runs-follow-openrouter-default.md`). Background runs now follow the box's OpenRouter default. No divergence from the issue; admin control for the small model is filed separately.
 
 ## What the boxholder reported
 
@@ -56,12 +59,12 @@ have background work fail silently.
 - Whether a per-purpose setting is needed (for example "background model"),
   or the chat default applies everywhere.
 - Privacy: moving background work to OpenRouter sends more box content
-  there. [Show privacy implications](../features/2026-10-14-show-privacy-implications-of-this-box-setup.md)
+  there. [Show privacy implications](../../features/2026-10-14-show-privacy-implications-of-this-box-setup.md)
   should list it.
 
 ## Related
 
-- [Provider-endpoint config](../features/2026-07-18-provider-endpoint-config.md).
-- [Explicit API key config](../features/2026-07-20-explicit-api-key-config.md).
-- [Thread runs skip the live provider check](2026-10-06-thread-runs-skip-live-provider-check.md).
-- [OpenRouter chat models in admin (closed)](../closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md).
+- [Provider-endpoint config](../../features/2026-07-18-provider-endpoint-config.md).
+- [Explicit API key config](../../features/2026-07-20-explicit-api-key-config.md).
+- [Thread runs skip the live provider check](../../bugs/2026-10-06-thread-runs-skip-live-provider-check.md).
+- [OpenRouter chat models in admin (closed)](../features/2026-09-19-openrouter-chat-models-added-in-admin.md).

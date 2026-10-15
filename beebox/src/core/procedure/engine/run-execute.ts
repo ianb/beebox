@@ -5,9 +5,8 @@ import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../../a
 import { invariant } from "../../../shared/invariant.js";
 import { MEMORY_ENV } from "../../schedule/memory.js";
 import { fmt } from "../../../lib/format.js";
-import { loadAgentEngine } from "../../box/config.js";
-import { loadEffectiveBoxModel } from "../../model-policy.js";
-import { providerOf, resolveProcedureModel } from "../../../shared/agent-models.js";
+import { loadEffectiveBoxModel, loadTierResolver } from "../../model-policy.js";
+import type { ProcedureModelName } from "../../../shared/agent-models.js";
 import type { ExecuteStepParams } from "./step.js";
 import {
   buildContextBlock,
@@ -49,15 +48,25 @@ function failedAgentOutcome(
   return { sessionId };
 }
 
+/**
+ * The model one run agent uses. A tier resolves through the box policy, so a
+ * GLM- or OpenRouter-defaulted box keeps the step on its own provider. A step
+ * that names no model takes the box default, as the admin's Default model
+ * says; only an unpinned box leaves it to the harness.
+ */
+async function stepModel(boxRoot: string, name: ProcedureModelName | undefined): Promise<string | undefined> {
+  if (name === undefined) return (await loadEffectiveBoxModel(boxRoot)) ?? undefined;
+  return (await loadTierResolver(boxRoot))(name);
+}
+
 async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   const { ctx, boxRoot, step, procedure } = params;
   invariant(step.run, "retryRunAgent requires a run phase");
   invariant(params.retry, "retryRunAgent requires retry context");
   const [agentDef] = step.run.agents;
   invariant(agentDef !== undefined, "review retry requires exactly one run agent");
-  const engine = await loadAgentEngine(boxRoot);
-  // Same provider rule as the main pass: the retry resumes the same step.
-  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
+  // Same model rule as the main pass: the retry resumes the same step.
+  const modelId = await stepModel(boxRoot, agentDef.model);
   const agentFactory = params.createAgent ?? realCreateAgent;
   ctx.writeLine(fmt.dim("  Re-running agent with validation feedback..."));
   const agent = agentFactory({
@@ -71,9 +80,7 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
     prompt: params.retry.failureContext,
     maxTurns: agentDef.maxTurns ?? 20,
     maxBudgetUsd: REVIEW_RETRY_BUDGET_USD,
-    ...(agentDef.model !== undefined && {
-      model: resolveProcedureModel({ engine, model: agentDef.model, provider }),
-    }),
+    ...(modelId !== undefined && { model: modelId }),
   };
   const result = await agent.invoke(invokeOpts);
   const sessionId = agent.sessionId ?? params.retry.sessionId;
@@ -96,21 +103,15 @@ export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutc
   } = params;
   invariant(step.run, "runRunAgents requires a run phase");
   const agentFactory = params.createAgent ?? realCreateAgent;
-  const engine = await loadAgentEngine(boxRoot);
-  // Tier resolution is provider-aware: a GLM-defaulted box's `model: strong`
-  // step resolves to GLM, not silently to first-party Opus.
-  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
   const relRunCardPath = path.relative(boxRoot, runCardPath);
   // Set only when a scheduled `runs:` started this procedure and the run can take a summary.
   const scheduleName = process.env[MEMORY_ENV.summaryFile] ? process.env[MEMORY_ENV.scheduleName] : undefined;
   let sessionId: string | undefined;
 
   for (const agentDef of step.run.agents) {
-    const modelId = agentDef.model === undefined
-      ? undefined
-      : resolveProcedureModel({ engine, model: agentDef.model, provider });
+    const modelId = await stepModel(boxRoot, agentDef.model);
     ctx.writeLine(
-      fmt.dim(`  Running agent${modelId === undefined ? "" : ` (${agentDef.model} → ${modelId})`}...`),
+      fmt.dim(`  Running agent${modelId === undefined ? "" : ` (${agentDef.model ?? "box default"} → ${modelId})`}...`),
     );
     const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
     const contextBlock = buildContextBlock({
