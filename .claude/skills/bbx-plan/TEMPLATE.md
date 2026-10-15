@@ -26,6 +26,7 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      estimated changed source/test lines (additions plus deletions). Estimates
      are goals, not automatic cutoffs or human-imposed limits. Explain what the
      fuller design buys. Report authored docs/generated output separately.
+     This plan file is not counted.
      Over 2,000 total changed lines is a BIG CHANGE: label it, explain the size,
      and obtain approval unless that size and scope are already approved.
      Substantial growth prompts visible reassessment, not an automatic halt. -->

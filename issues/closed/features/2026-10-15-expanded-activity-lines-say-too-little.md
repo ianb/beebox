@@ -1,6 +1,7 @@
 ---
 title: "Expanded chat activity lines say \"Made a change\" with no detail"
-workstream: unattached
+workstream: activity-detail
+resolution: implemented
 area: beebox
 labels: [chat]
 filed-by: agent
@@ -8,8 +9,10 @@ discovered-by: Ian
 discovered-in: main session — 2026-10-15
 ---
 
+Closed by 1271301ff (plan [activity-detail](../../../beebox/docs/implemented-plans/activity-detail.md)): expanded activity lines name the thing and show what changed. Divergence: Codex edits get names only, since Codex records no old/new text; failure detection relies on Claude Code's `<tool_use_error>` result prefix.
+
 The plain-language rewrite of the chat activity row (closed
-[activity row speaks in commands and files](../closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md))
+[activity row speaks in commands and files](../bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md))
 also changed the expanded list. When the boxholder expands the row, a step
 can read only "Made a change". The expanded list is the place where a person
 asked for more, so it should say more than the collapsed summary does.
@@ -46,9 +49,9 @@ and the raw JSON there is no middle level.
 - **Paths.** The earlier fix removed file paths on purpose. A title or
   display name from the card or document may be enough; a raw path such as
   `_content/...` should stay out of the line (see the `_content/` concern in
-  [printable cards](2026-10-01-printable-cards.md)).
+  [printable cards](../../features/2026-10-01-printable-cards.md)).
 
 ## Related
 
-- [Codex bash activity shows its shell wrapper](../bugs/2026-08-30-codex-bash-activity-shows-shell-wrapper.md).
-- [Surface agent error detail in chat](2026-07-11-surface-agent-error-detail-in-chat-ui.md).
+- [Codex bash activity shows its shell wrapper](../../bugs/2026-08-30-codex-bash-activity-shows-shell-wrapper.md).
+- [Surface agent error detail in chat](../../features/2026-07-11-surface-agent-error-detail-in-chat-ui.md).

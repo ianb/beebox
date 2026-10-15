@@ -1,6 +1,6 @@
 ---
 title: "A send rejected as busy is still recorded as delivered, then shows forever as the newest chat message"
-workstream: unattached
+workstream: busy-send-rejection
 area: beebox
 labels: [chat, voice]
 filed-by: agent
@@ -31,6 +31,11 @@ The boxholder ended a long recording, and a second, 2-second recording began
   terminal. The client considers both delivered.
 
 ## Two defects
+
+Status: defect 1 is fixed in commit b6721adc0 (the send records its event and
+dedup claim only once the session takes its turn; a refused send answers 409
+and records nothing). Defect 2 remains open. Existing orphans, such as the one
+in the evidence above, are not repaired.
 
 1. **Half-recorded message.** The busy path rejects the send after the user message
    event and the dedup record are written. Nothing queues it for the next
