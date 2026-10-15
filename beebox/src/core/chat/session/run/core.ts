@@ -32,6 +32,7 @@ import {
 import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "../model.js";
 import { preflightChatBackend } from "../../../agent/auth-preflight.js";
+import { runCanStart } from "./start-refusal.js";
 import { liveProviderRefusal } from "../../../provider-env/core.js";
 import { createRunLockHolder, withChatRunAdmission } from "./lock.js";
 import {
@@ -308,21 +309,21 @@ export class ChatSession extends EventEmitter {
    * carrying the text plus any image attachments referenced by `[imageN]`
    * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
    */
-  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void }): Promise<boolean> {
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
     const opening = (async () => {
       const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
-      try { return await work.run(() => this.sendAdmitted(message, options?.onAdmitted)); }
+      try { return await work.run(() => this.sendAdmitted(message, { onAdmitted: options?.onAdmitted, onRefused: options?.onRefused })); }
       finally { await work.release(); }
     })();
     this.opening.add(opening);
     try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput, onAdmitted: (() => void) | undefined): Promise<boolean> {
-    if (this.isBusy()) {
-      log("send", "Rejected — busy");
-      return false;
-    }
+  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onRefused }: { onAdmitted: (() => void) | undefined; onRefused: ((reason: string) => void) | undefined }): Promise<boolean> {
+    if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
+    // A run that cannot start is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
+    if (this.liveRun() === null && !(await runCanStart({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, startOptions: await this.buildBackendStartOptions(), session: this, onRefused }))) return false;
+    if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
 
     const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
 
