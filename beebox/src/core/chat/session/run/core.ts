@@ -306,25 +306,25 @@ export class ChatSession extends EventEmitter {
    *
    * Accepts either a plain string (back-compat) or a ChatSendInput object
    * carrying the text plus any image attachments referenced by `[imageN]`
-   * tokens in the text.
+   * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
    */
-  async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void }): Promise<boolean> {
     const opening = (async () => {
-      const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
-      try { return await work.run(() => this.sendAdmitted(message)); }
+      const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
+      try { return await work.run(() => this.sendAdmitted(message, options?.onAdmitted)); }
       finally { await work.release(); }
     })();
     this.opening.add(opening);
     try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput): Promise<boolean> {
+  private async sendAdmitted(message: string | ChatSendInput, onAdmitted: (() => void) | undefined): Promise<boolean> {
     if (this.isBusy()) {
       log("send", "Rejected — busy");
       return false;
     }
 
-    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
 
     // A live third-party run keeps the provider env it started with; re-check so a removed model or revoked key stops at this turn.
     const refusal = await liveProviderRefusal({ boxRoot: this.boxRoot, model: this.liveRun() === null ? null : this.resolvedModel }); if (refusal !== null) { this.emit("error", refusal); this.restart(); return false; }

@@ -1,6 +1,6 @@
 ---
 title: "A send rejected as busy is still recorded as delivered, then shows forever as the newest chat message"
-workstream: unattached
+workstream: busy-send-rejection
 area: beebox
 labels: [chat, voice]
 filed-by: agent

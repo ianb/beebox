@@ -99,40 +99,68 @@ export function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { 
   return { fail };
 }
 
+/** A send admitted after its watchdog already answered the request as refused. */
+export class SendAbandonedError extends Error {
+  constructor() {
+    super("Send abandoned before the session took the turn");
+    this.name = "SendAbandonedError";
+  }
+}
+
+/** Whether the session took the turn. Not admitted means nothing was recorded. */
+export type RunAdmission = { admitted: true } | { admitted: false; reason: string };
+
 /**
- * Start the run for a send that has already been acked.
+ * Start the run for a send, and report whether the session admitted it.
  *
- * Nothing awaits this. The client holds its `{turnId}` and is subscribed to the
- * turn stream, so a run that fails to start reports there rather than in an
- * HTTP status. `send()` can *reject* (an FD-exhausted SDK spawn is the case
- * we've seen) or return false; both mean the same thing — it only fails before
- * reaching the backend, so nothing was dispatched — and both fail the capture,
- * which releases the pin and marks the turn errored for every subscriber.
+ * `onAdmitted` runs at the moment the session takes the turn, before the
+ * engine starts: that is where the caller records the message, and the
+ * returned promise resolves once it has. A send the session refuses first
+ * (another send took the turn between the caller's busy check and this one,
+ * 14 ms apart on 2026-10-14) resolves `{ admitted: false }` with nothing
+ * recorded, so the caller can refuse the request instead of acking a message
+ * the agent never gets. A throw before admission, including one from
+ * `onAdmitted`, rejects the promise.
+ *
+ * Nothing awaits the run itself. The client holds its `{turnId}` and is
+ * subscribed to the turn stream, so a run that fails to start after admission
+ * reports there rather than in an HTTP status. `send()` can *reject* (an
+ * FD-exhausted SDK spawn is the case we've seen) or return false; both mean
+ * nothing was dispatched, and both fail the capture, which releases the pin
+ * and marks the turn errored for every subscriber.
  *
  * A `send()` that does NEITHER is the third case: a wedged run lock or a spawn
- * that never returns leaves the turn buffer unsettled and the session pinned
- * forever, while the client streams a turn that will never produce a frame and
- * every retry of its message id is answered `deduplicated: true`. The watchdog
- * bounds that: past `watchdog.timeoutMs` of *awake* time the turn is failed
- * like any other run that never started. It is cleared the moment `send()`
- * settles either way, so a long turn that did start is never touched — and if
- * `send()` settles late anyway, `capture.fail` has already no-oped the buffer,
- * so a real result can't be clobbered.
+ * that never returns leaves the turn buffer unsettled and the session pin held
+ * forever. The watchdog bounds that: past `watchdog.timeoutMs` of *awake* time
+ * the turn is failed like any other run that never started, and a send not yet
+ * admitted is abandoned (its late admission throws, so nothing is recorded).
+ * The watchdog is cleared the moment `send()` settles either way, so a long
+ * turn that did start is never touched — and if `send()` settles late anyway,
+ * `capture.fail` has already no-oped the buffer, so a real result can't be
+ * clobbered.
  *
- * The durable claim is deliberately left alone: the user message is already in
- * history, so a redelivery of this id must still be answered `deduplicated`,
- * not recorded a second time.
+ * The durable claim is deliberately left alone after admission: the user
+ * message is already in history, so a redelivery of this id must still be
+ * answered `deduplicated`, not recorded a second time.
  */
 export function startAckedRun(
   chatSession: Pick<ChatSession, "send">,
-  { input, capture, watchdog, work }: {
+  { input, capture, watchdog, work, onAdmitted }: {
     work?: BoxWork;
     input: ChatSendInput;
     capture: TurnCapture;
+    /** Records the message; runs once the session holds the turn. */
+    onAdmitted?: () => void;
     /** Tests shrink the bound; production omits it. */
     watchdog?: { timeoutMs: number; periodMs: number } | undefined;
   },
-): void {
+): Promise<RunAdmission> {
+  const answer: { settle?: (admission: RunAdmission) => void; refuse?: (error: unknown) => void } = {};
+  const admission = new Promise<RunAdmission>((resolve, reject) => { answer.settle = resolve; answer.refuse = reject; });
+  const settleAdmission = (result: RunAdmission): void => answer.settle?.(result);
+  const refuseAdmission = (error: unknown): void => answer.refuse?.(error);
+  let admitted = false;
+  let abandoned = false;
   const bound = watchdog ?? { timeoutMs: RUN_START_TIMEOUT_MS, periodMs: RUN_START_TICK_MS };
   const timer = startAwakeTimeout({
     timeoutMs: bound.timeoutMs,
@@ -143,19 +171,32 @@ export function startAckedRun(
           "failing the turn so the client stops waiting and the session pin is released. " +
           "Suspect a run lock nobody released or a subprocess spawn that never returned.",
       );
-      capture.fail(`The run did not start within ${describeBound(bound.timeoutMs)}`);
+      const reason = `The run did not start within ${describeBound(bound.timeoutMs)}`;
+      capture.fail(reason);
+      if (!admitted) { abandoned = true; settleAdmission({ admitted: false, reason }); }
     },
   });
-  void (work ? work.run(() => chatSession.send(input)) : chatSession.send(input))
+  const admit = (): void => {
+    if (abandoned) throw new SendAbandonedError();
+    onAdmitted?.();
+    admitted = true;
+    settleAdmission({ admitted: true });
+  };
+  const send = (): Promise<boolean> => chatSession.send(input, { onAdmitted: admit });
+  void (work ? work.run(send) : send())
     .then((sent) => {
       if (!sent) capture.fail("Failed to send message");
+      else if (!admitted) console.error("[chat] send() reported success without admitting the turn");
+      settleAdmission({ admitted: false, reason: "The chat is busy with another message; this one was not sent" });
     })
     .catch((e: unknown) => {
       console.error("[chat] send failed to start a run:", e);
       capture.fail(errorMessage(e));
+      refuseAdmission(e);
     })
     .finally(async () => {
       timer.stop();
       await work?.release();
     });
+  return admission;
 }
