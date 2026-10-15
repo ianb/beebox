@@ -1,6 +1,6 @@
 ---
 title: "Expanded chat activity lines say \"Made a change\" with no detail"
-workstream: unattached
+workstream: activity-detail
 area: beebox
 labels: [chat]
 filed-by: agent

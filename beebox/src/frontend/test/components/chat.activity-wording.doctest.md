@@ -7,6 +7,7 @@ expanded line; only the label is lay language.
 ```ts setup
 import {
   describeToolCall,
+  describeToolDetail,
   summarizeActivity,
 } from "../../src/components/chat/ChatMessages/activity-wording.js";
 
@@ -18,6 +19,10 @@ function tools(...blocks) {
 }
 function say(toolName, input) {
   return describeToolCall(tool(toolName, input));
+}
+// A finished call: the result is grafted onto it, as the history read does.
+function detail(toolName, input) {
+  return describeToolDetail({ ...tool(toolName, input), resultSummary: "The file has been updated." });
 }
 ```
 
@@ -74,11 +79,38 @@ The plural follows ordinary English endings:
 => ["Set up a place for your inventories", "Set up a place for your boxes"]
 ```
 
-## Other paths
+## Documents
+
+A file in the person's content folder that is not a card is named by its
+file name, without the extension. Paths arrive absolute or box-relative; the
+`_content` folder itself is never named.
 
 ```ts
-[say("Read", { file_path: "notes/todo.txt" }), say("Edit", { file_path: "notes/todo.txt" }), say("Write", {})]
-=> ["Checked something in your box", "Made a change", "Made a change"]
+const doc = "/srv/box/_content/lists/Errands.md";
+[say("Read", { file_path: doc }), say("Edit", { file_path: doc }), say("Write", { file_path: doc })]
+=> ["Looked at Errands", "Made a change to Errands", "Saved Errands"]
+```
+
+A Codex file change that touched several files names the first and counts
+the rest:
+
+```ts
+say("Edit", { file_path: "_content/lists/Errands.md", file_paths: ["_content/lists/Errands.md", "_content/a.md", "_content/b.md"] })
+=> Made a change to Errands and 2 more
+```
+
+## Other paths
+
+Agent machinery and paths outside the content folder keep the generic line:
+
+```ts
+[
+  say("Read", { file_path: "notes/todo.txt" }),
+  say("Edit", { file_path: "/box/_config/settings.yaml" }),
+  say("Write", {}),
+  say("Edit", { file_path: "/box/_content/" }),
+]
+=> ["Checked something in your box", "Made a change", "Made a change", "Made a change"]
 ```
 
 ## Bash
@@ -97,7 +129,7 @@ The description is shown, capitalized; the command text never is:
 
 ```ts
 [
-  say("Grep", { pattern: "x" }),
+  say("Grep", {}),
   say("Glob", { pattern: "*.ts" }),
   say("WebSearch", { query: "library loan rules" }),
   say("WebFetch", { url: "https://example.com/a/b?c=1" }),
@@ -125,4 +157,139 @@ expanded detail.
 ```ts
 describeToolCall({ type: "tool_use", toolName: "mcp__x__lookup", inputSummary: "{\"q\":\"drill\"}" })
 => Took a step
+```
+
+## Searches in the box
+
+A search for plain words says what it looked for. A Glob's `**/` and outer
+`*` are trimmed first. A pattern for every card of one type names the type.
+A `.` is plain in a Glob but a wildcard in a Grep regex.
+A regex or other file pattern keeps the plain line, and the expanded line
+shows the pattern under it.
+
+```ts
+[
+  say("Grep", { pattern: "lease" }),
+  say("Grep", { pattern: "Lemon Chicken" }),
+  say("Glob", { pattern: "**/*recipe*" }),
+  say("Glob", { pattern: "**/*.lending-item.card" }),
+  say("Grep", { pattern: "due:\\s*2026" }),
+  say("Grep", { pattern: "lease.*" }),
+  say("Glob", { pattern: "**/*.card" }),
+  say("Glob", { pattern: "Errands.md" }),
+]
+=> [
+  "Searched your box for \"lease\"",
+  "Searched your box for \"Lemon Chicken\"",
+  "Looked through your box for \"recipe\"",
+  "Looked through your box for lending item cards",
+  "Searched your box",
+  "Searched your box",
+  "Looked through your box",
+  "Looked through your box for \"Errands.md\""
+]
+
+[detail("Grep", { pattern: "lease" }).excerpt, detail("Grep", { pattern: "due:\\s*2026" }).excerpt]
+=> [null, { kind: "text", label: "Looked for", text: "due:\\s*2026" }]
+```
+
+## Detail on an expanded line
+
+The place is the folder a content file sits in. A file in a card's
+`.attach/` folder sits in that card. The top of the content folder and
+anything outside it have no place.
+
+```ts
+[
+  detail("Edit", { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card" }).place,
+  detail("Read", { file_path: "_content/recipes/Lemon_Chicken.attach/oven_photo.jpg" }).place,
+  detail("Read", { file_path: "_content/briefing.md" }).place,
+  detail("Read", { file_path: "_config/schemas/loan.ts" }).place,
+  detail("Grep", { pattern: "lease", path: "_content/people" }).place,
+]
+=> ["in recipes", "in Lemon Chicken", null, null, null]
+```
+
+An edit shows what it replaced and with what, trimmed. An edit that
+replaces every match says so.
+
+```ts
+detail("Edit", { file_path: "_content/recipes/Lemon_Chicken.recipe.card", old_string: "Bake at 350°\n", new_string: "Bake at 375°\n" }).excerpt
+=> { kind: "change", before: "Bake at 350°", after: "Bake at 375°", everywhere: false }
+
+detail("Edit", { old_string: "Marta", new_string: "Martha", replace_all: true }).excerpt.everywhere
+=> true
+```
+
+Lines the edit kept at its start and end are dropped, so an added line
+reads as an addition:
+
+```ts
+detail("Edit", { old_string: "- pick up chicken", new_string: "- pick up chicken\n- lemons (3)" }).excerpt
+=> { kind: "change", before: "", after: "- lemons (3)", everywhere: false }
+
+detail("Edit", { old_string: "# Errands\n- milk\n- eggs", new_string: "# Errands\n- oat milk\n- eggs" }).excerpt
+=> { kind: "change", before: "- milk", after: "- oat milk", everywhere: false }
+```
+
+Indentation is kept, since it can be the whole change:
+
+```ts
+detail("Edit", { old_string: "due:\n  - today", new_string: "due:\n    - today" }).excerpt
+=> { kind: "change", before: "  - today", after: "    - today", everywhere: false }
+```
+
+An edit with no result yet (still running, or interrupted) is only what the
+agent asked for, so it has no excerpt:
+
+```ts
+describeToolDetail(tool("Edit", { old_string: "350°", new_string: "375°" }))
+=> { place: null, failed: false, excerpt: null }
+```
+
+Deleting text leaves an empty after side; an edit with no text on either
+side, or with the fields missing (a Codex change, a block still streaming),
+has no excerpt and opens straight to the raw input.
+
+```ts
+[
+  detail("Edit", { old_string: "- buy milk", new_string: "" }).excerpt,
+  detail("Edit", { old_string: " ", new_string: "\n" }).excerpt,
+  detail("Edit", { file_path: "_content/a.md", status: "completed" }).excerpt,
+  detail("Edit", { old_string: 3, new_string: "x" }).excerpt,
+]
+=> [{ kind: "change", before: "- buy milk", after: "", everywhere: false }, null, null, null]
+```
+
+Long text is cut to three lines and 200 characters, marked with "…":
+
+```ts
+const long = detail("Edit", { old_string: "a\nb\nc\nd\ne", new_string: "x".repeat(300) }).excerpt;
+[long.before, long.after.length, long.after.endsWith("…")]
+=> ["a\nb\nc…", 201, true]
+```
+
+A step whose result is an error did not change anything. It is marked, and
+its excerpt is dropped so the asked-for text does not read as done:
+
+```ts
+const failed = { ...tool("Edit", { file_path: "_content/recipes/Lemon_Chicken.recipe.card", old_string: "350°", new_string: "375°" }), resultSummary: "<tool_use_error>String to replace not found in file." };
+describeToolDetail(failed)
+=> { place: "in recipes", failed: true, excerpt: null }
+
+describeToolDetail({ ...tool("Edit", { old_string: "350°", new_string: "375°" }), resultSummary: "The file has been updated." }).failed
+=> false
+```
+
+A step with nothing plain to add has no excerpt: a command, an unknown
+tool, a read, and a new file (its text is the whole file, not a change):
+
+```ts
+[
+  detail("Bash", { description: "check dates", command: "ls" }).excerpt,
+  detail("mcp__x__y", {}).excerpt,
+  detail("Read", { file_path: "_content/a.md" }).excerpt,
+  detail("Write", { file_path: "_content/lists/Errands.md", content: "# Errands\n\n- post office\n" }).excerpt,
+]
+=> [null, null, null, null]
 ```
