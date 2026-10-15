@@ -1,0 +1,86 @@
+# Slides index
+
+Draft deck for the development-practice talk; one file per slide. Main slides are numbered, supporting slides carry a letter. See [README.md](README.md) for the format.
+
+- **[Each fix moves the bottleneck](00-title.md)**
+- **[The walker who knows nothing](01-cold-open-journeys.md)**
+  - [A journey is a person with a goal](01a-journey-definition.md)
+  - [The walker's prompt, day one and day two](01b-walker-prompt.md)
+  - [Every claim gets a bucket and evidence](01c-walk-report-row.md)
+  - [Nothing from a walk is a finding until verified](01d-after-action-rule.md)
+  - [What the walks produced](01e-journey-numbers.md)
+- **[The pattern, in eight moves](02-thesis.md)**
+  - [Commits per month](02a-pace-curve.md)
+  - [What grew](02b-size-curve.md)
+  - [Five words](02c-vocabulary.md)
+- **[0. The agent forgets, and cannot read its tools](03-b0-agent-forgets.md)**
+  - [A test an agent can read and write](03a-doctest.md)
+  - [Did the guidance reach the agent?](03b-knowledge-audit.md)
+  - [A gap the audit found](03c-audit-rerun.md)
+- **[1. Instruction bloat](04-b1-instruction-bloat.md)**
+  - [Seven principles become seven lines](04a-condense-diff.md)
+  - ["When you get corrected, write a rule"](04b-meta-instruction.md)
+  - [Cut, regrow, cut](04c-regrowth.md)
+- **[The quiet stretch](05-quiet-stretch.md)**
+- **[2. One agent at a time](06-b2-one-agent-at-a-time.md)**
+  - [One checkout per line of work, one router for all](06a-worktrees-router.md)
+  - [Every hook had been skipped](06b-hooks-dead-noise-rule.md)
+  - [1,000 to zero in two days](06c-ratchet.md)
+  - [The same rule, before and after calibration](06d-no-disable-rule.md)
+- **[3. Bigger tasks need a design and a second reader](07-b3-bigger-tasks.md)**
+  - [What a plan has to say](07a-plan-template.md)
+  - ["Could this be simpler?" as skill prose, then as a template field](07b-could-this-be-simpler.md)
+  - [A review is kept, and every finding is checked](07c-review-file.md)
+  - [What the other model found](07d-review-catches.md)
+  - [False start: a one-directional review](07e-false-start-codex-skill.md)
+  - [Do agents read old plans?](07f-old-plans-are-read.md)
+- **[4. Findings outrun one person](08-b4-findings-outrun.md)**
+  - [The predecessor: one file, uneven entries](08a-ideas-file.md)
+  - [One file per tension, with a closed schema](08b-split-and-schema.md)
+  - [The queue in numbers](08c-issue-numbers.md)
+  - [A repeat sighting is evidence](08d-re-encounter.md)
+  - [When only a human on a phone can confirm it](08e-manual-testing-issue.md)
+  - [Do agents read closed issues?](08f-closed-issues-are-read.md)
+  - [Issues arrive from everywhere; work ships in batches](08g-batching-the-queue.md)
+- **[5a. Human attention across a dozen streams](09-b5-attention.md)**
+  - [The issue that reorganized August](09a-redesign-issue.md)
+  - [The guard that failed open](09b-fail-closed-guard.md)
+  - [One unattended sweep](09c-cleanup-log.md)
+  - [The seam: lifecycle out of one harness's hooks](09d-the-seam.md)
+  - [Agents that show their work, with one ask](09e-exhibits.md)
+  - [Every commit says which stream made it](09f-provenance.md)
+- **[5b. The suite is too slow and too often red](10-b5-suite.md)**
+  - [The gate failed, and the plan said so](10a-measured-miss.md)
+  - [Instrument before gate](10b-ledger-and-flake.md)
+  - [The only thing that tests main](10c-full-suite.md)
+  - [False start: the reporter blamed itself](10d-false-start-self-blame.md)
+  - [Three escapes in two days](10e-smoke.md)
+  - [Demoted, not deleted](10f-careful-tier.md)
+- **[5c. Work nobody is watching](11-b5-unattended.md)**
+  - [A whole scheduled job is four lines](11a-schedule-shapes.md)
+  - [Fifteen schedules on one screen](11b-schedules-list.md)
+  - [What an unattended run reports](11c-alerts.md)
+  - [False starts in unattended work](11d-false-starts-unattended.md)
+- **[5d. A second model family](12-b5-second-engine.md)**
+  - [No transform to mangle](12a-codex-mirrors.md)
+  - [The co-author trailer as a model timeline](12b-model-timeline.md)
+- **[6. Size, persuasion, and noise](13-b6-size-persuasion-noise.md)**
+  - [The router rule loses its shouting](13a-router-rule.md)
+  - [The package file stops describing the code](13b-tree-to-owners.md)
+  - [Every rule earns its place, and the size is a number](13c-guide-ledger.md)
+  - [The budget caught main once](13d-budget-breach.md)
+- **[7. The process measures itself](14-b7-process-measures-itself.md)**
+  - [Humans type one skill](14a-skill-usage.md)
+  - [What the review concluded, and what landed the next day](14b-skills-review.md)
+  - [A prose rule, then a refusal](14c-sigils.md)
+  - [Four words for how much to do](14d-how-much-to-do.md)
+  - [Arrange context, don't automate judgment](14e-retrospective.md)
+- **[What went in and came out](15-false-starts.md)**
+  - [False starts, in and out](15a-false-starts-table.md)
+  - [False starts, in and out](15b-false-starts-table-2.md)
+- **[Ten moves that recur](16-motifs.md)**
+  - [The motifs, with their evidence](16a-motif-evidence.md)
+  - [The evidence stays in the tree](16b-evidence-in-the-tree.md)
+  - [The tool's user is the agent](16c-tools-for-the-agent.md)
+- **[The numbers, in one place](17-numbers.md)**
+- **[What the next constraint looks like](18-close.md)**

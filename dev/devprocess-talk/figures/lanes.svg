@@ -1,0 +1,404 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 860" width="960" height="860" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Code lane (process, sweeps) and product lane (features, infrastructure) on one time axis, 2026">
+<title>Code lane (process, sweeps) and product lane (features, infrastructure) on one time axis, 2026</title>
+<rect x="0" y="0" width="960" height="860" fill="#ffffff" />
+<text x="24" y="24" font-size="16" fill="#1f2933" text-anchor="start" font-weight="600">Two lanes: the code and the product</text>
+<text x="24" y="42" font-size="13" fill="#6b7280" text-anchor="start" font-weight="400">Process and sweeps above the line; features and infrastructure below.</text>
+<line x1="62.1" y1="56" x2="62.1" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="66.1" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Feb</text>
+<line x1="150.5" y1="56" x2="150.5" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="154.5" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Mar</text>
+<line x1="248.3" y1="56" x2="248.3" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="252.3" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Apr</text>
+<line x1="343" y1="56" x2="343" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="347" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">May</text>
+<line x1="440.8" y1="56" x2="440.8" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="444.8" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Jun</text>
+<line x1="535.5" y1="56" x2="535.5" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="539.5" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Jul</text>
+<line x1="633.3" y1="56" x2="633.3" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="637.3" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Aug</text>
+<line x1="731.1" y1="56" x2="731.1" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="735.1" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Sep</text>
+<line x1="825.8" y1="56" x2="825.8" y2="816" stroke="#d9dde3" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="829.8" y="828" font-size="11" fill="#6b7280" text-anchor="start" font-weight="400">Oct</text>
+<line x1="40" y1="502" x2="870" y2="502" stroke="#1f2933" stroke-width="2"/>
+<line x1="100" y1="492" x2="100" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="112.6" y1="470" x2="112.6" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="125.2" y1="448" x2="125.2" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="137.8" y1="426" x2="137.8" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="141" y1="404" x2="141" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="153.6" y1="382" x2="153.6" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="156.8" y1="360" x2="156.8" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="159.9" y1="338" x2="159.9" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="298.8" y1="492" x2="298.8" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="384" y1="470" x2="384" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="409.2" y1="448" x2="409.2" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="421.9" y1="426" x2="421.9" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="425" y1="404" x2="425" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="425" y1="382" x2="425" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="431.3" y1="360" x2="431.3" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="434.5" y1="338" x2="434.5" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="434.5" y1="316" x2="434.5" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="437.6" y1="294" x2="437.6" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="450.3" y1="272" x2="450.3" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="497.6" y1="250" x2="497.6" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="500.8" y1="228" x2="500.8" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="503.9" y1="206" x2="503.9" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="519.7" y1="492" x2="519.7" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="541.8" y1="404" x2="541.8" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="541.8" y1="360" x2="541.8" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="544.9" y1="184" x2="544.9" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="544.9" y1="162" x2="544.9" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="548.1" y1="140" x2="548.1" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="563.9" y1="470" x2="563.9" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="592.3" y1="426" x2="592.3" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="639.6" y1="382" x2="639.6" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="642.8" y1="338" x2="642.8" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="658.6" y1="492" x2="658.6" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="658.6" y1="448" x2="658.6" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="671.2" y1="404" x2="671.2" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="677.5" y1="316" x2="677.5" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="699.6" y1="426" x2="699.6" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="705.9" y1="360" x2="705.9" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="705.9" y1="294" x2="705.9" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="709" y1="272" x2="709" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="709" y1="250" x2="709" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="712.2" y1="228" x2="712.2" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="718.5" y1="206" x2="718.5" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="724.8" y1="184" x2="724.8" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="734.3" y1="140" x2="734.3" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="740.6" y1="470" x2="740.6" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="765.9" y1="404" x2="765.9" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="765.9" y1="316" x2="765.9" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="784.8" y1="382" x2="784.8" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="803.7" y1="338" x2="803.7" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="813.2" y1="426" x2="813.2" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="841.6" y1="492" x2="841.6" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="844.8" y1="448" x2="844.8" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="844.8" y1="360" x2="844.8" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="844.8" y1="228" x2="844.8" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="847.9" y1="206" x2="847.9" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="847.9" y1="162" x2="847.9" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="851.1" y1="118" x2="851.1" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="851.1" y1="96" x2="851.1" y2="502" stroke="#eb6834" stroke-width="1.5"/>
+<line x1="854.2" y1="294" x2="854.2" y2="502" stroke="#2a78d6" stroke-width="1.5"/>
+<line x1="49.5" y1="502" x2="49.5" y2="512" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="49.5" y1="502" x2="49.5" y2="534" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="62.1" y1="502" x2="62.1" y2="556" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="81" y1="502" x2="81" y2="578" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="112.6" y1="502" x2="112.6" y2="600" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="125.2" y1="502" x2="125.2" y2="622" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="134.7" y1="502" x2="134.7" y2="644" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="134.7" y1="502" x2="134.7" y2="666" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="137.8" y1="502" x2="137.8" y2="688" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="147.3" y1="502" x2="147.3" y2="710" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="156.8" y1="502" x2="156.8" y2="732" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="159.9" y1="502" x2="159.9" y2="534" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="166.2" y1="502" x2="166.2" y2="754" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="172.5" y1="502" x2="172.5" y2="776" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="178.9" y1="502" x2="178.9" y2="556" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="207.3" y1="502" x2="207.3" y2="512" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="242" y1="502" x2="242" y2="578" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="283" y1="502" x2="283" y2="534" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="289.3" y1="502" x2="289.3" y2="600" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="305.1" y1="502" x2="305.1" y2="622" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="352.4" y1="502" x2="352.4" y2="512" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="380.8" y1="502" x2="380.8" y2="556" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="390.3" y1="502" x2="390.3" y2="578" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="409.2" y1="502" x2="409.2" y2="622" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="409.2" y1="502" x2="409.2" y2="644" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="437.6" y1="502" x2="437.6" y2="512" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="462.9" y1="502" x2="462.9" y2="534" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="466" y1="502" x2="466" y2="600" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="485" y1="502" x2="485" y2="556" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="503.9" y1="502" x2="503.9" y2="666" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="510.2" y1="502" x2="510.2" y2="578" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="526" y1="502" x2="526" y2="688" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="532.3" y1="502" x2="532.3" y2="644" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="538.6" y1="502" x2="538.6" y2="710" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="544.9" y1="502" x2="544.9" y2="512" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="551.3" y1="502" x2="551.3" y2="732" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="570.2" y1="502" x2="570.2" y2="622" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="579.7" y1="502" x2="579.7" y2="754" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="592.3" y1="502" x2="592.3" y2="600" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="592.3" y1="502" x2="592.3" y2="776" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="630.2" y1="502" x2="630.2" y2="534" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="649.1" y1="502" x2="649.1" y2="556" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="668" y1="502" x2="668" y2="578" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="677.5" y1="502" x2="677.5" y2="622" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="683.8" y1="502" x2="683.8" y2="666" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="683.8" y1="502" x2="683.8" y2="688" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="687" y1="502" x2="687" y2="710" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="690.1" y1="502" x2="690.1" y2="732" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="702.7" y1="502" x2="702.7" y2="512" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="724.8" y1="502" x2="724.8" y2="556" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="740.6" y1="502" x2="740.6" y2="600" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="753.2" y1="502" x2="753.2" y2="644" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="759.5" y1="502" x2="759.5" y2="754" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="772.2" y1="502" x2="772.2" y2="776" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="781.6" y1="502" x2="781.6" y2="710" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="784.8" y1="502" x2="784.8" y2="534" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="794.3" y1="502" x2="794.3" y2="666" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="810" y1="502" x2="810" y2="578" stroke="#7c5cbf" stroke-width="1.5"/>
+<line x1="838.4" y1="502" x2="838.4" y2="556" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="841.6" y1="502" x2="841.6" y2="622" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="847.9" y1="502" x2="847.9" y2="644" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="854.2" y1="502" x2="854.2" y2="688" stroke="#1baf7a" stroke-width="1.5"/>
+<line x1="854.2" y1="502" x2="854.2" y2="732" stroke="#7c5cbf" stroke-width="1.5"/>
+<text x="40" y="78" font-size="10" fill="#1f2933" text-anchor="start" font-weight="700" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">code</text>
+<text x="40" y="810" font-size="10" fill="#1f2933" text-anchor="start" font-weight="700" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">product</text>
+<circle cx="100" cy="492" r="3" fill="#2a78d6"/>
+<text x="107" y="495.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">lint preset</text>
+<circle cx="112.6" cy="470" r="3" fill="#2a78d6"/>
+<text x="119.6" y="473.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">lint on every write</text>
+<circle cx="125.2" cy="448" r="3" fill="#2a78d6"/>
+<text x="132.2" y="451.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">frozen clock</text>
+<circle cx="137.8" cy="426" r="3" fill="#eb6834"/>
+<text x="144.8" y="429.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">one color palette, 42 files</text>
+<circle cx="141" cy="404" r="3" fill="#2a78d6"/>
+<text x="148" y="407.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">knowledge audits</text>
+<circle cx="153.6" cy="382" r="3" fill="#2a78d6"/>
+<text x="160.6" y="385.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">the stack, written down</text>
+<circle cx="156.8" cy="360" r="3" fill="#2a78d6"/>
+<text x="163.8" y="363.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">doctests; first instruction cut</text>
+<circle cx="159.9" cy="338" r="3" fill="#eb6834"/>
+<text x="166.9" y="341.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">tRPC migration complete</text>
+<circle cx="298.8" cy="492" r="3" fill="#eb6834"/>
+<text x="305.8" y="495.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">UI primitives; semantic palette</text>
+<circle cx="384" cy="470" r="3" fill="#eb6834"/>
+<text x="391" y="473.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Activities system removed</text>
+<circle cx="409.2" cy="448" r="3" fill="#eb6834"/>
+<text x="416.2" y="451.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">schemas to frontmatter; news deleted</text>
+<circle cx="421.9" cy="426" r="3" fill="#2a78d6"/>
+<text x="428.9" y="429.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">monorepo, worktrees</text>
+<circle cx="425" cy="404" r="3" fill="#2a78d6"/>
+<text x="432" y="407.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">browser agent</text>
+<circle cx="425" cy="382" r="3" fill="#eb6834"/>
+<text x="432" y="385.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">accessibility sweep</text>
+<circle cx="431.3" cy="360" r="3" fill="#2a78d6"/>
+<text x="438.3" y="363.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">the plan skill</text>
+<circle cx="434.5" cy="338" r="3" fill="#eb6834"/>
+<text x="441.5" y="341.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">fakes beside the real services</text>
+<circle cx="434.5" cy="316" r="3" fill="#eb6834"/>
+<text x="441.5" y="319.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">lint suppressions, 1,000 to 0</text>
+<circle cx="437.6" cy="294" r="3" fill="#2a78d6"/>
+<text x="444.6" y="297.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">no-weakening rule for lint</text>
+<circle cx="450.3" cy="272" r="3" fill="#2a78d6"/>
+<text x="457.3" y="275.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">cross-model review</text>
+<circle cx="497.6" cy="250" r="3" fill="#eb6834"/>
+<text x="504.6" y="253.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">old card parser deleted</text>
+<circle cx="500.8" cy="228" r="3" fill="#2a78d6"/>
+<text x="507.8" y="231.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">craft skills</text>
+<circle cx="503.9" cy="206" r="3" fill="#eb6834"/>
+<text x="510.9" y="209.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">doctests regrouped, 300 files</text>
+<circle cx="519.7" cy="492" r="3" fill="#eb6834"/>
+<text x="526.7" y="495.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">user-story catalog</text>
+<circle cx="541.8" cy="404" r="3" fill="#2a78d6"/>
+<text x="548.8" y="407.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">headless finisher</text>
+<circle cx="541.8" cy="360" r="3" fill="#eb6834"/>
+<text x="548.8" y="363.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">knowledge audits rerun</text>
+<circle cx="544.9" cy="184" r="3" fill="#2a78d6"/>
+<text x="551.9" y="187.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">issues tree; doc check</text>
+<circle cx="544.9" cy="162" r="3" fill="#eb6834"/>
+<text x="551.9" y="165.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">docs reorg; one file per issue</text>
+<circle cx="548.1" cy="140" r="3" fill="#eb6834"/>
+<text x="555.1" y="143.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">architectural review</text>
+<circle cx="563.9" cy="470" r="3" fill="#eb6834"/>
+<text x="570.9" y="473.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">issues sorted into folders</text>
+<circle cx="592.3" cy="426" r="3" fill="#2a78d6"/>
+<text x="599.3" y="429.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">catch-up list</text>
+<circle cx="639.6" cy="382" r="3" fill="#eb6834"/>
+<text x="646.6" y="385.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">first skills review</text>
+<circle cx="642.8" cy="338" r="3" fill="#2a78d6"/>
+<text x="649.8" y="341.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Codex as 2nd engine</text>
+<circle cx="658.6" cy="492" r="3" fill="#2a78d6"/>
+<text x="665.6" y="495.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">workstreams; test ledger</text>
+<circle cx="658.6" cy="448" r="3" fill="#eb6834"/>
+<text x="665.6" y="451.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">frontmatter on 613 files</text>
+<circle cx="671.2" cy="404" r="3" fill="#2a78d6"/>
+<text x="678.2" y="407.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">dashboard</text>
+<circle cx="677.5" cy="316" r="3" fill="#2a78d6"/>
+<text x="684.5" y="319.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">exhibits</text>
+<circle cx="699.6" cy="426" r="3" fill="#2a78d6"/>
+<text x="706.6" y="429.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">simulated users</text>
+<circle cx="705.9" cy="360" r="3" fill="#2a78d6"/>
+<text x="712.9" y="363.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">schedules; trailers</text>
+<circle cx="705.9" cy="294" r="3" fill="#eb6834"/>
+<text x="712.9" y="297.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">knip backlog 342 to 4</text>
+<circle cx="709" cy="272" r="3" fill="#2a78d6"/>
+<text x="716" y="275.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">tests sized to change</text>
+<circle cx="709" cy="250" r="3" fill="#eb6834"/>
+<text x="716" y="253.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">last .mjs to TypeScript</text>
+<circle cx="712.2" cy="228" r="3" fill="#2a78d6"/>
+<text x="719.2" y="231.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">smoke tier</text>
+<circle cx="718.5" cy="206" r="3" fill="#eb6834"/>
+<text x="725.5" y="209.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">bin/ under lint</text>
+<circle cx="724.8" cy="184" r="3" fill="#eb6834"/>
+<text x="731.8" y="187.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">rename, 4,188 files</text>
+<circle cx="734.3" cy="140" r="3" fill="#eb6834"/>
+<text x="741.3" y="143.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">UI vocabulary sweep</text>
+<circle cx="740.6" cy="470" r="3" fill="#eb6834"/>
+<text x="747.6" y="473.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">one-root paths, 527 files</text>
+<circle cx="765.9" cy="404" r="3" fill="#2a78d6"/>
+<text x="772.9" y="407.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">calibration rewrite</text>
+<circle cx="765.9" cy="316" r="3" fill="#eb6834"/>
+<text x="772.9" y="319.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">instructions rewritten</text>
+<circle cx="784.8" cy="382" r="3" fill="#2a78d6"/>
+<text x="791.8" y="385.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">alerts, digest</text>
+<circle cx="803.7" cy="338" r="3" fill="#eb6834"/>
+<text x="810.7" y="341.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">docs restructured like code</text>
+<circle cx="813.2" cy="426" r="3" fill="#eb6834"/>
+<text x="820.2" y="429.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">layout moves, 8 commits</text>
+<circle cx="841.6" cy="492" r="3" fill="#eb6834"/>
+<text x="848.6" y="495.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">oxlint warnings cleared</text>
+<circle cx="844.8" cy="448" r="3" fill="#2a78d6"/>
+<text x="851.8" y="451.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">retrospective on a schedule</text>
+<circle cx="844.8" cy="360" r="3" fill="#2a78d6"/>
+<text x="851.8" y="363.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">skills measured</text>
+<circle cx="844.8" cy="228" r="3" fill="#eb6834"/>
+<text x="851.8" y="231.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">skills review</text>
+<circle cx="847.9" cy="206" r="3" fill="#2a78d6"/>
+<text x="854.9" y="209.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">do/land ladder</text>
+<circle cx="847.9" cy="162" r="3" fill="#eb6834"/>
+<text x="854.9" y="165.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">migrations retired, 133 files</text>
+<circle cx="851.1" cy="118" r="3" fill="#2a78d6"/>
+<text x="858.1" y="121.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">AGENTS.md</text>
+<circle cx="851.1" cy="96" r="3" fill="#eb6834"/>
+<text x="858.1" y="99.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">CLAUDE.md to AGENTS.md</text>
+<circle cx="854.2" cy="294" r="3" fill="#2a78d6"/>
+<text x="861.2" y="297.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">exhibits: show, do not ask</text>
+<circle cx="49.5" cy="512" r="3" fill="#1baf7a"/>
+<text x="56.5" y="515.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">cards in a git repo</text>
+<circle cx="49.5" cy="534" r="3" fill="#7c5cbf"/>
+<text x="56.5" y="537.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">schema registry</text>
+<circle cx="62.1" cy="556" r="3" fill="#1baf7a"/>
+<text x="69.1" y="559.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">daily news brief</text>
+<circle cx="81" cy="578" r="3" fill="#1baf7a"/>
+<text x="88" y="581.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Chrome extension</text>
+<circle cx="112.6" cy="600" r="3" fill="#1baf7a"/>
+<text x="119.6" y="603.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Gmail, Calendar</text>
+<circle cx="125.2" cy="622" r="3" fill="#7c5cbf"/>
+<text x="132.2" y="625.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">job reactor</text>
+<circle cx="134.7" cy="644" r="3" fill="#1baf7a"/>
+<text x="141.7" y="647.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">talk to the box</text>
+<circle cx="134.7" cy="666" r="3" fill="#7c5cbf"/>
+<text x="141.7" y="669.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">one server, many boxes</text>
+<circle cx="137.8" cy="688" r="3" fill="#7c5cbf"/>
+<text x="144.8" y="691.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Cloudflare tunnel</text>
+<circle cx="147.3" cy="710" r="3" fill="#7c5cbf"/>
+<text x="154.3" y="713.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Google sign-in</text>
+<circle cx="156.8" cy="732" r="3" fill="#7c5cbf"/>
+<text x="163.8" y="735.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">tRPC API layer</text>
+<circle cx="159.9" cy="534" r="3" fill="#7c5cbf"/>
+<text x="166.9" y="537.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Git LFS for media</text>
+<circle cx="166.2" cy="754" r="3" fill="#1baf7a"/>
+<text x="173.2" y="757.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">capture page</text>
+<circle cx="172.5" cy="776" r="3" fill="#7c5cbf"/>
+<text x="179.5" y="779.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">SQLite event bus</text>
+<circle cx="178.9" cy="556" r="3" fill="#7c5cbf"/>
+<text x="185.9" y="559.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">browser log to the server</text>
+<circle cx="207.3" cy="512" r="3" fill="#1baf7a"/>
+<text x="214.3" y="515.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">agent-written views</text>
+<circle cx="242" cy="578" r="3" fill="#7c5cbf"/>
+<text x="249" y="581.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">central OAuth tokens</text>
+<circle cx="283" cy="534" r="3" fill="#7c5cbf"/>
+<text x="290" y="537.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">git lock collisions</text>
+<circle cx="289.3" cy="600" r="3" fill="#1baf7a"/>
+<text x="296.3" y="603.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">images, files in chat</text>
+<circle cx="305.1" cy="622" r="3" fill="#1baf7a"/>
+<text x="312.1" y="625.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">activities</text>
+<circle cx="352.4" cy="512" r="3" fill="#1baf7a"/>
+<text x="359.4" y="515.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">landmarks</text>
+<circle cx="380.8" cy="556" r="3" fill="#1baf7a"/>
+<text x="387.8" y="559.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">narration mode</text>
+<circle cx="390.3" cy="578" r="3" fill="#7c5cbf"/>
+<text x="397.3" y="581.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">attach manifests</text>
+<circle cx="409.2" cy="622" r="3" fill="#1baf7a"/>
+<text x="416.2" y="625.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">cards become Markdown</text>
+<circle cx="409.2" cy="644" r="3" fill="#7c5cbf"/>
+<text x="416.2" y="647.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">cards to Markdown</text>
+<circle cx="437.6" cy="512" r="3" fill="#7c5cbf"/>
+<text x="444.6" y="515.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">pnpm workspace</text>
+<circle cx="462.9" cy="534" r="3" fill="#7c5cbf"/>
+<text x="469.9" y="537.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">WebSocket transport</text>
+<circle cx="466" cy="600" r="3" fill="#1baf7a"/>
+<text x="473" y="603.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">full-text search</text>
+<circle cx="485" cy="556" r="3" fill="#1baf7a"/>
+<text x="492" y="559.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">clipper with commentary</text>
+<circle cx="503.9" cy="666" r="3" fill="#7c5cbf"/>
+<text x="510.9" y="669.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">agent-applied migrations</text>
+<circle cx="510.2" cy="578" r="3" fill="#1baf7a"/>
+<text x="517.2" y="581.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">figures; courseware</text>
+<circle cx="526" cy="688" r="3" fill="#7c5cbf"/>
+<text x="533" y="691.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">schema hot reload</text>
+<circle cx="532.3" cy="644" r="3" fill="#7c5cbf"/>
+<text x="539.3" y="647.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">content security policy</text>
+<circle cx="538.6" cy="710" r="3" fill="#7c5cbf"/>
+<text x="545.6" y="713.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">REST into tRPC</text>
+<circle cx="544.9" cy="512" r="3" fill="#7c5cbf"/>
+<text x="551.9" y="515.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">hub; boxes as packages</text>
+<circle cx="551.3" cy="732" r="3" fill="#1baf7a"/>
+<text x="558.3" y="735.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">iOS app</text>
+<circle cx="570.2" cy="622" r="3" fill="#7c5cbf"/>
+<text x="577.2" y="625.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Docker image</text>
+<circle cx="579.7" cy="754" r="3" fill="#1baf7a"/>
+<text x="586.7" y="757.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">publishing</text>
+<circle cx="592.3" cy="600" r="3" fill="#1baf7a"/>
+<text x="599.3" y="603.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">password login</text>
+<circle cx="592.3" cy="776" r="3" fill="#7c5cbf"/>
+<text x="599.3" y="779.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">auth on by default</text>
+<circle cx="630.2" cy="534" r="3" fill="#1baf7a"/>
+<text x="637.2" y="537.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">chats grouped by place</text>
+<circle cx="649.1" cy="556" r="3" fill="#1baf7a"/>
+<text x="656.1" y="559.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">invites</text>
+<circle cx="668" cy="578" r="3" fill="#7c5cbf"/>
+<text x="675" y="581.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">scroll trace by flag</text>
+<circle cx="677.5" cy="622" r="3" fill="#7c5cbf"/>
+<text x="684.5" y="625.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">Codex SDK backend</text>
+<circle cx="683.8" cy="666" r="3" fill="#1baf7a"/>
+<text x="690.8" y="669.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">secrets manager</text>
+<circle cx="683.8" cy="688" r="3" fill="#7c5cbf"/>
+<text x="690.8" y="691.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">secrets store</text>
+<circle cx="687" cy="710" r="3" fill="#7c5cbf"/>
+<text x="694" y="713.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">box git lock</text>
+<circle cx="690.1" cy="732" r="3" fill="#7c5cbf"/>
+<text x="697.1" y="735.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">migrations on deploy</text>
+<circle cx="702.7" cy="512" r="3" fill="#7c5cbf"/>
+<text x="709.7" y="515.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">connector sync isolation</text>
+<circle cx="724.8" cy="556" r="3" fill="#1baf7a"/>
+<text x="731.8" y="559.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">renamed Bee Box</text>
+<circle cx="740.6" cy="600" r="3" fill="#7c5cbf"/>
+<text x="747.6" y="603.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">one-root box layout</text>
+<circle cx="753.2" cy="644" r="3" fill="#1baf7a"/>
+<text x="760.2" y="647.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">card themes</text>
+<circle cx="759.5" cy="754" r="3" fill="#1baf7a"/>
+<text x="766.5" y="757.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">resilient voice</text>
+<circle cx="772.2" cy="776" r="3" fill="#7c5cbf"/>
+<text x="779.2" y="779.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">git-annex replaces LFS</text>
+<circle cx="781.6" cy="710" r="3" fill="#7c5cbf"/>
+<text x="788.6" y="713.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">host packages via root wrapper</text>
+<circle cx="784.8" cy="534" r="3" fill="#7c5cbf"/>
+<text x="791.8" y="537.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">maintenance page on deploy</text>
+<circle cx="794.3" cy="666" r="3" fill="#1baf7a"/>
+<text x="801.3" y="669.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">quick chat</text>
+<circle cx="810" cy="578" r="3" fill="#7c5cbf"/>
+<text x="817" y="581.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">push delivery channels</text>
+<circle cx="838.4" cy="556" r="3" fill="#1baf7a"/>
+<text x="845.4" y="559.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">spoken replies stream</text>
+<circle cx="841.6" cy="622" r="3" fill="#1baf7a"/>
+<text x="848.6" y="625.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">box home</text>
+<circle cx="847.9" cy="644" r="3" fill="#1baf7a"/>
+<text x="854.9" y="647.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">theme sets</text>
+<circle cx="854.2" cy="688" r="3" fill="#1baf7a"/>
+<text x="861.2" y="691.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">plugins</text>
+<circle cx="854.2" cy="732" r="3" fill="#7c5cbf"/>
+<text x="861.2" y="735.5" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400" paint-order="stroke" stroke="#ffffff" stroke-width="6" stroke-linejoin="round">plugins: tags move out</text>
+<circle cx="43" cy="847" r="3" fill="#2a78d6"/>
+<text x="51" y="850" font-size="10" fill="#6b7280" text-anchor="start" font-weight="400">process</text>
+<circle cx="110" cy="847" r="3" fill="#eb6834"/>
+<text x="118" y="850" font-size="10" fill="#6b7280" text-anchor="start" font-weight="400">sweeps</text>
+<circle cx="171" cy="847" r="3" fill="#1baf7a"/>
+<text x="179" y="850" font-size="10" fill="#6b7280" text-anchor="start" font-weight="400">product</text>
+<circle cx="238" cy="847" r="3" fill="#7c5cbf"/>
+<text x="246" y="850" font-size="10" fill="#6b7280" text-anchor="start" font-weight="400">infrastructure</text>
+</svg>

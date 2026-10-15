@@ -1,0 +1,19 @@
+# Your words
+
+Framing statements you made while this material was being built, verbatim, with where each one landed. The talk is yours; these are the sentences that came from you rather than from the record. Add to this file as you think of more.
+
+| Said | Where it landed |
+|---|---|
+| "is it useful? What kind of accomplishments does it have?" (the brief for the Outcome line on every technique) | Every entry in the [inventory](inventory.md) has an **Outcome** line |
+| "false starts are useful to note too, things that went in and came out later" | Inventory §8, slides [15](slides/15-false-starts.md), [15a](slides/15a-false-starts-table.md), [15b](slides/15b-false-starts-table-2.md) |
+| "Concrete stuff is really good and important!" | The supporting-slide layer: every main slide has a case behind it |
+| "do agents read old plans?" | Slides [07f](slides/07f-old-plans-are-read.md), [08f](slides/08f-closed-issues-are-read.md); narrative, weakest-thesis section |
+| "by putting things like issues in the repository, and plans, and setting up the ability to read sessions, etc., This means I can have good discussions about what happened and how well the systems works, and there's evidence left over for all of it." | Motif 9 in the [narrative](bottlenecks.md#motifs-that-recur-across-the-ladder); slide [16b](slides/16b-evidence-in-the-tree.md) |
+| "the development process for something like giving the agent a good browsing harness, is indirect: the quality of the result is how well it works for the agent, not for me, and I mostly poke at the agent indirectly to improve things for itself." | Motif 10 in the narrative; slide [16c](slides/16c-tools-for-the-agent.md); the browse entry in the inventory |
+| "I want to have more understanding of user journeys ... what are these user journeys, what kind of issues do they raise, how well are we doing at fixing them, what do they look like, what's the flavor of them ... the choices they make, then the actual path that's taken, and the commentary that comes out of that, and then the issues that are created from the commentary, and then how the issues are addressed in that whole pipeline" | [User-story journeys: overview](../journeys/overview.md), a standing dev page the talk draws on |
+| "bbx-pick-issues is kind of interesting I think, because issues come from different directions and build up, and it's effectively batching them into logical units" | Inventory entry for pick-issues; slide [08g](slides/08g-batching-the-queue.md); the attention paragraph in the narrative |
+| "Provenance of issues is an interesting feature worth noting. It's something I probably wouldn't have done manually filing issues, but the agent can do it without issue" | Ownership-vs-provenance entry in the inventory; slide [16b](slides/16b-evidence-in-the-tree.md); the attention paragraph in the narrative |
+| "both user journeys and perhaps some other evals could totally lead to rogue agents under evaluation, just like we're seeing with Hugging Face etc." | Plus: "It's not entirely true the harness wouldn't detect it after the run. The more concerning part is if it chooses to go outside the box for evaluation." Caveat in the overview's limits section; weakest-thesis list in the [narrative](bottlenecks.md#where-the-thesis-is-weakest-for-the-human-to-judge); notes on slide [01e](slides/01e-journey-numbers.md) |
+
+Two phrases quoted from your own commit messages and issue text are already in the inventory and slides ("wrong at 03:00 with nobody watching"; "make no edit you cannot point at evidence for"). They are in the git record, so they are not repeated here.
+| "the monorepo was when I realized the agent was basically equally good in all areas at once, and so cross-repo changes were obvious and common and desired." | [timeline.md](timeline.md) §3 as the reason for the May 26 move; [chunks/monorepo-one-agent.md](chunks/monorepo-one-agent.md); inventory "Managed git worktrees" Relieved. |

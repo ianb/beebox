@@ -1,0 +1,14 @@
+Use the reference sheet for the two characters and draw in exactly its style: loose, raw 1970s underground outsider comic, black and white pen-and-ink, scratchy quick hatching, wobbly lines, heavy blacks where needed. Pure white paper background, no panel border, no frame.
+
+A teenage robot in its hoodie stands excitedly at a huge wall chart with a pointer, antenna quivering, presenting a decision. In the foreground the bearded man with round glasses in his baggy cardigan slumps in an armchair, utterly exhausted, head in one hand, a cold coffee beside him, more rolled-up charts at his feet.
+
+The chart is a decision diagram comparing two screws, drawn clearly from above and from the side: at the top left a large flat-head slotted screw, one straight slot across its head, labelled "SLOTTED"; at the top right a large Phillips screw, a cross in its head, labelled "PHILLIPS"; a question mark between them. Below, a flowchart of boxes and arrows with these exact short hand-lettered labels, in neat comic lettering, and no other words:
+"CAM-OUT: BUG OR FEATURE?"
+"SLOT ALIGNMENT COST, PER SCREW"
+"BIT AVAILABILITY GRADIENT"
+"THE 1936 CADILLAC INCIDENT"
+"TORQUE AUDIT PENDING"
+"DRIVER-BIT ENTROPY"
+"OPTION C: TORX (OUT OF SCOPE)"
+"RECOMMEND: PHILLIPS, 55% CONFIDENCE"
+Add a small pie chart and a tiny table whose cells are scribble lines. Arrows loop back on themselves at least once.

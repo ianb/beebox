@@ -1,0 +1,109 @@
+{
+ "generated": "2026-10-13",
+ "weeks": [
+  {
+   "date": "2026-07-20",
+   "browserCalls": 4,
+   "browserSessions": 1,
+   "bashCalls": 556,
+   "sessions": 15,
+   "exhibitScreenshots": 0
+  },
+  {
+   "date": "2026-07-27",
+   "browserCalls": 27,
+   "browserSessions": 2,
+   "bashCalls": 1471,
+   "sessions": 26,
+   "exhibitScreenshots": 0
+  },
+  {
+   "date": "2026-08-03",
+   "browserCalls": 132,
+   "browserSessions": 9,
+   "bashCalls": 1737,
+   "sessions": 36,
+   "exhibitScreenshots": 0
+  },
+  {
+   "date": "2026-08-10",
+   "browserCalls": 142,
+   "browserSessions": 12,
+   "bashCalls": 2546,
+   "sessions": 63,
+   "exhibitScreenshots": 0
+  },
+  {
+   "date": "2026-08-17",
+   "browserCalls": 1569,
+   "browserSessions": 45,
+   "bashCalls": 16775,
+   "sessions": 546,
+   "exhibitScreenshots": 329
+  },
+  {
+   "date": "2026-08-24",
+   "browserCalls": 813,
+   "browserSessions": 47,
+   "bashCalls": 15905,
+   "sessions": 271,
+   "exhibitScreenshots": 7
+  },
+  {
+   "date": "2026-08-31",
+   "browserCalls": 166,
+   "browserSessions": 11,
+   "bashCalls": 11904,
+   "sessions": 127,
+   "exhibitScreenshots": 27
+  },
+  {
+   "date": "2026-09-07",
+   "browserCalls": 307,
+   "browserSessions": 14,
+   "bashCalls": 7024,
+   "sessions": 138,
+   "exhibitScreenshots": 101
+  },
+  {
+   "date": "2026-09-14",
+   "browserCalls": 175,
+   "browserSessions": 17,
+   "bashCalls": 8667,
+   "sessions": 114,
+   "exhibitScreenshots": 30
+  },
+  {
+   "date": "2026-09-21",
+   "browserCalls": 335,
+   "browserSessions": 27,
+   "bashCalls": 12428,
+   "sessions": 304,
+   "exhibitScreenshots": 48
+  },
+  {
+   "date": "2026-09-28",
+   "browserCalls": 140,
+   "browserSessions": 9,
+   "bashCalls": 6043,
+   "sessions": 135,
+   "exhibitScreenshots": 5
+  },
+  {
+   "date": "2026-10-05",
+   "browserCalls": 1290,
+   "browserSessions": 90,
+   "bashCalls": 19789,
+   "sessions": 480,
+   "exhibitScreenshots": 229
+  },
+  {
+   "date": "2026-10-12",
+   "browserCalls": 139,
+   "browserSessions": 6,
+   "bashCalls": 1503,
+   "sessions": 28,
+   "exhibitScreenshots": 8
+  }
+ ]
+}
