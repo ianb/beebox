@@ -2,7 +2,7 @@ import SwiftUI
 import AppIntents
 
 @MainActor
-private enum AppRuntime {
+enum AppRuntime {
     static let pairedBoxStore = PairedBoxStore()
     static let boxScreenStore = BoxScreenStore()
 }
@@ -13,11 +13,24 @@ struct BeeBoxApp: App {
     @StateObject private var store = AppRuntime.pairedBoxStore
     @StateObject private var boxScreenStore = AppRuntime.boxScreenStore
     @StateObject private var boxLockManager = BoxLockManager()
+    @State private var captureLogStates: [UUID: String] = [:]
     @StateObject private var pairingURLInbox = PairingURLInbox.shared
+
+    private var captureFixtureActive: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("--quick-capture-fixture=") }
+        #else
+        false
+        #endif
+    }
 
     init() {
         AppDependencyManager.shared.add(dependency: { await AppRuntime.pairedBoxStore })
-        AppDependencyManager.shared.add(dependency: { await AppRuntime.boxScreenStore })
+        BeeBoxAppShortcuts.updateAppShortcutParameters()
+        QuickCaptureUploadCoordinator.shared.setReceiptHandler {
+            let boxes = await MainActor.run { AppRuntime.pairedBoxStore.boxes }
+            await QuickCaptureUploadCoordinator.shared.resumeWaitingContexts(boxes: boxes)
+        }
     }
 
     var body: some Scene {
@@ -27,13 +40,32 @@ struct BeeBoxApp: App {
                 .environmentObject(boxScreenStore)
                 .environmentObject(boxLockManager)
                 .task {
+                    guard !captureFixtureActive else { return }
                     // The registrar observes pairings from here on; the app
                     // delegate supplies the APNs token (contract §5.9).
                     PushRegistrar.shared.attach(store: store)
                 }
+                .onReceive(NotificationCenter.default.publisher(for: QuickCaptureStore.didChange).receive(on: DispatchQueue.main)) { _ in
+                    guard !captureFixtureActive else { return }
+                    do {
+                        for record in try QuickCaptureStore.shared.records() {
+                            guard captureLogStates[record.id] != record.status.state else { continue }
+                            captureLogStates[record.id] = record.status.state
+                            BoxLog.info("quick capture state id=\(record.id) state=\(record.status.state)", category: .capture, targetBoxID: record.boxID)
+                        }
+                    } catch { BoxLog.error("quick capture state read failed error=\(type(of: error))", category: .capture) }
+                }
                 .onReceive(store.$boxes) { boxes in
+                    guard !captureFixtureActive else { return }
+                    VoiceNoteCoordinator.shared.updatePairedBoxes(boxes)
+                    if UIApplication.shared.isProtectedDataAvailable {
+                        do { try QuickCaptureStore.shared.preserveProtection(boxes: boxes) }
+                        catch { BoxLog.warn("quick capture protection update failed error=\(type(of: error))", category: .capture) }
+                    }
                     let runtime = CaptureUploadRuntime.shared
                     runtime.updateBoxes(boxes)
+                    BeeBoxAppShortcuts.updateAppShortcutParameters()
+                    Task { await QuickCaptureUploadCoordinator.shared.recover(boxes: boxes) }
                     Task {
                         try? await runtime.start()
                     }
@@ -46,6 +78,7 @@ struct BeeBoxApp: App {
                     }
                 }
                 .onReceive(store.$selectedBoxID) { selectedBoxID in
+                    guard !captureFixtureActive else { return }
                     let boxes = store.boxes
                     let effectiveBoxID = selectedBoxID ?? boxes.first?.id
                     Task {
@@ -57,12 +90,14 @@ struct BeeBoxApp: App {
                 }
                 .onOpenURL { url in
                     Task {
-                        _ = await store.pair(from: url)
+                        if QuickCaptureURLInbox.handles(url) { QuickCaptureURLInbox.shared.accept(url) }
+                        else { _ = await store.pair(from: url) }
                     }
                 }
                 .onReceive(pairingURLInbox.$pendingURL.compactMap(\.self)) { url in
                     Task {
-                        _ = await store.pair(from: url)
+                        if QuickCaptureURLInbox.handles(url) { QuickCaptureURLInbox.shared.accept(url) }
+                        else { _ = await store.pair(from: url) }
                         pairingURLInbox.clear(url)
                     }
                 }

@@ -378,17 +378,20 @@ This box root also holds `package.json`, `node_modules/`, and the box's source c
 ## LANDMARKS — Landmarks
 
 <!-- rules: landmarks.what -->
-Landmarks are the user's quick-jump surface: the few places in the box they
-keep returning to. Directories organize the box for the system; landmarks
-orient it toward the user. A landmark is a `<Name>.landmark.card` placed
-inside the directory it marks (the box root's is `Box.landmark.card`), and
-its presence makes that directory a destination on the Landmarks page.
+Landmarks are the user's quick-jump surface: the places they keep returning
+to. Directories organize the box for the system; landmarks orient it toward
+the user. A landmark is a `<Name>.landmark.card` inside the directory it marks
+(`Box.landmark.card` at the root).
 
 <!-- rules: landmarks.earn-their-spot -->
 Landmarks earn their spot. When the same kind of thing keeps coming up
 (recipes, an ongoing project, a todo list) and has no landmark, raise it with
 the user; don't create one quietly for something trivial. When you build a
 new structure the user will return to, do drop a landmark in it.
+
+<!-- rules: landmarks.summary-on-change -->
+After you add, move, or change cards in a place, update its landmark's body
+(the place summary) in the same turn, writing one if it has none.
 
 <!-- rules: landmarks.read-first, landmarks.derived-links -->
 Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or

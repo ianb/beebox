@@ -66,6 +66,15 @@ final class BeeBoxAppDelegate: NSObject, UIApplicationDelegate {
         handleEventsForBackgroundURLSession identifier: String,
         completionHandler: @escaping () -> Void
     ) {
+        if QuickCaptureUploadCoordinator.handles(identifier) {
+            QuickCaptureUploadCoordinator.shared.handleEvents(identifier: identifier) {
+                Task { @MainActor in
+                    await QuickCaptureUploadCoordinator.shared.resumeWaitingContexts(boxes: AppRuntime.pairedBoxStore.boxes)
+                    completionHandler()
+                }
+            }
+            return
+        }
         guard identifier == CaptureBackgroundSession.identifier else {
             completionHandler()
             return
@@ -82,7 +91,8 @@ final class BeeBoxAppDelegate: NSObject, UIApplicationDelegate {
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
         Task { @MainActor in
-            PairingURLInbox.shared.accept(url)
+            if QuickCaptureURLInbox.handles(url) { QuickCaptureURLInbox.shared.accept(url) }
+            else { PairingURLInbox.shared.accept(url) }
         }
         return true
     }

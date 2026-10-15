@@ -16,6 +16,8 @@ import { boxRelativePathSchema } from "../../../../core/landmark/nearest.js";
 import type { LandmarkProblem } from "../../../../core/landmark/summaries.js";
 import { landmarkScanRelDir } from "../../../../core/landmark/root-dir.js";
 import { isListedLandmark } from "../../../../core/landmark/cascade.js";
+import type { SubtreeMemo } from "../../../../core/landmark/prominence-index.js";
+import { mapInBatches } from "../../../../lib/map-batched.js";
 import {
   loadLandmarkPayload,
   loadLandmarkIdentity,
@@ -25,6 +27,9 @@ import {
 } from "./payload.js";
 
 export type { LandmarkPayload, LandmarkIdentity } from "./payload.js";
+
+/** Landmarks resolved at once by `list`; each does its own run of file reads. */
+const LOAD_CONCURRENCY = 32;
 
 export const landmarksRouter = router({
   list: publicProcedure.query(async ({ ctx }): Promise<{
@@ -40,8 +45,17 @@ export const landmarksRouter = router({
     const payloads: LandmarkPayload[] = [];
     const problems: LandmarkProblem[] = [];
 
-    for (const relPath of matches) {
-      const load = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot, derive: true });
+    // One memo for the whole list: a nested landmark's subtree is both its own
+    // derivation and its parent's nested-landmark row, walked once for both.
+    const subtrees: SubtreeMemo = new Map();
+    const loads = await mapInBatches(matches, {
+      size: LOAD_CONCURRENCY,
+      map: async (relPath) => ({
+        relPath,
+        load: await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot, derive: true, subtrees }),
+      }),
+    });
+    for (const { relPath, load } of loads) {
       if (load.status === "ok") {
         payloads.push(load.payload);
         problems.push(...load.derivedProblems);

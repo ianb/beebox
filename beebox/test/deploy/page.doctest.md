@@ -74,6 +74,17 @@ text(3 * 60 * minute, 228).detail
 
 ## The built page
 
+`deploy/deploy.sh` runs `src/scripts/build-deploy-page.ts` with plain `node`
+(no tsx), whose type stripping does not map a `.js` import to its `.ts` file;
+every relative import that script reaches must name the `.ts` file. Loading it
+the same way proves that.
+
+```ts
+import { execFileSync } from "node:child_process";
+execFileSync("node", ["--input-type=module", "-e", "await import('./src/scripts/build-deploy-page.ts')"], { encoding: "utf8" })
+=> 
+```
+
 `src/scripts/build-deploy-page.ts` bundles the browser code into one
 self-contained HTML template. The server helper fills its placeholders with
 `sed`, so the helper must use the same three names.
@@ -83,6 +94,15 @@ const template = await renderDeployPageTemplate();
 const helper = await readFile("deploy/server-bin/bbx-deploy-window", "utf8");
 JSON.stringify(Object.values(PLACEHOLDERS).map((p) => [template.split(p).length - 1, helper.includes(p)]))
 => [[1,true],[1,true],[1,true]]
+```
+
+Above the text hangs the same paper sign the hub shows for a closed box
+(`src/lib/closed-sign.ts`): it swings once on load and holds still under
+reduced motion. Its words hold for every state the text below can reach.
+
+```ts continue
+JSON.stringify({ sign: template.match(/<div class="bbx-sign swing">[\s\S]*?<strong class="bbx-sign-title">([^<]*)<\/strong><p>([^<]*)<\/p>/)?.slice(1), stillWhenReduced: /prefers-reduced-motion: reduce\) \{ \.bbx-sign\.swing \{ animation: none/.test(template) })
+=> {"sign":["Closed","for an update"],"stillWhenReduced":true}
 ```
 
 The filled page, run with a stub DOM, rewrites the text in the reader's time

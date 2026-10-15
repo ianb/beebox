@@ -6,6 +6,7 @@ import { splitCardContent, type CardSchema } from "../../../exports/cards.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
+import { summarize } from "../../../core/loader-registry.js";
 import { resolveCardPath } from "../card-path.js";
 import { Document, isMap, parse as parseYaml, parseDocument } from "yaml";
 import { errorMessage } from "../../../shared/error-guards.js";
@@ -46,6 +47,12 @@ export interface FrontmatterCardResponse {
   validationError: string | undefined;
   /** `null` when the card did not parse against a schema (see `validationError`). */
   schema: CardSchemaFacts | null;
+  /**
+   * The card's summary line (`FileSummary.detail`, from its type's
+   * `summarize`), shown under the title. Absent when the type writes none or
+   * the card did not parse.
+   */
+  detail?: string;
 }
 
 function loadFrontmatterCard(input: {
@@ -59,10 +66,12 @@ function loadFrontmatterCard(input: {
   let body: string | undefined;
   let validationError: string | undefined;
   let schema: CardSchemaFacts | null = null;
+  let detail: string | undefined;
 
   try {
     const parsed = parseCardText(raw, { source, schemas: cardSchemas, type });
     schema = { hasBodyField: parsed.schema.bodyFieldName !== null, defaultProminence: parsed.schema.defaultProminence };
+    detail = summarize({ path: source, fields: parsed.fields, type }, cardSchemas).detail;
     const fields = { ...parsed.fields };
     if (parsed.schema.bodyFieldName !== null) {
       const bodyValue = fields[parsed.schema.bodyFieldName];
@@ -97,6 +106,7 @@ function loadFrontmatterCard(input: {
     body,
     validationError,
     schema,
+    ...(detail === undefined ? {} : { detail }),
   };
 }
 

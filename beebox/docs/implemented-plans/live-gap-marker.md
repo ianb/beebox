@@ -77,6 +77,9 @@ span is already governed by the chat prompt's unsure-mark guidance.
   today (`fold()` keeps only final text,
   `transcription-segment-text.ts:26`). They fall inside the gap, so the marker
   stands for them too.
+- Live text drops before any words: no marker (2026-10-13). No words before
+  the drop most likely means no speech during it, and a lone `[…]` would
+  turn an empty recording into a message.
 - Recording before the first live connection: no marker; the pending bubble
   already says "Recording without live text"
   (`voice-keyword-send.ts:124`) when nothing was transcribed.

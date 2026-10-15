@@ -59,6 +59,7 @@ export class ChatSession extends EventEmitter {
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
   private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
+  private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
   private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
@@ -203,6 +204,9 @@ export class ChatSession extends EventEmitter {
     });
   }
 
+  /** Settles once every send now preparing a turn or starting its run has finished or failed. */
+  whenStarted(): Promise<unknown> { return Promise.allSettled(this.opening); }
+
   /**
    * Return to `idle` after a run failed to start, and deal with anything that
    * queued behind it. While the start was in flight the session read as busy,
@@ -302,21 +306,25 @@ export class ChatSession extends EventEmitter {
    *
    * Accepts either a plain string (back-compat) or a ChatSendInput object
    * carrying the text plus any image attachments referenced by `[imageN]`
-   * tokens in the text.
+   * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
    */
-  async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
-    const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
-    try { return await work.run(() => this.sendAdmitted(message)); }
-    finally { await work.release(); }
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void }): Promise<boolean> {
+    const opening = (async () => {
+      const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
+      try { return await work.run(() => this.sendAdmitted(message, options?.onAdmitted)); }
+      finally { await work.release(); }
+    })();
+    this.opening.add(opening);
+    try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput): Promise<boolean> {
+  private async sendAdmitted(message: string | ChatSendInput, onAdmitted: (() => void) | undefined): Promise<boolean> {
     if (this.isBusy()) {
       log("send", "Rejected — busy");
       return false;
     }
 
-    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
 
     // A live third-party run keeps the provider env it started with; re-check so a removed model or revoked key stops at this turn.
     const refusal = await liveProviderRefusal({ boxRoot: this.boxRoot, model: this.liveRun() === null ? null : this.resolvedModel }); if (refusal !== null) { this.emit("error", refusal); this.restart(); return false; }
@@ -426,17 +434,11 @@ export class ChatSession extends EventEmitter {
     return loadSessionHistory(this.boxRoot, { sessionId: this.sessionId, slice, fresh: opts?.fresh ?? false });
   }
 
-  getSessionId(): string | null {
-    return this.sessionId;
-  }
+  getSessionId(): string | null { return this.sessionId; }
 
-  isRunning(): boolean {
-    return this.liveRun() !== null;
-  }
+  isRunning(): boolean { return this.liveRun() !== null; }
 
-  isBusy(): boolean {
-    return this.preparingTurn || lifecycleBusy(this.state);
-  }
+  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state); }
 
   /**
    * Stop the current run gracefully. Clears the pending queue so the

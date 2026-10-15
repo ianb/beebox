@@ -13,6 +13,7 @@
 
 import { z } from "zod";
 import { isRecord } from "../../../shared/is-record.js";
+import { QUICK_CAPTURE_SOURCES } from "../../../shared/quick-capture.js";
 import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import { routingCandidateSchema, type RoutingCandidate } from "./policy.js";
 
@@ -22,7 +23,7 @@ export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
 /** How the person entered the thought. External inputs are neither keyboard text nor a recording. */
 export const QUICK_CHAT_ORIGINS = ["typed", "voice", "external"] as const;
 export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
-export const QUICK_CHAT_SOURCES = ["apple-app-intents"] as const;
+export const QUICK_CHAT_SOURCES = QUICK_CAPTURE_SOURCES;
 /**
  * The engine that produced a dictated thought's HQ text on the phone
  * (docs/plans/ios-quick-chat-hq.md); the same name as the native emission's
@@ -46,6 +47,10 @@ const baseShape = {
   /** Absent on records written before the origin was kept: those were typed. */
   origin: z.enum(QUICK_CHAT_ORIGINS).default("typed"),
   source: z.enum(QUICK_CHAT_SOURCES).optional(),
+  sourceRef: z.string().optional(),
+  retainedRecording: z.boolean().optional(),
+  recordingInterrupted: z.boolean().optional(),
+  captureInputKind: z.enum(["words", "transcript"]).optional(),
   /** Absent: a typed thought, or the phone's live transcript. */
   hqService: quickChatHqServiceSchema.optional(),
   candidates: z.array(routingCandidateSchema),

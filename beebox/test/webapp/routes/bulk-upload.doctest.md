@@ -10,7 +10,7 @@ full prepare→deliver worker (retry, at-most-once, reconciliation) is covered i
 ```ts setup
 import { createHash } from "node:crypto";
 import { makeTestServer } from "../../helpers/doctest-server.js";
-import { readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";
+import { readStagingSession, writeStagingSession, sealStagingSession, setStagingState } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/session/history.js";
 
@@ -48,14 +48,20 @@ async function uploadItem(ctx, opts) {
   });
 }
 
-async function waitForSessionState(ctx, sessionId, targetState) {
-  for (let i = 0; i < 80; i++) {
-    const session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
-    if (session?.state === targetState) return;
-    await new Promise((r) => setTimeout(r, 10));
+// Finalize starts the prepare→deliver worker detached from the request, so it
+// outlives the response. Every test that finalizes waits here for the worker to
+// stop before cleanup deletes the box: a worker still running `git add` (through
+// git-annex) when the box directory vanishes hangs forever, and the file then
+// dies at tap's whole-file timeout instead of failing an assertion. Bounded, and
+// the error names the state the worker stalled in.
+async function waitForWorkerToSettle(ctx, sessionId) {
+  let session = null;
+  for (let i = 0; i < 600; i++) {
+    session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+    if (session === null || session.state === "delivered" || session.state.startsWith("failed:")) return session?.state ?? "gone";
+    await new Promise((r) => setTimeout(r, 50));
   }
-  const finalState = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
-  throw new Error(`timed out waiting for session ${sessionId} to reach ${String(targetState)}, last state was ${String(finalState?.state)}`);
+  throw new Error(`bulk worker for ${sessionId} did not settle within 30s; last state was ${String(session?.state)}`);
 }
 ```
 
@@ -374,6 +380,15 @@ JSON.stringify({ status: done.statusCode, staged: done.body.staged, sessionId: d
 => {"status":200,"staged":true,"sessionId":true}
 ```
 
+The seal happens before the response, not later in the worker: read first
+thing after the response, the batch is already out of `open`. The worker may
+have moved it on to any later state, so the check is only that it is not open.
+
+```ts continue
+(await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId }))?.state !== "open"
+=> true
+```
+
 A further upload after finalize is refused — the session is no longer open:
 
 ```ts continue
@@ -383,6 +398,7 @@ late.statusCode
 ```
 
 ```ts cleanup
+await waitForWorkerToSettle(ctx, sessionId);
 await ctx.cleanup();
 ```
 
@@ -402,9 +418,13 @@ const done = await ctx.request({
   method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
   payload: { note: "Receipts from the Tokyo trip" },
 });
+// The worker runs to its end before the read, so the read cannot race it.
+// "chat-note" has no recorded binding, so the worker leaves the batch retryable
+// as `failed:deliver` — and the note is still there for the resume to use.
+const settled = await waitForWorkerToSettle(ctx, sessionId);
 const sealed = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
-JSON.stringify({ status: done.statusCode, state: sealed.state, note: sealed.note })
-=> {"status":200,"state":"sealed","note":"Receipts from the Tokyo trip"}
+JSON.stringify({ status: done.statusCode, state: settled, note: sealed.note })
+=> {"status":200,"state":"failed:deliver","note":"Receipts from the Tokyo trip"}
 ```
 
 ```ts cleanup
@@ -427,6 +447,7 @@ await ctx.request({
   method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
   payload: { note: "   \n\t " },
 });
+await waitForWorkerToSettle(ctx, sessionId);
 const sealed = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
 JSON.stringify({ note: sealed.note ?? null })
 => {"note":null}
@@ -468,18 +489,25 @@ arrives while the client, which already saw finalize succeed, reports success.
 That is the "client says done, server shows nothing" failure this feature exists
 to remove, so a post-seal cancel is refused rather than raced.
 
+The batch is sealed and stepped through the worker's states in the store,
+without the finalize route, so no live worker races the DELETE: a real one can
+finish (staging gone, 404) or fail (`failed:*`, cancellable, 200) before the
+request lands. Every state the worker holds the batch in refuses the cancel:
+
 ```ts
 const ctx = await makeTestServer();
-await bindSession(ctx, "chat-cancel", "_content/photos");
 const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
 const sessionId = created.body.sessionId;
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
-await ctx.request({ method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`, payload: {} });
-await waitForSessionState(ctx, sessionId, "sealed");
+await sealStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
 
-const late = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${sessionId}` });
-late.statusCode
-=> 409
+const codes = {};
+for (const state of ["sealed", "preparing", "delivering"]) {
+  await setStagingState({ boxRoot: ctx.boxRoot, id: sessionId, state });
+  codes[state] = (await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${sessionId}` })).statusCode;
+}
+JSON.stringify(codes)
+=> {"sealed":409,"preparing":409,"delivering":409}
 ```
 
 An open batch still cancels normally:

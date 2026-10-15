@@ -15,7 +15,7 @@ import { mobileBootstrapTarget } from "./mobile-bootstrap.js";
 import { serveDev } from "./docs.js";
 import { serveSite } from "./site.js";
 import type { WorkstreamsAppSupervisor } from "./workstreams-app-supervisor.js";
-import { readyLifecycle, failedLifecycle, type WorktreeHandle } from "../lifecycle.js";
+import { failedLifecycle } from "../lifecycle.js";
 import type { RouterCore } from "../core/engine.js";
 import { errMessage, httpStatusOf } from "../effects.js";
 import { proxyWithRetry, proxyWorkstreamsAppOnce } from "./proxy.js";
@@ -123,33 +123,6 @@ async function handleControlRoutes(
     return true;
   }
 
-  if (url.startsWith("/__router/dashboard/")) {
-    const name = url.slice("/__router/dashboard/".length).replace(/\/$/, "");
-    if (!name) {
-      res.writeHead(400);
-      res.end("missing worktree name");
-      return true;
-    }
-    let handle: WorktreeHandle;
-    try {
-      handle = await core.ensureRunning(name);
-    } catch (err) {
-      res.writeHead(httpStatusOf(err) ?? 502, { "content-type": "text/plain" });
-      res.end(`Failed to start worktree ${name}: ${errMessage(err)}\n`);
-      return true;
-    }
-    const dashboardUrl = readyLifecycle(handle)?.dashboardUrl ?? null;
-    if (!dashboardUrl) {
-      res.writeHead(502, { "content-type": "text/plain" });
-      res.end(
-        `Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/beebox/logs/${name}.log\n`,
-      );
-      return true;
-    }
-    res.writeHead(302, { location: dashboardUrl });
-    res.end();
-    return true;
-  }
   return false;
 }
 

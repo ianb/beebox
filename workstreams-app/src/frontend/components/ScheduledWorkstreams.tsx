@@ -75,7 +75,7 @@ function ScheduledRow({ row, issues, exhibitsOrigin, now }: { row: WorkstreamLis
           </Button>
         </WorkstreamActions>
       </div>
-      {open ? <ScheduleAlerts name={row.name} /> : null}
+      {open ? <ScheduleAlerts name={row.name} withActions={false} /> : null}
       {row.exhibits.length > 0 ? (
         <div className="workstream-exhibits">
           <ExhibitLinks entries={row.exhibits} origin={exhibitsOrigin} />

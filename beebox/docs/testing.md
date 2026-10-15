@@ -28,6 +28,14 @@ suite runs on its own schedule instead
 ([recurring work](development/workflow.md#recurring-work)), bisected to the
 landing that broke it.
 
+**A broad selection runs in the background.** An edit to a module that
+hundreds of tests import selects about half the suite, which takes about
+10 minutes. `test:changed` prints the file count and an estimated time
+first, from the ledger's per-file times. At 5 minutes or more it says to run
+the command in the background, because load can make the run pass an agent
+shell's 10-minute foreground limit. `node --import tsx ../bin/test-select.ts`
+prints the same line and the selection without running it.
+
 ## Instruments
 
 | Instrument | Question it answers | Gate? | Cost |
@@ -62,7 +70,8 @@ can recur (a branch, a parser, a boundary), not for a wrong path, string, or
 one-line typo. Each example proves one claim the code could get wrong; an
 example that would still pass if the code it covers were deleted is itself a
 defect, and so is a second example proving the same claim with a different
-literal. A changed page or shared primitive also gets its tour walked before
+literal. Exploring varied inputs during work is useful; keep only the cases
+that failed, each with the reason its expected value is right. A changed page or shared primitive also gets its tour walked before
 the work is called done. A new agent-facing concept gets at least one knowledge
 audit. A change that could break startup or the app bar gets a smoke run by
 hand before landing. A field test is for a capability whose value depends on
@@ -107,12 +116,3 @@ installed version's changelog. Known cases that cost time here: `canvas.toBlob`
 produces only lossy WebP and AVIF; Node 20.3 and later advance timers during
 macOS sleep (use `startAwakeTimeout`); named value imports from a CommonJS
 module fail under Node's ESM loader.
-
-## Future directions
-
-Key ideas not yet implemented:
-
-- **Self-describing services** — Services export `description`, `examples`, and `properties` alongside their functions. Tests get generated from these.
-- **Property testing** — Semantically meaningful invariants (like `parse(serialize(card)) === card`), not random fuzzing.
-- **CGI-style route testing** — Test routes as pure state→output functions rather than spinning up servers.
-- **Assertive logging** — Soft assertions in production code that surface through the logging system, caught by an error harness in tests.

@@ -33,8 +33,8 @@ values and how they meet landmarks.
   generated intermediates, and anything already embedded in another card
   (an image that appears inside a primary document is background on its
   own; the document is where a reader sees it). Cards the box writes for
-  itself (jobs, runs, chat threads) and landmark cards are background by
-  type. On a landmark card, `prominence: background` is the one value to
+  itself (jobs, runs, chat threads and chat logs, capture and upload
+  staging) and landmark cards are background by type. On a landmark card, `prominence: background` is the one value to
   write: it marks the whole place as housekeeping and folds everything
   under it. Never write `entry-point` or `primary` on a landmark.
 

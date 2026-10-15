@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { Button, Pill } from "./ui.js";
 import { Markdown } from "./Markdown.js";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { friendlyTimestamp } from "../lib/format.js";
 import { trpc } from "../trpc.js";
+import { WorkstreamActions } from "./WorkstreamActions.js";
 import type { ScheduleAlert, ScheduleAlertPriority } from "../../shared/schedules.js";
+import type { Workstream } from "../types.js";
 
 /** The same words and colours the popups use: the page and the notification
  *  say one thing. */
@@ -75,6 +77,8 @@ export interface ScheduleAlertListProps {
   selectedAlert?: string | null;
   /** Name each alert's schedule: the all-schedules page mixes them. */
   showSchedule?: boolean;
+  /** Wraps an open alert's Acknowledge button, e.g. in its schedule's Resume. */
+  actions?: (alert: ScheduleAlert, acknowledge: ReactNode) => ReactNode;
 }
 
 function rowClass(alert: ScheduleAlert, selected: string | null): string | undefined {
@@ -82,7 +86,7 @@ function rowClass(alert: ScheduleAlert, selected: string | null): string | undef
 }
 
 /** Presentational: open alerts grouped by priority, closed ones folded away. */
-export function ScheduleAlertList({ alerts, onAcknowledge, acknowledging, error, selectedAlert, showSchedule }: ScheduleAlertListProps) {
+export function ScheduleAlertList({ alerts, onAcknowledge, acknowledging, error, selectedAlert, showSchedule, actions }: ScheduleAlertListProps) {
   const open = alerts.filter((alert) => alert.state === "open");
   const closed = alerts.filter((alert) => alert.state === "acknowledged");
   const selected = selectedAlert ?? null;
@@ -109,9 +113,8 @@ export function ScheduleAlertList({ alerts, onAcknowledge, acknowledging, error,
           <div key={group.priority} className="schedule-alert-group">
             <h3>{group.heading} <small>{members.length}</small></h3>
             <ul className="schedule-alert-list">
-              {members.map((alert) => (
-                <li key={alert.id} id={`schedule-alert-${alert.id}`} className={rowClass(alert, selected)} tabIndex={-1}>
-                  <AlertBody alert={alert} showSchedule={named} />
+              {members.map((alert) => {
+                const acknowledge = (
                   <Button
                     type="button"
                     disabled={acknowledging === alert.id}
@@ -119,8 +122,14 @@ export function ScheduleAlertList({ alerts, onAcknowledge, acknowledging, error,
                   >
                     {acknowledging === alert.id ? "Acknowledging…" : "Acknowledge"}
                   </Button>
-                </li>
-              ))}
+                );
+                return (
+                  <li key={alert.id} id={`schedule-alert-${alert.id}`} className={rowClass(alert, selected)} tabIndex={-1}>
+                    <AlertBody alert={alert} showSchedule={named} />
+                    {actions ? actions(alert, acknowledge) : acknowledge}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         );
@@ -147,10 +156,16 @@ export function ScheduleAlertList({ alerts, onAcknowledge, acknowledging, error,
 /**
  * The alerts of one scheduled workstream, or of every schedule when `name` is
  * null: fetched here, acknowledged through `bin/schedules ack` on the server,
- * rendered by the list above.
+ * rendered by the list above. Each open alert also gets its schedule's
+ * Resume (or Focus, when a run is live), so an alert that needs the boxholder
+ * leads straight back to the workstream. `withActions: false` is for a place
+ * that already shows them, the dashboard row.
  */
-export function ScheduleAlerts({ name, selectedAlert }: { name: string | null; selectedAlert?: string | null }) {
+export function ScheduleAlerts({ name, selectedAlert, withActions: withActionsProp }: { name: string | null; selectedAlert?: string | null; withActions?: boolean }) {
+  const withActions = withActionsProp ?? true;
   const alerts = trpc.schedules.alerts.useQuery({ workstream: name }, { staleTime: 10_000 });
+  const workstreams = trpc.workstreams.list.useQuery(undefined, { enabled: withActions, staleTime: 10_000 });
+  const rows = new Map<string, Workstream>((workstreams.data?.items ?? []).map((row) => [row.name, row]));
   const utils = trpc.useUtils();
   const acknowledge = trpc.schedules.acknowledge.useMutation({
     async onSuccess() {
@@ -178,6 +193,10 @@ export function ScheduleAlerts({ name, selectedAlert }: { name: string | null; s
       selectedAlert={selectedAlert ?? null}
       showSchedule={name === null}
       onAcknowledge={(id) => acknowledge.mutate({ id })}
+      actions={(alert, ack) => {
+        const row = withActions ? rows.get(alert.workstream) : undefined;
+        return row ? <WorkstreamActions row={row}>{ack}</WorkstreamActions> : ack;
+      }}
     />
   );
 }

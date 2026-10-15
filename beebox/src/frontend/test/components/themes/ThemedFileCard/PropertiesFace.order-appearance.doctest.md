@@ -75,6 +75,7 @@ const memo = await render({
   type: "memo",
   schema: { hasBodyField: true, defaultProminence: "ordinary" },
   frontmatter: { title: "Porch", contains: "Porch repair quotes", status: "new", theme: { name: "paper", stock: "cream" } },
+  body: "Three quotes so far.\n",
 }, { canEdit: true });
 ```
 
@@ -97,12 +98,13 @@ headings(memo)
 ]
 ```
 
-The view chooser comes last but for the actions menu, and keeps its "Use
-preferred view" button:
+The view chooser comes last but for the actions menu. It keeps its "Use
+preferred view" button and, under it, a button that copies the card's whole
+original text (the boxholder asked for it beside "Original text", 2026-10-13):
 
 ```ts
 textOf(memo.slice(memo.lastIndexOf("<section")))
-=> View Memo Original text Use preferred view Card actions
+=> View Memo Original text Use preferred view Copy original text Card actions
 ```
 
 ## Appearance
@@ -125,6 +127,17 @@ default leading; the rest wait behind "All card themes":
 
 textOf(/<details class="mt-3">.*?<\/summary>/s.exec(section)?.[0] ?? "")
 => All card themes
+```
+
+An image card also offers the image itself; a memo does not:
+
+```ts
+const photo = await render({
+  path: "_content/Porch.image.card", type: "image", schema: null,
+  frontmatter: { title: "Porch", filename: { ref: "attach/porch.jpg" } },
+}, { canEdit: false });
+[textOf(memo).includes("Copy image"), textOf(photo.slice(photo.lastIndexOf("<section")))]
+=> [false, "View Image Original text Use preferred view Copy original text Copy image Card actions"]
 ```
 
 A box-authored theme has no catalog swatch; the card's own choice is still

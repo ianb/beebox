@@ -9,9 +9,8 @@ allowed-tools: Bash, Read, Grep, Glob
 ## Rules
 
 - **Other family only.** Claude drivers (Fable, Opus) use `--engine codex`;
-  Codex drivers (Astra, Sol) use `--engine claude`. Choose by family, not tier.
-  If the other family cannot run, report the blocker; never substitute a
-  same-family review.
+  Codex drivers (Astra, Sol) use `--engine claude`. Choose by family, not
+  tier. If the other family cannot run, report the blocker; never substitute.
 - **The reviewer is read-only evidence, not authority.** Verify each actionable
   claim against the source before you act on it or report it. Separate real
   defects from scope opinions and noise.
@@ -24,15 +23,15 @@ allowed-tools: Bash, Read, Grep, Glob
   accept-or-fix decisions, never silently fixed.
 - **An adversarial reviewer never says "clean".** Its "not fit" verdict does
   not stop the work; the human's risk judgment does.
-- **Name the engine and model** (for example `codex gpt-6-sol`) wherever you
-  report the review.
+- **Name the engine and model** (`codex gpt-6-sol`) wherever you report it.
 - Presumptively reject mid-operation I/O-failure windows in one-shot operator
   tools, exotic input encodings, and attacker-is-the-owner scenarios.
 - Reject "add tests" as a finding. A test finding names the claim the code
   could get wrong and the one example that would catch it; code with no
-  branches, parsing, money, or security gets none (`docs/testing.md`).
-- Done means: findings adjudicated against the human's request, verified
-  in-scope defects fixed and rechecked, remaining risks surfaced.
+  branches, parsing, money, or security gets none (`docs/testing.md`). A new
+  expected value with no stated reason, or one that does not hold, is one.
+- Done means: findings adjudicated, in-scope defects fixed and rechecked,
+  remaining risks surfaced.
 
 ## Select the mode
 
@@ -118,23 +117,23 @@ If you wrote or delegated the change, write a CODING_FEEDBACK entry before
 sending its diff: pipe your answers to the four prompts (`bin/coding-feedback
 help`) into `bin/coding-feedback add --checkpoint implemented`.
 
-Write the prompt to `scratch/cross-model/<name>.prompt.md`, then run it as a
-background shell command and wait for its completion notice (a review outlasts
-the shell tool's 10-minute foreground limit):
+Write the prompt to `scratch/cross-model/<name>.prompt.md`, then run it in
+the background and wait for its completion notice (a review can outlast the
+10-minute foreground limit):
 
 ```bash
 bin/cross-model-run --engine codex --prompt-file scratch/cross-model/<name>.prompt.md
 ```
 
-It runs the reviewer read-only at `--effort high` (default models `gpt-6-sol`
-and `claude-opus-5-5`) and prints the saved answer path and the final answer. Use `--model fable` (Claude) for plan mode and `--model
-gpt-6-astra` (Codex) for a hard plan or a disputed finding; honor a human's
-model override within the family. `--help` lists `--out`, `--cwd`, and `--timeout` (default 30 min).
-A tool that yields a session handle has not finished: poll it to an exit code.
-A nonzero exit (127 missing engine, 124 timeout, 1 failure or empty answer)
-prints the raw-log tail; report it. If a Codex model stalls, retry once with an
-older model the account allows before reporting. Stop only the exact orphaned
-reviewer PID; `pkill -f codex` also kills Codex.app and sibling sessions.
+It runs the reviewer read-only at `--effort high` (defaults `gpt-6-sol`,
+`claude-opus-5-5`) and prints the answer path and answer. Use `--model fable`
+(Claude) for plan mode and `--model gpt-6-astra` (Codex) for a hard plan or a
+disputed finding; honor a human's model override within the family. `--help`
+lists `--out`, `--cwd`, and `--timeout` (default 30 min). A nonzero exit (127
+missing engine, 124 timeout, 1 failure or empty answer) prints the raw-log
+tail; report it. If a Codex model stalls, retry once with an older model the
+account allows. Stop only the exact orphaned reviewer PID; `pkill -f codex`
+also kills Codex.app and sibling sessions.
 
 ## Report
 

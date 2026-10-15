@@ -16,27 +16,32 @@ retry of its message id is answered from a claim nobody will ever settle.
 
 ```ts setup
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
-import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
+import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { captureTurn, startAckedRun } from "../../../../src/webapp/routes/chat/send-run.js";
 import { getTurnBuffer } from "../../../../src/core/chat/turn-buffer.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
 
-/** Poll until the turn buffer reports an error frame (or give up). */
-async function awaitTurnError(turnId: string): Promise<string> {
-  for (let attempt = 0; attempt < 400; attempt += 1) {
-    const errored = getTurnBuffer(turnId)?.errored;
-    if (errored !== null && errored !== undefined) return errored;
-    await new Promise((resolve) => { setTimeout(resolve, 5); });
-  }
-  return "(no error frame)";
+/** The turn buffer once it has ended (finished or failed), awaiting its own
+ *  change signal rather than polling against a deadline. */
+async function awaitTurnEnd(turnId: string) {
+  const buffer = getTurnBuffer(turnId);
+  if (buffer === undefined) throw new Error(`no turn buffer for ${turnId}`);
+  while (!buffer.complete) await buffer.waitForChange(undefined, buffer.versionSnapshot());
+  return buffer;
 }
 
-/** A request that hangs is a test failure, not a test that hangs. */
+/**
+ * A request that hangs is a test failure, not a test that hangs. The wedge
+ * this detects never settles, so the bound only has to sit inside the file's
+ * 300s timeout to fail readably; it is not a latency budget. (At 3s the
+ * healthy path missed it on a loaded host: 2026-10-07, a 73s block.)
+ */
 async function promptly(pending: Promise<{ statusCode: number }>): Promise<string> {
-  const timeout = new Promise<string>((resolve) => { setTimeout(() => { resolve("HUNG"); }, 3000); });
-  return Promise.race([pending.then((res) => String(res.statusCode)), timeout]);
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<string>((resolve) => { timer = setTimeout(() => { resolve("HUNG"); }, 60_000); });
+  return Promise.race([pending.then((res) => String(res.statusCode)), timeout]).finally(() => { clearTimeout(timer); });
 }
 ```
 
@@ -59,9 +64,43 @@ startAckedRun({ send: () => new Promise<boolean>(() => { /* never settles */ }) 
   watchdog: { timeoutMs: 40, periodMs: 5 },
 });
 
-const errored = await awaitTurnError("wedged-turn");
-`${errored} | pinned=${pinned} | complete=${getTurnBuffer("wedged-turn")?.complete}`
+const { errored, complete } = await awaitTurnEnd("wedged-turn");
+`${errored} | pinned=${pinned} | complete=${complete}`
 => The run did not start within 40ms | pinned=false | complete=true
+```
+
+```ts cleanup
+session.stop();
+await box.cleanup();
+```
+
+## A send not yet admitted when the watchdog fires is refused, and records nothing
+
+The route waits for the session to take the turn before it answers. If the
+watchdog fires first, the request is answered as not admitted, and a late
+admission is abandoned, so the message is not recorded after its client was
+told it was refused.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const session = new ChatSession(box.root, { backend, skipBootstrap: true });
+
+let admitLate: (() => void) | undefined;
+let recorded = 0;
+const capture = captureTurn(session, { turnId: "late-turn", releasePin: () => undefined });
+const answer = await startAckedRun({
+  send: (_input, options) => { admitLate = options?.onAdmitted; return new Promise<boolean>(() => { /* still waiting on a lock */ }); },
+}, {
+  input: { text: "did you water the plants" },
+  capture,
+  onAdmitted: () => { recorded += 1; },
+  watchdog: { timeoutMs: 40, periodMs: 5 },
+});
+let lateThrow = "none";
+try { admitLate?.(); } catch (e) { lateThrow = (e as Error).message; }
+({ answer, recorded, lateThrow })
+=> { answer: { admitted: false, reason: "The run did not start within 40ms" }, recorded: 0, lateThrow: "Send abandoned before the session took the turn" }
 ```
 
 ```ts cleanup
@@ -103,7 +142,12 @@ The event bus stands in for "anything between the claim and the ack" — its
 `emit` is the first thing the accepted-message path calls.
 
 ```ts
-const ctx = await makeTestServer({ chatBackend: createFakeChatBackend() });
+const backend = createFakeChatBackend();
+const realStart = backend.start.bind(backend);
+const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
+  backend.start = (opts) => { const run = realStart(opts); resolve(run); return run; };
+});
+const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
@@ -148,6 +192,18 @@ const retry = await ctx.request({
 
 `${retry.statusCode} | turn=${typeof retry.body.turnId} | recorded=${recorded.length} | ${recorded[0]}`
 => 200 | turn=string | recorded=1 | did you water the plants
+```
+
+The retried run reaches the backend and finishes once the backend answers.
+Waiting for it also keeps cleanup from deleting the box under a run that is
+still committing: on 2026-10-11 its bootstrap git commit outlived cleanup
+and held the process open until the file timed out.
+
+```ts continue
+(await runStarted).emitResult();
+const ended = await awaitTurnEnd(retry.body.turnId);
+`errored=${ended.errored} | complete=${ended.complete}`
+=> errored=null | complete=true
 ```
 
 ```ts cleanup

@@ -118,19 +118,54 @@ const HISTORY_HEADER =
   "# Context-size history — auto-appended by `knowledge-audit run`.\n" +
   "# box basename → audit id → entries (oldest first). See lib/context-history.ts.\n";
 
+/** Parse ledger text; an empty or all-comments file is an empty history. */
+export function parseHistoryText(text: string): ContextHistory {
+  // Parse boundary: this is a committed, tool-maintained ledger, so a
+  // present-but-malformed file is a real bug — `.parse()` throws rather
+  // than casting past it. An empty/all-comments file parses to `null`.
+  const parsed: unknown = YAML.parse(text);
+  return parsed === null ? {} : parseContextHistory(parsed);
+}
+
+/** The ledger's committed text, header included. */
+export function formatHistory(history: ContextHistory): string {
+  // Validate the whole document right before it becomes the committed
+  // ledger — a cheap backstop so a bug that shapes `history` incorrectly
+  // fails loudly here rather than writing a row later runs must skip past.
+  contextHistorySchema.parse(history);
+  return HISTORY_HEADER + YAML.stringify(history);
+}
+
+/**
+ * Two ledgers that grew apart on two branches, as one: every row from either,
+ * once, oldest first. finish-preflight resolves a merge conflict in the ledger
+ * with this. A line-based merge cannot: rows that end in identical lines
+ * (`added: 0`, `turns: 1`) share those lines, and git's union driver keeps
+ * them once, leaving a row without its last fields.
+ */
+export function mergeHistories(ours: ContextHistory, theirs: ContextHistory): ContextHistory {
+  const merged: ContextHistory = {};
+  for (const box of new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
+    const audits: Record<string, ContextHistoryEntry[]> = {};
+    for (const auditId of new Set([...Object.keys(ours[box] ?? {}), ...Object.keys(theirs[box] ?? {})])) {
+      const rows = new Map<string, ContextHistoryEntry>();
+      for (const entry of [...(ours[box]?.[auditId] ?? []), ...(theirs[box]?.[auditId] ?? [])]) {
+        rows.set(JSON.stringify(entry), entry);
+      }
+      audits[auditId] = [...rows.values()].toSorted((a, b) => a.date.localeCompare(b.date));
+    }
+    merged[box] = audits;
+  }
+  return merged;
+}
+
 /**
  * Load the history file, returning an empty history when it doesn't exist yet
  * (the normal first-run case). Any other read error is real and propagates.
  */
 export async function loadHistory(historyPath: string): Promise<ContextHistory> {
   try {
-    const text = await fs.readFile(historyPath, "utf-8");
-    // Parse boundary: this is a committed, tool-maintained ledger, so a
-    // present-but-malformed file is a real bug — `.parse()` throws rather
-    // than casting past it. An empty/all-comments file parses to `null`,
-    // which is the normal "no history yet" case (same as ENOENT below).
-    const parsed: unknown = YAML.parse(text);
-    return parsed === null ? {} : parseContextHistory(parsed);
+    return parseHistoryText(await fs.readFile(historyPath, "utf-8"));
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
     return {};
@@ -145,11 +180,5 @@ export async function recordRun(
 ): Promise<void> {
   const { historyPath, ...run } = options;
   const history = await loadHistory(historyPath);
-  const next = appendRun(history, run);
-  // Validate the whole document (not just the entries this run added) right
-  // before it becomes the new committed ledger — a cheap backstop so a
-  // future bug that shapes `next` incorrectly fails loudly here rather than
-  // writing a row later runs will need to warn-and-skip past.
-  contextHistorySchema.parse(next);
-  await fs.writeFile(historyPath, HISTORY_HEADER + YAML.stringify(next), "utf-8");
+  await fs.writeFile(historyPath, formatHistory(appendRun(history, run)), "utf-8");
 }

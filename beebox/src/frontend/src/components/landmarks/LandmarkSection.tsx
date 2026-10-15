@@ -23,6 +23,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
+import { InlineAction } from "../ui/InlineAction";
 import { ChevronIcon } from "./ChevronIcon";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
@@ -32,6 +33,8 @@ export interface ResolvedLink {
   label: string | null;
   title: string;
   exists: boolean;
+  /** The card type's summary line, shown under the title. */
+  detail?: string;
 }
 
 export interface ResolvedGroup {
@@ -188,6 +191,7 @@ export function LandmarkGroup({
   compact,
   defaultOpen,
   hidePath,
+  onMore,
 }: {
   group: ResolvedGroup;
   boxSlug: string;
@@ -197,6 +201,8 @@ export function LandmarkGroup({
   hidePath?: boolean;
   /** Start expanded (the place page); menus and the Landmarks page start collapsed. */
   defaultOpen?: boolean;
+  /** Makes the "+N more" count an action (the place page opens the folder in Browse); plain text without it. */
+  onMore?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen === true);
   const overflow = group.count - group.children.length;
@@ -221,7 +227,9 @@ export function LandmarkGroup({
           ))}
           {overflow > 0 ? (
             <Text as="div" size="xs" tone="muted" className="self-center">
-              +{overflow} more
+              {onMore === undefined ? `+${overflow} more` : (
+                <InlineAction intent="subtle" onClick={onMore}>{`+${overflow} more`}</InlineAction>
+              )}
             </Text>
           ) : null}
         </div>
@@ -245,6 +253,12 @@ export function LandmarkSymbol({
   compact?: boolean;
 }) {
   return <CardMark symbol={landmark.symbol} size={compact === true ? "md" : "lg"} boxSlug={boxSlug} fallback="📍" />;
+}
+
+/** The card type's summary line under a tile's title, in the `FileEntry` style. */
+function TileDetail({ detail }: { detail: string | undefined }) {
+  if (detail === undefined) return null;
+  return <Text as="div" size="xs" tone="subtle" truncate title={detail}>{detail}</Text>;
 }
 
 function LinkTile({
@@ -291,6 +305,7 @@ function LinkTile({
       <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
+          <TileDetail detail={link.detail} />
           {showPath ? <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text> : null}
         </Card>
       </button>
@@ -301,6 +316,7 @@ function LinkTile({
     <Link to={href(`/${boxSlug}/views/${link.ref}`)} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
+        <TileDetail detail={link.detail} />
         {showPath ? <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text> : null}
       </Card>
     </Link>

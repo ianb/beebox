@@ -18,11 +18,13 @@
  */
 
 import { naturalCompare } from "../../../shared/natural-sort.js";
+import { ALSO_HERE_CAP, ALSO_HERE_LABEL, alsoHere } from "../../../shared/also-here.js";
+import { parseRef } from "../../../shared/ref-path/core.js";
 import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
 import { prunedSubtreeWith, type ProminenceEntry, type ProminenceWalkContext, type PrunedSubtree } from "../prominence-index.js";
-import { createCardSchemaMap } from "../../../schemas.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";
 import type { DerivedReadProblem } from "../summaries.js";
+import type { ResolvedGroup } from "./core.js";
 
 export interface DerivedResolution {
   links: ResolvedLink[];
@@ -52,7 +54,7 @@ export async function resolveDerivedTiers(
   for (const level of ["entry-point", "primary"] as const) {
     await addCardTier({ entries: derived.entries, level, links, seen, options, problems, listedLevels });
   }
-  await addNestedLandmarkTier(derived, { links, seen, boxRoot: options.boxRoot });
+  await addNestedLandmarkTier(derived, { links, seen, ctx: { boxRoot: options.boxRoot, cardSchemas: options.cardSchemas, ...(options.subtrees === undefined ? {} : { subtrees: options.subtrees }) } });
   return { links, problems, listedLevels };
 }
 
@@ -103,16 +105,14 @@ async function addCardTier(
  */
 async function addNestedLandmarkTier(
   { entries, nested }: PrunedSubtree,
-  { links, seen, boxRoot }: { links: ResolvedLink[]; seen: Set<string>; boxRoot: string },
+  { links, seen, ctx }: { links: ResolvedLink[]; seen: Set<string>; ctx: ProminenceWalkContext },
 ): Promise<void> {
   const sorted = nested.toSorted((a, b) => naturalCompare(a.path, b.path));
-  // Built once, and only when there is a nested landmark to look into.
-  const cardSchemas = sorted.length > 0 ? await createCardSchemaMap(boxRoot) : null;
   for (const n of sorted) {
     // `n.path` has no leading "/" (box-relative, matching every other
     // resolved ref's format) — see the comment in `addCardTier` above.
     if (seen.has(n.path)) continue;
-    const entryPoint = cardSchemas === null ? null : await nestedEntryPoint({ boxRoot, cardSchemas }, n.dir);
+    const entryPoint = await nestedEntryPoint(ctx, n.dir);
     if (entryPoint !== null && seen.has(entryPoint)) continue;
     const entry = entries.find((e) => e.kind === "landmark" && e.boxPath === `/${n.path}`);
     seen.add(n.path);
@@ -139,4 +139,26 @@ async function nestedEntryPoint(
     .map((e) => e.boxPath.slice(1))
     .toSorted(naturalCompare)[0];
   return first ?? null;
+}
+
+/**
+ * The place page's "Also here" group: the subtree's ordinary cards that no
+ * link or other group already shows, the most recently changed
+ * `ALSO_HERE_CAP` as children and `count` the full total
+ * (docs/implemented-plans/place-shows-cards.md, Track A). Null when none are left, so the
+ * page adds no empty group. A card deleted since the walk keeps its row,
+ * shown missing; the count includes it.
+ */
+export async function resolveAlsoHere(
+  derived: PrunedSubtree,
+  { links, groups, options }: { links: ResolvedLink[]; groups: ResolvedGroup[]; options: ResolveOptions },
+): Promise<ResolvedGroup | null> {
+  const shown = [...links, ...groups.flatMap((g) => g.children)];
+  const shownRefs = new Set(shown.map((link) => parseRef(link.ref).path));
+  const { cards, count } = alsoHere(derived.ordinary, { shownRefs, cap: ALSO_HERE_CAP });
+  if (count === 0) return null;
+  const children = await Promise.all(
+    cards.map((card) => buildLink({ rawRef: card.boxPath, label: null, source: "derived", options })),
+  );
+  return { label: ALSO_HERE_LABEL, children, count, alsoHere: true };
 }

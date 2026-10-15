@@ -24,7 +24,7 @@ const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
 };
 
 /** The status word: the name of a checkbox whose todo's words are not known, and the prefix for a parked or dropped one. */
-export const STATUS_LABEL: Record<TodoStatus, string> = {
+const STATUS_LABEL: Record<TodoStatus, string> = {
   open: "Open",
   done: "Done",
   parked: "Parked",

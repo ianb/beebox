@@ -126,3 +126,35 @@ its first-parent diff has a non-`.md` path that matches
 
 No bug filed in this window is traced to an unwalked landing. The hourly
 full-suite run caught no regressions on `main`.
+
+## Evidence, fourth window (2026-10-14 review)
+
+Window 2026-10-07T20:15Z to 2026-10-14T20:56Z. The counting rule is the same
+as in the third window.
+
+- 160 landings; 75 code landings; 57 walked; 18 not walked. The walked share
+  fell from 80% to 76%.
+- Schedule merges with no walk: `worktree-sdk-update` 4 times (`4e83ce1ca`,
+  `8e1424f66`, `5c6438b21`, `3aa3c3aeb`, each `beebox/package.json` +
+  `pnpm-lock.yaml`), `worktree-knip-sweep` once (`72e9b4ea3`, 15 files across
+  `beebox/src/core`, `dev`, `frontend` and `plugins`), and
+  `worktree-supplemental-lint` once (`c2f343f89`).
+- Direct commits on `main` with no walk: 5, up from 2. Four change frontend
+  source: `2ac8b9dc2` (archive label), `1f284170a` (chat recovery copy),
+  `5faef0f50` (live gap marker), `76a74a4e7` (card properties copy). The
+  fifth, `bf12905a4`, changes a TTS voice map in `beebox/src/core`.
+- New this window: an interactive worktree landed frontend changes three times
+  with no walk. `worktree-theme-polish` has one walk in the log, on `9cf67aac4`
+  (2026-10-08 18:07 CDT). Its merges `22c4338fe` (18:41), `d6a3edf05` (18:57)
+  and `c046d627f` (21:54) each bring later commits in `beebox/src/frontend`
+  (27 files in the last one, including theme CSS and `app.tsx`). None of those
+  commits has a walk. This review did not find which path the landings took.
+  `bin/finish-verify` does not reuse an earlier smoke pass, so a landing
+  through `/finish` would have walked.
+- Other unwalked merges change only `beebox/src/dev`: `worktree-skills-review`
+  twice (`b22fc811e`, `1e1bd4e65`), `worktree-test-oracles` (`412be4562`),
+  and `worktree-agents-md` (`bee88d5d6`, which also changes `deploy.sh` and
+  `beebox/src/core`).
+
+No bug filed in this window is traced to an unwalked landing. The hourly
+full-suite run caught no regressions on `main`.

@@ -5,12 +5,19 @@ bundle identity file is simulated: changing it drives the server's existing poll
 its IPC request, the supervisor's gate, old-child shutdown, and real replacement
 HTTP readiness. No agent is prewarmed and no credential store is changed.
 
+Readiness polls the real server's HTTP, with a budget sized for a loaded test
+host rather than the hub's 30-second production `READY_TIMEOUT_MS`. With eight
+copies of this file running in parallel, a cold real-server boot took longer
+than 30 seconds, and the supervisor killed it before the reload ever started. The
+production budget is not what this file tests.
+
 ```ts setup
 import { statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
-import { defaultSpawnChild, defaultCheckReady } from "../../src/hub/supervisor/child-spawn.js";
+import { defaultSpawnChild } from "../../src/hub/supervisor/child-spawn.js";
+import { waitForHttp } from "../../src/hub/child-process-utils.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 const delay = () => new Promise((resolve) => setTimeout(resolve, 25));
@@ -27,7 +34,7 @@ const supervisor = new Supervisor({
   config: { boxes: { fixture: { path: box.root } }, configPath: box.path("hub.json"), port: undefined, host: undefined },
   hubSecret: "disposable-fixture-hub-secret",
   async checkReady(params) {
-    await defaultCheckReady(params);
+    await waitForHttp({ port: params.port, reqPath: "/api/build-info", timeoutMs: 120_000, label: params.label });
     const phase = (await boxMaintenanceStatus(box.root))?.phase ?? null;
     const code = phase === "ready" ? (await fetch(`http://127.0.0.1:${params.port}/fixture/not-a-route`, { method: "POST" })).status : null;
     readiness.push({ phase, code });
@@ -51,7 +58,7 @@ supervisor.getStatuses()[0].status
 const first = supervisor.getStatuses()[0];
 accepted = await acquireBoxWork(box.root, { reason: "test" });
 await writeFile(identityFile, "generation two is different");
-const deadline = Date.now() + 60000;
+const deadline = Date.now() + 120_000;
 while ((await boxMaintenanceStatus(box.root)) === null && Date.now() < deadline) await delay();
 (await boxMaintenanceStatus(box.root)).phase
 => draining

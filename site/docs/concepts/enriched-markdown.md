@@ -39,10 +39,12 @@ allow-list of formatting elements (collapsible sections, subscripts, line breaks
 works while other tags show as literal text. The same rules apply to chat
 messages and to Markdown pages that a publication renders.
 
-Other marks exist for particular kinds of card (a recipe's ingredients and
-steps, a briefing's purpose and corrections, a capture session's timeline),
-and a box can add its own. The baseline three are the ones the whole system
-agrees on.
+Other marks exist for particular kinds of card, such as a recipe's
+ingredients and steps. A kind of card declares its own marks, and they are
+valid only in that kind's body; the same mark typed into a memo is reported as
+an error rather than accepted silently. A box can declare marks for its own
+kinds. The baseline three are the ones the whole system agrees on, and the only
+ones every card shares.
 
 Why it is built this way: [the representation mirrors the idea](../design/representation.md)
 and [durability and provenance](../design/durability-and-provenance.md). Where

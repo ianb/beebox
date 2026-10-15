@@ -32,6 +32,8 @@ export interface AwakeTimeoutOptions {
   periodMs?: number;
   /** A tick gap at or above this counts as sleep. Defaults to 6× period. */
   sleepGapMs?: number;
+  /** Background cleanup may let Node exit; browser timers ignore this option. */
+  unref?: boolean;
 }
 
 export interface AwakeTimeout {
@@ -73,6 +75,7 @@ export function startAwakeTimeout(options: AwakeTimeoutOptions): AwakeTimeout {
       options.onTimeout(elapsed());
     }
   }, periodMs);
+  if (options.unref && typeof interval === "object") interval.unref();
 
   function stop(): void {
     if (stopped) return;

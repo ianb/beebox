@@ -71,7 +71,7 @@ the step is wired up, never that it has caught anything.
 ## Reading results
 
 **Every run is logged, so the tier can be trimmed on evidence.** Each walk
-appends a line to `callback-smoke-log.jsonl` in the shared git dir (beside the
+appends a line to `beebox-smoke-log.jsonl` in the shared git dir (beside the
 test ledger, and shared by every worktree on the machine for the same reasons):
 the verdict, which step failed, and every step's outcome and duration.
 `bin/smoke --report` folds it into per-step counts — how often each step ran,

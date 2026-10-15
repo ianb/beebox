@@ -226,3 +226,22 @@ await tryLoad("<memo status=\"new\"/>", "legacy.memo.card")
 await tryLoad("---\nthread-id: t1\n---\n", "x.unknown.card")
 => x.unknown.card: not a recognized card: no frontmatter block with a registered type
 ```
+
+## A landmark may carry a body, the place summary
+
+The landmark type declares a markdown body (docs/implemented-plans/place-shows-cards.md,
+Track C). A landmark with one loads with it; one without still loads, with an
+empty body.
+
+```ts
+const lmCtx: LoadCardContext = { cardSchemas: await createCardSchemaMap() };
+const bodyOf = async (content: string) => {
+  const loaded = await loadCardFromText({ content, source: "Lending.landmark.card", ctx: lmCtx });
+  return loaded.kind === "frontmatter" ? loaded.fields["body"] : "?";
+};
+await bodyOf("---\nnavigation:\n  label: Lending\n---\nThe stove is with Idris until Friday.\n")
+=> The stove is with Idris until Friday.
+
+({ body: await bodyOf("---\nnavigation:\n  label: Lending\n---\n") })
+=> { body: "" }
+```

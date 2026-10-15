@@ -71,7 +71,7 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOp
 
 class BoxReloadError extends Error {
   constructor({ reason }: { reason: "exit-timeout" | "not-ready" }) {
-    super(reason === "exit-timeout" ? "Old child did not exit after reload request" : "Replacement did not become ready; box remains closed for recovery");
+    super(reason === "exit-timeout" ? "Old child did not exit after reload request" : "Replacement did not become ready; box reopens with unfinished maintenance");
     this.name = "BoxReloadError";
   }
 }

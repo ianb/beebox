@@ -1,12 +1,20 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: c8428cca5
-date: 2026-10-02
-model: claude-sonnet-5-5
+generated-at-rev: 89c8a302abf1923ef8dc5bbc8578946e4aa01553
+date: 2026-10-12
+model: gpt-6-sol
 reviewed-by: Ian Bicking
 ---
 
 # Security report — structured version
+
+**Scoped amendment (2026-10-12, iOS quick capture), reviewed by Ian:** Adds the owner-scoped
+multipart capture endpoint, receipt/recovery procedures, retained media and
+native shared-container storage, and their use of existing transcription and
+routing providers. This draft reflects the siri-app-intents implementation;
+the full-inventory baseline remains `c8428cca5`; the provenance header identifies
+the current code for this scoped amendment. It does not re-audit
+unrelated changes, the surface map, or the private security tier.
 
 **Scoped amendment (2026-10-06, Codex telemetry), reviewed by Ian:** The
 telemetry row now covers Codex. Codex analytics follow a per-box
@@ -241,6 +249,7 @@ Notable abilities, and the items that are more than routine:
 |---|---|---|---|---|---|
 | `api-files.ts`, `api-files-write.ts`, `api-browse.ts`, `api-image.ts`, `history.ts` | Read/write/delete/commit raw box files; read any historical git blob | ok | — | authed | Path containment via `ref-path.ts` + route guards |
 | tRPC `files.kind` (`src/webapp/trpc/routers/files/router.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/trpc/routers/files/kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; `test/webapp/auth.required.doctest.md` covers the transport wall (401 without a credential, 200 with one), and `test/scenarios/cross-box-probe.doctest.md` covers a sibling box's path (`BAD_REQUEST`). |
+| `POST /api/quick-captures/:captureId`; tRPC `quickCapture.capabilities` / `list` / `detail` / `retry` / `choose` / `delete` (`src/webapp/routes/quick-capture/register.ts`, `src/webapp/trpc/routers/quick-capture.ts`) | Accept one complete text/material capture, read caller receipts, retry processing, choose an offered destination, or delete a source | mitigated | medium | authed | Same capture owner resolution as existing uploads; older ownerless mobile tokens are refused outside open mode. UUID, strict declaration, bounded multipart parts/bytes, declared digest and owner-scoped replay protect acceptance. Choices come from stored offers. Deletion tombstones under the same capture lock before removing source bytes; chat messages already sent and Git history remain. |
 | tRPC `quickChat.submit` / `choose` / `discard` / `home` (`src/webapp/trpc/routers/quick-chat.ts`) | Store a thought, route it with Jev, and post it to a chat as the caller; post to a destination the stored record offered; end an unsent thought; list open thoughts, recent chats, and `nav.card` shortcuts | mitigated | medium | authed | `authedProcedure`; a paired device's token passes (`mobileOk`), as for `share.*`. `submit` sends context to Jev (§3) and can incur provider spend. Delivery uses the send route's sender and message-id claim, so a thought posts once per id; `choose` accepts only a candidate id stored in the record. Record ids must be UUIDs. |
 | tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
@@ -439,6 +448,14 @@ gathered here so the lifecycle reads as one story.
 | Member password reset (operator-issued) | Owner mints a 15-min single-use reset link for one Allowed-User member (`admin.createPasswordReset`, `68c5e537`); member redeems it at `/auth/reset-password` without exposing the new password to the owner; consuming it bumps `gen`, revoking the member's other sessions; eligibility (member role + still on `allowedEmails`) is re-checked at redemption | ok | — | public route, owner-only mint | Reuses the invite-capability store/guarantees (§2). Implements option 2 of [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md) |
 | Recovery / reset | Members now self-serve via an operator-issued reset link (row above). Owner recovery is still host-side only: `bbx auth set-password`. Full email self-service reset was explicitly rejected (no outbound-mail identity); no MFA | accepted | med | local→owner | §8.2 — [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md) (resolution: implemented, option 2; option 3 rejected) |
 | Member capability tier | A logged-in non-owner member reaches every non-`ownerProcedure` surface, including `scheduler.trigger` (member-level shell execution) and `drive`/`calendar.updateConfig` | gap | med | authed | Moot single-operator (fail-closed owner-only); a multi-member design decision — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
+
+### 6c. iOS quick capture
+
+| What | State | Severity | Reachability | Notes |
+|---|---|---|---|---|
+| App-group capture source, draft AAC segments and multipart bodies (`ios-app/BeeBox/Storage/QuickCaptureStore.swift`, `Services/VoiceNoteCoordinator.swift`, `Services/QuickCaptureUploadCoordinator.swift`) | mitigated | medium | local | Immutable local acceptance keeps box identity and bytes without credentials in the manifest. Protected-box files request complete protection; other files request protection until first authentication. Local protection upgrades survive pairing removal, and recovery rows hide protected words before unlock. Simulator checks verify policy requests; effective locked-device Data Protection remains a phone gate. Siri/App Intents refuse protected boxes even when the phone is unlocked; explicit main/share UI uses device authentication. Confirmed receipt removes the temporary multipart copy; original media remains for local playback until explicit deletion. Removed-pairing copies and interrupted drafts can be exported only by explicit foreground action through the OS share/file UI, behind their original protection gate; there is no automatic reassignment or new provider destination. |
+| Retained source and acceptance ledger (`src/core/quick-capture/store.ts`, `source.ts`, `worker.ts`) | mitigated | medium | authed | Material is retained in a Git-backed source outside automatic inbox intake. Receipt ownership and stable IDs survive recovery; source refs pass shared namespace containment and real-path checks before reads or transcription updates. Supplied words and derived audio transcript are distinct. Save-only images/URLs/clippings do not start chat work. Source deletion removes active bytes and prevents replay; it does not erase prior Git history or already delivered messages. |
+| Capture transcription and routing egress (`src/core/quick-capture/worker.ts`, `src/core/chat/routing/quick-chat-submit/submit.ts`) | mitigated | medium | authed | User-initiated audio is automatically sent to the box's configured transcription backend, then nonempty transcript or supplied words use existing Jev routing and the selected chat engine. Providers and per-box grants remain those in §3; this is a new trigger, not a new destination. Empty audio transcripts retain audio without automatic repeated paid transcription. Shared material is evidence, not authority; framing and prompt guidance do not contain prompt injection (§7a). |
 
 ## 7. Cross-cutting threats
 

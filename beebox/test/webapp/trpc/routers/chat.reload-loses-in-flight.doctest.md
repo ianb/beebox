@@ -22,7 +22,7 @@ gap are pinned before anything moves
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
-import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
+import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -64,7 +64,12 @@ no transcript of its own — the real subprocess writes one eventually, which is
 precisely the lag being modelled here.
 
 ```ts
-const ctx = await makeTestServer({ chatBackend: createFakeChatBackend() });
+const backend = createFakeChatBackend();
+const realStart = backend.start.bind(backend);
+const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
+  backend.start = (opts) => { const run = realStart(opts); resolve(run); return run; };
+});
+const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded = [];
 ctx.eventBus.subscribe({
@@ -181,5 +186,9 @@ JSON.stringify({
 ```
 
 ```ts cleanup
+// The send's run starts unawaited, behind a bootstrap git commit. Deleting
+// the box under that commit left its child process holding the file open
+// until the 300s timeout (2026-10-09), so cleanup waits for the backend.
+await runStarted;
 await ctx.cleanup();
 ```

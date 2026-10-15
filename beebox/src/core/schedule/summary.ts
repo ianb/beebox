@@ -24,7 +24,7 @@ const HEADLINE_MAX_CHARS = 120;
 const BODY_MAX_BYTES = 1024;
 const NOTES_MAX_BYTES = 4096;
 /** Runs kept per schedule; older entries drop off. */
-export const RUN_HISTORY_LIMIT = 20;
+const RUN_HISTORY_LIMIT = 20;
 
 const RunSummarySchema = z.object({
   headline: z.string().min(1),
@@ -66,7 +66,7 @@ export function normalizeRunSummary(input: RunSummary): { summary: RunSummary; c
 }
 
 /** Write a run's summary, replacing any earlier one from the same run. Returns the fields cut to fit. */
-export async function writeRunSummary(filePath: string, input: RunSummary): Promise<string[]> {
+async function writeRunSummary(filePath: string, input: RunSummary): Promise<string[]> {
   const { summary, cut } = normalizeRunSummary(input);
   await fs.writeFile(filePath, `${JSON.stringify(summary)}\n`);
   return cut;
