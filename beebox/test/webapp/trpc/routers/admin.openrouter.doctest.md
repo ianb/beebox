@@ -2,12 +2,12 @@
 
 Adding a model in admin is the only way a box can run one
 (`docs/plans/openrouter-chat-models.md`). The add is checked against
-OpenRouter's catalog; removal refuses while the model is the box default. The
+OpenRouter's catalog; removal refuses while the model is the box default or small model. The
 catalog and key responses here are the recorded fixtures, served through the
 `openrouterFetch` service so nothing leaves the machine.
 
 ```ts setup
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -102,10 +102,24 @@ await message(() => caller(server).admin.updateBoxConfig({ agentModel: "qwen/qwe
 => Unknown model id qwen/qwen3-coder
 ```
 
-Once the default moves, removal works and the list is empty again.
+The small model is guarded the same way: background passes on an
+OpenRouter-default box run on it, and removing it would send them to Claude.
 
 ```ts continue
 await caller(server).admin.updateBoxConfig({ agentModel: null });
+const configPath = join(server.boxRoot, "_config/box.json");
+const withSmall = JSON.parse(await readFile(configPath, "utf8"));
+await writeFile(configPath, JSON.stringify({ ...withSmall, smallModel: "moonshotai/kimi-k2-0905:exacto" }));
+clearBoxConfigCache(server.boxRoot);
+await message(() => caller(server).admin.removeOpenrouterModel({ id: "moonshotai/kimi-k2-0905:exacto" }))
+=> moonshotai/kimi-k2-0905:exacto is this box's small model (smallModel in _config/box.json), used for chat titles, reviews and other quick background passes. Change it first, then remove it.
+```
+
+Once neither slot names it, removal works and the list is empty again.
+
+```ts continue
+await writeFile(configPath, JSON.stringify(withSmall));
+clearBoxConfigCache(server.boxRoot);
 await caller(server).admin.removeOpenrouterModel({ id: "moonshotai/kimi-k2-0905:exacto" });
 clearBoxConfigCache(server.boxRoot);
 (await caller(server).admin.openrouterModels()).models.length

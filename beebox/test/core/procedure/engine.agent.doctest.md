@@ -138,6 +138,59 @@ model: openai efficient
 await box.cleanup();
 ```
 
+## An OpenRouter default carries every agent step
+
+An added OpenRouter model has no tier, so the box's two slots stand in: the
+small model takes `efficient`, the default takes `strong`, and a step that
+names no model takes the default too. None of them needs a Claude login.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("_config/box.json", JSON.stringify({
+  agentModel: "moonshotai/kimi-k2-0905:exacto",
+  smallModel: "deepseek/deepseek-v3.2",
+  openrouterModels: [
+    { id: "moonshotai/kimi-k2-0905:exacto", label: "Kimi K2" },
+    { id: "deepseek/deepseek-v3.2", label: "DeepSeek" },
+  ],
+}));
+await box.write("_config/procedures/openrouter-tiers.procedure.card", `---
+name: openrouter-tiers
+steps:
+  - id: work
+    run:
+      agents:
+        - model: strong
+          prompt: Do hard work.
+        - model: efficient
+          prompt: Do routine work.
+        - prompt: Do unlabelled work.
+---
+`);
+box.commitAll("Add openrouter procedure");
+
+const models = [];
+const createAgent = (opts) => {
+  const agent = createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
+  const invoke = agent.invoke.bind(agent);
+  agent.invoke = async (options) => { models.push(options.model); return invoke(options); };
+  return agent;
+};
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({ ctx, procedureNameOrPath: "openrouter-tiers", options: { createAgent } });
+print(`success: ${result.ok}`);
+print(models.join("\n"));
+=>
+success: true
+moonshotai/kimi-k2-0905:exacto
+deepseek/deepseek-v3.2
+moonshotai/kimi-k2-0905:exacto
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Invocation rejection stays primary while finalizers still run
 
 A native harness can reject a model or fail without a usable assistant
