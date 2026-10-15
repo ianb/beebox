@@ -6,7 +6,7 @@ no Claude login, or a third-party model with no provider setup — used to be
 acknowledged too. The web composer then showed the error on the turn stream,
 but a sender that never subscribes to that stream, such as quick chat, stored
 the thought as sent while no run ever read it
-(`issues/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md`).
+(`issues/closed/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md`).
 
 So the session runs the same readiness check `startRun` makes before it takes
 the turn. A refusal answers 409 with its reason, records nothing, and keeps no
