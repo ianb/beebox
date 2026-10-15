@@ -26,8 +26,10 @@ const CAPTURES_DIR = "_content/captures";
  * Where a new source waits. A capture with typed or dictated words is routed to
  * a chat, which files it: it waits uncommitted in the git-ignored incoming
  * folder, as a page sent from the Clerk does. A capture with no words is never
- * routed, so nothing would file it, and a recording cannot be captured again:
- * both are committed in `_content/captures/` on arrival (boxholder, 2026-10-15).
+ * routed, so nothing would file it: committed in `_content/captures/` on
+ * arrival (boxholder, 2026-10-15). A recording is committed there too, words
+ * or not, because it cannot be captured again; that exception is the
+ * implementer's, put to the boxholder the same day.
  */
 function sourceDirectory(declaration: Pick<QuickCaptureDeclaration, "input" | "material">): string {
   const words = declaration.input !== undefined && declaration.input.trim() !== "";
