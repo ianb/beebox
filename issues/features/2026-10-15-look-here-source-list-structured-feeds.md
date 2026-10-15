@@ -28,12 +28,17 @@ most event sources expose structured data over plain HTTP, with no browser.
 - Wix and ticketing platforms (ActiveNet, Eleyo, BoothCentral, EntryThingy):
   no feed found; these need a rendered page read.
 
-Shape to consider: each source in the list records its platform and data URL,
-detected once when the source is added; a pass fetches the data URL and
-compares against the last fetch; Exa (keyless hosted MCP) runs discovery
-queries that propose new sources. Facebook and Instagram sources stay on the
-browser-task route.
+Boxholder decisions (2026-10-15):
 
-Open questions: whether the box agent may write the detected platform and
-data URL into the list itself; whether this is box guidance plus a helper
-command, or a card field.
+- How a box updates its list is the box's own policy. The default is that the
+  agent adds sources automatically as it finds them.
+- No change-detection service. A box writes its own scripts (tricks) that
+  fetch its sources on a schedule.
+- What beebox ships is a standard: a box doc of suggested approaches the
+  agent reads when it builds those scripts. It covers the data-URL patterns
+  above, detecting a source's platform once and storing its data URL with the
+  source, Exa for discovering new sources, the fetch fallback for pages with
+  no feed, and the browser-task route for Facebook and Instagram.
+
+Open question: where the doc lives among the box docs, and whether the
+patterns also become a small helper the scripts call.
