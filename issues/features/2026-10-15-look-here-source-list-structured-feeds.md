@@ -40,5 +40,9 @@ Boxholder decisions (2026-10-15):
   source, Exa for discovering new sources, the fetch fallback for pages with
   no feed, and the browser-task route for Facebook and Instagram.
 
-Open question: where the doc lives among the box docs, and whether the
-patterns also become a small helper the scripts call.
+Open question: where the doc lives among the box docs.
+
+A helper waits (boxholder, 2026-10-15: "maybe there should be a helper, but
+I'm unclear we know what it should do now"). Ship the doc first; once boxes
+have written source scripts from it, look at what those scripts repeat and
+extract that.
