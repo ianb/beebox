@@ -6,6 +6,7 @@ The boxholder's question (2026-10-15): the built-in WebSearch and WebFetch "work
 |---|---|
 | [probes-2026-10-15.md](probes-2026-10-15.md) | First-hand numbers: 15 hard URLs × 8 fetch paths; 4 scouring questions × 9 search tools; $0.35 spent |
 | [search-services.md](search-services.md) | Search APIs, model-provider search, MCP servers, deep-research loops, benchmarks |
+| [deep-research-reviews.md](deep-research-reviews.md) | Third-party benchmarks, citation studies and practitioner reports on research-dispatch services; Perplexity's legal status |
 | [per-site-services.md](per-site-services.md) | Paid per-site data APIs (Instagram, Facebook, LinkedIn, X threads, TikTok, YouTube transcripts, Reddit, Quora) |
 | [fetch-services.md](fetch-services.md) | Reader services, unblocking APIs, hosted browsers, per-host routes, logged-in profiles, legal posture |
 
@@ -21,6 +22,10 @@ All probes ran from a residential IP. A box runs on a Hetzner datacenter IP, whi
 - **Exa and Parallel have keyless hosted MCP servers** (`https://mcp.exa.ai/mcp`, `https://search.parallel.ai/mcp`). They returned results in 0.8–2.1 s at no cost, with no signup. Exa leaned toward recent forums and personal blogs; Parallel toward official and news pages.
 - **The box has no headless browser.** `beebox/docker/Dockerfile` installs no Chromium or `agent-browser`; `deploy.sh` marks them dev-only. The anchor issue's scope note says otherwise; that note is wrong.
 
+## Search budget
+
+Claude Code caps WebSearch at 200 calls per session; a box agent sees "this session has used its web search budget (200 of 200 WebSearch calls)". The limit is the `CLAUDE_CODE_MAX_WEB_SEARCHES` environment variable. In one box's seeding pass (2026-08-30) three subagents in one session exhausted it before finishing their lists. Exa calls do not count against it.
+
 ## Facts that change the Reddit plan
 
 Reddit announced on 2026-09-30 that RSS support ends 2026-11-13 and that public Data API access closes in phases through March 2027 ([TechCrunch](https://techcrunch.com/2026/09/30/reddit-is-killing-rss-feeds-ending-public-api-access-because-of-ai-bots/)). The `.rss` fallback proposed in the anchor issue has four weeks left. Arctic Shift ingests from Reddit, so its coverage after March 2027 is uncertain.
@@ -35,7 +40,7 @@ Reddit announced on 2026-09-30 that RSS support ends 2026-11-13 and that public 
 | Parallel keyless MCP | **later** | Free and fast; better for official sources than for forums. Keep as a second engine if Exa's gaps show. |
 | Gemini grounding, OpenAI `web_search` | **later** | Keys are held, but they return a synthesized answer instead of a result list, and they cost more per call ($0.017–0.038). No probe result beat Exa. |
 | Brave Search API | **later** | Own index, `freshness` parameter, Goggles for forum re-ranking. Needs a new account with a card. Revisit only if Exa fails a real need. |
-| Deep-research APIs and loops (Gemini Deep Research, GPT Researcher) | **later** | The scouring complaint is source quality per query. A better engine under the agent's own loop addresses that first. |
+| Dispatching a whole research project (Perplexity Sonar Deep Research on OpenRouter; Gemini Deep Research) | **adapt, as an add-on** | Trial on one brief from a real box's event-collecting work (details kept in the private issue repo because they name places): Perplexity (480 s, $1.13), Gemini (430 s, about $2.50) and a Claude loop on WebSearch plus Exa (285 s, 30 searches) each found 3 of the box's 14 known in-window events, a different 3 each time. Perplexity had no unsupported citations in a sample of 12 but padded with non-ceramics rows; Gemini had 2 unsupported, both cited to Instagram profiles. Reviews ([deep-research-reviews](deep-research-reviews.md)) report weak claim support and API timeouts for Perplexity. Low overlap means a second engine adds breadth; no contender replaced the others. Perplexity is on the existing OpenRouter key. |
 | SERP resellers (SerpApi, Serper, SearchAPI.io) | **reject** | Resell scraped Google results; SerpApi is a defendant in suits by Google and by Reddit. |
 | DuckDuckGo html, `s.jina.ai`, Bing API, Google Custom Search | **reject** | Challenge page; needs a key; retired; closed to new customers. |
 
