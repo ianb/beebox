@@ -11,7 +11,7 @@ discovered-in: worktree-background-provider — background runs follow an OpenRo
 `smallModel` in `_config/box.json` picks the model for chat titles, chat
 reviews, retro observation, and triage. On a box whose default is an
 OpenRouter model, it also picks the model for `efficient` and `balanced`
-procedure steps ([background runs follow an OpenRouter default](../../beebox/docs/plans/background-runs-follow-openrouter-default.md)).
+procedure steps ([background runs follow an OpenRouter default](../../beebox/docs/implemented-plans/background-runs-follow-openrouter-default.md)).
 Admin → Agent engine and model shows the Default model only. To change the
 small model, the owner edits the file or asks the box agent.
 
@@ -37,5 +37,5 @@ models. Write through `admin.updateBoxConfig`, validated by
 
 ## Related
 
-- [Background runs ignore the OpenRouter default](../bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md).
+- [Background runs ignore the OpenRouter default](../closed/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md).
 - [Small-model slot (closed)](../closed/features/2026-08-25-small-model-slot.md).

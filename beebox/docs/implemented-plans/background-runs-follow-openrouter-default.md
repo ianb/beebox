@@ -1,9 +1,9 @@
 ---
 title: "Background runs follow an OpenRouter box default"
-status: draft
+status: implemented
 workstream: background-provider
 issues:
-  - ../../../issues/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md
+  - ../../../issues/closed/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md
 ---
 # Background runs follow an OpenRouter box default
 
