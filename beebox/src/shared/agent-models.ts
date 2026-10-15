@@ -50,8 +50,8 @@ const ENGINE_DEFAULT_PROVIDER: Record<AgentEngine, ModelProvider> = {
  * default, whose resolver call sites are engine-scoped.
  *
  * `openrouter` has no {@link PROCEDURE_MODELS} column on purpose: an added
- * model has no tier, so a tiered step on an OpenRouter-defaulted box falls
- * back to first-party (boxholder, 2026-09-19).
+ * model has no tier, so the box's own two slots stand in for one
+ * (`resolveTierModel` in `core/model-policy.ts`).
  */
 export function providerOf(model: string): ModelProvider {
   if (model.includes("/")) return "openrouter";
@@ -119,6 +119,11 @@ export function isProcedureModelName(value: string): value is ProcedureModelName
  * requested provider falls back to that same default: a glm pin on a codex box
  * degrades to the codex tier table rather than vanishing.
  */
+/** The tier a procedure model name means — a legacy alias reads as its tier. */
+export function procedureTier(name: ProcedureModelName): ProcedureModelTier {
+  return LEGACY_TIER[name];
+}
+
 export function resolveProcedureModel(params: {
   engine: AgentEngine;
   model: ProcedureModelName;

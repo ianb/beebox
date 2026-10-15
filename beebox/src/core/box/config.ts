@@ -262,9 +262,10 @@ async function readConfiguredModel(
   const config = await loadBoxConfig(boxRoot);
   const model = config[field];
   if (model === undefined) return null;
-  // An added OpenRouter model may be the box default, never the small-pass
-  // model: cheap structured passes stay on a tier (boxholder, 2026-09-19).
-  if (field === "agentModel" && typeof model === "string" && (await isConfigurableModel(boxRoot, model))) {
+  // An added OpenRouter model may fill either slot. On an OpenRouter-default
+  // box the small slot is what efficient and balanced work runs on
+  // (boxholder, 2026-10-15; `resolveTierModel`).
+  if (typeof model === "string" && (await isConfigurableModel(boxRoot, model))) {
     return normalizeModelId(model);
   }
   if (typeof model !== "string" || modelTier(normalizeModelId(model)) === null) {

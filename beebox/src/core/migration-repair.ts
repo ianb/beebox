@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { captureMigrationSnapshot, changedMigrationPaths } from "./migration-recovery.js";
 import { createAgent } from "./agent/invoke/core.js";
+import { loadEffectiveBoxModel } from "./model-policy.js";
 import { cardFields, parseCardText } from "./card-io.js";
 import { QuestionSchema, createTextQuestionTemplate, questionState } from "../schemas/question.js";
 import { errnoCode } from "../shared/error-guards.js";
@@ -124,8 +125,10 @@ export function repairMigration(opts: {
     attempt: async (answer) => {
       const beforeAgent = await captureMigrationSnapshot(opts.boxRoot, opts.name);
       const agent = opts.agent ?? createAgent({ name: "migration-repair", onOutput: (text) => process.stderr.write(text) });
+      const model = await loadEffectiveBoxModel(opts.boxRoot);
       const result = await agent.invokeStructured(outcome, {
         signal: opts.signal,
+        ...(model !== null && { model }),
         boxRoot: opts.boxRoot, maxTurns: 12, systemPrompt: MIGRATION_REPAIR_DIRECTIVE,
         prompt: `Migration: ${opts.name}\nRecovery: ${opts.recoveryRef}\nFailure:\n${opts.failure}\n${answer}`,
       });

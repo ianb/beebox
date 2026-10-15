@@ -9,7 +9,7 @@
  */
 
 import { isChatModelAllowed, isOpenRouterModelId, type AddedModel } from "../shared/chat-models.js";
-import { modelTier, providerOf, resolveProcedureModel, type AgentEngine } from "../shared/agent-models.js";
+import { modelTier, procedureTier, providerOf, resolveProcedureModel, type AgentEngine, type ProcedureModelName } from "../shared/agent-models.js";
 import { normalizeModelId } from "../shared/model-ids.js";
 import { loadAddedModels, loadAgentEngine, loadBoxModel, loadSmallModel } from "./box/config.js";
 
@@ -145,22 +145,26 @@ export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | n
  *
  * Unlike the main policy this never returns null: a small pass always has an
  * answer, and the answer defaults to the `efficient` tier for whichever engine
- * is running it. That default is the point. These passes used to name a
- * provider-shaped nickname (`"haiku"`) which the Codex delegate forwarded to
- * the Codex SDK verbatim — the same defect the procedure tiers closed for
- * procedures (`issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md`).
- * Nothing here can produce a name an engine does not know.
+ * is running it. These passes used to name a provider-shaped nickname
+ * (`"haiku"`) which the Codex delegate forwarded to the Codex SDK verbatim
+ * (`issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md`). Nothing
+ * here can produce a name an engine does not know.
+ *
+ * An OpenRouter default has no efficient tier, so an unpinned small slot on
+ * such a box takes the default itself: background work follows the model the
+ * owner chose instead of quietly needing a Claude login (boxholder,
+ * 2026-10-15).
  */
 export function resolveSmallModelForEngine(params: {
   engine: AgentEngine;
   pinned: string | null;
+  added: readonly AddedModel[];
   /** The box's effective default model — picks the efficient tier's provider when `pinned` is null. */
   boxDefault: string | null;
 }): string {
-  // No added list: an OpenRouter model is never a small-pass pin
-  // (`readConfiguredModel` refuses it), so only the static menu applies.
-  const chosen = resolveBoxModelForEngine(params.engine, { pinned: params.pinned, added: [] });
+  const chosen = resolveBoxModelForEngine(params.engine, { pinned: params.pinned, added: params.added });
   if (chosen !== null) return chosen;
+  if (params.boxDefault !== null && providerOf(params.boxDefault) === "openrouter") return params.boxDefault;
   // No pinned small model: take the engine's efficient tier on the provider
   // the box's own default runs, so a GLM-defaulted box's cheap passes stay GLM
   // instead of silently billing first-party Haiku.
@@ -171,9 +175,43 @@ export function resolveSmallModelForEngine(params: {
   });
 }
 
+/**
+ * The concrete model a procedure tier runs on this box.
+ *
+ * A first-party, GLM, or Codex box reads the tier table on its default's
+ * provider. An OpenRouter default has no tier column, so the box's two slots
+ * stand in: `efficient` and `balanced` take the small model, `strong` and
+ * `strongest` the default (boxholder, 2026-10-15). `small` is the resolved
+ * small model, which is itself the default when the slot is unpinned.
+ */
+export function resolveTierModel(params: {
+  engine: AgentEngine;
+  name: ProcedureModelName;
+  boxDefault: string | null;
+  small: string;
+}): string {
+  const provider = providerOf(params.boxDefault ?? "");
+  if (params.engine === "claude" && params.boxDefault !== null && provider === "openrouter") {
+    const tier = procedureTier(params.name);
+    return tier === "efficient" || tier === "balanced" ? params.small : params.boxDefault;
+  }
+  return resolveProcedureModel({ engine: params.engine, model: params.name, provider });
+}
+
 /** The box's small-pass model for its own engine. One read, one concrete id. */
 export async function loadEffectiveSmallModel(boxRoot: string): Promise<string> {
   const engine = await loadAgentEngine(boxRoot);
   const boxDefault = await loadEffectiveBoxModel(boxRoot);
-  return resolveSmallModelForEngine({ engine, pinned: await loadSmallModel(boxRoot), boxDefault });
+  return resolveSmallModelForEngine({ engine, pinned: await loadSmallModel(boxRoot), added: await loadAddedModels(boxRoot), boxDefault });
+}
+
+/**
+ * Resolve procedure tiers for one run. The box config is read once, so every
+ * step of a run sees the same policy.
+ */
+export async function loadTierResolver(boxRoot: string): Promise<(name: ProcedureModelName) => string> {
+  const engine = await loadAgentEngine(boxRoot);
+  const boxDefault = await loadEffectiveBoxModel(boxRoot);
+  const small = await loadEffectiveSmallModel(boxRoot);
+  return (name) => resolveTierModel({ engine, name, boxDefault, small });
 }

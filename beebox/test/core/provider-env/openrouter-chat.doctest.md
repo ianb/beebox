@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chatModelForEngine, chatModelLabel, chatModelOptions, isChatModelAllowed, isOpenRouterModelId } from "../../../src/shared/chat-models.js";
 import { isThirdPartyModel, providerOf, resolveProcedureModel } from "../../../src/shared/agent-models.js";
-import { resolveEffectiveModel, resolveSmallModelForEngine } from "../../../src/core/model-policy.js";
+import { resolveEffectiveModel, resolveSmallModelForEngine, resolveTierModel } from "../../../src/core/model-policy.js";
 import { loadAddedModels, loadBoxModel, loadSmallModel } from "../../../src/core/box/config.js";
 import { providerEnvAdditions } from "../../../src/core/provider-env/core.js";
 import { openRouterChatEnv } from "../../../src/core/provider-env/openrouter-chat.js";
@@ -105,25 +105,56 @@ chatModelLabel("claude", { model: kimi.id, added: [] })
 => moonshotai/kimi-k2-0905:exacto (removed in admin)
 ```
 
-## Tiered work stays first-party
+## Background work follows an OpenRouter default
 
-An added model has no tier. On a box whose default is an OpenRouter model, a
-procedure step that asks for `strong` and the cheap structured passes resolve
-to first-party Claude — the boxholder's call (2026-09-19): only the model the
-owner chose spends per use.
+An added model has no tier. On a box whose default is an OpenRouter model, the
+box's two slots stand in for the tier table (boxholder, 2026-10-15): the small
+model takes `efficient` and `balanced`, the default takes `strong` and
+`strongest`. An unpinned small slot is the default itself, so nothing in the
+background quietly needs a Claude login.
 
 ```ts
+const deepseek = { id: "deepseek/deepseek-v3.2", label: "DeepSeek" };
+const added = [kimi, deepseek];
+const tiers = (small: string) => JSON.stringify((["efficient", "balanced", "strong", "strongest", "haiku"] as const)
+  .map((name) => named(resolveTierModel({ engine: "claude", name, boxDefault: kimi.id, small }))));
+
+resolveSmallModelForEngine({ engine: "claude", pinned: null, added, boxDefault: kimi.id })
+=> moonshotai/kimi-k2-0905:exacto
+
+resolveSmallModelForEngine({ engine: "claude", pinned: deepseek.id, added, boxDefault: kimi.id })
+=> deepseek/deepseek-v3.2
+
+tiers(deepseek.id)
+=> ["deepseek/deepseek-v3.2","deepseek/deepseek-v3.2","moonshotai/kimi-k2-0905:exacto","moonshotai/kimi-k2-0905:exacto","deepseek/deepseek-v3.2"]
+```
+
+A small slot pinned to a Claude model is the owner's choice: the lower tiers
+follow it, and those runs need a Claude login.
+
+```ts continue
+tiers(haiku)
+=> ["claude efficient","claude efficient","moonshotai/kimi-k2-0905:exacto","moonshotai/kimi-k2-0905:exacto","claude efficient"]
+```
+
+Other boxes keep the tier table. A Codex box cannot run an added model, so an
+OpenRouter small pin falls through to its own efficient tier.
+
+```ts continue
 JSON.stringify([
-  resolveProcedureModel({ engine: "claude", model: "strong", provider: providerOf(kimi.id) }),
-  resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: kimi.id }),
-].map(named))
-=> ["claude strong","claude efficient"]
+  named(resolveTierModel({ engine: "claude", name: "strong", boxDefault: null, small: haiku })),
+  named(resolveTierModel({ engine: "claude", name: "strong", boxDefault: sonnet, small: haiku })),
+  resolveTierModel({ engine: "claude", name: "strong", boxDefault: glm, small: haiku }) === glm,
+  resolveTierModel({ engine: "codex", name: "strong", boxDefault: sol, small: haiku }) === sol,
+  resolveSmallModelForEngine({ engine: "codex", pinned: deepseek.id, added, boxDefault: sol }) === resolveProcedureModel({ engine: "codex", model: "efficient" }),
+])
+=> ["claude strong","claude strong",true,true,true]
 ```
 
 ## Box config: the list, the default, and the small slot
 
 A malformed entry is dropped with a warning; the rest survive. An added model
-may be the box default. It may never be the small-pass model.
+may be the box default and the small-pass model.
 
 ```ts
 const box = await boxWith({
@@ -138,7 +169,7 @@ await loadBoxModel(box.root)
 => moonshotai/kimi-k2-0905:exacto
 
 await loadSmallModel(box.root)
-=> null
+=> moonshotai/kimi-k2-0905:exacto
 
 await box.cleanup();
 ```

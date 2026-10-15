@@ -1,6 +1,6 @@
 ---
 title: "Background agent runs (jobs, procedures, reviews) do not follow the box's OpenRouter default; they need the host's Claude subscription"
-workstream: unattached
+workstream: background-provider
 area: beebox
 labels: [providers]
 filed-by: agent
