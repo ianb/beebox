@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-15T23:27:45Z
-Total documents: 533
+Generated: 2026-10-15T23:56:07Z
+Total documents: 531
 
 ## Issues
 
@@ -80,7 +80,6 @@ These documents are not referenced by any other document.
 - **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (104 lines) · plan review
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
-- **docs/plans/retired-plan.md** — "Remove artist-inspired themes and rewrite their Git history" (138 lines) · proposal · partial
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines) · proposal · partial
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines) · plan review
@@ -90,6 +89,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/courseware/README.md** — "Courseware" (168 lines)
@@ -2419,7 +2419,7 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 186 lines | current reference
+Title: "Card themes" | 176 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
@@ -4915,13 +4915,6 @@ Referenced by:
 References:
 - → docs/implemented-plans/expose-dev-router.md (mention)
 
-#### docs/implemented-plans/expressive-themes.md
-
-Title: "Expressive theme collections" | 140 lines | shipped history | implemented
-
-Referenced by:
-- docs/plans/retired-plan.md:60 (mention) — - `beebox/docs/implemented-plans/expressive-themes.md` and `seven-material-themes.md` record the two series; remove thos
-
 #### docs/implemented-plans/external-url-validation.md
 
 Title: "External URL validation (`bbx validate --urls`)" | 84 lines | shipped history | implemented
@@ -6595,13 +6588,6 @@ References:
 - → docs/implemented-plans/box-search.md (mention)
 - → docs/engineering-principles.md (mention)
 - → src/services/AGENTS.md (mention)
-
-#### docs/implemented-plans/seven-material-themes.md
-
-Title: "Six material-led theme collections" | 205 lines | shipped history | implemented
-
-Referenced by:
-- docs/plans/retired-plan.md:60 (mention) — - `beebox/docs/implemented-plans/expressive-themes.md` and `seven-material-themes.md` record the two series; remove thos
 
 #### docs/implemented-plans/shared-frontend-backend-code.subplan.md
 
@@ -8455,14 +8441,6 @@ References:
 - → docs/README.md (link)
 - → docs/reports/plan-directory-migration-history-2026-09-13.md (link)
 
-#### docs/plans/retired-plan.md **[ORPHAN]**
-
-Title: "Remove artist-inspired themes and rewrite their Git history" | 138 lines | proposal | partial
-
-References:
-- → docs/implemented-plans/expressive-themes.md (mention)
-- → docs/implemented-plans/seven-material-themes.md (mention)
-
 #### docs/plans/route-splitting.md
 
 Title: "Route-level code splitting — plan and cost/benefit" | 193 lines | proposal | active
@@ -9748,6 +9726,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 14 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

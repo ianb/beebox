@@ -97,15 +97,15 @@ JSON.stringify(resolveCardTheme({
   path: "_content/One.memo.card",
   type: "memo",
   presentation: { status: "absent" },
-  systemTheme: "retired-theme-a",
+  systemTheme: "candy",
 }))
-=> {"choice":{"name":"retired-theme-a","stock":"pigment"},"problem":null,"origin":{"kind":"system","theme":"retired-theme-a"}}
+=> {"choice":{"name":"letter-set","stock":"strawberry"},"problem":null,"origin":{"kind":"system","theme":"candy"}}
 
 JSON.stringify(resolveCardTheme({
   path: "_content/One.memo.card",
   type: "memo",
   presentation: parsePresentationConfig({ default: { name: "post-it" } }),
-  systemTheme: "retired-theme-a",
+  systemTheme: "candy",
 }).origin.kind)
 => "box-default"
 
@@ -118,7 +118,7 @@ JSON.stringify(resolveCardTheme({
 => "plain"
 
 systemCardThemes("paper")
-=> ["paper","post-it","letter-set","retired-theme-d"]
+=> ["paper","post-it","letter-set"]
 ```
 
 Each system theme's default card theme is a card theme, and every theme it
@@ -204,46 +204,51 @@ JSON.stringify([chrome.choice, chrome.origin, chrome.problem?.message])
 => [{"name":"plain","stock":"neutral"},"box-chrome","Theme \"post-it\" does not provide app chrome"]
 ```
 
-The expressive themes can be saved as system themes, with their own
-default stocks rather than the fallback stock for an unknown theme.
+A saved system theme the host does not ship — box-authored, or one a later
+release removed — keeps the box usable: chrome falls back to Flat and the
+choice is reported as a problem rather than silently rewritten.
 
 ```ts
-["retired-theme-a", "retired-theme-b", "retired-theme-c",
- "retired-theme-d", "retired-theme-e", "retired-theme-f", "retired-theme-g", "retired-theme-h", "retired-theme-i"
-].map((name) => validateSystemThemeChoice({ name }))
-=> [
-  { choice: { name: "retired-theme-a", stock: "pigment" }, problem: null },
-  { choice: { name: "retired-theme-b", stock: "prism" }, problem: null },
-  { choice: { name: "retired-theme-c", stock: "cloud" }, problem: null },
-  { choice: { name: "retired-theme-d", stock: "wool" }, problem: null },
-  { choice: { name: "retired-theme-e", stock: "marquee" }, problem: null },
-  { choice: { name: "retired-theme-f", stock: "silhouette" }, problem: null },
-  { choice: { name: "retired-theme-g", stock: "canopy" }, problem: null },
-  { choice: { name: "retired-theme-h", stock: "ink" }, problem: null },
-  { choice: { name: "retired-theme-i", stock: "gouache" }, problem: null },
-]
+const retired = resolveChromeTheme(parsePresentationConfig({ chrome: { name: "retired-theme", stock: "retired-stock" } }));
+JSON.stringify([retired.choice, retired.origin, retired.problem?.message, validateSystemThemeChoice({ name: "retired-theme" }).choice])
+=> [{"name":"plain","stock":"neutral"},"box-chrome","Theme \"retired-theme\" does not provide app chrome",{"name":"plain","stock":"neutral"}]
 ```
 
-Choosing expressive chrome does not recolor the card's saved theme. A card can
-choose retired-theme-c over the box's retired-theme-a default while chrome stays Electric
-Playground; no stock leaks from either of the other choices.
+A card saved with such a theme keeps its literal name and stock with no
+problem; it renders on the base card material until a person chooses another.
 
 ```ts
-const expressive = parsePresentationConfig({
-  default: { name: "retired-theme-a" },
-  chrome: { name: "retired-theme-b" },
-});
-const expressiveCard = resolveCardTheme({
+const retiredCard = resolveCardTheme({
   path: "_content/One.memo.card",
   type: "memo",
-  cardChoice: { name: "retired-theme-c" },
-  presentation: expressive,
+  cardChoice: { name: "retired-theme", stock: "retired-stock" },
+  presentation: { status: "absent" },
+  systemTheme: "paper",
 });
-const expressiveChrome = resolveChromeTheme(expressive);
-[expressiveCard, expressiveChrome]
+JSON.stringify([retiredCard.choice, retiredCard.origin, retiredCard.problem])
+=> [{"name":"retired-theme","stock":"retired-stock"},{"kind":"card"},null]
+```
+
+Choosing chrome does not recolor the card's saved theme. A card can choose a
+sticky note over the box's Paper default while chrome stays Spectrum; no stock
+leaks from either of the other choices.
+
+```ts
+const mixed = parsePresentationConfig({
+  default: { name: "paper" },
+  chrome: { name: "spectrum" },
+});
+const mixedCard = resolveCardTheme({
+  path: "_content/One.memo.card",
+  type: "memo",
+  cardChoice: { name: "post-it" },
+  presentation: mixed,
+});
+const mixedChrome = resolveChromeTheme(mixed);
+[mixedCard, mixedChrome]
 => [
-  { choice: { name: "retired-theme-c", stock: "cloud" }, problem: null, origin: { kind: "card" } },
-  { choice: { name: "retired-theme-b", stock: "prism" }, problem: null, origin: "box-chrome" },
+  { choice: { name: "post-it", stock: "yellow" }, problem: null, origin: { kind: "card" } },
+  { choice: { name: "spectrum", stock: "gradient" }, problem: null, origin: "box-chrome" },
 ]
 ```
 

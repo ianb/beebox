@@ -1,6 +1,6 @@
-import type { PendingHq } from "../../machines/composerMachine";
-import { Button } from "../ui/Button";
-import { UserMessageText } from "./user-message-text";
+import type { PendingHq } from "../../../../machines/composerMachine";
+import { Button } from "../../../ui/Button";
+import { UserMessageText } from "../../user-message-text";
 
 /**
  * A voice message waiting for its HQ transcript

@@ -24,13 +24,7 @@ theme:
 Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
 `manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), and `letter-set`
-(`strawberry`, `lemon`, `sky`). retired-theme-a (`retired-theme-a`, stock `pigment`), Electric
-Playground (`retired-theme-b`, stock `prism`), and retired-theme-c (`retired-theme-c`, stock
-`cloud`) support both cards and app chrome. The material collections also
-support both: retired-theme-d (`retired-theme-d`/`wool`), retired-theme-e (`retired-theme-e`/`marquee`),
-retired-theme-f (`retired-theme-f`/`silhouette`), retired-theme-g (`retired-theme-g`/`canopy`),
-retired-theme-h (`retired-theme-h`/`ink`), and retired-theme-i
-(`retired-theme-i`/`gouache`). The system-only `spectrum` (`gradient`) and
+(`strawberry`, `lemon`, `sky`). The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
@@ -104,10 +98,11 @@ The **system theme** styles the toolbar, shared background, user-message slips,
 text selection, and floating controls such as the selection “+”. It is
 independent of card themes; a card theme may set its own selection color.
 Choose the box default in **Settings → System theme**. The system swatches preview
-these interface parts rather than a card. Flat, Spectrum, Paper, Candy, retired-theme-a,
-retired-theme-b, and retired-theme-c support the system; Sticky note and Letter set
-are card themes only. Paper offers Slate, Terracotta, and Blue palettes
-(stored as `cream`, `manila`, and `blue` respectively).
+these interface parts rather than a card. Flat, Spectrum, Paper, and Candy support the
+system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
+(stored as `cream`, `manila`, and `blue` respectively). A saved system theme
+without chrome support, such as an unfamiliar name, falls back to Flat and is
+reported as a presentation problem.
 
 A landmark can override the box system theme. Open the landmark's directory from the
 folder menu (**Open <dir>/**), open its landmark card, turn to **Properties**, open **Change** under **Appearance**, and use the separate **System theme** picker. **Use box
@@ -139,8 +134,7 @@ The universal quote tag keeps attribution with quoted words. Its optional
 should apply.
 
 Paper, Sticky note, and Letter set use layered slips for both ordinary Markdown
-blockquotes and attributed quote blocks. retired-theme-a, retired-theme-b, and
-retired-theme-c use inset quotes. Plain keeps both flat, like a web page. An explicit
+blockquotes and attributed quote blocks. Plain keeps both flat, like a web page. An explicit
 `treatment="inset"` or `treatment="plain"` opts out of the slip for that quote;
 `treatment="layered"` can opt into a slip even on Plain.
 
@@ -175,11 +169,7 @@ blue bar. Changing this choice updates open pages through the box's existing
 configuration subscription.
 
 The chrome theme also owns the common background behind chat and companion
-cards. retired-theme-a uses pigment wedges and angular edges; retired-theme-b
-uses bright geometric structures; retired-theme-c uses a soft sky and rounded shapes.
-These three themes give assistant replies opaque reading panels, coordinate
-the composer and menus, and keep independently chosen card materials intact.
-Other themes keep assistant replies directly on the background. In Paper chrome,
+cards. Assistant replies sit directly on that background. In Paper chrome,
 local user messages appear as dark, borderless paper slips with white text attached to the right
 edge; their tint follows the app bar stock. Flat keeps its usual message
 bubbles. This treatment does not change message or scrolling behavior.

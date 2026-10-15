@@ -21,7 +21,7 @@ import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../../../machines/speech-segment-states";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
-import { PendingHqMessage } from "../../pending-hq-message";
+import { PendingHqMessage } from "./pending-hq-message";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a

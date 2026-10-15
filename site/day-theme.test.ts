@@ -7,9 +7,9 @@ const BEEBOX_DIR = path.resolve(import.meta.dirname, "..", "beebox");
 
 test("the rotation is every system theme with the app's default card pairing", () => {
   const rotation = dayRotation();
-  assert.equal(rotation.length, 13);
+  assert.equal(rotation.length, 4);
   const byName = new Map(rotation.map((theme) => [theme.system, theme]));
-  assert.deepEqual(byName.get("retired-theme-i"), { system: "retired-theme-i", stock: "gouache", systemComposition: "expressive", card: "retired-theme-i", cardStock: "gouache", cardComposition: "expressive" });
+  assert.deepEqual(byName.get("candy"), { system: "candy", stock: "strawberry", card: "letter-set", cardStock: "strawberry" });
   assert.equal(byName.get("spectrum")?.card, "plain");
   assert.equal(byName.get("paper")?.card, "paper");
   assert.equal(byName.has("post-it"), false);
@@ -18,7 +18,7 @@ test("the rotation is every system theme with the app's default card pairing", (
 test("theme stylesheets follow the app entry point's imports", async () => {
   const names = await themeStylesheets(BEEBOX_DIR);
   assert.equal(names[0], "materials.css");
-  assert.ok(names.includes("chrome.css") && names.includes("retired-theme-i.css"));
+  assert.ok(names.includes("chrome.css") && names.includes("candy.css"));
 });
 
 interface FakeEl { attrs: Map<string, string>; setAttribute(n: string, v: string): void; removeAttribute(n: string): void }
