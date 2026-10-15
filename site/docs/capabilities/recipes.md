@@ -21,14 +21,15 @@ box. A recipe is a card with a structured body the recipe view understands.
 
 **What it needs**
 
-Nothing beyond the box itself. A recipe is created by the agent from
-something you tell it, paste, or have it capture from a web page or photo.
+A recipe is created by the agent from something you tell it, paste, or have
+it capture from a web page or photo. Recipes are an optional add-on (a **plugin**, a bundled library of card types and views that a box turns on). A new box does not have them until the agent activates the recipe plugin and writes two small files in the box, one for the card type and one for the view; the documentation describes this as a task the agent does on request, and the engine's health check flags recipe cards in a box that has not done it. Nothing else is needed. The documentation does not say how smoothly the agent does this unprompted.
 
 **How it works, briefly**
 
 A recipe card's body uses a small set of markup tags (a serving-size yield,
 per-ingredient amounts, steps, substitutions, sub-recipe links) that the
-recipe view reads to display and scale the recipe. Recipes are stored in the
+recipe view reads to display and scale the recipe. Those tags are valid only
+in recipe cards. Recipes are stored in the
 box (under `_content/recipes/`, for the curious); the agent files and
 organizes them there on request, not on a schedule.
 

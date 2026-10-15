@@ -17,6 +17,12 @@ phone, not a bolt-on to typing.
   partial, so it does not answer yet and the next message continues it.
 - Keeps dictating through a brief network drop or the microphone getting
   grabbed by something else, instead of losing what you said.
+- Every dictated message gets a second, higher-quality transcription from the
+  box when a transcription key is available; there is no setting for it. The
+  live text on screen is sent only when that pass cannot run or fails, and it is
+  marked as live text so the agent knows. If live transcription drops partway
+  through, the live text shows […] where words are missing until the
+  better transcript fills them in.
 - A narration mode for long, loose voice dumps: the box stays quiet,
   transcribes, and files what you said rather than chatting back line by
   line.
@@ -28,6 +34,8 @@ phone, not a bolt-on to typing.
   pacing, and emphasis for each spoken reply, not just one fixed narrator.
 - Short sounds (earcons) mark recording start, stop, failure, and send, so
   you know the state of the microphone without looking.
+- Siri and Shortcuts can save a short thought or start a voice note without
+  opening the app ([phone-capture.md](phone-capture.md)).
 - On the phone, speech recognition runs on the device itself. On iOS 26 the
   high-quality pass over the recording can run there too, so the recording is
   not sent to the box for transcription (it still goes to the box when you ask

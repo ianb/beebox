@@ -13,7 +13,9 @@ it becomes.
 **What you do.** Open the chat, or the capture page on your phone, and talk.
 Five seconds or twenty minutes. Pauses are expected, and so are false starts:
 "no, I didn't mean that" drops the abandoned thought and keeps the corrected
-one. Or type. With a card open you can select a passage and talk about it, and
+one. Or type. On an iPhone you can also tell Siri "Save a thought in Bee Box" without
+opening the app (see [phone capture](../capabilities/phone-capture.md) for what
+has and has not been tried on a real phone). With a card open you can select a passage and talk about it, and
 the selection arrives with what you said.
 
 **What the box does.** A spoken note becomes a memo card carrying its
