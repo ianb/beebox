@@ -335,12 +335,14 @@ async function writeWebpageCard(opts: {
     frozenRef: hasFrozen ? "attach/page.frozen" : undefined,
     captureId: opts.captureId,
   });
-  await writeCard(path.join(opts.boxRoot, opts.cardRel), card);
+  // The snapshot first: a crash between the writes must not leave a card,
+  // found later by its capture id, that names a snapshot never written.
   const created = [opts.cardRel];
   if (hasFrozen) {
     const frozenRel = attachmentPath(opts.cardRel, "page.frozen");
     await writeCard(path.join(opts.boxRoot, frozenRel), frozen);
     created.push(frozenRel);
   }
+  await writeCard(path.join(opts.boxRoot, opts.cardRel), card);
   return created;
 }

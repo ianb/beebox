@@ -43,10 +43,14 @@ export async function stageablePaths(cwd: string, relPaths: string[]): Promise<s
   const ignored = await ignoredPaths(cwd, relPaths);
   const listed = await gitWithInput({ cwd, args: ["ls-files", "-z", "--", ...relPaths], input: "" });
   const tracked = new Set(listed.split("\0").filter((p) => p !== ""));
+  // A directory (a moved `.attach/`) is tracked when any file under it is; its
+  // deletion must still be staged after it left the disk.
+  const hasTracked = (rel: string): boolean => tracked.has(rel) || [...tracked].some((file) => file.startsWith(`${rel}/`));
   const result: string[] = [];
   for (const rel of relPaths) {
+    if (hasTracked(rel)) { result.push(rel); continue; }
     if (ignored.has(rel)) continue;
-    if (tracked.has(rel) || await fs.access(path.join(cwd, rel)).then(() => true, () => false)) result.push(rel);
+    if (await fs.access(path.join(cwd, rel)).then(() => true, () => false)) result.push(rel);
   }
   return result;
 }

@@ -39,9 +39,16 @@ async function injectCapture(tabId: number, requestId: string): Promise<void> {
   await chrome.scripting.executeScript({ target: { tabId }, files: [CAPTURE_SCRIPT] });
 }
 
-function runCapture(tabId: number): Promise<CommentaryCapture | null> {
+interface RunningCapture {
+  result: Promise<CommentaryCapture | null>;
+  /** Settles when both injections have run or failed, which can be after `result` timed out. */
+  injected: Promise<void>;
+}
+
+function runCapture(tabId: number): RunningCapture {
   const requestId = crypto.randomUUID();
-  return new Promise((resolve) => {
+  let injected: Promise<void> = Promise.resolve();
+  const result = new Promise<CommentaryCapture | null>((resolve) => {
     let settled = false;
     const finish = (value: CommentaryCapture | null) => {
       if (settled) return;
@@ -58,22 +65,26 @@ function runCapture(tabId: number): Promise<CommentaryCapture | null> {
     }
     chrome.runtime.onMessage.addListener(listener);
 
-    injectCapture(tabId, requestId).catch((e: unknown) => {
+    injected = injectCapture(tabId, requestId).catch((e: unknown) => {
       // Injection failed (chrome://, Web Store, missing host access, …).
       console.debug("[beebox-clerk] capture injection failed:", e);
       finish(null);
     });
   });
+  return { result, injected };
 }
 
 /** Captures the tab's page, or null when it can't be captured or times out. */
 export function capturePage(tabId: number): Promise<CommentaryCapture | null> {
   const previous = tabQueues.get(tabId) ?? Promise.resolve();
-  // runCapture never rejects, so the chain never breaks.
-  const next = previous.then(() => runCapture(tabId));
-  tabQueues.set(tabId, next);
-  void next.then(() => {
-    if (tabQueues.get(tabId) === next) tabQueues.delete(tabId);
+  const started = previous.then(() => runCapture(tabId));
+  // The next capture in this tab waits for this one's injections too, not only
+  // its answer: an injection still waiting on a loading page after a timeout
+  // would otherwise read the next capture's request id. Neither promise rejects.
+  const tail = started.then(({ result, injected }) => Promise.all([result, injected]));
+  tabQueues.set(tabId, tail);
+  void tail.then(() => {
+    if (tabQueues.get(tabId) === tail) tabQueues.delete(tabId);
   });
-  return next;
+  return started.then(({ result }) => result);
 }

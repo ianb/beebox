@@ -29,7 +29,9 @@ export function unpackedExtensionId(extensionDir: string): string {
 export function frontTargetScript(targetUrl: string): string {
   const url = JSON.stringify(targetUrl);
   return `chrome.tabs.query({}).then((tabs) => {
-    const target = tabs.find((tab) => tab.url === ${url} && !tab.url.startsWith("chrome-extension://"));
+    const matches = tabs.filter((tab) => tab.url === ${url});
+    if (matches.length > 1) return "ambiguous";
+    const target = matches[0];
     if (target === undefined || target.id === undefined) return "no-target";
     return chrome.tabs.update(target.id, { active: true }).then(() => { setTimeout(() => location.reload(), 100); return "ok"; });
   })`;
@@ -63,6 +65,9 @@ export async function openClerkPopup(target: string | undefined): Promise<number
   const popupUrl = `chrome-extension://${unpackedExtensionId(extensionDir)}/popup.html`;
   await stdoutOf(["tab", "new", "--label", POPUP_LABEL, popupUrl]);
   const fronted = evalValue(await stdoutOf(["eval", frontTargetScript(targetUrl)]));
+  // Tabs are matched by URL (agent-browser's tab ids are not Chrome's); two
+  // tabs at one URL could hold different content, so refuse to guess.
+  if (fronted === "ambiguous") throw new BrowseConfigError(`clerk-popup: more than one tab is at ${targetUrl}; close the others`);
   if (fronted !== "ok") throw new BrowseConfigError(`clerk-popup: no tab at ${targetUrl} to act on`);
   // The reload is asynchronous: wait until the popup has mounted again over the target.
   const deadline = Date.now() + MOUNT_TIMEOUT_MS;

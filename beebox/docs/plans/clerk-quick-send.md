@@ -368,6 +368,12 @@ None.
 > 30 s). If the Clerk does not resend, the card stays in `_content/incoming/`
 > with no note and no Needs-you row. Per "stop over-engineering rare
 > failures", no recovery sweep: the card is visible in Browse.
+>
+> A narrower case in the same window: if the person files that card from
+> Browse before the Clerk resends, the resend finds no card in `incoming/`
+> and writes a second one. It needs a crash, a manual filing, and a retry
+> within seconds; a box-wide `capture-id` scan on every send is not worth it
+> (branch review, 2026-10-15).
 
 ## Agent-flow / user-flow edge cases
 

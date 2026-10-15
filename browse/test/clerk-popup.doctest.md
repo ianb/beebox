@@ -15,12 +15,13 @@ unpackedExtensionId("/srv/beebox/beebox-clerk/dist-browse/chrome-mv3")
 => aefhjangknhldlihokiojaajoegnlaoh
 ```
 
-The script that fronts the target embeds its URL as a JSON string, so a
-quote in the URL cannot end the string early.
+The script that fronts the target finds it by URL and refuses when two tabs
+share it. It embeds the URL as a JSON string, so a quote in the URL cannot end
+the string early.
 
 ```ts
 frontTargetScript('http://localhost/a"b').split("\n")[1].trim()
-=> const target = tabs.find((tab) => tab.url === "http://localhost/a\"b" && !tab.url.startsWith("chrome-extension://"));
+=> const matches = tabs.filter((tab) => tab.url === "http://localhost/a\"b");
 ```
 
 A `wait` always ends: upstream ignores `wait --timeout` outside download mode

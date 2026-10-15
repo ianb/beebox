@@ -90,14 +90,20 @@ stable.
 
 ## Dispositions
 
-| Idea | Disposition | Where |
-|---|---|---|
-| Scope extraction to the post container found from the right-click target, else the viewport center | **adopt** | [plan](../beebox/docs/plans/clerk-quick-send.md), Track 3 |
-| Run Defuddle on a small document holding only that container (plus `<head>`), with the real URL, so its site extractor still fires | **adopt** | same |
-| `includeReplies: false` | **adopt** | same |
-| Small per-host container table (X, Reddit, Threads, LinkedIn, Bluesky, Mastodon, Instagram, Facebook) over a generic `article`/`[role=article]` walk | **adapt** (Zotero `target` + `detectWeb` shape, selectors only, no per-site code paths) | same |
-| Show what will be sent (first line of the item) before sending | **adopt** | same |
-| Permalink from the container's `<time>` anchor as the item URL | **adopt** | same |
-| oEmbed/third-party API fallback (Meta, fxtwitter, Mastodon) | **reject for now**: sends the URL to a third party and returns less than the logged-in DOM | — |
-| User-editable selector templates (Obsidian) | **later**: worth it if the built-in table rots | — |
-| Bump Defuddle to 0.19.x | **adopt** when Track 3 lands, with fixture tests | same |
+The boxholder chose to send the full page first and design trimming from real
+captures (2026-10-15: "We'll do the full capture, then use the examples to see
+about trimming"). So none of these is built yet; each is a candidate for that
+later design. A first attempt at the finder and item extraction is parked on
+branch `wip-clerk-feed-items`.
+
+| Idea | Disposition |
+|---|---|
+| Scope extraction to the post container found from the right-click target, else the viewport center | later: lead candidate |
+| Run Defuddle on a small document holding only that container (plus `<head>`), with the real URL | later; Threads' extractor needs the surrounding pagelet, so test through to markdown |
+| `includeReplies: false` | later, with item scoping |
+| Per-host container table over a generic `article`/`[role=article]` walk (Zotero `target` + `detectWeb` shape) | later; verify Instagram and Facebook against real captures first |
+| Show which post will be sent before sending | later, with item scoping |
+| Permalink from the post's `<time>` anchor as the item URL | later, with item scoping |
+| oEmbed and third-party API fallbacks (Meta, fxtwitter, Mastodon) | reject for now: send the URL to a third party and return less than the logged-in page |
+| User-editable selector templates (Obsidian) | later, if a built-in table rots |
+| Bump Defuddle past 0.18.1 | later; 0.18.1 already has the X, Reddit, Threads, LinkedIn, Bluesky, and YouTube extractors |

@@ -30,9 +30,12 @@ export function SendSection({ boxUrl, tabId, blockedReason }: SendSectionProps) 
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<Busy | null>(null);
   const [last, setLast] = useState<SendActionResult | null>(null);
+  /** The note that went with `last`, so Try again clears it once confirmed. */
+  const [lastNote, setLastNote] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
 
-  const run = useCallback((params: { busy: Busy; message: ClerkMessage }) => {
+  // The note a confirmed send carried: only that text is cleared, never words typed since.
+  const run = useCallback((params: { busy: Busy; message: ClerkMessage; sentNote: string | null }) => {
     setBusy(params.busy);
     setNotice(null);
     void sendAction(params.message).then((response) => {
@@ -48,24 +51,26 @@ export function SendSection({ boxUrl, tabId, blockedReason }: SendSectionProps) 
         return;
       }
       setLast(result);
-      if (sendConfirmed(result.outcome)) setNote("");
+      if (params.busy === "send") setLastNote(params.sentNote);
+      const { sentNote } = params;
+      if (sentNote !== null && sendConfirmed(result.outcome)) setNote((current) => (current === sentNote ? "" : current));
     });
   }, []);
 
   const handleSend = useCallback(() => {
     if (tabId === null) return;
-    run({ busy: "send", message: { type: "sendToBox", tabId, note } });
+    run({ busy: "send", message: { type: "sendToBox", tabId, note }, sentNote: note });
   }, [note, run, tabId]);
 
   const handleRetry = useCallback(() => {
     if (last === null) return;
-    run({ busy: "retry", message: { type: "retrySend", id: last.id } });
-  }, [last, run]);
+    run({ busy: "retry", message: { type: "retrySend", id: last.id }, sentNote: lastNote });
+  }, [last, lastNote, run]);
 
   const handleChoose = useCallback(
     (candidateId: string) => {
       if (last === null) return;
-      run({ busy: "choose", message: { type: "chooseSend", id: last.id, candidateId } });
+      run({ busy: "choose", message: { type: "chooseSend", id: last.id, candidateId }, sentNote: null });
     },
     [last, run],
   );

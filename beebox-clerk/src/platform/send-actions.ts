@@ -39,7 +39,8 @@ export function classifySendError(error: unknown): SendOutcome {
   if (error instanceof SendUnsupportedError) return { status: "unsupported" };
   const message = error instanceof Error ? error.message : String(error);
   if (isAuthError(error)) return { status: "auth", message };
-  if (error instanceof ClerkApiError && error.status !== 0 && error.status < 500) {
+  // Only a refusal is a refusal: an unreadable 200 may still have saved the send.
+  if (error instanceof ClerkApiError && error.status >= 400 && error.status < 500) {
     return { status: "rejected", message };
   }
   return { status: "unconfirmed", message };
@@ -91,7 +92,12 @@ export function createSendActions(deps: SendDeps) {
 
     async chooseSend(choice: { id: string; candidateId: string }): Promise<SendActionResult> {
       const send = kept.get(choice.id);
-      const box = send?.box ?? (await deps.requireActiveBox());
+      // Never another box: after a worker restart the active box may not be the one the send went to.
+      if (send === undefined) {
+        const active = await deps.requireActiveBox();
+        return { kind: "send", id: choice.id, boxUrl: active.boxUrl, outcome: { status: "forgotten" } };
+      }
+      const { box } = send;
       let outcome: SendOutcome;
       try {
         outcome = { status: "answered", view: await deps.choose(box, choice) };
@@ -99,7 +105,7 @@ export function createSendActions(deps: SendDeps) {
         outcome = classifySendError(error);
         console.error(`[beebox-clerk] choose for send ${choice.id} failed:`, error);
       }
-      if (send !== undefined) deps.toast(send.tabId, sendToastText(outcome));
+      deps.toast(send.tabId, sendToastText(outcome));
       return { kind: "send", id: choice.id, boxUrl: box.boxUrl, outcome };
     },
   };

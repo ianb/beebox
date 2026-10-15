@@ -145,4 +145,14 @@ test("classifySendError separates too old, auth, no answer, and refusals", async
   t.equal(classifySendError(new ClerkApiError(0, { endpoint: "e", detail: "d" })).status, "unconfirmed");
   t.equal(classifySendError(new ClerkApiError(503, { endpoint: "e", detail: "d" })).status, "unconfirmed");
   t.equal(classifySendError(new ClerkApiError(409, { endpoint: "e", detail: "d" })).status, "rejected");
+  // A 200 whose body could not be read may have saved the send: Try again, never a new send.
+  t.equal(classifySendError(new ClerkApiError(200, { endpoint: "e", detail: "malformed JSON" })).status, "unconfirmed");
+});
+
+test("chooseSend for a send the worker forgot never posts to another box", async (t) => {
+  const h = harness();
+  h.setActive(boxB);
+  const chosen = await createSendActions(h.deps).chooseSend({ id: "gone", candidateId: "c2" });
+  t.same(chosen.outcome, { status: "forgotten" });
+  t.equal(h.posts.length, 0);
 });

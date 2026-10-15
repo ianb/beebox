@@ -143,6 +143,25 @@ const late = await caller(box.root, jev).clerk.send(page(id, { note: "for the sl
 }
 ```
 
+Moving the filed card again, now that git tracks it, commits both files as
+renames, with no old path left behind: a moved directory counts as tracked
+when any file under it is.
+
+```ts continue
+const filed = `_content/Garden/${card.split("/").at(-1)}`;
+const again2 = await executeMove(createCollectorContext(box.root).ctx, { from: filed, to: "_content/Reading/", commit: true });
+const changed = execFileSync("git", ["show", "--name-status", "--format=", "HEAD"], { cwd: box.root, encoding: "utf8" }).trim().split("\n");
+({ moved: again2.success, changed, gitStatus: gitStatus(box) })
+=> {
+  moved: true,
+  changed: [
+    "R100\t_content/Garden/Raised_beds_on_a_slope-«uuid».attach/page.frozen\t_content/Reading/Raised_beds_on_a_slope-«uuid».attach/page.frozen",
+    "R100\t_content/Garden/Raised_beds_on_a_slope-«uuid».webpage.card\t_content/Reading/Raised_beds_on_a_slope-«uuid».webpage.card",
+  ],
+  gitStatus: "",
+}
+```
+
 ## The same id with a different page or note is refused
 
 ```ts continue
