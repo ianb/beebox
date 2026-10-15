@@ -74,6 +74,40 @@ session.stop();
 await box.cleanup();
 ```
 
+## A send not yet admitted when the watchdog fires is refused, and records nothing
+
+The route waits for the session to take the turn before it answers. If the
+watchdog fires first, the request is answered as not admitted, and a late
+admission is abandoned, so the message is not recorded after its client was
+told it was refused.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const session = new ChatSession(box.root, { backend, skipBootstrap: true });
+
+let admitLate: (() => void) | undefined;
+let recorded = 0;
+const capture = captureTurn(session, { turnId: "late-turn", releasePin: () => undefined });
+const answer = await startAckedRun({
+  send: (_input, options) => { admitLate = options?.onAdmitted; return new Promise<boolean>(() => { /* still waiting on a lock */ }); },
+}, {
+  input: { text: "did you water the plants" },
+  capture,
+  onAdmitted: () => { recorded += 1; },
+  watchdog: { timeoutMs: 40, periodMs: 5 },
+});
+let lateThrow = "none";
+try { admitLate?.(); } catch (e) { lateThrow = (e as Error).message; }
+({ answer, recorded, lateThrow })
+=> { answer: { admitted: false, reason: "The run did not start within 40ms" }, recorded: 0, lateThrow: "Send abandoned before the session took the turn" }
+```
+
+```ts cleanup
+session.stop();
+await box.cleanup();
+```
+
 ## A run that *did* start is never touched by the watchdog
 
 The watchdog is cleared the moment `send()` settles either way, so a turn that
