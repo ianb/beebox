@@ -46,7 +46,7 @@ starts, on which device, and what the person sees after they let go of it.
 
 ## Related issues
 
-- [iOS App Intent capture via Siri / Shortcuts / Action Button](2026-08-08-ios-siri-app-intent-capture.md)
+- [iOS App Intent capture via Siri / Shortcuts / Action Button](../bugs/2026-08-08-ios-siri-app-intent-capture.md)
 - [Share-sheet webpage and doc saves land as inert stubs](../bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md)
 - [Chat input everywhere](2026-08-30-chat-input-everywhere.md)
 - [Jev for quick-capture routing](2026-09-21-jev-triage-and-quick-capture-routing.md)
@@ -107,7 +107,7 @@ Still open, so this issue stays open:
 
 - Siri, Shortcuts, the Action Button, a widget, and a Control Center control
   (an App Intent that calls `quickChat.submit`), tracked in
-  [iOS App Intent capture](2026-08-08-ios-siri-app-intent-capture.md).
+  [iOS App Intent capture](../bugs/2026-08-08-ios-siri-app-intent-capture.md).
 - The share sheet: it keeps its picker. An automatic destination through
   `submit` is a small follow-up.
 - The Mac: nothing exists outside the browser.

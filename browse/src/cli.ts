@@ -6,6 +6,7 @@ import { reclaimWorktreeBrowsers } from "../../bin/process-cleanup.js";
 import { annotatedSnapshot, checkedAction, getWithTarget } from "./act.js";
 import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
+import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
@@ -191,6 +192,19 @@ async function main(): Promise<number> {
 
   if (sub === "snapshot") {
     return annotatedSnapshot(args.slice(1), ctx);
+  }
+
+  if (sub === "clerk-popup") {
+    return openClerkPopup(args[1]);
+  }
+
+  if (sub === "wait") {
+    // Upstream parses `wait --timeout` only in `--download` mode and otherwise
+    // polls forever (0.27.0), and the daemon runs one command at a time: a
+    // `wait --text` for text that never appears wedged every later command
+    // until the daemon was killed (clerk-quick-send, 2026-10-15). The default
+    // action timeout is what bounds it, so derive that from `--timeout`.
+    process.env["AGENT_BROWSER_DEFAULT_TIMEOUT"] = String(waitTimeoutMs(args.slice(1)));
   }
 
   if (sub === "upload") {

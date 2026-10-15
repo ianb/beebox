@@ -31,7 +31,6 @@ import { notifyBoxholder } from "./notify-boxholder.js";
 import { parseTarget } from "./notification/target.js";
 import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import type { CommandContext } from "./command-runner.js";
-import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
 import { createEventBus } from "./event-bus/core.js";
 
@@ -60,7 +59,6 @@ export interface QuestionAgingResult {
 
 export interface QuestionAgingOptions {
   /** Injected services (tests / immediate delivery), forwarded to notifyBoxholder. */
-  tg?: TelegramService | undefined;
   push?: PushService | undefined;
 }
 
@@ -217,7 +215,7 @@ export async function ageQuestions(
           source: "question-nudge",
         },
         now,
-        services: { tg: options.tg, push: options.push },
+        services: { push: options.push },
       });
       latch.nudged[q.relativePath] = now.toISOString();
       nudged.push(q.relativePath);

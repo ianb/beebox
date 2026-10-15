@@ -11,7 +11,6 @@ import {
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
 import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
-import { createChatJobTemplate } from "../../src/schemas/chat-job.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -142,15 +141,15 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "_bookkeeping/jobs");
-await box.write("_bookkeeping/jobs/msg1.chat.job.card", `---\nconnector: telegram\n---\nChat`);
+await box.write("_bookkeeping/jobs/msg1.digest.job.card", `---\nconnector: rss\n---\nDigest`);
 await box.write("_bookkeeping/jobs/sweep.intake.job.card", `---\nconnector: gmail\n---\nIntake`);
 
-const chatOnly = await findJobCards(jobsDir, { typeFilter: "chat" });
-chatOnly.length
+const digestOnly = await findJobCards(jobsDir, { typeFilter: "digest" });
+digestOnly.length
 => 1
 
-chatOnly[0].file
-=> msg1.chat.job.card
+digestOnly[0].file
+=> msg1.digest.job.card
 
 const all = await findJobCards(jobsDir);
 all.length
@@ -168,16 +167,16 @@ connector filter:
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "_bookkeeping/jobs");
 await box.write("_bookkeeping/jobs/email.intake.job.card", `---\nconnector: gmail\n---\nEmail triage`);
-await box.write("_bookkeeping/jobs/chat.chat.job.card", `---\nconnector: telegram\n---\nChat`);
+await box.write("_bookkeeping/jobs/feed.digest.job.card", `---\nconnector: rss\n---\nDigest`);
 await box.write("_bookkeeping/jobs/inbox.intake.job.card", `---\npriority: normal\n---\nInbox triage`);
 
 const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
 => ["email.intake.job.card"]
 
-const telegramOnly = await findJobCards(jobsDir, { connectorFilter: "telegram" });
-JSON.stringify(telegramOnly.map((c) => c.file))
-=> ["chat.chat.job.card"]
+const rssOnly = await findJobCards(jobsDir, { connectorFilter: "rss" });
+JSON.stringify(rssOnly.map((c) => c.file))
+=> ["feed.digest.job.card"]
 
 // Other jobs stay put for a future run that does match them
 const noFilter = await findJobCards(jobsDir);
@@ -198,7 +197,7 @@ from filtered runs):
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "_bookkeeping/jobs");
 await box.write("_bookkeeping/jobs/y1.intake.job.card", "---\nconnector: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/a.memo.card\n---\n");
-await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nconnector: telegram\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
+await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nconnector: rss\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
 
 const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
@@ -291,40 +290,6 @@ desc.includes("#### store/inbox/item1.card")
 
 // Intake-job schema instructions are injected
 desc.includes("Processing Intake Jobs")
-=> true
-
-await box.cleanup();
-```
-
-### Inlines a chat job's thread ref
-
-The generic `{ref}` walk handles chat jobs' `thread: {ref}` too, not just
-intake `items:`.
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("store/threads/t1.chat-thread.card", `---\nstatus: new\ncreated: 2026-07-01T00:00:00Z\nsource: telegram\n---\nHello world`);
-
-const desc = await buildJobDescription(
-  {
-    card: { file: "reply.chat.job.card", priority: "normal" },
-    relPath: "_bookkeeping/jobs/reply.chat.job.card",
-    content: createChatJobTemplate({
-      connector: "telegram",
-      description: "Reply",
-      threadRef: "store/threads/t1.chat-thread.card",
-    }),
-  },
-  box.root,
-);
-desc.includes("Hello world")
-=> true
-
-desc.includes("#### store/threads/t1.chat-thread.card")
-=> true
-
-// Chat-job schema instructions are injected
-desc.includes("Processing Chat Jobs")
 => true
 
 await box.cleanup();

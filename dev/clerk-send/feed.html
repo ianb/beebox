@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fernfeed — Home</title>
+<meta property="og:title" content="Fernfeed">
+<meta property="og:description" content="See what your friends are growing.">
+<!--
+  A synthetic social feed for testing the Clerk's Send to box
+  (beebox/docs/plans/clerk-quick-send.md). Names come from
+  beebox/docs/example-names.md; the site is invented. It mimics the shape that
+  makes feeds hard to clip: navigation, several posts, suggestions.
+-->
+<style>
+  :root { --bg: #fafafa; --fg: #1d1d1f; --muted: #6b6b70; --card: #fff; --line: #e3e3e6; --accent: #2f7d4f; }
+  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  header { position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 16px; align-items: center; }
+  header strong { color: var(--accent); font-size: 18px; }
+  nav a { color: var(--muted); margin-right: 12px; text-decoration: none; }
+  main { max-width: 560px; margin: 16px auto; padding: 0 16px; display: grid; gap: 16px; }
+  article { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .who { font-weight: 600; } .when { color: var(--muted); font-size: 13px; }
+  .photo { height: 180px; border-radius: 8px; margin: 10px 0; background: linear-gradient(135deg, #b9d8a7, #6f9d63); }
+  aside { max-width: 560px; margin: 0 auto 32px; padding: 0 16px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header><strong>Fernfeed</strong><nav><a href="#">Home</a><a href="#">Explore</a><a href="#">Messages</a><a href="#">Profile</a></nav></header>
+<main role="feed">
+  <article role="article" aria-posinset="1">
+    <div><span class="who">Tomas Marlowe</span> · <a class="when" href="/clerk-quick-send/dev/clerk-send/feed.html#post-tomas-1"><time datetime="2026-10-15T08:10">3h</time></a></div>
+    <p>New bike lights came in. Commute home is a lot less scary now.</p>
+  </article>
+  <article role="article" aria-posinset="2" id="post-odette-7">
+    <div><span class="who">Odette Marlowe</span> · <a class="when" href="/clerk-quick-send/dev/clerk-send/feed.html#post-odette-7"><time datetime="2026-10-15T09:42">2h</time></a></div>
+    <div class="photo" role="img" aria-label="Terraced raised beds on a hillside"></div>
+    <p>Finally terraced the slope behind the shed: three raised beds, each a
+    foot lower than the last, cedar boards held with rebar stakes. Water now
+    runs from the top bed down instead of washing the soil away. Garlic goes
+    in next week.</p>
+  </article>
+  <article role="article" aria-posinset="3">
+    <div><span class="who">Wren Marlowe</span> · <a class="when" href="/clerk-quick-send/dev/clerk-send/feed.html#post-wren-2"><time datetime="2026-10-15T10:05">1h</time></a></div>
+    <p>Who else is watching the meteor shower tonight?</p>
+  </article>
+</main>
+<aside><h2>Suggested for you</h2><p>Juniper Marlowe · Priya Marlowe · Garden club near you</p></aside>
+</body>
+</html>

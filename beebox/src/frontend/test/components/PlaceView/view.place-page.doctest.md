@@ -66,13 +66,44 @@ const startedLending = { contextDir: "_content/lending", showsOwnOpeners: false,
 
 ## An empty place says so and names its folder
 
-No links and no groups: "Nothing here yet." and the folder, which opens in
-Browse. A place with no openers shows no "Start something".
+No links and no groups: "No cards to show here yet." and the folder, which
+opens in Browse. It does not say the folder is empty: the place skips
+background cards and cards of unknown types. A place with no openers shows no "Start something".
 
 ```ts
 const html = await render({ payload: payload({ openers: [] }) }, startedLending);
 ({ sections: sections(html), text: text(html) })
-=> { sections: ["empty"], text: "Nothing here yet. This place is the folder lending/ . Ask in the chat to add the first card." }
+=> { sections: ["empty"], text: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card." }
+```
+
+## The place summary comes first
+
+The landmark card's body is the place summary (docs/implemented-plans/place-shows-cards.md,
+Track C). It renders as markdown above "Start something" and the tiers.
+
+```ts
+const html = await render({ payload: payload({
+  groups: [{ label: "Also here", count: 1, alsoHere: true, children: [{ ref: "_content/lending/Stove.loan.card", label: null, title: "Camp stove", exists: true, source: "derived" }] }],
+}), body: "The **stove** is with Idris until Friday.\n" }, startedLending);
+({ sections: sections(html), summary: sectionText(html, "summary") })
+=> { sections: ["summary", "start-something", "group"], summary: "The stove is with Idris until Friday." }
+```
+
+A blank body shows no summary section, and no "No body content" line.
+
+```ts
+const html = await render({ payload: payload({ openers: [] }), body: "  \n\n" });
+({ sections: sections(html), text: text(html) })
+=> { sections: ["empty"], text: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card." }
+```
+
+A card link in the summary resolves against the landmark's folder and is a
+link the person can follow.
+
+```ts
+const html = await render({ payload: payload({ openers: [] }), body: "Ask [Idris](Idris.person.card) first.\n" });
+html.match(/<a [^>]*>Idris<\/a>/)?.[0]
+=> <a class="bbx-theme-link" href="/test1/views/_content/lending/Idris.person.card">Idris</a>
 ```
 
 ## Tiers and groups, with an empty group saying "None yet"
@@ -101,6 +132,60 @@ const html = await render({ payload: payload({
   groupOpen: true,
   text: "Start here Lending list Pinned Gone Missing Every receipt card here 0 None yet",
 }
+```
+
+## "Also here" opens the folder from its overflow count
+
+"Also here" lists 10 cards; the rest show as one count that opens the folder
+in Browse. Another group's overflow stays plain text.
+
+```ts
+const tile = (name) => ({ ref: `_content/lending/${name}.memo.card`, label: null, title: name, exists: true, source: "derived" });
+const ten = Array.from({ length: 10 }, (_, i) => tile(`Card ${i}`));
+const html = await render({ payload: payload({
+  openers: [],
+  groups: [
+    { label: "Every loan card here", count: 60, children: [tile("Loan")] },
+    { label: "Also here", count: 30, children: ten, alsoHere: true },
+  ],
+}) });
+({
+  moreButtons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].map((m) => m[1]),
+  plainMore: text(html).includes("+59 more"),
+})
+=> { moreButtons: ["+20 more"], plainMore: true }
+```
+
+## An author's group named "Also here" keeps a plain overflow count
+
+The page knows the server's "Also here" group by its `alsoHere` mark, not its
+label, so an expand the author named "Also here" does not open Browse.
+
+```ts
+const html = await render({ payload: payload({
+  openers: [],
+  groups: [{ label: "Also here", count: 30, children: [{ ref: "_content/lending/Loan.memo.card", label: null, title: "Loan", exists: true, source: "expand" }] }],
+}) });
+({ buttons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].length, plainMore: text(html).includes("+29 more") })
+=> { buttons: 0, plainMore: true }
+```
+
+## A tile shows its card's summary line under the title
+
+A row's `detail` (the card type's `summarize` line) shows under its title,
+so a loan tile says who has it without opening the card. A row without one
+shows the title alone.
+
+```ts
+const html = await render({ payload: payload({
+  openers: [],
+  groups: [{ label: "Also here", count: 2, alsoHere: true, children: [
+    { ref: "_content/lending/Stove.loan.card", label: null, title: "Camp stove", detail: "Idris has it · back by 2026-10-17", exists: true, source: "derived" },
+    { ref: "_content/lending/Rules.memo.card", label: null, title: "House rules", exists: true, source: "derived" },
+  ] }],
+}) });
+sectionText(html, "group")
+=> Also here 2 Camp stove Idris has it · back by 2026-10-17 House rules
 ```
 
 ## Outside a chat, "Start something" is hidden
@@ -158,7 +243,7 @@ embedded card has no header, so the page draws the mark and label itself.
 
 ```ts
 ({
-  pane: text(await render({ payload: payload({ openers: [] }) })).startsWith("Nothing"),
+  pane: text(await render({ payload: payload({ openers: [] }) })).startsWith("No cards"),
   embed: text(await render({ payload: payload({ openers: [] }), heading: true })).slice(0, 10),
 })
 => { pane: true, embed: "🤝 Lending" }

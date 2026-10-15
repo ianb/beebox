@@ -57,7 +57,8 @@ const OPENAI_TO_GEMINI: Record<string, string> = {
   ballad: "Fenrir",
   coral: "Laomedeia",
   sage: "Leda",
-  marin: "Vindemiatrix",
+  // Re-picked 2026-10-12 (was Vindemiatrix); shares Achernar with shimmer.
+  marin: "Achernar",
 };
 
 /** The mapping to reach one backend from a name belonging to another. */

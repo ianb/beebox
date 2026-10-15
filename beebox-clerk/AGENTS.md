@@ -102,11 +102,16 @@ content script is path-scoped (`http://localhost/main/test1/*`) and the
 background's port-aware `isUrlUnderBoxUrl` prefix check is the real
 authorization boundary. See the module comments.
 
-**Manual verification (no MV3 test harness exists — the chrome.* paths are
-verified by hand):**
+**Driving the extension in a browser:** `BROWSE_CLERK=1 bin/browse` loads the
+test build in `dist-browse/` (`pnpm build:browse`), rebuilt when a source is
+newer; close the browser to load a rebuild. It grants `http://localhost/*` at
+install, since automation cannot click Chrome's permission prompt or the
+toolbar button. `bin/browse clerk-popup <tab>` opens the popup acting on that
+tab. `dev/clerk-send/feed.html` is a synthetic feed page to send.
 
-1. `pnpm build`, then load `dist/chrome-mv3/` unpacked at `chrome://extensions`
-   (or run a headed `BROWSE_CLERK=1 bin/browse` session).
+**Manual verification of the relay (the chrome.* paths are verified by hand):**
+
+1. Run a headed `BROWSE_CLERK=1 bin/browse` session.
 2. Open a worktree box page (e.g.
    `http://localhost:3210/<worktree>/test1/`) and enable it from the popup
    (grants the per-origin host permission).

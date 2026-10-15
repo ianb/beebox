@@ -29,18 +29,18 @@ import {
   captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
   loadCurrentModel, loadSessionId, saveCurrentModel,
 } from "../state.js";
-import { pumpSessionRun } from "../consume.js";
+import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "../model.js";
 import { preflightChatBackend } from "../../../agent/auth-preflight.js";
-import { liveProviderRefusal } from "../../../provider-env/core.js";
-import { createRunLockHolder, withChatRunAdmission } from "../run-lock.js";
+import { sendReadiness } from "./start-refusal.js";
+import { createRunLockHolder, withChatRunAdmission } from "./lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
   composeTurnContent,
 } from "./start.js";
 import type { ChatSessionOptions } from "../options.js";
 import { createHealthGate } from "../../../session-context.js";
-import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "../lifecycle.js";
+import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
@@ -59,6 +59,7 @@ export class ChatSession extends EventEmitter {
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
   private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
+  private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
   private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
@@ -78,7 +79,7 @@ export class ChatSession extends EventEmitter {
   private resolvedContextDir: string | null | undefined = undefined;
   /** Coined-id state: does the next run create this conversation? See `coined-run.ts`. */
   private readonly coined: CoinedRunState;
-  /** The chat-active lock held while a run is in flight (`run-lock.ts`). */
+  /** The chat-active lock held while a run is in flight (`lock.ts`). */
   private readonly runLock = createRunLockHolder(() => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }));
   /** Holds each turn's `result` until the transcript flush lands on disk. */
   private readonly durability = createTurnDurabilityGate(
@@ -203,6 +204,9 @@ export class ChatSession extends EventEmitter {
     });
   }
 
+  /** Settles once every send now preparing a turn or starting its run has finished or failed. */
+  whenStarted(): Promise<unknown> { return Promise.allSettled(this.opening); }
+
   /**
    * Return to `idle` after a run failed to start, and deal with anything that
    * queued behind it. While the start was in flight the session read as busy,
@@ -302,24 +306,26 @@ export class ChatSession extends EventEmitter {
    *
    * Accepts either a plain string (back-compat) or a ChatSendInput object
    * carrying the text plus any image attachments referenced by `[imageN]`
-   * tokens in the text.
+   * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
    */
-  async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
-    const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
-    try { return await work.run(() => this.sendAdmitted(message)); }
-    finally { await work.release(); }
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
+    const opening = (async () => {
+      const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
+      try { return await work.run(() => this.sendAdmitted(message, { onAdmitted: options?.onAdmitted, onRefused: options?.onRefused })); }
+      finally { await work.release(); }
+    })();
+    this.opening.add(opening);
+    try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput): Promise<boolean> {
-    if (this.isBusy()) {
-      log("send", "Rejected — busy");
-      return false;
-    }
+  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onRefused }: { onAdmitted: (() => void) | undefined; onRefused: ((reason: string) => void) | undefined }): Promise<boolean> {
+    if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
+    // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
+    const live = this.liveRun() !== null;
+    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart(); return false; }
+    if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
 
-    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
-
-    // A live third-party run keeps the provider env it started with; re-check so a removed model or revoked key stops at this turn.
-    const refusal = await liveProviderRefusal({ boxRoot: this.boxRoot, model: this.liveRun() === null ? null : this.resolvedModel }); if (refusal !== null) { this.emit("error", refusal); this.restart(); return false; }
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,
@@ -426,17 +432,11 @@ export class ChatSession extends EventEmitter {
     return loadSessionHistory(this.boxRoot, { sessionId: this.sessionId, slice, fresh: opts?.fresh ?? false });
   }
 
-  getSessionId(): string | null {
-    return this.sessionId;
-  }
+  getSessionId(): string | null { return this.sessionId; }
 
-  isRunning(): boolean {
-    return this.liveRun() !== null;
-  }
+  isRunning(): boolean { return this.liveRun() !== null; }
 
-  isBusy(): boolean {
-    return this.preparingTurn || lifecycleBusy(this.state);
-  }
+  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state); }
 
   /**
    * Stop the current run gracefully. Clears the pending queue so the

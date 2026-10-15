@@ -275,8 +275,6 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
       return { extra: compact([str(fields["description"])]) };
     case "gsheet":
       return { extra: tabTitles(fields["sheets"]) };
-    case "telegram-message":
-      return { extra: compact([str(fields["text"])]) };
     default:
       return { extra: [] };
   }

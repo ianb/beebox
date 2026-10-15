@@ -79,16 +79,6 @@ export interface BoxConfig {
    */
   externalRoots?: string[];
   /**
-   * Proactive scheduled-task health alerts (schedule-health-alert.ts).
-   * Absent → no proactive alerts for this box (bbx health and the
-   * session-start snapshot still surface problems). Explicit opt-in
-   * because a misdirected alert is worse than no alert.
-   */
-  healthAlerts?: {
-    /** Telegram chat id to send alerts to (the boxholder's DM chat). */
-    telegramChat?: string;
-  };
-  /**
    * Agent browsing acts as the box owner. Set on boxes BUILT for agent-driven
    * testing (test1 and its clones); absent, the browse key clears the wall and
    * is nobody. A box a person actually uses must not set this.

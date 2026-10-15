@@ -32,8 +32,8 @@ behind an approval queue; Bee Box's `retro` writes directly, using git
 history as the undo path. Hermes reaches about thirty chat platforms and
 limits what it can do when a message arrives automatically from an outside
 service, allowing only four safe actions in that case, since that message's
-content cannot be trusted; Bee Box has four connectors, treats only Telegram as a real
-conversation, and keeps untrusted email text out of a card's loaded fields
+content cannot be trusted; Bee Box has three connectors, treats incoming email as data and not
+as a conversation, and keeps untrusted email text out of a card's loaded fields
 instead of narrowing the agent's tools. Hermes publishes a written threat
 model ("the only security boundary against an adversarial LLM is the
 operating system") and keeps one unconditional block on destructive commands

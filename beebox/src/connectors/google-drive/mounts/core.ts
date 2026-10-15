@@ -26,7 +26,7 @@ import { mirrorFolderOnce } from "../mount-sync.js";
 import { checkDriveScheduleHint } from "./schedule-hint.js";
 import { withDriveMirrorLock } from "../lock.js";
 import { resolveMountTarget, assertMountTargetWritable } from "../mount-path.js";
-import { safeFilename } from "../../../job-cards/chat-utils.js";
+import { safeFilename } from "../../../lib/safe-filename.js";
 import {
   AmbiguousFolderMountError,
   DirectoryAlreadyMountedError,

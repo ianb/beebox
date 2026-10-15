@@ -62,7 +62,7 @@ The return is both persisted and handed back.
 const box = await makeTmpBox();
 const result = await updateTransientState<{ lastUpdateId: number }>({
   boxRoot: box.root,
-  connectorName: "telegram",
+  connectorName: "gmail",
   defaultValue: { lastUpdateId: 0 },
   update: (state) => ({ lastUpdateId: state.lastUpdateId + 5 }),
 });
@@ -71,10 +71,10 @@ JSON.stringify(result)
 ```
 
 ```ts continue
-// Persisted to _bookkeeping/connectors/telegram.state.json, not just returned.
+// Persisted to _bookkeeping/connectors/gmail.state.json, not just returned.
 const onDisk = await loadTransientState({
   boxRoot: box.root,
-  connectorName: "telegram",
+  connectorName: "gmail",
   defaultValue: { lastUpdateId: -1 },
 });
 JSON.stringify(onDisk)
@@ -148,8 +148,8 @@ await box.cleanup();
 
 Missing and corrupt mean opposite things here. Missing is first run, and
 `defaultValue` is the correct answer. Corrupt is a damaged file, and resolving it
-to `defaultValue` would silently discard sync tokens and Telegram thread
-mappings — then the very next `updateTransientState` would write that loss back
+to `defaultValue` would silently discard sync tokens and alert latches
+— then the very next `updateTransientState` would write that loss back
 over the file.
 
 ```ts

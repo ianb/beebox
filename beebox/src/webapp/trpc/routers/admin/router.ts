@@ -1,21 +1,13 @@
 import { z } from "zod";
-import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, ownerProcedure } from "../../procedures.js";
-import { loadTelegramConfig } from "../../../../connectors/telegram/connector.js";
-import { telegramLegacySecretPath, telegramSecretName } from "../../../../connectors/telegram/helpers.js";
-import { forgetBoxSecret, setAndGrantSecret } from "../../../../core/secrets/lifecycle.js";
-import { boxSlug } from "../../../../lib/box-slug.js";
-import { createTelegramService } from "../../../../services/telegram.js";
-import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
-import { baseServerUrl } from "../../../base-server-url.js";
 import { googleAdminProcedures } from "./google.js";
 import { backupAdminProcedures } from "./backup.js";
 import { agentAuthAdminProcedures } from "./agent-auth.js";
 import { openrouterAdminProcedures } from "./openrouter.js";
-import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../../services/tailscale.js";
 import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../../box-config-write.js";
 import { isConfigurableModel, loadAddedModels } from "../../../../core/box/config.js";
@@ -56,142 +48,11 @@ const boxConfigSchema = z.object({
   googleServices: googleServicesSchema.default({}),
 });
 
-/** Per-box admin router (Telegram, box config). */
+/** Per-box admin router (box config). */
 export const adminRouter = router({
   ...inviteAdminProcedures,
   ...passwordResetAdminProcedures,
   ...gmailAdminProcedures,
-
-  /**
-   * Telegram's configured state — deliberately WITHOUT the bot token.
-   *
-   * It used to return `botToken` on both arms, which handed a live,
-   * unscopable, all-powerful credential to the admin frontend on every page
-   * load. Telegram has no derived-credential primitive at all (no scoping, no
-   * TTL, revoke-only via BotFather), so the token must terminate in the server
-   * process (`docs/implemented-plans/secret-custody.md`, "Broker escalations"). Callers
-   * that want to identify the bot use `botUsername`.
-   */
-  telegramStatus: ownerProcedure.query(async ({ ctx }) => {
-    const config = await loadTelegramConfig(ctx.boxRoot);
-    if (!config) {
-      const publicUrl = await resolveBoxPublicUrl(ctx.boxRoot);
-      return { configured: false, publicUrl, boxSlug: ctx.boxSlug };
-    }
-
-    const tg = ctx.services.telegram ?? createTelegramService(config.botToken);
-    try {
-      const [me, webhookInfo] = await Promise.all([
-        tg.getMe(),
-        tg.getWebhookInfo(),
-      ]);
-      return {
-        configured: true,
-        botUsername: me.username,
-        botFirstName: me.first_name,
-        webhookUrl: webhookInfo.url || null,
-        boxSlug: ctx.boxSlug,
-      };
-    } catch (err) {
-      return {
-        configured: true,
-        error: errorMessage(err),
-        boxSlug: ctx.boxSlug,
-      };
-    }
-  }),
-
-  telegramSetup: ownerProcedure
-    .input(z.object({ botToken: z.string().min(1) }))
-    .mutation(async ({ input, ctx }) => {
-      const tg = ctx.services.telegram ?? createTelegramService(input.botToken);
-      let me;
-      try {
-        me = await tg.getMe();
-      } catch (err) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Invalid bot token: ${errorMessage(err)}`,
-        });
-      }
-
-      const webhookSecret = crypto.randomBytes(32).toString("hex");
-      // Into the machine store, never a file in the box tree (Decision 3). The
-      // entry is this box's alone — a bot token routes to a single webhook URL,
-      // so `shareable: false` makes a grant to any other box an explained
-      // refusal rather than a silently broken integration.
-      // Keyed by the DISK-derived slug, which is what every telegram reader
-      // (the connector, the webhook route, notify-boxholder) resolves under —
-      // `ctx.boxSlug` can differ under `bbx serve --slug`, and a grant written
-      // under one and read under the other would silently never resolve.
-      const secretSlug = await boxSlug(ctx.boxRoot);
-      await setAndGrantSecret({
-        name: telegramSecretName(secretSlug),
-        value: JSON.stringify({ botToken: input.botToken, webhookSecret }),
-        slug: secretSlug,
-        access: "server",
-        note: "Telegram bot token + webhook secret",
-        owningBox: ctx.boxSlug,
-        shareable: false,
-      });
-
-      const publicUrl = await resolveBoxPublicUrl(ctx.boxRoot);
-
-      let webhookUrl: string | null = null;
-      if (publicUrl) {
-        webhookUrl = `${baseServerUrl(publicUrl)}/webhook/${ctx.boxSlug}/telegram`;
-        try {
-          await tg.setWebhook(webhookUrl, {
-            secret_token: webhookSecret,
-            allowed_updates: ["message", "edited_message"],
-          });
-        } catch (err) {
-          return {
-            success: true,
-            botUsername: me.username,
-            botFirstName: me.first_name,
-            webhookUrl,
-            webhookError: errorMessage(err),
-          };
-        }
-      }
-
-      return {
-        success: true,
-        botUsername: me.username,
-        botFirstName: me.first_name,
-        webhookUrl,
-      };
-    }),
-
-  telegramDisconnect: ownerProcedure.mutation(async ({ ctx }) => {
-    const config = await loadTelegramConfig(ctx.boxRoot);
-    if (config) {
-      try {
-        const tg = ctx.services.telegram ?? createTelegramService(config.botToken);
-        await tg.deleteWebhook();
-      } catch (e) { console.warn("Failed to delete Telegram webhook during disconnect (continuing):", e); }
-    }
-
-    // Revoke the grant and drop the store entry: disconnect must leave nothing
-    // resolvable behind, not merely stop using it. Idempotent either way.
-    const secretSlug = await boxSlug(ctx.boxRoot);
-    await forgetBoxSecret({ name: telegramSecretName(secretSlug), slug: secretSlug });
-
-    // The retired in-tree file is no longer read, but it is still deleted:
-    // a box configured before the store must not be left holding a stray
-    // credential file after disconnect.
-    const configPath = telegramLegacySecretPath(ctx.boxRoot);
-    try {
-      await fs.unlink(configPath);
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        console.warn("Could not remove Telegram config file (may already be gone):", e);
-      }
-    }
-
-    return { success: true };
-  }),
 
   boxConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, CONFIG_RELATIVE_PATH);

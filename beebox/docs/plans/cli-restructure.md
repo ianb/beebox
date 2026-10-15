@@ -62,7 +62,7 @@ Singular noun, parallel with `bbx job` / `bbx schedule`. Optional `[name]` scope
 |-----|-----|--------------|
 | `bbx connector list` | (new) | List configured connectors with status |
 | `bbx connector sync [name]` | (was `bbx wakeup --connector X`) | Pull inbound for a connector ad-hoc |
-| `bbx connector flush [name]` | `bbx finalize` | Send outbound (Telegram messages, push notifications) |
+| `bbx connector flush [name]` | `bbx finalize` | Send outbound (drafts, calendar and drive pushes) |
 
 `bbx wakeup` still does its full multi-phase cycle; `bbx connector sync` is the cleaner ad-hoc form when you just want to pull from one source without the wakeup machinery.
 

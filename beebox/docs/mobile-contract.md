@@ -1272,11 +1272,12 @@ See §1.3 (full request/response/errors).
   `test/core/notification/target.doctest.md` against the Swift target mirror.
 - **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
 
-### 5.11 Quick chat — `quickChat.submit`, `choose`, `discard`, `home`
+### 5.11 Quick chat — `quickChat.submit`, `choose`, `retry`, `discard`, `home`
 
 - **Direction:** native → box, bearer-authenticated tRPC (not batched). `POST
   /api/trpc/quickChat.submit` `{id,message,origin?,source?,hqService?,channel?}`, `POST /api/trpc/quickChat.choose`
-  `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.discard` `{id}`, and `GET
+  `{id,candidateId,channel?}`, `POST /api/trpc/quickChat.retry` `{id,channel?}`, `POST
+  /api/trpc/quickChat.discard` `{id}`, and `GET
   /api/trpc/quickChat.home`. The phone sends `channel: "ios-native"`. `origin` is `"typed"`,
   `"voice"`, or `"external"`, how the person entered the thought; an absent `origin` (a build from
   before it) is `"typed"`. External input requires a source; other origins reject `source`.
@@ -1290,7 +1291,14 @@ See §1.3 (full request/response/errors).
   `<external-input source="apple-app-intents">`. A repeated `submit` of a stored id keeps its
   stored origin, source, and hqService. A box from before hqService strips the key and frames the
   thought `stt="live"`. Each mutation answers a
-  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Each
+  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. A view may carry
+  `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+  whose `message` is the person's note and may be empty. Both box screens show the title,
+  linked to `url`, above the note, and hide an empty note. Retry on a `sending` row calls
+  `retry`, which delivers the stored record with its own words; `submit` refuses an empty
+  message. A box from before `retry` answers 404 `No procedure found on path …`; the phone then
+  resubmits the same id and message through `submit` when the message is not empty, and
+  otherwise shows the error. A missing record is also 404, with a different message. Each
   `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
   first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
   landmark resolves for its directory. Shapes:
@@ -1298,17 +1306,18 @@ See §1.3 (full request/response/errors).
   `src/webapp/trpc/routers/quick-chat.ts` (inputs, `quickChatHomeSchema`).
 - **Fixtures:** `test/mobile-contract/fixtures/quick-chat/`, parsed field for field by
   `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md` and by
-  `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the three request bodies
-  against `submit-request.json`, `choose-request.json`, and `discard-request.json`.
-- **Native caller:** the box screen and the App Intent, which have no web session mounted, so this is the native
-  path that sends a chat message without the web view (`ios-app/AGENTS.md`, bridge discipline).
-  The App Intent uses `origin: "external"` and `source: "apple-app-intents"`; a locked selected box
-  is refused before persistence. The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
+  `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the request bodies
+  against `submit-request.json`, `choose-request.json`, `retry-request.json`, and
+  `discard-request.json`. `view-sending-page-no-note.json` is a Clerk page with no note.
+- **Native caller:** the box screen, which has no web session mounted. This is the native
+  quick-chat composer path (`ios-app/AGENTS.md`, bridge discipline). Older App Intent
+  outbox entries with `origin: "external", source: "apple-app-intents"` still replay here;
+  new App Intents use §5.12 instead. The record `id` is a client-made UUID, sent lowercase; it becomes the chat message id, so a
   repeated `submit` of one id returns one record and posts once. A `sending` view with
   `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.
-- **Request deadline:** the App Intent's initial `quickChat.submit` request has a 20-second timeout
-  so Siri can return an honest local-queue result inside its execution window. Other quick-chat
-  mutations retain the normal 60-second request timeout.
+- **Request deadline:** legacy external `quickChat.submit` requests retain their bounded
+  20-second timeout; other quick-chat mutations use 60 seconds. Current App Intent
+  acknowledgment is local (§5.12), not a wait for this endpoint.
 - **Outbox:** the phone stores `{id,boxID,text,origin,source?,hqService?,createdAt,attempts,lastAttemptAt}` in
   `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
   answers. A failed request keeps it; retries follow a backoff while the app is in the
@@ -1322,6 +1331,138 @@ See §1.3 (full request/response/errors).
   Box `src/webapp/trpc/routers/quick-chat.ts`; `src/core/chat/routing/quick-chat-record.ts`.
 - **Drift:** LOUD. A request the server rejects keeps the entry in the outbox and the row
   visible; an answer the phone cannot decode fails the refresh and shows "Could not refresh".
+
+### 5.12 Quick capture — durable source acceptance
+
+Siri thoughts, Shortcuts material, native voice notes, share material plus words,
+and explicit later context use this path. The box-screen composer and existing
+quick-chat outbox retain §5.11; old pending entries keep their decoder and route.
+The App Intent no longer calls `BoxScreenStore.captureExternalThought` or awaits
+`quickChat.submit` before acknowledging capture.
+
+**Acceptance.** `POST /api/quick-captures/:captureId` is bearer-authenticated,
+file-backed `multipart/form-data`. It contains one JSON field `declaration` and,
+for image/audio, exactly one file part `material`. No second finalize call is
+required after the originating extension exits. Version 1 declaration:
+
+```json
+{"version":1,"capturedAt":"2026-10-12T12:00:00Z","source":"apple-share-extension","input":"Find the problem shown here","material":{"kind":"image","id":"10000000-0000-4000-8000-000000000001","mimeType":"image/png","byteLength":123,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","fileName":"screenshot.png"}}
+```
+
+The example describes a shape; the server verifies the actual length and digest.
+Client capture/item UUIDs are normalized lowercase. `source` is one of
+`apple-app-intents`, `apple-share-extension`, `apple-voice-recording`, or
+`apple-native-input`; these identify acquisition APIs, not inferred Siri versus
+Action Button callers. `input` is optional authored human text (10,000 UTF-16
+code units). `material` is one optional discriminated value: URL `{kind:"url",
+url,title?}` (HTTP(S) only), clipping `{kind:"clipping",text,title?}`, image, or
+audio. File declarations require item UUID, supported MIME, positive byte length
+at most 50 MiB, SHA-256, and safe display filename. No client filesystem path is
+accepted. A capture must have nonempty words or material. A text-only thought
+uses `input`; a clipping uses `material.text` and does not become a command.
+An interrupted audio declaration may add `recordingInterrupted:true`; it is
+invalid on non-audio/context events. This is recording provenance, not authored input.
+
+**Context.** A new capture/event UUID with `parentCaptureId` and `input` adds
+words to the explicit original capture. Version 1 context has no material. The
+phone persists it offline and waits for the original receipt; the server checks
+same owner and original identity. Context events cannot become context parents.
+Original and event box identity stay fixed. Events use independent stable chat
+message IDs; they never amend/resubmit original quick-chat text.
+
+**Receipt and conflicts.** Success `{id,state:"accepted"}` means all declared
+source bytes and immutable manifest are durably owned by the box. It does not
+mean transcription, chat dispatch, or requested work completed. Identical replay
+returns the same receipt; changed content/owner fails without overwrite. Missing,
+extra, truncated, or mismatched material is refused. Missing/revoked credentials
+are explicit failures. Explicit deletion keeps a Gone tombstone: late upload
+replay cannot recreate the source. Owner-scoped deletion also seals a tombstone
+for a not-yet-accepted ID, so cancellation cannot race a buffered upload into revival.
+
+**Status API.** Nonbatched bearer-authenticated tRPC `quickCapture.capabilities`
+returns `{version:1,maxFileBytes,maxInputCharacters,maxClippingCharacters,materialKinds}`;
+`quickCapture.list` returns `{captures:[...]}`; `detail` takes `{id}`. `retry`
+takes `{id}`, `choose` takes `{id,candidateId}`, `delete` takes `{id}`. All item
+operations and lists enforce original owner. Views carry
+`{id,state,capturedAt,source,input?,material?,parentCaptureId?,sourceRef?,
+transcript?,recordingInterrupted?,error?,attempts,nextAttemptAt?,serverAccepted:true,delivery?}`;
+`delivery` is a §5.11 `QuickChatView`. States: accepted, preparing, saved,
+needs-choice, sending, sent, failed, blocked, gone. Blocked context exposes the
+original pending choice where applicable; choose does not guess a different
+box/chat. Gone views omit deleted source words, material, transcript, and chat
+message payload. Context blocked by deleted parent retains its own words. An uncaptured deletion
+tombstone has no source/capturedAt payload; other views retain those fields.
+
+**Source and work.** Source memo plus attach scope lives outside the automatic
+intake inbox. A capture with typed or dictated words, and no recording, is
+written uncommitted to the git-ignored `_content/incoming/`, and the chat that
+receives it files it with `bbx mv --commit`. A capture with no words, or with a
+recording, is committed in `_content/captures/` on arrival. Optional memo
+`share-id` is the stable source identity; existing memo context carries
+URL/clipping evidence. File media uses existing image/audio handling. Source
+materialization (and its commit, in `_content/captures/`) precedes dispatch.
+Stored source refs are resolved through the shared containment helper and checked
+against the box's real path before source reads or transcription updates; an
+escaping ref fails closed.
+Material without authored input is saved without inventing an agent task.
+Voice audio persists before asynchronous transcription; empty/failed transcript
+retains playable audio and an explicit retry state. An empty transcript has no
+automatic paid retry; Retry remains available. External-input framing names
+source memo and retained-recording status, without implying a live speech turn.
+`input-kind="words"` identifies separately supplied instructions; `input-kind="transcript"`
+identifies derived speech. `retained-recording="1"` asserts audio availability, not
+that separately supplied words are a transcript. `recording-interrupted="1"`
+marks playable partial recording evidence that may end early.
+Six-day chat delivery expiry and seven-day dedup protection are retained.
+
+**Native ownership.** `QuickCaptureStore` owns an app-group directory per capture,
+copies and flushes files, then atomically publishes an immutable manifest plus
+separate coordinated status. No credentials or box URL enter the manifest.
+`CaptureDestinationStore` uses a separate app-group `captureDefaultBoxID`
+preference, not browsed selectedBoxID. One paired box may initialize it once;
+multiple boxes or a removed default require explicit choice. Siri/AppIntent
+paths refuse requiresDeviceUnlock regardless of phone unlock; share UI uses
+explicit device-owner authentication. Accepted box UUID never changes on retry. Removed-pairing phone copies remain
+accessible through local recovery/explicit export with their original protection.
+That path makes no server request and never rebinds ownership. Interrupted-copy
+recovery is not acceptance: voice Save repairs only a never-uploaded incomplete
+copy from the original finalized audio and verifies retained replay bytes.
+
+**Transfers.** One persisted multipart body is scheduled with a process-specific
+`app.beebox.ios.quick-capture.<bundle-id>` background URLSession identifier.
+Extension sessions set `sharedContainerIdentifier` to `group.app.beebox.ios`;
+main app routes completion events and resumes waiting contexts before finishing
+background callbacks; foreground acceptance also advances waiting contexts.
+Confirmed server receipt removes the temporary multipart copy, while retaining
+original media for playback. A local discard request is durable immediately,
+stops new uploads, and stays `discard-pending` until remote Gone confirmation.
+It does not claim completed deletion while offline. Foreground recovery refreshes capabilities/receipts before
+replay; automatic retry is bounded to seven days, retaining terminal failures.
+Background tasks have a one-hour resource timeout and new automatic scheduling
+stops in the last hour of that window, so a delayed transfer does not outlive it.
+Force quit may cancel system transfers; recovery then waits for reopening.
+Siri says “Saved on your phone for <box>” after local persistence and scheduling,
+without awaiting routing or promising a second spoken response.
+
+**Voice/system surfaces.** Start/Stop intents use the main recording coordinator;
+iOS 18+ AudioRecordingIntent requires a Live Activity. Widget/control extension
+opens `beebox://capture/voice?action=toggle|stop`; it owns no recorder or fake
+process-local recording state. Foreground task UI is the explicit fallback. Stop/show links for an existing
+protected draft require its in-app unlock; Siri/App Intents still refuse it.
+iOS 17 records through foreground UI without newer control APIs. AAC recording
+has a ten-minute/advertised-byte cap and finalized short segments: interruption
+retains completed audio, while sudden termination can lose an unfinished tail
+of at most ten seconds. Never claim complete audio from that recovered draft.
+
+**Fixtures and anchors.** `test/mobile-contract/fixtures/quick-capture/` is parsed
+by TypeScript and XCTest. Core/server anchors: `src/shared/quick-capture.ts`,
+`src/core/quick-capture/`, `src/webapp/routes/quick-capture/`,
+`src/webapp/trpc/routers/quick-capture.ts`. Native anchors:
+`Storage/QuickCaptureStore.swift`, `Storage/CaptureDestinationStore.swift`,
+`Services/QuickCaptureAPI.swift`, `Services/QuickCaptureUploadCoordinator.swift`,
+`Services/VoiceNoteCoordinator.swift`, `Intents/CaptureThoughtIntent.swift`,
+`Intents/VoiceNoteIntents.swift`, and share extension. No bridge emission shape
+or mounted-chat ownership change.
 
 ---
 
@@ -1392,7 +1533,8 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
-| Q1 | `quickChat.submit` / `choose` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,source?,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id}`; external requires `origin:"external",source:"apple-app-intents"`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift`; `Intents/CaptureThoughtIntent.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| Q1 | `quickChat.submit` / `choose` / `retry` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,source?,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id,channel:"ios-native"}` / `{id}`; external requires `origin:"external",source:"apple-app-intents"`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| Q2 | Quick capture (§5.12) | native/extension→box | one complete multipart POST plus owner-scoped tRPC capabilities/list/detail/retry/choose/delete | `Storage/QuickCaptureStore.swift`; `Services/QuickCaptureAPI.swift`; `Services/QuickCaptureUploadCoordinator.swift`; `Intents/CaptureThoughtIntent.swift`; `Intents/VoiceNoteIntents.swift` | `shared/quick-capture.ts`; `routes/quick-capture/`; `trpc/routers/quick-capture.ts`; `core/quick-capture/` | LOUD; local source retained |
 | W3 | Box screen navigation (§3.5) | web→native | main-frame navigation to `<baseURL>/box`, cancelled by native | `Views/ChatWebView.swift` · `isBoxScreenURL`, `Coordinator.mainFramePolicy(for:)` | the `/<box>/box` route; the landmark menu's box row | SILENT-degraded |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
@@ -1689,6 +1831,18 @@ ios-app/BeeBox/BeeBoxAppDelegate.swift
 ios-app/BeeBox/BeeBox.entitlements
 
 # Shared golden fixtures — any fixture change is a contract change (directory prefix)
+# Box-level quick capture acceptance and native mirrors (§5.12)
+beebox/src/shared/quick-capture.ts
+beebox/src/core/quick-capture/
+beebox/src/webapp/routes/quick-capture/
+beebox/src/webapp/trpc/routers/quick-capture.ts
+ios-app/BeeBox/Storage/QuickCaptureStore.swift
+ios-app/BeeBox/Storage/CaptureDestinationStore.swift
+ios-app/BeeBox/Services/QuickCaptureAPI.swift
+ios-app/BeeBox/Services/QuickCaptureUploadCoordinator.swift
+ios-app/BeeBox/Services/VoiceNoteCoordinator.swift
+ios-app/BeeBox/Intents/VoiceNoteIntents.swift
+
 beebox/test/mobile-contract/
 ```
 

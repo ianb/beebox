@@ -18,6 +18,7 @@ import { quickChatRowId, rowFace, type QuickChatView } from "../../pages/box-scr
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { ErrorText } from "../ui/ErrorText";
+import { ExternalLink } from "../ui/ExternalLink";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
@@ -109,7 +110,15 @@ function QuickChatRow({ view, boxSlug, busy, error, actions }: {
     <li id={quickChatRowId(view.id)}>
       <Card padding="sm" border="subtle">
         <Stack gap="sm">
-          <Text as="p" size="sm" tone="subtle" italic>&ldquo;{view.message}&rdquo;</Text>
+          {view.page === undefined ? null : (
+            <Text as="p" size="sm">
+              <ExternalLink id={`bbx-box-screen-page-${view.id}`} href={view.page.url}>{view.page.title}</ExternalLink>
+            </Text>
+          )}
+          {/* A page sent from the Clerk may carry no note: the page title is the row then. */}
+          {view.page !== undefined && view.message === "" ? null : (
+            <Text as="p" size="sm" tone="subtle" italic>&ldquo;{view.message}&rdquo;</Text>
+          )}
           <FaceBody view={view} boxSlug={boxSlug} busy={busy} actions={actions} />
           {error === undefined ? null : <ErrorText>{error}</ErrorText>}
         </Stack>

@@ -25,6 +25,7 @@ const ImageChannelSchema = z.enum([
   "camera-user",
   "camera-environment",
   "gallery",
+  "import",
   "screenshot",
   "download",
   "scan",
@@ -116,7 +117,7 @@ The image file itself lives in the card's attach scope, pointed to by
 Frontmatter fields:
 - \`filename:\` — \`{ref, via}\` for the attached image file.
   \`via\` says how the image came into the box:
-  - \`channel\` — \`camera-user\`, \`camera-environment\`, \`gallery\`,
+  - \`channel\` — \`camera-user\`, \`camera-environment\`, \`gallery\`, \`import\`,
     \`screenshot\`, \`download\`, \`scan\`, or \`generated\`.
   - \`at\` — the acquisition timestamp supplied by the
     capture/upload/import flow (for example, camera shutter time,

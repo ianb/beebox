@@ -63,6 +63,10 @@
   publish: concepts/chat-schedules.md
   description: "Timers the agent sets from chat that fire later."
 
+- source: beebox/docs/plugins.md
+  publish: concepts/plugins.md
+  description: "Plugins: bundled libraries (recipes, courses) a box turns on, how they are activated, and what stays in the engine."
+
 
 - source: beebox/docs/architecture/01-what-is-this.md
   publish: architecture/01-what-is-this.md
@@ -86,10 +90,6 @@
 - source: beebox/docs/connectors/drive.md
   publish: install/drive.md
   description: "The three kinds of Drive card and how the Drive connector syncs them."
-
-- source: beebox/docs/connectors/telegram.md
-  publish: install/telegram.md
-  description: "Connecting a Telegram chat to a box."
 
 - source: beebox/docs/connectors/calendar.md
   publish: install/calendar.md

@@ -33,7 +33,14 @@ import {
   probeFailure,
   readHealthProbe,
 } from "./smoke-probe.js";
-import { formatSmokeReport, smokeLogPath, summarizeSmokeLog, type SmokeRunRecord } from "./smoke-lib.js";
+import {
+  formatSmokeReport,
+  smokeLogPath,
+  summarizeSmokeLog,
+  type SmokeRunRecord,
+  type SmokeSummary,
+  type StepStats,
+} from "./smoke-lib.js";
 
 export const REPO_ROOT = join(import.meta.dirname, "..");
 
@@ -106,15 +113,24 @@ export function record(entry: SmokeRunRecord): void {
   }
 }
 
-export function report(): number {
+function logSummary(): SmokeSummary {
   let lines: string[] = [];
   try {
     lines = readFileSync(logPath(), "utf-8").split("\n");
   } catch (_e) {
     // No log yet is a legitimate state, and summarize says so.
   }
-  process.stdout.write(formatSmokeReport(summarizeSmokeLog(lines)));
+  return summarizeSmokeLog(lines);
+}
+
+export function report(): number {
+  process.stdout.write(formatSmokeReport(logSummary()));
   return 0;
+}
+
+/** Each step's history from the log, by step id, for the walk's usual times. */
+export function stepHistory(): Map<string, StepStats> {
+  return new Map(logSummary().steps.map((step) => [step.id, step]));
 }
 
 /**
@@ -222,7 +238,7 @@ export class Budget {
    * Checking the clock only between steps bounds nothing: every browser call
    * spawns `bin/browse`, and a hung Chrome would block one step forever. That
    * is worse here than anywhere else, because `bin/finish-verify` runs its
-   * commands with `spawnSync` and no timeout — a smoke walk that never returns
+   * commands with no timeout — a smoke walk that never returns
    * hangs the whole landing with no verdict printed at all.
    */
   async race<T>(step: string, work: Promise<T>): Promise<T> {

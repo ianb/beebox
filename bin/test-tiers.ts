@@ -93,6 +93,18 @@ export function taprcPatterns(packageRoot: string): TaprcPatterns {
   };
 }
 
+/**
+ * `.taprc`'s `jobs:`, or null when it sets none (tap then uses one per core).
+ */
+export function taprcJobs(packageRoot: string): number | null {
+  const path = join(packageRoot, ".taprc");
+  if (!existsSync(path)) return null;
+  const parsed: unknown = parse(readFileSync(path, "utf-8"));
+  if (!isRecord(parsed)) return null;
+  const jobs = parsed.jobs;
+  return typeof jobs === "number" && Number.isInteger(jobs) && jobs > 0 ? jobs : null;
+}
+
 /** The parse boundary: YAML hands back `unknown`, and `.taprc` may be anything. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

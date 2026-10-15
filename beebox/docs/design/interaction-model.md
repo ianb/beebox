@@ -12,9 +12,7 @@ Two coexisting truths (ruling 5):
   and load-bearing for the engine (see `processing.md`).
 - **The system is definitely also a chatbot.** Web chat is a continuous,
   session-resuming presence: the server keeps a long-lived agent session per
-  chat ([`../chat/sessions.md`](../chat/sessions.md)); the reactor's chat path
-  resumes per-thread sessions for connector threads such as Telegram
-  (`src/core/reactor/DESIGN.md`). The current design direction makes chat the
+  chat ([`../chat/sessions.md`](../chat/sessions.md)). The current design direction makes chat the
   standing frame primitive ([interface-as-cards](../plans/interface-as-cards.md)).
 
 **Proactivity is active ambition** (aspiration): the boxholder wants *more* of
@@ -49,8 +47,8 @@ calendar, a prime early integration, is [`../connectors/calendar.md`](../connect
 The old claim that "nothing else is particularly privileged — not voice, not
 web, not any particular UI" no longer holds: **the web has become privileged**,
 or at least the richest surface and the main focus (ruling 6). Chat has
-dedicated machinery (its own reactor path, session pool, history); Telegram
-and other channels are additional connectors, not peers of the web UI.
+dedicated machinery (its own session pool, history); connectors are not peers
+of the web UI.
 
 ## Sync is an event, not just data transfer
 

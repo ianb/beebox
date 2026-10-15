@@ -7,24 +7,16 @@ import { Pre } from "../../ui/Pre";
 import { JsonView } from "../../ui/JsonView";
 import type { SessionContentBlock } from "../../../api";
 import type { ActivityPart } from "../message-parsing";
-import { describeToolCall, summarizeActivity } from "./activity-wording";
+import { type Excerpt, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
 
 type ActivityParts = ActivityPart[];
 
-/**
- * Render a single tool call — the plain-language line expands to the raw input and result.
- */
-function ToolDetail({ block }: { block: SessionContentBlock }) {
+/** The raw tool input and result: the deepest level of a line. */
+function RawToolDetail({ block }: { block: SessionContentBlock }) {
   const input = block.input;
   const result = block.resultSummary;
-  const description = describeToolCall(block);
-
   return (
-    <details className="group/tool">
-      <summary className="cursor-pointer list-none flex items-center gap-1 hover:text-warm-700 py-0.5">
-        <span className="text-warm-500 group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
-        <span>{description}</span>
-      </summary>
+    <>
       {input ? (
         <div className="bbx-scroll-fade-bottom mt-1 mb-1 ml-3 max-h-40 overflow-auto rounded bg-warm-50 p-3">
           <JsonView value={input} />
@@ -38,6 +30,54 @@ function ToolDetail({ block }: { block: SessionContentBlock }) {
           </Pre>
         </>
       ) : null}
+    </>
+  );
+}
+
+/** The plain excerpt under a line: what an edit replaced, or a labelled snippet. Spans, so it can sit in a `<summary>`. */
+function ExcerptView({ excerpt }: { excerpt: Excerpt }) {
+  switch (excerpt.kind) {
+    case "change":
+      return (
+        <span className="block mb-1 ml-3 space-y-0.5 whitespace-pre-wrap break-words">
+          {excerpt.before ? <span className="block text-warm-500 line-through">{excerpt.before}</span> : null}
+          {excerpt.after ? <span className="block text-warm-800">{excerpt.after}</span> : null}
+          {excerpt.everywhere ? <span className="block text-warm-500 italic">(every place it appeared)</span> : null}
+        </span>
+      );
+    case "text":
+      return (
+        <span className="block mb-1 ml-3">
+          <span className="text-warm-500">{excerpt.label}: </span>
+          <span className="text-warm-800 whitespace-pre-wrap break-words">{excerpt.text}</span>
+        </span>
+      );
+  }
+}
+
+/**
+ * Render a single tool call: the plain-language line, its place, and, in an
+ * expanded list, the plain excerpt under it. The excerpt sits inside the
+ * summary so the opened raw input and result come after it. A lone step's
+ * line is the collapsed view, so its excerpt waits behind the line's click.
+ */
+function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; excerptInline: boolean }) {
+  const description = describeToolCall(block);
+  const { place, failed, excerpt } = describeToolDetail(block);
+
+  return (
+    <details className="group/tool">
+      <summary className="cursor-pointer list-none hover:text-warm-700 py-0.5">
+        <span className="flex flex-wrap items-center gap-x-1">
+          <span className="text-warm-500 group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
+          <span>{description}</span>
+          {place ? <span className="text-warm-500">· {place}</span> : null}
+          {failed ? <span className="text-warm-500">· didn’t go through</span> : null}
+        </span>
+        {excerpt && excerptInline ? <ExcerptView excerpt={excerpt} /> : null}
+      </summary>
+      {excerpt && !excerptInline ? <ExcerptView excerpt={excerpt} /> : null}
+      <RawToolDetail block={block} />
     </details>
   );
 }
@@ -57,7 +97,7 @@ function countToolCalls(parts: ActivityParts): number {
   return count;
 }
 
-function ActivityGroupInner({ parts }: { parts: ActivityParts }) {
+function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; excerptInline: boolean }) {
   return (
     <>
       {parts.map((part, i) => {
@@ -76,7 +116,7 @@ function ActivityGroupInner({ parts }: { parts: ActivityParts }) {
               </details>
             );
           case "tools":
-            return part.tools.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} />);
+            return part.tools.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} excerptInline={excerptInline} />);
         }
       })}
     </>
@@ -96,7 +136,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   if (totalItems === 1) {
     return (
       <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
-        <ActivityGroupInner parts={parts} />
+        <ActivityGroupInner parts={parts} excerptInline={false} />
       </div>
     );
   }
@@ -110,7 +150,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
         <span>{summary}</span>
       </summary>
       <div className="mt-1 text-xs text-warm-600 leading-tight ml-1">
-        <ActivityGroupInner parts={parts} />
+        <ActivityGroupInner parts={parts} excerptInline />
       </div>
     </details>
   );

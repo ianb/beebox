@@ -54,5 +54,5 @@ See **`writing-style.md`** for the full style guide. Key points:
 - Mark things that are one-step aspirational vs. working now
 - See `spirit.md` for tone — avoid AIisms, stock cheerfulness, enterprise-speak
 - Don't describe illustrations — complement them
-- Web chat is primary; Telegram is one of several additional channels
+- Web chat is the primary surface
 - Cross-link architecture to the vignettes that precede it

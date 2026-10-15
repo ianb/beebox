@@ -7,25 +7,24 @@ const CHAT_SHUTDOWN_GRACE_MS = 10_000;
 export interface ShutdownChatSession {
   getSessionId(): string | null;
   isRunning(): boolean;
+  /** Settles when a run start in flight has finished or failed; at once when none is. */
+  whenStarted(): Promise<unknown>;
   once(event: "close", listener: () => void): unknown;
   stop(): void;
 }
 
+/**
+ * Stop every session and wait for each to close, all within one time limit.
+ * Live runs stop at once. A session still opening a turn is not running yet,
+ * but its start (the bootstrap docs commit, then the backend spawn) would
+ * finish after the caller tore the box down; so openings settle next, and a
+ * run they opened is stopped too. Stopping clears a session's queue, so a
+ * stopped run does not drain into a new send.
+ */
 export async function stopChatSessionsAndWait(
   sessions: ShutdownChatSession[],
   options?: { timeoutMs?: number; periodMs?: number },
 ): Promise<string[]> {
-  const closing = new Set<string>();
-  const waits = sessions.filter((session) => session.isRunning()).map((session, index) => {
-    const id = session.getSessionId() ?? `<pending-${String(index + 1)}>`;
-    closing.add(id);
-    const closed = new Promise<void>((resolve) => {
-      session.once("close", () => { closing.delete(id); resolve(); });
-    });
-    session.stop();
-    return closed;
-  });
-  if (waits.length === 0) return [];
   let timeout!: ReturnType<typeof startAwakeTimeout>;
   const expired = new Promise<"timeout">((resolve) => {
     timeout = startAwakeTimeout({
@@ -34,7 +33,33 @@ export async function stopChatSessionsAndWait(
       onTimeout: () => { resolve("timeout"); },
     });
   });
-  await Promise.race([Promise.all(waits), expired]);
-  timeout.stop();
-  return [...closing];
+  const label = (session: ShutdownChatSession): string => session.getSessionId() ?? `<pending-${String(sessions.indexOf(session) + 1)}>`;
+  const stopped = new Set<ShutdownChatSession>();
+  const unfinished = new Set<ShutdownChatSession>();
+  const closes: Promise<void>[] = [];
+  const stopRunning = (): void => {
+    for (const session of sessions) {
+      if (stopped.has(session) || !session.isRunning()) continue;
+      stopped.add(session);
+      unfinished.add(session);
+      closes.push(new Promise<void>((resolve) => {
+        session.once("close", () => { unfinished.delete(session); resolve(); });
+      }));
+      session.stop();
+    }
+  };
+  try {
+    stopRunning();
+    const opening = new Set(sessions);
+    const started = sessions.map((session) => session.whenStarted().then(() => { opening.delete(session); }));
+    if ((await Promise.race([Promise.all(started), expired])) === "timeout") {
+      return [...new Set([...unfinished, ...opening])].map(label);
+    }
+    stopRunning();
+    if (closes.length === 0) return [];
+    await Promise.race([Promise.all(closes), expired]);
+    return [...unfinished].map(label);
+  } finally {
+    timeout.stop();
+  }
 }

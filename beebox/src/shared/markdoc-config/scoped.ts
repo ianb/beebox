@@ -17,7 +17,7 @@ function isMdType(value: unknown, type: string): value is Record<string, unknown
 }
 
 /** Attributes as the author wrote them: ` key="text" count=2 ref=$a.b`. */
-export function authoredAttributes(attrs: Record<string, unknown>): string {
+function authoredAttributes(attrs: Record<string, unknown>): string {
   return Object.entries(attrs).map(([key, value]) => {
     if (typeof value === "string") return ` ${key}=${JSON.stringify(value)}`;
     if (typeof value === "number" || typeof value === "boolean") return ` ${key}=${String(value)}`;

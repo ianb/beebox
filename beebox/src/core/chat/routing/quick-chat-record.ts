@@ -13,6 +13,7 @@
 
 import { z } from "zod";
 import { isRecord } from "../../../shared/is-record.js";
+import { QUICK_CAPTURE_SOURCES } from "../../../shared/quick-capture.js";
 import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import { routingCandidateSchema, type RoutingCandidate } from "./policy.js";
 
@@ -22,7 +23,8 @@ export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
 /** How the person entered the thought. External inputs are neither keyboard text nor a recording. */
 export const QUICK_CHAT_ORIGINS = ["typed", "voice", "external"] as const;
 export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
-export const QUICK_CHAT_SOURCES = ["apple-app-intents"] as const;
+/** The phone's capture sources, and the Clerk browser extension (docs/implemented-plans/clerk-quick-send.md). */
+export const QUICK_CHAT_SOURCES = [...QUICK_CAPTURE_SOURCES, "browser-clerk"] as const;
 /**
  * The engine that produced a dictated thought's HQ text on the phone
  * (docs/plans/ios-quick-chat-hq.md); the same name as the native emission's
@@ -40,14 +42,26 @@ const deliverySchema = z.object({
 });
 export type QuickChatDelivery = z.infer<typeof deliverySchema>;
 const destinationSchema = z.object({ label: z.string(), sessionId: z.string().optional() });
+/**
+ * The web page a send carries: routing evidence and the row's label. Page
+ * text is third-party; it never becomes the delivered message.
+ */
+export const quickChatPageSchema = z.object({ title: z.string(), url: z.string(), site: z.string().optional() });
+export type QuickChatPage = z.infer<typeof quickChatPageSchema>;
 
 const baseShape = {
   id: z.string().uuid(), message: z.string(), createdAt: z.string(),
   /** Absent on records written before the origin was kept: those were typed. */
   origin: z.enum(QUICK_CHAT_ORIGINS).default("typed"),
   source: z.enum(QUICK_CHAT_SOURCES).optional(),
+  sourceRef: z.string().optional(),
+  retainedRecording: z.boolean().optional(),
+  recordingInterrupted: z.boolean().optional(),
+  captureInputKind: z.enum(["words", "transcript"]).optional(),
   /** Absent: a typed thought, or the phone's live transcript. */
   hqService: quickChatHqServiceSchema.optional(),
+  /** Present on a page sent from the Clerk; the message is then the person's note, possibly empty. */
+  page: quickChatPageSchema.optional(),
   candidates: z.array(routingCandidateSchema),
   /** Empty when routing was unavailable. Kept for calibration; never shown. */
   probabilities: z.record(z.string(), z.number()),
@@ -111,6 +125,8 @@ export const quickChatViewSchema = z.object({
   /** A `sending` record past the delivery window: offer Open chat and Discard, never Retry. */
   expired: z.literal(true).optional(),
   choices: z.array(z.object({ candidateId: z.string(), label: z.string(), detail: z.string().optional() })).max(MAX_CHOICES).optional(),
+  /** A page sent from the Clerk: the row shows its title, linked. */
+  page: z.object({ title: z.string(), url: z.string() }).optional(),
 });
 export type QuickChatView = z.infer<typeof quickChatViewSchema>;
 
@@ -130,7 +146,8 @@ function choiceView(candidate: RoutingCandidate): NonNullable<QuickChatView["cho
 
 /** What the box screen shows for one record at `now`. */
 export function quickChatView(record: QuickChatRecord, now: number): QuickChatView {
-  const base = { id: record.id, message: record.message, createdAt: record.createdAt, state: record.state };
+  const base = { id: record.id, message: record.message, createdAt: record.createdAt, state: record.state,
+    ...(record.page === undefined ? {} : { page: { title: record.page.title, url: record.page.url } }) };
   switch (record.state) {
     case "needs-choice": {
       const byId = new Map(record.candidates.map((candidate) => [candidate.id, candidate]));

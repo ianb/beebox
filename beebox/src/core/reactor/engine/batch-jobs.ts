@@ -1,5 +1,5 @@
 /**
- * Batch job processing — groups non-chat jobs into a single agent session.
+ * Batch job processing — groups jobs into a single agent session.
  *
  * This is the original reactor processing mode: all pending jobs are
  * described in one prompt, and the agent processes them sequentially,

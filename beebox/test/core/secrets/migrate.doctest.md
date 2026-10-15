@@ -4,7 +4,7 @@
 `_config/connectors/*.secret.json` into the machine store
 (`docs/implemented-plans/secret-custody.md`, "Rollout shape"). Three boxes below stand in
 for a real machine: two that share one Mistral key, one that has a *different*
-one, a Deepgram file (multi-field), a Telegram file (structurally per-box), an
+one, a Deepgram file (multi-field), an
 OAuth *token* file that must not be migrated at all, and a malformed file.
 
 Values are obvious placeholders, and the point of several assertions is that
@@ -16,7 +16,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCopyGrants, runMigrateSecrets } from "../../../src/cli/commands/secrets/migrate.js";
-import { listSecrets, setSecret } from "../../../src/core/secrets/lifecycle.js";
+import { listSecrets, setAndGrantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { loadSecretStore } from "../../../src/core/secrets/store.js";
 
 /** A minimal shapeVersion-3 box whose slug is its (one) root directory name. */
@@ -63,7 +63,6 @@ async function makeMachine() {
   await mkdir(boxes);
   await makeBox(boxes, "alpha", {
     "mistral.secret.json": MISTRAL_SHARED,
-    "telegram.secret.json": JSON.stringify({ botToken: "111:placeholder", webhookSecret: "placeholder-hook" }),
   });
   await makeBox(boxes, "beta", {
     "mistral.secret.json": MISTRAL_SHARED,
@@ -99,7 +98,6 @@ Boxes examined: alpha, beta, gamma
   deepgram — new entry; grants: beta
   mistral — new entry; grants: alpha, beta
   mistral/gamma — new entry, single-box; grants: gamma
-  telegram-bot/alpha — new entry, single-box; grants: alpha
   CONFLICT: "gamma" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/gamma".
             Readers ask for "mistral" and "gamma" holds no grant for it, so that connector reads as NOT CONFIGURED — a name that exists in the store no longer falls back to a legacy file. Decide which key the box should use, then grant it.
   skipped <boxes>/gamma/_config/connectors/google.secret.json — no store name is defined for "google" — left in place
@@ -130,7 +128,7 @@ so two boxes holding one credential dedupe instead of differing by key order.
 const applied = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
 print(applied.logs.slice(-4).join("\n"));
 =>
-Created 4 entries, wrote 5 grants, left 0 existing entries untouched.
+Created 3 entries, wrote 4 grants, left 0 existing entries untouched.
 1 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.
 The original files are LEFT IN PLACE — readers still fall back to them during the transition.
 Check each box with `bbx secrets status <box>`, then delete the files in a separate pass.
@@ -140,7 +138,7 @@ Check each box with `bbx secrets status <box>`, then delete the files in a separ
 const after = await loadSecretStore();
 print(JSON.stringify(after.value.grants, null, 2));
 print(`deepgram value: ${after.value.secrets["deepgram"]?.value}`);
-print(`single-box flags: ${after.value.secrets["telegram-bot/alpha"]?.shareable} ${after.value.secrets["mistral"]?.shareable}`);
+print(`single-box flags: ${after.value.secrets["mistral/gamma"]?.shareable} ${after.value.secrets["mistral"]?.shareable}`);
 =>
 {
   "beta": {
@@ -148,8 +146,7 @@ print(`single-box flags: ${after.value.secrets["telegram-bot/alpha"]?.shareable}
     "mistral": "server"
   },
   "alpha": {
-    "mistral": "server",
-    "telegram-bot/alpha": "server"
+    "mistral": "server"
   },
   "gamma": {
     "mistral/gamma": "server"
@@ -176,22 +173,23 @@ the stale file still holds.
 ```ts continue
 const again = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
 print(again.logs.find((line) => line.startsWith("Created")));
-=> Created 0 entries, wrote 0 grants, left 4 existing entries untouched.
+=> Created 0 entries, wrote 0 grants, left 3 existing entries untouched.
 ```
 
 ## `copy-grants`: provisioning a new box
 
 What `deploy/add-box.sh --secrets-from` does now. Access levels come across
 unchanged; a single-box secret is skipped with a note rather than failing the
-run, because the new box needs its own Telegram bot, not alpha's.
+run, because the new box needs its own token, not alpha's.
 
 ```ts continue
+await setAndGrantSecret({ name: "bucket-token/alpha", value: "placeholder-bucket-token", slug: "alpha", access: "server", owningBox: "alpha", shareable: false });
 const copied = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "alpha", toBoxOrRoot: "delta", agentConfirmed: true }));
 print(copied.logs.join("\n"));
 print(`delta now: ${JSON.stringify((await loadSecretStore()).value.grants["delta"])}`);
 =>
 Granted "mistral" to "delta" with server access (from "alpha").
-Skipped "telegram-bot/alpha" — single-box secret (belongs to "alpha") — set this box up with its own.
+Skipped "bucket-token/alpha" — single-box secret (belongs to "alpha") — set this box up with its own.
 delta now: {"mistral":"server"}
 ```
 
@@ -199,7 +197,7 @@ Two ways to copy nothing are deliberately worded differently, because
 `deploy/add-box.sh` reads them: a source with **no grants at all** is a machine
 that predates the store, and the script falls back to the old file copy; a
 source whose grants are **all single-box** must NOT trigger that fallback, or
-the new box would be handed the very Telegram token the skip just refused.
+the new box would be handed the very token the skip just refused.
 
 ```ts continue
 const noGrants = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "zeta", toBoxOrRoot: "delta", agentConfirmed: true }));
@@ -218,10 +216,10 @@ boxes — which is the whole point of the exercise:
 const listing = await listSecrets();
 print(listing.map((entry) => `${entry.name}: ${Object.keys(entry.grants).join(",")}`).join("\n"));
 =>
+bucket-token/alpha: alpha
 deepgram: beta
 mistral: beta,alpha,delta
 mistral/gamma: gamma
-telegram-bot/alpha: alpha
 ```
 
 ```ts cleanup
@@ -264,11 +262,11 @@ print(applied.logs.slice(-4).join("\n"));
 const grants = (await loadSecretStore()).value.grants;
 print(`alpha: ${JSON.stringify(grants["alpha"])}`);
 =>
-Created 4 entries, wrote 5 grants, left 1 existing entry untouched.
+Created 3 entries, wrote 4 grants, left 1 existing entry untouched.
 3 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.
 The original files are LEFT IN PLACE — readers still fall back to them during the transition.
 Check each box with `bbx secrets status <box>`, then delete the files in a separate pass.
-alpha: {"mistral/alpha":"server","telegram-bot/alpha":"server"}
+alpha: {"mistral/alpha":"server"}
 ```
 
 ```ts cleanup

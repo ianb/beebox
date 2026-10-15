@@ -13,7 +13,7 @@ import { useIsLoopback } from "../TailscaleSection";
 import {
   claudeEnabled, fromQuery, ready, summarizeAgentEngine, summarizeAllowedUsers, summarizeBackup, summarizeClaude,
   summarizeCloudflare, summarizeCodex, summarizeGmailFilters, summarizeGoogle, summarizeOpenRouter, summarizeSecrets,
-  summarizeTailscale, summarizeTelegram, type AdminSectionStatus,
+  summarizeTailscale, type AdminSectionStatus,
 } from "./admin-overview-summaries";
 
 export type { AdminSectionStatus } from "./admin-overview-summaries";
@@ -61,7 +61,6 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
   const codex = trpc.admin.codexStatus.useQuery();
   const google = trpc.admin.googleStatus.useQuery();
   const gmail = trpc.admin.gmailConfig.useQuery();
-  const telegram = trpc.admin.telegramStatus.useQuery();
   const secrets = trpc.secrets.boxStatus.useQuery();
   const cloudflare = trpc.cloudflarePublishConnections.list.useQuery();
   // Same gate as the Tailscale section: the exposure question is about this host, asked from it.
@@ -83,7 +82,6 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
     "gmail-filters": fromQuery(config, data => data.googleServices.gmail === true && gmail.error !== null
       ? { state: "error", message: gmail.error.message }
       : summarizeGmailFilters({ config: data, gmail: gmail.data })),
-    "telegram": fromQuery(telegram, summarizeTelegram),
     "secrets": fromQuery(secrets, summarizeSecrets),
     "cloudflare-publishing": fromQuery(cloudflare, summarizeCloudflare),
     "tailscale": loopback ? fromQuery(tailscale, summarizeTailscale) : ready("Managed on the host", "neutral"),

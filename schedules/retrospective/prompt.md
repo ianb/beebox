@@ -72,7 +72,7 @@ validates it and shows you a parse failure.
    human (the watch list is where those go). `bin/land` refusing is such a
    stop.
 5. Write the digest to `scratch/retrospective-digest.md` in this worktree and
-   publish it: `bin/exhibits add --title "Retrospective <date>" --ask fyi
+   publish it: `bin/exhibits add --title "Retrospective <date>"
    --prose "<one sentence: landed, or waiting and why>"
    scratch/retrospective-digest.md`. The digest says what you saw (how many
    entries, which patterns), what you changed (paths, and the entries behind

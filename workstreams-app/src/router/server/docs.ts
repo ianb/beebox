@@ -380,7 +380,7 @@ export async function serveDev(params: {
   // surface. The destructive control verbs (`/__router/{stop,retry}`,
   // `/workstreams/action/*`) remain POST-only + CSRF-classified (`control` in
   // router-auth.ts); GETs behind the router can still lazy-start processes
-  // (`/__router/dashboard/<name>`, any worktree path) — that is the router's
+  // (any worktree path) — that is the router's
   // core design, not a mutation this change exposes. Background:
   // issues/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md.
   const base = `/${name}/dev`;

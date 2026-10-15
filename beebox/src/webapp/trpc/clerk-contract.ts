@@ -103,3 +103,37 @@ export const tabArrangementOutput = z.object({
   open: z.string(),
   transferId: z.string().uuid(),
 });
+
+/**
+ * One Send to box: the page, the person's optional note, and the send's id.
+ * The id is made once per send and resent unchanged on retry; it is the quick
+ * chat record id and the webpage card's `capture-id`.
+ */
+export const sendInput = z.object({
+  id: z.string().uuid(),
+  // The person's words; empty when they sent the page with no note.
+  note: z.string().trim().max(10000),
+  url: z.string().url(),
+  title: z.string().min(1),
+  siteName: z.string().optional(),
+  byline: z.string().optional(),
+  excerpt: z.string().optional(),
+  readableMarkdown: z.string().min(1),
+  frozenHtml: z.string().optional(),
+});
+
+/**
+ * Where a send stands. A projection of the quick chat view, kept here so this
+ * file alone determines the wire shape (see the header).
+ */
+export const sendOutput = z.object({
+  // Box-relative path of the saved webpage card when it was last known.
+  card: z.string(),
+  state: z.enum(["needs-choice", "sending", "sent", "discarded"]),
+  destination: z.object({ label: z.string(), sessionId: z.string().optional() }).optional(),
+  queued: z.boolean().optional(),
+  reason: z.enum(["uncertain", "routing-unavailable", "destination-gone"]).optional(),
+  lastError: z.string().optional(),
+  expired: z.literal(true).optional(),
+  choices: z.array(z.object({ candidateId: z.string(), label: z.string(), detail: z.string().optional() })).optional(),
+});

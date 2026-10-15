@@ -28,10 +28,8 @@ import {
 } from "../effects.js";
 import { READY_BUDGET_MS, spawnGeneration, type Generation } from "./generation.js";
 import {
-  browseDirsFor,
   isolatedSecretsFileFor,
   killChildren,
-  stopDashboardCmd,
   touch,
   type CoreState,
 } from "./worktree-teardown.js";
@@ -43,18 +41,13 @@ export interface StartPlan {
   logStream: WriteStream;
   frontendPort: number;
   backendPort: number;
-  dashboardPort: number;
-  socketDir: string;
-  profileDir: string;
   baseUrl: string;
   childEnv: NodeJS.ProcessEnv;
-  browseEnv: NodeJS.ProcessEnv;
 }
 
 /** Which stage the startup reached, for the failed-startup page. */
 export interface StartProgress {
   failurePhase: string;
-  dashboardStarted: boolean;
 }
 
 async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<StartPlan> {
@@ -69,18 +62,9 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
   const logStream = createWriteStream(logFile, { flags: "a" });
   logStream.write(`\n=== router start ${new Date(effects.now()).toISOString()} ===\n`);
 
-  const [frontendPort, backendPort, dashboardPort] = await Promise.all([
-    effects.getPort(),
-    effects.getPort(),
-    effects.getPort(),
-  ]);
-  const { socketDir, profileDir } = browseDirsFor(state, name);
+  const [frontendPort, backendPort] = await Promise.all([effects.getPort(), effects.getPort()]);
   const isolatedSecretsFile = isolatedSecretsFileFor(state.config.browseDir, name);
-  await Promise.all([
-    fs.mkdir(socketDir, { recursive: true }),
-    fs.mkdir(profileDir, { recursive: true }),
-    ...(isolatedSecretsFile === undefined ? [] : [fs.mkdir(path.dirname(isolatedSecretsFile), { recursive: true })]),
-  ]);
+  if (isolatedSecretsFile !== undefined) await fs.mkdir(path.dirname(isolatedSecretsFile), { recursive: true });
 
   const baseUrl = `/${name}/`;
   // --disable-warning=DEP0040 silences the punycode deprecation that
@@ -111,14 +95,8 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
   // its operator's store to use, but never a throwaway one: the isolation
   // assertion is the router's to make, and it makes it only for worktrees.
   if (isolatedSecretsFile === undefined) delete childEnv.BBX_SECRETS_STORE_ISOLATED;
-  const browseEnv: NodeJS.ProcessEnv = {
-    ...process.env,
-    AGENT_BROWSER_SOCKET_DIR: socketDir,
-    AGENT_BROWSER_PROFILE: profileDir,
-    AGENT_BROWSER_IDLE_TIMEOUT_MS: String(config.idleTimeoutMs),
-  };
 
-  log(`[${name}] frontend=${frontendPort} backend=${backendPort} dashboard=${dashboardPort} base=${baseUrl}`);
+  log(`[${name}] frontend=${frontendPort} backend=${backendPort} base=${baseUrl}`);
 
   return {
     wt,
@@ -126,47 +104,29 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
     logStream,
     frontendPort,
     backendPort,
-    dashboardPort,
-    socketDir,
-    profileDir,
     baseUrl,
     childEnv,
-    browseEnv,
   };
 }
 
 /**
- * Everything from the dashboard daemon through readiness, sharing ONE
- * try/catch: a synchronous/rejected failure at ANY of these stages (dashboard
- * start already catches its own; a rejected pidStore.write is the one that used
- * to slip past uncaught) must reach the same cleanup + guarded-publication
- * logic as a waitForHttp timeout, not bypass it and leak the two children.
+ * Everything from the pidfile write through readiness, sharing ONE try/catch:
+ * a synchronous/rejected failure at ANY of these stages (a rejected
+ * pidStore.write is the one that used to slip past uncaught) must reach the
+ * same cleanup + guarded-publication logic as a waitForHttp timeout, not bypass
+ * it and leak the two children.
  *
- * Resolves to whether the dashboard daemon started; on failure rejects with the
- * cause, having recorded which stage it happened in on `progress`.
+ * On failure rejects with the cause, having recorded which stage it happened
+ * in on `progress`.
  */
 async function bringUpGeneration(
   state: CoreState,
   args: { plan: StartPlan; generation: Generation; progress: StartProgress },
 ): Promise<void> {
-  const { effects, config, log } = state;
+  const { effects, config } = state;
   const { plan, generation, progress } = args;
-  const { wt, browseEnv, dashboardPort, frontendPort, backendPort, baseUrl, socketDir, profileDir } = plan;
+  const { wt, frontendPort, backendPort, baseUrl } = plan;
   const name = wt.name;
-
-  // Kill any orphaned dashboard daemon for this socket dir before starting a new one.
-  await stopDashboardCmd(state, browseEnv);
-
-  try {
-    await effects.spawn("node", {
-      args: [config.agentBrowserBin, "dashboard", "start", "--port", String(dashboardPort)],
-      options: { env: browseEnv, stdio: "ignore", timeout: 15000 },
-    });
-    progress.dashboardStarted = true;
-    log(`[${name}] dashboard ready on :${dashboardPort}`);
-  } catch (err) {
-    log(`[${name}] dashboard failed to start: ${errMessage(err)}`);
-  }
 
   progress.failurePhase = "pidStore.write";
   await effects.pidStore.write(name, {
@@ -175,9 +135,6 @@ async function bringUpGeneration(
     fastifyPid: generation.fastify.pid,
     frontendPort,
     backendPort,
-    dashboardPort: progress.dashboardStarted ? dashboardPort : null,
-    socketDir,
-    profileDir,
     routerPid: config.routerPid,
     startedAt: effects.now(),
   });
@@ -203,16 +160,12 @@ async function failStart(
   args: { handle: WorktreeHandle; plan: StartPlan; generation: Generation; progress: StartProgress; err: unknown },
 ): Promise<never> {
   const { effects, worktrees, retryAttempts, log } = state;
-  const { handle, plan, generation, progress, err } = args;
-  const { browseEnv, dashboardPort } = plan;
+  const { handle, generation, progress, err } = args;
   const name = handle.name;
   const { vite, fastify } = generation;
   const expect: PidExpectation = { vitePid: vite.pid, fastifyPid: fastify.pid };
 
   const killTimer = killChildren(state, { vitePid: vite.pid, fastifyPid: fastify.pid });
-  // The dashboard daemon started before waitForHttp; stop it too so a failed
-  // startup doesn't leak an agent-browser process.
-  if (progress.dashboardStarted) await stopDashboardCmd(state, browseEnv);
   // Safe even if pidStore.write above never ran (or never got this far) —
   // remove() falls through to a no-op unlink when the record is missing.
   await effects.pidStore.remove(name, expect);
@@ -236,8 +189,6 @@ async function failStart(
       reason: "requested",
       vitePid: vite.pid,
       fastifyPid: fastify.pid,
-      dashboardPort: progress.dashboardStarted ? dashboardPort : null,
-      browseEnv,
       killTimer,
     });
     throw statusError(captured.message, 502);
@@ -263,8 +214,8 @@ async function publishGeneration(
   args: { handle: WorktreeHandle; plan: StartPlan; generation: Generation; progress: StartProgress; sourceToken: string | null },
 ): Promise<WorktreeHandle> {
   const { effects, worktrees, log } = state;
-  const { handle, plan, generation, progress, sourceToken } = args;
-  const { browseEnv, dashboardPort, frontendPort, backendPort, socketDir, profileDir, logFile } = plan;
+  const { handle, plan, generation, sourceToken } = args;
+  const { frontendPort, backendPort, logFile } = plan;
   const { vite, fastify } = generation;
   const name = handle.name;
   const expect: PidExpectation = { vitePid: vite.pid, fastifyPid: fastify.pid };
@@ -277,15 +228,12 @@ async function publishGeneration(
   if (worktrees.get(name) !== handle) {
     log(`[${name}] startup finished but this generation was superseded — self-cleaning, not publishing`);
     const killTimer = killChildren(state, { vitePid: vite.pid, fastifyPid: fastify.pid });
-    if (progress.dashboardStarted) await stopDashboardCmd(state, browseEnv);
     await effects.pidStore.remove(name, expect);
     transitionLifecycle(handle, {
       phase: "stopping",
       reason: "requested",
       vitePid: vite.pid,
       fastifyPid: fastify.pid,
-      dashboardPort: progress.dashboardStarted ? dashboardPort : null,
-      browseEnv,
       killTimer,
     });
     return handle;
@@ -300,11 +248,6 @@ async function publishGeneration(
     fastifyPid: fastify.pid,
     frontendPort,
     backendPort,
-    dashboardPort: progress.dashboardStarted ? dashboardPort : null,
-    dashboardUrl: progress.dashboardStarted ? `http://localhost:${dashboardPort}/` : null,
-    socketDir,
-    profileDir,
-    browseEnv,
     logFile,
     sourceToken,
     lastActivity: effects.now(),
@@ -335,10 +278,9 @@ export async function startWorktree(state: CoreState, handle: WorktreeHandle): P
   const sourceToken = await effects.sourceToken(plan.wt.root);
   // Built BEFORE the spawn: the exit listeners attached inside spawnGeneration
   // record which phase they failed in, so `progress` has to exist first.
-  const progress: StartProgress = { failurePhase: "spawn", dashboardStarted: false };
+  const progress: StartProgress = { failurePhase: "spawn" };
   const generation = await spawnGeneration(state, { plan, handle, progress });
 
-  progress.failurePhase = "dashboard-start";
   try {
     await bringUpGeneration(state, { plan, generation, progress });
   } catch (err) {

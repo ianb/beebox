@@ -6,7 +6,7 @@
 
 The old `broadcastEvent` system was tightly coupled to SSE connections. Events were fire-and-forget: if no SSE clients were connected when an event fired, it was lost. This caused the schedule-fired bug — the server broadcast to 0/0 clients and the frontend never saw the agent's response.
 
-The system also had two separate `broadcastEvent` instances per box (one for the main routes at `/<slug>/`, one for webhooks at `/webhook/<slug>/`), which meant Telegram's webhook handler couldn't reach the same SSE clients as the chat routes.
+The system also had two separate `broadcastEvent` instances per box (one for the main routes at `/<slug>/`, one for webhooks at `/webhook/<slug>/`), so a webhook handler couldn't reach the same SSE clients as the chat routes.
 
 ## Architecture
 
@@ -21,7 +21,6 @@ The system also had two separate `broadcastEvent` instances per box (one for the
 | `wakeup-start/complete/error` | Wakeup cycle | `routes/actions.ts`, `trpc/routers/actions.ts` |
 | `question-answered` | User answers a question | `routes/actions.ts`, `trpc/routers/actions.ts` |
 | `card-created` | Card creation (capture, action, voice memo) | `routes/actions.ts`, `routes/capture.ts`, `trpc/routers/actions.ts` |
-| `cards-changed` | Telegram creates/processes cards | `routes/telegram.ts` |
 | `command-complete` | CLI command execution | `routes/commands.ts`, `trpc/routers/commands.ts` |
 
 ### Consumers (listen via the `events.subscribe` tRPC subscription)
@@ -112,7 +111,7 @@ The browser's `EventSource` automatically sends `Last-Event-ID` on reconnect. Th
 
 - **Server creates one EventBus per box** in `server.ts`
 - **All routes receive `eventBus`** — routes, tRPC context, webhook handlers
-- **Webhook routes share the same EventBus** — Telegram webhook emits to the same bus as chat routes
+- **Webhook routes share the same EventBus** — a webhook emits to the same bus as chat routes
 - **File watcher** uses `eventBus.emitTransient()` for high-frequency file-change events (not persisted to SQLite)
 
 ### Pruning

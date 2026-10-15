@@ -106,7 +106,6 @@ The school moved the field trip to Thursday.
 Forms are due Wednesday.
 apns skipped: no-audience
 web-push sent
-telegram skipped: no-audience
 
 push.sent[0].payload.url === `/${await boxSlug(box.root)}/chat?session=${SESSION}`
 => true
@@ -126,7 +125,6 @@ quiet | you asked | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
 Booked.
 apns skipped: present
 web-push skipped: present
-telegram skipped: present
 
 push.sent.length
 => 1
@@ -143,7 +141,6 @@ loud | first | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
 Filed.
 apns skipped: present
 web-push skipped: present
-telegram skipped: present
 
 push.sent.length
 => 1

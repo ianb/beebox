@@ -214,7 +214,7 @@ export class SecretNotShareableError extends SecretLifecycleError {
       `The secret "${opts.secretName}" is marked single-box` +
         (opts.owningBox === undefined ? "" : ` (it belongs to "${opts.owningBox}")`) +
         ` and cannot also be granted to "${opts.boxSlug}". Some credentials bind to one box ` +
-        "structurally — a Telegram bot token routes to a single webhook URL — so sharing one " +
+        "structurally — a bucket-scoped publish token works for one bucket only — so sharing one " +
         "would break the box already using it. Create a separate secret for this box.",
     );
     this.name = "SecretNotShareableError";

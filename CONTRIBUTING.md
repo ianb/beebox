@@ -49,7 +49,7 @@ the same change.
 
 - `src/cli/`: CLI commands
 - `src/core/`: the wakeup cycle, agent invocation, procedures
-- `src/connectors/`: integrations with external services (Gmail, Telegram, and others)
+- `src/connectors/`: integrations with external services (Gmail, Google Calendar, and others)
 - `src/webapp/`: the Fastify server and tRPC routers
 - `src/frontend/`: the React UI
 - `src/schemas/`: card type definitions

@@ -22,8 +22,7 @@ warns that others may fail turns that need tools.
 
 **Accounts, per connector, all optional.** A Google account, plus signing in
 with it and a one-time setup, for Gmail, Calendar, and Drive; the
-documentation calls that setup the hardest part of installing today. A Telegram bot token for
-Telegram. A transcription vendor key (Mistral, OpenAI, or Deepgram) for
+documentation calls that setup the hardest part of installing today. A transcription vendor key (Mistral, OpenAI, or Deepgram) for
 voice. A Cloudflare account for publishing. A git remote if you want the box
 pushed off the machine. Photos, voice, and typing need none of these.
 

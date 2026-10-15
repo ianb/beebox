@@ -57,7 +57,7 @@ interface StaticDoc {
 const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "migration-repair.md", readWhen: "Repairing a failed migration or answering its recovery question.", generate: generateMigrationRepairDoc },
   { filename: "bbx-commands.md", readWhen: "Running a `bbx` command beyond the everyday ones, using `bbx search`'s filters or reading its results, or creating a card from a template.", generate: generateBbxCommands },
-  { filename: "connectors.md", readWhen: "Anything about Gmail, Google Drive, Telegram, or calendar sync, or a credential a connector needs.", generate: generateConnectorsDocs },
+  { filename: "connectors.md", readWhen: "Anything about Gmail, Google Drive, or calendar sync, or a credential a connector needs.", generate: generateConnectorsDocs },
   { filename: "views.md", readWhen: "Writing or changing a view (a React component that renders a card type).", generate: generateViewsDoc },
   { filename: "procedures.md", readWhen: "Writing or modifying a procedure card, or debugging a procedure run.", generate: generateProcedureGuide },
   { filename: "triage.md", readWhen: "Working the intake → triage → handle pipeline, deciding where an inbox item belongs, or telling a reactor job from a triaged item.", generate: generateTriageGuide },

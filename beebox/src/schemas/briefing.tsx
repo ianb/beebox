@@ -101,7 +101,8 @@ them, then write their answer into the \`purpose:\` frontmatter field.
 When you record the box's purpose, also edit the root landmark,
 \`_content/Box.landmark.card\`: remove its stock onboarding openers
 ("Let me tell you what this box is for.", "What can you do?") from
-\`navigation.openers\`, or replace them with openers for that purpose.
+\`navigation.openers\` or replace them with openers for that purpose, and
+write its body, the place summary the person sees first.
 
 **Purpose** — the \`purpose:\` frontmatter field: one sentence or a
 short paragraph saying what this box (or directory) is for. Required

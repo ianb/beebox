@@ -55,10 +55,20 @@ export class SegmentTranscript {
     this.currentWords = null;
   }
 
-  /** Live text went down (a drop, or given up for the segment): fold, then mark the gap once. */
+  /**
+   * Live text went down (a drop, or given up for the segment): fold, then mark
+   * the gap once. Blank text gets no marker: nothing was said before the drop,
+   * so most likely nothing was said during it, and a marker alone would turn
+   * an empty recording into a non-empty one.
+   */
   openGap(): void {
     const pendingRecovery = this.gap === "awaitingText";
     this.fold();
+    if (this.committedText.trim() === "") {
+      this.committedText = "";
+      this.gap = "open";
+      return;
+    }
     if (!this.committedText.endsWith(LIVE_GAP_MARKER)) {
       this.committedText = mergeFinalText(this.committedText, LIVE_GAP_MARKER);
       this.markerPermanent = false;

@@ -15,10 +15,10 @@ import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";
 import { registerChatRoutes } from "./routes/chat/register.js";
-import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerBoxIdentityAssetRoutes } from "./routes/box-identity-assets.js";
+import { registerQuickCaptureRoutes } from "./routes/quick-capture/register.js";
 import { registerCaptureRoutes } from "./routes/capture/register.js";
 import { registerSecretsRoutes } from "./routes/secrets.js";
 import { registerBulkUploadRoutes } from "./routes/bulk-upload/register.js";
@@ -332,10 +332,11 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerHistoryRoutes(instance, box.boxRoot);
   await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat, chatBackend: options.chatBackend, devSurfaces });
   registerPairingRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
-  // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
+  // Box admin (google/box-config) now lives in the `admin` tRPC router
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route
   // (registered at the root, see server.ts).
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+  await registerQuickCaptureRoutes({ server: instance, boxRoot: box.boxRoot, services: options.services ?? {} });
   // The loopback secret resolver. It sits in the box scope like every other
   // route, but does its OWN auth: the box auth hook above accepts five
   // credentials and this interface accepts exactly one of them (the agent
@@ -361,11 +362,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
 }
 
 /**
- * Register a box on the server: its main scope under `/<slug>` and its
- * webhook scope under `/webhook/<slug>` (outside the auth wall).
+ * Register a box on the server: its scopes under `/<slug>`.
  */
 export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
-  const { box, eventBus, options } = deps;
+  const { box, options } = deps;
 
   await server.register(async (instance) => {
     await registerBoxRoutes(instance, deps);
@@ -381,11 +381,4 @@ export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): 
   await server.register(async (instance) => {
     await registerScanUploadRoutes({ server: instance, boxRoot: box.boxRoot, promoteRun: options.scanPromoteRun });
   }, { prefix: `/${box.slug}` });
-
-  // Register webhooks at /webhook/<slug>/ — outside auth so external
-  // services (Telegram, etc.) can reach them without Cloudflare Access.
-  // Shares the same EventBus as the main routes above.
-  await server.register(async (instance) => {
-    await registerTelegramRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
-  }, { prefix: `/webhook/${box.slug}` });
 }

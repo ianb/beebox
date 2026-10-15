@@ -108,8 +108,18 @@ const todo = await renderPerson({ name: "Rosa Quill", todos: [{ text: "Send the 
 => Rosa Quill | Archivist
 
 const unknown = await renderPerson({ name: "Rosa Quill", email: 42, nickname: "AL" }, "Notes.\n", { schema: null });
-[unknown.summary, unknown.html.includes(">email:<"), unknown.html.includes(">nickname:<"), unknown.html.includes(">name:<")]
+[unknown.summary, unknown.html.includes('field-label">Email<'), unknown.html.includes('field-label">Nickname<'), unknown.html.includes('field-label">Name<')]
 => [null, true, true, false]
+```
+
+The table reads like the rest of the card: a label is the key in sentence
+case, and a small object that names someone reads as the name with its role
+beside it.
+
+```ts
+const employer = await renderPerson({ name: "Rosa Quill", "day-job": { name: "Harbour Archive", role: "volunteer" } }, "Notes.\n", { schema: null });
+/data-card-section="frontmatter">(.*?)<\/dl>/s.exec(employer.html)?.[1].replace(/<[^>]+>/g, "|").replace(/\|+/g, "|")
+=> |Day job|Harbour Archive| (volunteer)|
 ```
 
 ## Booleans that are not drawn stay visible
@@ -120,7 +130,7 @@ instead of vanishing.
 
 ```ts
 const odd = await renderPerson({ name: "Rosa Quill", boxholder: "yes", archived: false }, "Notes.\n", { schema: null });
-[odd.summary, odd.html.includes(">boxholder:<"), odd.html.includes(">archived:<")]
+[odd.summary, odd.html.includes('field-label">Boxholder<'), odd.html.includes('field-label">Archived<')]
 => [null, true, true]
 ```
 

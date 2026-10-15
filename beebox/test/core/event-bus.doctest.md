@@ -34,7 +34,7 @@ const samples = {
   "question-answered": { path: "Q.question.card", answer: "yes", selectedId: "opt-1", timestamp: TS },
   "question-dismissed": { path: "Q.question.card", timestamp: TS },
   "question-expired": { path: "Q.question.card", timestamp: TS },
-  "cards-changed": { source: "telegram" },
+  "cards-changed": { source: "gmail" },
   "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Ada" }, timestamp: TS },
   "chat-complete": { sessionId: "s1", timestamp: TS },
   "chat-task": { sessionId: "s1", task: { phase: "started", taskId: "t1", status: "running", description: "Generate image" } },
@@ -151,7 +151,7 @@ dispatch — the three bad ones as `unknown` sentinels, the valid one intact:
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root);
-bus.emit("cards-changed", { source: "telegram" });
+bus.emit("cards-changed", { source: "gmail" });
 
 const dbPath = join(box.root, ".beebox/events.db");
 const raw = new Database(dbPath);
@@ -171,7 +171,7 @@ name and raw payload for debugging:
 
 ```ts continue
 JSON.stringify(rows[0].data)
-=> {"source":"telegram"}
+=> {"source":"gmail"}
 
 rows[1].data.originalEvent
 => card-created

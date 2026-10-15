@@ -141,3 +141,23 @@ const image = summarize({ path: "_content/inbox/photo-002.image.card" }, schemas
 [memo.title, memo.attrs, image.title, image.attrs].join("|")
 => Unread Note||photo 002|
 ```
+
+## Record — name as title, location and quantity as the summary line
+
+An inventory record's summary line says where it is and how many, joined by
+" · ". Either part alone stands alone; with neither, there is no line.
+
+```ts
+import { RecordSchema } from "../src/schemas/record.js";
+
+const records = new Map<string, CardSchema>([["record", RecordSchema]]);
+const record = (fields: Record<string, unknown>) =>
+  summarize({ path: "_content/inventory/Solder.record.card", type: "record", fields: { type: "record", name: "Solder", body: "", ...fields } }, records);
+[
+  record({ location: { text: "Tray 3" }, quantity: { value: "2 spools" } }),
+  record({ location: { text: "Tray 3" } }),
+  record({ location: { ref: "../Garage.memo.card" }, quantity: { value: "2 spools" } }),
+  record({}),
+].map((s) => [s.title, s.detail ?? null])
+=> [["Solder", "Tray 3 · 2 spools"], ["Solder", "Tray 3"], ["Solder", "2 spools"], ["Solder", null]]
+```

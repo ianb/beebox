@@ -14,6 +14,7 @@
  * `send()` so a failure is recorded retryably rather than fire-and-forgotten.
  */
 
+import { startAwakeTimeout } from "../../../shared/awake-timeout.js";
 import { createReadStream } from "node:fs";
 import type { ChatSession } from "./run/core.js";
 import type { ChatSessionRegistry } from "./registry/core.js";
@@ -152,14 +153,7 @@ export async function deliverUserMessage(opts: {
     // session object (guarded so duck-typed test-double registries without an
     // event emitter are a no-op).
     if (onSessionResolved && typeof registry.on === "function") {
-      const handler = (payload: { sessionId: string }): void => {
-        if (session.getSessionId() !== payload.sessionId) return;
-        registry.off("session-assigned", handler);
-        void Promise.resolve(onSessionResolved(payload.sessionId)).catch((e: unknown) => {
-          console.error(`[${logPrefix}] Persisting resolved target ${payload.sessionId} failed:`, e);
-        });
-      };
-      registry.on("session-assigned", handler);
+      observeAssignedSession({ registry, session, onAssigned: onSessionResolved, logPrefix });
     }
   }
   wireSession?.(session);
@@ -208,4 +202,32 @@ export async function deliverUserMessage(opts: {
   if (!sent) throw new UserMessageDeliveryError();
   recordUserMessage();
   return { sessionId: session.getSessionId(), queued: false };
+}
+
+
+/** Bind one exact pending session; never await its persistence inside a caller's message lock. */
+export function observeAssignedSession(opts: {
+  registry: Pick<ChatSessionRegistry, "on" | "off">;
+  session: ChatSession;
+  onAssigned: (sessionId: string) => void | Promise<void>;
+  logPrefix: string;
+}): () => void {
+  const { registry, session } = opts;
+  const detach = (): void => {
+    timer.stop(); registry.off("session-assigned", handler);
+    session.removeListener("error", detach); session.removeListener("close", detach);
+  };
+  const handler = (payload: { sessionId: string }): void => {
+    if (session.getSessionId() !== payload.sessionId) return;
+    detach();
+    void Promise.resolve(opts.onAssigned(payload.sessionId)).catch((error: unknown) => {
+      console.error(`[${opts.logPrefix}] Could not retain assigned chat identity:`, error instanceof Error ? error.name : "UnknownError");
+    });
+  };
+  // This bounds background listener retention; it must not keep a finished
+  // worker or server alive while a session still has no assigned identity.
+  const timer = startAwakeTimeout({ timeoutMs: 10 * 60 * 1000, onTimeout: detach, unref: true });
+  registry.on("session-assigned", handler);
+  session.once("error", detach); session.once("close", detach);
+  return detach;
 }

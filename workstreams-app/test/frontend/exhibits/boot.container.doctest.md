@@ -15,7 +15,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 // import. Handing the global over is the smallest way to render one here.
 Object.assign(globalThis, { React });
 
-import { ExhibitContainer } from "../../../src/frontend/exhibits/boot/Container.js";
+import { ExhibitContainer } from "../../../src/frontend/exhibits/Container.js";
 import type { ExhibitBoot } from "../../../src/shared/exhibits.js";
 
 function boot(overrides: Partial<ExhibitBoot>): ExhibitBoot {
@@ -130,4 +130,25 @@ JSON.stringify({
   dataIsLink: figures.includes('href="trace.json"') && !figures.includes("Enlarge A2"),
 })
 => {"enlarge":true,"imageInButton":true,"dialogClosed":true,"rawLink":true,"dataIsLink":true}
+```
+
+## The control bar for a raw page
+
+A raw `index.html` page that references `/controls.ts` gets the same two
+controls the container shows, in one strip: Reply in the session first, then
+Comment. Nothing else of the container comes with it.
+
+```ts
+import { ControlBar } from "../../../src/frontend/exhibits/controls/ControlBar.js";
+
+const bar = renderToStaticMarkup(
+  createElement(ControlBar, { scope: "logo-bakeoff/round-3", contentRef: { current: null } }),
+);
+JSON.stringify({
+  reply: bar.includes("Reply in the session"),
+  comment: bar.includes(">Comment</button>"),
+  replyFirst: bar.indexOf("Reply in the session") < bar.indexOf(">Comment</button>"),
+  noBreadcrumb: !bar.includes("←"),
+})
+=> {"reply":true,"comment":true,"replyFirst":true,"noBreadcrumb":true}
 ```

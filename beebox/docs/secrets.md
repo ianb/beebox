@@ -76,7 +76,6 @@ one in this table; see "Google client credentials" below.
 | `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` `getBoxGoogleClientCreds` | — | — |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
 | `openrouter` | `core/openrouter.ts` (the fallback route for embeddings, audio questions, Whisper HQ transcription, and the opt-in Gemini scan backend; the *only* route for the `mai` HQ services and the `gemini` TTS backend), `/api/adapters/openrouter` | — | — (new since custody; store-only from the start) |
-| `telegram-bot/<box>` | `connectors/telegram-helpers.ts`, admin setup | `telegram.secret.json` | — |
 
 **One deliberate reuse outside this table.** The dev repo's document-comment
 surface transcribes spoken comments with `BBX_OPENAI_API_KEY` — the
@@ -112,11 +111,6 @@ surfaces:
   store grant against. This one reads `GOOGLE_OAUTH_CLIENT_ID` /
   `GOOGLE_OAUTH_CLIENT_SECRET` from the environment, and that is real
   configuration for that surface, not a legacy fallback.
-
-`telegram-bot/<box>` is a **single-box** entry: it carries `owningBox` +
-`shareable: false` and is granted automatically by telegram setup. A grant to
-any other box is refused with an explanation — a Telegram bot token routes to
-one webhook URL, so sharing would break routing rather than merely be unwise.
 
 ## Why a secret exists
 
@@ -192,8 +186,7 @@ label), bounded only so the store and the admin page stay readable: one line,
 shape, which is what keeps one entry, one grant, and one rotation true for
 every provider. A credential that is structurally several fields is stored as a
 **JSON string** the consumer parses and validates with its own zod schema —
-`deepgram` (`{apiKey, projectId}`) and `telegram-bot/<box>`
-(`{botToken, webhookSecret}`).
+`deepgram` (`{apiKey, projectId}`).
 
 A stored value that is not valid JSON, or does not match the consumer's shape,
 degrades to **not configured** with one warning naming the secret
@@ -307,7 +300,7 @@ are **advisory toward the value and authoritative about who decides**:
 - **Probe** (`src/core/secrets/probe-registry.ts`) — after a value is stored, one
   cheap harmless authenticated call decides `verified: ok | failed | unchecked`
   on the entry. `mistral`/`openai`/`openai-thinking`/`gemini`/`deepgram` use a
-  models-or-projects listing; `telegram-bot/<box>` uses `getMe`; any name with
+  models-or-projects listing; any name with
   no entry stays `unchecked`.
 
 **Probe targets are server-owned and nothing else can name one.** An
@@ -315,7 +308,7 @@ agent-supplied probe URL would send the freshly-saved secret wherever the agent
 pointed it — agents supply format hints, never probe targets. A `family/` probe
 additionally requires the entry to carry `owningBox` + `shareable: false`, which
 only the connector flow that owns the family sets: without that, an agent could
-declare `telegram-bot/anything` and choose where a value the boxholder pasted
+declare a name in the family and choose where a value the boxholder pasted
 gets sent.
 
 Only an auth rejection (401/403; 400 as well for Google, which answers a bad key
@@ -328,7 +321,7 @@ paths, which is stronger evidence than any probe.
 
 A stored reason is assembled from the status code, fixed prose, and (for a
 network failure) the error's *class* only — never a message, since fetch and
-proxy errors quote the request URL and Telegram's probe URL contains the token.
+proxy errors quote the request URL, which can contain the token.
 A verdict is written back only if the entry's `updated` stamp still matches the
 value that was probed, so a slow probe cannot land on a rotated key.
 

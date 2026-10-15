@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createClaudeAgent } from "../../src/core/agent/invoke/core.js";
 import { createCodexAgent } from "../../src/core/agent/codex-agent.js";
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
@@ -21,6 +21,19 @@ async function preparedBox() {
   await box.write(MANIFEST_PATH, MIGRATIONS.filter((m) => m.name !== PROBE).map((m) => JSON.stringify({ name: m.name, "applied-at": "2026-01-01T00:00:00Z" })).join("\n") + "\n");
   await box.commitAll("seed");
   return box;
+}
+// Sections that need cancellation to land mid-script or mid-repair abort the
+// sweep's own `signal` at that point. A short `executionMs` budget cannot
+// promise it: the budget also covers snapshot and git setup, which under host
+// load can outlast it before the script starts. The budget timer aborts the
+// same signal, and "Draining does not consume the execution budget" below
+// covers the timer itself.
+class Expired extends Error { constructor() { super("execution budget expired"); this.name = "Expired"; } }
+async function waitForFile(file) {
+  while (true) {
+    try { await access(file); return; }
+    catch { await new Promise((resolve) => setTimeout(resolve, 25)); }
+  }
 }
 const waitForAbort = (signal) => signal.aborted ? Promise.resolve() : new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
 async function stopped(pid) {
@@ -56,9 +69,14 @@ const box = await preparedBox();
 const pidFile = join(box.root, "child.pid");
 const childCode = "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)";
 const script = `const fs=require('node:fs');const {spawn}=require('node:child_process');const child=spawn(process.execPath,['-e',${JSON.stringify(childCode)}],{stdio:'ignore'});fs.writeFileSync(${JSON.stringify(pidFile)},String(child.pid));setInterval(()=>{},1000);`;
-const runScript = ({ signal }) => runMigrationProcess({ file: process.execPath, args: ["-e", script], cwd: box.root, env: process.env, signal });
-await sweepMigrations({ boxRoot: box.root, executionMs: 2000, runScript })
-=> throws MigrationExecutionTimeoutError
+const expiry = new AbortController();
+const runScript = ({ signal }) => {
+  // Expire once the descendant exists, so it is there to be stopped.
+  void waitForFile(pidFile).then(() => expiry.abort(new Expired()));
+  return runMigrationProcess({ file: process.execPath, args: ["-e", script], cwd: box.root, env: process.env, signal });
+};
+await sweepMigrations({ boxRoot: box.root, signal: expiry.signal, runScript })
+=> throws Expired
 
 const pid = Number(await readFile(pidFile, "utf8"));
 JSON.stringify({ childAlive: !(await stopped(pid)), phase: (await boxMaintenanceStatus(box.root)).phase, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE), snapshot: refs(box, `refs/bbx/migrations/${PROBE}/snapshots/`).length > 0 })
@@ -75,14 +93,17 @@ await box.cleanup();
 const box = await preparedBox();
 let runs = 0;
 let invoked = 0;
+const expiry = new AbortController();
 const repairAgent = { invokeStructured: async (_schema, options) => {
   invoked += 1;
+  // Expire while the repair is running.
+  expiry.abort(new Expired());
   await waitForAbort(options.signal);
   return { success: false, sessionId: "cancelled-repair", error: "cancelled", exitCode: 1 };
 } };
-await sweepMigrations({ boxRoot: box.root, repair: true, executionMs: 2000,
+await sweepMigrations({ boxRoot: box.root, repair: true, signal: expiry.signal,
   runScript: async () => { runs += 1; return 1; }, repairAgent })
-=> throws MigrationExecutionTimeoutError
+=> throws Expired
 
 JSON.stringify({ runs, invoked, phase: (await boxMaintenanceStatus(box.root)).phase, receipt: refs(box, `refs/bbx/migrations/${PROBE}/repair-started`).length > 0 })
 => {"runs":1,"invoked":1,"phase":"exclusive","receipt":true}

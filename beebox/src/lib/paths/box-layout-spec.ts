@@ -81,6 +81,15 @@ export const BOX_LAYOUT = [
     agentDescription: "Held low-confidence items, paired with a question card.",
   },
   {
+    boxDirsKey: "incoming",
+    path: "_content/incoming",
+    area: "content",
+    description:
+      "Pages sent from the Clerk and phone captures with words, waiting for the chat that quick chat chose to file them. " +
+      "Git-ignored by its own `.gitignore`; a card enters git when it is filed. Not triaged.",
+    agentDescription: "Pages and captures sent to the box, not filed yet (git-ignored until filed)",
+  },
+  {
     boxDirsKey: "recipes",
     path: "_content/recipes",
     area: "content",
@@ -158,7 +167,7 @@ export const BOX_LAYOUT = [
     description: "Outbound cards staged for delivery (push notifications, replies). Flushed by `bbx finalize`.",
     agentDescription:
       "Cards that make something happen **outside** the box — an action serialized as a card for an " +
-      "external effector to pick up and execute (a Telegram message to send, etc.), flushed by " +
+      "external effector to pick up and execute (an email draft to push, etc.), flushed by " +
       "`bbx finalize`.",
   },
   {

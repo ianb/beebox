@@ -1,7 +1,8 @@
 # `POST /api/chat/send` — the ack is not coupled to the engine spawn
 
-The idle path acks the way the busy path always has: persist the user message
-and the message-id claim, answer, *then* start the run
+The idle path acks the way the busy path always has: once the session admits
+the send, persist the user message and the message-id claim, answer, *then*
+start the run
 (`docs/implemented-plans/emission-model.md`, Track A). `{turnId}` means "the box durably has
 your message and this is where its output will appear", not "the engine
 started" — starting it can take minutes on a cold agent, and the client (plus
@@ -15,9 +16,11 @@ import { ChatSession } from "../../../src/core/chat/session/run/core.js";
 import type { BusEvent } from "../../../src/core/event-bus/core.js";
 
 /**
- * Hold every `ChatSession.send()` open at its first instruction — the stand-in
- * for a slow engine start. Nothing awaits the send any more, so the route runs
- * to completion while a send is parked here; `entered` proves one is.
+ * Hold every engine start (`ChatSession`'s private `startRun`) open — the
+ * stand-in for a slow cold spawn. The send has already been admitted and its
+ * message recorded by then, so the route acks while the start is parked here;
+ * `entered` proves one is. Parking `send()` itself would hold the send before
+ * admission, and the route waits for admission before it acks.
  */
 interface SendGate {
   entered: Promise<void>;
@@ -27,27 +30,28 @@ interface SendGate {
 }
 
 function openSendGate(): SendGate {
-  const original = ChatSession.prototype.send;
+  const original: unknown = Reflect.get(ChatSession.prototype, "startRun");
+  if (typeof original !== "function") throw new Error("ChatSession.startRun is gone; move this gate to the engine start");
   let markEntered = (): void => {};
   const entered = new Promise<void>((resolve) => { markEntered = () => resolve(); });
   let letGo = (): void => {};
   const held = new Promise<void>((resolve) => { letGo = () => resolve(); });
   let markCompleted = (): void => {};
   const completed = new Promise<void>((resolve) => { markCompleted = () => resolve(); });
-  ChatSession.prototype.send = async function patched(message: Parameters<typeof original>[0]) {
+  Reflect.set(ChatSession.prototype, "startRun", async function patched(this: ChatSession): Promise<unknown> {
     markEntered();
     await held;
     try {
-      return await original.call(this, message);
+      return await Reflect.apply(original, this, []);
     } finally {
       markCompleted();
     }
-  };
+  });
   return {
     entered,
     completed,
     release: () => letGo(),
-    restore: () => { ChatSession.prototype.send = original; },
+    restore: () => { Reflect.set(ChatSession.prototype, "startRun", original); },
   };
 }
 ```
@@ -70,8 +74,8 @@ const res = await ctx.request({
   payload: { session: "new", message: "how cold is it out", messageId: "ack-1" },
 });
 
-// The send is still held at its first instruction, so the backend has not been
-// asked for a run yet — and the client already has its turn.
+// The engine start is still parked, so the backend has not been asked for a
+// run yet — and the client already has its turn.
 `${res.statusCode} | turn=${typeof res.body.turnId} | recorded=${recorded.length} | runs=${backend.runs.length} | buffered=${getTurnBuffer(String(res.body.turnId)) !== undefined}`
 => 200 | turn=string | recorded=1 | runs=0 | buffered=true
 ```

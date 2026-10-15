@@ -16,7 +16,6 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
 import { addSubscription } from "../../../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../../../src/services/push.js";
-import { createFakeTelegram } from "../../../../src/services/telegram.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import { writePresence } from "../../../../src/core/notification/presence.js";
 import { pairFakePushDevice } from "../../../../src/core/mobile/pairing.js";
@@ -29,22 +28,19 @@ process.env.BBX_PUSH_STORE_DIR = storeDir;
 // No box environment: every section but the last delivers in this process.
 for (const name of ["BBX_SERVER_URL", "BBX_BOX_NAME", "BBX_AGENT_TOKEN", "BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
 
-// A box whose boxholder subscribed a browser and set a Telegram chat.
+// A box whose boxholder subscribed a browser.
 const box = await makeTmpBox({ git: true });
-await box.seed("_config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
-box.commitAll("seed");
 await addSubscription({
   boxSlug: await boxSlug(box.root),
   subscription: { endpoint: "https://push.example/phone", keys: { p256dh: "p", auth: "a" } },
   now: new Date(),
 });
-const tg = createFakeTelegram({ username: "bot" });
 const push = createFakePush();
 
 // Run with captured output; ids are random (a letter, then 8 base64url
 // characters), so they print as <id>.
-const ID = /\bn[\w-]{8}(?=: (apns|web-push|telegram) )/;
-async function run(title, options, stdin, services = { tg, push }, root = box.root) {
+const ID = /\bn[\w-]{8}(?=: (apns|web-push) )/;
+async function run(title, options, stdin, services = { push }, root = box.root) {
   const out = [];
   const origLog = console.log;
   const origErr = console.error;
@@ -79,20 +75,17 @@ await run(undefined, { check: true })
 =>
 apns: no
 web-push: yes
-telegram: yes
 exit 0
 ```
 
-A subscribed browser and a Telegram chat are not enough on their own: without
-VAPID keys a push cannot be sent, and without the bot secret a Telegram
-message cannot, so `--check` says no and exits 1:
+A subscribed browser is not enough on its own: without VAPID keys a push
+cannot be sent, so `--check` says no and exits 1:
 
 ```ts
 await run(undefined, { check: true }, undefined, {})
 =>
 apns: no
 web-push: no
-telegram: no
 exit 1
 ```
 
@@ -107,7 +100,6 @@ bareCheck
 =>
 apns: no
 web-push: no
-telegram: no
 exit 1
 ```
 
@@ -116,12 +108,12 @@ exit 1
 ```ts
 await run("Field trip form due", { target: "card:_content/inbox/field-trip.email.card", loudness: "loud", body: "Sign it by Friday." })
 =>
-<id>: apns skipped (no-audience), web-push sent, telegram sent
+<id>: apns skipped (no-audience), web-push sent
 exit 0
 
 const slug = await boxSlug(box.root);
-JSON.stringify([tg.sent.at(-1).text.replace(slug, "<box>"), tg.sent.at(-1).silent])
-=> ["Field trip form due\nSign it by Friday.\n/<box>/browse/_content/inbox/field-trip.email.card",false]
+JSON.stringify([push.sent.at(-1).payload.body, push.sent.at(-1).payload.url.replace(slug, "<box>"), push.sent.at(-1).payload.silent])
+=> ["Sign it by Friday.","/<box>/browse/_content/inbox/field-trip.email.card",false]
 ```
 
 ## Stdin is the body only when asked: `--body -` or `--body-file -`; `quiet` is the default
@@ -135,23 +127,23 @@ let stdinReads = 0;
 const counted = async () => { stdinReads += 1; return "never read"; };
 const quietLog = console.log;
 console.log = () => {};
-const unasked = await runNotify(box.root, { title: "Unasked", options: { target: "dashboard", channel: "telegram" }, readStdin: counted, source: "doctest", services: { tg, push } });
+const unasked = await runNotify(box.root, { title: "Unasked", options: { target: "dashboard", channel: "web-push" }, readStdin: counted, source: "doctest", services: { push } });
 console.log = quietLog;
 JSON.stringify([unasked, (await lastIntent()).body, stdinReads])
 => [0,"",0]
 
 await run("Weekly summary", { target: "dashboard", body: "-" }, "Three cards changed.\n")
 =>
-<id>: apns skipped (no-audience), web-push sent, telegram sent
+<id>: apns skipped (no-audience), web-push sent
 exit 0
 
 const summary = await lastIntent();
 JSON.stringify([summary.body, summary.loudness, summary.source])
 => ["Three cards changed.","quiet","doctest"]
 
-await run("From stdin", { target: "dashboard", bodyFile: "-", channel: "telegram" }, "Via --body-file -\n")
+await run("From stdin", { target: "dashboard", bodyFile: "-", channel: "web-push" }, "Via --body-file -\n")
 =>
-<id>: telegram sent
+<id>: web-push sent
 exit 0
 
 (await lastIntent()).body
@@ -196,9 +188,9 @@ bbx notify
 ```ts
 const bodyFile = path.join(box.root, "body.txt");
 await fs.writeFile(bodyFile, "Line one\nLine two\n");
-await run("From a file", { target: "chat:new", bodyFile, loudness: "loud", channel: "telegram" })
+await run("From a file", { target: "chat:new", bodyFile, loudness: "loud", channel: "web-push" })
 =>
-<id>: telegram sent
+<id>: web-push sent
 exit 0
 
 (await lastIntent()).body
@@ -249,7 +241,7 @@ stderr: Error: Invalid notification target "nowhere": no scheme. Valid targets: 
 exit 2
 stderr: Error: --loudness must be one of dot, quiet, loud (got "shout")
 exit 2
-stderr: Error: --channel must be one of apns, web-push, telegram (got "pager")
+stderr: Error: --channel must be one of apns, web-push (got "pager")
 exit 2
 stderr: Error: give --body or --body-file, not both
 exit 2
@@ -272,7 +264,7 @@ registration, but the server has no APNs key.
 ```ts
 await pairFakePushDevice(box.root, { label: "test phone" });
 await writePresence(box.root, { activeWeb: 0, now: new Date() });
-const sentBefore = [push.sent.length, tg.sent.length];
+const sentBefore = [push.sent.length];
 const loggedBefore = (await readRecent(box.root, { days: 1 })).length;
 await run("Pick up Sam", { target: "chat:new", loudness: "loud", body: "At 3.", tag: "pickup", dryRun: true })
 =>
@@ -282,14 +274,13 @@ presence: 0 active web sessions (live reading)
 audience:
   apns: 1 device (test phone, sandbox) [unconfigured]
   web-push: 1 subscription
-  telegram: chat 777
-would try: apns, web-push, telegram
+would try: apns, web-push
 would skip: none
 dry run: nothing sent, nothing logged
 exit 0
 
-[push.sent.length === sentBefore[0], tg.sent.length === sentBefore[1], (await readRecent(box.root, { days: 1 })).length === loggedBefore]
-=> [true, true, true]
+[push.sent.length === sentBefore[0], (await readRecent(box.root, { days: 1 })).length === loggedBefore]
+=> [true, true]
 ```
 
 The dry run applies the same rule a send does, so it shows the effect of the
@@ -297,16 +288,15 @@ live presence reading and of `--channel`. `--presence <n>` substitutes a
 reading, to preview a `quiet` notification with someone in the app:
 
 ```ts continue
-await run("Pick up Sam", { target: "chat:new", loudness: "quiet", dryRun: true, presence: "2", channel: "telegram" })
+await run("Pick up Sam", { target: "chat:new", loudness: "quiet", dryRun: true, presence: "2", channel: "web-push" })
 =>
 intent: quiet "Pick up Sam" -> chat:new
 presence: 2 active web sessions (--presence)
 audience:
   apns: 1 device (test phone, sandbox) [unconfigured]
   web-push: 1 subscription
-  telegram: chat 777
 would try: none
-would skip: telegram (present)
+would skip: web-push (present)
 dry run: nothing sent, nothing logged
 exit 0
 
@@ -345,7 +335,6 @@ fake mode: every channel sends through its fake (BBX_NOTIFY_FAKE)
 audience:
   apns: 1 device (test phone, sandbox)
   web-push: 1 subscription
-  telegram: chat 777
 would try: apns
 would skip: none
 dry run: nothing sent, nothing logged
@@ -364,9 +353,7 @@ untouched. The auth wall is up, so the agent bearer is doing real work.
 ```ts
 const serverApns = createFakeApns();
 const serverPush = createFakePush();
-const serverTg = createFakeTelegram({ username: "bot" });
-const server = await makeTestServer({ openAccess: false, services: { notify: { apns: serverApns, push: serverPush, tg: serverTg } } });
-await fs.writeFile(path.join(server.boxRoot, "_config/box.json"), JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
+const server = await makeTestServer({ openAccess: false, services: { notify: { apns: serverApns, push: serverPush } } });
 await pairFakePushDevice(server.boxRoot, { label: "test phone" });
 await addSubscription({
   boxSlug: await boxSlug(server.boxRoot),
@@ -378,18 +365,18 @@ process.env.BBX_BOX_NAME = TEST_SLUG;
 process.env.BBX_AGENT_TOKEN = getOrCreateAgentToken(server.boxRoot);
 
 const localApns = createFakeApns();
-const local = { apns: localApns, push, tg };
-const localBefore = [localApns.sent.length, push.sent.length, tg.sent.length];
+const local = { apns: localApns, push };
+const localBefore = [localApns.sent.length, push.sent.length];
 await run("Pick up Sam", { target: "chat:new", loudness: "loud", body: "At 3." }, undefined, local, server.boxRoot)
 =>
-<id>: apns sent, web-push sent, telegram sent
+<id>: apns sent, web-push sent
 exit 0
 
 JSON.stringify({
-  server: [serverApns.sent.length, serverPush.sent.length, serverTg.sent.length],
-  localUntouched: JSON.stringify([localApns.sent.length, push.sent.length, tg.sent.length]) === JSON.stringify(localBefore),
+  server: [serverApns.sent.length, serverPush.sent.length],
+  localUntouched: JSON.stringify([localApns.sent.length, push.sent.length]) === JSON.stringify(localBefore),
 })
-=> {"server":[1,1,1],"localUntouched":true}
+=> {"server":[1,1],"localUntouched":true}
 ```
 
 The server logged it, with this shell's source:
@@ -409,7 +396,6 @@ without it nothing about the path is printed.
 stderr: [notify] via the box server (<server>)
 apns: yes
 web-push: yes
-telegram: yes
 exit 0
 ```
 
@@ -424,8 +410,7 @@ presence: 0 active web sessions (--presence)
 audience:
   apns: 1 device (test phone, sandbox)
   web-push: 1 subscription
-  telegram: chat 777
-would try: apns, web-push, telegram
+would try: apns, web-push
 would skip: none
 dry run: nothing sent, nothing logged
 exit 0
@@ -436,9 +421,9 @@ process instead would quietly lose the channels only the server has keys for.
 
 ```ts continue
 await server.cleanup();
-const beforeDown = [localApns.sent.length, push.sent.length, tg.sent.length].join();
+const beforeDown = [localApns.sent.length, push.sent.length].join();
 const down = await run("Pick up Sam", { target: "dashboard", loudness: "loud" }, undefined, local, server.boxRoot).catch((e) => `threw: ${e.name}: ${e.message.split(":")[0]}`);
-JSON.stringify([down, [localApns.sent.length, push.sent.length, tg.sent.length].join() === beforeDown])
+JSON.stringify([down, [localApns.sent.length, push.sent.length].join() === beforeDown])
 => ["threw: NotifyServerError: The box's server could not be reached",true]
 ```
 

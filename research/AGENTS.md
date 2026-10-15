@@ -60,8 +60,9 @@ official API no longer issues credentials without a manual review. What works:
   and `.../api/comments/tree?link_id=<id>&limit=9999`. Archived at ingest, so
   scores and counts are stale and removed text is missing.
 - The thread's `.rss` feed (`.../comments/<id>/.rss`). Reddit's own data, but
-  it returns 429 after a few requests.
+  it returns 429 after a few requests, and Reddit ends RSS on 2026-11-13.
 - `i.redd.it` images fetch directly; image posts often carry the content.
 
-Do not use stealth-browser or residential-proxy fetchers. Details and the
-proposed tool: [fetch-blocked-pages](../issues/features/2026-10-04-fetch-blocked-pages.md).
+Other hosts and search: [web-search-fetch](web-search-fetch/README.md). Do not
+use stealth-browser or residential-proxy fetchers until the boxholder decides
+that question. Details and the proposed tool: [fetch-blocked-pages](../issues/features/2026-10-04-fetch-blocked-pages.md).

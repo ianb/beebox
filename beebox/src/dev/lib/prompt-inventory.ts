@@ -11,7 +11,6 @@ import * as path from "node:path";
 import { cardSchemas } from "../../schemas.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../../core/reactor/prompts.js";
 import { CHAT_SYSTEM_PROMPT } from "../../core/chat/session/run/core.js";
-import { buildThreadSystemPrompt } from "../../core/chat/session/thread.js";
 import { COMMIT_NUDGE_PROMPT } from "../../core/agent/invoke/core.js";
 import { OBSERVER_SYSTEM_PROMPT } from "../../core/retro/observer.js";
 import { buildJudgePrompt } from "../../core/procedure/engine-validate-model.js";
@@ -58,17 +57,6 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
     source: "src/core/chat/session/run/core.ts → CHAT_SYSTEM_PROMPT",
     scope: "System prompt for the persistent web UI chat session. Active whenever the user is chatting via the main chat page.",
     text: CHAT_SYSTEM_PROMPT,
-  });
-
-  entries.push({
-    title: "Chat Thread System Prompt",
-    source: "src/core/chat/session/thread.ts → buildThreadSystemPrompt()",
-    scope: "System prompt for per-thread chat sessions (e.g. Telegram threads). Each thread gets its own long-lived Claude process with this prompt.",
-    text: buildThreadSystemPrompt({
-      threadRef: "${threadRef}",
-      chatDescription: "${chatDescription}",
-      sessionViewBaseUrl: "${sessionViewBaseUrl}",
-    }),
   });
 
   entries.push({

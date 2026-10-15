@@ -41,10 +41,12 @@ const memo = render({
     status: "new",
     created: "2026-07-01",
   },
+  body: "Three quotes so far.\n",
 });
 ```
 
 A memo with no declared `prominence` shows its type's default and says so.
+The memo has a body, so its type fields are here rather than on the front.
 The symbol row draws the mark and the group as written. The memo's own fields
 follow, in the shared fields table; the title, todos, and theme are shown
 elsewhere and are not repeated:
@@ -57,8 +59,30 @@ rows(memo)
   "Contains = Porch repair quotes",
   "Prominence = ordinary, the type's default",
   "Symbol = 🏠 glyph: 🏠 · background: #fde",
-  "status: = new",
-  "created: = 2026-07-01",
+  "Status = new",
+  "Created = 2026-07-01",
+]
+```
+
+The fields table reads its keys as labels and small objects as one value
+(`test/lib/readable-fields.doctest.md`). A record is headed by its `name:`
+(`cardTitle`), so the table leaves out the `name` row that would repeat the
+header:
+
+```ts
+rows(render({
+  path: "_content/lending/Camp_stove.record.card",
+  type: "record",
+  schema: memoSchema,
+  frontmatter: { name: "Camp stove", location: { text: "With Idris" }, quantity: { value: "1 stove", note: "missing lid" } },
+  body: "Borrowed for the lake trip.\n",
+}))
+=> [
+  "Filed at = _content/lending/Camp_stove.record.card",
+  "Card type = record",
+  "Prominence = ordinary, the type's default",
+  "Location = With Idris",
+  "Quantity = 1 stove (missing lid)",
 ]
 ```
 
@@ -90,24 +114,47 @@ rows(render({ ...broken, frontmatter: { status: [1, 2] } }))
 => ["Filed at = _content/Broken.memo.card", "Card type = memo"]
 ```
 
-A landmark has no body, so `splitCardFields` sends its type fields to the
-front. The place page replaces that front, so for a landmark Properties shows
-them under Fields instead; otherwise `navigation` would show only in Source
-(docs/implemented-plans/landmark-arrival.md, Track C). Other body-less types keep their
-fields on the front.
+A landmark's body is the place summary, and most landmarks have none. With an
+empty body, `splitCardFields` sends the type fields to the front, but the place
+page replaces that front and draws no fields. So for a landmark Properties
+shows them under Fields whether or not it has a body; otherwise `navigation`
+would show only in Source (docs/implemented-plans/landmark-arrival.md, Track C;
+docs/implemented-plans/place-shows-cards.md, Track C).
 
 ```ts
-const landmarkSchema = { hasBodyField: false, defaultProminence: null };
-const landmark = render({
+const landmarkSchema = { hasBodyField: true, defaultProminence: "background" };
+const landmark = (body) => render({
   path: "_content/lending/Lending.landmark.card",
   type: "landmark",
   schema: landmarkSchema,
   frontmatter: { symbol: { glyph: "🤝" }, navigation: { label: "Lending" } },
+  body,
 });
-({ fields: landmark.includes('data-card-section="fields"'), navigation: /navigation/.test(landmark) })
-=> { fields: true, navigation: true }
+[undefined, "The stove is with Idris.\n"].map((body) => ({ fields: landmark(body).includes('data-card-section="fields"'), navigation: /Navigation/.test(landmark(body)) }))
+=> [{ fields: true, navigation: true }, { fields: true, navigation: true }]
+```
 
-const question = render({ path: "_content/Q.question.card", type: "question", schema: landmarkSchema, frontmatter: { question: "Which?" } });
+Other body-less types keep their fields on the front.
+
+```ts
+const bodiless = { hasBodyField: false, defaultProminence: null };
+const question = render({ path: "_content/Q.question.card", type: "question", schema: bodiless, frontmatter: { question: "Which?" } });
 question.includes('data-card-section="fields"')
 => false
+```
+
+## An empty body leaves the type fields on the front
+
+With no body text, the front shows the type fields
+(`test/lib/card-field-faces.doctest.md`), so Properties lists no Fields
+section and nothing shows twice. A body that only repeats the title counts as
+empty, the same test the front uses.
+
+```ts
+const emptyMemo = (body) => render({
+  path: "_content/projects/Porch.memo.card", type: "memo", schema: memoSchema,
+  frontmatter: { title: "Porch", status: "new" }, body,
+});
+[emptyMemo(undefined).includes('data-card-section="fields"'), emptyMemo("# Porch\n").includes('data-card-section="fields"'), emptyMemo("Quotes.\n").includes('data-card-section="fields"')]
+=> [false, false, true]
 ```

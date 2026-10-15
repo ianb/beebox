@@ -282,7 +282,7 @@ evidence model.
   affordance is available while `pending`.
 - **Notifications + nudges** — `checkPendingQuestionsAndNotify`
   (`question-alert.ts`) notifies once per newly-pending question through
-  `notifyBoxholder` (push + Telegram); the aging sweep's nudge is a second,
+  `notifyBoxholder` (push); the aging sweep's nudge is a second,
   one-time reminder at the 7-day/half-window mark. Both are best-effort;
   regardless of notification-channel configuration, pending questions remain
   visible on the Dashboard attention surface and Questions page.
@@ -321,10 +321,6 @@ agent-guide context:
   chat is a different situation from the async queue — the agent just asks
   in prose, and retrospectives convert chat into learning. `_bookkeeping/questions/`
   is the only structured-question primitive.
-- **Telegram inline-button answering.** The deep-link + header work is
-  channel-agnostic groundwork; the `callback_query` inbound branch isn't
-  built. Telegram is used sparsely enough that this isn't worth its
-  maintenance yet.
 - **Web-push action buttons.** Chromium-only across browsers; revisit with
   the iOS app's push story.
 - **Question batching** (one card covering several held items at once).

@@ -10,14 +10,11 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { loadTelegramConfig } from "../connectors/telegram/helpers.js";
-import { createFakeTelegram, createTelegramService, type TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
 import type { ApnsService } from "../services/apns.js";
 import { sendPush, VapidNotConfiguredError, webPushConfigured } from "./send-push.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { getBoxTime } from "../lib/time.js";
-import { getPublicUrl } from "../lib/public-url.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { assertNever } from "../shared/invariant.js";
 import { createEventBus } from "./event-bus/core.js";
@@ -35,7 +32,6 @@ export type NotificationInput = Omit<NotificationIntent, "id"> & { id?: string |
 
 /** Injected services (tests); omitted ones are built from the box's config. */
 export interface NotifyServices {
-  tg?: TelegramService | undefined;
   push?: PushService | undefined;
   apns?: ApnsService | undefined;
 }
@@ -72,16 +68,13 @@ export function notificationReached(result: NotifyResult): boolean {
 export interface ChannelFlags {
   apns: boolean;
   webPush: boolean;
-  telegram: boolean;
 }
 
 /** Whether a send on each channel has what it needs: an injected service, fake mode, or the server's keys. */
-async function channelsConfigured(boxRoot: string, opts: { services: NotifyServices; fake: boolean }): Promise<ChannelFlags> {
-  const { services, fake } = opts;
+function channelsConfigured(services: NotifyServices): ChannelFlags {
   return {
     apns: services.apns !== undefined || apnsConfigured(),
     webPush: services.push !== undefined || webPushConfigured(),
-    telegram: services.tg !== undefined || fake || (await loadTelegramConfig(boxRoot)) !== null,
   };
 }
 
@@ -98,11 +91,10 @@ export async function notifyChannelsDetail(
   const services = opts?.services ?? {};
   const detail = await audienceDetail(boxRoot);
   const audience = audienceFlags(detail);
-  const configured = await channelsConfigured(boxRoot, { services, fake: detail.fake });
+  const configured = channelsConfigured(services);
   const reach = {
     apns: audience.apns && configured.apns,
     webPush: audience["web-push"] && configured.webPush,
-    telegram: audience.telegram && configured.telegram,
   };
   return { reach, configured };
 }
@@ -110,7 +102,7 @@ export async function notifyChannelsDetail(
 /**
  * Which channels can currently reach the boxholder for this box: someone to
  * send to, and what a send with the same `services` needs (an injected
- * service, or else the APNs key, VAPID keys, and the bot secret).
+ * service, or else the APNs key, VAPID keys).
  * Triggers use this to decide whether a proactive alert has anywhere to go.
  */
 export async function notifyChannels(boxRoot: string, opts?: { services?: NotifyServices | undefined }): Promise<ChannelFlags> {
@@ -182,41 +174,12 @@ async function sendWebPush(ctx: SendContext): Promise<Delivery> {
   }
 }
 
-async function telegramService(ctx: SendContext): Promise<TelegramService | null> {
-  if (ctx.services.tg !== undefined) return ctx.services.tg;
-  if (ctx.audience.fake) return createFakeTelegram({ username: "fake-bot" });
-  const config = await loadTelegramConfig(ctx.boxRoot);
-  return config === null ? null : createTelegramService(config.botToken);
-}
-
-/** Title, body, and the link a tap opens: absolute when the server knows its public URL. */
-function telegramText(intent: NotificationIntent, url: string): string {
-  const link = `${getPublicUrl("").replace(/\/+$/, "")}${url}`;
-  return [intent.title, ...(intent.body ? [intent.body] : []), link].join("\n");
-}
-
-async function sendTelegram(ctx: SendContext): Promise<Delivery> {
-  const { intent, url } = ctx;
-  const telegramChat = ctx.audience.telegramChat;
-  if (telegramChat === undefined) return { channel: "telegram", status: "skipped", detail: "no-audience" };
-  try {
-    const tg = await telegramService(ctx);
-    if (tg === null) return { channel: "telegram", status: "skipped", detail: "unconfigured" };
-    await tg.sendMessage(telegramChat, { text: telegramText(intent, url), silent: intent.loudness === "quiet" });
-    return sentDelivery("telegram", ctx);
-  } catch (e) {
-    return { channel: "telegram", status: "failed", detail: errorMessage(e) };
-  }
-}
-
 async function sendOn(channel: ChannelName, ctx: SendContext): Promise<Delivery> {
   switch (channel) {
     case "apns":
       return sendApns({ boxRoot: ctx.boxRoot, intent: ctx.intent, devices: ctx.audience.apnsDevices, apns: ctx.services.apns });
     case "web-push":
       return sendWebPush(ctx);
-    case "telegram":
-      return sendTelegram(ctx);
     default:
       return assertNever(channel);
   }
@@ -259,7 +222,7 @@ export async function planNotification(
   },
 ): Promise<NotifyPlan> {
   const audience = await audienceDetail(boxRoot);
-  const configured = opts.configured ?? (await channelsConfigured(boxRoot, { services: opts.services ?? {}, fake: audience.fake }));
+  const configured = opts.configured ?? channelsConfigured(opts.services ?? {});
   const presence = opts.presence ?? (await livePresence(boxRoot, { now: opts.now ?? getBoxTime(boxRoot) }));
   const plan = restrict(channelsToTry({ intent: opts.intent, audience: audienceFlags(audience), presence, onScreen: opts.onScreen }), opts.channel);
   return { audience, configured, presence, plan };

@@ -101,6 +101,7 @@ _content/
 ├── Box.landmark.card        root landmark (chat can be scoped to the box root)
 ├── MAP.md
 ├── inbox/                   incoming items awaiting triage
+├── incoming/                pages and captures sent to the box, not filed yet (git-ignored)
 ├── chat/                    chat-thread cards
 ├── docs/                    box-specific docs (optional, agent-authored)
 ├── people/                  person cards
@@ -160,6 +161,7 @@ is state** — a card's directory determines its lifecycle stage. From
 | `_content/inbox/staged/` | Intake-complete; waiting for the triage agent. |
 | `_content/inbox/triaged/` | Per-category holding spots (`<category>/`), plus `_unsure/` for low-confidence items paired with a question card. |
 | `_content/inbox/triaged/_unsure/` | Low-confidence triage results; paired with a question card. |
+| `_content/incoming/` | Pages sent from the Clerk and phone captures with words, waiting for the chat that quick chat chose to file them. Git-ignored by its own `.gitignore`; a card enters git when it is filed. Not triaged. |
 | `_content/recipes/` | Recipe collection (free-form subdirectory tree). |
 | `_content/todos/` | Active todo lists — human action items. |
 | `_content/drive/` | Google Drive sync (spreadsheets as JSON, docs as markdown). |
@@ -233,7 +235,8 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 | `box-growth-health.json` | Latest box file/directory/Git measurement, acknowledged size baseline, and explicit ongoing-rate expectations used by the growth health warning. Machine-written and schema-validated; use the dashboard actions instead of editing or deleting it. |
 | `scheduler.jsonl` | One JSONL line per scheduler tick. Records which scripts ran/skipped/errored. |
 | `usage.db` | Token-usage tracking database. |
-| `chat-session-history.json`, `chat-session-id.json`, `chat-sessions.json`, `chat-thread-sessions.json` | Active chat session state. |
+| `chat-session-history.json`, `chat-session-id.json` | Active chat session state. |
+| `chat-sessions.json`, `chat-thread-sessions.json` | Left by the retired Telegram thread sessions; read only by the retrospective walker to attribute old transcripts. |
 | `chat-models/<sessionId>.json` | One chat's own model choice. Absent means the chat follows the box default (`docs/model-policy.md`). |
 | `retro/state.json`, `retro/observations.jsonl` | Retrospective walker state (which sessions were observed) and the append-only observation ledger that recurrence judgments draw on. Survives transcript clearing. |
 
@@ -253,6 +256,16 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 | `src/views/` | Custom view definitions (rendering customization). |
 | `src/tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `src/tricks/lib/` | Shared helpers used by `src/tricks/scripts/`. |
+
+Box code imports the engine only through the `exports` map in
+`beebox/package.json`, whose targets are under `dist/`. A new public subpath
+needs its `exports` entry and a build that emits the target, usually an
+`entryPoints` build in `src/scripts/build-cli/build/bundle.ts`. A typed
+subpath also needs its declarations (`tsconfig.declarations.json` `files`, or a
+copied `.d.ts` as for `view-widgets`); one that plugin bundles import needs a
+row in `publicExportsExternal` (`build/plugins.ts`). Check the export from
+`dist/` after `pnpm build`: a test box linked to the source tree can hide a
+missing step.
 
 ## What's *not* in a box
 

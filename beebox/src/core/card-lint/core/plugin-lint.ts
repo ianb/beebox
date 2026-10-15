@@ -21,7 +21,7 @@ import { pluginByName } from "../../../plugins.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 
 /** The box-aware helpers a plugin's hook gets, each failing closed on a path that leaves the box. */
-export function makeLintContext(boxRoot: string): LintContext {
+function makeLintContext(boxRoot: string): LintContext {
   return {
     boxRoot,
     async resolveContainedRef(from, ref) {

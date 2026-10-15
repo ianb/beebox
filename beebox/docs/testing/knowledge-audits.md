@@ -125,7 +125,9 @@ refused at load. Mechanics: `src/dev/lib/test-runner/dev-session.ts`.
 It cannot observe Codex sessions (`AGENTS.md`, `.codex/` agents), what a
 session learns only by doing (hooks, lint and doc-check failures, tool
 errors), or interactive-session context such as the developer's memory and
-`/` commands. It asks cold questions; a session mid-task may load more.
+`/` commands. It asks cold questions; a session mid-task may load more. The
+session reads `issues/`, so a before-and-after comparison of a guidance
+change also hides the issue that states the rule.
 
 ## Writing one
 
@@ -137,6 +139,8 @@ Each entry in `knowledge-audits.yaml` has these fields:
   - `knows_about` — should know which docs to read, then answer.
   - `discoverable` — should be able to find the answer by exploring the filesystem.
 - `correct_contains` / `correct_contains_any` — strings that must appear in the response.
+  Keep a literal only for a term the guide itself teaches; grade a free-text
+  answer with `correct_matches`, and a box audit's card write with `cards_contain`.
 - `correct_matches` — case-insensitive regexes that must match the response; use
   when the required relationship has legitimate wording variation that a list
   of exact substrings would overfit.

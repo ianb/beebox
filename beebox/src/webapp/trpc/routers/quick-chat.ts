@@ -1,19 +1,10 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../procedures.js";
-import type { TrpcContext } from "../context.js";
-import { quickChatHqServiceSchema, QUICK_CHAT_ORIGINS, QUICK_CHAT_SOURCES, quickChatView, quickChatViewSchema, type QuickChatRecord, type QuickChatView } from "../../../core/chat/routing/quick-chat-record.js";
-import {
-  chooseQuickChat, discardQuickChat, submitQuickChat,
-  QuickChatDestinationFixedError, QuickChatInvalidChoiceError, QuickChatNotFoundError, QuickChatTextConflictError,
-  type QuickChatChat, type QuickChatContext, type QuickChatDeliveryOutcome,
-} from "../../../core/chat/routing/quick-chat-submit/submit.js";
+import { quickChatHqServiceSchema, QUICK_CHAT_ORIGINS, QUICK_CHAT_SOURCES, quickChatViewSchema } from "../../../core/chat/routing/quick-chat-record.js";
+import { chooseQuickChat, discardQuickChat, retryQuickChat, submitQuickChat } from "../../../core/chat/routing/quick-chat-submit/submit.js";
 import { quickChatHome } from "../../../core/chat/routing/quick-chat-home.js";
-import { CHAT_CHANNELS, type ChatChannel } from "../../../shared/chat-channel.js";
-import type { SendOutcome } from "../../chat-runtime.js";
-import { getBoxTime } from "../../../lib/time.js";
-import { toError } from "../../../shared/error-guards.js";
-import { getChatRuntime } from "../../chat-runtime.js";
+import { CHAT_CHANNELS } from "../../../shared/chat-channel.js";
+import { quickChatContext, quickChatRecordView, quickChatRequestFailure } from "../quick-chat-delivery.js";
 
 const idSchema = z.string().uuid();
 const channelSchema = z.enum(CHAT_CHANNELS).optional();
@@ -29,62 +20,13 @@ export const quickChatSubmitInput = z.object({ id: idSchema, message: z.string()
   });
 export const quickChatChooseInput = z.object({ id: idSchema, candidateId: z.string().min(1), channel: channelSchema });
 export const quickChatDiscardInput = z.object({ id: idSchema });
+export const quickChatRetryInput = z.object({ id: idSchema, channel: channelSchema });
 const recentChatSchema = z.object({ sessionId: z.string(), label: z.string(), lastActivity: z.string(),
   landmark: z.object({ dir: z.string(), label: z.string(), symbol: z.string().nullable() }).nullable() });
 export const quickChatHomeSchema = z.object({
   open: z.array(quickChatViewSchema), recentlySent: z.array(quickChatViewSchema),
   recentChats: z.array(recentChatSchema), shortcuts: z.array(z.object({ label: z.string(), to: z.string() })),
 });
-
-function deliveryOutcome(outcome: SendOutcome): QuickChatDeliveryOutcome {
-  const { body } = outcome;
-  if ("deduplicated" in body) return { kind: "duplicate" };
-  if ("queued" in body) return { kind: "accepted", queued: true };
-  if ("turnId" in body) return { kind: "accepted", queued: false };
-  return { kind: "failed", error: body.error };
-}
-
-/** The box's chat runtime as quick chat delivers through it: the send route's own target resolution and sender. */
-function quickChatChat(ctx: TrpcContext, channel: ChatChannel | undefined): QuickChatChat | undefined {
-  const runtime = getChatRuntime(ctx.boxRoot);
-  if (runtime === undefined) return undefined;
-  return {
-    reserve: (opts) => runtime.registry.reserve(opts),
-    async deliver({ delivery, messageId, message, origin, source, hqService }) {
-      const fresh = delivery.session === "new";
-      const resolved = await runtime.resolveSendTarget({ sessionParam: delivery.session, exactSession: delivery.exactSession,
-        contextDir: fresh ? delivery.contextDir : undefined, requestSeedFeatures: undefined, ...(fresh ? { engine: delivery.engine } : {}) });
-      // 410 is a deleted or deleting chat; 404 an exact session that no longer resumes. Both are gone.
-      if (!resolved.ok) return resolved.code === "CHAT_SESSION_UNAVAILABLE" || resolved.status === 404 ? { kind: "gone" } : { kind: "failed", error: resolved.error };
-      // Framed as the composer frames a message, so the sender is attributed, and tagged with how it arrived.
-      // A dictated thought carries the HQ engine when the phone ran its own HQ pass
-      // (docs/plans/ios-quick-chat-hq.md); otherwise it is the live transcript and carries the live
-      // marker (docs/plans/hq-always.md). No recording reaches the box, so there is no server pass.
-      const tag = origin === "voice" ? "speech" : "typed";
-      const framedMessage = origin === "external"
-        ? `<external-input source="${source}">${message}</external-input>`
-        : origin === "voice"
-          ? `<speech source="box-screen" ${hqService === undefined ? "stt=\"live\"" : `stt-service="${hqService}"`}>${message}</speech>`
-          : `<${tag} source="box-screen">${message}</${tag}>`;
-      return deliveryOutcome(await runtime.sendUserMessage({ target: resolved.target, message: framedMessage, messageId, user: ctx.user, channel }));
-    },
-  };
-}
-
-function context(ctx: TrpcContext, channel: ChatChannel | undefined): QuickChatContext {
-  return { boxRoot: ctx.boxRoot, jev: ctx.services.jev, chat: quickChatChat(ctx, channel) };
-}
-
-function view(record: QuickChatRecord, ctx: TrpcContext): QuickChatView {
-  return quickChatView(record, getBoxTime(ctx.boxRoot).getTime());
-}
-
-function requestFailure(error: unknown): never {
-  if (error instanceof QuickChatTextConflictError || error instanceof QuickChatDestinationFixedError) throw new TRPCError({ code: "CONFLICT", message: error.message });
-  if (error instanceof QuickChatNotFoundError) throw new TRPCError({ code: "NOT_FOUND", message: error.message });
-  if (error instanceof QuickChatInvalidChoiceError) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-  throw toError(error);
-}
 
 export const quickChatRouter = router({
   /** Store, route, and deliver one thought. A repeat with the same id returns the stored record, retrying a pending delivery. */
@@ -94,16 +36,23 @@ export const quickChatRouter = router({
       const request = { id: input.id, message: input.message, origin: input.origin,
         ...(input.source === undefined ? {} : { source: input.source }),
         ...(input.hqService === undefined ? {} : { hqService: input.hqService }) };
-      return view(await submitQuickChat(context(ctx, input.channel), request).catch(requestFailure), ctx);
+      return quickChatRecordView(await submitQuickChat(quickChatContext(ctx, input.channel), request).catch(quickChatRequestFailure), ctx);
     }),
   /** Fix the person's chosen destination for a stored thought, and deliver it. */
   choose: authedProcedure.input(quickChatChooseInput)
     .output(quickChatViewSchema)
-    .mutation(async ({ ctx, input }) => view(await chooseQuickChat(context(ctx, input.channel), input).catch(requestFailure), ctx)),
+    .mutation(async ({ ctx, input }) => quickChatRecordView(await chooseQuickChat(quickChatContext(ctx, input.channel), input).catch(quickChatRequestFailure), ctx)),
+  /**
+   * Deliver a stored thought again, with its own words. The box screen's Retry
+   * uses it: a page sent from the Clerk may have no words, which `submit` refuses.
+   */
+  retry: authedProcedure.input(quickChatRetryInput)
+    .output(quickChatViewSchema)
+    .mutation(async ({ ctx, input }) => quickChatRecordView(await retryQuickChat(quickChatContext(ctx, input.channel), input).catch(quickChatRequestFailure), ctx)),
   /** End a stored thought that was not sent. */
   discard: authedProcedure.input(quickChatDiscardInput)
     .output(quickChatViewSchema)
-    .mutation(async ({ ctx, input }) => view(await discardQuickChat({ boxRoot: ctx.boxRoot }, input).catch(requestFailure), ctx)),
+    .mutation(async ({ ctx, input }) => quickChatRecordView(await discardQuickChat({ boxRoot: ctx.boxRoot }, input).catch(quickChatRequestFailure), ctx)),
   /** What the box screen shows. */
   home: authedProcedure.output(quickChatHomeSchema).query(async ({ ctx }) => quickChatHome(ctx.boxRoot)),
 });

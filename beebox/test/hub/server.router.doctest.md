@@ -24,7 +24,7 @@ import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireBoxMaintenance } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -619,22 +619,33 @@ const provider = {
 };
 const closedHub = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }, { slug: "broken", boxRoot: "/nonexistent/broken" }] });
 const owner = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
+// Retry-After is the lease's remaining whole seconds at request time. The
+// lease runs 600s from acquire, so pin the hub's clock to that moment: 600
+// is then exact, and still tells the lease from the 60s default. Unpinned, a
+// request more than a second after acquire read 599 (2026-10-08).
+const realNow = Date.now;
+const leaseStart = Date.parse((await boxMaintenanceStatus(closedBox.root))?.until ?? "") - 600_000;
+Date.now = () => leaseStart;
 const closedResponse = await fetch(`${closedHub.base}/closed/api/x`);
 const closedBody = await closedResponse.json();
-JSON.stringify({ status: closedResponse.status, retryAfter: closedResponse.headers.get("retry-after"), error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner.pid === process.pid })
-=> {"status":503,"retryAfter":"600","error":"box_closed","reason":"migration","ownerIsThisProcess":true}
+// Retry-After counts down from the 600 s maintenance lease, so allow a loaded run a few seconds.
+const retryAfter = closedResponse.headers.get("retry-after");
+JSON.stringify({ status: closedResponse.status, retryAfterNearLease: Number(retryAfter) > 580 && Number(retryAfter) <= 600, error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner.pid === process.pid })
+=> {"status":503,"retryAfterNearLease":true,"error":"box_closed","reason":"migration","ownerIsThisProcess":true}
 
 // A page navigation (a browser, the iOS web view) gets a scriptless page: a
 // sign that swings once, the sentence, and a refresh after Retry-After.
 const page = await fetch(`${closedHub.base}/closed/chat`, { headers: { accept: "text/html,application/xhtml+xml" } });
 const html = await page.text();
-JSON.stringify({ status: page.status, type: page.headers.get("content-type"), refresh: html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1], headline: html.match(/<h1>([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1].replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
-=> {"status":503,"type":"text/html; charset=utf-8","refresh":"600","headline":["Closed","for migration"],"swings":true,"script":false,"detail":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits"}
+JSON.stringify({ status: page.status, type: page.headers.get("content-type"), refreshIsRetryAfter: Number(html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1]) > 580, headline: html.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="bbx-sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1].replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+=> {"status":503,"type":"text/html; charset=utf-8","refreshIsRetryAfter":true,"headline":["Closed","for migration"],"swings":true,"script":false,"detail":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits"}
 
 // A form post that accepts HTML gets the sentence as text: a self-reload would repeat it as a GET.
 const posted = await fetch(`${closedHub.base}/closed/chat`, { method: "POST", headers: { accept: "text/html" } });
-JSON.stringify({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
-=> {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in 600 seconds.\n"}
+JSON.stringify({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)").replace(/Retry in \d+ seconds/u, "Retry in <n> seconds") })
+=> {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in <n> seconds.\n"}
+
+Date.now = realNow;
 
 await owner.beginChanges();
 await owner.release();
@@ -669,6 +680,6 @@ retry gets a still sign; message text is escaped.
 
 ```ts
 const quick = renderUnavailablePage({ status: 503, retryAfter: 3, body: { error: "box_unavailable", message: "Box <b> is not running" } });
-JSON.stringify({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1>([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") })
+JSON.stringify({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") })
 => {"refresh":"3","swings":false,"headline":"Not open","escaped":true}
 ```

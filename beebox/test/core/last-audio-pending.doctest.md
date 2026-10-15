@@ -511,6 +511,11 @@ await ctx.cleanup();
 
 ## Route: an answer with a mismatched messageId is ignored, not delivered
 
+The wrong tab answers first; the request stays open, and the right tab's
+answer is the one delivered. (This used to end on the poll's 100ms timeout
+instead, which on a loaded host expired before the mismatched answer arrived:
+2026-10-07, `unknown-request`.)
+
 ```ts
 const ctx = await makeTestServer();
 const gotId = new Promise((resolve) => {
@@ -521,37 +526,41 @@ const gotId = new Promise((resolve) => {
 const longPoll = ctx.rawRequest({
   method: "POST",
   url: "/api/chat/last-audio/request",
-  payload: { timeoutMs: 100, messageId: "msg-wanted" },
+  payload: { timeoutMs: 30_000, messageId: "msg-wanted" },
 });
 const requestId = await gotId;
 const boundary = "----cbtestmismatch";
-const upload = [
+const uploadFor = (messageId, bytes) => [
   `--${boundary}`,
   'Content-Disposition: form-data; name="messageId"',
   "",
-  "msg-someone-elses",
+  messageId,
   `--${boundary}`,
   'Content-Disposition: form-data; name="file"; filename="last-message.wav"',
   "Content-Type: audio/wav",
   "",
-  "WRONGWAVBYTES",
+  bytes,
   `--${boundary}--`,
   "",
 ].join("\r\n");
-const answer = await ctx.request({
+const answerWith = (messageId, bytes) => ctx.request({
   method: "POST",
   url: `/api/chat/last-audio/${requestId}`,
-  payload: upload,
+  payload: uploadFor(messageId, bytes),
   headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
 });
-print(`answer: ${JSON.stringify(answer.body)}`);
+const wrong = await answerWith("msg-someone-elses", "WRONGWAVBYTES");
+const right = await answerWith("msg-wanted", "RIGHTWAVBYTES");
+print(`wrong: ${JSON.stringify(wrong.body)}`);
+print(`right: ${JSON.stringify(right.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`error: ${JSON.parse(res.payload).error}`);
+print(`audio: ${res.payload}`);
 =>
-answer: {"ok":false,"ignored":true,"message":"messageId did not match the pending request's target"}
-status: 504
-error: no-client
+wrong: {"ok":false,"ignored":true,"message":"messageId did not match the pending request's target"}
+right: {"ok":true}
+status: 200
+audio: RIGHTWAVBYTES
 ```
 
 ```ts cleanup

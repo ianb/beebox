@@ -1,7 +1,6 @@
 # Chat
 
-The conversational surface: web chat with the whole box, threads over external
-chats such as Telegram, and everything that serves them. One page per member.
+The conversational surface: web chat with the whole box and everything that serves it. One page per member.
 
 ## Members
 
@@ -9,7 +8,7 @@ chats such as Telegram, and everything that serves them. One page per member.
 |---|---|
 | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK pump. |
 | [History](chat/history.md) | The transcript and the acceptance record, and how a replayed photo is served. |
-| [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence, Telegram threads. |
+| [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence. |
 | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's husk card. |
 | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it. |
 | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |

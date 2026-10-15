@@ -123,6 +123,26 @@ late.update({ finalText: "and the rest", finalWords: null }).text
 => […] and the rest
 ```
 
+## A drop before any words leaves the text blank
+
+The boxholder decided this on 2026-10-13. No text before the drop most likely
+means no speech during it. Blank text and text holding only `[…]` behave
+differently downstream: one is an empty recording, the other is a message.
+So the drop marks nothing, and words after the reconnect start the text.
+
+```ts
+const text = new SegmentTranscript();
+text.connected({ covered: true });
+text.update({ finalText: "  ", finalWords: null });
+text.openGap();
+({ text: text.textWith("") })
+=> { text: "" }
+
+text.connected({ covered: false });
+text.update({ finalText: "hello", finalWords: null }).text
+=> hello
+```
+
 ## Words stay with their text
 
 The marker is text only; word lists (Deepgram confidence) merge as before.

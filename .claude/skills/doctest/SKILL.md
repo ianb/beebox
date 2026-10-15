@@ -11,20 +11,22 @@ right instrument at all: [choosing an instrument](../../../beebox/docs/testing.m
 
 ## Authoring
 
-Create `test/<name>.doctest.md`, mirroring the `src/` path (`beebox/AGENTS.md`).
-Good models: `beebox/test/core/pdf/probe.text-layer-quality.doctest.md`
-(narrative) and `beebox/test/core/bulk-upload/worker/deliver.doctest.md`
-(multi-line output).
+Create `test/<name>.doctest.md`, mirroring the `src/` path. A good model:
+`beebox/test/core/pdf/probe.text-layer-quality.doctest.md`.
 
 - **The prose is the document.** Open with the contract or the incident behind
-  the code. Put one sentence before each example saying what rule it shows.
+  the code. The sentence before each example says what rule it shows and where
+  the rule comes from: the issue or plan, the format, a calculation the reader
+  can redo, or the bug it replays. A value that is a choice (order, wording)
+  says so.
 - **One claim per example.** Passing with the code deleted, or re-proving
-  another example's branch, is a defect ([testing](../../../beebox/docs/testing.md)).
+  another example's branch, is a defect. Exploration keeps only the cases
+  that failed ([testing](../../../beebox/docs/testing.md)).
 - **Show values.** Write objects as literals (`=> { kind: "box" }`), not
   `JSON.stringify(...)`. Prefer the value to `=> true`.
 - **Unknown or varying value:** write `=> ?`, run, and paste the `suggested:`
-  value after checking it is right. Varying parts arrive as wildcards
-  (`«int»`, `«date»`, `«*»`). Better still, pass fixed inputs (time, ids).
+  value once the sentence says why that exact value is right. Varying parts
+  arrive as wildcards (`«int»`, `«date»`, `«*»`); better, pass fixed inputs.
 - **Waiting:** `eventually(fn, { label })`, never a fixed sleep.
 - Blocks are separate tests; ` ```ts continue ` shares variables (prose between
   examples goes after a closing fence, never inside an open one), ` ```ts setup `
@@ -45,21 +47,17 @@ then rerun after the fix.
 
 ## Reading a failure
 
-- `not ok N - line 42: <expression>`: the example at markdown line 42.
-- `diff:` `-` is expected, `+` is actual; `suggested:` is the actual value,
-  ready to paste; `hint:` names a recognised mistake.
-- `DoctestSyntaxError file.md:39: …` means the file did not compile: it shows
-  the line and its block. Stack traces point at `.doctest.md` lines.
-- `still running after 60s: file.md:L …` names an example that is hanging.
+`not ok N - line 42: <expr>` names the markdown line; `diff:` has `-` expected
+and `+` actual; `suggested:` is the actual value, ready to paste after the
+check above. The rest, including `DoctestSyntaxError` and hangs, is in the
+syntax reference.
 
 ## Flake triage
 
 The suite runs 6 files in parallel (`beebox/.taprc`); not every red run is
-your bug. Isolate first: rerun the file alone. A failure that reproduces alone,
-including on the unmodified tree, is a real bug, however long it has been red.
-Most past flakes were test-caused: a fixed sleep or an unsettled wait (use
-`eventually`), a budget sized for an idle machine, or a resource a failed
-example left open (use `cleanup`). The full protocol (isolated rerun, grep
-`issues/` for the signature, at most one full-suite rerun, file or fix) is in
-`.claude/agents/finish.md`; file new flake shapes in `issues/bugs/` with the
-`issues` skill.
+your bug. Rerun the file alone first. A failure that reproduces alone, even on
+the unmodified tree, is a real bug however long it has been red. Most past
+flakes were test-caused: a fixed sleep or unsettled wait (use `eventually`), a
+budget sized for an idle machine, or a resource a failed example left open
+(use `cleanup`). The full protocol is in `.claude/agents/finish.md`; file new
+flake shapes in `issues/bugs/` with the `issues` skill.

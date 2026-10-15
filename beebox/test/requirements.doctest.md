@@ -66,27 +66,19 @@ print(`granted, no value yet: ${await missing(box.root, "someservice")}`);
 granted, no value yet: ["someservice"]
 ```
 
-## Telegram's store name differs from its connector name
+## A per-box instance of a name counts
 
-The store says what the credential *is* (`telegram-bot/<box>`, one per box); the
-requirement says what *syncs* (`telegram`). The mapping is stated, not derived.
-
-Only the per-box form counts: the connector resolves exactly
-`telegram-bot/<slug>`, so a flat `telegram-bot` grant would make a script run
-and fail rather than skip cleanly.
+A requirement names the store entry itself or its per-box form
+`<name>/<slug>`; either one, granted to this box and holding a value, is
+configured.
 
 ```ts continue
-await setSecret({ name: "telegram-bot", value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }) });
-await grantSecret({ slug, name: "telegram-bot", access: "server" });
-print(`a flat grant does not count: ${await missing(box.root, "telegram")}`);
-
-await setSecret({ name: `telegram-bot/${slug}`, value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }) });
-print(`stored per-box, not granted: ${await missing(box.root, "telegram")}`);
-await grantSecret({ slug, name: `telegram-bot/${slug}`, access: "server" });
-print(`granted per-box: ${await missing(box.root, "telegram")}`);
+await setSecret({ name: `otherservice/${slug}`, value: "placeholder-token" });
+print(`stored per-box, not granted: ${await missing(box.root, "otherservice")}`);
+await grantSecret({ slug, name: `otherservice/${slug}`, access: "server" });
+print(`granted per-box: ${await missing(box.root, "otherservice")}`);
 =>
-a flat grant does not count: ["telegram"]
-stored per-box, not granted: ["telegram"]
+stored per-box, not granted: ["otherservice"]
 granted per-box: []
 ```
 

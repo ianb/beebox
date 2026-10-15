@@ -12,7 +12,6 @@ its type; a **box** is the directory of them. One page per capability is in
 - [Gmail](capabilities/gmail.md): sync watched threads in, draft replies you send yourself.
 - [Calendar](capabilities/calendar.md): two-way Google Calendar sync.
 - [Drive](capabilities/drive.md): mirror Google Docs, Sheets, and folders both ways.
-- [Telegram](capabilities/telegram.md): chat with the box from a messaging app.
 - [The web interface](capabilities/web-interface.md): dashboard, browser, questions, map, history, settings, and a display for each kind of card, on desktop and phone.
 - [Chat](capabilities/chat.md): the central web conversation, with resumable threads.
 - [Voice](capabilities/voice.md): dictation, transcription, and spoken replies.
@@ -26,8 +25,8 @@ its type; a **box** is the directory of them. One page per capability is in
 - [It keeps itself coherent](capabilities/integrity.md): links parsed and checked, references rewritten on a move, cards validated at several layers, so the box stays navigable as it grows.
 - [Provenance](capabilities/provenance.md): your exact words kept as quotes, and facts that point back at their source.
 - [Views](capabilities/views.md): pages and displays the agent builds for a kind of card, so a collection becomes something to browse.
-- [Courses](capabilities/courses.md): structured teaching material and per-learner progress.
-- [Recipes](capabilities/recipes.md): scaling-aware cooking cards.
+- [Courses](capabilities/courses.md): structured teaching material and per-learner progress (an optional add-on a box turns on).
+- [Recipes](capabilities/recipes.md): scaling-aware cooking cards (an optional add-on a box turns on).
 - [Publishing](capabilities/publishing.md): put a site built from box content on the public web, after you approve it.
 
 ## The kinds of things it holds
@@ -37,12 +36,12 @@ Every card type has a reference page in
 
 - Inputs: memo, image, audio, capture-session, upload-batch, file, pdf.
 - Web material: webpage, extfile, commentary, tab-arrangement.
-- Things you keep: record, doc, person, place, recipe, inventory, figure, todo-view.
-- Mail and messages: email-thread, email-message, email-outbound, telegram-message, chat-thread, feedback.
+- Things you keep: record, doc, person, place, inventory, figure, todo-view, and recipe once the recipe add-on is on.
+- Mail and messages: email-thread, email-message, email-outbound, feedback, and chat-thread (a read-only record of conversations from a messaging app that older boxes may still hold).
 - Google material: gdoc, gsheet, gfolder, glink.
 - Teaching the agent: briefing, guide, personality, landmark, question.
 - Automation: procedure, procedure-run, scheduled-script, and the job cards the engine queues.
-- Learning: course, concept-map, exposition-plan, lesson-plan, progress.
+- Learning, once the courses add-on is on: course, concept-map, exposition-plan, lesson-plan, progress. Their reference pages live with the add-ons, not in the card index.
 - The interface itself: dashboard, settings, browse, questions, landmarks, history, admin, view, nav.
 
 A box can also define its own card types. See

@@ -81,6 +81,13 @@ class KnowledgeAuditAgentError extends Error {
   }
 }
 
+export class KnowledgeAuditTranscriptError extends Error {
+  constructor({ sessionId, logPath }: { sessionId: string; logPath: string }, cause: unknown) {
+    super(`Claude knowledge-audit transcript is missing for session ${sessionId}: ${logPath}. No audit checks were evaluated.`, { cause });
+    this.name = "KnowledgeAuditTranscriptError";
+  }
+}
+
 /**
  * Load audit tests from a YAML file.
  */
@@ -161,6 +168,9 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
       invokeOpts.cwd = path.join(boxRoot, test.context_dir);
       invokeOpts.additionalDirectories = [boxRoot];
     }
+    // Claude keys persisted transcripts by the physical cwd (e.g. macOS
+    // /tmp resolves to /private/tmp). Invoke and collect with that same path.
+    if (engine === "claude") invokeOpts.cwd = await fs.realpath(invokeOpts.cwd ?? boxRoot);
     const codexActivity: CodexObservedActivity[] = [];
     const agentOptions = {
       name: "knowledge-audit",
@@ -202,10 +212,13 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
  * agent's text reply is evaluated.
  */
 export async function extractBehavior(logDir: string, sessionId: string): Promise<AgentBehavior> {
-  const logPath = getSessionLogPath(logDir, sessionId);
+  const logPath = getSessionLogPath(await fs.realpath(logDir), sessionId);
   const { entries, total } = await parseSessionLog({
     logPath,
     slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+  }).catch((error: unknown) => {
+    if (errnoCode(error) === "ENOENT") throw new KnowledgeAuditTranscriptError({ sessionId, logPath }, error);
+    throw error;
   });
   warnIfBehaviorReadTruncated({ logPath, entriesRead: entries.length, total });
 

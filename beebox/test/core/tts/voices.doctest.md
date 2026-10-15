@@ -24,11 +24,12 @@ JSON.stringify(resolveVoice({ backend: "gemini", requested: "Puck" }))
 
 Every `VOICE_MODELS` name has a Gemini equivalent, chosen by ear rather than by
 pitch — so a personality card keeps naming the voices it always did, and no
-card needs migrating.
+card needs migrating. `marin` maps to Achernar because the boxholder re-picked
+it by ear on 2026-10-12, replacing Vindemiatrix; `shimmer` shares it.
 
 ```ts
 JSON.stringify(resolveVoice({ backend: "gemini", requested: "marin" }))
-=> {"kind":"mapped","voice":"Vindemiatrix","requested":"marin"}
+=> {"kind":"mapped","voice":"Achernar","requested":"marin"}
 ```
 
 `mapped` is deliberately its own outcome rather than a kind of substitution:

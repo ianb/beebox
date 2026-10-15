@@ -10,7 +10,7 @@ import { stringifyYaml, z } from "../../exports/schema.js";
  * Template for creating a recipe card. Seeds yield + headings + a
  * single ingredient/step as a starting shape.
  */
-export function createRecipeTemplate(options: {
+function createRecipeTemplate(options: {
   title: string;
   description?: string;
   servings?: number;

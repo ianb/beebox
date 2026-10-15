@@ -78,6 +78,23 @@ lB === basename(B)
 => true
 ```
 
+A repair keeps the place summary. An inert landmark whose body the agent
+wrote gets the stock frontmatter back, and its body survives:
+
+```ts
+const S = await makeContentBox();
+await writeFile(join(S, "_content", "Box.landmark.card"), "---\nsymbol:\n  glyph: 📦\n---\nTwo lists so far: groceries and the landlord.\n");
+await installRootLandmark(S);
+const repaired = await readFile(join(S, "_content", "Box.landmark.card"), "utf8");
+repaired.endsWith("---\nTwo lists so far: groceries and the landlord.\n")
+=> true
+```
+
+```ts continue
+parseLandmarkFields(repaired)?.navigation?.label === basename(S)
+=> true
+```
+
 A real landmark (it has a navigation role) is left untouched — returns null, the
 user owns it:
 

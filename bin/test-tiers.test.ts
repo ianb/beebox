@@ -18,6 +18,7 @@ import {
   carefulExclusions,
   parseCarefulList,
   readCarefulList,
+  taprcJobs,
   taprcTestFiles,
   tierCommand,
   TierListError,
@@ -87,6 +88,18 @@ test("taprc include/exclude are read, not restated", () => {
     assert.deepEqual(taprcTestFiles(fx.root), ["test/a.doctest.md"]);
   } finally {
     fx.cleanup();
+  }
+});
+
+test("taprc jobs is read, and absent means tap's own default", () => {
+  const fx = fixture({ ".taprc": "jobs: 6\n" });
+  const bare = fixture({ ".taprc": "include:\n  - test/**/*.doctest.md\n" });
+  try {
+    assert.equal(taprcJobs(fx.root), 6);
+    assert.equal(taprcJobs(bare.root), null);
+  } finally {
+    fx.cleanup();
+    bare.cleanup();
   }
 });
 

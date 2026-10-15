@@ -46,6 +46,10 @@ bin/browse wait @e1                             # until element appears
 bin/browse wait --text "Success"                # until text appears
 bin/browse wait --url "**/dashboard"            # until URL matches glob
 bin/browse wait --load networkidle              # post-navigation catch-all
+bin/browse wait --text "Filed" --timeout 180000 # every wait ends: --timeout ms, default 30 s
+
+# Clerk extension (BROWSE_CLERK=1 loads its localhost test build, rebuilt when stale)
+BROWSE_CLERK=1 bin/browse clerk-popup feed      # popup acting on tab "feed", in tab "clerk-popup"
 
 # Lifecycle
 bin/browse close                                # close this browser
@@ -80,8 +84,7 @@ The sidecar makes an individual capture self-describing to an agent; it does
 not make a list of file paths a good human handoff. When screenshots are the
 evidence for UI work, package the useful set with `bin/exhibits add` and share
 the exhibit URL. Give the exhibit prose/captions enough context to distinguish
-before/after and each state or viewport. Use `--ask fyi` for evidence that asks
-nothing of the developer; choose another ask only when you genuinely need it.
+before/after and each state or viewport.
 An incidental diagnostic screenshot does not need an exhibit.
 
 ## Escape hatch — anything not covered here

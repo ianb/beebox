@@ -6,7 +6,7 @@ The box records what each uploader says it is (see
 `test/core/scan/tokens.doctest.md`) and this check is where a person sees that
 one is behind.
 
-Health rather than a notification, on purpose: push and Telegram reach nobody
+Health rather than a notification, on purpose: a push alert reaches nobody
 unless the boxholder wired a channel, and there is no notification history to
 look back at. A stale uploader is also a *sticky* condition — true on every
 request until someone re-copies the bundle — and a pull surface reports a

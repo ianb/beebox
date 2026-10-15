@@ -68,8 +68,8 @@ const secretEntrySchema = z.object({
    *  until the boxholder grants it), but without it `bbx secrets status <box>`
    *  cannot show a box the slots it asked for and is still waiting on. */
   declaredBy: z.string().optional(),
-  /** Set for structurally per-box secrets (a Telegram bot token binds to one
-   *  webhook URL), together with `shareable: false`. */
+  /** Set for structurally per-box secrets (a publish token scoped to
+   *  one bucket), together with `shareable: false`. */
   owningBox: z.string().optional(),
   shareable: z.boolean().optional(),
 });

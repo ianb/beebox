@@ -17,6 +17,15 @@ struct QuickChatAPI {
                 message
             }
         }
+
+        /// tRPC's answer for a procedure the box does not have: a box from
+        /// before it. A missing record is also 404, with a different message.
+        var isUnknownProcedure: Bool {
+            guard case .server(404, let message) = self else {
+                return false
+            }
+            return message.hasPrefix("No procedure found on path")
+        }
     }
 
     /// The channel the server records on the delivered message, as the share
@@ -46,6 +55,12 @@ struct QuickChatAPI {
         try Self.decodeView(await send(discardRequest(id: id)))
     }
 
+    /// Deliver a stored record again with its own words. Unlike a repeated
+    /// `submit`, it needs no message, so it retries a page sent with no note.
+    func retry(id: UUID) async throws -> QuickChatView {
+        try Self.decodeView(await send(retryRequest(id: id)))
+    }
+
     func home() async throws -> QuickChatHome {
         try Self.decodeHome(await send(homeRequest()))
     }
@@ -72,6 +87,10 @@ struct QuickChatAPI {
 
     func discardRequest(id: UUID) throws -> URLRequest {
         try mutation("quickChat.discard", body: DiscardBody(id: Self.wireID(id)))
+    }
+
+    func retryRequest(id: UUID) throws -> URLRequest {
+        try mutation("quickChat.retry", body: RetryBody(id: Self.wireID(id), channel: Self.channel))
     }
 
     func homeRequest() -> URLRequest {
@@ -161,5 +180,10 @@ struct QuickChatAPI {
 
     private struct DiscardBody: Encodable {
         var id: String
+    }
+
+    private struct RetryBody: Encodable {
+        var id: String
+        var channel: String
     }
 }

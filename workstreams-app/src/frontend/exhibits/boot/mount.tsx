@@ -7,7 +7,7 @@
 import { createRoot } from "react-dom/client";
 import type { ReactNode } from "react";
 
-import { ExhibitContainer } from "./Container.js";
+import { ExhibitContainer } from "../Container.js";
 import { DefaultExhibit } from "./DefaultExhibit.js";
 import type { ExhibitBoot } from "../../../shared/exhibits.js";
 import "../styles.css";

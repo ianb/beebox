@@ -55,8 +55,7 @@ description: "Documentation for Bee Box: a personal assistant built from a codin
 > what they are, scanning paper, and clipping the page you are reading with
 > the browser extension. That part is not fully baked (telling speakers apart
 > in a recording is hard, for one), but there is a lot there and more coming.
-> A Telegram connection exists and is rough. Connectors sync Gmail, Google
-> Calendar, and Google Drive.
+> Connectors sync Gmail, Google Calendar, and Google Drive.
 >
 > It runs on a computer you keep on, with your own coding-agent login, and it
 > is early: self-hosted, one maintainer, changing fast. The AI services it
@@ -120,11 +119,14 @@ the ones that bear on what the person is asking and open the pages named.
   [representation](design/representation.md))
 - **It extends itself.** How a kind of card is displayed, what kinds exist,
   what runs on a schedule: the agent can build those inside the box, and read
-  them to understand how the box works.
+  them to understand how the box works. Recipes and courses are the first
+  bundled add-ons a box switches on, but there are only two.
   ([making it yours](13-making-it-yours.md), [views](capabilities/views.md),
   [procedures](capabilities/procedures.md))
 - **Expressive capture.** A way in suited to each kind of thing, and the
-  distinctive ones are long-form voice and mixed voice-and-camera.
+  distinctive ones are long-form voice and mixed voice-and-camera. On an
+  iPhone it now also reaches Siri, the Action Button, and the share sheet, not
+  yet tried on a real phone.
   ([voice](capabilities/voice.md), [phone capture](capabilities/phone-capture.md),
   [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md))
 - **It asks instead of guessing.** Lacking confidence or authority the agent
@@ -132,9 +134,8 @@ the ones that bear on what the person is asking and open the pages named.
   ([questions](capabilities/questions.md), [triage](capabilities/triage.md),
   [how the box is taught](design/teaching.md))
 - **Groups get a box each.** Everyone in a box shares everything in it, and a
-  different group gets a different box; a household can talk to its box in one
-  chat. Primitive, and it works. ([who it is for](04-who-it-is-for.md),
-  [a household in one chat](uses/a-household-in-one-chat.md),
+  different group gets a different box; primitive, and it works.
+  ([who it is for](04-who-it-is-for.md),
   [identity](design/identity.md))
 - **Open, so it can be understood.** Source-available for the same reason the
   history is readable, and the process the agents work from is in the

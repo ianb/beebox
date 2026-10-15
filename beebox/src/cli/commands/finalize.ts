@@ -2,7 +2,7 @@
  * bbx finalize - Post-processing phase for outbound connectors.
  *
  * Symmetric counterpart to `bbx wakeup`. Runs after job processing
- * to flush outbound cards (e.g. telegram messages in box/output/).
+ * to flush outbound cards (e.g. Gmail drafts, Calendar and Drive pushes).
  *
  * Called by the reactor after all job cycles complete, or manually.
  */
@@ -11,7 +11,6 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { createGmailConnector } from "../../connectors/gmail/connector.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar/connector.js";
-import { createTelegramConnector } from "../../connectors/telegram/connector.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive/connector.js";
 import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
@@ -19,7 +18,6 @@ import { rotateIfNeeded } from "../../core/notification/log.js";
 import { getBoxTime } from "../../lib/time.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { syncConnector } from "../../connector-activity/core.js";
-import type { TelegramService } from "../../services/telegram.js";
 import type { PushService } from "../../services/push.js";
 
 /**
@@ -27,9 +25,9 @@ import type { PushService } from "../../services/push.js";
  * newly pending. Aging runs first so a question about to expire is never
  * announced: an old box's first finalize would otherwise send a notice for
  * questions it expires a moment later. Aging never depends on a notification
- * channel; only the nudge's delivery does. `tg`/`push` are injected in tests.
+ * channel; only the nudge's delivery does. `push` is injected in tests.
  */
-export async function finalizeQuestions(boxRoot: string, services: { tg?: TelegramService; push?: PushService }): Promise<void> {
+export async function finalizeQuestions(boxRoot: string, services: { push?: PushService }): Promise<void> {
   try {
     const aging = await ageQuestions(boxRoot, services);
     if (aging.nudged.length > 0 || aging.expired.length > 0) {
@@ -68,7 +66,6 @@ export const finalizeCommand = new Command("finalize")
     const connectors = [
       createGmailConnector(boxRoot),
       createGoogleCalendarConnector(boxRoot),
-      createTelegramConnector(boxRoot),
       createGoogleDriveConnector(boxRoot),
     ];
 

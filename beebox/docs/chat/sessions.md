@@ -5,17 +5,14 @@ code both session classes share.
 
 ## What it is
 
-The backend chat runs are long-lived SDK conversations wrapped by two classes:
+The backend chat run is a long-lived SDK conversation wrapped by one class:
 
 - **`ChatSession`** (`src/core/chat/session/run/core.ts`) — whole-box interactive chat.
   Queues messages that arrive mid-turn and drains them into the next turn.
-- **`ChatThreadSession`** (`src/core/chat/session/thread.ts`) — one per chat
-  thread, orchestrated by `ChatSessionPool`. No queue; the pool parks/activates
-  one session at a time.
 
-Both drive their SDK run through the same lifecycle, modelled as a discriminated
-union in `src/core/chat/session/lifecycle.ts`, and adapt raw SDK messages through
-the same shared adapter (`adaptSdkMessage` in `src/core/chat/session/messages.ts`).
+It drives its SDK run through a lifecycle modelled as a discriminated union in
+`src/core/chat/session/run/lifecycle.ts`, and adapts raw SDK messages through
+the shared adapter (`adaptSdkMessage` in `src/core/chat/session/messages.ts`).
 This page is the backend
 counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
 contract the backend previously left implicit.
@@ -41,9 +38,6 @@ contract the backend previously left implicit.
 | `streaming` | a turn is in flight | yes | yes |
 | `stopping` | a graceful `stop()` closed the run; close handler will not drain | yes | `wasBusy` |
 
-`stopping` is **ChatSession-only** — a thread session has no queue to protect, so
-its `stop()`/`park()` close straight through `ready`/`streaming` → `idle`.
-
 The legal edges live in one table (`isLegalChatPhaseTransition`); every write
 site goes through `nextLifecycle`, which throws an `InvariantError` on an illegal
 move (a caller bug over internal state — not a degradable condition).
@@ -63,10 +57,7 @@ move (a caller bug over internal state — not a degradable condition).
   drain. `restart()` leaves the phase as-is and just closes the run, so the same
   close handler **does** drain the queue into a fresh run — the wedged-session
   recovery path. `resetSession()` is `stop()` plus clearing the saved session id.
-- **Park / evict (ChatThreadSession + pool).** The pool holds one active session.
-  A message for a different thread `park()`s the active one (close the run, keep
-  the session id for resume) after waiting for any in-flight turn to finish
-  (`waitForIdle` watches `done`/`close`). Registry eviction calls `stop()`.
+- **Evict.** Registry eviction calls `stop()`.
 - **The busy-flip ordering.** On `result`, the phase advances to `ready`
   (`isBusy()` → `false`) **before** `<chat-app>` feature deltas are applied, so a
   `features-changed` listener can call `setFeature()` without hitting the

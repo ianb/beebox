@@ -11,10 +11,13 @@ import type {
   CommentaryPayload,
   CommentaryDestination,
   CommentaryResult,
+  SendPayload,
+  SendResult,
   TabArrangementPayload,
   TabArrangementResult,
 } from "../contract/clerk-contract.generated.js";
 import { isRecord } from "../domain/is-record.js";
+import type { SendView } from "../domain/send.js";
 
 export class ClerkApiError extends Error {
   constructor(
@@ -23,6 +26,14 @@ export class ClerkApiError extends Error {
   ) {
     super(`Clerk API ${options.endpoint} failed (${status === 0 ? "network" : status}): ${options.detail}`);
     this.name = "ClerkApiError";
+  }
+}
+
+/** The box has no `clerk.send` (tRPC answers 404): it predates Send and needs an update. */
+export class SendUnsupportedError extends ClerkApiError {
+  constructor(detail: string) {
+    super(404, { endpoint: "clerk.send", detail });
+    this.name = "SendUnsupportedError";
   }
 }
 
@@ -184,18 +195,41 @@ export async function getCommentaryDestinations(box: EnabledBox): Promise<Commen
 }
 
 /**
- * Waits before each retry of a commentary POST. Two retries cover a dropped
- * connection or a restarting box without holding the capture for long.
+ * Waits before each retry of a POST. Two retries cover a dropped connection or
+ * a restarting box without holding the capture for long.
  */
-const COMMENTARY_RETRY_DELAYS_MS = [1000, 3000];
+const RETRY_DELAYS_MS = [1000, 3000];
 
 /**
- * Failures after which the box may or may not have written the capture: no
- * response at all, or a proxy/gateway error in front of the box. A 500 is the
- * box's own answer and is not retried.
+ * Commentary retries failures after which the box may or may not have written
+ * the capture: no response at all, or a proxy/gateway error in front of the
+ * box. A 500 is the box's own answer and is not retried.
  */
-function isAmbiguousFailure(error: unknown): boolean {
-  return error instanceof ClerkApiError && [0, 502, 503, 504].includes(error.status);
+const COMMENTARY_RETRY_STATUSES: readonly number[] = [0, 502, 503, 504];
+
+/** Send also retries a 500: the box answers a repeat of the same id with the stored result. */
+const SEND_RETRY_STATUSES: readonly number[] = [0, 500, 502, 503, 504];
+
+/**
+ * Run `attempt` until it succeeds, retrying a `ClerkApiError` whose status is
+ * in `statuses` after each delay in turn. The caller's attempt must resend the
+ * SAME payload: only an id the box dedupes on makes a replay safe.
+ */
+async function withRetries<T>(
+  attempt: () => Promise<T>,
+  policy: { delaysMs: readonly number[]; statuses: readonly number[]; label: string },
+): Promise<T> {
+  for (let n = 0; ; n++) {
+    try {
+      return await attempt();
+    } catch (error) {
+      const delay = policy.delaysMs[n];
+      const retryable = error instanceof ClerkApiError && policy.statuses.includes(error.status);
+      if (delay === undefined || !retryable) throw error;
+      console.info(`[clerk] ${policy.label} failed (attempt ${n + 1}); retrying`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
 }
 
 /**
@@ -209,17 +243,127 @@ export async function postCommentary(
   request: { payload: CommentaryPayload & { captureId: string }; retryDelaysMs?: readonly number[] },
 ): Promise<CommentaryResult> {
   const { payload } = request;
-  const retryDelaysMs = request.retryDelaysMs ?? COMMENTARY_RETRY_DELAYS_MS;
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await trpcMutation(box, { procedure: "clerk.commentary", input: payload, shape: parseCommentaryResult });
-    } catch (error) {
-      const delay = retryDelaysMs[attempt];
-      if (delay === undefined || !isAmbiguousFailure(error)) throw error;
-      console.info(`[clerk] commentary post failed (attempt ${attempt + 1}); retrying capture ${payload.captureId}`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
+  return withRetries(
+    () => trpcMutation(box, { procedure: "clerk.commentary", input: payload, shape: parseCommentaryResult }),
+    {
+      delaysMs: request.retryDelaysMs ?? RETRY_DELAYS_MS,
+      statuses: COMMENTARY_RETRY_STATUSES,
+      label: `commentary post for capture ${payload.captureId}`,
+    },
+  );
+}
+
+const SEND_STATES: ReadonlySet<unknown> = new Set(["needs-choice", "sending", "sent", "discarded"]);
+const SEND_REASONS: ReadonlySet<unknown> = new Set(["uncertain", "routing-unavailable", "destination-gone"]);
+
+function parseSendDestination(value: unknown): NonNullable<SendView["destination"]> | null {
+  if (!isRecord(value) || typeof value["label"] !== "string") return null;
+  const sessionId = value["sessionId"];
+  if (sessionId === undefined) return { label: value["label"] };
+  return typeof sessionId === "string" ? { label: value["label"], sessionId } : null;
+}
+
+function parseSendChoices(value: unknown): NonNullable<SendView["choices"]> | null {
+  if (!Array.isArray(value)) return null;
+  const choices: NonNullable<SendView["choices"]> = [];
+  for (const raw of value) {
+    if (!isRecord(raw)) return null;
+    const { candidateId, label, detail } = raw;
+    if (typeof candidateId !== "string" || typeof label !== "string") return null;
+    if (detail !== undefined && typeof detail !== "string") return null;
+    choices.push(detail === undefined ? { candidateId, label } : { candidateId, label, detail });
   }
+  return choices;
+}
+
+/** Copies the optional view fields that are present and well-typed; false on a wrong type. */
+function readOptionalViewFields(data: Record<string, unknown>, view: SendView): boolean {
+  const { destination, queued, reason, lastError, expired, choices } = data;
+  if (destination !== undefined) {
+    const parsed = parseSendDestination(destination);
+    if (parsed === null) return false;
+    view.destination = parsed;
+  }
+  if (queued !== undefined) {
+    if (typeof queued !== "boolean") return false;
+    view.queued = queued;
+  }
+  if (reason !== undefined) {
+    if (!SEND_REASONS.has(reason)) return false;
+    view.reason = reason === "uncertain" || reason === "routing-unavailable" ? reason : "destination-gone";
+  }
+  if (lastError !== undefined) {
+    if (typeof lastError !== "string") return false;
+    view.lastError = lastError;
+  }
+  if (expired !== undefined) {
+    if (typeof expired !== "boolean") return false;
+    view.expired = expired;
+  }
+  if (choices !== undefined) {
+    const parsed = parseSendChoices(choices);
+    if (parsed === null) return false;
+    view.choices = parsed;
+  }
+  return true;
+}
+
+/**
+ * Runtime twin of the generated `SendResult` without `card`: also reads the
+ * quick chat view `quickChat.choose` answers (its extra fields are ignored).
+ */
+export function parseSendView(data: unknown): SendView | null {
+  if (!isRecord(data)) return null;
+  const state = data["state"];
+  if (!SEND_STATES.has(state)) return null;
+  const view: SendView = {
+    state: state === "needs-choice" || state === "sending" || state === "sent" ? state : "discarded",
+  };
+  return readOptionalViewFields(data, view) ? view : null;
+}
+
+/** Runtime twin of the generated `SendResult`. */
+export function parseSendResult(data: unknown): SendResult | null {
+  if (!isRecord(data) || typeof data["card"] !== "string") return null;
+  const view = parseSendView(data);
+  return view === null ? null : { card: data["card"], ...view };
+}
+
+/**
+ * Post one send, retrying a lost answer (network, 500, 502-504) with the SAME
+ * payload: the box answers a repeat of the id with the stored result. A 404
+ * means the box predates `clerk.send` and becomes `SendUnsupportedError`.
+ */
+export async function postSend(
+  box: EnabledBox,
+  request: { payload: SendPayload; retryDelaysMs?: readonly number[] },
+): Promise<SendResult> {
+  const { payload } = request;
+  try {
+    return await withRetries(
+      () => trpcMutation(box, { procedure: "clerk.send", input: payload, shape: parseSendResult }),
+      {
+        delaysMs: request.retryDelaysMs ?? RETRY_DELAYS_MS,
+        statuses: SEND_RETRY_STATUSES,
+        label: `send ${payload.id}`,
+      },
+    );
+  } catch (error) {
+    if (error instanceof ClerkApiError && error.status === 404) throw new SendUnsupportedError(error.message);
+    throw error;
+  }
+}
+
+/** Fix the destination of a send that needs a choice, and deliver it (`quickChat.choose`). */
+export async function chooseSendDestination(
+  box: EnabledBox,
+  choice: { id: string; candidateId: string },
+): Promise<SendView> {
+  return trpcMutation(box, {
+    procedure: "quickChat.choose",
+    input: { id: choice.id, candidateId: choice.candidateId },
+    shape: parseSendView,
+  });
 }
 
 export async function postTabArrangement(

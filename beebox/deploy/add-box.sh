@@ -41,7 +41,7 @@ set -euo pipefail
 #                    box tree: there is one copy of each secret in the
 #                    machine store and this adds a grant to it, so rotation
 #                    still touches one place (docs/secrets.md). Secrets that
-#                    bind to one box (a Telegram bot token) are skipped and
+#                    bind to one box (a bucket-scoped publish token) are skipped and
 #                    named. A source box with no grants at all copies nothing:
 #                    grant it the secrets it should have first.
 #   --dry-run        run the preflight checks against the live server and
@@ -404,7 +404,7 @@ fi
 # and the new box gets a grant to it, so rotating a key later touches one entry
 # instead of every box that was ever seeded from this one (the rotation hazard
 # the secret-custody plan exists to end — docs/secrets.md). Secrets that bind
-# structurally to one box (a Telegram bot token routes to one webhook URL) are
+# structurally to one box (a bucket-scoped publish token) are
 # skipped by the command and named in its output.
 #
 # '--agent-confirmed' is correct here and not a rubber stamp: the operator

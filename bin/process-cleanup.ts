@@ -71,7 +71,7 @@ const BIN_DIR = import.meta.dirname;
 
 // Per-worktree agent-browser socket dirs, mirroring `bin/browse`
 // (`${HOME}/.cache/beebox/browse/<worktree>/socket`). Each dir's
-// `*.pid` files (default.pid, dashboard.pid, <session>.pid) name the only
+// `*.pid` files (default.pid, <session>.pid) name the only
 // agent-browser processes that are actually live for that worktree.
 const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "beebox", "browse");
 
@@ -138,8 +138,8 @@ function worktreeForPath(p: string): string | null {
 
 /**
  * The agent-browser pids a worktree's socket dir currently vouches for — read
- * from its `*.pid` files (the live daemon `default.pid`, the `dashboard.pid`,
- * and any per-session `<name>.pid`). Any *other* agent-browser process for that
+ * from its `*.pid` files (the live daemon `default.pid` and any per-session
+ * `<name>.pid`). Any *other* agent-browser process for that
  * worktree is a superseded orphan: the upstream daemon stops serving its socket
  * on idle/supersession but never exits — it reparents to PID 1 and sleeps
  * forever — so a fresh daemon is spawned on next use and the old one lingers,
@@ -365,7 +365,7 @@ function sleep(ms: number): Promise<void> {
  * currently vouches for (a `*.pid` entry) — or when liveness is unknown, which
  * spares regardless. A worktree with no session at all has every daemon
  * reaped; a live
- * worktree keeps its current daemon + dashboard but sheds superseded orphans
+ * worktree keeps its current daemon but sheds superseded orphans
  * (which never exit on their own). The hard rule — never kill a daemon a live
  * session is actually using — is preserved, just sharpened from "any daemon of
  * a live worktree" to "the current one."

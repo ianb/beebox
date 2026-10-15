@@ -22,6 +22,7 @@ struct BoxScreenView: View {
     /// Never activated: a quick chat composer does not touch pending emissions,
     /// but the composer's type requires a store.
     @ObservedObject var pendingStore: PendingEmissionStore
+    @Environment(\.openURL) private var openURL
     var onOpen: (String) -> Void
     var onSelectBox: (PairedBox) -> Void
     /// Open scrolled to the Boxes section, for the multi-box fixture.
@@ -32,6 +33,7 @@ struct BoxScreenView: View {
             ScrollViewReader { proxy in
                 List {
                     refreshNotice
+                    QuickCaptureSection(box: box, boxes: boxes, onOpen: onOpen)
                     needsSection
                     sentSection
                     recentSection
@@ -279,8 +281,7 @@ struct BoxScreenView: View {
     private func recordRow(_ view: QuickChatView) -> some View {
         let busy = screenStore.busyIDs.contains(view.id)
         VStack(alignment: .leading, spacing: 8) {
-            Text(view.message)
-                .lineLimit(4)
+            recordContent(view, lineLimit: 4)
             switch view.state {
             case .needsChoice:
                 Text(view.statusLine)
@@ -326,6 +327,41 @@ struct BoxScreenView: View {
         .disabled(busy)
         .opacity(busy ? 0.6 : 1)
         .padding(.vertical, 4)
+    }
+
+    /// The page a Clerk send carries, linked, above the person's note. A page
+    /// sent with no note has an empty message: the title is the row then.
+    @ViewBuilder
+    private func recordContent(_ view: QuickChatView, lineLimit: Int, secondary: Bool = false) -> some View {
+        if let page = view.page {
+            pageLink(page)
+        }
+        if view.page == nil || view.message.isEmpty == false {
+            Text(view.message)
+                .lineLimit(lineLimit)
+                .foregroundStyle(secondary ? .secondary : .primary)
+        }
+    }
+
+    @ViewBuilder
+    private func pageLink(_ page: QuickChatView.Page) -> some View {
+        let title = page.title.isEmpty ? page.url : page.title
+        if let url = URL(string: page.url), url.scheme == "https" || url.scheme == "http" {
+            Button {
+                openURL(url)
+            } label: {
+                Label(title, systemImage: "doc.richtext")
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(title)
+            .accessibilityHint("Opens the page")
+            .accessibilityAddTraits(.isLink)
+        } else {
+            Label(title, systemImage: "doc.richtext")
+                .lineLimit(2)
+        }
     }
 
     private func choiceButtons(_ view: QuickChatView) -> some View {
@@ -376,9 +412,7 @@ struct BoxScreenView: View {
 
     private func sentRow(_ view: QuickChatView) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(view.message)
-                .lineLimit(2)
-                .foregroundStyle(.secondary)
+            recordContent(view, lineLimit: 2, secondary: true)
             HStack {
                 Label(view.statusLine, systemImage: "checkmark.circle")
                 .font(.footnote)

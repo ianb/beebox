@@ -9,6 +9,7 @@ landmark, and folds to nothing under a `background` landmark — the top one
 or any ancestor.
 
 ```ts setup
+import { utimes } from "node:fs/promises";
 import { prunedSubtree } from "../../../src/core/landmark/prominence-index.js";
 import { getParseCount, resetParseCount } from "../../../src/core/landmark/prominence-cache.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -182,6 +183,47 @@ root.summary.background
 await box.cleanup();
 ```
 
+## Ordinary cards are listed with their mtimes
+
+`ordinary` lists every `ordinary`-level card the walk reached, with its file
+mtime, for the place page's "Also here" group. A briefing is ordinary: the
+person reads it as their own page. Chat husks, capture sessions and upload
+batches are `background` by type, so they are not listed; neither is a card
+inside a nested place.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/Groceries.memo.card", "---\n---\n");
+await box.write("_content/Box.briefing.card", "---\n---\nAbout this box.\n");
+await box.write("_content/chat/web/Hello.chat.card", "---\nsession: s1\n---\n");
+await box.write("_content/tmp-capture/Walk.capture-session.card", "---\n---\n");
+await box.write("_content/tmp-upload/Batch.upload-batch.card", "---\n---\n");
+await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
+await box.write("_content/Sub/Nested.memo.card", "---\n---\n");
+await utimes(box.path("_content/Groceries.memo.card"), 1_700_000_000, 1_700_000_000);
+await utimes(box.path("_content/Box.briefing.card"), 1_700_000_100, 1_700_000_100);
+
+const { ordinary, entries } = await prunedSubtree(box.root, "");
+ordinary
+  .map((o) => `${o.boxPath} ${o.mtimeMs}`)
+  .sort()
+  .join("\n")
+=>
+/_content/Box.briefing.card 1700000100000
+/_content/Groceries.memo.card 1700000000000
+
+fmt(entries)
+=>
+card:background /_content/chat/web/Hello.chat.card
+card:background /_content/tmp-capture/Walk.capture-session.card
+card:background /_content/tmp-upload/Batch.upload-batch.card
+landmark:background /_content/Sub/Sub.landmark.card
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## A warm second call parses nothing
 
 The per-file cache (`prominence-cache.ts`) memoizes each file's parse by
@@ -198,6 +240,33 @@ resetParseCount();
 await prunedSubtree(box.root, "");
 getParseCount()
 => 0
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A large box stays cached
+
+A walk reads every card under its place, so the cache must hold a whole
+large box. A cap of 4,096 files once cleared the cache partway through every
+walk of a box with about 9,000 cards, and each walk parsed every card again.
+Here 4,500 cards, more than that old cap, are all parsed once and then never
+again.
+
+```ts
+const box = await makeTmpBox();
+await Promise.all(
+  Array.from({ length: 4500 }, (_, i) => box.write(`_content/d${i % 30}/Card${i}.memo.card`, "---\n---\n")),
+);
+
+resetParseCount();
+await prunedSubtree(box.root, "");
+const cold = getParseCount();
+resetParseCount();
+await prunedSubtree(box.root, "");
+({ cold, warm: getParseCount() })
+=> { cold: 4500, warm: 0 }
 ```
 
 ```ts cleanup

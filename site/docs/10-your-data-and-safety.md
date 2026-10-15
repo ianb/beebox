@@ -40,7 +40,11 @@ screen, sends your message, your routing rules, and recent conversation text
 through OpenRouter to a routing model (TypeSafe) to choose a destination, and
 posts the thought to a clear choice without asking; the documentation says
 this is not a zero-retention guarantee, and leaving the OpenRouter key
-ungranted avoids it while ordinary chat keeps working. If you opt in to the judging model for filing documents, the prepared text of
+ungranted avoids it while ordinary chat keeps working. A thought saved through
+Siri on the iPhone, and a voice note or a share with words, takes the same route
+once it reaches the box (a voice note's audio first goes to your transcription
+vendor); a share with no words, such as a saved image or link, starts no chat
+work. Until it uploads, such a capture is held in storage on the phone itself. If you opt in to the judging model for filing documents, the prepared text of
 each item and your filing rules go the same way, and a record of each decision
 stays in the box. A watch that
 notifies you when something changes in the box sends the text of the changed
@@ -48,7 +52,7 @@ cards to the same routing model, with a request that the provider not retain
 it; it needs the same OpenRouter key. Push to the iPhone app goes through
 Apple, and push to a browser through that browser's vendor; a notification
 carries a title, a short body, and where a tap should land. Google services,
-Telegram, web push, and publishing send data only if you connect them. A
+web push, and publishing send data only if you connect them. A
 published site is stored and served by the Cloudflare account you connect, and
 is visible to whoever has its address. Gmail access is limited to
 reading and drafting; the system never asks for permission to send mail on

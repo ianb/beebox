@@ -22,6 +22,15 @@ import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../src/servi
 import { createFakeCodexCli } from "../../../src/services/codex-cli/core.js";
 import { createChatBackend } from "../../../src/services/claude-chat/core.js";
 
+/** Run with console.error captured: a refused run logs its reason, which these examples show. */
+async function capturingErrors(run) {
+  const logged = [];
+  const { error } = console;
+  console.error = (...args) => { logged.push(args.map(String).join(" ")); };
+  try { return { result: await run(), logged }; }
+  finally { console.error = error; }
+}
+
 /** A probe that answers `n` times with no usable result, then as given. */
 function flakyCli(inconclusiveTimes, then) {
   let calls = 0;
@@ -68,7 +77,8 @@ await checkClaudeAuth({ claudeCli: loggedOut });
 A fake chat backend leaves `requiresClaudeAuth` unset, so it always proceeds —
 tests never shell out. A real backend (`requiresClaudeAuth: true`) with a
 logged-out CLI emits `"error"` on the session and returns `false` so the run
-aborts.
+aborts. The reason is also logged: a sender with no listener on the session,
+such as quick chat, would otherwise leave no trace of why the run did not start.
 
 ```ts
 resetClaudeAuthCache();
@@ -83,9 +93,9 @@ JSON.stringify({ proceedFake, events })
 ```ts continue
 resetClaudeAuthCache();
 const claudeCli = createFakeClaudeCli({ loggedIn: false });
-const proceedReal = await preflightChatBackend({ backend: { requiresClaudeAuth: true }, session, claudeCli });
-JSON.stringify({ proceedReal, events })
-=> {"proceedReal":false,"events":[["error","Claude Code is not logged in — run `claude auth login` on this machine"]]}
+const { result: proceedReal, logged } = await capturingErrors(() => preflightChatBackend({ backend: { requiresClaudeAuth: true }, session, claudeCli }));
+JSON.stringify({ proceedReal, events, logged })
+=> {"proceedReal":false,"events":[["error","Claude Code is not logged in — run `claude auth login` on this machine"]],"logged":["[chat-preflight] run refused: Claude Code is not logged in — run `claude auth login` on this machine"]}
 ```
 
 ## Codex has its own preflight and remedy
@@ -144,13 +154,13 @@ const codexEvents = [];
 const codexSession = { emit: (event, err) => { codexEvents.push([event, err.message]); return true; } };
 const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
 const claudeCli = createFakeClaudeCli({ loggedIn: true });
-const proceedCodex = await preflightChatBackend({
+const { result: proceedCodex } = await capturingErrors(() => preflightChatBackend({
   backend: { requiresCodexAuth: true },
   engine: "codex",
   session: codexSession,
   claudeCli,
   codexCli,
-});
+}));
 JSON.stringify({ proceedCodex, codexEvents, codexCalls: codexCli.statusCalls })
 => {"proceedCodex":false,"codexEvents":[["error","Codex is not logged in — run `codex login --device-auth` as the Bee Box service user"]],"codexCalls":1}
 ```

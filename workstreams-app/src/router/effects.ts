@@ -32,14 +32,13 @@ export interface SpawnedChild extends Promise<unknown> {
 }
 
 /** The subset of execa options the lifecycle passes through (lifecycle children:
- *  detached + piped stdio; dashboard commands: ignored stdio + a timeout). */
+ *  detached + piped stdio). */
 export interface SpawnOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
-  stdio?: "ignore" | ["ignore", "pipe", "pipe"];
+  stdio?: ["ignore", "pipe", "pipe"];
   detached?: boolean;
   cleanup?: boolean;
-  timeout?: number;
 }
 
 /** A resolved worktree: where its checkout lives and which boxes it serves.
@@ -65,10 +64,8 @@ export interface ResolvedWorktree {
  * a bug (everything must route through here).
  */
 export interface RouterEffects {
-  /** Spawn a child. Both the two lifecycle children (vite, fastify) and the four
-   *  dashboard commands (pre-start stop, start, failed-startup stop, stopDashboard)
-   *  go through here. The rejection is swallowed at the spawn site by the caller's
-   *  very next line (lifecycle children) or the awaiting `.catch` (dashboard). */
+  /** Spawn one of the two lifecycle children (vite, fastify). The rejection is
+   *  swallowed at the spawn site by the caller's very next line. */
   spawn(command: string, params: { args: string[]; options: SpawnOptions }): SpawnedChild;
   /** SIGTERM (or the given signal) a child's process GROUP, falling back to the
    *  bare pid. No-op for `undefined`. */
@@ -116,9 +113,9 @@ export interface RouterCoreConfig {
   /** Where per-worktree log files are written (real streams, per the plan; tests
    *  point this at a tmp dir). */
   logDir: string;
-  /** Base dir for a worktree's agent-browser socket/profile dirs. */
+  /** `<state>/browse`; a worktree's isolated secret store lives beside it
+   *  (see `isolatedSecretsFileFor`). */
   browseDir: string;
-  agentBrowserBin: string;
   /** `true` reverts the backend to the legacy single server-main.ts process. */
   devNoHub: boolean;
   /** This router process's pid, stamped into pidfile records. */

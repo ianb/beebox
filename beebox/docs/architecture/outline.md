@@ -8,13 +8,13 @@ Supporting docs (not user-facing): `spirit.md` (values compass), `family.md` (ch
 
 ## 1. What Is This Thing?
 
-**Opening scene:** Saturday morning, the Lund-Vega household. The family has a Telegram group — Diana, James, Rosa, and the box. (Mateo was added but muted it.) The box posted overnight: it sorted out a scheduling conflict for next week and has a question about the Costco list. Rosa replied in Spanish. James thumbs-up'd something at 2am between shifts. Diana's reading the thread now with coffee.
+**Opening scene:** Saturday morning, the Lund-Vega household. The family all talk with the box — Diana, James, Rosa; Mateo was set up but rarely opens it. The box posted overnight: it sorted out a scheduling conflict for next week and has a question about the Costco list. Rosa replied in Spanish. James thumbs-up'd something at 2am between shifts. Diana's reading the thread now with coffee.
 
-The group conversation is the primary shared surface — the box participates in the family conversation rather than being a separate thing everyone talks to privately. That group lives in Telegram; in the web chat, the main interface, each person talks with the box. But there are other surfaces too: capture mode in the chat composer for voice memos and photos, and pages the box creates on its own.
+The group conversation is the primary shared surface — the box participates in the family conversation rather than being a separate thing everyone talks to privately. In the web chat each person talks with the box, and the box carries what one tells it into what it says to the others. But there are other surfaces too: capture mode in the chat composer for voice memos and photos, and pages the box creates on its own.
 
 What the reader should understand:
 - A box is a shared family system — both a conversation space and a shared repository of the family's stuff
-- The chat is the main space (web for each person, a Telegram group for the family together) — the box is a participant, not a hub
+- The chat is the main space (web, one chat per person) — the box is a participant, not a hub
 - Other surfaces exist: capture mode (voice, photo, text), generated pages and views
 - Different people engage differently — Diana checks everything, Rosa replies in Spanish, Mateo ignores it, Sofia asks it questions directly sometimes
 - The box also reaches out on its own: notifications, assembled pages, custom views
@@ -59,14 +59,14 @@ This section needs multiple small vignettes, going back and forth between storie
 
 **Vignette: Email.** Diana has the Gmail connector watching a label she puts on Sofia's swim schedule updates. An email arrives with an updated PDF. The box wakes up, sees the new email, processes the PDF, updates the schedule card, notices a conflict with James's shifts, posts a question to the group chat. Email is a primary intake pattern — the Gmail connector reads Diana's own mail by query or label, so she just sets up filters and labels and things flow in.
 
-**Vignette: Something from the group chat.** James sends a photo of his posted work schedule to the Telegram group. The box sees it, parses it, creates/updates the shift cards. Maybe it gets something wrong and asks for confirmation.
+**Vignette: Something from the group chat.** James sends a photo of his posted work schedule to the box. The box sees it, parses it, creates/updates the shift cards. Maybe it gets something wrong and asks for confirmation.
 
 **Vignette: Adding a new connector.** Diana decides she wants the box to track Sofia's swim team announcements that come via email. She adds a Gmail filter that labels them for the box. What happens the first time a new kind of email arrives? The box has to figure out what it is and what to do with it.
 
 **Architecture — the wakeup cycle:**
 - The cycle: sync connectors → the reactor runs the jobs they created → `bbx finalize`
 - It runs on a schedule, not just in response to user actions — the box does things on its own
-- Connectors are how the outside world gets in: Gmail, Telegram, calendar sync, Google Drive, browser-extension captures, etc.
+- Connectors are how the outside world gets in: Gmail, calendar sync, Google Drive, browser-extension captures, etc.
 - Each connector syncs its source into the box's filesystem as cards
 
 **Architecture — agents:**
@@ -112,7 +112,7 @@ What the reader should understand:
 
 ## 5. How It Got Here / How It Changes
 
-**Story: Flashback.** Diana set up the box a few months ago. Connected her Gmail and set up labels for the box — swim team emails, school announcements, pharmacy notifications. Added Rosa to the Telegram group. The box started figuring out what each kind of email meant and what to do with it.
+**Story: Flashback.** Diana set up the box a few months ago. Connected her Gmail and set up labels for the box — swim team emails, school announcements, pharmacy notifications. Added Rosa to the box. The box started figuring out what each kind of email meant and what to do with it.
 
 **Story: Something new.** James starts sending photos of his posted work schedule to the group chat instead of just to Diana. The box sees a new kind of input, figures out what it is, starts parsing it. The first time it gets the format wrong. It asks. It learns.
 

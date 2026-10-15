@@ -301,7 +301,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // pipe the raw request stream to the child. The built-in parsers must go
   // first: Fastify's own application/json and text/plain parsers take
   // precedence over a catch-all "*", and they drain the stream, which left
-  // every JSON webhook POST (e.g. Telegram) hanging behind the hub.
+  // every JSON webhook POST hanging behind the hub.
   app.removeAllContentTypeParsers();
   // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
   app.addContentTypeParser("*", (_request, _payload, done) => {

@@ -24,11 +24,11 @@ const CONNECTORS: ConnectorInfo[] = [
   {
     name: "gmail",
     produces: ["email-thread", "email-message"],
-    description: "Pulls emails from Gmail via IMAP. Creates thread directories with message cards and body text files.",
+    description: "Pulls mail through the Gmail API. Creates thread directories with message cards and body text files; sends the agent's `email-outbound` drafts.",
   },
   {
     name: "google-drive",
-    produces: ["gsheet", "gdoc"],
+    produces: ["gdoc", "gsheet", "gfolder", "glink"],
     description: [
       "Two-way sync with Google Drive. Spreadsheets become `.gsheet.card` files with JSON tabs;",
       "Google Docs become `.gdoc.card` files with sibling markdown. Push detects conflicts when",
@@ -50,15 +50,6 @@ const CONNECTORS: ConnectorInfo[] = [
       "the file format, editability by calendar role, and filename form are the",
       "`connector-calendar` rule, which loads when an `.ics` file is in play. Sync state lives in",
       "`_bookkeeping/connectors/`.",
-    ].join("\n"),
-  },
-  {
-    name: "telegram",
-    produces: ["telegram-message"],
-    description: [
-      "Messages the boxholder sends the box's Telegram bot arrive as cards under",
-      "`_content/chat/telegram/`; replies go back through the same chat. There is nothing to",
-      "author by hand: a Telegram conversation is a chat like any other.",
     ].join("\n"),
   },
 ];
@@ -138,7 +129,7 @@ export function generateConnectorsDocs(): string {
     "",
     "  A trick declares its secrets in `secrets.json` instead and receives them in its",
     "  environment; see `tricks.md`.",
-    "- Built-in connectors (Telegram, Gmail, transcription, …) resolve their own credentials",
+    "- Built-in connectors (Gmail, Calendar, Drive, transcription, …) resolve their own credentials",
     "  inside the server process. You never see or need those values.",
     "- A scheduled script that needs a connector says so in its `requires` field; see",
     "  `card-scheduled-script.md`.",

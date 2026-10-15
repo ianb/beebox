@@ -16,7 +16,6 @@ import { OpenRouterModelsSection } from "../components/admin/OpenRouterModelsSec
 import { AllowedEmailsSection } from "../components/admin/AllowedEmailsSection";
 import { GoogleServicesSection } from "../components/admin/GoogleServicesSection/view";
 import { GmailFiltersSection } from "../components/admin/GmailFiltersSection/view";
-import { TelegramSection } from "../components/admin/TelegramSection/view";
 import { SecretsSection } from "../components/admin/SecretsSection/view";
 import { CloudflarePublishConnectionsSection } from "../components/admin/CloudflarePublishConnectionsSection/view";
 import { NotificationsSection } from "../components/admin/NotificationsSection/view";
@@ -101,7 +100,6 @@ function ConnectionsPanel({ arrival, arrivalReceipt, onArrivalConsumed }: Pick<A
   return <>
     <ProbeSection name="GoogleServices"><GoogleServicesSection arrival={arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={onArrivalConsumed} /></ProbeSection>
     <ProbeSection name="GmailFilters"><GmailFiltersSection /></ProbeSection>
-    <ProbeSection name="Telegram"><TelegramSection /></ProbeSection>
     <ProbeSection name="CloudflarePublishConnections"><CloudflarePublishConnectionsSection /></ProbeSection>
   </>;
 }

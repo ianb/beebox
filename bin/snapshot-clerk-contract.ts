@@ -29,6 +29,8 @@ import {
   commentaryDestination,
   tabArrangementPayload,
   tabArrangementOutput,
+  sendInput,
+  sendOutput,
 } from "../beebox/src/webapp/trpc/clerk-contract.js";
 
 /**
@@ -98,6 +100,8 @@ const CONTRACT: { schema: z.ZodType; io: "input" | "output"; name: string; doc: 
   { schema: commentaryDestination, io: "output", name: "CommentaryDestination", doc: "A single landmark commentary destination." },
   { schema: tabArrangementPayload, io: "input", name: "TabArrangementPayload", doc: "Captured tabs and their proposed arrangement." },
   { schema: tabArrangementOutput, io: "output", name: "TabArrangementResult", doc: "Result of accepting a tab arrangement into the box." },
+  { schema: sendInput, io: "input", name: "SendPayload", doc: "Request body for `clerk.send`." },
+  { schema: sendOutput, io: "output", name: "SendResult", doc: "Where a `clerk.send` stands: sent, waiting for a choice, or not delivered yet." },
 ];
 
 const INDENT = "  ";

@@ -100,8 +100,8 @@ importers:
   beebox:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
-        specifier: 0.3.293
-        version: 0.3.293(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
+        specifier: 0.3.296
+        version: 0.3.296(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
       '@fastify/cookie':
         specifier: ^11.0.2
         version: 11.0.2
@@ -124,11 +124,11 @@ importers:
         specifier: ^0.5.7
         version: 0.5.7(@types/react@18.3.29)(react@18.3.1)
       '@openai/codex':
-        specifier: 0.161.0
-        version: 0.161.0
+        specifier: 0.162.1
+        version: 0.162.1
       '@openai/codex-sdk':
-        specifier: 0.161.0
-        version: 0.161.0
+        specifier: 0.162.1
+        version: 0.162.1
       '@orama/orama':
         specifier: 3.1.18
         version: 3.1.18
@@ -201,9 +201,6 @@ importers:
       google-auth-library:
         specifier: ^10.5.0
         version: 10.6.2
-      grammy:
-        specifier: ^1.40.1
-        version: 1.43.0
       http-proxy-3:
         specifier: ^1.23.2
         version: 1.23.2
@@ -444,9 +441,6 @@ importers:
       d3:
         specifier: ^7.9.0
         version: 7.9.0
-      fraction.js:
-        specifier: ^5.3.4
-        version: 5.3.4
       p5:
         specifier: ^2.3.0
         version: 2.3.0
@@ -562,7 +556,7 @@ importers:
         version: 4.4.4(eslint-plugin-import-x@4.16.2(@typescript-eslint/utils@8.65.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-node@0.3.10)(eslint@9.39.4(jiti@2.7.0)))(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.7.0))
       tap:
         specifier: ^21.0.0
-        version: 21.7.4(@types/node@24.13.3)(@types/react@18.3.29)(typescript@5.9.3)
+        version: 21.7.4(@types/node@24.13.3)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
       tsx:
         specifier: ^4.23.1
         version: 4.23.1
@@ -883,8 +877,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.293':
-    resolution: {integrity: sha512-E2rwiiHr3LwYzBuTROVDpJkts4QmYCrW39ZIN1qixVSNQhSEiz5LjaKxzrwq0xgPgQDU0vd2fLMG1k72BgD24w==}
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.296':
+    resolution: {integrity: sha512-Wrhy7rxQVUNowQRDpSZD+3MFSBAlN4TINZSpKD8PKpEValCG6x05N855MuITvwgkH0EeoyNLRCsowJaIHa8V9Q==}
     cpu: [arm64]
     os: [darwin]
 
@@ -898,8 +892,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.293':
-    resolution: {integrity: sha512-UJD8kX1XDhMqs/0LLxD012h+S9U3Q8XPbRSNcnPQEMNAoEF+lh898xPbVnkUgPKl3jUOUyqYRwFRwDiUJD+GJg==}
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.296':
+    resolution: {integrity: sha512-klMOQ1TdA7u6sWZJYw9l5byWYxMiWzbuPhzCgVVY+LJOs4FlhsS3qLXn2RZmIFhQv1u65zwX+2CRSWEJddqfVQ==}
     cpu: [x64]
     os: [darwin]
 
@@ -915,8 +909,8 @@ packages:
     os: [linux]
     libc: [musl]
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.293':
-    resolution: {integrity: sha512-l5Nfwox69bBMEccSQfPQFOq9hbSqQIMsi4H/UXaMSsqgnxunXuKEBXb5klXZJwk4vUt/NzeqAjB/UFbKqW29HQ==}
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.296':
+    resolution: {integrity: sha512-8DEazoBU4I8HsPrXgSJ1Vq30nCBF7PaKjHz1o/igCz+HZu3qepHztWpoKJKQee5Mt4XsvZLwtKuxQo1F+SC6yQ==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
@@ -933,8 +927,8 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.293':
-    resolution: {integrity: sha512-B3M5gw6pPH/ckMtrLtGg4ZY1adLVnPoXkEV+Ruu0j/gdFzwuLWR64Spa0RCsbo7BXVN6w5NTqkuZk+HBfsPUZA==}
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.296':
+    resolution: {integrity: sha512-+tC1KlUlp/3BQS+EfG8RBrmru4xKwF6hNEm15gNct8k9tNVRLYOftbkNCGJPTKkoBoq0sQ+Omojzwr/W2Dg60A==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
@@ -951,8 +945,8 @@ packages:
     os: [linux]
     libc: [musl]
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.293':
-    resolution: {integrity: sha512-5N30l2Y17ZV9q0TGCMXtrkTleX+RVtUMoOL+48qQ7ZrKWGYYBtVDS59cIXDv+TAGqoyYVmklw0W2Sy4dA40BwQ==}
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.296':
+    resolution: {integrity: sha512-lMquemenM5CDNZv6g1+xBSfQpat2xiwOQUnY2mwSQKjT+IfE5/F8CgRd38ZBljwGnedPIuKs/DAZMt4YslLF5w==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
@@ -969,8 +963,8 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.293':
-    resolution: {integrity: sha512-MtqXROSQiuqOCNXfC4k3/3DVfgTNLEdaT5jp/omaZeiPtnRtfCz2KTtBTVG4IwbEDFaKsqfzPsPFzN7X6avwkg==}
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.296':
+    resolution: {integrity: sha512-TStCnbg2iBtWJBQeMdO7Xwpx5IYWICmdcf7J9eXhIi4JbahWD+VLRaH5sxB+LLZjdBXekp8piKv6Ne2+arag0w==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
@@ -985,8 +979,8 @@ packages:
     cpu: [arm64]
     os: [win32]
 
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.293':
-    resolution: {integrity: sha512-WvPf8cXna446bTx2U4WVQc5+iUgDn94ve8aauvWwcG8n9oa+1wNCKNGFxk8HvS7DQJhF8dfrCbcF068uNFqYNw==}
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.296':
+    resolution: {integrity: sha512-/epluPyoLm1NQAcHV0LUierKog7c9yyU8BgpZOtGWiM54nqTZKKBuCwANraV3ROfXYFfJdMV4Vehk/8fqxoOqQ==}
     cpu: [arm64]
     os: [win32]
 
@@ -1000,8 +994,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.293':
-    resolution: {integrity: sha512-SVaIDHtpCwM0r0m9jzue1U7yktIZ1eJhR1O3e0UCHYTJluaIXty5m6DzqhG4rjnEoNlEAl9rQLqPigS/R5+IiQ==}
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.296':
+    resolution: {integrity: sha512-T71Y/hp0v7VtRzTOoxAsIkPa68JpB1d/VvCKTTE9GzTkbjQZHjs3S1DM06LDxSpwjITF7OCVJq14+XjN8M9t/g==}
     cpu: [x64]
     os: [win32]
 
@@ -1021,8 +1015,8 @@ packages:
       '@modelcontextprotocol/sdk': ^1.29.0
       zod: ^4.0.0
 
-  '@anthropic-ai/claude-agent-sdk@0.3.293':
-    resolution: {integrity: sha512-DVfn46SmpfB7xaKuUHsAC+qwY27hOLHNbvF7FoNOAXLZPRTeCr68SjhBjlFOtk+jz5Nf7pfUwnIUDFcdVih6Dg==}
+  '@anthropic-ai/claude-agent-sdk@0.3.296':
+    resolution: {integrity: sha512-Y+cZ2BT8X94mQ9GJOVyIqhjC/nWGvwozUVLjdkzX7aSt+zuo5tgk7Hdv9V7tEUQ9fKnEuiL6moYNWDeHqCD4Lw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@anthropic-ai/sdk': '>=0.93.0'
@@ -2256,9 +2250,6 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@grammyjs/types@3.27.3':
-    resolution: {integrity: sha512-yUKMLliGsGbnxu96YUJ7km7B0zy4PzeH/Jvti5705R/LeKDMqkDV4DckMSt+OrliWQpTwQljHE0QLol5zgxBkg==}
-
   '@hono/node-server@1.19.17':
     resolution: {integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==}
     engines: {node: '>=18.14.1'}
@@ -2825,47 +2816,47 @@ packages:
     resolution: {integrity: sha512-mGUWr1uMnf0le2TwfOZY4SFxZGXGfm4Jtay/nwAa2FLNAKXUoUwaGwBMNH36UHPtinWfTSJ3nqFQr0091CxVGg==}
     engines: {node: ^20.17.0 || >=22.9.0}
 
-  '@openai/codex-sdk@0.161.0':
-    resolution: {integrity: sha512-o2SJAq6qmZRaPKLsQTT+5kuJ9PO0QTlpdNz3S7gK8F9StU8LqEGkWc9haR24WkL+1OG41MAn5HNDvs3EFFtlow==}
+  '@openai/codex-sdk@0.162.1':
+    resolution: {integrity: sha512-oG3u4y8Zq9t5QvlABcGo0cby/E2d6nrYZq71F/JBy2VOsOoqhhaMlbA7/35SWsykYGouL+T+3RgRT2X/xE+Y1g==}
     engines: {node: '>=18'}
 
-  '@openai/codex@0.161.0':
-    resolution: {integrity: sha512-+ZnJFGBbQBwYnjUTs+PoacgYVxmNyxMLiadIz6eSJ0AzQW0mRVxuuOQizSbz2qeNAJia9Syxag6j2uGf7guD2Q==}
+  '@openai/codex@0.162.1':
+    resolution: {integrity: sha512-NWZdi/kxyjv/8EUGFupziGU38YyleugZRM4JXgY5XFH7FUmaFA33NZS2Bmq0HPazf7S3jJQQWsZ/jAK9jsrV3Q==}
     engines: {node: '>=16'}
     hasBin: true
 
-  '@openai/codex@0.161.0-darwin-arm64':
-    resolution: {integrity: sha512-arxKLYB3uKjewwOpGFo5/MGe8+4JzNB17KIYBmGfF4k3QU+QC4ieXVUwqHmQX2nXrB1BzNMN0gtAgm1AGBTg8w==}
+  '@openai/codex@0.162.1-darwin-arm64':
+    resolution: {integrity: sha512-YVXpg57itBuQxjofay3KDF5UbnZF4Y1ZmNFzUCz0ZQiQN+DndxOjN5V87rnXvPaC4qCPO2El74DzewoBP8JyPQ==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
-  '@openai/codex@0.161.0-darwin-x64':
-    resolution: {integrity: sha512-svVXwOisMkf/e9BD8Qyp0BQYOTsRnrYErfLq+o7aNMts8Evg06rRsHUfxH6HAiJ99dUgC/4CLr3Rpwh3833TfQ==}
+  '@openai/codex@0.162.1-darwin-x64':
+    resolution: {integrity: sha512-0/WHRhbUnM1wAjfyCO54Q8s4vQRxLVBbqW6XuQf7rZTEMTYPKRIQU9aPeRgjG653ZCSjtBrslWQ+G9urY9CksQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
-  '@openai/codex@0.161.0-linux-arm64':
-    resolution: {integrity: sha512-SBu0n4C1Pby9rGKUNA02yHEg/ScbECgiTIiKiKhbYWiUWqGPV1hY0Br7joEntbz0dyNzSWqNPD8uOqxcOry/Fg==}
+  '@openai/codex@0.162.1-linux-arm64':
+    resolution: {integrity: sha512-Ss7W/SrKtQFNaMtSojNoiykJgX+iDC8daM+YrcvgmJADtQPk0cd3w6Dna4CYH2CYvf9nQranj69fpcTzZ3sQIQ==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
-  '@openai/codex@0.161.0-linux-x64':
-    resolution: {integrity: sha512-AVkNzeJWyCHHPyg5vxD8UE6aFsYaOwq0/x6mtmkOKy6LdjvsyxLr7Q7UULlk+Ma3+PnrN8uIxG2/XGPQ936hgA==}
+  '@openai/codex@0.162.1-linux-x64':
+    resolution: {integrity: sha512-cjK2mdHIfEepZ1lQ1MX3aTQC+8ncIsvnacl/6vI2dIIcfP8/MrhTQ2+qRlkXFNDzJSj1d36quIszP+3/4CUJWQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
-  '@openai/codex@0.161.0-win32-arm64':
-    resolution: {integrity: sha512-tgo++ui5X5pXkaz113Q4/PNVviWXlvUdHH4zY+SoGwHm4720JsRPjuUJcUNZ9WtryEiw3Xpj5nKp8pgCXJUjYA==}
+  '@openai/codex@0.162.1-win32-arm64':
+    resolution: {integrity: sha512-teVVACnEcupkR6XSmUQKwlGg/oA15d1DQDPVSoAfilHgctPEpTi5y11jYS6JhJO+AFnYM84gyo5SOS5vlnCQSg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [win32]
 
-  '@openai/codex@0.161.0-win32-x64':
-    resolution: {integrity: sha512-VdNnttGOG3nbwoREvVurVBXci/EJD/kncVJnvtXjpEE+YhC1twvvrVNmtlZcZGEEVi06xLN/ov0d6nxjZ1XLSg==}
+  '@openai/codex@0.162.1-win32-x64':
+    resolution: {integrity: sha512-dfl4MhHuEi0ARKyNmrTxk+RQmsWNCQAoVLUtrYq+yrW1C8P2sg5ziwgHUUACHjYLKuACV7ARH5Nq5pnCz3GlaQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -4380,10 +4371,6 @@ packages:
   abbrev@4.0.0:
     resolution: {integrity: sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA==}
     engines: {node: ^20.17.0 || >=22.9.0}
-
-  abort-controller@3.0.0:
-    resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
-    engines: {node: '>=6.5'}
 
   abstract-logging@2.0.1:
     resolution: {integrity: sha512-2BjRTZxTPvheOvGbBslFSYOUkr+SjPtOnrLP33f+VIWLzezQpZcqVg7ja3L4dBXmzzgwT+a029jRx5PCi3JuiA==}
@@ -5915,10 +5902,6 @@ packages:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
 
-  event-target-shim@5.0.1:
-    resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
-    engines: {node: '>=6'}
-
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
@@ -6346,10 +6329,6 @@ packages:
 
   graceful-readlink@1.0.1:
     resolution: {integrity: sha512-8tLu60LgxF6XpdbK8OW3FA+IfTNBn1ZHGHKF4KQbEeSkajYw5PlYJcKluntgegDPTg8UkHjpet1T82vk6TQ68w==}
-
-  grammy@1.43.0:
-    resolution: {integrity: sha512-7dYm06A945mXuIk/5HUlSjeyIYChW8vCEiU2dkOKKqJJzwAWxTkCc91Eqbz7TgODh2rtFFKWI/fekowWHOkmjQ==}
-    engines: {node: ^12.20.0 || >=14.13.1}
 
   graphlib@2.1.8:
     resolution: {integrity: sha512-jcLLfkpoVGmH7/InMC/1hIvOPSUh38oJtGhvrOFGzioE1DZ+0YW16RgmOJhHiuWTvGiJQ9Z1Ik43JvkRPRvE+A==}
@@ -7510,15 +7489,6 @@ packages:
 
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
-
-  node-fetch@2.7.0:
-    resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
-    engines: {node: 4.x || >=6.0.0}
-    peerDependencies:
-      encoding: ^0.1.0
-    peerDependenciesMeta:
-      encoding:
-        optional: true
 
   node-fetch@3.3.2:
     resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
@@ -8922,10 +8892,6 @@ packages:
     resolution: {integrity: sha512-dRXchy+C0IgK8WPC6xvCHFRIWYUbqqdEIKPaKo/AcTUNzwLTK6AH7RjdLWsEZcAN/TBdtfUw3PYEgPr5VPr6ww==}
     engines: {node: '>=14.16'}
 
-  tr46@5.1.1:
-    resolution: {integrity: sha512-hdF5ZgjTqgAntKkklYw0R03MG2x/bSzTtkxmIRw/sTNV8YXsCJ1tfLAX23lhxhHJlEf3CRCOCGGWw3vI3GaSPw==}
-    engines: {node: '>=18'}
-
   trivial-deferred@2.0.0:
     resolution: {integrity: sha512-iGbM7X2slv9ORDVj2y2FFUq3cP/ypbtu2nQ8S38ufjL0glBABvmR9pTdsib1XtS2LUhhLMbelaBUaf/s5J3dSw==}
     engines: {node: '>= 8'}
@@ -9332,10 +9298,6 @@ packages:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
     engines: {node: '>= 8'}
 
-  webidl-conversions@7.0.0:
-    resolution: {integrity: sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==}
-    engines: {node: '>=12'}
-
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
@@ -9346,10 +9308,6 @@ packages:
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
-    engines: {node: '>=18'}
-
-  whatwg-url@14.2.0:
-    resolution: {integrity: sha512-De72GdQZzNTUBBChsXueQUnPKDkg/5A5zp7pFDuQAj5UFoENpiACU0wlCvzpAGnTkj++ihpKwKyYewn/XNUbKw==}
     engines: {node: '>=18'}
 
   when-exit@2.1.5:
@@ -9623,7 +9581,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.226':
@@ -9632,7 +9590,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.226':
@@ -9641,7 +9599,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.226':
@@ -9650,7 +9608,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.226':
@@ -9659,7 +9617,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.226':
@@ -9668,7 +9626,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.226':
@@ -9677,7 +9635,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.226':
@@ -9686,7 +9644,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.293':
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.296':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk@0.3.226(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
@@ -9719,20 +9677,20 @@ snapshots:
       '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.227
       '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.227
 
-  '@anthropic-ai/claude-agent-sdk@0.3.293(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
+  '@anthropic-ai/claude-agent-sdk@0.3.296(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
     dependencies:
       '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       zod: 4.4.3
     optionalDependencies:
-      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.293
-      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.293
-      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.293
-      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.293
-      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.293
-      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.293
-      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.293
-      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.293
+      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.296
+      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.296
+      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.296
+      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.296
+      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.296
+      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.296
+      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.296
+      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.296
 
   '@anthropic-ai/sdk@0.93.0(zod@4.4.3)':
     dependencies:
@@ -10567,8 +10525,6 @@ snapshots:
 
   '@googleworkspace/cli@0.22.5': {}
 
-  '@grammyjs/types@3.27.3': {}
-
   '@hono/node-server@1.19.17(hono@4.12.32)':
     dependencies:
       hono: 4.12.32
@@ -11042,35 +10998,35 @@ snapshots:
       node-gyp: 12.3.0
       proc-log: 6.1.0
 
-  '@openai/codex-sdk@0.161.0':
+  '@openai/codex-sdk@0.162.1':
     dependencies:
-      '@openai/codex': 0.161.0
+      '@openai/codex': 0.162.1
 
-  '@openai/codex@0.161.0':
+  '@openai/codex@0.162.1':
     optionalDependencies:
-      '@openai/codex-darwin-arm64': '@openai/codex@0.161.0-darwin-arm64'
-      '@openai/codex-darwin-x64': '@openai/codex@0.161.0-darwin-x64'
-      '@openai/codex-linux-arm64': '@openai/codex@0.161.0-linux-arm64'
-      '@openai/codex-linux-x64': '@openai/codex@0.161.0-linux-x64'
-      '@openai/codex-win32-arm64': '@openai/codex@0.161.0-win32-arm64'
-      '@openai/codex-win32-x64': '@openai/codex@0.161.0-win32-x64'
+      '@openai/codex-darwin-arm64': '@openai/codex@0.162.1-darwin-arm64'
+      '@openai/codex-darwin-x64': '@openai/codex@0.162.1-darwin-x64'
+      '@openai/codex-linux-arm64': '@openai/codex@0.162.1-linux-arm64'
+      '@openai/codex-linux-x64': '@openai/codex@0.162.1-linux-x64'
+      '@openai/codex-win32-arm64': '@openai/codex@0.162.1-win32-arm64'
+      '@openai/codex-win32-x64': '@openai/codex@0.162.1-win32-x64'
 
-  '@openai/codex@0.161.0-darwin-arm64':
+  '@openai/codex@0.162.1-darwin-arm64':
     optional: true
 
-  '@openai/codex@0.161.0-darwin-x64':
+  '@openai/codex@0.162.1-darwin-x64':
     optional: true
 
-  '@openai/codex@0.161.0-linux-arm64':
+  '@openai/codex@0.162.1-linux-arm64':
     optional: true
 
-  '@openai/codex@0.161.0-linux-x64':
+  '@openai/codex@0.162.1-linux-x64':
     optional: true
 
-  '@openai/codex@0.161.0-win32-arm64':
+  '@openai/codex@0.162.1-win32-arm64':
     optional: true
 
-  '@openai/codex@0.161.0-win32-x64':
+  '@openai/codex@0.162.1-win32-x64':
     optional: true
 
   '@orama/orama@3.1.18': {}
@@ -11496,11 +11452,6 @@ snapshots:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       function-loop: 4.0.0
 
-  '@tapjs/after-each@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      function-loop: 4.0.0
-
   '@tapjs/after-each@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11511,11 +11462,6 @@ snapshots:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       is-actual-promise: 1.0.2
 
-  '@tapjs/after@3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      is-actual-promise: 1.0.2
-
   '@tapjs/after@3.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11524,17 +11470,6 @@ snapshots:
   '@tapjs/asserts@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@tapjs/stack': 4.3.3
-      is-actual-promise: 1.0.2
-      tcompare: 9.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      trivial-deferred: 2.0.0
-    transitivePeerDependencies:
-      - react
-      - react-dom
-
-  '@tapjs/asserts@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
       '@tapjs/stack': 4.3.3
       is-actual-promise: 1.0.2
       tcompare: 9.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11559,11 +11494,6 @@ snapshots:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       function-loop: 4.0.0
 
-  '@tapjs/before-each@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      function-loop: 4.0.0
-
   '@tapjs/before-each@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11574,11 +11504,6 @@ snapshots:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       is-actual-promise: 1.0.2
 
-  '@tapjs/before@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      is-actual-promise: 1.0.2
-
   '@tapjs/before@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11587,10 +11512,6 @@ snapshots:
   '@tapjs/chdir@3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-
-  '@tapjs/chdir@3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
 
   '@tapjs/chdir@3.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
@@ -11606,16 +11527,6 @@ snapshots:
       tap-yaml: 4.4.2
       walk-up-path: 4.0.0
 
-  '@tapjs/config@5.6.4(@tapjs/core@4.5.8(@types/node@24.13.3))(@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      '@tapjs/test': 4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)
-      chalk: 5.6.2
-      jackspeak: 4.2.3
-      polite-json: 5.0.0
-      tap-yaml: 4.4.2
-      walk-up-path: 4.0.0
-
   '@tapjs/config@5.6.4(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11625,27 +11536,6 @@ snapshots:
       polite-json: 5.0.0
       tap-yaml: 4.4.2
       walk-up-path: 4.0.0
-
-  '@tapjs/core@4.5.8(@types/node@24.13.3)':
-    dependencies:
-      '@tapjs/processinfo': 3.1.12
-      '@tapjs/stack': 4.3.3
-      '@tapjs/test': 4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)
-      async-hook-domain: 4.0.1
-      diff: 8.0.4
-      is-actual-promise: 1.0.2
-      minipass: 7.1.3
-      signal-exit: 4.1.0
-      tap-parser: 18.3.4
-      tap-yaml: 4.4.2
-      tcompare: 9.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      trivial-deferred: 2.0.0
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - react
-      - react-dom
 
   '@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -11697,10 +11587,6 @@ snapshots:
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
-  '@tapjs/filter@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-
   '@tapjs/filter@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11708,12 +11594,6 @@ snapshots:
   '@tapjs/fixture@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      mkdirp: 3.0.1
-      rimraf: 6.1.3
-
-  '@tapjs/fixture@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
       mkdirp: 3.0.1
       rimraf: 6.1.3
 
@@ -11727,12 +11607,6 @@ snapshots:
     dependencies:
       '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@tapjs/stack': 4.3.3
-
-  '@tapjs/intercept@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
       '@tapjs/stack': 4.3.3
 
   '@tapjs/intercept@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
@@ -11749,14 +11623,6 @@ snapshots:
       resolve-import: 2.4.0
       walk-up-path: 4.0.0
 
-  '@tapjs/mock@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      '@tapjs/stack': 4.3.3
-      resolve-import: 2.4.0
-      walk-up-path: 4.0.0
-
   '@tapjs/mock@4.4.8(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
@@ -11768,13 +11634,6 @@ snapshots:
   '@tapjs/node-serialize@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@tapjs/error-serdes': 4.3.2
-      '@tapjs/stack': 4.3.3
-      tap-parser: 18.3.4
-
-  '@tapjs/node-serialize@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
       '@tapjs/error-serdes': 4.3.2
       '@tapjs/stack': 4.3.3
       tap-parser: 18.3.4
@@ -11798,30 +11657,6 @@ snapshots:
     dependencies:
       '@tapjs/config': 5.6.4(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@tapjs/stack': 4.3.3
-      chalk: 5.6.2
-      ink: 5.2.1(@types/react@18.3.29)(react@18.3.1)
-      minipass: 7.1.3
-      ms: 2.1.3
-      patch-console: 2.0.0
-      prismjs-terminal: 1.2.4
-      react: 18.3.1
-      string-length: 6.0.0
-      tap-parser: 18.3.4
-      tap-yaml: 4.4.2
-      tcompare: 9.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-    transitivePeerDependencies:
-      - '@tapjs/test'
-      - '@types/react'
-      - bufferutil
-      - react-devtools-core
-      - react-dom
-      - utf-8-validate
-
-  '@tapjs/reporter@4.4.10(@tapjs/core@4.5.8(@types/node@24.13.3))(@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3))(@types/react@18.3.29)':
-    dependencies:
-      '@tapjs/config': 5.6.4(@tapjs/core@4.5.8(@types/node@24.13.3))(@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3))
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
       '@tapjs/stack': 4.3.3
       chalk: 5.6.2
       ink: 5.2.1(@types/react@18.3.29)(react@18.3.1)
@@ -11910,50 +11745,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@tapjs/run@4.5.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)(@types/react@18.3.29)':
-    dependencies:
-      '@isaacs/which': 7.0.4
-      '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/before': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/config': 5.6.4(@tapjs/core@4.5.8(@types/node@24.13.3))(@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3))
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      '@tapjs/processinfo': 3.1.12
-      '@tapjs/reporter': 4.4.10(@tapjs/core@4.5.8(@types/node@24.13.3))(@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3))(@types/react@18.3.29)
-      '@tapjs/spawn': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/stdin': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/test': 4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)
-      c8: 10.1.3
-      chalk: 5.6.2
-      chokidar: 4.0.3
-      foreground-child: 4.0.3
-      glob: 13.0.6
-      minipass: 7.1.3
-      mkdirp: 3.0.1
-      node-options-to-argv: 1.0.0
-      opener: 1.5.2
-      pacote: 21.5.0
-      path-scurry: 2.0.2
-      resolve-import: 2.4.0
-      rimraf: 6.1.3
-      semver: 7.8.1
-      signal-exit: 4.1.0
-      tap-parser: 18.3.4
-      tap-yaml: 4.4.2
-      tcompare: 9.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      trivial-deferred: 2.0.0
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - '@types/react'
-      - bufferutil
-      - monocart-coverage-reports
-      - react
-      - react-devtools-core
-      - react-dom
-      - supports-color
-      - utf-8-validate
-
   '@tapjs/run@4.5.8(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/node@25.9.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@isaacs/which': 7.0.4
@@ -12008,16 +11799,6 @@ snapshots:
       - react
       - react-dom
 
-  '@tapjs/snapshot@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      is-actual-promise: 1.0.2
-      tcompare: 9.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      trivial-deferred: 2.0.0
-    transitivePeerDependencies:
-      - react
-      - react-dom
-
   '@tapjs/snapshot@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -12032,10 +11813,6 @@ snapshots:
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
-  '@tapjs/spawn@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-
   '@tapjs/spawn@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -12045,10 +11822,6 @@ snapshots:
   '@tapjs/stdin@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-
-  '@tapjs/stdin@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
 
   '@tapjs/stdin@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
@@ -12074,44 +11847,6 @@ snapshots:
       '@tapjs/stdin': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
       '@tapjs/typescript': 3.5.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/node@24.13.3)(typescript@5.9.3)
       '@tapjs/worker': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
-      glob: 13.0.6
-      jackspeak: 4.2.3
-      mkdirp: 3.0.1
-      package-json-from-dist: 1.0.1
-      resolve-import: 2.4.0
-      rimraf: 6.1.3
-      sync-content: 2.0.4
-      tap-parser: 18.3.4
-      tshy: 3.3.2
-      typescript: 5.9.3
-      walk-up-path: 4.0.0
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - react
-      - react-dom
-
-  '@tapjs/test@4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)':
-    dependencies:
-      '@isaacs/ts-node-temp-fork-for-pr-2009': 10.9.7(@types/node@24.13.3)(typescript@5.9.3)
-      '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/after-each': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/asserts': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/before': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/before-each': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/chdir': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      '@tapjs/filter': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/fixture': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/intercept': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/mock': 4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/node-serialize': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/snapshot': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/spawn': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/stdin': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/typescript': 3.5.10(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)(typescript@5.9.3)
-      '@tapjs/worker': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
       glob: 13.0.6
       jackspeak: 4.2.3
       mkdirp: 3.0.1
@@ -12178,16 +11913,6 @@ snapshots:
       - '@types/node'
       - typescript
 
-  '@tapjs/typescript@3.5.10(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)(typescript@5.9.3)':
-    dependencies:
-      '@isaacs/ts-node-temp-fork-for-pr-2009': 10.9.7(@types/node@24.13.3)(typescript@5.9.3)
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - typescript
-
   '@tapjs/typescript@3.5.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/node@25.9.1)(typescript@5.9.3)':
     dependencies:
       '@isaacs/ts-node-temp-fork-for-pr-2009': 10.9.7(@types/node@25.9.1)(typescript@5.9.3)
@@ -12201,10 +11926,6 @@ snapshots:
   '@tapjs/worker@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
       '@tapjs/core': 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-
-  '@tapjs/worker@4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))':
-    dependencies:
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
 
   '@tapjs/worker@4.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))':
     dependencies:
@@ -13025,10 +12746,6 @@ snapshots:
   '@yarnpkg/lockfile@1.1.0': {}
 
   abbrev@4.0.0: {}
-
-  abort-controller@3.0.0:
-    dependencies:
-      event-target-shim: 5.0.1
 
   abstract-logging@2.0.1: {}
 
@@ -14636,14 +14353,14 @@ snapshots:
   eslint-plugin-import-x@4.16.2(@typescript-eslint/utils@8.65.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-node@0.3.10)(eslint@9.39.4(jiti@2.7.0)):
     dependencies:
       '@package-json/types': 0.0.12
-      '@typescript-eslint/types': 8.59.4
+      '@typescript-eslint/types': 8.65.0
       comment-parser: 1.4.7
       debug: 4.4.3
       eslint: 9.39.4(jiti@2.7.0)
       eslint-import-context: 0.1.9(unrs-resolver@1.12.2)
       is-glob: 4.0.3
-      minimatch: 10.2.5
-      semver: 7.8.1
+      minimatch: 10.2.6
+      semver: 7.8.5
       stable-hash-x: 0.2.0
       unrs-resolver: 1.12.2
     optionalDependencies:
@@ -14941,8 +14658,6 @@ snapshots:
   esutils@2.0.3: {}
 
   etag@1.8.1: {}
-
-  event-target-shim@5.0.1: {}
 
   eventemitter3@5.0.4: {}
 
@@ -15442,16 +15157,6 @@ snapshots:
 
   graceful-readlink@1.0.1: {}
 
-  grammy@1.43.0:
-    dependencies:
-      '@grammyjs/types': 3.27.3
-      abort-controller: 3.0.0
-      debug: 4.4.3
-      node-fetch: 2.7.0
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
-
   graphlib@2.1.8:
     dependencies:
       lodash: 4.18.1
@@ -15639,7 +15344,7 @@ snapshots:
     dependencies:
       es-errors: 1.3.0
       hasown: 2.0.3
-      side-channel: 1.1.0
+      side-channel: 1.1.1
 
   internmap@2.0.3: {}
 
@@ -16664,10 +16369,6 @@ snapshots:
       semver: 6.3.1
 
   node-fetch-native@1.6.7: {}
-
-  node-fetch@2.7.0:
-    dependencies:
-      whatwg-url: 14.2.0
 
   node-fetch@3.3.2:
     dependencies:
@@ -18360,42 +18061,6 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  tap@21.7.4(@types/node@24.13.3)(@types/react@18.3.29)(typescript@5.9.3):
-    dependencies:
-      '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/after-each': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/asserts': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/before': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/before-each': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/chdir': 3.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/core': 4.5.8(@types/node@24.13.3)
-      '@tapjs/filter': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/fixture': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/intercept': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/mock': 4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/node-serialize': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/run': 4.5.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)(@types/react@18.3.29)
-      '@tapjs/snapshot': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/spawn': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/stdin': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      '@tapjs/test': 4.4.8(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)
-      '@tapjs/typescript': 3.5.10(@tapjs/core@4.5.8(@types/node@24.13.3))(@types/node@24.13.3)(typescript@5.9.3)
-      '@tapjs/worker': 4.3.10(@tapjs/core@4.5.8(@types/node@24.13.3))
-      resolve-import: 2.4.0
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - '@types/react'
-      - bufferutil
-      - monocart-coverage-reports
-      - react
-      - react-devtools-core
-      - react-dom
-      - supports-color
-      - typescript
-      - utf-8-validate
-
   tap@21.7.4(@types/node@25.9.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3):
     dependencies:
       '@tapjs/after': 3.3.10(@tapjs/core@4.5.8(@types/node@25.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
@@ -18573,10 +18238,6 @@ snapshots:
       '@borewit/text-codec': 0.2.2
       '@tokenizer/token': 0.3.0
       ieee754: 1.2.1
-
-  tr46@5.1.1:
-    dependencies:
-      punycode: 2.3.1
 
   trivial-deferred@2.0.0: {}
 
@@ -19035,8 +18696,6 @@ snapshots:
 
   web-streams-polyfill@3.3.3: {}
 
-  webidl-conversions@7.0.0: {}
-
   webpack-virtual-modules@0.6.2: {}
 
   whatwg-encoding@3.1.1:
@@ -19044,11 +18703,6 @@ snapshots:
       iconv-lite: 0.6.3
 
   whatwg-mimetype@4.0.0: {}
-
-  whatwg-url@14.2.0:
-    dependencies:
-      tr46: 5.1.1
-      webidl-conversions: 7.0.0
 
   when-exit@2.1.5: {}
 

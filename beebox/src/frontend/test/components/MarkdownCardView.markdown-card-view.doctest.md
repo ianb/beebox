@@ -60,7 +60,7 @@ const fm = renderFields({ todos });
 [...fm.matchAll(/data-todo-status="(\w+)"(?: data-todo-assigned="\w+")? data-todo-locator="([^"]*)"/g)].map((m) => `${m[2]}:${m[1]}`).join(" ")
 => todos[0]:open todos[2]:done
 
-fm.includes("Summarize the quotes") || fm.includes(">text:<")
+fm.includes("Summarize the quotes") || fm.includes('field-label">Text<')
 => false
 ```
 
@@ -87,6 +87,50 @@ renderFields({ meta: { todos } }).includes("data-todo-status")
 
 Which fields the card front passes to this table is decided by
 `splitCardFields` (`test/lib/card-field-faces.doctest.md`).
+
+## Fields read as a person reads them
+
+A label is the key in sentence case, with no colon
+(`test/lib/readable-fields.doctest.md`). A small object reads as one value: a
+person's name links to their card with the role beside it in parentheses,
+and a measure reads as its value with its note.
+
+```ts setup
+/** The visible text of each `<dt>`/`<dd>` cell, in order, "|"-separated. */
+function cells(html) {
+  return html.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
+}
+```
+
+```ts
+const record = renderFields({
+  "back-by": "2026-10-20",
+  lender: { name: "Idris", ref: "../people/Idris_Okafor.person.card", role: "lender" },
+  quantity: { value: "1 stove", note: "missing lid" },
+});
+[cells(record), /<button[^>]*>Idris<\/button>/.test(record)]
+=> ["|Back by|2026-10-20|Lender|Idris| (lender)|Quantity|1 stove| (missing lid)|", true]
+```
+
+A `ref` beside `text` can be the evidence for the text, as in a guide's
+observation, so the text is not made a link and both keep their own rows. An
+extra key the rule does not know keeps its row too.
+
+```ts
+cells(renderFields({ observation: { text: "Water pools by the door", ref: "../notes/Rain.note.card" } }))
+=> |Observation|Text|Water pools by the door|Ref|../notes/Rain.note.card|
+
+cells(renderFields({ length: { value: "3", unit: "m" } }))
+=> |Length|Value|3|Unit|m|
+```
+
+A web address that reads as one value stays a link, as a bare URL field
+does.
+
+```ts
+/<a href="https:\/\/maps\.example\/shelf"[^>]*>https:\/\/maps\.example\/shelf<\/a>/.test(renderFields({ location: { text: "https://maps.example/shelf" } }))
+=> true
+```
 
 ## A body heading that repeats the title is hidden
 
@@ -133,4 +177,119 @@ A different first heading stays:
 ```ts
 (await renderCard("# Day one\n\nWe drove down on Friday.\n")).includes("Day one</h1>")
 => true
+```
+
+## An empty bodied card shows its fields, not "No body content"
+
+A record with only fields and an empty body shows its type fields on the
+front (`splitCardFields` with `bodyEmpty`), and the front says nothing about
+the missing body. A body that is only the repeated title heading counts as
+empty.
+
+```ts setup
+async function renderRecord(body) {
+  const data = {
+    path: "_content/inventory/Solder.record.card",
+    frontmatter: { title: "Solder", location: { text: "Tray 3" } },
+    body,
+    schema: { hasBodyField: true, defaultProminence: null },
+  };
+  const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "page" });
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const root = createRootRoute({ staticData: { title: null }, component: () => element });
+  const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  await router.load();
+  return renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() }, React.createElement(RouterProvider, { router })));
+}
+```
+
+```ts
+const empty = await renderRecord("# Solder\n");
+[empty.includes('data-card-section="frontmatter"'), empty.includes("Tray 3"), empty.includes("No body content")]
+=> [true, true, false]
+```
+
+The front reads "Location" and "With Idris", with no nested "Text" row and
+no "Name" row: a record is headed by its `name:`, which the header already
+shows. A card headed by something else (its `title:`) keeps the `name` row.
+
+```ts
+async function renderFront(frontmatter) {
+  const data = { path: "_content/lending/Camp_stove.record.card", frontmatter, body: "", schema: { hasBodyField: true, defaultProminence: null } };
+  const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "page" });
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const root = createRootRoute({ staticData: { title: null }, component: () => element });
+  const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  await router.load();
+  const html = renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() }, React.createElement(RouterProvider, { router })));
+  const section = /data-card-section="frontmatter">(.*?)<\/dl>/s.exec(html);
+  return section === null ? null : cells(section[1]);
+}
+
+await renderFront({ name: "Camp stove", location: { text: "With Idris" }, quantity: { value: "1 stove" } })
+=> |Location|With Idris|Quantity|1 stove|
+
+await renderFront({ title: "Stove", name: "Camp stove", location: { text: "With Idris" } })
+=> |Name|Camp stove|Location|With Idris|
+```
+
+A record with only its name has nothing beside the header, so the front draws
+no empty field section.
+
+```ts continue
+await renderFront({ name: "Camp stove" })
+=> null
+```
+
+With a body, the fields stay in Properties:
+
+```ts
+const full = await renderRecord("Lead-free, 0.8mm.\n");
+[full.includes('data-card-section="frontmatter"'), full.includes("Tray 3"), full.includes("Lead-free")]
+=> [false, false, true]
+```
+
+## An embed reads title, summary line, body, then fields
+
+A card embedded in chat has no header, so the view draws the title and the
+type's summary line, then the body, then the field block
+(docs/implemented-plans/place-shows-cards.md, Track B). The title shows once: it is not
+also a row in the field block, and a body heading that repeats it is hidden.
+A record is titled by its `name:`.
+
+```ts setup
+async function renderEmbed(data) {
+  const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "embed" });
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const root = createRootRoute({ staticData: { title: null }, component: () => element });
+  const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  await router.load();
+  return renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() }, React.createElement(RouterProvider, { router })));
+}
+
+/** The `data-card-section` names in page order. */
+function sectionOrder(html) {
+  return [...html.matchAll(/data-card-section="([^"]*)"/g)].map((m) => m[1]);
+}
+```
+
+```ts
+const html = await renderEmbed({
+  path: "_content/inventory/Solder.record.card",
+  frontmatter: { name: "Solder", location: { text: "Tray 3" }, quantity: { value: "2 spools" } },
+  body: "# Solder\n\nLead-free, 0.8mm.\n",
+  detail: "Tray 3 · 2 spools",
+  schema: { hasBodyField: true, defaultProminence: null },
+});
+[sectionOrder(html), html.split("Solder<").length - 1, html.includes("Tray 3 · 2 spools"), html.includes("Lead-free")]
+=> [["heading", "body", "frontmatter"], 1, true, true]
+```
+
+A page shows the same card with its fields in Properties and no heading of
+its own; the card header has the title.
+
+```ts
+const page = await renderCard("Lead-free, 0.8mm.\n");
+sectionOrder(page)
+=> ["body"]
 ```

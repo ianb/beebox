@@ -11,7 +11,7 @@ declared.
 import { GLOBAL_CARD_FIELDS } from "../../src/cards/schema.js";
 import { Prominence, effectiveLevel } from "../../src/shared/prominence.js";
 import { MemoSchema } from "../../src/schemas/memo.js";
-import { ChatJobSchema } from "../../src/schemas/chat-job.js";
+import { QuestionFollowupJobSchema } from "../../src/schemas/question-followup-job.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 ```
 
@@ -40,14 +40,14 @@ result.error.issues[0].message
 ## Type defaults: `defaultProminence` on `CardSchema`
 
 A `category: "system"` schema (cards the box writes for its own use, like a
-chat job) defaults to `background` with nothing declared per schema — the
+follow-up job) defaults to `background` with nothing declared per schema — the
 category is the declaration.
 
 ```ts
-ChatJobSchema.category
+QuestionFollowupJobSchema.category
 => system
 
-ChatJobSchema.defaultProminence
+QuestionFollowupJobSchema.defaultProminence
 => background
 ```
 
@@ -77,9 +77,9 @@ LandmarkSchema.defaultProminence
 ## `effectiveLevel`: a declared value always wins over the type default
 
 ```ts
-effectiveLevel({ declared: "primary", typeDefault: ChatJobSchema.defaultProminence })
+effectiveLevel({ declared: "primary", typeDefault: QuestionFollowupJobSchema.defaultProminence })
 => primary
 
-effectiveLevel({ declared: undefined, typeDefault: ChatJobSchema.defaultProminence })
+effectiveLevel({ declared: undefined, typeDefault: QuestionFollowupJobSchema.defaultProminence })
 => background
 ```

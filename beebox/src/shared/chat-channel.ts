@@ -12,6 +12,3 @@
 export const CHAT_CHANNELS = ["web-desktop", "web-mobile", "ios-native"] as const;
 
 export type ChatChannel = (typeof CHAT_CHANNELS)[number];
-
-/** Channels that can appear in agent context; Telegram is not client-declarable. */
-export type AgentChatChannel = ChatChannel | "telegram";

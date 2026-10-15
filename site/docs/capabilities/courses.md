@@ -23,8 +23,15 @@ topic.
 
 **What it needs**
 
-Nothing beyond the box itself; you ask the agent to build a course on a
-topic and it creates the cards.
+You ask the agent to build a course on a topic and it creates the cards.
+Courses are an optional add-on (a **plugin**, a bundled library of card types,
+a diagram view, and a teaching procedure that a box turns on). A new box does
+not have them until the agent activates the courseware plugin and writes a
+small file in the box for each of the five card types and for the diagram
+view; the documentation describes this as a task the agent does on request,
+and the engine's health check flags course cards in a box that has not done
+it. The documentation does not say how smoothly the agent does this
+unprompted.
 
 **How it works, briefly**
 

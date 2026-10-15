@@ -120,7 +120,7 @@ export const TodoReviewJobSchema = cardSchema("todo-review-job", {
     // then wait up to a day, and — being pending — suppress the next
     // sweep's job for that long too (Track 5b's "deterministic hook, not a
     // hope" wants it processed on the same tick that queued it).
-    // `chat-job`/`question-followup-job` (no `priority` field at all,
+    // `question-followup-job` (no `priority` field at all,
     // defaulting to `normal` in `job-discovery.ts`) are the precedent for
     // "must be processed promptly"; `low` (contains-backfill's own choice)
     // is for genuinely-optional background filler that rides along other

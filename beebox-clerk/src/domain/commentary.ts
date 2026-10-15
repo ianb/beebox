@@ -30,6 +30,35 @@ export interface CommentaryCapture {
   frozenHtml: string | null;
 }
 
+/** The page fields `clerk.commentary` and `clerk.send` share. */
+export interface CapturedPageFields {
+  url: string;
+  title: string;
+  readableMarkdown: string;
+  siteName?: string;
+  byline?: string;
+  excerpt?: string;
+  frozenHtml?: string;
+}
+
+/**
+ * Shapes a capture into the page fields both mutations take: an empty title
+ * falls back to the URL, empty markdown to a markdown link, and empty optional
+ * fields are omitted.
+ */
+export function capturedPageFields(capture: CommentaryCapture): CapturedPageFields {
+  const { page, frozenHtml } = capture;
+  const title = page.title !== "" ? page.title : page.url;
+  const readableMarkdown =
+    page.markdown !== "" ? page.markdown : linkMarkdown(title, page.url);
+  const fields: CapturedPageFields = { url: page.url, title, readableMarkdown };
+  if (page.siteName !== null && page.siteName !== "") fields.siteName = page.siteName;
+  if (page.byline !== null && page.byline !== "") fields.byline = page.byline;
+  if (page.excerpt !== null && page.excerpt !== "") fields.excerpt = page.excerpt;
+  if (frozenHtml !== null && frozenHtml !== "") fields.frozenHtml = frozenHtml;
+  return fields;
+}
+
 export function buildCommentaryPayload(params: {
   page: ReadablePage;
   frozenHtml: string | null;
@@ -39,20 +68,11 @@ export function buildCommentaryPayload(params: {
   captureId: string;
 }): CommentaryPayload & { captureId: string } {
   const { page, frozenHtml, destinationDir, timestamp, captureId } = params;
-  const title = page.title !== "" ? page.title : page.url;
-  const readableMarkdown =
-    page.markdown !== "" ? page.markdown : linkMarkdown(title, page.url);
   const payload: CommentaryPayload & { captureId: string } = {
-    url: page.url,
-    title,
-    readableMarkdown,
+    ...capturedPageFields({ page, frozenHtml }),
     timestamp,
     captureId,
   };
-  if (page.siteName !== null && page.siteName !== "") payload.siteName = page.siteName;
-  if (page.byline !== null && page.byline !== "") payload.byline = page.byline;
-  if (page.excerpt !== null && page.excerpt !== "") payload.excerpt = page.excerpt;
-  if (frozenHtml !== null && frozenHtml !== "") payload.frozenHtml = frozenHtml;
   if (destinationDir !== null && destinationDir !== "") payload.destinationDir = destinationDir;
   return payload;
 }

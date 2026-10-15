@@ -110,8 +110,8 @@ bbx secrets copy-grants <from-box> <box> # give a new box the same grants a refe
 ```
 
 `copy-grants` is what `deploy/add-box.sh --secrets-from` runs. It skips
-secrets that bind structurally to one box — a Telegram bot token routes to a
-single webhook URL — and names each skip: that box needs its own, connected
+secrets that bind structurally to one box — a bucket-scoped publish token is
+one — and names each skip: that box needs its own, connected
 from its admin page.
 
 Without a granted key the affected connector emits a health warning but the box

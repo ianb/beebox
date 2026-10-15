@@ -19,7 +19,7 @@ import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolv
 import { resolveRefPath } from "../../../shared/ref-path/core.js";
 import { lookupField, loadCardFrontmatter } from "../../frontmatter-field.js";
 import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
-import { resolveDerivedTiers } from "./derived-links.js";
+import { resolveAlsoHere, resolveDerivedTiers } from "./derived-links.js";
 import type { DerivedReadProblem } from "../summaries.js";
 
 export type { ResolvedLink, ResolveOptions } from "./link-build.js";
@@ -36,6 +36,11 @@ export interface ResolvedGroup {
   children: ResolvedLink[];
   /** Total match count (may exceed `children.length` when capped). */
   count: number;
+  /**
+   * Set only on the place page's "Also here" group (`resolveAlsoHere`), so the
+   * page can tell it from an author's expand that happens to share its label.
+   */
+  alsoHere?: true;
 }
 
 /** Flat links plus named groups for one landmark's navigation role. */
@@ -72,7 +77,8 @@ const PLACEHOLDER_RE = /\${([^}]+)}/g;
  * dropped across every tier (first wins); a listed link whose card is also a
  * derived entry point or primary card takes that level as its `prominence`. Each expand carrying a `group`
  * instead becomes a collapsible group, deduped within itself and independent
- * of the flat list. A landmark without a `navigation` role and no `derived`
+ * of the flat list. With `options.alsoHere`, an "Also here" group of the
+ * remaining ordinary cards comes last. A landmark without a `navigation` role and no `derived`
  * input resolves to no links and no groups.
  */
 export async function resolveLandmark(
@@ -107,6 +113,10 @@ export async function resolveLandmark(
     }
     const expanded = await resolveExpand(expand, options);
     for (const link of expanded.links) addUnique(link, { out: links, seen });
+  }
+  if (options.alsoHere === true && options.derived !== undefined) {
+    const also = await resolveAlsoHere(options.derived, { links, groups, options });
+    if (also !== null) groups.push(also);
   }
   return { links, groups, derivedProblems };
 }

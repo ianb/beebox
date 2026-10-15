@@ -11,7 +11,7 @@ When I open the app with a thought in my head, I want to type or say it at once,
 
 Today the iOS app loads the full web chat and the last conversation first. Quick chat sits behind that load, as a web form in a sheet. The web Quick chat page skips the box load, but its send and recovery behavior loses messages and overwrites drafts. This plan adds a box screen with an inline composer on iOS and web, moves routing and delivery to one server operation, and reshapes the app bar's menus so that the box screen holds what concerns the whole box.
 
-**Issues addressed:** `issues/features/2026-09-25-quick-drop-entry-points.md` (partly: the in-app door and the after-drop state; it stays open for the doors outside the app). Related and not closed by this plan: `issues/features/2026-08-08-ios-siri-app-intent-capture.md` (a later caller of the same server operation), `issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md` (half 2 is this routing; the issue also owns Gmail admission), `issues/bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md`, `issues/bugs/2026-08-20-capture-success-is-invisible.md`, `issues/features/2026-08-30-chat-input-everywhere.md`, `issues/features/2026-09-25-notifications-and-proactive-design.md`. Queue search for "cold start", "launch screen", "home screen", "box selector", and "quick chat" found no other open item about the launch path.
+**Issues addressed:** `issues/features/2026-09-25-quick-drop-entry-points.md` (partly: the in-app door and the after-drop state; it stays open for the doors outside the app). Related and not closed by this plan: `issues/bugs/2026-08-08-ios-siri-app-intent-capture.md` (a later caller of the same server operation), `issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md` (half 2 is this routing; the issue also owns Gmail admission), `issues/bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md`, `issues/bugs/2026-08-20-capture-success-is-invisible.md`, `issues/features/2026-08-30-chat-input-everywhere.md`, `issues/features/2026-09-25-notifications-and-proactive-design.md`. Queue search for "cold start", "launch screen", "home screen", "box selector", and "quick chat" found no other open item about the launch path.
 
 ## Smallest fix and budget
 
@@ -26,7 +26,7 @@ The chosen design has four tracks.
 | 1. Server: one submit operation, disposition policy, records | 450 | 400 | includes extracting the send-route body |
 | 2. Web: the box screen | 350 | 150 | replaces the Quick chat page; deletes the client-side send and the draft staging |
 | 3. Web: app bar menus | 250 | 150 | landmark menu, folder menu, landmark search page |
-| 4. iOS: box screen, outbox, launch rule | 1,300 | 400 | replaces the Quick chat button, the sheet, and the "+" menu's box list |
+| 4. iOS: box screen, outbox, launch rule | 1,300 | 400 | replaces the Quick chat button and the sheet |
 | Authored docs | 300 | | quick-chat.md, landmarks and navigation docs, mobile-contract.md, ios-app/AGENTS.md, security report |
 
 What the size buys: a thought is stored by the server in one request; every caller (web, the phone, later Siri and the share sheet) gets the same routing and the same recovery; the phone shows a composer before any web content loads; box-wide navigation has one home on both platforms.
@@ -71,7 +71,7 @@ Paths are monorepo-relative.
 - `beebox/src/frontend/src/components/BoxSelectionTiles.tsx:75`: `to={href(`/${box.slug}/quick-chat`)}` under the label "Quick chat". **Change** the target to the box screen.
 - `ios-app/BeeBox/Views/ChatWebView.swift:506`: `decidePolicyFor navigationAction` already decides every main-frame navigation and cancels those outside the box's origin. **Reuse** to catch the navigation to `/<box>/box`.
 - `ios-app/BeeBox/Views/ChatWebView.swift:90`: `struct NavigationRequest` carries a path for the web view to open; notification taps use it (`RootView.swift:293`). **Reuse** to open a box-wide page from the native box screen.
-- `ios-app/BeeBox/Views/ComposerActionsView.swift:84`: `Section("Boxes")` lists paired boxes and calls `store.select(box)`. **Move** the list to the box screen; reuse the selection call.
+- `ios-app/BeeBox/Views/ComposerActionsView.swift:84`: `Section("Boxes")` lists paired boxes and calls `store.select(box)`. **Copy** the list to the box screen; reuse the selection call. The + menu keeps its list (boxholder, 2026-10-15: the removal was not wanted).
 - `beebox/src/webapp/server-box-scope.ts:302`: a paired device's bearer token passes `authedProcedure` (`mobileOk`). The share extension calls `share.destinations` and `share.saveTextual` this way. **Reuse**; no new auth.
 - `ios-app/BeeBox/Views/RootView.swift:306`: `ChatWebView(` is constructed whenever a box is selected. `ChatWebView.swift:219` creates a new `WKWebView` in `makeUIView` and line 224 loads it. **Change**: construct it only when a chat is shown.
 - `ios-app/BeeBox/Views/RootView.swift:439`: `showingQuickChat = true`, and the `QuickChatSheet` struct near line 797. **Delete**; the landmark menu's box row replaces them.
@@ -322,7 +322,7 @@ No critical gap: every new codepath has a planned test and a visible state, exce
 
 ## NOT in scope
 
-- Siri, Shortcuts, the Action Button, a widget, and a Control Center control: they call `quickChat.submit` later. Their own questions are in `issues/features/2026-08-08-ios-siri-app-intent-capture.md`.
+- Siri, Shortcuts, the Action Button, a widget, and a Control Center control: they call `quickChat.submit` later. Their own questions are in `issues/bugs/2026-08-08-ios-siri-app-intent-capture.md`.
 - The share extension: it keeps its picker. Giving it an automatic destination is a small follow-up once `submit` exists.
 - Photos, files, and capture from the box screen: routing judges text only, and uploaded files under `_tmp/` are swept (`uploads.ts:17`). A photo thought needs its own storage rule.
 - High-quality transcription on the box screen: `ChatAPI.transcribeAudio` resolves a chat session first (`ChatAPI.swift:110`), and the setting is reported by the web chat.

@@ -24,5 +24,5 @@ Three ways to get a running beebox. Choose by what you want to do with it.
 
 - The one operator's multi-box production server is not an install path:
   [server](server.md).
-- Google, Gmail, Drive, Calendar, and Telegram setup: their own pages,
+- Google, Gmail, Drive, and Calendar setup: their own pages,
   listed in the [guide index](guides.md).

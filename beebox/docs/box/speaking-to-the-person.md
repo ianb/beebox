@@ -22,7 +22,7 @@ These surfaces all reach them:
   summarized)
 - a command's `description` (shown as the line for that step)
 - cards and briefings they open, question cards, and todos you write for them
-- notifications, Telegram messages, and schedule run summaries
+- notifications and schedule run summaries
 
 Text written for agents does not: job cards, schema `instructions`,
 procedures, guide cards, and rules.

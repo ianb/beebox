@@ -7,6 +7,7 @@ protocol QuickChatClient {
     func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String?, hqService: String?) async throws -> QuickChatView
     func choose(id: UUID, candidateId: String) async throws -> QuickChatView
     func discard(id: UUID) async throws -> QuickChatView
+    func retry(id: UUID) async throws -> QuickChatView
     func home() async throws -> QuickChatHome
 }
 
@@ -98,11 +99,6 @@ extension QuickChatView {
 /// rows.
 @MainActor
 final class BoxScreenStore: ObservableObject {
-    enum ExternalCaptureResult {
-        case persistenceFailed
-        case submitted(QuickChatView)
-        case savedLocally
-    }
     enum Refresh: Equatable {
         case idle
         case refreshing
@@ -186,22 +182,6 @@ final class BoxScreenStore: ObservableObject {
         await outbox.load()
         await outbox.forgetBoxes(except: Set(boxes.map(\.id)))
         resumeRetries()
-    }
-
-    /// Capture one external thought through the same durable outbox as the box
-    /// screen, without draining unrelated entries restored from disk.
-    func captureExternalThought(_ text: String, box: PairedBox) async -> ExternalCaptureResult {
-        await outbox.restore()
-        guard boxes.contains(where: { $0.id == box.id }), box.requiresDeviceUnlock == false,
-              let entry = await outbox.store(text: text, origin: .external, source: "apple-app-intents", boxID: box.id) else {
-            return .persistenceFailed
-        }
-        BoxLog.info("external quick chat stored", category: .composer, targetBoxID: box.id)
-        await outbox.retry(id: entry.id)
-        if let answer = answers.values.flatMap(\.self).first(where: { $0.view.id == entry.id })?.view {
-            return .submitted(answer)
-        }
-        return .savedLocally
     }
 
     /// The outbox retries on its backoff only while the app is in the foreground.
@@ -332,10 +312,17 @@ final class BoxScreenStore: ObservableObject {
         }
     }
 
-    /// Retry a `sending` record: `submit` with the same id delivers again.
+    /// Retry a `sending` record through `quickChat.retry`. A box from before
+    /// that procedure retries through a repeated `submit` of the same id,
+    /// which needs the message: a page sent with no note cannot fall back.
     func retry(_ view: QuickChatView, boxID: UUID) async {
         await act(on: view, boxID: boxID, name: "retry", follows: true) { client in
-            try await client.submit(id: view.id, message: view.message, origin: nil, source: nil, hqService: nil)
+            do {
+                return try await client.retry(id: view.id)
+            } catch let error as QuickChatAPI.APIError where error.isUnknownProcedure && view.message.isEmpty == false {
+                BoxLog.info("quick chat retry unavailable; resubmitting", category: .net, targetBoxID: boxID)
+                return try await client.submit(id: view.id, message: view.message, origin: nil, source: nil, hqService: nil)
+            }
         }
     }
 

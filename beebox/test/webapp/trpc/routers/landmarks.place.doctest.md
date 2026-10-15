@@ -8,6 +8,7 @@ list. The same payload names the place's arrival target (Track D): the card
 that arriving at the place opens.
 
 ```ts setup
+import { utimes } from "node:fs/promises";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { expandLabel } from "../../../../src/core/landmark/expand-label.js";
@@ -178,4 +179,230 @@ await box.write("_content/house/House.landmark.card", "---\nprominence: backgrou
 await box.write("_content/house/Log.memo.card", "---\nprominence: entry-point\n---\n");
 (await payload(box.root, { dir: "_content/house" })).arrival
 => _content/house/House.landmark.card
+```
+
+## "Also here" lists the place's other cards, most recently changed first
+
+With `expandsAsGroups`, the last group is "Also here": the place's ordinary
+cards that no tier or other group shows (docs/implemented-plans/place-shows-cards.md,
+Track A). A pinned card, an entry point, an expand group's cards, a chat husk
+(background by type) and a nested place's card are not in it.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/house/House.landmark.card", [
+  "---",
+  "navigation:",
+  "  label: House",
+  "  links:",
+  "    - ref: Pinned.memo.card",
+  "  expand:",
+  "    - query: \"Recipe*.memo.card\"",
+  "      group: Recipes",
+  "---",
+  "",
+].join("\n"));
+await box.write("_content/house/Pinned.memo.card", "---\n---\n");
+await box.write("_content/house/Start.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/house/Recipe_Soup.memo.card", "---\n---\n");
+await box.write("_content/house/chat/Hello.chat.card", "---\nsession: s1\n---\n");
+await box.write("_content/house/garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
+await box.write("_content/house/garden/Seeds.memo.card", "---\n---\n");
+await box.write("_content/house/Groceries.memo.card", "---\n---\n");
+await box.write("_content/house/notes/Landlord.memo.card", "---\n---\n");
+await box.write("_content/house/Spanish.memo.card", "---\n---\n");
+await utimes(box.path("_content/house/Groceries.memo.card"), 1_700_000_000, 1_700_000_000);
+await utimes(box.path("_content/house/notes/Landlord.memo.card"), 1_700_000_200, 1_700_000_200);
+await utimes(box.path("_content/house/Spanish.memo.card"), 1_700_000_100, 1_700_000_100);
+
+const page = await payload(box.root, { dir: "_content/house", expandsAsGroups: true });
+groups(page.groups)
+=> [
+  { label: "Recipes", count: 1, children: ["_content/house/Recipe_Soup.memo.card"] },
+  {
+    label: "Also here",
+    count: 3,
+    children: ["_content/house/notes/Landlord.memo.card", "_content/house/Spanish.memo.card", "_content/house/Groceries.memo.card"]
+  }
+]
+```
+
+Its rows are derived links with no level, titled like any other row.
+
+```ts continue
+rows(page.groups[1].children)
+=> ["derived _content/house/notes/Landlord.memo.card", "derived _content/house/Spanish.memo.card", "derived _content/house/Groceries.memo.card"]
+```
+
+Only the server's group carries the `alsoHere` mark the page reads.
+
+```ts continue
+page.groups.map((g) => ({ label: g.label, alsoHere: g.alsoHere === true }))
+=> [{ label: "Recipes", alsoHere: false }, { label: "Also here", alsoHere: true }]
+```
+
+The menus omit the flag and get no "Also here".
+
+```ts continue
+(await payload(box.root, { dir: "_content/house" })).groups.map((g) => g.label)
+=> ["Recipes"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## "Also here" shows 10 cards and counts the rest
+
+Thirty ordinary cards: the 10 most recently changed are listed, and `count`
+is 30, so the page can say "+20 more".
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/many/Many.landmark.card", "---\nnavigation:\n  label: Many\n---\n");
+for (let i = 1; i <= 30; i++) {
+  const rel = `_content/many/Card_${i}.memo.card`;
+  await box.write(rel, "---\n---\n");
+  await utimes(box.path(rel), 1_700_000_000 + i, 1_700_000_000 + i);
+}
+const [also] = (await payload(box.root, { dir: "_content/many", expandsAsGroups: true })).groups;
+({ label: also.label, count: also.count, children: also.children.map((c) => c.ref.replace("_content/many/", "")) })
+=> {
+  label: "Also here",
+  count: 30,
+  children: [
+    "Card_30.memo.card", "Card_29.memo.card", "Card_28.memo.card", "Card_27.memo.card", "Card_26.memo.card",
+    "Card_25.memo.card", "Card_24.memo.card", "Card_23.memo.card", "Card_22.memo.card", "Card_21.memo.card"
+  ]
+}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Equal mtimes keep a stable order
+
+A checkout can give every card the same mtime; the path then orders them,
+numbers by value.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/same/Same.landmark.card", "---\nnavigation:\n  label: Same\n---\n");
+for (const name of ["B_10", "A", "B_2"]) {
+  const rel = `_content/same/${name}.memo.card`;
+  await box.write(rel, "---\n---\n");
+  await utimes(box.path(rel), 1_700_000_000, 1_700_000_000);
+}
+(await payload(box.root, { dir: "_content/same", expandsAsGroups: true })).groups[0].children.map((c) => c.ref)
+=> ["_content/same/A.memo.card", "_content/same/B_2.memo.card", "_content/same/B_10.memo.card"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An author's expand named "Also here" is not the server's group
+
+The author's group keeps its own cards and gets no `alsoHere` mark; the
+server's group still comes last.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/den/Den.landmark.card", [
+  "---",
+  "navigation:",
+  "  label: Den",
+  "  expand:",
+  "    - query: \"Book*.memo.card\"",
+  "      group: Also here",
+  "---",
+  "",
+].join("\n"));
+await box.write("_content/den/Book_One.memo.card", "---\n---\n");
+await box.write("_content/den/Lamp.memo.card", "---\n---\n");
+(await payload(box.root, { dir: "_content/den", expandsAsGroups: true })).groups
+  .map((g) => ({ label: g.label, alsoHere: g.alsoHere === true, children: g.children.map((c) => c.ref) }))
+=> [
+  { label: "Also here", alsoHere: false, children: ["_content/den/Book_One.memo.card"] },
+  { label: "Also here", alsoHere: true, children: ["_content/den/Lamp.memo.card"] }
+]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## No ordinary cards left, no "Also here"
+
+Every card here is already in a tier, so the page adds no empty group.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/tidy/Tidy.landmark.card", "---\nnavigation:\n  label: Tidy\n---\n");
+await box.write("_content/tidy/Start.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/tidy/Log.chat.card", "---\nsession: s1\n---\n");
+(await payload(box.root, { dir: "_content/tidy", expandsAsGroups: true })).groups
+=> []
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A tile carries its card type's summary line
+
+Each row carries `detail`, the line the card's type writes about itself
+through `summarize` (docs/implemented-plans/place-shows-cards.md, Track B). A box-authored
+`loan` type writes who has it and when it is due. The loan cards do not
+write `type:` on disk; the type comes from the filename, as loading a card
+does, so the line is still there. A card whose type writes no line, a
+loan that fails validation, and a loan file whose written `type:` names
+another type (the card loader rejects it) have none.
+
+```ts
+import * as fs from "node:fs/promises";
+
+const box = await makeTmpBox({ deps: true });
+await fs.mkdir(box.path("src/schemas"), { recursive: true });
+await fs.writeFile(box.path("src/schemas/loan.ts"), `import { body, cardSchema } from "beebox/cards";
+import { z } from "beebox/schema";
+
+export default cardSchema("loan", {
+  fields: { item: z.string(), holder: z.string(), due: z.string(), body: body(z.string()) },
+  instructions: "# Loan Cards",
+  summarize: (card, base) => ({ ...base, title: card.item, detail: \`\${card.holder} has it · back by \${card.due}\` }),
+});
+`);
+await box.write("_content/lending/Lending.landmark.card", "---\nnavigation:\n  label: Lending\n---\n");
+await box.write("_content/lending/Stove.loan.card", "---\nitem: Camp stove\nholder: Idris\ndue: 2026-10-17\n---\n");
+await box.write("_content/lending/Broken.loan.card", "---\nitem: Ladder\n---\n");
+await box.write("_content/lending/Rules.memo.card", "---\ntitle: House rules\n---\n");
+await box.write("_content/lending/Mislabeled.loan.card", "---\ntype: memo\nitem: Tent\nholder: Bram\ndue: 2026-11-01\n---\n");
+const [also] = (await payload(box.root, { dir: "_content/lending", expandsAsGroups: true })).groups;
+also.children.map((c) => [c.title, c.detail ?? null]).toSorted()
+=> [["Broken", null], ["Camp stove", "Idris has it · back by 2026-10-17"], ["House rules", null], ["Mislabeled", null]]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A landmark with a body is still read as a place
+
+The landmark's body is the place summary (Track C). The lightweight reader
+parses only the frontmatter, so a body changes nothing about the payload.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/lending/Lending.landmark.card",
+  "---\nnavigation:\n  label: Lending\n  links:\n    - ref: Stove.memo.card\n---\nThe [stove](Stove.memo.card) is with Idris.\n");
+await box.write("_content/lending/Stove.memo.card", "---\n---\n");
+const p = await payload(box.root, { dir: "_content/lending", expandsAsGroups: true });
+({ label: p.label, links: rows(p.links) })
+=> { label: "Lending", links: ["listed _content/lending/Stove.memo.card"] }
+```
+
+```ts cleanup
+await box.cleanup();
 ```

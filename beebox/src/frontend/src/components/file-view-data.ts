@@ -179,6 +179,7 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
           body: card.body,
           bodyLineOffset: card.bodyLineOffset,
           schema: card.schema,
+          ...(card.detail === undefined ? {} : { detail: card.detail }),
         },
         loading: false,
         error: null,
