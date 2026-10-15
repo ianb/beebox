@@ -6,6 +6,7 @@ The boxholder's question (2026-10-15): the built-in WebSearch and WebFetch "work
 |---|---|
 | [probes-2026-10-15.md](probes-2026-10-15.md) | First-hand numbers: 15 hard URLs × 8 fetch paths; 4 scouring questions × 9 search tools; $0.35 spent |
 | [search-services.md](search-services.md) | Search APIs, model-provider search, MCP servers, deep-research loops, benchmarks |
+| [per-site-services.md](per-site-services.md) | Paid per-site data APIs (Instagram, Facebook, LinkedIn, X threads, TikTok, YouTube transcripts, Reddit, Quora) |
 | [fetch-services.md](fetch-services.md) | Reader services, unblocking APIs, hosted browsers, per-host routes, logged-in profiles, legal posture |
 
 All probes ran from a residential IP. A box runs on a Hetzner datacenter IP, which many sites treat worse, so every "ok" here is an upper bound for a box.
@@ -30,8 +31,7 @@ Reddit announced on 2026-09-30 that RSS support ends 2026-11-13 and that public 
 
 | Option | Disposition | Reason, traced to beebox |
 |---|---|---|
-| Exa keyless MCP in the dev repo | **adopt** | Zero setup; best freshness and forum recall in the probes. Queries go to Exa; dev-repo queries are not box content. Unverified: keyless rate limits and Exa's retention terms ([search-services.md](search-services.md#gaps)). |
-| OpenRouter `openrouter:web_search` (engine `exa` or `parallel`) for box agents | **adapt** | Rides the `openrouter` grant a box already holds ([secrets.md](../../beebox/docs/secrets.md)); about $0.01 per call. It would join the OpenRouter rows of the egress table ([security-report.md §3](../../beebox/docs/security-report.md#3-data-egress)). A box query can carry private context, so this needs the egress row and an off switch. |
+| Exa as a second search engine for scouring the web | **adopt** | Best freshness and forum recall in the probes. WebSearch stays for ordinary lookups; Exa is for scouring (breadth, recent posts, forums, small sites). Two ways in: the keyless hosted MCP (`https://mcp.exa.ai/mcp`, no account), or OpenRouter's `openrouter:web_search` tool with engine `exa` (about $0.01 per call on the existing `openrouter` key, [secrets.md](../../beebox/docs/secrets.md)). Unverified: keyless rate limits and Exa's retention terms ([search-services.md](search-services.md#gaps)). |
 | Parallel keyless MCP | **later** | Free and fast; better for official sources than for forums. Keep as a second engine if Exa's gaps show. |
 | Gemini grounding, OpenAI `web_search` | **later** | Keys are held, but they return a synthesized answer instead of a result list, and they cost more per call ($0.017–0.038). No probe result beat Exa. |
 | Brave Search API | **later** | Own index, `freshness` parameter, Goggles for forum re-ranking. Needs a new account with a card. Revisit only if Exa fails a real need. |
@@ -43,8 +43,10 @@ Reddit announced on 2026-09-30 that RSS support ends 2026-11-13 and that public 
 
 | Option | Disposition | Reason, traced to beebox |
 |---|---|---|
-| Per-host adapters behind one `fetch` entry point | **adapt** | The anchor issue said to wait for a second host. There are now five with working free routes: Reddit, X, YouTube, TikTok, Medium. Drop the Reddit `.rss` step (ends 2026-11-13). |
-| Fallback chain: curl with a Chrome UA, then Jina Reader, then a headless browser | **adapt** | Each covered pages the others missed. Jina Reader is a third party that sees every URL; it applies per-domain abuse blocks, so treat it as intermittent. |
+| WebFetch first, a fallback route after it | **adopt** | WebFetch works for most of the open web. The fallback runs only when WebFetch refuses a host, gets a block or CAPTCHA page, or returns an empty script shell. |
+| Per-host adapters as the first fallback step | **adapt** | The anchor issue said to wait for a second host. There are now five with working free routes: Reddit, X, YouTube, TikTok, Medium. Drop the Reddit `.rss` step (ends 2026-11-13). |
+| Paid per-site data services (Instagram and similar) | **investigate** | Fill the per-site gaps that free routes leave ([per-site-services.md](per-site-services.md)). ScrapeCreators covers 9 of 10 target sites on one key (Instagram, Facebook, LinkedIn, TikTok, YouTube, Reddit comments, Threads, Pinterest); 100 free calls with no card, then about $47 for 25,000 credits that do not expire. Gaps: X threads (GetXAPI or twitterapi.io), Quora (Apify actors only). Supadata for YouTube transcripts from a datacenter IP. All prices are vendor claims; no service has been probed. Next step: spend ScrapeCreators' free calls on one URL per site. |
+| For hosts with no adapter: curl with a Chrome UA, then Jina Reader, then a headless browser | **adapt** | Each covered pages the others missed. Jina Reader is a third party that sees every URL; it applies per-domain abuse blocks, so treat it as intermittent. |
 | A headless render path in the box | **investigate** | The box has none today. [Server-side capture](../../issues/features/2026-09-11-server-side-webpage-capture.md) needs one. Options: Chromium in the image, or Cloudflare Browser Run (no unblocking; needs a Workers paid plan). |
 | Logged-in persistent profile | **later** | The only route to content behind the boxholder's own accounts (including paywalled news they subscribe to). Risk lands on the real account. The [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md) already covers the logged-in case through Claude in Chrome on the boxholder's machine. |
 | Archives (Wayback, archive.ph) | **reject** as a primary route | 429 on the first request. Keep the Wayback availability check as a last resort only. |
@@ -65,4 +67,6 @@ Lean: keep the line for boxes, where the egress and vendor-risk costs apply to b
 ## Filed and amended
 
 - Amended [fetch-blocked-pages](../../issues/features/2026-10-04-fetch-blocked-pages.md): Reddit RSS end date, the box has no headless browser, the five-host case for an adapter entry point, a link here.
-- Filed [scouring-search-engine](../../issues/features/2026-10-15-scouring-search-engine.md): Exa MCP for dev agents, OpenRouter web search for box agents.
+- Filed [scouring-search-engine](../../issues/features/2026-10-15-scouring-search-engine.md): Exa as a second engine for scouring the web.
+
+Boxholder input (2026-10-15): "site specific routes is very reasonable and good. There are services for things like Insta. This isn't about box search, only about scouring the web. I probably want to keep WebFetch when it works, so think about this as a fallback."

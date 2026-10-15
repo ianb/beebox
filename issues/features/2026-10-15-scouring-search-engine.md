@@ -15,16 +15,15 @@ GitHub repo. Exa's keyless MCP server returned 8 of 10 results in the window
 on the same question, 5 of them Reddit threads, in about 2 s at no cost.
 Numbers and method: [probes](../../research/web-search-fetch/probes-2026-10-15.md).
 
-Two routes, from the [survey](../../research/web-search-fetch/README.md#search):
+WebSearch stays for ordinary lookups. Exa would be a second engine agents
+reach for when scouring: breadth, recent posts, forums, small sites. Two ways
+in, from the [survey](../../research/web-search-fetch/README.md#search):
 
-- **Dev repo:** register Exa's hosted MCP server (`https://mcp.exa.ai/mcp`) for
-  agents in this checkout. No account. Check its keyless rate limit and
-  retention terms first.
-- **Box:** OpenRouter's `openrouter:web_search` server tool with engine `exa`
-  (or `parallel`), on the `openrouter` grant the box already holds, about
-  $0.01 per call. A box query can carry private context, so this needs an
-  egress-table row and a per-box off switch.
+- Exa's keyless hosted MCP server (`https://mcp.exa.ai/mcp`). No account.
+  Check its rate limit and retention terms first.
+- OpenRouter's `openrouter:web_search` tool with engine `exa`, on the existing
+  `openrouter` key, about $0.01 per call.
 
-Open questions: whether agents need guidance on when to use the new tool
-instead of WebSearch, and whether one probe run (four questions, single runs)
-is enough evidence or a larger comparison should come first.
+Open questions: what guidance tells an agent when to scour with Exa instead
+of WebSearch, and whether one probe run (four questions, single runs) is
+enough evidence or a larger comparison should come first.
