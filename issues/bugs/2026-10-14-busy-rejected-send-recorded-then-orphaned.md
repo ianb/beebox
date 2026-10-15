@@ -32,16 +32,20 @@ The boxholder ended a long recording, and a second, 2-second recording began
 
 ## Two defects
 
-1. **Lost message.** The busy path rejects the send after the user message
+1. **Half-recorded message.** The busy path rejects the send after the user message
    event and the dedup record are written. Nothing queues it for the next
    turn, the client is not told, and the dedup record blocks a client retry.
-   The send path should either queue a message that arrives during a turn
-   start, or refuse it before anything records it as received.
+   The send path should refuse it before anything records it as received,
+   and tell the client. Queueing it for the next turn is the wrong default:
+   in this case the second send was a mis-send the boxholder did not want
+   delivered (boxholder, 2026-10-14). The fix is that a rejected message
+   does not end up half-recorded, not that it gets sent.
 2. **Orphan placement.** The chat view merges the event log with the
    transcript. A user message present only in the event log has no position
    in the transcript, so it renders after the last turn on every load. A
    message the agent never received should render at its own time and show
-   that it was not delivered (with a way to resend).
+   that it was not delivered, with resend and discard. Discard is the likely
+   choice for a mis-send like this one.
 
 Where to start: the `Rejected — busy` branch (`beebox/src/core/chat/session/run/core.ts:323`), and where
 the `chat-user-message` event and the dedup record are written relative to
