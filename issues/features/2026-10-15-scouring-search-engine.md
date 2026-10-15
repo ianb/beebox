@@ -24,6 +24,11 @@ in, from the [survey](../../research/web-search-fetch/README.md#search):
 - OpenRouter's `openrouter:web_search` tool with engine `exa`, on the existing
   `openrouter` key, about $0.01 per call.
 
+Related: Claude Code caps WebSearch at 200 calls per session
+(`CLAUDE_CODE_MAX_WEB_SEARCHES`). A box's seeding pass on 2026-08-30 had three
+subagents exhaust it. Exa calls do not count against it. Decide whether box
+runs should raise the cap.
+
 Open questions: what guidance tells an agent when to scour with Exa instead
 of WebSearch, and whether one probe run (four questions, single runs) is
 enough evidence or a larger comparison should come first.

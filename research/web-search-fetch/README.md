@@ -76,6 +76,14 @@ Lean: keep the line for boxes, where the egress and vendor-risk costs apply to b
 ## Filed and amended
 
 - Amended [fetch-blocked-pages](../../issues/features/2026-10-04-fetch-blocked-pages.md): Reddit RSS end date, the box has no headless browser, the five-host case for an adapter entry point, a link here.
-- Filed [scouring-search-engine](../../issues/features/2026-10-15-scouring-search-engine.md): Exa as a second engine for scouring the web.
+- Filed [scouring-search-engine](../../issues/features/2026-10-15-scouring-search-engine.md): Exa as a second engine for scouring the web, and the 200-search session cap.
+- Filed [look-here-source-list-structured-feeds](../../issues/features/2026-10-15-look-here-source-list-structured-feeds.md): a per-box source list re-checked through structured data URLs, written up as a box doc of suggested approaches; helper deferred.
+- The full research-dispatch trial, with the event finds new to the box, is in the private issue repo (`exploration/2026-10-15-research-dispatch-trial.md`).
 
-Boxholder input (2026-10-15): "site specific routes is very reasonable and good. There are services for things like Insta. This isn't about box search, only about scouring the web. I probably want to keep WebFetch when it works, so think about this as a fallback."
+## Open
+
+- The "no stealth or proxy" line (above).
+- Paid per-site services: a probe of ScrapeCreators' free calls, one URL per site, needs a signup.
+- A headless render path for boxes.
+
+Boxholder input (2026-10-15), in order: "site specific routes is very reasonable and good. There are services for things like Insta. This isn't about box search, only about scouring the web. I probably want to keep WebFetch when it works, so think about this as a fallback." Then: "These are very bad results! … The cost here seems fairly prohibitive, given they aren't accomplishing much" (research dispatch). Then: keep the look-here approach and extend it with Exa and ways to fetch other kinds of pages; how a box updates its list is the box's policy, adding automatically by default; no change-detection service, since a box can write scheduled scripts; ship a doc of suggested approaches, and defer a helper until we know what it should do.
