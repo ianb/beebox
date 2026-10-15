@@ -32,8 +32,7 @@ import {
 import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "../model.js";
 import { preflightChatBackend } from "../../../agent/auth-preflight.js";
-import { runCanStart } from "./start-refusal.js";
-import { liveProviderRefusal } from "../../../provider-env/core.js";
+import { sendReadiness } from "./start-refusal.js";
 import { createRunLockHolder, withChatRunAdmission } from "./lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
@@ -321,14 +320,12 @@ export class ChatSession extends EventEmitter {
 
   private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onRefused }: { onAdmitted: (() => void) | undefined; onRefused: ((reason: string) => void) | undefined }): Promise<boolean> {
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
-    // A run that cannot start is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
-    if (this.liveRun() === null && !(await runCanStart({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, startOptions: await this.buildBackendStartOptions(), session: this, onRefused }))) return false;
+    // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
+    const live = this.liveRun() !== null;
+    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart(); return false; }
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
 
     const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
-
-    // A live third-party run keeps the provider env it started with; re-check so a removed model or revoked key stops at this turn.
-    const refusal = await liveProviderRefusal({ boxRoot: this.boxRoot, model: this.liveRun() === null ? null : this.resolvedModel }); if (refusal !== null) { this.emit("error", refusal); this.restart(); return false; }
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,

@@ -1,6 +1,7 @@
 /**
- * The incoming folder: pages sent from the Clerk wait in `_content/incoming/`
- * until the chat that quick chat chose files them (docs/implemented-plans/clerk-quick-send.md).
+ * The incoming folder: pages sent from the Clerk, and phone captures with
+ * words, wait in `_content/incoming/` until the chat that quick chat chose
+ * files them (docs/implemented-plans/clerk-quick-send.md, quick-capture/source.ts).
  * The folder ignores itself with its own `.gitignore`, so a card enters git
  * only when it is filed; the box-wide `.gitignore` is not changed.
  */

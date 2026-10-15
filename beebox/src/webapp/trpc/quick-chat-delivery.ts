@@ -17,7 +17,7 @@ import { getChatRuntime, type SendOutcome } from "../chat-runtime.js";
 import { getBoxTime } from "../../lib/time.js";
 import { toError } from "../../shared/error-guards.js";
 import { frameExternalCapture } from "../../core/quick-capture/framing.js";
-import { locateSentCard } from "../../core/clerk-incoming.js";
+import { locateSentCard } from "../../core/incoming.js";
 
 const SENT_PAGE_REMOVED = "The sent page was removed.";
 

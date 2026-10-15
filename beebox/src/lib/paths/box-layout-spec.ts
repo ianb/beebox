@@ -85,9 +85,9 @@ export const BOX_LAYOUT = [
     path: "_content/incoming",
     area: "content",
     description:
-      "Pages sent from the Clerk, waiting for the chat that quick chat chose to file them. " +
+      "Pages sent from the Clerk and phone captures with words, waiting for the chat that quick chat chose to file them. " +
       "Git-ignored by its own `.gitignore`; a card enters git when it is filed. Not triaged.",
-    agentDescription: "Pages sent to the box, not filed yet (git-ignored until filed)",
+    agentDescription: "Pages and captures sent to the box, not filed yet (git-ignored until filed)",
   },
   {
     boxDirsKey: "recipes",

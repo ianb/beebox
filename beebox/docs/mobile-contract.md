@@ -1393,10 +1393,14 @@ box/chat. Gone views omit deleted source words, material, transcript, and chat
 message payload. Context blocked by deleted parent retains its own words. An uncaptured deletion
 tombstone has no source/capturedAt payload; other views retain those fields.
 
-**Source and work.** Source memo plus attach scope lives in `_content/captures/`,
-outside automatic intake inbox. Optional memo `share-id` is the stable source
-identity; existing memo context carries URL/clipping evidence. File media uses
-existing image/audio handling. Source materialization/commit precedes dispatch.
+**Source and work.** Source memo plus attach scope lives outside the automatic
+intake inbox. A capture with typed or dictated words, and no recording, is
+written uncommitted to the git-ignored `_content/incoming/`, and the chat that
+receives it files it with `bbx mv --commit`. A capture with no words, or with a
+recording, is committed in `_content/captures/` on arrival. Optional memo
+`share-id` is the stable source identity; existing memo context carries
+URL/clipping evidence. File media uses existing image/audio handling. Source
+materialization (and its commit, in `_content/captures/`) precedes dispatch.
 Stored source refs are resolved through the shared containment helper and checked
 against the box's real path before source reads or transcription updates; an
 escaping ref fails closed.

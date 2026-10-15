@@ -17,6 +17,22 @@ import { realpathContained } from "../../lib/box-containment.js";
 import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.js";
 import { quickCaptureDeclarationSchema } from "../../shared/quick-capture.js";
 import { captureDirectory, readCapture, withCaptureLock, writeCapture, QuickCaptureError, type CaptureRecord } from "./store.js";
+import { ensureIncomingDir, INCOMING_DIR } from "../incoming.js";
+import type { QuickCaptureDeclaration } from "../../shared/quick-capture.js";
+
+const CAPTURES_DIR = "_content/captures";
+
+/**
+ * Where a new source waits. A capture with typed or dictated words is routed to
+ * a chat, which files it: it waits uncommitted in the git-ignored incoming
+ * folder, as a page sent from the Clerk does. A capture with no words is never
+ * routed, so nothing would file it, and a recording cannot be captured again:
+ * both are committed in `_content/captures/` on arrival (boxholder, 2026-10-15).
+ */
+function sourceDirectory(declaration: Pick<QuickCaptureDeclaration, "input" | "material">): string {
+  const words = declaration.input !== undefined && declaration.input.trim() !== "";
+  return words && declaration.material?.kind !== "audio" ? INCOMING_DIR : CAPTURES_DIR;
+}
 
 async function resolveSource(boxRoot: string, ref: string): Promise<string> {
   const contained = resolveContainedRef({ boxRoot, ref, fromPath: "" });
@@ -27,8 +43,8 @@ async function resolveSource(boxRoot: string, ref: string): Promise<string> {
 }
 /** Only memo cards owned by this coordinator participate in identity lookup. */
 export async function findCaptureSource(boxRoot: string, record: CaptureRecord): Promise<string | null> {
-  const expected = `_content/captures/${record.id}.memo.card`;
-  const candidates = record.sourceRef === undefined ? [expected] : [record.sourceRef, expected];
+  const expected = [`${CAPTURES_DIR}/${record.id}.memo.card`, `${INCOMING_DIR}/${record.id}.memo.card`];
+  const candidates = record.sourceRef === undefined ? expected : [record.sourceRef, ...expected];
   const schemas = await createCardSchemaMap(boxRoot);
   for (const ref of candidates) {
     const abs = await resolveSource(boxRoot, ref);
@@ -77,7 +93,10 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
     if (existing === null) throw new QuickCaptureError({ reason: "missing-source" });
     return existing;
   }
-  const rel = existing ?? `_content/captures/${record.id}.memo.card`;
+  const directory = sourceDirectory(record.declaration);
+  const rel = existing ?? `${directory}/${record.id}.memo.card`;
+  const waitsInIncoming = rel.startsWith(`${INCOMING_DIR}/`);
+  if (waitsInIncoming) await ensureIncomingDir(boxRoot);
   const abs = await resolveSource(boxRoot, rel);
   const attachRel = rel.replace(/\.memo\.card$/, ".attach");
   const attachAbs = path.join(boxRoot, attachRel);
@@ -120,7 +139,8 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
       parseCardText(content, { source: abs, schemas: await createCardSchemaMap(boxRoot) });
       await writeFileAtomic(abs, { content });
     }
-    await stageAndCommitPaths(boxRoot, { paths, message: "Retain quick capture source", trailers: { "Created-By": declaration.source } });
+    // A source in the incoming folder is on disk, not in git, until its chat files it.
+    if (!waitsInIncoming) await stageAndCommitPaths(boxRoot, { paths, message: "Retain quick capture source", trailers: { "Created-By": declaration.source } });
   });
   return rel;
 }

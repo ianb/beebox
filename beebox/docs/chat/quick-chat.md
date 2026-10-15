@@ -319,7 +319,7 @@ records support live evaluation and are not repository test fixtures.
 - Provider contract: `src/services/jev.ts`.
 - Authenticated procedures: `src/webapp/trpc/routers/quick-chat.ts`.
 - Clerk sends: `clerk.send` in `src/webapp/trpc/routers/clerk.ts`; the
-  incoming folder and the lookup by `capture-id`: `src/core/clerk-incoming.ts`.
+  incoming folder and the lookup by `capture-id`: `src/core/incoming.ts`.
 - Shared sender: `src/webapp/routes/chat/user-message-sender.ts`.
 - Web box screen: `src/frontend/src/pages/box-screen/` and
   `src/frontend/src/components/box-screen/`.
