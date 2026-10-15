@@ -81,6 +81,7 @@ _content/inbox/staged
 _content/inbox/triaged
 _content/inbox/triaged/_unsure
 _content/inbox/unhandled
+_content/incoming
 _content/people
 _content/places
 _content/recipes

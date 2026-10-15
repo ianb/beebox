@@ -1290,7 +1290,12 @@ See §1.3 (full request/response/errors).
   `<external-input source="apple-app-intents">`. A repeated `submit` of a stored id keeps its
   stored origin, source, and hqService. A box from before hqService strips the key and frames the
   thought `stt="live"`. Each mutation answers a
-  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. Each
+  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. A view may carry
+  `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+  whose `message` is the person's note and may be empty. The native box screen ignores `page`
+  for now and retries such a row through `submit`, which refuses an empty message; the web box
+  screen shows the title and retries with `quickChat.retry` `{id,channel?}`
+  ([issue](../../issues/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md)). Each
   `recentChats` row is `{sessionId,label,lastActivity,landmark:{dir,label,symbol}|null}`, newest
   first: the fresh landmark chats plus the box's last chat, whose `landmark` is `null` when no
   landmark resolves for its directory. Shapes:

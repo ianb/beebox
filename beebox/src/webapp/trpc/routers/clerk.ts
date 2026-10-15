@@ -18,7 +18,15 @@ import {
   commentaryDestinationsOutput,
   tabArrangementPayload,
   tabArrangementOutput,
+  sendInput,
+  sendOutput,
 } from "../clerk-contract.js";
+import { ensureIncomingDir, incomingCardName, INCOMING_DIR } from "../../../core/clerk-incoming.js";
+import { readQuickChatRecord } from "../../../core/chat/routing/quick-chat-store.js";
+import { submitQuickChat } from "../../../core/chat/routing/quick-chat-submit/submit.js";
+import type { QuickChatView } from "../../../core/chat/routing/quick-chat-record.js";
+import { quickChatContext, quickChatRecordView, quickChatRequestFailure } from "../quick-chat-delivery.js";
+import type { TrpcContext } from "../context.js";
 import { createWebpageTemplate } from "../../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
@@ -87,6 +95,15 @@ export const clerkRouter = router({
     });
   }),
 
+  /**
+   * Send to box (docs/plans/clerk-quick-send.md): save the page as a webpage
+   * card in the git-ignored incoming folder, then let quick chat place it.
+   * Idempotent by `id`: a retry answers from the stored send and never writes
+   * a second card, even after the card was filed.
+   */
+  send: authedProcedure.input(sendInput).output(sendOutput).mutation(async ({ input, ctx }) =>
+    withCardLock(path.join(ctx.boxRoot, INCOMING_DIR, `.send-${input.id}`), () => sendPage(ctx, input))),
+
   tabArrangement: authedProcedure
     .input(tabArrangementPayload)
     .output(tabArrangementOutput)
@@ -125,6 +142,44 @@ export const clerkRouter = router({
 });
 
 const WEBPAGE_SUFFIX = ".webpage.card";
+
+function sendConflict(): TRPCError {
+  return new TRPCError({ code: "CONFLICT", message: "This send already holds a different page or note. Send it again as a new send." });
+}
+
+async function sendPage(ctx: TrpcContext, input: z.infer<typeof sendInput>): Promise<z.infer<typeof sendOutput>> {
+  const { boxRoot } = ctx;
+  const page = { title: input.title, url: input.url, ...(input.siteName === undefined ? {} : { site: input.siteName }) };
+  const stored = await readQuickChatRecord(boxRoot, input.id);
+  let card: string;
+  if (stored !== null) {
+    // The send was stored: its card may since have been filed, so look nothing up on disk.
+    if (stored.page?.url !== input.url || stored.message !== input.note || stored.sourceRef === undefined) throw sendConflict();
+    card = stored.sourceRef;
+  } else {
+    const existing = await findCaptureCard({ boxRoot, destDir: INCOMING_DIR, captureId: input.id });
+    if (existing !== null && existing.url !== input.url) throw sendConflict();
+    if (existing !== null) card = existing.relPath;
+    else {
+      await ensureIncomingDir(boxRoot);
+      card = path.join(INCOMING_DIR, incomingCardName(safeFilename(input.title, "Page"), input.id));
+      // Not committed: the incoming folder ignores itself, and the chat files the card into git.
+      await writeWebpageCard({ boxRoot, cardRel: card, title: input.title, url: input.url, capturedAt: new Date().toISOString(),
+        markdown: input.readableMarkdown, siteName: input.siteName, byline: input.byline, excerpt: input.excerpt,
+        frozenHtml: input.frozenHtml, captureId: input.id });
+    }
+  }
+  const record = await submitQuickChat(quickChatContext(ctx), { id: input.id, message: input.note, origin: "external",
+    source: "browser-clerk", sourceRef: card, page }).catch(quickChatRequestFailure);
+  return sendResult(card, quickChatRecordView(record, ctx));
+}
+
+function sendResult(card: string, view: QuickChatView): z.infer<typeof sendOutput> {
+  const { state, destination, queued, reason, lastError, expired, choices } = view;
+  return { card, state, ...(destination === undefined ? {} : { destination }), ...(queued === undefined ? {} : { queued }),
+    ...(reason === undefined ? {} : { reason }), ...(lastError === undefined ? {} : { lastError }),
+    ...(expired === undefined ? {} : { expired }), ...(choices === undefined ? {} : { choices }) };
+}
 
 async function writeCommentaryCapture(opts: {
   boxRoot: string;

@@ -64,6 +64,9 @@ accepts only a choice that the record offers. `quickChat.discard` ends a
 thought that was not sent. A sent thought cannot be discarded.
 `quickChat.home` returns what the box screen shows: the open thoughts, the
 recently sent thoughts, the recent chats, and the shortcuts.
+`quickChat.retry` delivers a stored `sending` thought again with its own
+words; the web box screen's Retry uses it, because a page sent from the Clerk
+may have no words (below).
 
 `submit` also takes `origin`: `typed` or `voice`, how the person entered the
 thought. The web page always sends `typed`. The iOS app sends `voice` when the
@@ -197,6 +200,32 @@ Discard only.
 A busy chat queues the message in memory. A server restart loses that queue,
 as it does for every queued chat send.
 
+## Pages sent from the Clerk
+
+The Clerk browser extension's **Send to box** sends the page in the active
+tab, with an optional note, through `clerk.send`
+(`src/webapp/trpc/routers/clerk.ts`; plan:
+[clerk-quick-send](../plans/clerk-quick-send.md)). The send's UUID, made by
+the Clerk, is the record id.
+
+- The box writes the page as a webpage card, with its frozen snapshot, in
+  `_content/incoming/<title>-<id>.webpage.card`. The folder's own
+  `.gitignore` keeps it out of git. The card carries the id as `capture-id`.
+- The record is routed like any thought. Its message is the note, possibly
+  empty. It also keeps `page: {title, url, site}`, which goes to Jev as data
+  beside the note, so a page with no note can still be placed.
+- Delivery wraps the note as `<external-input source="browser-clerk"
+  source-ref="_content/incoming/…">`. The page's text is never in the
+  message. The chat's agent files the card with `bbx mv --commit`, which
+  commits it at its new place.
+- A repeat of the same send answers from the stored record and writes no
+  card, even after the card was filed. A repeat with a different URL or note
+  is refused.
+- If the card was filed before delivery (from Browse, while the thought waits
+  for a choice), delivery finds it by `capture-id` and sends its current
+  path. If it was deleted, delivery fails with "The sent page was removed."
+- The box screen shows the page title, linked, above the note.
+
 ## Destinations
 
 Eligible candidates are recent resumable web chats (the existing seven-day
@@ -252,7 +281,8 @@ in the rubric.
 
 The request goes to OpenRouter's Decisions API and is pinned to TypeSafe Jev.
 It includes the thought, candidate identities and activity, rubric rules, and
-recent conversation text. See [security report §3](../security-report.md#3-data-egress).
+recent conversation text. For a page sent from the Clerk it also includes the
+page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
 The current bounds are:
 
 - Thought: 12,000 characters; text only, with no attachments.
@@ -288,6 +318,8 @@ records support live evaluation and are not repository test fixtures.
 - Box screen data: `src/core/chat/routing/quick-chat-home.ts`.
 - Provider contract: `src/services/jev.ts`.
 - Authenticated procedures: `src/webapp/trpc/routers/quick-chat.ts`.
+- Clerk sends: `clerk.send` in `src/webapp/trpc/routers/clerk.ts`; the
+  incoming folder and the lookup by `capture-id`: `src/core/clerk-incoming.ts`.
 - Shared sender: `src/webapp/routes/chat/user-message-sender.ts`.
 - Web box screen: `src/frontend/src/pages/box-screen/` and
   `src/frontend/src/components/box-screen/`.

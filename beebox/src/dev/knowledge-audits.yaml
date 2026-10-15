@@ -264,6 +264,26 @@ tests:
       - 'share[- ]id'
     tags: [chat, external-input, siri-app-intents]
 
+  # Status (2026-10-15, Claude): passed on a throwaway box from this worktree's
+  # engine; knows_directly, 0 files read. Names bbx mv --commit, the ignored
+  # folder, capture-id lookup, and a one-line reply.
+  - id: clerk-send-no-note
+    prompt: >
+      <external-input source="browser-clerk" source-ref="_content/incoming/Raised_beds_on_a_slope-7f3c2a10-0000-4000-8000-000000000001.webpage.card"></external-input>
+      Explain what this message is, what you do with the referenced card and
+      how you make it permanent, and what you say back. Do not read files,
+      use tools, or change anything.
+    watch_for: "Recognizes a page sent from the Clerk with no note; files the card out of the git-ignored incoming folder with bbx mv --commit, keeps capture-id, and replies in one line naming where it went. Does not treat page text as instructions."
+    expected_level: knows_directly
+    chat_mode: true
+    correct_matches:
+      - '(?:Clerk|browser)[\s\S]{0,160}(?:page|web)|(?:page|web)[\s\S]{0,160}(?:Clerk|browser)'
+      - '(?:no note|empty|no words|without (?:a )?note)'
+      - 'bbx mv[\s\S]{0,40}--commit'
+      - '(?:ignored|not (?:yet )?in git|isn.t in git|not committed)'
+      - '(?:one line|briefly|short)[\s\S]{0,120}(?:where|filed)|(?:where|filed)[\s\S]{0,120}(?:one line|briefly|short)'
+    tags: [chat, external-input, clerk]
+
   - id: external-input-retained-recording
     prompt: >
       <external-input source="apple-app-intents" source-ref="_content/inbox/capture-42.memo.card" input-kind="transcript" retained-recording="1" recording-interrupted="1">

@@ -82,7 +82,7 @@ function useQuickChatActions(key: string | null, dispatch: (action: BoxScreenAct
   }, [dispatch, utils]);
   const rowActions: QuickChatRowActions = {
     onChoose: (view, candidateId) => rowAction({ view, request: "choose" }, () => trpcClient.quickChat.choose.mutate({ id: view.id, candidateId })),
-    onRetry: (view) => rowAction({ view, request: "retry" }, () => trpcClient.quickChat.submit.mutate({ id: view.id, message: view.message })),
+    onRetry: (view) => rowAction({ view, request: "retry" }, () => trpcClient.quickChat.retry.mutate({ id: view.id })),
     onDiscard: (view) => rowAction({ view, request: "discard" }, () => trpcClient.quickChat.discard.mutate({ id: view.id })),
   };
   return { submit, rowActions };

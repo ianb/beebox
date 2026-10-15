@@ -2,6 +2,7 @@ import { createJevService, serializeJevRequest, type JevDecision, type JevServic
 import { getOpenRouterKey } from "../../../openrouter.js";
 import { boundRoutingContexts } from "./catalog.js";
 import type { RoutingCandidate } from "../policy.js";
+import type { QuickChatPage } from "../quick-chat-record.js";
 
 /**
  * Ask Jev where one quick chat message belongs. Returns null when the box has
@@ -11,7 +12,7 @@ import type { RoutingCandidate } from "../policy.js";
  */
 export async function judgeQuickChat(
   { boxRoot, jev }: { boxRoot: string; jev: JevService | undefined },
-  state: { message: string; candidates: RoutingCandidate[] },
+  state: { message: string; page?: QuickChatPage; candidates: RoutingCandidate[] },
 ): Promise<(JevDecision & { candidates: RoutingCandidate[] }) | null> {
   let service = jev;
   if (service === undefined) {
