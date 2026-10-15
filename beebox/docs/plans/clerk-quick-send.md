@@ -2,8 +2,7 @@
 title: "Clerk: send a page to the box, sorted like quick chat"
 status: draft
 workstream: clerk-quick-send
-issues:
-  - ../../../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md
+issues: []   # the Clerk issue stays open for part 2 (feed items); see below
 ---
 # Clerk: send a page to the box, sorted like quick chat
 
