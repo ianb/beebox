@@ -205,7 +205,7 @@ as it does for every queued chat send.
 The Clerk browser extension's **Send to box** sends the page in the active
 tab, with an optional note, through `clerk.send`
 (`src/webapp/trpc/routers/clerk.ts`; plan:
-[clerk-quick-send](../plans/clerk-quick-send.md)). The send's UUID, made by
+[clerk-quick-send](../implemented-plans/clerk-quick-send.md)). The send's UUID, made by
 the Clerk, is the record id.
 
 - The box writes the page as a webpage card, with its frozen snapshot, in

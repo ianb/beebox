@@ -90,7 +90,7 @@ in the `web-search-fetch` workstream.
 
 - 2026-10-15: research recorded in
   [feed-item capture survey](../../research/feed-item-capture-2026-10-15.md);
-  plan at [clerk-quick-send](../../beebox/docs/plans/clerk-quick-send.md).
+  plan at [clerk-quick-send](../../beebox/docs/implemented-plans/clerk-quick-send.md).
   Boxholder: the page stays a card, in an incoming location (not only
   `_tmp`), referenced from the chat.
 - 2026-10-15: part 1 implemented on `worktree-clerk-quick-send` (Send to box,

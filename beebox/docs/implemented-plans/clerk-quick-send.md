@@ -1,6 +1,6 @@
 ---
 title: "Clerk: send a page to the box, sorted like quick chat"
-status: draft
+status: implemented
 workstream: clerk-quick-send
 issues: []   # the Clerk issue stays open for part 2 (feed items); see below
 ---
@@ -14,7 +14,7 @@ agent files the card. When the choice is not clear, the popup and the box
 screen ask.
 
 **Issues addressed:** [Clerk send to box sorted like quick chat](../../../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md),
-part 1 in full. Part 2 (feed items) is researched
+part 1 in full (shipped). Part 2 (feed items) is researched
 ([survey](../../../research/feed-item-capture-2026-10-15.md)); trimming is
 deferred by the boxholder until real captures exist (see *NOT in scope*). The
 issue stays open for part 2. Related, not closed: [quick drop entry points](../../../issues/features/2026-09-25-quick-drop-entry-points.md),

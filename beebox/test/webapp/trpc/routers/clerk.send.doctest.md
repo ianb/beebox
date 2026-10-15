@@ -2,7 +2,7 @@
 
 `clerk.send` saves a page sent from the Clerk as a webpage card in
 `_content/incoming/`, which git ignores, then lets quick chat place it
-(docs/plans/clerk-quick-send.md). The chat gets the person's note, which may be
+(docs/implemented-plans/clerk-quick-send.md). The chat gets the person's note, which may be
 empty, and a reference to the card. Page text never becomes the message; the
 page's title, site, and URL go to Jev as routing data.
 

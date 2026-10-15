@@ -10,7 +10,7 @@ discovered-in: worktree-clerk-quick-send — cross-model plan review
 
 A page sent from the Clerk with no note becomes a quick chat record with an
 empty message and a `page: { title, url }` field
-([plan](../../beebox/docs/plans/clerk-quick-send.md)). The web box screen
+([plan](../../beebox/docs/implemented-plans/clerk-quick-send.md)). The web box screen
 shows the page title. The native box screen shows only `message`, so the row
 is blank, and several such rows cannot be told apart when the person must
 choose a destination.

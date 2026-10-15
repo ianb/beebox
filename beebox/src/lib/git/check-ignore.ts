@@ -34,7 +34,7 @@ export async function ignoredPaths(
 /**
  * The subset of `relPaths` that `git add` can take: not ignored, and either on
  * disk or tracked. A file that moved out of an ignored folder (a page sent from
- * the Clerk, docs/plans/clerk-quick-send.md) has an old path that is neither,
+ * the Clerk, docs/implemented-plans/clerk-quick-send.md) has an old path that is neither,
  * and naming it would make `git add` fail after the move happened.
  */
 export async function stageablePaths(cwd: string, relPaths: string[]): Promise<string[]> {

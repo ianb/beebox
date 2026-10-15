@@ -15,7 +15,7 @@ iOS quick capture commits its source memo on arrival at
 A page sent from the Clerk now waits uncommitted in `_content/incoming/`,
 which git ignores through a folder-local `.gitignore`, and the chat agent
 commits it when it files it
-([plan](../../beebox/docs/plans/clerk-quick-send.md)).
+([plan](../../beebox/docs/implemented-plans/clerk-quick-send.md)).
 
 The boxholder chose the ignored folder for Clerk sends and said: "probably
 the ios quick capture should do the same" (2026-10-15).

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-15T18:48:31Z
-Total documents: 530
+Generated: 2026-10-15T21:41:06Z
+Total documents: 531
 
 ## Issues
 
@@ -166,6 +166,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/chat-composer-rerender.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/chat-stream-finalize-unify.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/clerk-quick-send.md:136 (mention) — - Lint: no rule changes (root `AGENTS.md`).
 - docs/implemented-plans/clerk-webpage-capture.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/codex-box-engine.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/codex-sdk-backend.md:134 (mention) — generated `AGENTS.md` and installed plugin. If the public SDK cannot preserve this role,
@@ -728,6 +729,7 @@ Referenced by:
 - ../research/openui/beebox-fit.md:7 (link) — [README](README.md) carries the disposition table; this note is the reasoning.
 - ../research/openui/beebox-surfaces.md:4 (link) — this date; see [README](README.md) for the comparison and dispositions.
 - ../research/pai/telos.md:7 (mention) — - `$PAI/PAI/USER/TELOS/` — nine source files + `README.md` + generated summary + `CURRENT_STATE/`/`IDEAL_STATE/` dirs
+- ../research/web-search-fetch/oss-fetch-and-feeds.md:3 (link) — Context: a box agent keeps a per-box list of sources to re-check on each pass (a pottery-scene box: potters' own event p
 
 References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (link)
@@ -906,7 +908,7 @@ References:
 
 #### docs/box-layout.md
 
-Title: "Box Layout" | 295 lines | current reference
+Title: "Box Layout" | 297 lines | current reference
 
 Referenced by:
 - AGENTS.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
@@ -924,6 +926,7 @@ Referenced by:
 - docs/implemented-plans/box-retrospectives.md:422 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/boxes-as-packages-v2.md:43 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/implemented-plans/bulk-file-upload.md:117 (mention) — - **Landing-zone convention** — `docs/box-layout.md:88-91` (`tmp-capture/`
+- docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
 - docs/implemented-plans/design-reconciliation.md:597 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
 - docs/implemented-plans/doc-structure-box-guidance.md:172 (mention) — engine owns. `docs/box-layout.md:65-68` draws `CLAUDE.md`, `.claude/`,
 - docs/implemented-plans/doc-structure-cards.md:88 (mention) — `box-layout.md` (its own subject), `docs/box/` card docs (box-facing),
@@ -1048,7 +1051,7 @@ Title: "Client Debug Log" | 107 lines | current reference
 
 Referenced by:
 - AGENTS.md:59 (link) — - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the
-- docs/box-layout.md:229 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
+- docs/box-layout.md:231 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
 - docs/box-work.md:58 (mention) — log](client-debug-log.md)).
 - docs/guides.md:47 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
@@ -1533,15 +1536,16 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1860 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1865 lines | current reference
 
 Referenced by:
 - AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/chat.md:20 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
-- docs/chat/quick-chat.md:76 (link) — [mobile contract §5.11](../mobile-contract.md).
+- docs/chat/quick-chat.md:79 (link) — [mobile contract §5.11](../mobile-contract.md).
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 - docs/guides.md:51 (link) — | Mobile contract: what the native apps and a box agree on | [mobile-contract](mobile-contract.md) |
 - docs/implemented-plans/chat-image-files.md:143 (mention) — says `_tmp/` (`docs/mobile-contract.md:880-881`), so every `[file#N]` line
+- docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
 - docs/implemented-plans/doc-structure.md:237 (mention) — are cited by number (`mobile-contract.md`).
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
 - docs/implemented-plans/ios-log-forwarding.md:56 (mention) — machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
@@ -1610,6 +1614,7 @@ Referenced by:
 - ../issues/features/2026-10-06-ios-on-device-hq-transcription.md:16 (mention) — (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
 - ../issues/features/2026-10-07-mac-companion-app.md:28 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
 - ../issues/features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md:35 (mention) — (`beebox/docs/mobile-contract.md`) should also count, since a contract change
+- ../issues/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:27 (link) — shape is in [mobile contract §5.11](../../beebox/docs/mobile-contract.md).
 - ../research/installable-app/tailscale.md:103 (mention) — (`beebox/docs/mobile-contract.md` §1.1). A box-owned node gives that URL a
 - ../research/omi-review.md:175 (link) — as our [mobile contract](../beebox/docs/mobile-contract.md) drift table.
 - ../research/opencode/inspiration.md:78 (mention) — | One server, many clients; ACP; desktop sidecar | web + iOS over one server; `docs/mobile-contract.md` | already done,
@@ -1625,6 +1630,8 @@ References:
 - → docs/plans/chat-photo-batch-upload.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
 - → docs/implemented-plans/ios-quick-chat-hq.md (mention)
+- → docs/chat/quick-chat.md (mention)
+- → ../issues/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md (link)
 - → docs/plans/ios-companion-review-2026-07-17.md (mention)
 - → docs/implemented-plans/mobile-token-handshake.md (mention)
 
@@ -1655,7 +1662,7 @@ References:
 Title: "Which model a box thinks with" | 189 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:209 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
+- docs/box-layout.md:211 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/chat.md:19 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
 - docs/design/identity.md:27 (link) — engine's own store ([`../model-policy.md`](../model-policy.md)).
 - docs/guides.md:45 (link) — | Model policy: which engine and model a box thinks with | [model-policy](model-policy.md) |
@@ -1729,7 +1736,7 @@ References:
 Title: "Plugins" | 190 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:271 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
+- docs/box-layout.md:273 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
 - docs/design/extensibility.md:13 (link) — What does exist (2026-10, [plugins](../plugins.md)): a **plugin** is a typed
 - docs/guides.md:34 (link) — | Plugins: typed in-repo libraries a box activates through stubs | [plugins](plugins.md) |
 - docs/implemented-plans/boxes-as-packages-v2.md:373 (mention) — (`docs/plugins.md`, "Health") print under `Plugin health after upgrade:`. Report-only too.
@@ -1924,7 +1931,7 @@ Title: "Secrets: the machine-level store" | 541 lines | current reference
 Referenced by:
 - AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
-- docs/box-layout.md:210 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
+- docs/box-layout.md:212 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/box-work.md:46 (link) — ([secrets](secrets.md#worktree-boxes-have-their-own-store)). In a worktree,
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
 - docs/design/privacy-and-egress.md:11 (link) — ([`../secrets.md`](../secrets.md)).
@@ -1950,6 +1957,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
 - ../issues/features/2026-10-08-agent-files-a-grant-request.md:23 (mention) — (`beebox/docs/secrets.md`) and OAuth scopes on the connector, and does not add
 - ../research/imbue-studio/comparison.md:15 (mention) — | Default-deny per-action permissions | Every third-party call leaves through a gateway with detent rules; the agent fil
+- ../research/web-search-fetch/README.md:40 (link) — | Exa as a second search engine for scouring the web | **adopt** | Best freshness and forum recall in the probes. WebSea
 
 References:
 - → docs/implemented-plans/secret-custody.md (link)
@@ -2002,11 +2010,12 @@ References:
 Title: "Security report — structured version" | 644 lines | current reference
 
 Referenced by:
-- docs/chat/quick-chat.md:255 (link) — recent conversation text. See [security report §3](../security-report.md#3-data-egress).
+- docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
 - docs/design/privacy-and-egress.md:27 (link) — box ([`../security-report.md`](../security-report.md#3-data-egress)).
 - docs/guides.md:50 (link) — | Security overview, and the structured report behind it | [security-overview](security-overview.md), [security-report](
 - docs/implemented-plans/agent-browsing-owner.md:189 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
 - docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
+- docs/implemented-plans/clerk-quick-send.md:124 (mention) — - **Data egress**, `docs/security-report.md` §3: routing a page with no note
 - docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/implemented-plans/jev-document-triage.md:552 (mention) — `security-report.md` and `security-overview.md`. It does not re-audit unrelated
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
@@ -2221,7 +2230,7 @@ References:
 Title: "Triage" | 117 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:158 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
+- docs/box-layout.md:159 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
 - docs/connectors.md:131 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:33 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:40 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
@@ -2461,9 +2470,11 @@ Referenced by:
 Title: "Quick chat routing rules" | 47 lines | current reference
 
 Referenced by:
-- docs/chat/quick-chat.md:219 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
+- docs/chat/quick-chat.md:248 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
+- docs/implemented-plans/clerk-quick-send.md:73 (mention) — the chat in the person's words (`docs/box/quick-chat.md`: *"A posted thought
 - docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:20 (mention) — or recent conversation (`beebox/docs/box/quick-chat.md`), but **it does not
+- ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md:34 (mention) — (`beebox/docs/chat/quick-chat.md`, `beebox/docs/box/quick-chat.md`). The
 
 #### docs/box/schemas.md
 
@@ -2471,7 +2482,7 @@ Title: "Writing Box-Local Schemas" | 301 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:140 (link) — [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
-- docs/box-layout.md:253 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
+- docs/box-layout.md:255 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
 - docs/cards/validation.md:56 (link) — `markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
 - docs/implemented-plans/place-shows-cards.md:215 (mention) — schemas can define it (`docs/box/schemas.md:185-205`, the `plant` example
 - docs/implemented-plans/plugins-slice-2.md:137 (mention) — (`docs/box/schemas.md:236-262`); the loader reads it at
@@ -2761,22 +2772,26 @@ Referenced by:
 
 #### docs/chat/quick-chat.md
 
-Title: "Quick chat" | 298 lines | current reference
+Title: "Quick chat" | 330 lines | current reference
 
 Referenced by:
 - docs/chat.md:13 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
 - docs/design/trust.md:49 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
+- docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
 - docs/landmarks.md:230 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
+- docs/mobile-contract.md:1294 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
 - docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:18 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:24 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:31 (mention) — (`docs/chat/quick-chat.md`).
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:102 (link) — and is documented at [`beebox/docs/chat/quick-chat.md`](../../beebox/docs/chat/quick-chat.md);
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:92 (link) — [Quick chat](../../beebox/docs/chat/quick-chat.md).
+- ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md:34 (mention) — (`beebox/docs/chat/quick-chat.md`, `beebox/docs/box/quick-chat.md`). The
 - ../research/imbue-studio/chat-app.md:299 (mention) — (`beebox/docs/chat/quick-chat.md`). **Adapt** the draft-vs-send distinction
 
 References:
 - → docs/mobile-contract.md (link)
+- → docs/implemented-plans/clerk-quick-send.md (link)
 - → docs/box/quick-chat.md (link)
 - → docs/security-report.md (link)
 
@@ -3742,6 +3757,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-13-browser-task-history-and-subject.md:31 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-inbox-table-view.md:32 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/features/2026-09-17-box-as-mcp-server-hands-out-tasks.md:107 (link) — - [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md)
+- ../research/web-search-fetch/README.md:57 (link) — | Logged-in persistent profile | **later** | The only route to content behind the boxholder's own accounts (including pa
 
 References:
 - → ../issues/features/2026-08-13-dead-drop-ingress-for-external-automations.md (frontmatter)
@@ -3766,7 +3782,7 @@ References:
 Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
-- docs/box-layout.md:136 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
+- docs/box-layout.md:137 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
 - docs/mobile-contract.md:1012 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:34 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
@@ -3797,7 +3813,7 @@ References:
 Title: "Capture mode — unifying capture into the input" | 671 lines | shipped history | implemented
 
 Referenced by:
-- docs/box-layout.md:125 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
+- docs/box-layout.md:126 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
 - docs/implemented-plans/bulk-file-upload.md:43 (mention) — - **Shipped precedent: capture mode** (`docs/implemented-plans/capture-mode.md`,
 - docs/implemented-plans/resilient-voice-recording.md:146 (mention) — - `docs/implemented-plans/capture-mode.md`: server-side staging, crash-resumable
 - docs/plans/cli-restructure.md:13 (mention) — **2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`bbx transcribe-captures`, `b
@@ -4112,6 +4128,30 @@ Referenced by:
 
 References:
 - → docs/module-map.md (mention)
+
+#### docs/implemented-plans/clerk-quick-send.md
+
+Title: "Clerk: send a page to the box, sorted like quick chat" | 483 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/quick-chat.md:208 (link) — [clerk-quick-send](../implemented-plans/clerk-quick-send.md)). The send's UUID, made by
+- ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md:93 (link) — plan at [clerk-quick-send](../../beebox/docs/implemented-plans/clerk-quick-send.md).
+- ../issues/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:13 (link) — ([plan](../../beebox/docs/implemented-plans/clerk-quick-send.md)). The web box screen
+- ../issues/features/2026-10-15-ios-quick-capture-to-ignored-incoming.md:18 (link) — ([plan](../../beebox/docs/implemented-plans/clerk-quick-send.md)).
+
+References:
+- → ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md (link)
+- → ../research/feed-item-capture-2026-10-15.md (link)
+- → ../issues/features/2026-09-25-quick-drop-entry-points.md (link)
+- → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
+- → ../issues/features/2026-10-04-fetch-blocked-pages.md (link)
+- → docs/chat/quick-chat.md (mention)
+- → docs/box/quick-chat.md (mention)
+- → docs/security-report.md (mention)
+- → AGENTS.md (mention)
+- → ../issues/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md (link)
+- → docs/mobile-contract.md (mention)
+- → docs/box-layout.md (mention)
 
 #### docs/implemented-plans/clerk-webpage-capture.md
 
@@ -5331,7 +5371,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1685 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1690 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -7941,7 +7981,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1679 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1684 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -8441,7 +8481,7 @@ Referenced by:
 Title: "TTS backend selection, and per-backend style direction" | 582 lines | proposal | partial
 
 Referenced by:
-- docs/box-layout.md:217 (mention) — | `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.m
+- docs/box-layout.md:219 (mention) — | `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.m
 - docs/implemented-plans/tts-streamed-playback.md:44 (mention) — `docs/plans/tts-backend-selection.md` and the services table. Not a BIG CHANGE.
 - ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md:6 (frontmatter) — design: ../../../beebox/docs/plans/tts-backend-selection.md
 - ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md:53 (link) — **Designed:** [tts-backend-selection](../../../beebox/docs/plans/tts-backend-selection.md).

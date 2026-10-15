@@ -96,7 +96,7 @@ export const clerkRouter = router({
   }),
 
   /**
-   * Send to box (docs/plans/clerk-quick-send.md): save the page as a webpage
+   * Send to box (docs/implemented-plans/clerk-quick-send.md): save the page as a webpage
    * card in the git-ignored incoming folder, then let quick chat place it.
    * Idempotent by `id`: a retry answers from the stored send and never writes
    * a second card, even after the card was filed.

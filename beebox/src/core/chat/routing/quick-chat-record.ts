@@ -23,7 +23,7 @@ export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
 /** How the person entered the thought. External inputs are neither keyboard text nor a recording. */
 export const QUICK_CHAT_ORIGINS = ["typed", "voice", "external"] as const;
 export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
-/** The phone's capture sources, and the Clerk browser extension (docs/plans/clerk-quick-send.md). */
+/** The phone's capture sources, and the Clerk browser extension (docs/implemented-plans/clerk-quick-send.md). */
 export const QUICK_CHAT_SOURCES = [...QUICK_CAPTURE_SOURCES, "browser-clerk"] as const;
 /**
  * The engine that produced a dictated thought's HQ text on the phone
