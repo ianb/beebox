@@ -30,8 +30,9 @@ const CODEX_TELEMETRY_HELPER =
  */
 const OPENROUTER_BACKGROUND_HINT =
   "Background work follows this model too: wakeups, procedures, and chat titles and reviews run on OpenRouter " +
-  "and need no Claude login. Two things still use Claude: a chat someone switches to a Claude model, and reading " +
-  "photos during scan import (unless the server sets BBX_SCAN_VISION=gemini).";
+  "and need no Claude login. Still on Claude: a chat someone switches to a Claude model, quick passes when the " +
+  "box's smallModel is set to a Claude model, and reading photos during scan import (unless the server sets " +
+  "BBX_SCAN_VISION=gemini).";
 
 const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
 

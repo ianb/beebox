@@ -267,3 +267,20 @@ pass; the live check shows the run banner naming the DeepSeek model for a
 tiered step and a review pass, and the run succeeds without a Claude login in
 play. No migration: `smallModel` keeps its shape; the loader only accepts more
 values.
+
+## Live check results (2026-10-15)
+
+Worktree test box, `agentModel: deepseek/deepseek-v3.2`, `openrouter` key in a
+scratch secret store. A two-step probe procedure (`model: efficient`, and no
+model):
+
+- Before: `efficient → claude-haiku-4-5-20251001`; no model → `claude-opus-5-5`.
+- After: both steps `deepseek/deepseek-v3.2`; both succeeded.
+
+Chat title and full review passes through `createSdkChatReviewer`, with a
+synthetic 39,022-character transcript (the renderer's ceiling is 40,000):
+both resolved to `deepseek/deepseek-v3.2` and succeeded under the $0.25
+`maxBudgetUsd` cap (title 9.8 s, review 48.2 s). The SDK's cost figure was not
+captured directly; the cap did not trip. Wakeup jobs already followed the
+default before this change (`reactor/engine/batch-jobs.ts:55`).
+
