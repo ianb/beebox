@@ -119,11 +119,14 @@ the ones that bear on what the person is asking and open the pages named.
   [representation](design/representation.md))
 - **It extends itself.** How a kind of card is displayed, what kinds exist,
   what runs on a schedule: the agent can build those inside the box, and read
-  them to understand how the box works.
+  them to understand how the box works. Recipes and courses are the first
+  bundled add-ons a box switches on, but there are only two.
   ([making it yours](13-making-it-yours.md), [views](capabilities/views.md),
   [procedures](capabilities/procedures.md))
 - **Expressive capture.** A way in suited to each kind of thing, and the
-  distinctive ones are long-form voice and mixed voice-and-camera.
+  distinctive ones are long-form voice and mixed voice-and-camera. On an
+  iPhone it now also reaches Siri, the Action Button, and the share sheet, not
+  yet tried on a real phone.
   ([voice](capabilities/voice.md), [phone capture](capabilities/phone-capture.md),
   [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md))
 - **It asks instead of guessing.** Lacking confidence or authority the agent

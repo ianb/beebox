@@ -172,10 +172,18 @@ the box works, because they are files in the box like everything else.
 **How it is expressed.** Views the agent writes for a card type. Dashboards.
 Box-local card types with their own fields and instructions. Procedures and
 scheduled scripts as cards. Small programs for a task that repeats. Rules,
-guides, and a personality the agent reads before acting.
+guides, and a personality the agent reads before acting. Plugins, added
+October 2026: bundled typed libraries (recipes, courses) that a box turns on by
+naming them in its configuration and writing small stub files, the same files
+a box-local type or view would be. A card type can declare its own body tags,
+valid only in that type.
 
 **Where it is thin.** Building these is agent work with real capability, so
-the quality is the agent's. Nothing gates a badly-built view.
+the quality is the agent's. Nothing gates a badly-built view. There are two
+plugins, both written by the project; the stated position is no registry and
+no marketplace. Recipes and courses stopped being on by default when they
+became plugins, and activation is a manual, agent-run step that no one has
+checked for smoothness.
 
 **Pages.** `13-making-it-yours.md`, `capabilities/views.md`,
 `capabilities/procedures.md`, `uses/teaching-it-your-preferences.md`.
@@ -192,13 +200,21 @@ with the box staying quiet and filing rather than chatting back. A capture
 session that groups a burst of photos and spoken remarks into one timeline.
 Scanned paper. A browser extension for the page you are reading. Connectors
 that sync email, calendar, and documents, and act as triggers as well as
-sources. Quick chat is the newest path: the box screen, which the iPhone app opens on,
+sources. On the iPhone, Siri, the Action Button, a Lock Screen control, and the
+share sheet (with optional instructions) save a thought, a voice note, or
+shared material to a chosen capture-default box, kept on the phone until it
+uploads. Every dictated message also gets the higher-quality transcription
+pass, with the live text as the marked fallback. Quick chat is the other newer
+path: the box screen, which the iPhone app opens on,
 has one text box, a routing model sends the thought to the fitting
 conversation, and an unclear thought waits for the person to choose.
 
 **Where it is thin.** Telling speakers apart in a recording is not solved.
 Several capture paths are code-verified rather
-than exercised end to end. Quick chat posts a clearly routed thought without confirmation and the post
+than exercised end to end; the Siri, voice-note control, and share paths have
+passed simulator and automated tests, and the project's plan lists the
+physical-phone checks as open. A box that requires device unlock refuses Siri
+entirely. Quick chat posts a clearly routed thought without confirmation and the post
 cannot be moved; it sends the message and recent conversation text to a
 routing model through OpenRouter, and it needs that key.
 

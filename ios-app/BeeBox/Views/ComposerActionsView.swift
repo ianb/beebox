@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 struct ComposerActionsView: View {
+    @EnvironmentObject private var store: PairedBoxStore
     @Binding var selectedPhotoItems: [PhotosPickerItem]
     var canCapture: Bool
     var canTakePhoto: Bool
@@ -80,8 +81,26 @@ struct ComposerActionsView: View {
                     }
                 }
 
-                // Switching boxes lives on the box screen; pairing stays here.
-                Section {
+                // The box screen also lists boxes; this is the quick switch
+                // from inside a chat (boxholder, 2026-10-15).
+                Section("Boxes") {
+                    ForEach(store.boxes) { box in
+                        Button {
+                            store.select(box)
+                            onDismiss()
+                        } label: {
+                            HStack {
+                                Text(box.label)
+                                Spacer()
+                                if box.requiresDeviceUnlock {
+                                    Image(systemName: "lock.fill")
+                                }
+                                if box.id == store.selectedBox?.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
                     Button(action: onPairBox) {
                         Label("Pair or Manage Boxes", systemImage: "rectangle.stack.badge.plus")
                     }
@@ -92,8 +111,8 @@ struct ComposerActionsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     // A checkmark, matching the rows below it — this sheet
-                    // already marks active location sharing with one. A
-                    // plain-text bar button is also what
+                    // already marks the selected box and active location
+                    // sharing with one. A plain-text bar button is also what
                     // Accessibility's Button Shapes underlines, which is how
                     // "Done, underlined" looked to the boxholder.
                     Button(action: onDismiss) {

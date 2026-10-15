@@ -64,6 +64,24 @@ spanOut.includes("<unsure")
 => false
 ```
 
+## A send tag with more attributes still renders as the pill
+
+When live dictation heard a send command that the HQ text did not reproduce,
+the tag gains `heard="live"` (`speech-keywords.ts`). It is the same pill: the
+raw tag never shows in the message.
+
+```ts
+const liveOut = render('<speech stt="whisper-llm-mini">something more like that <send-message phrase="Send message." heard="live" /></speech>');
+liveOut.includes("&lt;send-message")
+=> false
+
+(liveOut.match(/bbx-chat-user-token/g) ?? []).length
+=> 1
+
+liveOut.includes("Send message.</span>")
+=> true
+```
+
 ## No marks at all — message renders unchanged, no pill machinery kicks in
 
 A message with no `<unsure>`/`<send-message>`/`<user-selection>` tags takes

@@ -28,8 +28,9 @@ box. Chat is the everyday way you talk to it.
   Deleting a chat is a separate, permanent act: the transcript and the chat's
   card are removed, while cards and files the conversation produced, and
   earlier committed versions in git, stay.
-- Titles chats for you as they grow, including short ones, and keeps a title
-  you set by hand.
+- Titles chats for you, starting right after the first exchange or two
+  rather than overnight, retitling as they grow, and keeps a title you set by
+  hand.
 - Shows the agent's short progress remarks between its tool steps, live and
   later in the transcript, so a long turn does not look silent.
 - Keeps an image you paste or upload as a file the agent can use (crop it,
@@ -71,7 +72,7 @@ box-wide search is not built.
 **Go deeper**
 
 [../reference/cards/chat.md](../reference/cards/chat.md),
-[../reference/cards/chat-thread.md](../reference/cards/chat-thread.md),
+[../reference/cards/chat-thread.md](../reference/cards/chat-thread.md) (history only),
 [../reference/chat-voice.md](../reference/chat-voice.md),
 [../reference/narration-mode.md](../reference/narration-mode.md),
 [voice.md](voice.md)
