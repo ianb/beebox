@@ -1,9 +1,9 @@
 ---
 title: "Expanded chat activity lines say what changed"
-status: active
+status: implemented
 workstream: activity-detail
 issues:
-  - ../../../issues/features/2026-10-15-expanded-activity-lines-say-too-little.md
+  - ../../../issues/closed/features/2026-10-15-expanded-activity-lines-say-too-little.md
 ---
 # Expanded chat activity lines say what changed
 
@@ -12,7 +12,7 @@ thing it touched and, one click further, what changed. The plain-language
 wording from the Oct 9 fix stays; this plan adds a name, a place, and a short
 plain excerpt between the line and the raw tool JSON.
 
-**Issues addressed:** `issues/features/2026-10-15-expanded-activity-lines-say-too-little.md`.
+**Issues addressed:** `issues/closed/features/2026-10-15-expanded-activity-lines-say-too-little.md`.
 Related, not closed: `issues/bugs/2026-08-30-codex-bash-activity-shows-shell-wrapper.md`
 (the shell wrapper only appears in the raw level, which this plan keeps as is).
 Searched the queue for "activity", "Made a change", "tool call detail": no
