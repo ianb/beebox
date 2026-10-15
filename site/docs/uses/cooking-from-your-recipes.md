@@ -24,7 +24,8 @@ view shows them has not been checked (see below). Recipes are filed together, an
 directory makes the collection something to browse. Remarks that fit no field
 stay on the card as your own words.
 
-**What it needs.** Nothing beyond the box itself.
+**What it needs.** The box itself, with the recipe add-on switched on, which
+the agent does when asked ([recipes](../capabilities/recipes.md) says how).
 [Recipes](../capabilities/recipes.md), [views](../capabilities/views.md),
 [what it requires](../08-what-it-requires.md).
 

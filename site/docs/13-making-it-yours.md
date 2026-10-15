@@ -32,6 +32,17 @@ you are collecting and the agent proposes fields, adds more later, and keeps
 anything that does not fit as prose on the card. Start with generic record
 cards and promote to a type once a shape repeats.
 
+**Add-ons.** A few larger pieces ship with the engine but a box only has them
+once it turns them on. Today there are two: recipes (a recipe card type with a
+view that scales amounts) and courses (five linked card types, a concept-map
+diagram, and a teaching procedure). Turning one on means naming it in the box's
+configuration and writing a few small files in the box, which is a task for the
+agent; a new box turns none on, and the engine's health check says when a box
+holds cards of an add-on's type without it. In the project's vocabulary these
+are plugins ([concepts/plugins.md](concepts/plugins.md)). The project's stated position is no marketplace and no registry:
+add-ons are written by the project, there are two of them, and Gmail, Calendar,
+and Drive deliberately stay part of the engine.
+
 **Your own interfaces.** A **view** is a page or display the agent builds
 for a kind of card: a recipe laid out as a recipe, a shelf of records you can
 browse and filter, a dashboard of what is open. You describe what you want

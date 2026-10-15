@@ -43,7 +43,7 @@ lean on it.
 - **Schedules and procedures** ([schedules](capabilities/schedules.md), [procedures](capabilities/procedures.md)): [routines](uses/routines-that-run-without-you.md), [email](uses/email-under-control.md).
 - **Typed cards with validated fields** ([cards](concepts/cards.md)): [paper into records](uses/paper-into-records.md), [reading and clipping](uses/reading-and-clipping.md), [recipes](uses/cooking-from-your-recipes.md), [people and places](uses/people-and-places.md), [learning](uses/learning-a-subject.md), [publishing](uses/publishing-from-your-cards.md).
 - **Views** ([views](capabilities/views.md)): [a project's working memory](uses/a-projects-working-memory.md), [recipes](uses/cooking-from-your-recipes.md), [learning](uses/learning-a-subject.md).
-- **The chat-thread card** ([chat](capabilities/chat.md)): [learning](uses/learning-a-subject.md).
+- **The chat card** ([chat](capabilities/chat.md)): [learning](uses/learning-a-subject.md).
 - **Publishing with an approval step and a takedown** ([publishing](capabilities/publishing.md)): [publishing](uses/publishing-from-your-cards.md).
 - **The history** ([durability and provenance](design/durability-and-provenance.md)): [teaching it](uses/teaching-it-your-preferences.md), [routines](uses/routines-that-run-without-you.md).
 - **Room for what does not fit yet** ([dump it in now, shape it later](capabilities/shape-it-later.md)): [paper into records](uses/paper-into-records.md), [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md).

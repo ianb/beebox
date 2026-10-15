@@ -23,7 +23,8 @@ pre-made, the material cards, and a progress card per learner. Progress is
 evidence-backed against the ideas in the concept map, so what you understood
 is recorded against specific concepts rather than as a percentage. The concept map can be browsed as a diagram of how the ideas connect.
 
-**What it needs.** Nothing beyond the box itself.
+**What it needs.** The box itself, with the courses add-on switched on, which
+the agent does when asked ([courses](../capabilities/courses.md) says how).
 [Courses](../capabilities/courses.md), [chat](../capabilities/chat.md),
 [what it requires](../08-what-it-requires.md).
 
@@ -38,7 +39,7 @@ agent's judgement recorded with its evidence, not a test score.
 
 - **Typed cards with validated fields** ([cards](../concepts/cards.md)): the map of ideas, the approach, the order, and your progress are separate checked cards, so each can be revised without rewriting the others.
 - **Views** ([views](../capabilities/views.md)): a display built for a kind of card, which is what lets the concept map be browsed as a diagram instead of read as a list.
-- **The chat-thread card** ([chat](../capabilities/chat.md)): a conversation is a durable card in the box, so a lesson taught in chat stays material you can reopen.
+- **The chat card** ([chat](../capabilities/chat.md)): a conversation is a durable card in the box, so a lesson taught in chat stays material you can reopen.
 
 **Read next.** [Courses](../capabilities/courses.md),
 [the card format](../concepts/cards.md).
