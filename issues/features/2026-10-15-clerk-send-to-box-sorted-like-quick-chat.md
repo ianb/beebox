@@ -93,3 +93,8 @@ in the `web-search-fetch` workstream.
   plan at [clerk-quick-send](../../beebox/docs/plans/clerk-quick-send.md).
   Boxholder: the page stays a card, in an incoming location (not only
   `_tmp`), referenced from the chat.
+- 2026-10-15: part 1 implemented on `worktree-clerk-quick-send` (Send to box,
+  `clerk.send`, git-ignored `_content/incoming/`). Part 2 deferred by the
+  boxholder: send the full page now, design trimming from real captures; a
+  first finder is parked on branch `wip-clerk-feed-items`. This issue stays
+  open for part 2.
