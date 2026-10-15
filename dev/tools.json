@@ -1,10 +1,46 @@
 {
   "tools": [
     {
-      "emoji": "\ud83d\udccf",
+      "emoji": "🃏",
+      "title": "Dev-process talk: chunks",
+      "href": "dev/devprocess-talk/chunks/preview.html",
+      "desc": "102 atomized observations as cards (number, quote, contrast, case, rule, timeline, figure) with speech cues for a co-presenter; catalog in chunks/index.md."
+    },
+    {
+      "emoji": "🧭",
+      "title": "Dev-process talk: timeline explorer",
+      "href": "dev/devprocess-talk/explorer.html",
+      "desc": "One time axis at year, quarter or month scale; overlay weekly stats with the event lanes; chapters (dev/devprocess-talk/chapters.md) zoom to a span, shade the rest, and show a card in place of a slide."
+    },
+    {
+      "emoji": "📏",
       "title": "Project size",
       "href": "dev/project-size/index.html",
       "desc": "Lines of code, tests, and docs by category and package, with commentary. Refresh: pnpm project-size"
+    },
+    {
+      "emoji": "🚶",
+      "title": "User-story journeys: overview",
+      "href": "dev/journeys/overview.md",
+      "desc": "What the journeys are for, the choices behind them, every walk round, what the walkers say, the claim-to-issue funnel, and what happens to the issues. Evidence under dev/journeys/reports/."
+    },
+    {
+      "emoji": "🪜",
+      "title": "Dev-process talk: techniques and bottlenecks",
+      "href": "dev/devprocess-talk/bottlenecks.md",
+      "desc": "Inventory of every development technique with outcomes, and the bottleneck narrative draft for the talk. Evidence under dev/devprocess-talk/reports/."
+    },
+    {
+      "emoji": "🗂",
+      "title": "Dev-process talk: draft slides",
+      "href": "dev/devprocess-talk/slides/index.md",
+      "desc": "Main and supporting slides, one Markdown file each, with verbatim excerpts and speaker notes."
+    },
+    {
+      "emoji": "📊",
+      "title": "Dev-process talk: visual treatments",
+      "href": "dev/devprocess-talk/visuals.html",
+      "desc": "Six prototype slide visuals (staircase, small multiples, flow, paired bars, shrink, dots and strip) to react to."
     }
   ]
 }

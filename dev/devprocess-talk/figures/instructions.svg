@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" width="960" height="320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Word count of always-loaded instruction files, February to October 2026">
+<title>Word count of always-loaded instruction files, February to October 2026</title>
+<rect x="0" y="0" width="960" height="320" fill="#ffffff" />
+<text x="24" y="24" font-size="16" fill="#1f2933" text-anchor="start" font-weight="600">The instructions every session reads: words over time</text>
+<text x="24" y="42" font-size="13" fill="#6b7280" text-anchor="start" font-weight="400">I cut by hand in March and September. Between cuts it grows, one rule per correction.</text>
+<line x1="56" y1="239.3" x2="810" y2="239.3" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="243.3" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">500</text>
+<line x1="56" y1="198.5" x2="810" y2="198.5" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="202.5" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">1,000</text>
+<line x1="56" y1="157.8" x2="810" y2="157.8" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="161.8" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">1,500</text>
+<line x1="56" y1="117" x2="810" y2="117" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="121" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">2,000</text>
+<line x1="56" y1="76.3" x2="810" y2="76.3" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="80.3" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">2,500</text>
+<text x="76.3" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Feb</text>
+<text x="157.5" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Mar</text>
+<text x="247.4" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Apr</text>
+<text x="334.4" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">May</text>
+<text x="424.3" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Jun</text>
+<text x="511.3" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Jul</text>
+<text x="601.2" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Aug</text>
+<text x="691.1" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Sep</text>
+<text x="778.1" y="296" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">Oct</text>
+<path d="M76.3,172.1 L157.5,178.2 L166.2,202.9 L247.4,189.9 L334.4,162.2 L424.3,154.1 L511.3,142.7 L601.2,88.7 L691.1,75.2 L725.9,190.9 L778.1,180.8 L804.2,176.8" fill="none" stroke="#2a78d6" stroke-width="2.5"/>
+<path d="M424.3,210.9 L511.3,176.8 L601.2,174.2 L691.1,100.4 L725.9,209.3 L778.1,200.4 L804.2,169.6" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="76.3" cy="172.1" r="3.5" fill="#2a78d6"/>
+<circle cx="157.5" cy="178.2" r="3.5" fill="#2a78d6"/>
+<circle cx="166.2" cy="202.9" r="3.5" fill="#2a78d6"/>
+<circle cx="247.4" cy="189.9" r="3.5" fill="#2a78d6"/>
+<circle cx="334.4" cy="162.2" r="3.5" fill="#2a78d6"/>
+<circle cx="424.3" cy="154.1" r="3.5" fill="#2a78d6"/>
+<circle cx="424.3" cy="210.9" r="3.5" fill="#eb6834"/>
+<circle cx="511.3" cy="142.7" r="3.5" fill="#2a78d6"/>
+<circle cx="511.3" cy="176.8" r="3.5" fill="#eb6834"/>
+<circle cx="601.2" cy="88.7" r="3.5" fill="#2a78d6"/>
+<circle cx="601.2" cy="174.2" r="3.5" fill="#eb6834"/>
+<circle cx="691.1" cy="75.2" r="3.5" fill="#2a78d6"/>
+<circle cx="691.1" cy="100.4" r="3.5" fill="#eb6834"/>
+<circle cx="725.9" cy="190.9" r="3.5" fill="#2a78d6"/>
+<circle cx="725.9" cy="209.3" r="3.5" fill="#eb6834"/>
+<circle cx="778.1" cy="180.8" r="3.5" fill="#2a78d6"/>
+<circle cx="778.1" cy="200.4" r="3.5" fill="#eb6834"/>
+<circle cx="804.2" cy="176.8" r="3.5" fill="#2a78d6"/>
+<circle cx="804.2" cy="169.6" r="3.5" fill="#eb6834"/>
+<line x1="163.3" y1="60" x2="163.3" y2="280" stroke="#1f2933" stroke-width="1"/>
+<text x="167.3" y="70" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400">first cut</text>
+<line x1="723" y1="60" x2="723" y2="280" stroke="#1f2933" stroke-width="1"/>
+<text x="727" y="70" font-size="10" fill="#1f2933" text-anchor="start" font-weight="400">calibration rewrite</text>
+<text x="818" y="180.8" font-size="11" fill="#2a78d6" text-anchor="start" font-weight="400">main system (1,266)</text>
+<text x="818" y="161.6" font-size="11" fill="#eb6834" text-anchor="start" font-weight="400">monorepo root (1,355)</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 330" width="960" height="330" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Commits per month, January to October 2026, with process phases">
+<title>Commits per month, January to October 2026, with process phases</title>
+<rect x="0" y="0" width="960" height="330" fill="#ffffff" />
+<text x="24" y="24" font-size="16" fill="#1f2933" text-anchor="start" font-weight="600">Commits per month, and what I was changing in the process</text>
+<text x="24" y="42" font-size="13" fill="#6b7280" text-anchor="start" font-weight="400">Each phase bought enough confidence to leave the agent alone longer.</text>
+<line x1="56" y1="251.9" x2="936" y2="251.9" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="255.9" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">500</text>
+<line x1="56" y1="213.8" x2="936" y2="213.8" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="217.8" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">1,000</text>
+<line x1="56" y1="175.8" x2="936" y2="175.8" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="179.8" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">1,500</text>
+<line x1="56" y1="137.7" x2="936" y2="137.7" stroke="#d9dde3" stroke-width="1"/>
+<text x="50" y="141.7" font-size="10" fill="#6b7280" text-anchor="end" font-weight="400">2,000</text>
+<rect x="56" y="66" width="264" height="224" fill="#f3f6fa" />
+<text x="188" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">checks before trust</text>
+<text x="364" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">quiet</text>
+<rect x="408" y="66" width="88" height="224" fill="#f3f6fa" />
+<text x="452" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">checkouts</text>
+<text x="540" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">2nd model</text>
+<rect x="584" y="66" width="88" height="224" fill="#f3f6fa" />
+<text x="628" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">the queue</text>
+<text x="716" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">unattended</text>
+<rect x="760" y="66" width="88" height="224" fill="#f3f6fa" />
+<text x="804" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">instructions</text>
+<text x="892" y="80" font-size="10" fill="#6b7280" text-anchor="middle" font-weight="400">measured</text>
+<rect x="66" y="288.1" width="68" height="1.9" fill="#2a78d6" rx="3"/>
+<text x="100" y="283.1" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">25</text>
+<text x="100" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Jan</text>
+<rect x="154" y="274.7" width="68" height="15.3" fill="#2a78d6" rx="3"/>
+<text x="188" y="269.7" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">201</text>
+<text x="188" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Feb</text>
+<rect x="242" y="269.7" width="68" height="20.3" fill="#2a78d6" rx="3"/>
+<text x="276" y="264.7" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">266</text>
+<text x="276" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Mar</text>
+<rect x="330" y="273.7" width="68" height="16.3" fill="#2a78d6" rx="3"/>
+<text x="364" y="268.7" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">214</text>
+<text x="364" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Apr</text>
+<rect x="418" y="253.3" width="68" height="36.7" fill="#2a78d6" rx="3"/>
+<text x="452" y="248.3" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">482</text>
+<text x="452" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">May</text>
+<rect x="506" y="233" width="68" height="57" fill="#2a78d6" rx="3"/>
+<text x="540" y="228" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">748</text>
+<text x="540" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Jun</text>
+<rect x="594" y="175" width="68" height="115" fill="#2a78d6" rx="3"/>
+<text x="628" y="170" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">1,510</text>
+<text x="628" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Jul</text>
+<rect x="682" y="114.5" width="68" height="175.5" fill="#2a78d6" rx="3"/>
+<text x="716" y="109.5" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">2,305</text>
+<text x="716" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Aug</text>
+<rect x="770" y="117.3" width="68" height="172.7" fill="#2a78d6" rx="3"/>
+<text x="804" y="112.3" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">2,268</text>
+<text x="804" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Sep</text>
+<rect x="858" y="210.3" width="68" height="79.7" fill="#2a78d6" rx="3"/>
+<text x="892" y="205.3" font-size="11" fill="#6b7280" text-anchor="middle" font-weight="400">1,046</text>
+<text x="892" y="306" font-size="12" fill="#1f2933" text-anchor="middle" font-weight="400">Oct</text>
+<line x1="56" y1="290" x2="936" y2="290" stroke="#d9dde3" stroke-width="1"/>
+</svg>

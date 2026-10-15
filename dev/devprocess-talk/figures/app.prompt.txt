@@ -1,0 +1,9 @@
+Use the reference sheet only for the drawing style: loose, raw 1970s underground outsider comic, pure black ink on white paper, no color, no gray fills, scratchy quick hatching, wobbly lines. Pure white paper background, no border and no frame; the screen's outer edge is a single wobbly line. Draw no people and no robots.
+
+Draw a wide web application screen, seen straight on, with exactly this layout and nothing else:
+- Across the top, a dark bar filled with scratchy black hatching. At its left end one rounded pill holding a small icon and a short scribble, then a tiny folder icon. At its right end three rounded pills: a wider one with two scribbles, a small one with two tiny icons, and a small one with two little number badges; then a round avatar circle.
+- Left half: a tall note panel. It has a small tab above it with a short scribble and an × on the right; three tiny icons sit to the right of the tab. The panel itself has a heavy scribble as its title, then three scribble lines as a paragraph, then a bulleted list of six short underlined scribbles. Its top right corner is folded over like paper, with a narrow vertical strip beside it.
+- Right half: mostly empty, with two wide flat rounded bubbles stacked in the center, each holding one scribble, and a faint short scribble beneath them.
+- Along the bottom: a composer bar with a round button holding a plus sign, a long empty rounded text field with a faint scribble at its left, then two round buttons, one with an upward arrow and one with a microphone.
+
+Every piece of text is a wobbly horizontal scribble line the way comics fake text. No readable text or letters anywhere.
