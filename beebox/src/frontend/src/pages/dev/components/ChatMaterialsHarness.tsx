@@ -27,6 +27,28 @@ const STREAM: SessionEntry[] = [{ uuid: "material-stream", type: "assistant", ti
   { type: "tool_use", toolName: "Bash", toolId: "material-running", input: { command: "list local samples" } },
   { type: "text", text: "This is a **partial streaming reply**. Its growing text stays on the same reading surface…" },
 ] }];
+// A multi-step row for the expanded activity detail: names, places, an edit's
+// before/after, a search, a failed edit, and a step with only its description.
+// Results sit on the call, as `cli/lib/session-entry.ts` merges them.
+const ACTIVITY: SessionEntry[] = [{ uuid: "material-activity", type: "assistant", timestamp: TIMESTAMP, content: [
+  { type: "tool_use", toolName: "Grep", toolId: "activity-grep", input: { pattern: "Lemon Chicken", path: "/box/_content" } },
+  { type: "tool_use", toolName: "Read", toolId: "activity-read", input: { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card" } },
+  { type: "tool_use", toolName: "Edit", toolId: "activity-edit-failed", input: { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card", old_string: "Bake at 350 F", new_string: "Bake at 375 F" },
+    resultSummary: "<tool_use_error>String to replace not found in file." },
+  { type: "tool_use", toolName: "Edit", toolId: "activity-edit", input: { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card", old_string: "Bake at 350°F for 40 minutes.", new_string: "Bake at 375°F for 35 minutes, until the skin is golden." },
+    resultSummary: "The file has been updated." },
+  { type: "tool_use", toolName: "Edit", toolId: "activity-doc", input: { file_path: "/box/_content/lists/Errands.md", old_string: "- pick up chicken", new_string: "- pick up chicken\n- lemons (3)" },
+    resultSummary: "The file has been updated." },
+  { type: "tool_use", toolName: "Glob", toolId: "activity-glob", input: { pattern: "**/*.recipe.card" } },
+  { type: "tool_use", toolName: "Bash", toolId: "activity-bash", input: { description: "check the recipe still opens", command: "bbx validate _content/recipes/Lemon_Chicken.recipe.card" } },
+  { type: "text", text: "Done: Lemon Chicken now bakes at 375°F, and lemons are on your errands list." },
+] }];
+// One step: its line is the collapsed view, so the excerpt waits behind its click.
+const ONE_STEP: SessionEntry[] = [{ uuid: "material-one-step", type: "assistant", timestamp: TIMESTAMP, content: [
+  { type: "tool_use", toolName: "Edit", toolId: "one-step-edit", input: { file_path: "/box/_content/lists/Errands.md", old_string: "- milk", new_string: "- oat milk" },
+    resultSummary: "The file has been updated." },
+  { type: "text", text: "Changed milk to oat milk." },
+] }];
 const COMPACT: SessionEntry[] = [{ uuid: "material-compact", type: "compaction", timestamp: TIMESTAMP,
   content: [{ type: "text", text: "Retained the three sketches and the next experiment." }] }];
 
@@ -45,6 +67,8 @@ export function ChatMaterialsHarness() {
       <UserMessage entries={USER.map((entry) => ({ ...entry, uuid: "material-queued", pending: true }))} />
       <AssistantMessage entries={REPLY} />
       <AssistantMessage entries={STREAM} />
+      <AssistantMessage entries={ACTIVITY} />
+      <AssistantMessage entries={ONE_STEP} />
       <CompactionMessage entries={COMPACT} />
       <InterruptedMessage />
       <SelfNoteMessage note={{ ref: null, commit: null, body: "Saved the comparison for the next studio session." }} />
