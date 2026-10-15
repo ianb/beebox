@@ -7,6 +7,7 @@ The boxholder's question (2026-10-15): the built-in WebSearch and WebFetch "work
 | [probes-2026-10-15.md](probes-2026-10-15.md) | First-hand numbers: 15 hard URLs × 8 fetch paths; 4 scouring questions × 9 search tools; $0.35 spent |
 | [search-services.md](search-services.md) | Search APIs, model-provider search, MCP servers, deep-research loops, benchmarks |
 | [deep-research-reviews.md](deep-research-reviews.md) | Third-party benchmarks, citation studies and practitioner reports on research-dispatch services; Perplexity's legal status |
+| [oss-fetch-and-feeds.md](oss-fetch-and-feeds.md) | Open-source libraries and self-hosted systems: hidden CMS feeds, change watchers, RSSHub and RSS-Bridge, social downloaders, render and evasion libraries |
 | [per-site-services.md](per-site-services.md) | Paid per-site data APIs (Instagram, Facebook, LinkedIn, X threads, TikTok, YouTube transcripts, Reddit, Quora) |
 | [fetch-services.md](fetch-services.md) | Reader services, unblocking APIs, hosted browsers, per-host routes, logged-in profiles, legal posture |
 
@@ -54,6 +55,9 @@ Reddit announced on 2026-09-30 that RSS support ends 2026-11-13 and that public 
 | For hosts with no adapter: curl with a Chrome UA, then Jina Reader, then a headless browser | **adapt** | Each covered pages the others missed. Jina Reader is a third party that sees every URL; it applies per-domain abuse blocks, so treat it as intermittent. |
 | A headless render path in the box | **investigate** | The box has none today. [Server-side capture](../../issues/features/2026-09-11-server-side-webpage-capture.md) needs one. Options: Chromium in the image, or Cloudflare Browser Run (no unblocking; needs a Workers paid plan). |
 | Logged-in persistent profile | **later** | The only route to content behind the boxholder's own accounts (including paywalled news they subscribe to). Risk lands on the real account. The [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md) already covers the logged-in case through Claude in Chrome on the boxholder's machine. |
+| A "look here" source list, re-checked through each source's structured data URL | **adopt** (boxholder direction, 2026-10-15) | Accept imperfect search; grow a per-box list of sources as they are found, and re-check them each pass. Most event sources expose structured data over plain HTTP ([oss-fetch-and-feeds.md](oss-fetch-and-feeds.md)): WordPress The Events Calendar `/wp-json/tribe/events/v1/events` (4 of 8 arts sites probed), Squarespace `?format=json`, Google Calendar ICS, Google Sheets CSV export, Eventbrite JSON-LD. Detect the platform once and store the data URL with the source. Exa feeds discovery. |
+| changedetection.io | **later** | Maintained (Apache-2.0, release 2026-10-12) and fits watching a list, but a second service in the image. A hash check on the stored data URL inside the box covers most sources first. |
+| RSSHub, RSS-Bridge | **later** | Self-host only: the public `rsshub.app` returned a Cloudflare challenge on every route. Social routes need a logged-in cookie. |
 | Archives (Wayback, archive.ph) | **reject** as a primary route | 429 on the first request. Keep the Wayback availability check as a last resort only. |
 | Unblocking APIs and stealth browsers (Bright Data, Zyte, ScrapingBee, Browserbase stealth, Apify actors) | **decision for the boxholder** | See below. |
 
