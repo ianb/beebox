@@ -44,8 +44,8 @@ export interface FakeChatBackendRun extends ChatBackendRun {
   emitMessage(msg: SDKMessage): void;
   /** Push a `system/init` message with a session_id. */
   emitSessionInit(sessionId: string): void;
-  /** Push a plain assistant text turn. */
-  emitAssistantText(text: string): void;
+  /** Push a plain assistant text turn; `uuid` is the transcript entry it stands for. */
+  emitAssistantText(text: string, opts?: { uuid?: string }): void;
   /** Push an end-of-turn `result` message. */
   emitResult(opts?: { isError?: boolean; result?: string }): void;
   /** Whether `interrupt()` was called. */
@@ -182,9 +182,10 @@ export function createFakeChatBackend(): FakeChatBackend {
             // The remaining fields aren't used by ChatSession's handler.
           }));
         },
-        emitAssistantText(text: string): void {
+        emitAssistantText(text: string, textOpts?: { uuid?: string }): void {
           run.emitMessage(fakeSdkMessage({
             type: "assistant",
+            ...(textOpts?.uuid === undefined ? {} : { uuid: textOpts.uuid }),
             message: { role: "assistant", content: [{ type: "text", text }] },
             session_id: opts.resumeSessionId ?? "",
             parent_tool_use_id: null,

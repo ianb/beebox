@@ -116,8 +116,8 @@ does not silently shrink. Groups render open on this page.
 const html = await render({ payload: payload({
   openers: [],
   links: [
-    { ref: "_content/lending/List.memo.card", label: null, title: "Lending list", exists: true, source: "derived", prominence: "entry-point" },
-    { ref: "_content/lending/Gone.memo.card", label: null, title: "Gone", exists: false, source: "listed" },
+    { ref: "_content/lending/List.doc.card", label: null, title: "Lending list", exists: true, source: "derived", prominence: "entry-point" },
+    { ref: "_content/lending/Gone.doc.card", label: null, title: "Gone", exists: false, source: "listed" },
   ],
   groups: [{ label: "Every receipt card here", count: 0, children: [] }],
 }) }, startedLending);
@@ -141,7 +141,7 @@ const html = await render({ payload: payload({
 in Browse. Another group's overflow stays plain text.
 
 ```ts
-const tile = (name: string) => ({ ref: `_content/lending/${name}.memo.card`, label: null, title: name, exists: true, source: "derived" as const });
+const tile = (name: string) => ({ ref: `_content/lending/${name}.doc.card`, label: null, title: name, exists: true, source: "derived" as const });
 const ten = Array.from({ length: 10 }, (_, i) => tile(`Card ${i}`));
 const html = await render({ payload: payload({
   openers: [],
@@ -165,7 +165,7 @@ label, so an expand the author named "Also here" does not open Browse.
 ```ts
 const html = await render({ payload: payload({
   openers: [],
-  groups: [{ label: "Also here", count: 30, children: [{ ref: "_content/lending/Loan.memo.card", label: null, title: "Loan", exists: true, source: "expand" }] }],
+  groups: [{ label: "Also here", count: 30, children: [{ ref: "_content/lending/Loan.doc.card", label: null, title: "Loan", exists: true, source: "expand" }] }],
 }) });
 ({ buttons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].length, plainMore: text(html).includes("+29 more") })
 => { buttons: 0, plainMore: true }
@@ -182,7 +182,7 @@ const html = await render({ payload: payload({
   openers: [],
   groups: [{ label: "Also here", count: 2, alsoHere: true, children: [
     { ref: "_content/lending/Stove.loan.card", label: null, title: "Camp stove", detail: "Idris has it · back by 2026-10-17", exists: true, source: "derived" },
-    { ref: "_content/lending/Rules.memo.card", label: null, title: "House rules", exists: true, source: "derived" },
+    { ref: "_content/lending/Rules.doc.card", label: null, title: "House rules", exists: true, source: "derived" },
   ] }],
 }) });
 sectionText(html, "group")

@@ -65,7 +65,7 @@ chrome choice:
   "presentation": {
     "default": { "name": "plain", "stock": "neutral" },
     "cardTypes": {
-      "memo": { "name": "paper", "stock": "cream" }
+      "doc": { "name": "paper", "stock": "cream" }
     },
     "rules": [
       {
@@ -73,7 +73,7 @@ chrome choice:
         "theme": { "name": "paper", "stock": "manila" }
       },
       {
-        "match": "_content/inbox/*.memo.card",
+        "match": "_content/inbox/*.doc.card",
         "theme": { "name": "post-it", "stock": "yellow" }
       }
     ],

@@ -9,10 +9,9 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```ts
 const box = await makeTmpBox({ git: true });
 const maintenance = await closeBoxMaintenance(box.root, { reason: "fixture" });
-let resolveFired: () => void = () => {};
-const fired = new Promise<void>((resolve) => { resolveFired = resolve; });
+const fired = Promise.withResolvers<void>();
 let count = 0;
-const manager = new ChatScheduleManager(box.root, { onFire: () => { count++; resolveFired(); } });
+const manager = new ChatScheduleManager(box.root, { onFire: () => { count++; fired.resolve(); } });
 // Arming under the maintenance context must not give the timer that privilege.
 maintenance.run(() => manager.addSchedule({ label: "due", alarm: false, announce: null, content: "run later", durationMs: 0 }));
 const deadline = Date.now() + 3000;
@@ -23,7 +22,7 @@ JSON.stringify({ count, pending: loadChatSchedules({ boxRoot: box.root }).length
 await maintenance.drain();
 await maintenance.complete();
 manager.resumeAfterMaintenance();
-await fired;
+await fired.promise;
 while (manager.hasInFlightDeliveries() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 5));
 JSON.stringify({ count, pending: loadChatSchedules({ boxRoot: box.root }).length })
 => {"count":1,"pending":0}

@@ -50,6 +50,9 @@ export interface AtomicWriteOptions {
    *  Omit to preserve an existing target's mode (platform default for a new
    *  file); pass 0o600 for anything credential-bearing. */
   mode?: number;
+  /** `false`: fail with ENOENT when the directory is gone instead of creating
+   *  it, for a write that must not recreate a folder something else moved. */
+  createDir?: boolean;
 }
 
 /** The mode to create the temp sibling with: the caller's explicit choice,
@@ -71,13 +74,13 @@ async function effectiveMode(filePath: string, mode: number | undefined): Promis
 
 /**
  * Replace `filePath` with `content`, atomically. Creates the containing
- * directory if needed. On any failure the temp sibling is cleaned up and the
+ * directory if needed, unless `createDir` is false. On any failure the temp sibling is cleaned up and the
  * original error is rethrown, so the target is left exactly as it was.
  */
 export async function writeFileAtomic(filePath: string, opts: AtomicWriteOptions): Promise<void> {
   const { content, mode } = opts;
   const dir = path.dirname(filePath);
-  await fs.mkdir(dir, { recursive: true });
+  if (opts.createDir !== false) await fs.mkdir(dir, { recursive: true });
   const tmp = `${filePath}.tmp-${String(process.pid)}-${randomBytes(6).toString("hex")}`;
   try {
     const handle = await fs.open(tmp, "wx", await effectiveMode(filePath, mode));

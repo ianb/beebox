@@ -12,6 +12,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
@@ -20,17 +21,7 @@ const SESSION = "aaaa1111-2222-4333-8444-555566667777";
 const OTHER = "bbbb1111-2222-4333-8444-555566667777";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    isOwner: true,
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isAuthenticatedOwner: false,
-    actor: "none",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, actor: "none" });
   return appRouter.createCaller(ctx);
 }
 

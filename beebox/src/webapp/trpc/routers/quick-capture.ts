@@ -17,6 +17,7 @@ import { getBoxTime, getBoxTimeISO } from "../../../lib/time.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { stageAndCommitPaths, getStatus, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
+import { attachDirFor } from "../../../shared/attach-path.js";
 
 const id = z.string().uuid().transform(value => value.toLowerCase());
 const idInput = z.object({ id });
@@ -135,7 +136,7 @@ export const quickCaptureRouter = router({
       if (existing !== null) await owned(ctx, input.id);
       await reconcileCaptureSourceLocked(ctx.boxRoot, record);
       // Looked up even before the source is marked written: a crash between writing
-      // the memo and recording that would otherwise leave the memo behind.
+      // the source and recording that would otherwise leave the source behind.
       const ref = record.declaration.parentCaptureId === undefined
         ? await findCaptureSource(ctx.boxRoot, record) ?? (record.state === "gone" ? record.sourceRef ?? null : null) : null;
       // Tombstone first: a crash cannot make a stale upload resurrect the deleted source.
@@ -148,7 +149,7 @@ export const quickCaptureRouter = router({
       if (ref !== null) {
         const rel = resolveRefPath({ fromPath: undefined, ref: parseRef(ref).path, kind: "card" });
         if (rel === null) throw new TRPCError({ code: "CONFLICT", message: "Invalid source reference." });
-        const attach = rel.replace(/\.memo\.card$/, ".attach");
+        const attach = attachDirFor(rel);
         await withCardLock(path.join(ctx.boxRoot, rel), () => withBoxGitLock(ctx.boxRoot, async () => {
           await fs.rm(path.join(ctx.boxRoot, rel), { force: true });
           await fs.rm(path.join(ctx.boxRoot, attach), { recursive: true, force: true });

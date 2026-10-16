@@ -15,6 +15,7 @@ import { TRPCError } from "@trpc/server";
 import type { TrpcActor, TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet, type GoogleDriveService } from "../../../../src/services/google-drive/core.js";
 // Importing the connector registers the docs/sheets handlers — that is what
@@ -64,17 +65,12 @@ function recipesDrive() {
 }
 
 function caller(boxRoot: string, drive?: GoogleDriveService, actor?: TrpcActor) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     actor: actor ?? "user",
     boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: drive === undefined ? {} : { drive },
-    user: null,
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 
@@ -298,8 +294,8 @@ a stale page, or a mount someone removed in between.
 await refusal(c.drive.syncFolder({ cardPath: "_content/drive/recipes/Missing.gfolder.card" }))
 => BAD_REQUEST: _content/drive/recipes/Missing.gfolder.card is not a Drive folder mount card
 
-await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.memo.card" }))
-=> BAD_REQUEST: _content/notes/Plan.memo.card is not a Drive folder mount card
+await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.doc.card" }))
+=> BAD_REQUEST: _content/notes/Plan.doc.card is not a Drive folder mount card
 ```
 
 ## A path that climbs out of the box is refused before anything is written

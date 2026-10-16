@@ -23,6 +23,7 @@ import { normalizeModelId } from "../../../shared/model-ids.js";
 import { resolveHarnessPluginPath } from "../plugin-paths.js";
 import { boxSessionSettings } from "../box-session-settings.js";
 import type { AgentResult, AgentResultBase } from "../types.js";
+import type { Options } from "@anthropic-ai/claude-agent-sdk";
 import { applyEngineUnavailability } from "../engine-unavailability-apply.js";
 
 export interface RunAgentOptions {
@@ -77,7 +78,7 @@ interface RunContext {
 export function buildQueryOptions(
   options: RunAgentOptions,
   context: RunContext,
-): Record<string, unknown> {
+): Options {
   const { env, maxTurns, binaryPath, appendedSystem } = context;
   return {
     cwd: options.cwd ?? options.boxRoot,

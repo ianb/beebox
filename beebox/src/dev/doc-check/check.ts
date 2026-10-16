@@ -224,7 +224,7 @@ const ALLOWED_MISSING_PATHS = new Set([
   "beebox/docs/box-guidance.md -> .claude/rules/bbx-validate-ignore.md",
   "beebox/docs/cards.md -> src/schemas/AGENTS.md",
   "beebox/docs/testing/knowledge-audits.md -> src/schemas/AGENTS.md",
-  "beebox/docs/testing/knowledge-audits.md -> .claude/rules/card-memo.md",
+  "beebox/docs/testing/knowledge-audits.md -> .claude/rules/card-doc.md",
   // Entry points of a consumer project that installs the preset.
   "personal-vibe-check/install.md -> src/index.ts",
   "personal-vibe-check/install.md -> src/main.tsx",

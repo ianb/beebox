@@ -189,8 +189,8 @@ import { CardLink, CardRef } from "beebox/view-widgets";
 **\`<CardLink cardRef="…">\`** — a lightly-styled inline link. Clicking opens the card in the current surface. The link text falls back to the card's title when you omit children:
 
 \`\`\`tsx
-<CardLink cardRef="/_content/notes/Plan.memo.card">the plan</CardLink>
-<CardLink cardRef="/_content/notes/Plan.memo.card" />
+<CardLink cardRef="/_content/notes/Plan.doc.card">the plan</CardLink>
+<CardLink cardRef="/_content/notes/Plan.doc.card" />
 \`\`\`
 
 **\`<CardRef cardRef="…">\`** — a styled reference chip with two controls: **Open** (same as CardLink) and **Expand** (renders the card inline, in place). Use it when a card is worth showing, not just linking:

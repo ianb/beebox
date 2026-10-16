@@ -10,19 +10,10 @@ card did not parse against a schema.
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 ```
@@ -41,8 +32,8 @@ A card whose frontmatter fails validation has no schema facts, so the front
 shows all its fields:
 
 ```ts continue
-await box.write("_content/Broken.memo.card", "---\nstatus: [not, a, status]\n---\nBody\n");
-const broken = await caller(box.root).card.get({ path: "_content/Broken.memo.card" });
+await box.write("_content/Broken.doc.card", "---\ntitle: [not, a, title]\n---\nBody\n");
+const broken = await caller(box.root).card.get({ path: "_content/Broken.doc.card" });
 [broken.validationError === undefined, broken.schema]
 => [false, null]
 ```

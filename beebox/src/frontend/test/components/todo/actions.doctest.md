@@ -26,7 +26,7 @@ import {
 
 globalThis.React = React;
 
-const address: TodoAddress = { path: "_content/Porch.memo.card", locator: { kind: "body", line: 12 }, text: "Order lumber" };
+const address: TodoAddress = { path: "_content/Porch.doc.card", locator: { kind: "body", line: 12 }, text: "Order lumber" };
 
 type ItemProps = Omit<React.ComponentProps<typeof TodoItem>, "children">;
 
@@ -107,7 +107,7 @@ still match (`trpc-todos-set-status.doctest.md`).
 
 ```ts
 JSON.stringify(tickInput(address, "open"))
-=> {"path":"_content/Porch.memo.card","locator":{"kind":"body","line":12},"text":"Order lumber","expectedStatus":"open","status":"done"}
+=> {"path":"_content/Porch.doc.card","locator":{"kind":"body","line":12},"text":"Order lumber","expectedStatus":"open","status":"done"}
 
 JSON.stringify([tickInput(address, "done")?.status, tickInput(address, "done")?.expectedStatus, tickInput(address, "parked"), tickInput(address, "dropped")])
 => ["open","done",null,null]
@@ -156,7 +156,7 @@ and says where the todo sits.
 JSON.stringify([
   todoSelection(address),
   todoSelection({ ...address, locator: { kind: "body", line: 12, nth: 2 } }).position,
-  todoSelection({ ...address, path: "/_content/Porch.memo.card", locator: { kind: "frontmatter", index: 0 } }),
+  todoSelection({ ...address, path: "/_content/Porch.doc.card", locator: { kind: "frontmatter", index: 0 } }),
 ])
-=> [{"ref":"/_content/Porch.memo.card","text":"Order lumber","position":"todo at line 12"},"todo at line 12 (#2 on that line)",{"ref":"/_content/Porch.memo.card","text":"Order lumber","position":"todo in frontmatter"}]
+=> [{"ref":"/_content/Porch.doc.card","text":"Order lumber","position":"todo at line 12"},"todo at line 12 (#2 on that line)",{"ref":"/_content/Porch.doc.card","text":"Order lumber","position":"todo in frontmatter"}]
 ```

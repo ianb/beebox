@@ -130,9 +130,10 @@ if (values.agent) {
   }
   const files: Record<string, string> = {};
   for (const [index, sample] of samples.filter((item) => item.variant !== "snippet").entries()) {
-    const file = `item-${String(index + 1).padStart(3, "0")}.memo.card`;
+    const name = `item-${String(index + 1).padStart(3, "0")}`;
+    const file = `${name}.doc.card`;
     files[file] = sample.id;
-    await fs.writeFile(path.join(boxRoot, "_content/inbox/staged", file), sample.body);
+    await fs.writeFile(path.join(boxRoot, "_content/inbox/staged", file), `---\ntitle: ${name}\n---\n${sample.body}`);
   }
   const started = performance.now();
   const result = await runTriage({ boxRoot, dryRun: true });

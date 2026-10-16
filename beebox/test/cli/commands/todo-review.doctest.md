@@ -26,11 +26,10 @@ import { installProcedures, installSchedules } from "../../../src/core/box/struc
 import { loadProcedureDefinition } from "../../../src/core/procedure/engine/parse.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
-const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
-const CARD = "store/Porch.memo.card";
+const CARD = "store/Porch.doc.card";
 
-function memo(body: string): string {
-  return `---\n${MEMO_FM}---\n${body}`;
+function doc(body: string): string {
+  return `---\ntitle: Porch\n---\n${body}`;
 }
 
 function setTime(iso: string): void {
@@ -80,7 +79,7 @@ async function seedBox() {
 async function boxWith(todos: string, day: string) {
   const box = await seedBox();
   setTime(`${day}T12:00:00.000Z`);
-  await box.write(CARD, memo(`${todos}\n`));
+  await box.write(CARD, doc(`${todos}\n`));
   box.commitAll("porch");
   return box;
 }
@@ -203,10 +202,10 @@ brief.slice(brief.indexOf("```yaml"))
 =>
 «codeblock»yaml
 escalated:
-  - locator: store/Porch.memo.card:5
+  - locator: store/Porch.doc.card:4
     text: Order lumber
     detail: due 2026-09-01
-    card: '{% todo due="2026-09-01" %}Order lumber{% /todo %}'
+    card: Porch
 «codeblock»
 
 await pendingJobs(box.root)
@@ -232,7 +231,7 @@ re-invokes the agent with this output).
 
 ```ts continue
 await run(box.root, ["verify"])
-=> {"code":1,"out":["1 todo review item(s) are not settled:","- store/Porch.memo.card:5 \"Order lumber\": still open with no recheck date"]}
+=> {"code":1,"out":["1 todo review item(s) are not settled:","- store/Porch.doc.card:4 \"Order lumber\": still open with no recheck date"]}
 ```
 
 A `recheck` more than 90 days out is refused:
@@ -240,7 +239,7 @@ A `recheck` more than 90 days out is refused:
 ```ts continue
 await edit(box.root, { from: '{% todo due="2026-09-01" %}', to: '{% todo due="2026-09-01" recheck="2027-03-01" %}' });
 (await run(box.root, ["verify"])).out[1]
-=> - store/Porch.memo.card:5 "Order lumber": recheck 2027-03-01 is 157 days from today (2026-09-25); it must be 1-90 days out
+=> - store/Porch.doc.card:4 "Order lumber": recheck 2027-03-01 is 157 days from today (2026-09-25); it must be 1-90 days out
 ```
 
 Ten days out, with a reason after the closing tag, settles it:
@@ -267,11 +266,11 @@ await checkCode(box.root)
 
 await edit(box.root, { from: '{% todo due="2026-09-01" recheck="2026-10-05" %}', to: '{% todo status="done" due="2026-10-20" recheck="2026-10-10" %}' });
 (await run(box.root, ["verify"])).out[1]
-=> - store/Porch.memo.card:5 "Order lumber": the review may change only recheck on the boxholder's todos (changed: status, due)
+=> - store/Porch.doc.card:4 "Order lumber": the review may change only recheck on the boxholder's todos (changed: status, due)
 
 await edit(box.root, { from: '{% todo status="done" due="2026-10-20" recheck="2026-10-10" %}Order lumber', to: '{% todo due="2026-09-01" recheck="2026-10-10" %}Order cedar lumber' });
 (await run(box.root, ["verify"])).out[1]
-=> - store/Porch.memo.card:5 "Order lumber": not found on its card as written: the review may not reword the boxholder's todos
+=> - store/Porch.doc.card:4 "Order lumber": not found on its card as written: the review may not reword the boxholder's todos
 ```
 
 Every attribute but `recheck` is frozen, `created` included; the note after
@@ -280,7 +279,7 @@ the closing tag is free.
 ```ts continue
 await edit(box.root, { from: '{% todo due="2026-09-01" recheck="2026-10-10" %}Order cedar lumber{% /todo %}', to: '{% todo created="2026-09-02" due="2026-09-01" recheck="2026-10-10" %}Order lumber{% /todo %} — still waiting' });
 (await run(box.root, ["verify"])).out[1]
-=> - store/Porch.memo.card:5 "Order lumber": the review may change only recheck on the boxholder's todos (changed: created)
+=> - store/Porch.doc.card:4 "Order lumber": the review may change only recheck on the boxholder's todos (changed: created)
 
 await edit(box.root, { from: '{% todo created="2026-09-02" ', to: "{% todo " });
 (await run(box.root, ["verify"])).code
@@ -379,23 +378,23 @@ rest.slice(rest.indexOf("## The items"))
 «blankline»
 «codeblock»yaml
 escalated:
-  - locator: store/Porch.memo.card:5
+  - locator: store/Porch.doc.card:4
     text: Task 26
     detail: due 2026-08-26
 «*»
 stirring:
-  - locator: store/Porch.memo.card:57
+  - locator: store/Porch.doc.card:56
     text: Book the painter
     detail: started 2026-09-24
 «*»
 actionable:
-  - locator: store/Porch.memo.card:59
+  - locator: store/Porch.doc.card:58
     text: Review the delivery note
     detail: agent follow-up
     assigned: agent
 «*»
 stale:
-  - locator: store/Porch.memo.card:61
+  - locator: store/Porch.doc.card:60
     text: Sort the shed
     detail: created 2026-06-01
 «*»
@@ -429,7 +428,7 @@ const legacy = await seedBox();
 setTime("2026-09-25T12:00:00.000Z");
 await legacy.write(
   "_bookkeeping/jobs/2026-09-20T06-30.todo-review.job.card",
-  createTodoReviewJobTemplate({ escalated: [{ locator: "store/Old.memo.card:5", text: "Old item", detail: "due 2026-09-01" }], stirring: [], stale: [] }),
+  createTodoReviewJobTemplate({ escalated: [{ locator: "store/Old.doc.card:4", text: "Old item", detail: "due 2026-09-01" }], stirring: [], stale: [] }),
 );
 legacy.commitAll("legacy job");
 await run(legacy.root, ["check"])
@@ -453,7 +452,7 @@ boxholder set by hand, with no retirement behind it, is respected.
 ```ts
 const back = await boxWith('{% todo due="2026-09-01" %}Fix the gate{% /todo %}\n\n{% todo due="2026-09-01" recheck="never" %}Old idea{% /todo %}', "2026-09-25");
 await retire(back.root)
-=> Stopped reviewing store/Porch.memo.card:5: Fix the gate (third recheck with no change)
+=> Stopped reviewing store/Porch.doc.card:4: Fix the gate (third recheck with no change)
 
 setTime("2026-11-01T12:00:00.000Z");
 await checkCode(back.root)
@@ -489,7 +488,7 @@ await checkCode(sneaky.root)
 
 await edit(sneaky.root, { from: 'due="2026-09-01" %}', to: 'due="2026-09-01" recheck="never" %}' });
 (await run(sneaky.root, ["verify"])).out[1]
-=> - store/Porch.memo.card:5 "Fix the gate": recheck="never" is set only by the review itself; give a date 1-90 days out
+=> - store/Porch.doc.card:4 "Fix the gate": recheck="never" is set only by the review itself; give a date 1-90 days out
 
 setTime("2026-11-02T12:00:00.000Z");
 (await run(sneaky.root, ["check"])).out.join("\n").includes("Fix the gate")
@@ -520,9 +519,9 @@ const tired = await boxWith('{% todo due="2026-09-01" %}Fix the gate{% /todo %}'
 
 const third = await cycle(tired.root, { day: "2026-10-10", from: 'recheck="2026-10-10"', to: 'recheck="2026-10-20"' });
 third.out[0]
-=> Stopped reviewing store/Porch.memo.card:5: Fix the gate (third recheck with no change)
+=> Stopped reviewing store/Porch.doc.card:4: Fix the gate (third recheck with no change)
 
-(await fs.readFile(path.join(tired.root, CARD), "utf-8")).split("\n")[4]
+(await fs.readFile(path.join(tired.root, CARD), "utf-8")).split("\n")[3]
 => {% todo due="2026-09-01" recheck="never" %}Fix the gate{% /todo %}
 
 execSync("git log -1 --format=%s", { cwd: tired.root, encoding: "utf-8" }).trim()
@@ -542,7 +541,7 @@ JSON.stringify([health.name, health.ok, health.severity])
 => ["todos-unreviewed",false,"warning"]
 
 health.message
-=> 1 open todo is no longer reviewed: store/Porch.memo.card:5 "Fix the gate". Remove recheck="never" or edit one to put it back in review.
+=> 1 open todo is no longer reviewed: store/Porch.doc.card:4 "Fix the gate". Remove recheck="never" or edit one to put it back in review.
 ```
 
 ## `check` prunes the recheck history of todos that are gone
@@ -599,7 +598,7 @@ await tended.cleanup();
 const quiet = await seedBox();
 await quiet.write(
   CARD,
-  memo(
+  doc(
     '{% todo recheck="2026-10-01" %}Rechecked, still reviewed{% /todo %}\n\n' +
     '{% todo assigned="agent" by="agent" created="2026-09-01" recheck="never" %}Agent follow-up{% /todo %}\n\n' +
     '{% todo status="done" recheck="never" %}Finished{% /todo %}\n'

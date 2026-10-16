@@ -211,7 +211,7 @@ Line two
 ## `--targets-from-stdin` sends one notification per target
 
 ```ts
-await run("Two cards need review", { targetsFromStdin: true, body: "See the card.", loudness: "loud", channel: "web-push" }, "card:_content/a.memo.card\ncard:_content/b.memo.card\n")
+await run("Two cards need review", { targetsFromStdin: true, body: "See the card.", loudness: "loud", channel: "web-push" }, "card:_content/a.doc.card\ncard:_content/b.doc.card\n")
 =>
 <id>: web-push sent
 <id>: web-push sent

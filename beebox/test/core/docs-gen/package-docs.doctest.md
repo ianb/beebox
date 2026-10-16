@@ -74,7 +74,7 @@ second.status
 
 // Every doc landed, plus the fingerprint file; no temp sibling was left behind
 const files = (await readdir(join(packageRoot, "box-docs"))).sort();
-files.includes("README.md") && files.includes(".hash") && files.includes("card-memo.md")
+files.includes("README.md") && files.includes(".hash") && files.includes("card-doc.md")
 => true
 
 (await readdir(packageRoot)).join(",")
@@ -139,12 +139,12 @@ await writeFile(join(live, "stale.md"), "old");
 await writeFile(join(live, "README.md"), "old index");
 await writeFile(join(live, ".hash"), "old\n");
 await writeFile(join(incoming, "README.md"), "new index");
-await writeFile(join(incoming, "card-memo.md"), "memo");
+await writeFile(join(incoming, "card-doc.md"), "doc");
 await writeFile(join(incoming, ".hash"), "new\n");
 await replaceDirContents({ from: incoming, to: live });
 
 (await readdir(live)).sort().join(",")
-=> .hash,README.md,card-memo.md
+=> .hash,README.md,card-doc.md
 
 [await readFile(join(live, "README.md"), "utf-8"), (await readFile(join(live, ".hash"), "utf-8")).trim()].join(" ")
 => new index new
@@ -160,28 +160,28 @@ await rm(layerRoot, { recursive: true, force: true });
 An older engine wrote every engine doc into the box's `_content/docs/generated/`.
 `writeBoxCardDocs` removes those (they live in the package now) and then writes
 the box-local card docs — in that order, so a box-local schema that shadows a
-built-in type (`memo` here) keeps its doc where the agent guide points.
+built-in type (`doc` here) keeps its doc where the agent guide points.
 
 ```ts
 const boxRoot = await mkdtemp(join(tmpdir(), "bbx-boxdocs-"));
 const docsDir = join(boxRoot, "_content/docs/generated");
 await mkdir(docsDir, { recursive: true });
 await writeFile(join(docsDir, "bbx-commands.md"), "old engine doc");
-await writeFile(join(docsDir, "card-memo.md"), "old built-in memo doc");
+await writeFile(join(docsDir, "card-doc.md"), "old built-in card doc");
 await writeFile(join(docsDir, "intake-guide.md"), "compiled from this box");
 
-const boxMemo = cardSchema("memo", {
-  description: "this box's memo",
+const boxDoc = cardSchema("doc", {
+  description: "this box's doc",
   category: "authored",
-  fields: { status: z.string() },
-  instructions: "How THIS box memos.",
+  fields: { title: z.string() },
+  instructions: "How THIS box writes docs.",
 });
-await writeBoxCardDocs({ boxRoot, boxCardSchemas: [boxMemo], boxTemplates: [] });
+await writeBoxCardDocs({ boxRoot, boxCardSchemas: [boxDoc], boxTemplates: [] });
 
 (await readdir(docsDir)).sort().join(",")
-=> card-memo.md,intake-guide.md
+=> card-doc.md,intake-guide.md
 
-(await readFile(join(docsDir, "card-memo.md"), "utf-8")).includes("How THIS box memos.")
+(await readFile(join(docsDir, "card-doc.md"), "utf-8")).includes("How THIS box writes docs.")
 => true
 
 await rm(boxRoot, { recursive: true, force: true });

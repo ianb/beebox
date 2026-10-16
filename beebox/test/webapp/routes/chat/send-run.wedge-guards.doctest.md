@@ -22,7 +22,6 @@ import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { captureTurn, startAckedRun } from "../../../../src/webapp/routes/chat/send-run.js";
 import { getTurnBuffer } from "../../../../src/core/chat/turn-buffer.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 
 /** The turn buffer once it has ended (finished or failed), awaiting its own
  *  change signal rather than polling against a deadline. */
@@ -157,7 +156,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const realEmit = ctx.eventBus.emit;

@@ -12,19 +12,10 @@ import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import assert from "node:assert/strict";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 ```
@@ -37,7 +28,7 @@ await box.write(
   "_content/recipes/Recipes.landmark.card",
   "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n",
 );
-await box.write("_content/recipes/Bread.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/recipes/Bread.doc.card", "---\ntitle: Bread\nprominence: primary\n---\n");
 
 const { identity } = await caller(box.root).landmarks.identity({ dir: "_content/recipes" });
 JSON.stringify(identity)
@@ -61,14 +52,14 @@ await box.cleanup();
 ```ts
 const box2 = await makeTmpBox();
 await box2.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n");
-await box2.write("_content/recipes/Index.memo.card", "---\nprominence: entry-point\n---\n");
-await box2.write("_content/recipes/Bread.memo.card", "---\nprominence: primary\n---\n");
-await box2.write("_content/recipes/Notes.memo.card", "---\n---\n");
+await box2.write("_content/recipes/Index.doc.card", "---\ntitle: Index\nprominence: entry-point\n---\n");
+await box2.write("_content/recipes/Bread.doc.card", "---\ntitle: Bread\nprominence: primary\n---\n");
+await box2.write("_content/recipes/Notes.doc.card", "---\ntitle: Notes\n---\n");
 
 const { landmark } = await caller(box2.root).landmarks.forDir({ dir: "_content/recipes" });
 assert.ok(landmark);
 JSON.stringify(landmark.links.map((l) => ({ ref: l.ref, source: l.source, prominence: l.prominence ?? null })))
-=> [{"ref":"_content/recipes/Index.memo.card","source":"derived","prominence":"entry-point"},{"ref":"_content/recipes/Bread.memo.card","source":"derived","prominence":"primary"}]
+=> [{"ref":"_content/recipes/Index.doc.card","source":"derived","prominence":"entry-point"},{"ref":"_content/recipes/Bread.doc.card","source":"derived","prominence":"primary"}]
 ```
 
 `landmarks.list` carries the same derived entries for every landmark in the

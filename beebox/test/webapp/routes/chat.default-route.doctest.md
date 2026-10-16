@@ -10,19 +10,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerChatRoutes } from "../../../src/webapp/routes/chat/register.js";
+import { silentEventBus } from "../../helpers/trpc-context.js";
 
 const boxRoot = await mkdtemp(join(tmpdir(), "bbx-chat-default-"));
 const server = Fastify();
-const eventBus = {
-  emit: () => 0,
-  emitTransient: () => {},
-  readSince: () => [],
-  readRecent: () => [],
-  subscribe: () => ({ unsubscribe: () => {} }),
-  prune: () => 0,
-  close: () => {},
-};
-await registerChatRoutes({ server, boxRoot, eventBus });
+await registerChatRoutes({ server, boxRoot, eventBus: silentEventBus });
 
 async function getDefaultSession() {
   const res = await server.inject({ method: "GET", url: "/api/chat/default" });

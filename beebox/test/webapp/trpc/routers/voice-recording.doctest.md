@@ -13,22 +13,18 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext, TrpcUser } from "../../../../src/webapp/trpc/context.js";
 import type { HqTranscriptionService } from "../../../../src/shared/transcription-services.js";
 import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createEventBus } from "../../../../src/core/event-bus/core.js";
 import { createStagingSession } from "../../../../src/core/capture/staging-store/core.js";
 import { sealVoiceSession, applyVoiceEvent } from "../../../../src/core/voice-recording/voice-staging/core.js";
 
 function caller(box: TmpBox, opts?: { user?: TrpcUser }) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: box.root,
-    boxSlug: "test",
     eventBus: createEventBus(box.root),
-    services: {},
     user: (opts && opts.user) || { email: "owner@example.com", name: "Owner" },
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 

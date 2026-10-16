@@ -32,6 +32,7 @@
  */
 import { relative } from "node:path";
 import { isSystemCardType, systemCardLocationError } from "../../../shared/system-card-paths.js";
+import { retiredTypeHint } from "../../../cards/retired-types.js";
 
 
 import { readFile } from "node:fs/promises";
@@ -148,7 +149,7 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
           message:
             type === undefined
               ? "card filename does not encode a type (expected Name.<type>.card)"
-              : `no schema registered for card type "${type}" — card not validated`,
+              : `no schema registered for card type "${type}" — card not validated${retiredTypeHint(type)}`,
         },
       ],
     };

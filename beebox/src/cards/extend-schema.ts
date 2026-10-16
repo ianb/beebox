@@ -5,7 +5,6 @@ import type { ThemeChoice } from "../shared/card-theme/core.js";
 import type {
   CardFieldsOf,
   CardSchemaConfig,
-  CardSummaryBase,
   CardSummaryParts,
   CardValidateInput,
   FieldDecl,
@@ -63,7 +62,7 @@ export interface SchemaDelta<
    * Receives the base's summary (its `summarize` applied first, or the engine
    * summary when the base has none) as `base`, over the merged fields.
    */
-  readonly summarize?: (card: CardFieldsOf<string, BF & DF>, base: CardSummaryBase) => CardSummaryParts;
+  readonly summarize?: (card: CardFieldsOf<string, BF & DF>, base: CardSummaryParts) => CardSummaryParts;
   /** Appended to the base's instructions, separated by a blank line. */
   readonly instructions?: string;
   readonly description?: string;

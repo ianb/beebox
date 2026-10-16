@@ -2,7 +2,7 @@
  * Intake job card schema — a job to triage new inbox items.
  *
  * Created by connectors (gmail, raindrop, etc.) when new items arrive,
- * or by `bbx wakeup` for UI-created memos and other unjobbed inbox items.
+ * or by `bbx wakeup` for captured notes and other unjobbed inbox items.
  * Processed by the reactor agent, which triages each item.
  */
 

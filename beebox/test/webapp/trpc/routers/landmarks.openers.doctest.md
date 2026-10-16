@@ -13,20 +13,11 @@ and a directory with no landmark has no payload at all.
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { LandmarkNavigation } from "../../../../src/schemas/landmark.js";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: false,
-    actor: "none",
-    services: {},
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, actor: "none" });
   return appRouter.createCaller(ctx);
 }
 
@@ -86,7 +77,7 @@ await box.write("_content/swim/Swim.landmark.card", "---\nnavigation:\n  label: 
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/Box.landmark.card", ROOT);
-await box.write("_content/loose/Note.memo.card", "---\ntitle: note\n---\n");
+await box.write("_content/loose/Note.doc.card", "---\ntitle: note\n---\n");
 await openersFor(box.root, "_content/loose")
 => null
 ```

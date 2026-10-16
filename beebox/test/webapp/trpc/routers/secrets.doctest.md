@@ -15,7 +15,6 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TRPCError } from "@trpc/server";
-import type { EventBus } from "../../../../src/core/event-bus/core.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
@@ -23,23 +22,17 @@ import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js
 import { getBoxTimeISO } from "../../../../src/lib/time.js";
 import { mayRevealSecretInBrowser } from "../../../../src/shared/secret-reveal.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-
-const noBus: EventBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string, opts?: { isOwner?: boolean; isAuthenticatedOwner?: boolean }) {
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus: noBus,
-    services: {},
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
     isOwner: opts?.isOwner ?? true,
     // These procedures gate on the STRICT flag (see the open-access section at
     // the end); an ordinary owner session carries both.
     isAuthenticatedOwner: opts?.isAuthenticatedOwner ?? opts?.isOwner ?? true,
-    actor: "user",
-  });
+  }));
 }
 
 type Caller = ReturnType<typeof caller>;

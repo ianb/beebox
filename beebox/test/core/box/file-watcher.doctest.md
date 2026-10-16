@@ -21,7 +21,6 @@ import {
 import { watchLimitStatus } from "../../../src/core/box/watch-limit.js";
 import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/watch-limit.js";
 import { createEventBus, type BusEvent, type EventBus } from "../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";
@@ -29,9 +28,7 @@ import { join } from "node:path";
 
 /** The path of a `file-change` event, or undefined for any other event. */
 function fileChangePath(event: BusEvent): string | undefined {
-  if (event.event !== "file-change") return undefined;
-  const parsed = eventSchemas["file-change"].safeParse(event.data);
-  return parsed.success ? parsed.data.path : undefined;
+  return event.event === "file-change" ? event.data.path : undefined;
 }
 
 /** How many descriptors this process holds right now. */
@@ -106,7 +103,7 @@ async function seedTree(root: string, dirs: number, perDir: number): Promise<voi
     const dir = join(root, "store", `dir${d}`);
     await mkdir(dir, { recursive: true });
     for (let f = 0; f < perDir; f++) {
-      await writeFile(join(dir, `card${f}.memo.card`), "---\nstatus: new\n---\nbody\n");
+      await writeFile(join(dir, `card${f}.doc.card`), "---\ntitle: Note\n---\nbody\n");
     }
   }
 }
@@ -287,10 +284,10 @@ const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
-await writeFile(join(box.root, "store", "Note.memo.card"), "---\nstatus: new\n---\nhi\n");
-await waitFor(() => seen.includes("store/Note.memo.card"), 60_000, "the card file-change event");
+await writeFile(join(box.root, "store", "Note.doc.card"), "---\ntitle: Note\n---\nhi\n");
+await waitFor(() => seen.includes("store/Note.doc.card"), 60_000, "the card file-change event");
 
-seen.includes("store/Note.memo.card")
+seen.includes("store/Note.doc.card")
 => true
 ```
 
@@ -452,8 +449,8 @@ that refetched on the first event never learns about `v5`.
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
-const card = join(box.root, "store", "Note.memo.card");
-await writeFile(card, "---\nstatus: new\n---\nv1\n");
+const card = join(box.root, "store", "Note.doc.card");
+await writeFile(card, "---\ntitle: Note\n---\nv1\n");
 
 const fake = fakeWatch();
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
@@ -463,11 +460,11 @@ const store = join(box.root, "store");
 let events = 0;
 bus.subscribe({
   listener: (e) => {
-    if (fileChangePath(e) === "store/Note.memo.card") events++;
+    if (fileChangePath(e) === "store/Note.doc.card") events++;
   },
 });
 
-for (let i = 0; i < 4; i++) fake.fire(store, "change", "Note.memo.card");
+for (let i = 0; i < 4; i++) fake.fire(store, "change", "Note.doc.card");
 // The leading event is synchronous; the other three are held in the window.
 events
 => 1

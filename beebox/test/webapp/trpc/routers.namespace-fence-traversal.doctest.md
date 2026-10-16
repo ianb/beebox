@@ -22,6 +22,7 @@ import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { cardRouter } from "../../../src/webapp/trpc/routers/card.js";
 import { statusRouter } from "../../../src/webapp/trpc/routers/status.js";
 import { historyRouter } from "../../../src/webapp/trpc/routers/history.js";
@@ -40,11 +41,7 @@ async function trpcDisplayFormMessage(fn: () => Promise<unknown>): Promise<strin
 
 /** An owner context for the box at `boxRoot`; the fence under test reads only the path. */
 function ownerCtx(boxRoot: string): TrpcContext {
-  return {
-    boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true,
-    isAuthenticatedOwner: true, actor: "user", services: {},
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-  };
+  return trpcContext({ boxRoot, boxSlug: "t", isAuthenticatedOwner: true });
 }
 
 /** The `error` string of a JSON error body. */
@@ -402,7 +399,7 @@ await annexServer.cleanup();
 The directory fence above (`/api/browse/_content/pkg`) only checks the
 listing TARGET. A separate hazard: the target directory itself is fine, but
 one CHILD entry inside it is a symlink whose target resolves outside the
-namespace (e.g. `_content/alias.memo.card -> ../src/private.memo.card`) —
+namespace (e.g. `_content/alias.doc.card -> ../src/private.doc.card`) —
 before this fix, the child loop's `loadCardFrontmatter` followed that symlink
 and returned the external card's frontmatter straight into the listing. The
 escaping child is now silently omitted; a normal sibling card still lists.
@@ -411,11 +408,11 @@ escaping child is now silently omitted; a normal sibling card still lists.
 const escServer = await makeTestServer();
 await mkdir(join(escServer.boxRoot, "src"), { recursive: true });
 await writeFile(
-  join(escServer.boxRoot, "src", "private.memo.card"),
-  '---\nconflict: true\ncreated: "2026-01-01T00:00:00.000Z"\n---\nPrivate.\n',
+  join(escServer.boxRoot, "src", "private.doc.card"),
+  '---\nconflict: true\ntitle: Private\n---\nPrivate.\n',
 );
-await escServer.seed("_content/Normal.memo.card", '---\ncreated: "2026-01-01T00:00:00.000Z"\n---\nNormal.\n');
-await symlink(join("..", "src", "private.memo.card"), join(escServer.boxRoot, "_content", "alias.memo.card"));
+await escServer.seed("_content/Normal.doc.card", '---\ntitle: Normal\n---\nNormal.\n');
+await symlink(join("..", "src", "private.doc.card"), join(escServer.boxRoot, "_content", "alias.doc.card"));
 
 const escBrowseRes = await escServer.request({ method: "GET", url: "/api/browse/_content" });
 JSON.stringify({

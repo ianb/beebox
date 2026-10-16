@@ -68,16 +68,16 @@ present(await processCapture(ctx,first)).state
 => sent
 
 await mkdir(box.path("_content/filed"),{recursive:true});
-await rename(box.path("_content/captures/11111111-1111-4111-8111-111111111111.memo.card"),box.path("_content/filed/source.memo.card"));
+await rename(box.path("_content/captures/11111111-1111-4111-8111-111111111111.doc.card"),box.path("_content/filed/source.doc.card"));
 const done=present(await processCapture(ctx,second));
 [done.state,done.sourceRef,ctx.delivered.length]
-=> ["sent","_content/filed/source.memo.card",2]
+=> ["sent","_content/filed/source.doc.card",2]
 
 present(ctx.delivered[0]).session===present(ctx.delivered[1]).session
 => true
 
 [present(ctx.delivered[0]).sourceRef,present(ctx.delivered[1]).sourceRef]
-=> ["_content/captures/11111111-1111-4111-8111-111111111111.memo.card","_content/filed/source.memo.card"]
+=> ["_content/captures/11111111-1111-4111-8111-111111111111.doc.card","_content/filed/source.doc.card"]
 
 ctx.delivered.map(item=>item.words)
 => ["Explain this","Compare it"]

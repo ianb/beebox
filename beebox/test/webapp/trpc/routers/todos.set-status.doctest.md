@@ -16,13 +16,13 @@ import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 const events: string[] = [];
 
 function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean }) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot,
-    boxSlug: "test",
     eventBus: {
       emit: () => 0,
       emitTransient: (name, data) => { events.push(`${name} ${"path" in data ? data.path : undefined}`); },
@@ -32,13 +32,10 @@ function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean
       prune: () => 0,
       close: () => {},
     },
-    services: {},
-    user: null,
     authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
     isAuthenticatedOwner: options?.isOwner !== false,
-    actor: "user",
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 
@@ -55,12 +52,12 @@ function outcome(promise: Promise<unknown>): Promise<string> {
   return promise.then(() => "accepted", (error: unknown) => (error instanceof TRPCError ? `${error.code}: ${error.message}` : String(error)));
 }
 
-const cardPath = "_content/Porch.memo.card";
+const cardPath = "_content/Porch.doc.card";
 const original = [
   "---",
-  "status: new",
-  "created: 2026-07-01T10:00:00Z",
   "title: Porch",
+  "via:",
+  "  channel: email",
   "todos:",
   "  - text: Call the inspector",
   "    due: 2026-10-01",
@@ -104,7 +101,7 @@ Source: webapp
 Endpoint: todos.setStatus
 
 JSON.stringify(events)
-=> ["file-change _content/Porch.memo.card"]
+=> ["file-change _content/Porch.doc.card"]
 ```
 
 Reopening removes the attribute (absence means open), and the file is back
@@ -214,8 +211,8 @@ await outcome(caller(box.root).todos.setStatus({
 A card whose frontmatter no longer parses has no todos to address:
 
 ```ts continue
-const brokenPath = "_content/Broken.memo.card";
-await box.write(brokenPath, "---\nstatus: [not, a, status]\ntodos:\n  - text: Fix it\n---\n{% todo %}Fix it{% /todo %}\n");
+const brokenPath = "_content/Broken.doc.card";
+await box.write(brokenPath, "---\ntitle: [not, a, title]\ntodos:\n  - text: Fix it\n---\n{% todo %}Fix it{% /todo %}\n");
 box.commitAll("broken");
 const brokenBefore = await box.read(brokenPath);
 await outcome(caller(box.root).todos.setStatus({

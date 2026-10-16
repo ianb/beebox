@@ -125,11 +125,11 @@ parseBrowseState(parseViewUrl(serializeViewUrl(converted)))
   }
 }
 
-(await legacyBrowseTarget({ ...file, path: "_content/Old.memo.card" }, { lookupKind: async () => "missing", missingKind: "file" })).viewState
+(await legacyBrowseTarget({ ...file, path: "_content/Old.doc.card" }, { lookupKind: async () => "missing", missingKind: "file" })).viewState
 => {
   "directory": "_content",
   "detail": {
-    "path": "_content/Old.memo.card",
+    "path": "_content/Old.doc.card",
     "viewer": "Source",
     "params": {
       "zoom": "2"

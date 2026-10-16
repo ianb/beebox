@@ -37,7 +37,7 @@ in the card's todo context. A finished agent follow-up is left out.
 ```ts setup
 import { CardTodosContext, indexPlateStates } from "../../src/components/todo/card-todos-context.js";
 
-const cardPath = "_content/projects/Porch.memo.card";
+const cardPath = "_content/projects/Porch.doc.card";
 const todos = [
   { text: "Book the inspector", due: "2026-09-15" },
   { text: "Summarize the quotes", assigned: "agent", status: "done" },

@@ -67,7 +67,7 @@ async function executeSearch(
     if (e instanceof UnknownKindError) {
       return {
         success: false,
-        error: `${e.message}\n  e.g. bbx search "${query}" --kind ${e.validKinds[0] ?? "memo"}`,
+        error: `${e.message}\n  e.g. bbx search "${query}" --kind ${e.validKinds[0] ?? "doc"}`,
       };
     }
     // Config/mode errors surface as clean CLI errors, not stack traces.

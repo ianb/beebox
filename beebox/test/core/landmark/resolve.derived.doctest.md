@@ -25,15 +25,15 @@ function summarize(links: { ref: string; label: string | null; source: string; p
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Spot.landmark.card", "---\nnavigation:\n  label: Spot\n  expand:\n    - query: Extra.memo.card\n---\n");
-await box.write("_content/Extra.memo.card", "---\n---\n");
-await box.write("_content/Idx.memo.card", "---\nprominence: entry-point\n---\n");
-await box.write("_content/Plan.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Spot.landmark.card", "---\nnavigation:\n  label: Spot\n  expand:\n    - query: Extra.doc.card\n---\n");
+await box.write("_content/Extra.doc.card", "---\n---\n");
+await box.write("_content/Idx.doc.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Plan.doc.card", "---\nprominence: primary\n---\n");
 await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
 
 const derived = await prunedSubtree(box.root, "");
 const { links } = await resolveLandmark(
-  { label: "Spot", expand: [{ query: "Extra.memo.card" }] },
+  { label: "Spot", expand: [{ query: "Extra.doc.card" }] },
   { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
 );
 
@@ -41,13 +41,13 @@ JSON.stringify(summarize(links), null, 2)
 =>
 [
   {
-    "ref": "_content/Idx.memo.card",
+    "ref": "_content/Idx.doc.card",
     "label": null,
     "source": "derived",
     "prominence": "entry-point"
   },
   {
-    "ref": "_content/Plan.memo.card",
+    "ref": "_content/Plan.doc.card",
     "label": null,
     "source": "derived",
     "prominence": "primary"
@@ -59,7 +59,7 @@ JSON.stringify(summarize(links), null, 2)
     "prominence": "background"
   },
   {
-    "ref": "_content/Extra.memo.card",
+    "ref": "_content/Extra.doc.card",
     "label": null,
     "source": "expand",
     "prominence": null
@@ -81,11 +81,11 @@ tier.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Plan.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Plan.doc.card", "---\nprominence: primary\n---\n");
 
 const derived = await prunedSubtree(box.root, "");
 const { links } = await resolveLandmark(
-  { label: "Spot", links: [{ ref: "/_content/Plan.memo.card", label: "the plan" }] },
+  { label: "Spot", links: [{ ref: "/_content/Plan.doc.card", label: "the plan" }] },
   { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
 );
 
@@ -93,7 +93,7 @@ JSON.stringify(summarize(links), null, 2)
 =>
 [
   {
-    "ref": "_content/Plan.memo.card",
+    "ref": "_content/Plan.doc.card",
     "label": "the plan",
     "source": "listed",
     "prominence": "primary"
@@ -110,17 +110,17 @@ and it carries `prominence: "entry-point"`.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/List.memo.card", "---\nprominence: entry-point\n---\n");
-await box.write("_content/Other.memo.card", "---\n---\n");
+await box.write("_content/List.doc.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Other.doc.card", "---\n---\n");
 
 const derived = await prunedSubtree(box.root, "");
 const { links } = await resolveLandmark(
-  { label: "Spot", links: [{ ref: "/_content/List.memo.card", label: "the list" }, { ref: "/_content/Other.memo.card" }] },
+  { label: "Spot", links: [{ ref: "/_content/List.doc.card", label: "the list" }, { ref: "/_content/Other.doc.card" }] },
   { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
 );
 
 summarize(links)
-=> [{ ref: "_content/List.memo.card", label: "the list", source: "listed", prominence: "entry-point" }, { ref: "_content/Other.memo.card", label: null, source: "listed", prominence: null }]
+=> [{ ref: "_content/List.doc.card", label: "the list", source: "listed", prominence: "entry-point" }, { ref: "_content/Other.doc.card", label: null, source: "listed", prominence: null }]
 ```
 
 ```ts cleanup
@@ -168,8 +168,8 @@ filename ("Cake Carrier Marisol"). The resolver reads the target card's
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Cake_Carrier_Marisol.memo.card", "---\ntitle: Cake carrier (Marisol's)\nprominence: primary\n---\n");
-await box.write("_content/Ladder.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Cake_Carrier_Marisol.doc.card", "---\ntitle: Cake carrier (Marisol's)\nprominence: primary\n---\n");
+await box.write("_content/Ladder.doc.card", "---\nprominence: primary\n---\n");
 
 const derived = await prunedSubtree(box.root, "");
 const { links } = await resolveLandmark(
@@ -195,7 +195,7 @@ A nested landmark without one still opens its landmark card.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/Inventory/Inventory.landmark.card", "---\nnavigation:\n  label: Inventory\n---\n");
-await box.write("_content/Inventory/Index.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Inventory/Index.doc.card", "---\nprominence: entry-point\n---\n");
 await box.write("_content/Garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
 
 const derived = await prunedSubtree(box.root, "");
@@ -205,7 +205,7 @@ const { links } = await resolveLandmark(
 );
 
 links.map((l) => ({ ref: l.ref, label: l.label }))
-=> [{ ref: "_content/Garden/Garden.landmark.card", label: "Garden" }, { ref: "_content/Inventory/Index.memo.card", label: "Inventory" }]
+=> [{ ref: "_content/Garden/Garden.landmark.card", label: "Garden" }, { ref: "_content/Inventory/Index.doc.card", label: "Inventory" }]
 ```
 
 ```ts cleanup

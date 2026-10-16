@@ -53,7 +53,7 @@ was; without a destination the reducer would have used the originating pane.
 
 ```ts
 const plate = "_content/plate.todo-view.card";
-const roof = "_content/projects/porch-rebuild/roof.memo.card";
+const roof = "_content/projects/porch-rebuild/roof.doc.card";
 let state = reduceWorkspace(createEmptyWorkspaceState(), {
   type: "openCard", target: card(plate), label: plate, at: 1, viewport: "desktop", destinationPane: "left",
 }).state;

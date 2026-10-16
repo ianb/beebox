@@ -15,9 +15,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 ```ts
 JSON.stringify(parseHookFilePaths({
   tool_name: "Write",
-  tool_input: { file_path: "/box/store/Note.memo.card", content: "..." },
+  tool_input: { file_path: "/box/store/Note.doc.card", content: "..." },
 }))
-=> ["/box/store/Note.memo.card"]
+=> ["/box/store/Note.doc.card"]
 ```
 
 ## Codex apply_patch
@@ -27,17 +27,17 @@ JSON.stringify(parseHookFilePaths({
   tool_name: "apply_patch",
   tool_input: {
     command: `*** Begin Patch
-*** Update File: _content/One.memo.card
+*** Update File: _content/One.doc.card
 @@
 -old
 +new
-*** Add File: _content/Two.memo.card
+*** Add File: _content/Two.doc.card
 +new
-*** Delete File: _content/Old.memo.card
+*** Delete File: _content/Old.doc.card
 *** End Patch`,
   },
 }))
-=> ["_content/One.memo.card","_content/Two.memo.card","_content/Old.memo.card"]
+=> ["_content/One.doc.card","_content/Two.doc.card","_content/Old.doc.card"]
 ```
 
 Unknown and malformed tool inputs are ignored quietly:
@@ -57,9 +57,9 @@ subprocess's potentially different cwd:
 JSON.stringify(parseHookFilePaths({
   cwd: "/box/content",
   tool_name: "apply_patch",
-  tool_input: { command: "*** Begin Patch\n*** Update File: _content/One.memo.card\n*** End Patch" },
+  tool_input: { command: "*** Begin Patch\n*** Update File: _content/One.doc.card\n*** End Patch" },
 }))
-=> ["/box/content/_content/One.memo.card"]
+=> ["/box/content/_content/One.doc.card"]
 ```
 
 ## Warning severity is preserved
@@ -177,8 +177,8 @@ closed vocabulary, or the npm namespace specifically:
 
 ```ts
 const quietBox = await makeTmpBox();
-await quietBox.write("_content/inbox/x.memo.card", "---\nstatus: new\ncreated: 2026-01-01T00:00:00Z\n---\n");
-const quietEdit = await validateHookPathsResult([`${quietBox.root}/_content/inbox/x.memo.card`]);
+await quietBox.write("_content/inbox/x.doc.card", "---\ntitle: X\n---\n");
+const quietEdit = await validateHookPathsResult([`${quietBox.root}/_content/inbox/x.doc.card`]);
 await quietBox.cleanup();
 quietEdit.feedback
 => null

@@ -12,7 +12,6 @@ because this flow has no consent prompt.
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
 import { bodyField } from "../../../helpers/doctest-helpers.js";
-import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 import type { UiScanEntry, UiScanPayload } from "../../../../src/shared/ui-scan/core.js";
 
 /** A syntactically-valid (but not pending) request id — real ids are UUIDs. */
@@ -29,7 +28,7 @@ function captureRequestId(ctx: TestServer) {
   return new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({
       listener: (e) => {
-        if (e.event === "ui-scan-request") resolve(eventSchemas["ui-scan-request"].parse(e.data).requestId);
+        if (e.event === "ui-scan-request") resolve(e.data.requestId);
       },
     });
   });

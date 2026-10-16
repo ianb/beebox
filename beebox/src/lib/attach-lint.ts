@@ -84,7 +84,7 @@ async function scanDir(ctx: ScanContext, absDir: string): Promise<void> {
 
   // Collect basenames of cards in this directory to detect collisions.
   // Keyed case-insensitively — macOS/Windows filesystems are case-insensitive,
-  // so "Foo.memo.card" and "foo.memo.card" collide on disk even though their
+  // so "Foo.doc.card" and "foo.doc.card" collide on disk even though their
   // basenames differ in case. The first-seen casing is kept for the message.
   const basenamesSeen = new Map<string, { base: string; names: string[] }>();
   for (const entry of entries) {

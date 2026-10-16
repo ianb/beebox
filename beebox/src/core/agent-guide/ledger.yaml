@@ -103,7 +103,6 @@ registry:
       - src/schemas/audio.tsx
       - src/schemas/doc.tsx
       - src/schemas/image/schema.tsx
-      - src/schemas/memo.ts
       - src/schemas/person.tsx
       - docs/box/provenance.md
       - docs/prompts/review.md
@@ -282,7 +281,7 @@ rows:
     handle: ABOUT_CARDS
     bin: core
     reason: Every card an agent reads or writes depends on it, and an agent that guesses the type from a `type:` key or an XML shape writes cards that do not load.
-    audits: [card-type-from-filename, memo-xml-structure, memo-yaml-format]
+    audits: [card-type-from-filename, doc-xml-structure, doc-yaml-format]
   - id: about-cards.naming
     rule: Name a card in `First_Last` form, capitalized words joined by underscores, not dashes or lowercase slugs; no two cards in a directory share a basename.
     handle: ABOUT_CARDS
@@ -391,7 +390,7 @@ rows:
     handle: ABOUT_CARDS
     bin: delete
     reason: The validator warns on a frontmatter key the type's schema does not declare, which is the substitute; and memo declares `created`, so the blanket rule was wrong for it. The draft had this core.
-    audits: [memo-yaml-format]
+    audits: [doc-yaml-format]
   - id: about-cards.status-type-specific
     rule: "`status:` values are type-specific; check the type's schema."
     handle: ABOUT_CARDS
@@ -403,7 +402,7 @@ rows:
     handle: ABOUT_CARDS
     bin: delete
     reason: History; the shape sentence says what a card is. bbx-commands.md's `bbx answer` entry, the last surface that said XML, was corrected against the command.
-    audits: [memo-xml-structure]
+    audits: [doc-xml-structure]
   - id: about-cards.attachments
     rule: Files a card references live in a sibling `<basename>.attach/` directory, referenced from the body as `attach/…`; create the directory yourself.
     handle: ABOUT_CARDS

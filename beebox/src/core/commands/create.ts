@@ -25,6 +25,7 @@ import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
 import { errorMessage } from "../../shared/error-guards.js";
+import { retiredTypeHint } from "../../cards/retired-types.js";
 
 async function validateGeneratedCard(input: {
   boxRoot: string;
@@ -104,7 +105,7 @@ async function executeCreate(
     }
     return {
       success: false,
-      error: `No default template for card type '${parsed.type}'. Use -t to specify a template.\nAvailable templates: ${getTemplateNames().join(", ")}`,
+      error: `No default template for card type '${parsed.type}'${retiredTypeHint(parsed.type)}. Use -t to specify a template.\nAvailable templates: ${getTemplateNames().join(", ")}`,
     };
   }
 

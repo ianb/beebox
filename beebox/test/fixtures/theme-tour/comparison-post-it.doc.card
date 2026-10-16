@@ -1,7 +1,8 @@
 ---
-status: new
 title: One note, three stocks
-created: "2026-09-07T12:01:00+00:00"
+theme:
+  name: post-it
+  stock: yellow
 ---
 At 8:15, Mara left the west window open while she checked the clay samples. The
 morning light moved across the worktable, and the glaze notes stayed easy to

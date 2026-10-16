@@ -40,7 +40,7 @@ async function nudge(command: string, event: "PreToolUse" | "PostToolUse" = "Pre
 So does a `.card` move outside `store/` (the wrapper still mishandles refs):
 
 ```ts
-(await nudge("cd box && git mv box/A.memo.card box/sub/A.memo.card"))?.includes("bbx mv")
+(await nudge("cd box && git mv box/A.doc.card box/sub/A.doc.card"))?.includes("bbx mv")
 => true
 ```
 

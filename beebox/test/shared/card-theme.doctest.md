@@ -42,7 +42,7 @@ type override, schema preference, box default, and engine fallback.
 ```ts
 const presentation = parsePresentationConfig({
   default: { name: "paper", stock: "blue" },
-  cardTypes: { memo: { name: "plain" } },
+  cardTypes: { doc: { name: "plain" } },
   rules: [
     { match: "_content/notes/**", theme: { name: "post-it", stock: "mint" } },
     { match: "_content/**", theme: { name: "paper" } },
@@ -50,8 +50,8 @@ const presentation = parsePresentationConfig({
 });
 
 JSON.stringify(resolveCardTheme({
-  path: "_content/notes/One.memo.card",
-  type: "memo",
+  path: "_content/notes/One.doc.card",
+  type: "doc",
   cardChoice: { name: "paper", stock: "manila" },
   typeDefault: { name: "paper" },
   presentation,
@@ -59,8 +59,8 @@ JSON.stringify(resolveCardTheme({
 => {"choice":{"name":"paper","stock":"manila"},"problem":null,"origin":{"kind":"card"}}
 
 JSON.stringify(resolveCardTheme({
-  path: "_content/notes/One.memo.card",
-  type: "memo",
+  path: "_content/notes/One.doc.card",
+  type: "doc",
   typeDefault: { name: "paper" },
   presentation,
 }))
@@ -72,18 +72,18 @@ the lower paper stock. With no authored choice, the engine is plain.
 
 ```ts
 JSON.stringify(resolveCardTheme({
-  path: "_content/tasks/One.memo.card",
-  type: "memo",
+  path: "_content/tasks/One.doc.card",
+  type: "doc",
   presentation: parsePresentationConfig({
     default: { name: "paper", stock: "blue" },
-    cardTypes: { memo: { name: "post-it" } },
+    cardTypes: { doc: { name: "post-it" } },
   }),
 }))
 => {"choice":{"name":"post-it","stock":"yellow"},"problem":null,"origin":{"kind":"type-override"}}
 
 JSON.stringify(resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   presentation: { status: "absent" },
 }))
 => {"choice":{"name":"plain","stock":"neutral"},"origin":{"kind":"engine"},"problem":null}
@@ -95,24 +95,24 @@ default included. An unknown system theme falls back to plain.
 
 ```ts
 JSON.stringify(resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   presentation: { status: "absent" },
   systemTheme: "candy",
 }))
 => {"choice":{"name":"letter-set","stock":"strawberry"},"problem":null,"origin":{"kind":"system","theme":"candy"}}
 
 JSON.stringify(resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   presentation: parsePresentationConfig({ default: { name: "post-it" } }),
   systemTheme: "candy",
 }).origin.kind)
 => "box-default"
 
 JSON.stringify(resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   presentation: { status: "absent" },
   systemTheme: "a-box-authored-theme",
 }).choice.name)
@@ -139,8 +139,8 @@ and capabilities for the themes the host ships; it is not an allowlist.
 
 ```ts
 const ownStock = resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   cardChoice: { name: "paper", stock: "neon" },
   presentation: parsePresentationConfig({ default: { name: "post-it" } }),
 });
@@ -154,8 +154,8 @@ one unless the card names its own.
 
 ```ts
 const ownTheme = resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   cardChoice: { name: "velvet" },
   presentation: { status: "absent" },
 });
@@ -175,8 +175,8 @@ JSON.stringify([badConfig.status, badConfig.status === "invalid" ? badConfig.pro
 => ["invalid",1]
 
 const degraded = resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   presentation: badConfig,
 });
 JSON.stringify([degraded.choice, degraded.origin, degraded.problem?.location])
@@ -187,9 +187,9 @@ JSON.stringify([degraded.choice, degraded.origin, degraded.problem?.location])
 
 ```ts
 JSON.stringify([
-  themePatternMatches("_content/**/Notes.*.card", "_content/Notes.memo.card"),
-  themePatternMatches("_content/**/Notes.*.card", "_content/archive/Notes.memo.card"),
-  themePatternMatches("_content/*/Notes.*.card", "_content/archive/deep/Notes.memo.card"),
+  themePatternMatches("_content/**/Notes.*.card", "_content/Notes.doc.card"),
+  themePatternMatches("_content/**/Notes.*.card", "_content/archive/Notes.doc.card"),
+  themePatternMatches("_content/*/Notes.*.card", "_content/archive/deep/Notes.doc.card"),
   validateThemePattern("_content/foo**bar"),
   validateThemePattern("../outside/**"),
 ])
@@ -220,8 +220,8 @@ problem; it renders on the base card material until a person chooses another.
 
 ```ts
 const retiredCard = resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   cardChoice: { name: "retired-theme", stock: "retired-stock" },
   presentation: { status: "absent" },
   systemTheme: "paper",
@@ -240,8 +240,8 @@ const mixed = parsePresentationConfig({
   chrome: { name: "spectrum" },
 });
 const mixedCard = resolveCardTheme({
-  path: "_content/One.memo.card",
-  type: "memo",
+  path: "_content/One.doc.card",
+  type: "doc",
   cardChoice: { name: "post-it" },
   presentation: mixed,
 });
@@ -292,15 +292,15 @@ open value can excuse.
 ```ts
 const lintBox = await makeTmpBox();
 await lintBox.write(
-  "_content/Own.memo.card",
-  "---\ncreated: 2026-09-07T12:00:00Z\ntheme:\n  name: paper\n  stock: purple\n---\nBody\n",
+  "_content/Own.doc.card",
+  "---\ntitle: Own\ntheme:\n  name: paper\n  stock: purple\n---\nBody\n",
 );
 await lintBox.write(
-  "_content/Bad.memo.card",
-  "---\ncreated: 2026-09-07T12:00:00Z\ntheme: paper\n---\nBody\n",
+  "_content/Bad.doc.card",
+  "---\ntitle: Bad\ntheme: paper\n---\nBody\n",
 );
 const lintResult = await lintCardsDispatch(
-  [lintBox.path("_content/Own.memo.card"), lintBox.path("_content/Bad.memo.card")],
+  [lintBox.path("_content/Own.doc.card"), lintBox.path("_content/Bad.doc.card")],
   { boxRoot: lintBox.root, ctx: await buildLoadContext(lintBox.root) },
 );
 JSON.stringify([
@@ -324,10 +324,10 @@ validateSystemThemeChoice({ name: "bloom" })
 systemCardThemes("bloom")
 => ["bloom", "letter-set", "post-it"]
 
-resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "bloom" })
+resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "bloom" })
 => { choice: { name: "bloom", stock: "cutouts" }, problem: null, origin: { kind: "system", theme: "bloom" } }
 
-resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "bloom", cardChoice: { name: "paper", stock: "blue" } }).choice
+resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "bloom", cardChoice: { name: "paper", stock: "blue" } }).choice
 => { name: "paper", stock: "blue" }
 ```
 
@@ -341,10 +341,10 @@ validateSystemThemeChoice({ name: "ribbon" })
 systemCardThemes("ribbon")
 => ["ribbon", "paper", "post-it"]
 
-resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "ribbon" })
+resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "ribbon" })
 => { choice: { name: "ribbon", stock: "flow" }, problem: null, origin: { kind: "system", theme: "ribbon" } }
 
-resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "ribbon", cardChoice: { name: "paper", stock: "blue" } }).choice
+resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "ribbon", cardChoice: { name: "paper", stock: "blue" } }).choice
 => { name: "paper", stock: "blue" }
 ```
 
@@ -358,9 +358,9 @@ validateSystemThemeChoice({ name: "deck" })
 systemCardThemes("deck")
 => ["deck", "paper", "post-it"]
 
-resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "deck" })
+resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "deck" })
 => { choice: { name: "deck", stock: "panels" }, problem: null, origin: { kind: "system", theme: "deck" } }
 
-resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "deck", cardChoice: { name: "paper", stock: "blue" } }).choice
+resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "deck", cardChoice: { name: "paper", stock: "blue" } }).choice
 => { name: "paper", stock: "blue" }
 ```

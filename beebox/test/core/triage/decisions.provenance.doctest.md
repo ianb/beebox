@@ -122,7 +122,7 @@ await annexBox.write("_content/home/Home.landmark.card", "---\nsymbol:\n  glyph:
 await simpleGit(annexBox.root).add("_content/home/Home.landmark.card");
 await simpleGit(annexBox.root).commit("Add triage instructions");
 await annexBox.write("_content/inbox/staged/Paper.doc.card", "---\ntitle: Paper\n---\nHousehold receipt.");
-await annexBox.write("_content/inbox/staged/Paper.attach/photo.png", "synthetic image bytes");
+await annexBox.write("_content/inbox/staged/Paper.attach/photo.png", Buffer.from("synthetic image bytes"));
 await execa("git", ["annex", "add", "--", "_content/inbox/staged/Paper.attach/photo.png"], { cwd: annexBox.root });
 await execa("git", ["annex", "unlock", "--", "_content/inbox/staged/Paper.attach/photo.png"], { cwd: annexBox.root });
 

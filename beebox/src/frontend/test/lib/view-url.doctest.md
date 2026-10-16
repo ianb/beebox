@@ -41,8 +41,8 @@ JSON.stringify(parseViewUrl('_content/docs/report.md?k=v&viewState=%7B%22page%22
 A leading `/` is stripped — `ViewTarget.path` is box-root-relative, and consumers compare it for exact equality against the file watcher's relative paths (which have no leading slash). Card refs are conventionally written `/_content/…`, so the slash is normalized away here:
 
 ```ts
-JSON.stringify(parseViewUrl("view:/_bookkeeping/archive/Foo.memo.card"))
-=> {"path":"_bookkeeping/archive/Foo.memo.card","viewer":null,"params":{},"viewState":null}
+JSON.stringify(parseViewUrl("view:/_bookkeeping/archive/Foo.doc.card"))
+=> {"path":"_bookkeeping/archive/Foo.doc.card","viewer":null,"params":{},"viewState":null}
 ```
 
 `serializeViewUrl` is the round-trip inverse (without the `view:` prefix):

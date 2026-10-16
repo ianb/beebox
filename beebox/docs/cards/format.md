@@ -119,9 +119,11 @@ embedded `{% todo %}` items — there is no dedicated todo-list card type.
 **`Name.attach/`** — a sibling directory holding files that belong to `Name.type.card`. No reserved top-level attachment directory; every card gets its own scope next to it:
 
 ```
-Voice_Memo.memo.card
-Voice_Memo.attach/
-  voice-memo-001.webm
+Voice_note.doc.card
+Voice_note.attach/
+  recording.audio.card
+  recording.attach/
+    recording.m4a
 ```
 
 Two lint rules make this unambiguous (`src/lib/attach-lint.ts`):

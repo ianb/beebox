@@ -10,21 +10,19 @@ don't count.
 ```ts setup
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 
 function contextFor(box: TmpBox) {
-  const ctx: TrpcContext = {
-    boxRoot: box.root, boxSlug: "t", user: null, authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user", services: {},
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", isAuthenticatedOwner: true });
   return statusRouter.createCaller(ctx);
 }
 
 const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
-function memo(body: string) {
-  return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
+function doc(body: string) {
+  return `---\ntitle: Notes\n---\n${body}`;
 }
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
@@ -36,8 +34,8 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox({ git: true });
 await box.seed(".beebox/box.json", MARKER);
 await box.write(
-  "_content/a.memo.card",
-  memo(
+  "_content/a.doc.card",
+  doc(
     '{% todo due="2026-07-01" %}Overdue thing{% /todo %}\n\n' +      // escalated
     '{% todo %}Undated thing{% /todo %}\n\n' +                       // on-plate
     '{% todo start="2026-09-01" %}Not yet{% /todo %}\n\n' +          // quiet
@@ -54,7 +52,7 @@ counts.onPlateTodos
 ## Zero when there are none
 
 ```ts continue
-await box.write("_content/a.memo.card", memo("No todos here.\n"));
+await box.write("_content/a.doc.card", doc("No todos here.\n"));
 box.commitAll("clear");
 
 const after = await contextFor(box).status();

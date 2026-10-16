@@ -20,9 +20,7 @@ import { cardTitle } from "../../src/core/loader-registry.js";
  * the plan remove them. The list only shrinks: the test below fails when an
  * entry is no longer present, so each removal also deletes its line here.
  */
-const PENDING_REMOVAL = new Set([
-  "memo.created", "memo.source", "memo.status",
-]);
+const PENDING_REMOVAL = new Set<string>([]);
 
 function loads(text: string, schemas: Map<string, ReturnType<typeof cardSchema>>): string {
   try {

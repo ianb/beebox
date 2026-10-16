@@ -14,6 +14,7 @@ mount-writing procedures that DO exist are covered in
 import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import assert from "node:assert/strict";
@@ -22,17 +23,7 @@ import { errorMessage } from "../../../src/shared/error-guards.js";
 import { simpleGit } from "simple-git";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: false,
-    actor: "none",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, actor: "none" });
   return appRouter.createCaller(ctx);
 }
 

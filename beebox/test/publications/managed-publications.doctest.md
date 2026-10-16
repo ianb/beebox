@@ -20,12 +20,12 @@ import { approveManagedPublication, disableManagedPublication, enableManagedPubl
 import { listManagedPublications, readManagedPublicationReleaseFile } from "../../src/publish/managed-publication-queries.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { publicationsRouter } from "../../src/webapp/trpc/routers/publications.js";
-import type { EventBus } from "../../src/core/event-bus/core.js";
 import type { CloudflarePublishBinding, CloudflarePublishBoxHost, CloudflarePublishConnectionSummary } from "../../src/core/secrets/cloudflare-publish.js";
 import type { FakeProvisioningClient } from "../../src/services/cloudflare-provisioning/core.js";
 import type { ManagedPublicationRuntime } from "../../src/services/managed-publication-runtime/core.js";
 import type { TrpcActor } from "../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { trpcContext } from "../helpers/trpc-context.js";
 
 let pubId = "abcdefghijklmnopqrstuvwxyz";
 const box = await makeTmpBox();
@@ -94,34 +94,29 @@ provisioning.scripts.set("bbx-test-host", { bindings: [
   { type: "plain_text", name: "PUB_HOSTNAME", text: "sites.example.com" },
   { type: "plain_text", name: "PUB_WORKER_VERSION", text: sharedWorkerVersion },
 ] });
-const noBus: EventBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
 function publicationCaller(actor: TrpcActor, authenticatedOwner = actor === "user", boxSlug = "box-a", injectedRuntime: ManagedPublicationRuntime = runtime) {
   const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot,
     boxSlug,
-    eventBus: noBus,
     services: { managedPublicationRuntime: injectedRuntime },
     user,
-    authed: true,
     isOwner: actor === "user",
     isAuthenticatedOwner: authenticatedOwner,
     actor,
-  });
+  }));
 }
 function publicationConnectionsCaller(actor: TrpcActor) {
   const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
-  return publicationsRouter.createCaller({
+  return publicationsRouter.createCaller(trpcContext({
     boxRoot,
     boxSlug: "box-a",
-    eventBus: noBus,
     services: { managedPublicationRuntime: runtime },
     user,
-    authed: true,
     isOwner: actor === "user",
     isAuthenticatedOwner: actor === "user",
     actor,
-  });
+  }));
 }
 ```
 

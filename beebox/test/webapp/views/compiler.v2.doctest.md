@@ -61,7 +61,7 @@ export const description = "renders a CardLink from beebox/view-widgets";
 export const dependencies = [];
 export const modes = ["page"];
 export default function WidgetView() {
-  return <div><CardLink cardRef="_content/inbox/Test.memo.card" /></div>;
+  return <div><CardLink cardRef="_content/inbox/Test.doc.card" /></div>;
 }
 `;
 

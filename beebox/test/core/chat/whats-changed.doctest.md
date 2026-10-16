@@ -42,14 +42,14 @@ an earlier commit does not, and an untracked file shows in the working tree.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/Trip.memo.card", "first");
+await box.write("_content/Trip.doc.card", "first");
 box.commitAll("add trip card");
 // Mark this point as "my last reply".
 await recordTurnMarkerForSession(box.root, "sess-1");
 // Work since: one new commit, plus one new untracked file.
-await box.write("_content/Trip.memo.card", "first\nsecond");
+await box.write("_content/Trip.doc.card", "first\nsecond");
 box.commitAll("expand trip card");
-await box.write("_content/Notes.memo.card", "scratch");
+await box.write("_content/Notes.doc.card", "scratch");
 const report = await summarizeWhatsChanged(box.root, { sessionId: "sess-1" });
 
 report.includes("Commits since your last reply")
@@ -64,7 +64,7 @@ report.includes("add trip card")
 report.includes("Uncommitted working tree")
 => true
 
-report.includes("Untracked: _content/Notes.memo.card")
+report.includes("Untracked: _content/Notes.doc.card")
 => true
 ```
 
@@ -72,8 +72,8 @@ Scoping to a card path narrows every section to that path: the Trip card's
 commit stays, the out-of-scope Notes file drops out.
 
 ```ts continue
-const scoped = await summarizeWhatsChanged(box.root, { sessionId: "sess-1", card: "_content/Trip.memo.card" });
-scoped.includes("Scope: _content/Trip.memo.card")
+const scoped = await summarizeWhatsChanged(box.root, { sessionId: "sess-1", card: "_content/Trip.doc.card" });
+scoped.includes("Scope: _content/Trip.doc.card")
 => true
 
 scoped.includes("expand trip card")
@@ -94,7 +94,7 @@ such, rather than claiming a precise delta.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/Trip.memo.card", "first");
+await box.write("_content/Trip.doc.card", "first");
 box.commitAll("add trip card");
 const report = await summarizeWhatsChanged(box.root, { sessionId: "no-marker-session" });
 

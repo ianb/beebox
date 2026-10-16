@@ -26,7 +26,6 @@
  */
 
 import type { EventBus } from "../../event-bus/core.js";
-import { isRecord } from "../../../shared/is-record.js";
 import { attachmentsBlockStart } from "../../../shared/composer-tokens.js";
 import type { SessionEntry } from "../../../cli/lib/session-entry.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";
@@ -166,17 +165,13 @@ export function readAcceptedMessages(
   const cutoff = now.getTime() - ACCEPTED_WINDOW_MS;
   const accepted: AcceptedMessage[] = [];
   for (const event of eventBus.readRecent({ event: "chat-user-message", limit: ACCEPTED_SCAN_LIMIT })) {
-    // Bus payloads arrive `unknown` and are narrowed by the reader, the way
-    // every other consumer does it — the row was already validated against the
-    // `chat-user-message` schema on the way out of SQLite.
-    const data = isRecord(event.data) ? event.data : {};
-    const eventSessionId = typeof data["sessionId"] === "string" ? data["sessionId"] : null;
-    const message = typeof data["message"] === "string" ? data["message"] : "";
-    const timestamp = typeof data["timestamp"] === "string" ? data["timestamp"] : "";
+    // A row that failed validation on the way out of SQLite is the "unknown"
+    // sentinel; every other row was validated against this event's schema.
+    if (event.event === "unknown") continue;
+    const { sessionId: eventSessionId, message, timestamp, user: rowUser } = event.data;
     if (message === "") continue;
     if (!matchesSession(eventSessionId, sessionId)) continue;
-    const rowUser = isRecord(data["user"]) ? data["user"] : null;
-    const rowEmail = rowUser !== null && typeof rowUser["email"] === "string" ? rowUser["email"] : null;
+    const rowEmail = rowUser?.email ?? null;
     if (eventSessionId === null && !matchesUser(rowEmail, viewerEmail)) continue;
     const at = Date.parse(timestamp);
     if (!Number.isFinite(at) || at < cutoff) continue;

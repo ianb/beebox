@@ -39,7 +39,7 @@ await fs.writeFile(box.path("_content/people/Bob.image.card"), "one");
 await fs.writeFile(box.path("_content/people/Bob.doc.card"), "two");
 await fs.mkdir(box.path("_content/people/Bob.attach"));
 await fs.writeFile(box.path("_content/people/Bob.attach/shared.bin"), "three");
-await fs.writeFile(box.path("_content/people/Charlie.memo.card"), "solo");
+await fs.writeFile(box.path("_content/people/Charlie.recipe.card"), "solo");
 await fs.mkdir(box.path("node_modules/pkg"), { recursive: true });
 await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
 ```
@@ -60,7 +60,7 @@ print(JSON.stringify({
   grouped: { card: grouped[".image.card"], markdown: grouped[".md"], orphan: grouped["Orphaned .attach/"] },
   ambiguous: grouped["Ambiguous card basename"],
   linked: { grouped: linkedGrouped[".image.card"], ambiguous: linkedGrouped["Ambiguous card basename"], card: linkedDirect[".image.card"], nestedCard: linkedDirect[".doc.card"], attachment: linkedDirect[".webp"] },
-  unlinked: unlinkedGrouped[".memo.card"],
+  unlinked: unlinkedGrouped[".recipe.card"],
   repository: {
     hasCheckoutSize: inventory.repository.checkoutDiskBytes >= inventory.totals.bytes,
     gitSizeIsRepository: inventory.repository.gitDiskBytes > 0,

@@ -34,10 +34,10 @@ async function collectTodos(boxRoot: string, options?: { glob: string }) {
   };
 }
 
-const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
+const DOC_FM = "title: Kitchen\ncontains: Notes on the kitchen remodel.\n";
 
-function memo(frontmatterExtra: string, body: string): string {
-  return `---\n${MEMO_FM}${frontmatterExtra}---\n${body}`;
+function doc(frontmatterExtra: string, body: string): string {
+  return `---\n${DOC_FM}${frontmatterExtra}---\n${body}`;
 }
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
@@ -56,8 +56,8 @@ both show up, each with its own locator kind.
 
 ```ts
 await box.write(
-  "store/a.memo.card",
-  memo(
+  "store/a.doc.card",
+  doc(
     'todos:\n  - text: "Renew parking permit"\n    due: "2026-08-15"\n',
     'Body text.\n\n{% todo id="vet-refill" assigned="Dana" %}Call the vet{% /todo %}\n'
   )
@@ -97,15 +97,15 @@ result1.issues.length
 
 ```ts continue
 await box.write(
-  "store/b.memo.card",
-  memo(
+  "store/b.doc.card",
+  doc(
     "",
-    '{% todo id="with-see-also" %}Ping Marcus {% see-also ref="store/a.memo.card" %}he offered to help{% /see-also %} about the quote.{% /todo %}\n'
+    '{% todo id="with-see-also" %}Ping Marcus {% see-also ref="store/a.doc.card" %}he offered to help{% /see-also %} about the quote.{% /todo %}\n'
   )
 );
-const result2 = await collectTodos(box.root, { glob: "store/b.memo.card" });
+const result2 = await collectTodos(box.root, { glob: "store/b.doc.card" });
 JSON.stringify(result2.todos[0]?.seeAlso)
-=> [{"ref":"store/a.memo.card","note":"he offered to help"}]
+=> [{"ref":"store/a.doc.card","note":"he offered to help"}]
 
 result2.todos[0]?.text
 => Ping Marcus about the quote.
@@ -119,8 +119,8 @@ result2.todos[0]?.text
 
 ```ts continue
 await box.write(
-  "store/plate.memo.card",
-  memo(
+  "store/plate.doc.card",
+  doc(
     "",
     [
       '{% todo id="p-escalated" due="2026-07-27" %}Overdue{% /todo %}',
@@ -134,7 +134,7 @@ await box.write(
     ].join("\n")
   )
 );
-const plateResult = await collectTodos(box.root, { glob: "store/plate.memo.card" });
+const plateResult = await collectTodos(box.root, { glob: "store/plate.doc.card" });
 JSON.stringify(
   Object.fromEntries(plateResult.todos.map((t) => [t.id, t.plateState])),
   null,
@@ -153,10 +153,10 @@ JSON.stringify(
 
 ```ts continue
 await box.write(
-  "store/bad-status.memo.card",
-  memo("", '{% todo status="Done" %}Bad status{% /todo %}\n')
+  "store/bad-status.doc.card",
+  doc("", '{% todo status="Done" %}Bad status{% /todo %}\n')
 );
-const badStatusResult = await collectTodos(box.root, { glob: "store/bad-status.memo.card" });
+const badStatusResult = await collectTodos(box.root, { glob: "store/bad-status.doc.card" });
 badStatusResult.todos.length
 => 0
 
@@ -180,10 +180,10 @@ result.
 
 ```ts continue
 await box.write(
-  "store/bad-status-multiline.memo.card",
-  memo("", '{% todo status="Done" %}\nBad status, multi-line\n{% /todo %}\n')
+  "store/bad-status-multiline.doc.card",
+  doc("", '{% todo status="Done" %}\nBad status, multi-line\n{% /todo %}\n')
 );
-const badStatusMultiline = await collectTodos(box.root, { glob: "store/bad-status-multiline.memo.card" });
+const badStatusMultiline = await collectTodos(box.root, { glob: "store/bad-status-multiline.doc.card" });
 badStatusMultiline.todos.length
 => 0
 
@@ -196,7 +196,7 @@ JSON.stringify(badStatusMultiline.issues.map((i) => i.kind))
 ```ts continue
 await box.write(
   "store/unknown-type.memmo.card",
-  memo("", '{% todo %}Never collected — unregistered type{% /todo %}\n')
+  doc("", '{% todo %}Never collected — unregistered type{% /todo %}\n')
 );
 const unknownTypeResult = await collectTodos(box.root, { glob: "store/unknown-type.memmo.card" });
 unknownTypeResult.todos.length
@@ -213,10 +213,10 @@ unknownTypeResult.issues[0]?.message
 
 ```ts continue
 await box.write(
-  "store/bad-frontmatter.memo.card",
-  "---\nstatus: new\ncreated: not-a-date\n---\n{% todo %}Never collected{% /todo %}\n"
+  "store/bad-frontmatter.doc.card",
+  "---\ntitle: [unclosed\n---\n{% todo %}Never collected{% /todo %}\n"
 );
-const badLoadResult = await collectTodos(box.root, { glob: "store/bad-frontmatter.memo.card" });
+const badLoadResult = await collectTodos(box.root, { glob: "store/bad-frontmatter.doc.card" });
 badLoadResult.todos.length
 => 0
 
@@ -227,9 +227,9 @@ badLoadResult.issues[0]?.kind
 ## Duplicate `id` across cards is reported, but both todos still come back
 
 ```ts continue
-await box.write("store/dup1.memo.card", memo("", '{% todo id="shared" %}First{% /todo %}\n'));
-await box.write("store/dup2.memo.card", memo("", '{% todo id="shared" %}Second{% /todo %}\n'));
-const dupResult = await collectTodos(box.root, { glob: "store/dup{1,2}.memo.card" });
+await box.write("store/dup1.doc.card", doc("", '{% todo id="shared" %}First{% /todo %}\n'));
+await box.write("store/dup2.doc.card", doc("", '{% todo id="shared" %}Second{% /todo %}\n'));
+const dupResult = await collectTodos(box.root, { glob: "store/dup{1,2}.doc.card" });
 dupResult.todos.map((t) => t.text).join(", ")
 => First, Second
 
@@ -240,14 +240,14 @@ dupResult.issues[0]?.kind
 => duplicate-id
 
 dupResult.issues[0]?.message
-=> duplicate todo id "shared" used at: store/dup1.memo.card:5, store/dup2.memo.card:5
+=> duplicate todo id "shared" used at: store/dup1.doc.card:5, store/dup2.doc.card:5
 ```
 
 ## `--glob` scopes which cards are scanned
 
 ```ts continue
-await box.write("other/c.memo.card", memo("", '{% todo id="outside-scope" %}Not scoped in{% /todo %}\n'));
-const scoped = await collectTodos(box.root, { glob: "store/dup1.memo.card" });
+await box.write("other/c.doc.card", doc("", '{% todo id="outside-scope" %}Not scoped in{% /todo %}\n'));
+const scoped = await collectTodos(box.root, { glob: "store/dup1.doc.card" });
 scoped.todos.map((t) => t.id).join(", ")
 => shared
 ```
@@ -286,8 +286,8 @@ timezone with a warning instead of throwing.
 const badTzBox = await makeTmpBox();
 await badTzBox.write("_config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
 await badTzBox.write(
-  "store/x.memo.card",
-  memo("", '{% todo id="survives" %}Should still collect{% /todo %}\n')
+  "store/x.doc.card",
+  doc("", '{% todo id="survives" %}Should still collect{% /todo %}\n')
 );
 const badTzResult = await collectTodos(badTzBox.root);
 badTzResult.todos.map((t) => t.id).join(", ")
@@ -306,16 +306,16 @@ the same card).
 const full = await collectTodos(box.root);
 full.todos.map((t) => `${t.path}#${formatTodoLocation(t)}`).join("\n")
 =>
-other/c.memo.card#other/c.memo.card:5
-store/a.memo.card#store/a.memo.card:10
-store/a.memo.card#store/a.memo.card#todos[0]
-store/b.memo.card#store/b.memo.card:5
-store/dup1.memo.card#store/dup1.memo.card:5
-store/dup2.memo.card#store/dup2.memo.card:5
-store/plate.memo.card#store/plate.memo.card:5
-store/plate.memo.card#store/plate.memo.card:7
-store/plate.memo.card#store/plate.memo.card:9
-store/plate.memo.card#store/plate.memo.card:11
+other/c.doc.card#other/c.doc.card:5
+store/a.doc.card#store/a.doc.card:10
+store/a.doc.card#store/a.doc.card#todos[0]
+store/b.doc.card#store/b.doc.card:5
+store/dup1.doc.card#store/dup1.doc.card:5
+store/dup2.doc.card#store/dup2.doc.card:5
+store/plate.doc.card#store/plate.doc.card:5
+store/plate.doc.card#store/plate.doc.card:7
+store/plate.doc.card#store/plate.doc.card:9
+store/plate.doc.card#store/plate.doc.card:11
 ```
 
 ```ts cleanup

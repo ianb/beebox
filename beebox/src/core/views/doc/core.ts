@@ -136,7 +136,7 @@ Cards are YAML frontmatter + a markdown body. Each card in the \`cards\` array h
 \`\`\`typescript
 {
   path: string;        // Box-relative path (e.g., "_bookkeeping/archive/Foo.record.card")
-  type: string;        // Card type, from the filename Foo.<type>.card (e.g., "record", "memo")
+  type: string;        // Card type, from the filename Foo.<type>.card (e.g., "record", "doc")
   frontmatter?: Record<string, unknown>;  // Parsed YAML frontmatter (body and type excluded)
   body?: string;       // Markdown body — render it with \`Markdown\` (see "Card text")
   bodyLineOffset: number;         // File lines before the body; \`Markdown\` uses it
