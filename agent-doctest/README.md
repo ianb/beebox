@@ -371,7 +371,7 @@ finds an error.
 The check builds its module with one difference from the run: type-only
 imports in example blocks, which the run erases, are moved to module scope.
 Two blocks that import different types under one name then collide
-(TS2300); import the type in a `setup` block or rename one.
+(TS2300); rename one of them.
 Unused-binding errors on the runner's own bindings (`t`, `print`,
 `eventually`) are not reported.
 

@@ -107,10 +107,10 @@ function hoistedTypeImports(classified: Classified[]): GenLine[] {
   const out: GenLine[] = [];
   for (const { block, info } of classified) {
     if (info.kind === "setup" || info.kind === "prose") continue;
-    for (const { offset, statement } of typeOnlyImports(block.content)) {
+    for (const { offset, statement, shift } of typeOnlyImports(block.content)) {
       if (seen.has(statement)) continue;
       seen.add(statement);
-      out.push({ text: statement, md: block.line + offset, col: 0 });
+      out.push({ text: statement, md: block.line + offset, col: shift });
     }
   }
   return out;

@@ -7,7 +7,7 @@ The formula was checked against the id a real Chrome profile recorded for a
 worktree's build (in its Secure Preferences); the path below is made up.
 
 ```ts setup
-import { unpackedExtensionId, frontTargetScript, waitTimeoutMs } from "../src/clerk-popup.ts";
+import { unpackedExtensionId, frontTargetScript, waitTimeoutMs } from "../src/clerk-popup.js";
 ```
 
 ```ts
@@ -20,7 +20,7 @@ share it. It embeds the URL as a JSON string, so a quote in the URL cannot end
 the string early.
 
 ```ts
-frontTargetScript('http://localhost/a"b').split("\n")[1].trim()
+frontTargetScript('http://localhost/a"b').split("\n")[1]?.trim()
 => const matches = tabs.filter((tab) => tab.url === "http://localhost/a\"b");
 ```
 
@@ -34,6 +34,6 @@ and would poll forever, wedging the daemon. The wrapper turns `--timeout`, or
 ```
 
 ```ts
-(() => { try { return waitTimeoutMs(["--timeout", "3s"]); } catch (error) { return error.message; } })()
+(() => { try { return waitTimeoutMs(["--timeout", "3s"]); } catch (error) { return error instanceof Error ? error.message : error; } })()
 => wait --timeout is not a positive integer: 3s
 ```

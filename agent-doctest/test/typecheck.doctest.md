@@ -117,9 +117,10 @@ check({
 => []
 ```
 
-A hoisted import is one line per bound name, so a multi-line `import type`
-keeps every later line on its markdown line. Two blocks that import the same
-type, in different statements, bind it once.
+A hoisted import is one line per bound name, on the line that names it, so a
+multi-line `import type` puts an error on the right line and keeps every later
+line on its markdown line. Two blocks that import the same type, in different
+statements or quotes, bind it once.
 
 ```ts
 check({
@@ -127,6 +128,7 @@ check({
     `${fence}ts`,
     "import type {",
     "  Point,",
+    "  Nope,",
     '} from "../src/math.js";',
     'const p: Point = { x: 1, y: "2" };',
     "p.x",
@@ -134,14 +136,17 @@ check({
     fence,
     "",
     `${fence}ts`,
-    'import type { Point, Point as P } from "../src/math.js";',
+    "import type { Point, Point as P } from '../src/math.js';",
     "const q: P = { x: 3, y: 4 };",
     "q.x",
     "=> 3",
     fence,
   ].join("\n"),
 })
-=> ["hoist.doctest.md:5:26 TS2322 Type 'string' is not assignable to type 'number'."]
+=> [
+  "hoist.doctest.md:4:3 TS2305 Module '\"../src/math.js\"' has no exported member 'Nope'.",
+  "hoist.doctest.md:6:26 TS2322 Type 'string' is not assignable to type 'number'."
+]
 ```
 
 `t`, `print`, and `eventually` are bound for every test whether it uses them
