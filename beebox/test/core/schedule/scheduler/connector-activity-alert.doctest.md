@@ -10,6 +10,7 @@ it. Nothing is sent: health never notifies on its own
 
 ```ts setup
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import { syncConnector, addDays, loadConnectorActivity } from "../../../../src/connector-activity/core.js";
 import { updateConnectorEpisodes } from "../../../../src/core/schedule/scheduler/connector-activity-alert.js";
@@ -42,25 +43,13 @@ async function runDays(boxRoot: string, { start, pattern }: { start: string; pat
 }
 
 function caller(boxRoot: string, isOwner: boolean) {
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus: {
-      emit: () => 0,
-      emitTransient: () => {},
-      readSince: () => [],
-      readRecent: () => [],
-      subscribe: () => ({ unsubscribe: () => {} }),
-      prune: () => 0,
-      close: () => {},
-    },
-    services: {},
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
     isOwner,
     isAuthenticatedOwner: isOwner,
     actor: isOwner ? "user" : "none",
-  });
+  }));
 }
 ```
 

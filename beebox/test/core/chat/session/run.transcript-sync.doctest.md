@@ -16,7 +16,6 @@ path and remove that directory afterwards.
 
 ```ts setup
 import { once } from "node:events";
-import type { SDKAssistantMessage } from "@anthropic-ai/claude-agent-sdk";
 import assert from "node:assert/strict";
 import { mkdir, writeFile, appendFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -30,40 +29,6 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { tick, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 
 const FINAL_UUID = "00000000-0000-4000-8000-000000000001";
-
-/** A complete streamed assistant message, as the SDK types it. */
-function assistantMessage(uuid: SDKAssistantMessage["uuid"], sessionId: string, text: string): SDKAssistantMessage {
-  return {
-    type: "assistant",
-    uuid,
-    session_id: sessionId,
-    parent_tool_use_id: null,
-    message: {
-      id: "msg-final",
-      type: "message",
-      role: "assistant",
-      model: "test-model",
-      container: null,
-      context_management: null,
-      stop_details: null,
-      stop_reason: null,
-      stop_sequence: null,
-      content: [{ type: "text", text, citations: null }],
-      usage: {
-        cache_creation: null,
-        cache_creation_input_tokens: null,
-        cache_read_input_tokens: null,
-        inference_geo: null,
-        input_tokens: 0,
-        iterations: null,
-        output_tokens: 0,
-        server_tool_use: null,
-        service_tier: null,
-        speed: null,
-      },
-    },
-  };
-}
 
 const entryLine = (uuid: string) =>
   JSON.stringify({
@@ -124,7 +89,7 @@ await mkdir(dirname(logPath), { recursive: true });
 await writeFile(logPath, entryLine("seg-1-uuid"));
 let doneFired = false;
 session.on("done", () => { doneFired = true; });
-run?.emitMessage(assistantMessage(FINAL_UUID, "tsync-gate", "final segment"));
+run?.emitAssistantText("final segment", { uuid: FINAL_UUID });
 run?.emitResult();
 await sleep(200);
 

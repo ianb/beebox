@@ -48,17 +48,19 @@ export function verbatim(text: string, opts: { md: number | null; indent: string
   return out;
 }
 
-/** An author expression wrapped in generated code on its first and last lines. */
+/**
+ * An author expression wrapped in generated code: the prefix on its first
+ * line, the suffix on a generated line of its own. On the author's last line,
+ * a trailing `// comment` would swallow the suffix.
+ */
 function wrapped(expr: string, opts: { md: number; prefix: string; suffix: string }): GenLine[] {
   const lines = verbatim(expr, { md: opts.md, indent: "" });
   const first = lines[0];
-  const last = lines.at(-1);
   if (first) {
     first.text = `${opts.prefix}${first.text}`;
     first.col = opts.prefix.length;
   }
-  if (last) last.text = `${last.text}${opts.suffix}`;
-  return lines;
+  return [...lines, gen(`  ${opts.suffix}`)];
 }
 
 export function emitExamples(examples: Array<Example | ThrowsExample>, ctx: EmitContext): GenLine[] {

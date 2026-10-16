@@ -6,9 +6,15 @@
  *
  *   const log = makeLog("ChatSession");
  *   log("drainQueue", count);   // → [ChatSession:drainQueue] 3
+ *
+ * These lines are a box server's record of its chat sessions. The test suite
+ * sets `BBX_CHAT_SESSION_LOG=off` (test/helpers/quiet-chat-session-log.ts):
+ * every test that drives a real session would otherwise print them into its
+ * TAP output. Read per call, so a test can turn them back on.
  */
 export function makeLog(prefix: string): (context: string, ...args: unknown[]) => void {
   return (context: string, ...args: unknown[]): void => {
+    if (process.env["BBX_CHAT_SESSION_LOG"] === "off") return;
     console.log(`[${prefix}:${context}]`, ...args);
   };
 }

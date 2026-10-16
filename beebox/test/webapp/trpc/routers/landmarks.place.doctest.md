@@ -13,20 +13,11 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import assert from "node:assert/strict";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { expandLabel } from "../../../../src/core/landmark/expand-label.js";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 

@@ -16,6 +16,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import net from "node:net";
 import { makeTestServer, TEST_SLUG } from "../../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../../helpers/trpc-context.js";
 import { statusRouter } from "../../../../../src/webapp/trpc/routers/status.js";
 
 const server = await makeTestServer();
@@ -153,7 +154,7 @@ sync `containWithinBox` call is reachable with an ordinary `../<sibling>`
 path):
 
 ```ts continue
-const ctx = { boxRoot: server.boxRoot, boxSlug: "t", eventBus: server.eventBus, services: {}, user: null, authed: true, isOwner: true, isAuthenticatedOwner: false, actor: "none" } as const;
+const ctx = trpcContext({ boxRoot: server.boxRoot, boxSlug: "t", eventBus: server.eventBus, actor: "none" });
 const escapeBrowse = await statusRouter.createCaller(ctx).browse({ path: `../${boxDirName}-other` });
 // The box root's own directory name varies per run (a temp dir), so compare
 // against the same computed sibling name rather than a fixed literal.

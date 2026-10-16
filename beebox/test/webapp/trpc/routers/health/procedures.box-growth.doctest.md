@@ -14,27 +14,15 @@ import {
   readBoxGrowthState,
 } from "../../../../../src/core/box-growth/health.js";
 import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string, isOwner: boolean) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus: {
-      emit: () => 0,
-      emitTransient: () => {},
-      readSince: () => [],
-      readRecent: () => [],
-      subscribe: () => ({ unsubscribe: () => {} }),
-      prune: () => 0,
-      close: () => {},
-    },
-    services: {},
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
     isOwner,
     isAuthenticatedOwner: isOwner,
-    actor: "user",
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 

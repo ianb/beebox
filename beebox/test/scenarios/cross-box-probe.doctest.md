@@ -43,6 +43,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTwoBoxTestServer, commitAll } from "../helpers/test-server.js";
+import { silentEventBus, trpcContext } from "../helpers/trpc-context.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../src/core/secrets/lifecycle.js";
@@ -51,30 +52,16 @@ import type { EventBus } from "../../src/core/event-bus/core.js";
 
 const BETA_MARKER = "BETA-SECRET-MARKER-9f3c1a";
 
-const noBus: EventBus = {
-  emit: () => 0,
-  emitTransient: () => {},
-  readSince: () => [],
-  readRecent: () => [],
-  subscribe: () => ({ unsubscribe: () => {} }),
-  prune: () => 0,
-  close: () => {},
-};
-
 /** A tRPC caller authenticated to `alpha` (or any given box), the shape the
  *  real per-box auth wall constructs after admitting a request. */
 function callerFor(boxRoot: string, eventBus?: EventBus) {
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot,
     boxSlug: "alpha",
-    eventBus: eventBus ?? noBus,
-    services: {},
+    eventBus: eventBus ?? silentEventBus,
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-    actor: "user",
-  });
+  }));
 }
 
 /** Run a tRPC call, reporting either its result or the error code. */

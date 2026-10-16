@@ -9,6 +9,7 @@ the saved fields.
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext, TrpcUser } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { simpleGit } from "simple-git";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -17,17 +18,7 @@ import { addInvitedMember, addUser, createFirstUser } from "../../../../src/weba
 
 // Owner context (ownerProcedure requires ctx.isOwner).
 function caller(boxRoot: string, user: TrpcUser | null = { email: "owner@example.com", name: "Owner" }) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, user, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 ```

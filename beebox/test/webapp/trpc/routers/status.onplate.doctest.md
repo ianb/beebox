@@ -10,14 +10,12 @@ don't count.
 ```ts setup
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 
 function contextFor(box: TmpBox) {
-  const ctx: TrpcContext = {
-    boxRoot: box.root, boxSlug: "t", user: null, authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user", services: {},
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", isAuthenticatedOwner: true });
   return statusRouter.createCaller(ctx);
 }
 

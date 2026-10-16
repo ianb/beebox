@@ -11,22 +11,18 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeClaudeCli } from "../../../../src/services/claude-cli.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 ```
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const claudeCli = createFakeClaudeCli({ loggedIn: false });
-const ctx: TrpcContext = {
+const ctx: TrpcContext = trpcContext({
   boxRoot: box.root,
-  boxSlug: "test",
-  eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
   services: { claudeCli },
   user: { email: "owner@example.com", name: "Owner" },
-  authed: true,
-  isOwner: true,
   isAuthenticatedOwner: true,
-  actor: "user",
-};
+});
 const admin = appRouter.createCaller(ctx).admin;
 ```
 

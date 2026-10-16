@@ -22,6 +22,7 @@ gap are pinned before anything moves
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TestServer } from "../../../helpers/doctest-server.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { SessionEntry } from "../../../../src/cli/lib/session.js";
@@ -31,17 +32,11 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 function caller(server: TestServer) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: server.boxRoot,
-    boxSlug: "test",
     eventBus: server.eventBus,
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 
@@ -164,11 +159,12 @@ nobody to keep it from, and any reader of that box sees it:
 
 ```ts continue
 function callerAs(server: TestServer, email: string) {
-  const ctx: TrpcContext = {
-    boxRoot: server.boxRoot, boxSlug: "test", eventBus: server.eventBus,
-    services: {}, user: { email, name: email }, authed: true, isOwner: false,
-    isAuthenticatedOwner: false, actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({
+    boxRoot: server.boxRoot,
+    eventBus: server.eventBus,
+    user: { email, name: email },
+    isOwner: false,
+  });
   return appRouter.createCaller(ctx);
 }
 const anyReader = await callerAs(ctx, "grace@example.com").chat.bootstrap({ slice: TAIL });

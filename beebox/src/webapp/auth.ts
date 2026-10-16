@@ -65,7 +65,10 @@ function getSessionSecret(): string {
  *
  * Timing-safe comparison so the key cannot be brute-forced via response time.
  */
-export function verifyDiagBearerKey(request: FastifyRequest): boolean {
+/** The request fields the diagnostic-key checks read. A FastifyRequest is one. */
+export type DiagRequest = Pick<FastifyRequest, "method" | "url" | "headers">;
+
+export function verifyDiagBearerKey(request: Pick<DiagRequest, "headers">): boolean {
   const key = process.env.BBX_DIAG_API_KEY;
   if (!key) return false;
   const auth = request.headers["authorization"];
@@ -116,7 +119,7 @@ function parseTrpcProcedures(url: string): string[] | null {
   return pathSegment.split(",");
 }
 
-export function isDiagnosticBypassRequest(request: FastifyRequest): boolean {
+export function isDiagnosticBypassRequest(request: DiagRequest): boolean {
   if (request.method !== "GET") return false;
   const procedures = parseTrpcProcedures(request.url);
   if (procedures === null || procedures.length === 0) return false;

@@ -28,10 +28,10 @@ export interface TmpBox {
   list(subdir?: string): Promise<string>;
   /** Read file contents. */
   read(relativePath: string): Promise<string>;
-  /** Write a file, creating parent dirs as needed. */
-  write(relativePath: string, content: string): Promise<void>;
+  /** Write a file (text, or bytes for a binary fixture), creating parent dirs as needed. */
+  write(relativePath: string, content: string | Uint8Array): Promise<void>;
   /** Alias for write. */
-  seed(relativePath: string, content: string): Promise<void>;
+  seed(relativePath: string, content: string | Uint8Array): Promise<void>;
   /** Stage all and commit (only works if git was initialized). */
   commitAll(message: string): void;
   /** Remove the temp directory. */
@@ -120,12 +120,12 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
     async read(relativePath: string) {
       return readFile(join(root, relativePath), "utf-8");
     },
-    async write(relativePath: string, content: string) {
+    async write(relativePath: string, content: string | Uint8Array) {
       const fullPath = join(root, relativePath);
       await mkdir(dirname(fullPath), { recursive: true });
       await writeFile(fullPath, content);
     },
-    async seed(relativePath: string, content: string) {
+    async seed(relativePath: string, content: string | Uint8Array) {
       return box.write(relativePath, content);
     },
     commitAll(message: string) {

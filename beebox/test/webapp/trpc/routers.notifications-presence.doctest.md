@@ -13,6 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { notifyBoxholder } from "../../../src/core/notify-boxholder.js";
 import { livePresence } from "../../../src/core/notification/presence.js";
@@ -31,18 +32,12 @@ for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY
 const box = await makeTmpBox({ git: true });
 
 function caller(over: Partial<TrpcContext>) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: box.root,
     boxSlug: "alpha",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-    actor: "user",
     ...over,
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 

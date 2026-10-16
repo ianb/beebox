@@ -5,33 +5,17 @@ mobile pairing procedures beside it: minting a credential is not something a box
 member — let alone a machine credential — may do.
 
 ```ts setup
-import type { EventBus } from "../../../../src/core/event-bus/core.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { verifyScanToken } from "../../../../src/core/scan/tokens.js";
 
-const eventBus: EventBus = {
-  emit: () => 0,
-  emitTransient: () => {},
-  readSince: () => [],
-  readRecent: () => [],
-  subscribe: () => ({ unsubscribe: () => {} }),
-  prune: () => 0,
-  close: () => {},
-};
-
 function caller(boxRoot: string, { isOwner }: { isOwner: boolean }) {
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus,
-    services: {},
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
     isOwner,
-    isAuthenticatedOwner: false,
-    actor: "user",
-  });
+  }));
 }
 ```
 

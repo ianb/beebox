@@ -19,7 +19,6 @@ import {
   RedeclaredFieldError,
   RedeclaredTagError,
   type CardSchemaConfig,
-  type CardSummaryParts,
   type CardValidateInput,
   type FieldDecl,
   type LintIssue,
@@ -121,11 +120,8 @@ The delta sees the merged fields (`card.mood`) and the base's summary
 ```ts
 const schema = cardSchema("progress", extendSchema(progressBase, {
   fields: { mood: z.string().optional() },
-  summarize: (card, base) => {
-    // `base` is the base schema's result, which may carry `detail` and `attrs`.
-    const baseParts: CardSummaryParts = base;
-    return { ...base, detail: `${baseParts.detail ?? ""}, mood ${card.mood ?? "unset"}` };
-  },
+  // `base` is the base schema's result, which may carry `detail` and `attrs`.
+  summarize: (card, base) => ({ ...base, detail: `${base.detail ?? ""}, mood ${card.mood ?? "unset"}` }),
 }));
 schema.summarize?.({ type: "progress", score: 7, status: "open", body: "", mood: "bright" }, sampleBase)
 => { title: "T", detail: "score 7, mood bright", attrs: { score: 7 } }

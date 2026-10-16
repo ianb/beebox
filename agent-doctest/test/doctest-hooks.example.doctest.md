@@ -18,6 +18,13 @@ String results are compared literally (no quotes needed):
 => HELLO WORLD
 ```
 
+A checked line may end in a comment:
+
+```
+1 + 1 // the comment is the author's, not part of the value
+=> 2
+```
+
 ## Multiple examples in one block
 
 Examples in the same block share scope — variables persist between them:

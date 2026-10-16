@@ -10,6 +10,7 @@ in `createContext` (`server-box-scope.ts`) so these gates are pure checks.
 import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import { router, publicProcedure, authedProcedure, ownerProcedure, authenticatedOwnerProcedure } from "../../../src/webapp/trpc/procedures.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 
 const testRouter = router({
   pub: publicProcedure.query(() => "pub-ok"),
@@ -20,18 +21,14 @@ const testRouter = router({
 
 // Full context with the gate booleans defaulting to denied; override per case.
 function caller(over: Partial<TrpcContext>) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: "/x",
     boxSlug: "t",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
     authed: false,
     isOwner: false,
-    isAuthenticatedOwner: false,
     actor: "none",
     ...over,
-  };
+  });
   return testRouter.createCaller(ctx);
 }
 

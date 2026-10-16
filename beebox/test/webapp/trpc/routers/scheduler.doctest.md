@@ -12,6 +12,7 @@ throws are covered here (running a real script is exercised elsewhere).
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { getLog } from "../../../../src/lib/git/core/operations.js";
 import { parse as parseYaml } from "yaml";
 import assert from "node:assert/strict";
@@ -19,17 +20,7 @@ import { TRPCError } from "@trpc/server";
 import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 

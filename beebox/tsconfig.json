@@ -24,7 +24,7 @@
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": "src",
-    "lib": ["ES2023"],
+    "lib": ["ES2024"],
     "types": ["node"],
     // The doctest runner (tap + tsx) uses THIS tsconfig, so a frontend module
     // it exercises can only be imported if every alias that module uses

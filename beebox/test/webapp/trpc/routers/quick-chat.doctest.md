@@ -11,13 +11,10 @@ import { TRPCError } from "@trpc/server";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot, boxSlug: "test", authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user", user: null,
-    services: { jev: undefined },
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true, services: { jev: undefined } });
   return quickChatRouter.createCaller(ctx);
 }
 async function code(run: () => Promise<unknown>) {

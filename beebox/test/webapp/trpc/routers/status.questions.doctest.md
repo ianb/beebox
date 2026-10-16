@@ -13,19 +13,10 @@ import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function contextFor(box: TmpBox) {
-  const ctx: TrpcContext = {
-    boxRoot: box.root,
-    boxSlug: "t",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", isAuthenticatedOwner: true });
   return statusRouter.createCaller(ctx);
 }
 

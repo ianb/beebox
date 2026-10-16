@@ -18,19 +18,10 @@ import type { TodoParamsSchema } from "../../../../src/core/todo/collection.js";
 import type { TodoQueryResult } from "../../../../src/core/todo/query.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string) {
-  const ctx: TrpcContext = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 

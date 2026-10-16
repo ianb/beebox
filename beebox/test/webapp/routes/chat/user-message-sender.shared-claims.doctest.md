@@ -12,6 +12,7 @@ one chat message: first the route and the runtime's sender, then the route and
 import type { BusEvent, EventBus } from "../../../../src/core/event-bus/core.js";
 import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";
@@ -27,7 +28,13 @@ const generalJev = {
 };
 
 function quickChat(boxRoot: string, eventBus: EventBus) {
-  return quickChatRouter.createCaller({ boxRoot, boxSlug: "test", authed: true, isOwner: false, isAuthenticatedOwner: false, actor: "none", user: null, services: { jev: generalJev }, eventBus });
+  return quickChatRouter.createCaller(trpcContext({
+    boxRoot,
+    isOwner: false,
+    actor: "none",
+    services: { jev: generalJev },
+    eventBus,
+  }));
 }
 
 /** Send through the runtime's sender into a new chat, as quickChat does. */
