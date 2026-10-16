@@ -34,7 +34,7 @@ import type { Workstream, WorkstreamListItem } from "../../../src/frontend/types
 router.update({ history: createMemoryHistory({ initialEntries: ["/"] }) });
 const render = (element: ReactElement): string =>
   renderToStaticMarkup(createElement(WorkstreamsApiProvider, null,
-    createElement(RouterContextProvider, { router }, element)));
+    createElement(RouterContextProvider, { router, children: element })));
 
 const now = new Date("2026-08-24T12:00:00.000Z");
 

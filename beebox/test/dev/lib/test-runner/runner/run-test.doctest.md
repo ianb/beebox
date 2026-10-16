@@ -106,6 +106,7 @@ const linkedPackageDocsRejected = await ensureAuditPackageDocs(box.root, {
   id: "photos",
   prompt: "photos",
   expected_level: "knows_about",
+  watch_for: "photos docs",
   should_read: ["node_modules/beebox/box-docs/phone-photos.md"],
 }).then(() => false, (error: Error) => error.message.includes("symbolic link"));
 linkedPackageDocsRejected
@@ -154,6 +155,7 @@ await ensureAuditPackageDocs(clone.root, {
   id: "voice",
   prompt: "voice",
   expected_level: "knows_about",
+  watch_for: "voice docs",
   should_read: ["node_modules/beebox/box-docs/chat-voice.md"],
 });
 await stat(clone.path("node_modules/beebox/box-docs/chat-voice.md")).then((info) => info.isFile())

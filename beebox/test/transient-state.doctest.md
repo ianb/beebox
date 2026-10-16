@@ -20,7 +20,7 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 
 /** Run `fn`, returning whatever it throws instead of propagating. */
-async function tryCall(fn) {
+async function tryCall(fn: () => Promise<unknown>): Promise<unknown> {
   try {
     return await fn();
   } catch (e) {
@@ -158,7 +158,7 @@ const gmailState = transientStatePath(box.root, "gmail");
 await mkdir(path.dirname(gmailState), { recursive: true });
 await writeFile(gmailState, '{"historyId": "trunca');
 
-const readBack = await tryCall(() => loadTransientState({
+const readBack = await tryCall(() => loadTransientState<{ historyId: string | null }>({
   boxRoot: box.root, connectorName: "gmail", defaultValue: { historyId: null },
 }));
 readBack instanceof TransientStateCorruptError
@@ -169,7 +169,7 @@ The RMW aborts too, so the damaged bytes are still on disk for a human to look
 at rather than replaced by a one-field default.
 
 ```ts continue
-const updated = await tryCall(() => updateTransientState({
+const updated = await tryCall(() => updateTransientState<{ historyId: string | null }>({
   boxRoot: box.root,
   connectorName: "gmail",
   defaultValue: { historyId: null },

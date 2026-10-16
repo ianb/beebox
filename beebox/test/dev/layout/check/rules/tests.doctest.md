@@ -70,7 +70,7 @@ const extraRootFindings = testsRule.check(extraRoot);
 extraRootFindings.length
 => 1
 
-extraRootFindings[0].message
+extraRootFindings[0]?.message
 => second source root; fold it into pkg/src so tests have one tree to mirror
 ```
 
@@ -87,7 +87,7 @@ const outsideRootFindings = testsRule.check(outsideRoot);
 outsideRootFindings.length
 => 1
 
-outsideRootFindings[0].message
+outsideRootFindings[0]?.message
 => tests live under pkg/test, mirroring the source path
 ```
 
@@ -104,10 +104,10 @@ const flattenedFindings = testsRule.check(flattened);
 flattenedFindings.length
 => 1
 
-flattenedFindings[0].rule
+flattenedFindings[0]?.rule
 => test-naming
 
-flattenedFindings[0].message
+flattenedFindings[0]?.message
 => chat-session-archive.doctest.md names no module or directory in pkg/src/core; name it subject.facet.ext after the module or directory it tests
 ```
 
@@ -128,10 +128,10 @@ const misplacedGroupFindings = testsRule.check(misplacedGroup);
 misplacedGroupFindings.length
 => 1
 
-misplacedGroupFindings[0].rule
+misplacedGroupFindings[0]?.rule
 => test-structure
 
-misplacedGroupFindings[0].message
+misplacedGroupFindings[0]?.message
 => pkg/test/core/misc has no source counterpart; move this test to the mirror of the module it tests
 ```
 
@@ -205,9 +205,9 @@ const misplacedHelperFindings = testsRule.check(misplacedHelper);
 misplacedHelperFindings.length
 => 1
 
-misplacedHelperFindings[0].rule
+misplacedHelperFindings[0]?.rule
 => support-placement
 
-misplacedHelperFindings[0].message
+misplacedHelperFindings[0]?.message
 => used by tests under pkg/test/core/agent; move it to pkg/test/core/agent/ (or a support directory directly under it)
 ```

@@ -14,7 +14,7 @@ import { MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session-oversize.js
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { errnoCode } from "../../../src/shared/error-guards.js";
 
-function turn({ uuid, text, imageData }) {
+function turn({ uuid, text, imageData }: { uuid: string; text: string; imageData?: string | undefined }) {
   return JSON.stringify({
     type: "user",
     uuid,
@@ -32,7 +32,7 @@ function turn({ uuid, text, imageData }) {
 const photo = Buffer.from("p".repeat(400_000)).toString("base64");
 const hugeText = "z".repeat(MAX_SESSION_LINE_BYTES);
 
-async function kinds(logPath) {
+async function kinds(logPath: string) {
   const seen = [];
   for await (const line of readTranscriptLines(logPath)) {
     seen.push(`${String(line.lineNumber)}:${line.kind}${line.kind === "parseable" && line.mediaStripped ? "+stripped" : ""}`);
@@ -41,7 +41,7 @@ async function kinds(logPath) {
 }
 
 /** The text of each turn the reader handed over as parseable. */
-async function parseableTexts(logPath) {
+async function parseableTexts(logPath: string) {
   const out = [];
   for await (const line of readTranscriptLines(logPath)) {
     if (line.kind === "parseable") out.push(JSON.parse(line.text).message.content[0].text);
@@ -50,7 +50,7 @@ async function parseableTexts(logPath) {
 }
 
 /** Line numbers the reader refused to parse. */
-async function oversizeLineNumbers(logPath) {
+async function oversizeLineNumbers(logPath: string) {
   const out = [];
   for await (const line of readTranscriptLines(logPath)) {
     if (line.kind === "oversize") out.push(line.lineNumber);
@@ -59,7 +59,7 @@ async function oversizeLineNumbers(logPath) {
 }
 
 /** How many lines were pulled before breaking out at `needle`. */
-async function readUntil(logPath, needle) {
+async function readUntil(logPath: string, needle: string) {
   let read = 0;
   for await (const line of readTranscriptLines(logPath)) {
     read += 1;
@@ -69,7 +69,7 @@ async function readUntil(logPath, needle) {
 }
 
 /** The errno of a read that failed, or "(no error)". */
-async function readErrno(logPath) {
+async function readErrno(logPath: string) {
   try {
     for await (const _line of readTranscriptLines(logPath)) break;
     return "(no error)";

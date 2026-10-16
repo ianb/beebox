@@ -15,11 +15,11 @@ const MONO_ROOT = resolve(import.meta.dirname, "../..");
 const CHECK = join(MONO_ROOT, "bin/doc-lifecycle-check.ts");
 const LAND = join(MONO_ROOT, "bin/land");
 
-function git(repo, ...args) {
+function git(repo: string, ...args: string[]) {
   return execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" }).trim();
 }
 
-function writePlan({ repo, rel, status, title = "Test" }) {
+function writePlan({ repo, rel, status, title = "Test" }: { repo: string; rel: string; status: string; title?: string }) {
   const absolute = join(repo, rel);
   mkdirSync(dirname(absolute), { recursive: true });
   writeFileSync(absolute, `---\ntitle: ${title}\nstatus: ${status}\nworkstream: test\nissues: []\n---\n# ${title}\n`);
@@ -36,14 +36,14 @@ function fixture() {
   return repo;
 }
 
-function runCheck(repo, ...args) {
+function runCheck(repo: string, ...args: string[]) {
   return spawnSync("node", ["--import", "tsx", CHECK, "--repo", repo, ...args], {
     cwd: MONO_ROOT,
     encoding: "utf8",
   });
 }
 
-function runLand(repo, ...args) {
+function runLand(repo: string, ...args: string[]) {
   return spawnSync("bash", [LAND, ...args], { cwd: repo, encoding: "utf8" });
 }
 ```

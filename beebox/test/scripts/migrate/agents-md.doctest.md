@@ -31,7 +31,8 @@ The registry entry uses the name the resolver checks (later migrations
 follow it in the list):
 
 ```ts
-MIGRATIONS.find((m) => m.name === AGENTS_MD_MIGRATION)?.script
+const migration = MIGRATIONS.find((m) => m.name === AGENTS_MD_MIGRATION);
+migration !== undefined && "script" in migration ? migration.script : undefined
 => src/scripts/migrate/agents-md/run.ts
 ```
 

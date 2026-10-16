@@ -327,10 +327,12 @@ the new one. Twenty interleaved writes of two different documents leave a file
 that parses, and no temp files behind.
 
 ```ts continue
-const bodies = [JSON.stringify({ who: "a".repeat(20_000) }), JSON.stringify({ who: "b".repeat(20_000) })];
+const bodyA = JSON.stringify({ who: "a".repeat(20_000) });
+const bodyB = JSON.stringify({ who: "b".repeat(20_000) });
+const bodies = [bodyA, bodyB];
 await Promise.all(
   Array.from({ length: 20 }, (_unused, index) =>
-    app.inject({ method: "PUT", url: `${scope}/data/racy`, headers: json, payload: bodies[index % 2] })),
+    app.inject({ method: "PUT", url: `${scope}/data/racy`, headers: json, payload: index % 2 === 0 ? bodyA : bodyB })),
 );
 const racy = await fs.readFile(path.join(store, "demo-ws/instrument/data/racy.json"), "utf8");
 const entries = await fs.readdir(path.join(store, "demo-ws/instrument/data"));
