@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-16T06:47:47Z
-Total documents: 534
+Generated: 2026-10-16T12:46:05Z
+Total documents: 535
 
 ## Issues
 
@@ -21,6 +21,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/codex-sdk-backend.review.md** — "Plan Engineering Review — Codex SDK backend" (162 lines) · implementation review
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (372 lines) · shipped history · implemented
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines) · shipped history · implemented
+- **docs/implemented-plans/deck-theme.md** — "Deck system and card theme" (186 lines) · shipped history · implemented
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-lifecycle-clarity.md** — "Make current documentation and historical records distinguishable" (125 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-cards.md** — "Documentation structured like code: cards" (162 lines) · shipped history · implemented
@@ -671,7 +672,6 @@ Referenced by:
 - docs/plans/narration-mode.md:197 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - docs/plans/operator-member-password-reset.md:101 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
 - docs/plans/publish-sites-admin.md:163 (mention) — **Direction:** The starter is a conventional site-local React/Tailwind project with pinned own dependencies and its own
-- docs/theme-authoring.md:56 (link) — fixed theme-tour cards using the instructions in [frontend.md](../frontend.md)
 - frontend.md:219 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../dev/devprocess-talk/inventory.md:821 (mention) — | Craft skills bbx-debug, bbx-frontend, bbx-guide-testing | 2026-06-20 | 2026-10-07 19e261eb9 | "Current models debug an
 - ../dev/devprocess-talk/reports/sweep-instructions.md:25 (mention) — - **Appeared:** 2026-03-06 bedf968cf "Rewrite CLAUDE.md for clarity and add self-improvement meta-instruction" (body: "A
@@ -2246,14 +2246,15 @@ References:
 
 #### docs/theme-authoring.md
 
-Title: "Authoring themes" | 60 lines | current reference
+Title: "Authoring themes" | 45 lines | current reference
 
 Referenced by:
 - frontend.md:222 (link) — [theme authoring studio](docs/theme-authoring.md).
+- ../.claude/skills/bbx-theme/SKILL.md:8 (mention) — Read `beebox/docs/theme-authoring.md` for the studio and material hooks.
 
 References:
+- → ../.claude/skills/bbx-theme/SKILL.md (link)
 - → docs/box/card-themes.md (link)
-- → frontend.md (link)
 
 #### docs/todo-security.md
 
@@ -2435,12 +2436,12 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 192 lines | current reference
+Title: "Card themes" | 204 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
 - docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
-- docs/theme-authoring.md:55 (link) — Follow [card themes](box/card-themes.md) for the product contract. Then install the
+- docs/theme-authoring.md:38 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 - frontend.md:13 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 
 #### docs/box/history.md
@@ -4426,6 +4427,12 @@ References:
 - → docs/media/assets.md (link)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/deck-theme.md **[ORPHAN]**
+
+Title: "Deck system and card theme" | 186 lines | shipped history | implemented
+
+No references in or out.
 
 #### docs/implemented-plans/deferred-recoverable-agent-failures.md
 

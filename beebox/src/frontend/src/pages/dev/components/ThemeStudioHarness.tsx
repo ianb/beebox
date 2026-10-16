@@ -69,10 +69,12 @@ export function ThemeStudioHarness() {
       <datalist id="bbx-studio-system-names">
         {THEME_CATALOG.filter((theme) => theme.chrome).map((theme) => <option key={theme.name} value={theme.name}>{theme.label}</option>)}
         <option value="draft" />
+        <option value="undertow" /><option value="deck-study" /><option value="patina" />
       </datalist>
       <datalist id="bbx-studio-card-names">
         {THEME_CATALOG.filter((theme) => !theme.systemOnly).map((theme) => <option key={theme.name} value={theme.name}>{theme.label}</option>)}
         <option value="draft" />
+        <option value="undertow" /><option value="deck-study" /><option value="patina" />
       </datalist>
       <datalist id="bbx-studio-system-stocks">{(system?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
       <datalist id="bbx-studio-card-stocks">{(card?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
@@ -91,7 +93,7 @@ function ConversationSample() {
   return <section aria-label="Conversation styling sample" className="min-w-0">
     <div className="space-y-4 pb-4">
       <UserMessageSample />
-      <div className="bg-white rounded-lg px-4 py-3 text-warm-900">
+      <div className="bbx-chat-reply-material bg-white rounded-lg px-4 py-3 text-warm-900">
         <Markdown prose="block" onNavigate={noop}>{"Start with labeled envelopes and a small welcome table. **Keep the instructions short** so everyone can join in."}</Markdown>
       </div>
       <CalloutStack callouts={[{ context: "Ready to review", body: "The draft checklist is ready. **Bring spare envelopes** for new arrivals." }]} />
@@ -128,7 +130,11 @@ function NavigationSample() {
   return <div className="bbx-app-nav bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden" aria-label="Navigation styling sample">
     <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-1.5 text-sm">
       <span className="font-semibold">Seed exchange</span>
-      <span className="text-xs">Navigation sample</span>
+      <div className="flex gap-2">
+        <Button id="bbx-studio-nav-chat" size="sm" aria-pressed onClick={noop}>Chat</Button>
+        <Button id="bbx-studio-nav-notes" size="sm" intent="secondary" onClick={noop}>Notes</Button>
+        <Button id="bbx-studio-nav-more" size="sm" intent="secondary" onClick={noop}>More</Button>
+      </div>
     </div>
   </div>;
 }
