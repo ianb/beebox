@@ -222,6 +222,8 @@
 .bbx-card-surface[data-card-theme="night-atlas"] > .bbx-card-properties {
   border-radius: 0 12px 0 12px;
 }
+/* Settings cards stay light even when Night Atlas is the inherited card ink. */
+.bbx-card-theme[data-card-theme="night-atlas"] .bbx-system-theme-button { color: #174b4d; }
 .bbx-interface-tab[data-card-theme="night-atlas"] {
   background: #23666a;
   border-top-color: #5caaa4;
