@@ -195,11 +195,11 @@ system theme or an individual card. Explicit choices on other cards stay intact.
 
 ## Deck
 
-Deck combines a charcoal workspace with oversized rounded turquoise panels,
-printed grain, and offset teal outlines. Dark cards and assistant reply panels
-keep pale text clear; aqua user messages have petrol text and a firm offset
-shadow. The toolbar and composer use rounded controls with bright turquoise
-accents. Select `deck` with stock `panels` for the system or an individual card.
+Deck combines charcoal cloth with oversized rounded turquoise panels,
+uneven screen-printed ink, pale bands, and offset outlines. Fine woven fibers
+continue across dark cards and assistant reply panels without obscuring pale
+text. Aqua user messages have petrol text and soft dark offset shadows. The
+toolbar and composer use rounded controls with dyed turquoise accents. Select `deck` with stock `panels` for the system or an individual card.
 Its paired card choices are Deck, Paper, and Sticky note. Cards with an explicit
 choice keep their own material, including pale Paper on the dark workspace.
 
@@ -215,8 +215,9 @@ Select `night-atlas` with stock `lights` for the system or an individual card. I
 paired card choices are Night Atlas, Paper, and Sticky note. Explicit card choices
 keep their own material.
 
-Night Atlas’s background follows a four-minute orbit through field-like terrain,
-dense city lights, and open harbor water. Only the decorative background moves;
+Night Atlas’s background drifts slowly through field-like terrain, dense city
+lights, and open harbor water. The horizontal pan has a constant speed, with a
+thirty-minute traversal before returning; it does not accelerate midway. Only the decorative background moves;
 reduced-motion preferences keep it static.
 
 
