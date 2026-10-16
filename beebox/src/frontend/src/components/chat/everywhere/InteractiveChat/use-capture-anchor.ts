@@ -82,13 +82,18 @@ function useReaderScrolled(contentElRef: React.RefObject<HTMLDivElement | null>)
     const inChat = (e: Event) => e.target instanceof Node && contentElRef.current?.parentElement?.contains(e.target) === true;
     const mark = (e: Event) => { if (inChat(e)) scrolled.current = true; };
     const onKey = (e: KeyboardEvent) => { if (SCROLL_KEYS.has(e.key)) mark(e); };
+    // A scrollbar drag fires no wheel or touch; it starts on the scroller
+    // element itself, which a press on any message never does.
+    const onPointer = (e: PointerEvent) => { if (e.target === contentElRef.current?.parentElement) scrolled.current = true; };
     window.addEventListener("wheel", mark, { passive: true });
     window.addEventListener("touchmove", mark, { passive: true });
     window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointer);
     return () => {
       window.removeEventListener("wheel", mark);
       window.removeEventListener("touchmove", mark);
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer);
     };
   }, [contentElRef]);
   return { readScrolled, resetScrolled };

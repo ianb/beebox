@@ -15,7 +15,7 @@
  * one. Only a capture message counts as the arrival; a message typed in
  * another tab meanwhile does not end the wait. A reader who scrolls the chat
  * themselves after the bubble is anchored is left where they are. That is
- * read from their input (wheel, touch, scroll keys), not from the scroll
+ * read from their input (wheel, touch, scroll keys, a scrollbar drag), not from the scroll
  * position: the position also moves when the bubble leaves and the blank
  * space under it passes to the message above, and the scroller's "at bottom"
  * measures above that blank space, so neither tells a reader's scroll apart.
