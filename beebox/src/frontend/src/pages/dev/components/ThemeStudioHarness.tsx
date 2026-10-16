@@ -69,10 +69,12 @@ export function ThemeStudioHarness() {
       <datalist id="bbx-studio-system-names">
         {THEME_CATALOG.filter((theme) => theme.chrome).map((theme) => <option key={theme.name} value={theme.name}>{theme.label}</option>)}
         <option value="draft" />
+        <option value="undertow" /><option value="deck" /><option value="patina" />
       </datalist>
       <datalist id="bbx-studio-card-names">
         {THEME_CATALOG.filter((theme) => !theme.systemOnly).map((theme) => <option key={theme.name} value={theme.name}>{theme.label}</option>)}
         <option value="draft" />
+        <option value="undertow" /><option value="deck" /><option value="patina" />
       </datalist>
       <datalist id="bbx-studio-system-stocks">{(system?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
       <datalist id="bbx-studio-card-stocks">{(card?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
