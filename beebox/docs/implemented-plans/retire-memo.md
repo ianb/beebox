@@ -1,10 +1,10 @@
 ---
 title: "Retire the memo card type into doc"
-status: draft
+status: implemented
 workstream: retire-memo
 issues:
-  - ../../../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md
-  - ../../../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md
+  - ../../../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md
+  - ../../../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md
 ---
 # Retire the memo card type into doc
 
@@ -13,9 +13,9 @@ note's recording, transcript and transcription error move onto an `audio` card
 in the doc's attach scope. A script migration converts every existing memo.
 
 **Issues addressed:**
-[retire memo](../../../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
+[retire memo](../../../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
 (the anchor);
-[memo `source` vs emission `origin`](../../../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md)
+[memo `source` vs emission `origin`](../../../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md)
 (settled here: memo's `source` becomes `via.channel`, see Track B).
 Searched the queue for `memo`, `voice note`, `quick capture` title: the
 [standard card fields](../implemented-plans/standard-card-fields.md) plan

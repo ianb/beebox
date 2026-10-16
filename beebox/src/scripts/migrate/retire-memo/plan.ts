@@ -1,6 +1,6 @@
 /**
  * `retire-memo-2026-10` decision: every `*.memo.card` becomes a `*.doc.card`
- * with the same directory and basename (docs/plans/retire-memo.md, Track D).
+ * with the same directory and basename (docs/implemented-plans/retire-memo.md, Track D).
  *
  * Pure: the runner reads the box and hands over every text file and the list of
  * all file paths; this module returns the writes, recording moves and deletes.

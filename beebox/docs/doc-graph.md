@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-16T17:39:40Z
+Generated: 2026-10-16T19:07:55Z
 Total documents: 537
 
 ## Issues
@@ -1408,10 +1408,10 @@ Referenced by:
 - docs/plans/pdf-intake-design.md:61 (link) — **Intake-time extraction.** When a PDF arrives (`bbx import`, capture endpoint, email connector), the intake path runs d
 - ../dev/devprocess-talk/reports/sweep-instructions.md:342 (mention) — - **Lives in:** `beebox/docs/glossary.md` (91 lines).
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:18 (mention) — > glossary's new user-facing register (`beebox/docs/glossary.md`). UI copy
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:50 (mention) — and mostly needs a line in `docs/glossary.md` so the next agent chooses
 - ../issues/closed/docs-and-chores/2026-05-21-fill-out-the-glossary.md:12 (mention) — > apply and kept current through planning, replace `docs/glossary.md`. Its
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:45 (mention) — shows actual state with pending shown explicitly (`docs/glossary.md`,
 - ../issues/closed/features/2026-10-08-invisible-plumbing-reference-for-box-replies.md:41 (mention) — glossary's user-facing register (`beebox/docs/glossary.md`), the agent
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:47 (mention) — and mostly needs a line in `docs/glossary.md` so the next agent chooses
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:17 (mention) — them reached a shared document. `beebox/docs/glossary.md` has 25 entries and
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:100 (mention) — checking against the glossary (`beebox/docs/glossary.md`) — the codebase
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:29 (mention) — > settled — `beebox/docs/glossary.md` has a user-facing register per term
@@ -1594,6 +1594,7 @@ Referenced by:
 - docs/implemented-plans/notifications-design-notes.md:52 (mention) — record from pairing (`docs/mobile-contract.md`, `pairing.devices`), which
 - docs/implemented-plans/notifications.md:263 (mention) — - **Mobile contract.** `docs/mobile-contract.md:8` the sync rule; the
 - docs/implemented-plans/resilient-voice-recording.md:900 (mention) — - `mobile-contract.md` gains a voice staging section. §5.2 is marked "legacy,
+- docs/implemented-plans/retire-memo.md:222 (mention) — `docs/mobile-contract.md:1396-1411` prose changes from "memo" to "doc"; no
 - docs/implemented-plans/router-transient-failure-resilience.md:774 (mention) — paired to a dev-router URL at all (`beebox/docs/mobile-contract.md:21-23`).
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
 - docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
@@ -1611,7 +1612,6 @@ Referenced by:
 - docs/plans/invite-links-and-password-change.md:126 (mention) — `mobile-contract.md` change is required.
 - docs/plans/ios-input-plane-parity.md:95 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - docs/plans/ios-share-extension-capture.md:52 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/BeeBox/Services/LogForwarder.swift:283` posts to `t
-- docs/plans/retire-memo.md:222 (mention) — `docs/mobile-contract.md:1396-1411` prose changes from "memo" to "doc"; no
 - docs/plans/workspace-pane-controls.md:84 (mention) — | `docs/mobile-contract.md:285-290`: attention carries “focusedRef, and visible/hidden transcript”; “ordinary route move
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:21 (mention) — The boxholder requires the setting to work on iOS. The existing mobile contract requires web/native wire changes to upda
 - ../.claude/skills/bbx-ios-overlap/SKILL.md:13 (mention) — The reference is `beebox/docs/mobile-contract.md`: §7 Contract Surface Index,
@@ -1634,13 +1634,13 @@ Referenced by:
 - ../issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md:54 (mention) — ceiling). `docs/mobile-contract.md` carries the shared statement of the rule
 - ../issues/closed/bugs/2026-09-12-non-owner-cannot-see-or-revoke-their-own-paired-device.md:50 (mention) — `beebox/docs/mobile-contract.md` §1.2.
 - ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:14 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:27 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md:78 (mention) — (`docs/mobile-contract.md` §8 and the iOS mirror updated with it).
 - ../issues/closed/features/2026-08-03-ios-self-screenshot.md:66 (mention) — into the native bridge + `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:266 (mention) — where it matters most. See `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md:50 (mention) — rather than invent a second one; see `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:30 (link) — shape is in [mobile contract §5.11](../../../beebox/docs/mobile-contract.md).
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:31 (mention) — web (`docs/mobile-contract.md` §2).
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:24 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md:59 (mention) — `docs/mobile-contract.md:21-23` records the shape: *"A paired box's `baseURL`
 - ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:40 (mention) — - `docs/mobile-contract.md`: the sentence on `migration-pending`.
 - ../issues/docs-and-chores/2026-08-03-mobile-contract-missing-capture-bulk-rows.md:10 (mention) — `docs/mobile-contract.md` presents itself as the canonical Contract Surface
@@ -2712,6 +2712,7 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:47 (mention) — entries." `migrations.md:80-84`: "Never reorder, rename, or remove."
 - docs/implemented-plans/remove-cardworks-deletion.md:465 (mention) — `docs/cards/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:333 (mention) — it now means "from `src/cards/`"); retire `docs/cards/migrations.md` references to
+- docs/implemented-plans/retire-memo.md:291 (mention) — (`docs/cards/migrations.md:95-110`).
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
 - docs/implemented-plans/standard-card-fields.md:110 (mention) — (`docs/cards/migrations.md`, "Automatic convergence"), and a card the
 - docs/implemented-plans/vocab-glossary-sweep.md:59 (mention) — - `scripts/migrate/_harness.ts` (moved to `beebox/src/scripts/migrate/_harness.ts`) + `docs/cards/migrations.md` — migra
@@ -2720,7 +2721,6 @@ Referenced by:
 - docs/plans/asset-annex.md:761 (mention) — since it accurately records a system that existed. `docs/cards/migrations.md`
 - docs/plans/asset-offbox-storage.md:577 (mention) — nothing in `docs/cards/migrations.md`. The only state change is Track A2
 - docs/plans/migration-reliability.md:759 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
-- docs/plans/retire-memo.md:291 (mention) — (`docs/cards/migrations.md:95-110`).
 - docs/plans/scan-guide-card.md:88 (mention) — script + procedure kinds; `docs/cards/migrations.md`). NOT used — see
 - docs/reports/migration-rollout-2026-05-23.md:3 (mention) — Frozen 2026-09-25 from `docs/migrations.md`. The 2026-05-23 production
 - docs/reports/migration-rollout-2026-05-23.md:6 (link) — runbook is [card migrations](../cards/migrations.md). Do not update in place.
@@ -6329,6 +6329,25 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/retire-memo.md
+
+Title: "Retire the memo card type into doc" | 400 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:14 (mention) — **Closed:** Closed by the retire-memo branch. No memo `source` field remains; the glossary records `via` vs `origin`. Pl
+- ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md:14 (mention) — **Closed:** Closed by the retire-memo branch (merge of worktree-retire-memo). The memo card type is removed; migration `
+- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/retire-memo.md
+
+References:
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
+- → ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (link)
+- → docs/implemented-plans/standard-card-fields.md (link)
+- → docs/mobile-contract.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/cards/migrations.md (mention)
+
 #### docs/implemented-plans/retire-type-specific-core-tags.md
 
 Title: "Retire the four type-specific core Markdoc tags" | 312 lines | shipped history | implemented
@@ -6722,13 +6741,13 @@ Title: "Standard card fields" | 635 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/chat-titles.md:80 (mention) — - **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
-- docs/plans/retire-memo.md:21 (link) — [standard card fields](../implemented-plans/standard-card-fields.md) plan
+- docs/implemented-plans/retire-memo.md:21 (link) — [standard card fields](../implemented-plans/standard-card-fields.md) plan
 - ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (link) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
 
 References:
 - → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (frontmatter)
 - → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (link)
-- → ../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
 - → ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md (link)
 - → ../issues/closed/features/2026-09-27-card-properties-design-session.md (link)
 - → docs/cards/schemas.md (mention)
@@ -7829,8 +7848,8 @@ Referenced by:
 - ../bin/AGENTS.md:102 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:179 (mention) — - **Lives in:** `bin/comments`, `bin/comments.ts`, `workstreams-app/src/server/comments-service.ts`, `workstreams-app/sr
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:42 (link) — [document-comments](../../../beebox/docs/plans/document-comments.md) plan
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:70 (link) — - [document-comments](../../../beebox/docs/plans/document-comments.md) — the
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:39 (link) — [document-comments](../../beebox/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:19 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:14 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) is
 - ../issues/features/2026-10-13-suggested-edits-tracked-changes.md:80 (link) — - [Document comments](../../beebox/docs/plans/document-comments.md) is the
@@ -8505,23 +8524,6 @@ References:
 - → ../.claude/agents/finish.md (link)
 - → docs/README.md (link)
 - → docs/reports/plan-directory-migration-history-2026-09-13.md (link)
-
-#### docs/plans/retire-memo.md
-
-Title: "Retire the memo card type into doc" | 400 lines | proposal | draft
-
-Referenced by:
-- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:7 (frontmatter) — design: ../../beebox/docs/plans/retire-memo.md
-
-References:
-- → ../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (frontmatter)
-- → ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (frontmatter)
-- → ../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
-- → ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (link)
-- → docs/implemented-plans/standard-card-fields.md (link)
-- → docs/mobile-contract.md (mention)
-- → src/core/agent-guide/guide.md (mention)
-- → docs/cards/migrations.md (mention)
 
 #### docs/plans/route-splitting.md
 
@@ -9726,8 +9728,8 @@ Referenced by:
 - docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/implemented-plans/remove-telegram.md:152 (mention) — - **Agent-facing text:** `src/core/agent-guide/guide.md:309, 405`,
+- docs/implemented-plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
-- docs/plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:84 (mention) — | 31 | Note 4: it offered to remind the person this evening; "it offered, didn't do it". | P | Transcript 11:45:15: "I c

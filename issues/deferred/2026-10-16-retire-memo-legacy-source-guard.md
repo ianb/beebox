@@ -4,7 +4,7 @@ workstream: unattached
 activate-on: 2026-11-16
 category: code-quality
 area: beebox
-design: ../../beebox/docs/plans/retire-memo.md
+design: ../../beebox/docs/implemented-plans/retire-memo.md
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retire-memo — registering the retire-memo-2026-10 migration (plan Track B)

@@ -1,6 +1,6 @@
 ---
 title: "Two vocabularies for how input arrived: emission `origin: typed|voice` vs memo `source: text|voice|email`"
-workstream: dev-comments
+workstream: retire-memo
 area: beebox
 needs: [decision]
 filed-by: agent
@@ -8,7 +8,10 @@ discovered-by: Ian
 discovered-in: worktree-dev-comments — aligning the document-comments schema with the box's
 labels: [vocabulary]
 priority: important
+resolution: implemented
 ---
+
+**Closed:** Closed by the retire-memo branch. No memo `source` field remains; the glossary records `via` vs `origin`. Plan: beebox/docs/implemented-plans/retire-memo.md.
 
 The box describes "how did this text arrive" in two places, with two field names
 and two spellings of the same value:
@@ -36,7 +39,7 @@ emission is one interactive act, a memo's `source` is a provenance class that
 also covers `email` and has no interactive sense. But an agent writing a new
 surface has to pick one and has no rule for choosing, which is how a third
 spelling gets added. That already nearly happened: the dev-repo
-[document-comments](../../beebox/docs/plans/document-comments.md) plan
+[document-comments](../../../beebox/docs/plans/document-comments.md) plan
 initially invented `kind: typed | spoken`, a third field name and a third value
 word, before being aligned to the emission model.
 

@@ -1,7 +1,7 @@
 # Migration: retire the memo card type
 
 `retire-memo-2026-10` turns every `*.memo.card` into a `*.doc.card` with the
-same directory and basename (docs/plans/retire-memo.md, Track D). A recording
+same directory and basename (docs/implemented-plans/retire-memo.md, Track D). A recording
 moves under an `audio` card in the doc's attach scope, and every mention of the
 memo's filename follows the rename. It fails closed: a field it does not map,
 or a recording it cannot place, names the memo, writes nothing, and exits 1.

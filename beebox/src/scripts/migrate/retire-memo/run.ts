@@ -2,7 +2,7 @@
 /**
  * `retire-memo-2026-10` runner: every `*.memo.card` becomes a `*.doc.card`,
  * and a recording moves under an `audio` card in the doc's attach scope
- * (`plan.ts` holds the decision; docs/plans/retire-memo.md, Track D). Phases:
+ * (`plan.ts` holds the decision; docs/implemented-plans/retire-memo.md, Track D). Phases:
  *
  * 1. Plan: read every card and `.md` file and list every file, call
  *    `planRetireMemo`. Any failure prints each path and exits 1 with nothing
