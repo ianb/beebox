@@ -3,14 +3,15 @@ title: Ribbon system and card theme
 status: implemented
 workstream: theme-polish
 issues:
-  - ../../../issues/code-quality/2026-10-15-themed-file-card-unit-layout.md
+  - ../../../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md
 ---
 # Ribbon system and card theme
 
 Make the approved Ribbon study available in the existing system and card theme
 pickers. Preserve its flowing rust, amber and green bands and unpatterned tabs.
 
-**Issues addressed:** None. Searched the theme issue cluster: box-authored themes
+**Issues addressed:** The finish-time ThemedFileCard layout issue was fixed in
+the same theme-polish work. Searched the theme issue cluster: box-authored themes
 and the closed catalog decision concern extension contracts, outside this theme.
 
 ## Design
@@ -149,8 +150,8 @@ None; one appearance with an approved reference and existing data contract.
 
 The human approved the previously excluded ThemedFileCard layout repair during
 finish. The entry, helpers and matching doctests now live under the required
-`view/` unit; the mechanical move does not alter theme behavior. The related
-issue remains open for the finish close-out.
+`view/` unit; the mechanical move does not alter theme behavior. The issue is
+closed after commit `c69cd3b04` resolved the layout finding.
 
 ## Open design questions
 

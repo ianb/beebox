@@ -3,14 +3,15 @@ title: Theme authoring studio
 status: implemented
 workstream: theme-polish
 issues:
-  - ../../../issues/code-quality/2026-10-15-themed-file-card-unit-layout.md
+  - ../../../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md
 ---
 # Theme authoring studio
 
 Provide a repeatable development page for styling themes against fixed content.
 A developer edits CSS, opens a URL, and captures the same surfaces at two widths.
 
-**Issues addressed:** None. Searched the public queue for theme harness, preview,
+**Issues addressed:** The finish-time ThemedFileCard layout issue was fixed in
+the same theme-polish work. Searched the public queue for theme harness, preview,
 rig, and authoring. The related `2026-09-23-test1-lacks-theme-tour-fixtures` issue
 concerns real-box fixtures; the studio has its own fixed content and does not
 resolve that issue.
@@ -166,4 +167,4 @@ browser. Paper blue navigation now renders its actual dark bar.
 At finish, the human approved a mechanical move of the ThemedFileCard entry and
 its helpers into the required `view/` unit, plus the corresponding import and
 doctest-name updates. This clears the pre-existing layout-check finding without
-changing card behavior. The issue remains open only for the finish close-out.
+changing card behavior. Commit `c69cd3b04` resolved the layout finding.
