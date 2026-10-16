@@ -1,12 +1,15 @@
 ---
 title: "A reply that finalizes while a pending voice or capture bubble shows remounts instead of updating in place"
-workstream: unattached
+workstream: frontend-dom-harness
 area: beebox
 labels: [frontend, chat]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-frontend-dom-harness — cross-model diff review, 2026-10-16
+resolution: implemented
 ---
+
+> **Closed:** `nextLiveTargetUuid` now skips every non-group item after the last group. A DOM doctest finalizes a turn with a pending voice message below it and checks that the reply's row keeps its DOM node (red before the fix).
 
 `nextLiveTargetUuid` (`beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/messages.tsx`)
 binds the live-turn key to the finalized assistant group by walking the row
