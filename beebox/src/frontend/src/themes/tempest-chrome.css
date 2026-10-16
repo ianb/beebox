@@ -48,7 +48,7 @@
 [data-chrome-theme="tempest"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
 [data-chrome-theme="tempest"] #bbx-chat-load-older:disabled { color: #a4bac8; opacity: .6; }
 [data-chrome-theme="tempest"] [aria-label="Pane controls"] button { background: #0b1b2b; color: #e0eef4; border: 1px solid #456477; border-radius: 8px; }
-[data-chrome-theme="tempest"] [aria-label="Pane controls"] button:hover { background: #edb49f; }
+[data-chrome-theme="tempest"] [aria-label="Pane controls"] button:hover { background: #edb49f; color: #152044; }
 .bbx-card-theme[data-card-theme="tempest"] { --bbx-font: ui-sans-serif, system-ui, sans-serif; --bbx-quote-edge: 3px; }
 .bbx-interface-tab[data-card-theme="tempest"] { background: #142b40; border-color: #456477; border-radius: 6px 6px 0 0; }
 .bbx-interface-tab[data-card-theme="tempest"]:not([data-active="true"]):hover { background: #20485c; }

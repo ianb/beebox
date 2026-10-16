@@ -1,4 +1,4 @@
-/* Nocturnal pigment and distant sparks; reading surfaces remain opaque. */
+/* Nocturnal pigment and distant sparks; translucent reading surfaces belong to Tempest chrome. */
 :is([data-chrome-theme="tempest"], .bbx-card-theme[data-card-theme="tempest"]) {
   --tempest-paper: #0b1b2b;
   --tempest-ink: #e0eef4;
@@ -22,13 +22,13 @@
   box-shadow: none;
   padding-block: 5px;
 }
-[data-chrome-theme="tempest"] .bbx-app-nav button {
+[data-chrome-theme="tempest"] .bbx-app-nav button:not(#bbx-nav-errors) {
   background: #101d40;
   color: #dce4ff;
   border: 1px solid #6376b0;
   border-radius: 5px 3px 5px 3px;
 }
-[data-chrome-theme="tempest"] .bbx-app-nav button[aria-pressed="true"] {
+[data-chrome-theme="tempest"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors) {
   background: #b2e0ed;
   color: #101d40;
   border-color: #d0daff;
@@ -58,6 +58,7 @@
 }
 [data-chrome-theme="tempest"] .bbx-chat-callout > .text-accent-dark { color: #b8c6e7; }
 [data-chrome-theme="tempest"] .bbx-composer-material > section { background: transparent; border: 0; }
+[data-chrome-theme="tempest"] .bbx-composer-material { backdrop-filter: none; }
 [data-chrome-theme="tempest"] .bbx-composer-material textarea { background: transparent; color: #e0eef4; }
 [data-chrome-theme="tempest"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic):enabled {
   color: #0c193b;
@@ -94,7 +95,7 @@
   --bbx-bullet: #edb49f;
   --bbx-counter: #edb49f;
 }
-.bbx-card-surface[data-card-theme="tempest"] {
+[data-chrome-theme="tempest"] .bbx-card-surface[data-card-theme="tempest"] {
   border: 0;
   background: linear-gradient(130deg,#0d263baa,#06172ba8);
   backdrop-filter: blur(8px);
@@ -107,7 +108,11 @@
   background: #a8d4e5;
   border-radius: 12px 5px 12px 5px;
 }
-:is([data-chrome-theme="tempest"],[data-card-theme="tempest"]) :is(button,textarea,input):focus-visible {
+[data-chrome-theme="tempest"] :is(button,textarea,input):focus-visible:not(.bbx-card-theme *) {
+  outline: 2px solid #d4dfff;
+  outline-offset: 3px;
+}
+.bbx-card-theme[data-card-theme="tempest"] :is(button,textarea,input):focus-visible {
   outline: 2px solid #d4dfff;
   outline-offset: 3px;
 }
