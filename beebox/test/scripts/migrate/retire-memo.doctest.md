@@ -266,8 +266,13 @@ plan({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\n", "Wo
 ## On a box, with an annexed recording
 
 The runner applies the plan to a real box. The recording is a git-annex
-symlink; moved one folder deeper it still reaches its content. Box code that
-names memo cards is reported and left alone. A second run finds nothing.
+symlink; moved one folder deeper it still reaches its content.
+
+Box code and card fields that still name memo cards are leftovers the filename
+rewrite cannot fix, like a view's dependency glob or a styling rule. The run
+converts everything else and exits 2, listing the leftovers last. Exit 2 sends
+the migration to the sweep's agent repair, and the rerun after repair confirms
+it. A warning with exit 0 would leave the box broken with nobody told.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -276,6 +281,7 @@ await writeFile(box.path("_content/captures/X.memo.card"), voice["c/X.memo.card"
 await writeFile(box.path("_content/captures/X.attach/recording.m4a"), "audio bytes");
 await mkdir(box.path("src/views"), { recursive: true });
 await writeFile(box.path("src/views/memos.tsx"), `export const dependencies = ["_content/**/*.memo.card"];\n`);
+await writeFile(box.path("_content/Look.mockup.card"), "---\nrules:\n  - match: \"**/*.memo.card\"\n---\nA prose mention of Old.memo.card is not a leftover.\n");
 execFileSync("git", ["annex", "add", "--force-large", "_content/captures/X.attach/recording.m4a"], { cwd: box.root, stdio: "ignore" });
 execFileSync("git", ["add", "-A"], { cwd: box.root });
 execFileSync("git", ["commit", "-qm", "fixture", "--no-verify"], { cwd: box.root });
@@ -284,13 +290,34 @@ execFileSync("git", ["commit", "-qm", "fixture", "--no-verify"], { cwd: box.root
 
 const run = await runRetireMemo({ boxRoot: box.root, mode: "apply" });
 [run.code, run.lines.filter((l) => !l.startsWith("audio ") && !l.startsWith("doc "))]
-=> [0,["warning: src/views/memos.tsx names memo cards; it needs updating by hand after this migration","move _content/captures/X.attach/recording.m4a → _content/captures/X.attach/recording.attach/recording.m4a","delete _content/captures/X.memo.card","retire-memo: memos 1, recordings 1, referrers 0."]]
+=> [2,["move _content/captures/X.attach/recording.m4a → _content/captures/X.attach/recording.attach/recording.m4a","delete _content/captures/X.memo.card","retire-memo: memos 1, recordings 1, referrers 0.","leftover: src/views/memos.tsx is box code that names memo cards; change it to doc cards","leftover: _content/Look.mockup.card names memo cards in a field; change it to doc cards","retire-memo: converted; 2 leftover(s) still name memo cards."]]
 
 await readFile(box.path("_content/captures/X.attach/recording.attach/recording.m4a"), "utf8")
 => audio bytes
 
-(await runRetireMemo({ boxRoot: box.root, mode: "apply" })).lines.at(-1)
-=> retire-memo: memos 0, recordings 0, referrers 0.
+```
 
+Until the leftovers are fixed, a rerun exits 2 again. A repair that missed one
+is then recorded with a question for the boxholder that lists it, not as
+done.
+
+```ts continue
+const again = await runRetireMemo({ boxRoot: box.root, mode: "apply" });
+[again.code, again.lines.at(-1)]
+=> [2,"retire-memo: converted; 2 leftover(s) still name memo cards."]
+```
+
+Once the agent has changed both to doc cards, the rerun converts nothing and
+exits 0.
+
+```ts continue
+await writeFile(box.path("src/views/memos.tsx"), `export const dependencies = ["_content/**/*.doc.card"];\n`);
+await writeFile(box.path("_content/Look.mockup.card"), "---\nrules:\n  - match: \"**/*.doc.card\"\n---\n");
+const fixed = await runRetireMemo({ boxRoot: box.root, mode: "apply" });
+[fixed.code, fixed.lines.at(-1)]
+=> [0,"retire-memo: memos 0, recordings 0, referrers 0."]
+```
+
+```ts cleanup
 await box.cleanup();
 ```

@@ -1,10 +1,11 @@
 ---
 title: "A migration's leftover work must exit partial so the repair agent picks it up"
-workstream: unattached
+workstream: retire-memo
 area: beebox
 filed-by: agent
 discovered-by: boxholder
 discovered-in: worktree-retire-memo — after retire-memo-2026-10 ran on production
+resolution: implemented
 ---
 
 `retire-memo-2026-10` found box code that still named memo cards. It printed
