@@ -11,7 +11,8 @@
  * paths or aliases (the same rule as resolve-rules.ts).
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -82,27 +83,42 @@ function readCompilerOptions(tsconfig: string, cacheFile: string | undefined): {
   return { options, packageFiles: parsed.fileNames };
 }
 
+/** On a case-insensitive file system, build info stores lowercased paths. */
+function canonical(path: string): string {
+  return ts.sys.useCaseSensitiveFileNames ? path : path.toLowerCase();
+}
+
 /**
- * Whether this run may replace the build info: it checked every doctest the
- * old build info covered that still exists. A run over a few files (a
- * commit's staged doctests) reads a full run's cache but leaves it in place.
+ * The doctests an existing build info covers (canonical virtual paths), or
+ * null when there is none. A file that is not build info JSON is deleted, so
+ * TypeScript starts fresh instead of failing on it.
  */
-function coversCache(cacheFile: string, generated: ReadonlyMap<string, unknown>): boolean {
-  let text: string;
+function cachedDoctests(cacheFile: string): string[] | null {
+  let info: unknown;
   try {
-    text = readFileSync(cacheFile, "utf8");
-  } catch {
-    return true; // no cache yet
+    info = JSON.parse(readFileSync(cacheFile, "utf8"));
+  } catch (e) {
+    if (e instanceof SyntaxError) rmSync(cacheFile, { force: true });
+    return null;
   }
-  const info: unknown = JSON.parse(text);
-  const names = typeof info === "object" && info !== null && "fileNames" in info && Array.isArray(info.fileNames) ? info.fileNames : [];
-  // On a case-insensitive file system, build info stores lowercased paths.
-  const canonical = (path: string): string => (ts.sys.useCaseSensitiveFileNames ? path : path.toLowerCase());
-  const checked = new Set([...generated.keys()].map(canonical));
-  return names
+  if (typeof info !== "object" || info === null || !("fileNames" in info) || !Array.isArray(info.fileNames)) {
+    rmSync(cacheFile, { force: true });
+    return null;
+  }
+  return info.fileNames
     .filter((name): name is string => typeof name === "string" && name.endsWith(".doctest.md.ts"))
-    .map((name) => resolve(dirname(cacheFile), name))
-    .every((path) => checked.has(canonical(path)) || !existsSync(path.slice(0, -".ts".length)));
+    .map((name) => canonical(resolve(dirname(cacheFile), name)));
+}
+
+/**
+ * Whether this run may replace the build info: it was asked about every
+ * doctest the old build info covered that still exists (a doctest that failed
+ * to generate counts; it was reported). A run over a few files (a commit's
+ * staged doctests) reads a full run's cache but leaves it in place.
+ */
+function coversCache(cached: string[] | null, requested: ReadonlySet<string>): boolean {
+  if (cached === null) return true;
+  return cached.every((path) => requested.has(path) || !existsSync(path.slice(0, -".ts".length)));
 }
 
 interface Generated {
@@ -127,6 +143,7 @@ function mapPosition(mod: GeneratedModule, at: ts.LineAndCharacter): { line: num
 /** Typecheck doctests under one tsconfig; diagnostics are on markdown lines, sorted. */
 export function typecheckDoctests({ tsconfig, files, cacheFile }: TypecheckOptions): DoctestDiagnostic[] {
   const { options, packageFiles } = readCompilerOptions(resolve(tsconfig), cacheFile);
+  const cached = cacheFile === undefined ? null : cachedDoctests(cacheFile);
   const diagnostics: DoctestDiagnostic[] = [];
   const generated = new Map<string, Generated>();
   for (const md of files) {
@@ -150,17 +167,27 @@ export function typecheckDoctests({ tsconfig, files, cacheFile }: TypecheckOptio
     // concurrent run never reads half a file.
     writeFile: (p, data) => {
       mkdirSync(dirname(p), { recursive: true });
-      const temp = `${p}.${process.pid}.tmp`;
+      const temp = `${p}.${randomUUID()}.tmp`;
       writeFileSync(temp, data);
       renameSync(temp, p);
     },
   };
   const host = ts.createIncrementalCompilerHost(options, system);
-  const program = ts.createIncrementalProgram({
+  const build = (): ts.EmitAndSemanticDiagnosticsBuilderProgram => ts.createIncrementalProgram({
     rootNames: [...generated.keys(), ...packageFiles, TAP_AUGMENTATION],
     options,
     host,
   });
+  let program: ts.EmitAndSemanticDiagnosticsBuilderProgram;
+  try {
+    program = build();
+  } catch (e) {
+    // Build info TypeScript cannot read (another version's, or damaged):
+    // drop it and start fresh rather than fail the check.
+    if (cacheFile === undefined || !existsSync(cacheFile)) throw e;
+    rmSync(cacheFile, { force: true });
+    program = build();
+  }
   for (const optionDiagnostic of program.getOptionsDiagnostics()) {
     throw new Error(`${tsconfig}: ${ts.flattenDiagnosticMessageText(optionDiagnostic.messageText, "\n")}`);
   }
@@ -191,6 +218,6 @@ export function typecheckDoctests({ tsconfig, files, cacheFile }: TypecheckOptio
     }
   }
 
-  if (cacheFile !== undefined && coversCache(cacheFile, generated)) program.emit();
+  if (cacheFile !== undefined && coversCache(cached, new Set(files.map((md) => canonical(virtualPath(md)))))) program.emit();
   return diagnostics.toSorted((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column);
 }

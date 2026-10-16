@@ -243,3 +243,14 @@ summary(typecheckDoctests({ ...pkg, cacheFile }))
 existsSync(cacheFile) && statSync(cacheFile).mtimeMs > written
 => true
 ```
+
+A damaged cache file is discarded and rebuilt, not an error.
+
+```ts continue
+writeFileSync(cacheFile, "{");
+summary(typecheckDoctests({ ...pkg, cacheFile }))
+=> []
+
+existsSync(cacheFile)
+=> true
+```
