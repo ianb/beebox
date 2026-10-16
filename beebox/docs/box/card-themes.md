@@ -24,8 +24,8 @@ theme:
 Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
 `manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), `letter-set`
-(`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), `ribbon` (`flow`), and
-`deck` (`panels`). The system-only `spectrum` (`gradient`) and
+(`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), `ribbon` (`flow`),
+`deck` (`panels`), and `night-atlas` (`lights`). The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
@@ -201,3 +201,19 @@ shadow. The toolbar and composer use rounded controls with bright turquoise
 accents. Select `deck` with stock `panels` for the system or an individual card.
 Its paired card choices are Deck, Paper, and Sticky note. Cards with an explicit
 choice keep their own material, including pale Paper on the dark workspace.
+
+
+## Night Atlas
+
+Night Atlas looks down over distant lights in turquoise and sea-green, with warm gold
+and peach highlights. The workspace drifts slowly across varied terrain while
+cards and controls stay still. Reduced-motion preferences keep the background
+static. Deep teal cards and reply panels provide quiet reading surfaces; pale
+mint user messages and warm gold controls carry the aerial palette into chat.
+Select `night-atlas` with stock `lights` for the system or an individual card. Its
+paired card choices are Night Atlas, Paper, and Sticky note. Explicit card choices
+keep their own material.
+
+Night Atlas’s background follows a four-minute orbit through field-like terrain,
+dense city lights, and open harbor water. Only the decorative background moves;
+reduced-motion preferences keep it static.

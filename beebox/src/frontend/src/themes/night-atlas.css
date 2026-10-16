@@ -1,0 +1,302 @@
+/* Night Atlas: distant warm lights over sea-green terrain and quiet teal reading surfaces. */
+.bbx-box-presentation[data-chrome-theme="night-atlas"] {
+  --bbx-desk-background: #167d7e;
+  --bbx-desk-pattern: none;
+  --bbx-desk-edge: #5caaa4;
+  --bbx-bar-paper: #103e46;
+  --bbx-bar-edge: #5caaa4;
+  --bbx-focus-ring: #ffd38b;
+  --bbx-selection: #ffd38b;
+  --bbx-selection-ink: #124e53;
+  --bbx-selection-code: #ffd38b;
+  --bbx-selection-code-ink: #174b4d;
+  --bbx-chat-user-paper: #bce6d9;
+  --bbx-chat-user-ink: #174b4d;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"]:not(.bbx-system-theme-preview) {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"]:not(.bbx-system-theme-preview)::before {
+  content: "";
+  position: absolute;
+  inset: -36px auto -36px -36px;
+  width: max(calc(200% + 72px), 2100px);
+  z-index: -1;
+  pointer-events: none;
+  background: url("./night-atlas-lights.webp") center top / cover no-repeat;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(
+  .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
+  .bbx-interface-card-desk[data-card-content="card"],
+  .bbx-interface-browse-panel[data-card-content="card"]
+) { background: transparent; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-interface-tabstrip > [role="none"]::before,
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-interface-tabstrip > [role="none"]::after {
+  background: transparent;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav {
+  background: linear-gradient(115deg, #12414b, #176264 58%, #245d5a);
+  color: #e0f5e9;
+  border-bottom: 1px solid #dbb97a;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav > div {
+  background: transparent;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav :is(
+  #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
+  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat
+) {
+  background-color: #174d53;
+  color: #e0f5e9;
+  border: 1px solid #5caaa4;
+  border-radius: 8px;
+  box-shadow: inset 0 1px #b1e9d51a;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav button:active { box-shadow: none; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav :is(button, a):focus-visible {
+  outline: 2px solid #e0f5e9;
+  outline-offset: 2px;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material {
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+  color: #e0f5e9;
+  border: 1px solid #5caaa4;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 8px 28px #063c4b66, inset 0 1px #b1e9d51a;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material > section {
+  background: transparent;
+  border-top: 0;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r,
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea {
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+  color: #e0f5e9;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea::placeholder { color: #a9d2c7; }
+/* Enabled sends and the idle mic only; preserve recording and disabled cues. */
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic.bg-primary {
+  background-color: #ffd38b;
+  color: #174b4d;
+  border: 1px solid #5caaa4;
+  border-radius: 8px;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-add {
+  background-color: #23666a;
+  color: #e0f5e9;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled:hover,
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic.bg-primary:hover {
+  background-color: #ffe6bc;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-user-paper {
+  --bbx-selection: #124e53;
+  --bbx-selection-ink: #e0f5e9;
+  background: linear-gradient(115deg, #c2e7d8, #9edbd2 70%, #c5dfce);
+  color: var(--bbx-chat-user-ink);
+  border: 1px solid #5caaa4;
+  border-radius: 12px 12px 4px 12px;
+  box-shadow: 0 8px 28px #063c4b66, inset 0 1px #b1e9d51a;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-user-paper :is(
+  .bbx-chat-user-status, .bbx-chat-user-attachment-summary
+) { color: #174b4d; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-user-paper :is(
+  .bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge
+) {
+  background: #ffffff45;
+  color: #124e53;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-user-unsure { text-decoration-color: #23666a; }
+/* Explicit nested cards reset material variables and keep their own colors. */
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-reply-material {
+  --bbx-ink: #e0f5e9;
+  --bbx-ink-soft: #a9d2c7;
+  --bbx-pen: #ffd38b;
+  --bbx-edge: #5caaa4;
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+  color: var(--bbx-ink);
+  border: 1px solid #5caaa4;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px #063c4b66, inset 0 1px #b1e9d51a;
+}
+/* Tailwind typography declares its tokens on each prose node. Target the
+   transcript prose itself, while leaving explicit nested cards independent. */
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme .prose) {
+  --bbx-ink: #e0f5e9;
+  --bbx-ink-soft: #a9d2c7;
+  --bbx-pen: #ffd38b;
+  --tw-prose-body: #e0f5e9;
+  --tw-prose-headings: #e0f5e9;
+  --tw-prose-bold: #e0f5e9;
+  --tw-prose-links: #ffd38b;
+  --tw-prose-quotes: #e0f5e9;
+  --tw-prose-code: #e0f5e9;
+  --tw-prose-counters: #a9d2c7;
+  --tw-prose-captions: #a9d2c7;
+  --tw-prose-bullets: #ffd38b;
+  --tw-prose-quote-borders: #5caaa4;
+  --tw-prose-hr: #5caaa4;
+  --tw-prose-th-borders: #5caaa4;
+  --tw-prose-td-borders: #5caaa4;
+  --tw-prose-pre-bg: #0a363d;
+  --tw-prose-pre-code: #e0f5e9;
+  color: #e0f5e9;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-callout {
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+  color: #e0f5e9;
+  border: 1px solid #5caaa4;
+  border-radius: 12px;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-callout > .text-accent-dark { color: #e0f5e9; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-meta-material {
+  color: #a9d2c7;
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-pending-material {
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+  color: #e0f5e9;
+  border-radius: 12px;
+  padding: 6px 10px;
+}
+/* Activity captions need light ink; raw tool details keep light surfaces. */
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) {
+  color: #a9d2c7;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) {
+  color: #e0f5e9;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-chat-load-older:enabled {
+  color: #ffd38b;
+  text-decoration: underline;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-chat-load-older:enabled:hover {
+  color: #e0f5e9;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-chat-load-older:disabled {
+  color: #a9d2c7;
+  opacity: .6;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-empty-label {
+  display: inline-block;
+  color: #a9d2c7;
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+.bbx-card-theme[data-card-theme="night-atlas"] {
+  color-scheme: dark;
+  --bbx-sheet: #23666a;
+  --bbx-tint: #20595c;
+  --bbx-code-paper: #0a363d;
+  --bbx-code-ink: #e0f5e9;
+  --bbx-paper: #124e53;
+  --bbx-ink: #e0f5e9;
+  --bbx-ink-soft: #a9d2c7;
+  --bbx-pen: #ffd38b;
+  --bbx-edge: #5caaa4;
+  --bbx-underlay: #0a363d;
+  --bbx-font: ui-sans-serif, system-ui, sans-serif;
+  --bbx-sheet-radius: 12px;
+  --bbx-quote-paper: #23666a;
+  --bbx-quote-layer-paper: #23666a;
+  --bbx-quote-edge: 3px;
+  --bbx-blockquote-paper: #23666a;
+  --bbx-blockquote-edge: 3px;
+  --bbx-blockquote-padding: 0.65em 1em;
+  --bbx-selection: #ffd38b;
+  --bbx-selection-ink: #124e53;
+  --bbx-selection-code: #ffd38b;
+  --bbx-selection-code-ink: #174b4d;
+}
+.bbx-card-surface[data-card-theme="night-atlas"] {
+  background-image: linear-gradient(135deg, #24676555, transparent 48%, #0a394633);
+  border-top: 1px solid #edba81;
+  box-shadow: 0 8px 28px #063c4b66, inset 0 1px #b1e9d51a;
+}
+.bbx-card-surface[data-card-theme="night-atlas"] > .bbx-card-properties {
+  border-radius: 0 12px 0 12px;
+}
+.bbx-interface-tab[data-card-theme="night-atlas"] {
+  background: #23666a;
+  border-top-color: #5caaa4;
+  border-left-color: #5caaa4;
+  border-right-color: #5caaa4;
+  border-radius: 16px 16px 0 0;
+}
+.bbx-interface-tab[data-card-theme="night-atlas"][data-active="true"] { background: #124e53; }
+.bbx-interface-tab[data-card-theme="night-atlas"]:not([data-active="true"]):hover { background: #2c7375; }
+.bbx-system-theme-preview[data-chrome-theme="night-atlas"] {
+  background: url("./night-atlas-lights.webp") center / cover, #167d7e;
+}
+.bbx-system-theme-preview[data-chrome-theme="night-atlas"] .bbx-system-theme-toolbar {
+  background: #103e46;
+  border-bottom: 3px solid #5caaa4;
+}
+.bbx-system-theme-preview[data-chrome-theme="night-atlas"] .bbx-system-theme-toolbar i { background: #e0f5e9; }
+.bbx-system-theme-preview[data-chrome-theme="night-atlas"] .bbx-system-theme-desk > span {
+  background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
+  border-color: #5caaa4;
+  box-shadow: 0 3px 8px #073e4b55;
+}
+
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav .bbx-place-pill {
+  background: #ffd38b;
+  color: #174b4d;
+  border: 1px solid #5caaa4;
+  border-radius: 8px;
+  box-shadow: inset 0 1px #b1e9d51a;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #174b4d; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material {
+  color-scheme: dark;
+  border: 1px solid #5caaa4;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material :is(textarea, input) { border-color: #5caaa4; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material :is(button, textarea):focus-visible {
+  outline: 2px solid #ffd38b;
+  outline-offset: 2px;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) {
+  color: #302f2d;
+}
+
+
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-interface-card-desk[data-card-content="neutral"] {
+  background: #fbf5ee;
+}
+@media print {
+  .bbx-box-presentation[data-chrome-theme="night-atlas"]::before { display: none; }
+  .bbx-box-presentation[data-chrome-theme="night-atlas"],
+  .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material),
+  .bbx-card-surface[data-card-theme="night-atlas"] {
+    background: transparent; color: #000; border: 0; box-shadow: none;
+  }
+  .bbx-card-theme[data-card-theme="night-atlas"],
+  .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme .prose) {
+    color-scheme: light;
+    --bbx-paper: #fff; --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
+    --tw-prose-body: #000; --tw-prose-bold: #000; --tw-prose-headings: #000;
+    --tw-prose-quotes: #000; --tw-prose-counters: #333; --tw-prose-bullets: #333; --tw-prose-captions: #333;
+    color: #000;
+  }
+  .bbx-card-theme[data-card-theme="night-atlas"] :is(.bbx-blockquote, .bbx-quote-block),
+  .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-callout > .text-accent-dark,
+  .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) {
+    color: #333; background: transparent; box-shadow: none;
+  }
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] [aria-label="Pane controls"] button {
+  color: #a9d2c7;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] [aria-label="Pane controls"] button:hover {
+  color: #174b4d; background: #ffd38b;
+}
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(#bbx-composer-capture, #bbx-composer-keyboard) {
+  background: #23666a; color: #e0f5e9;
+}
