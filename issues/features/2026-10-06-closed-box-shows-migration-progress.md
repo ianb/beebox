@@ -40,6 +40,9 @@ name their step (`maintenance.step(name)`, kept in `step-<id>.json` beside
 `phase.json`), and the closed page and 503 body show it with its start time.
 Still open from "Wanted": countable progress, a page that updates itself, and
 a signal for a step that has made no progress.
+Accepted residual: a step write still in flight when the phase changes can
+leave the finished step's label showing until the next step or completion.
+No caller writes a step concurrently with a phase change today.
 
 ## Wanted
 

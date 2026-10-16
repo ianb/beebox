@@ -38,5 +38,9 @@ export async function readMaintenanceStep(directory: string, id: string): Promis
 
 /** A phase change ends the step, and a cleared or replaced record takes its step with it. */
 export async function clearMaintenanceStep(directory: string, id: string): Promise<void> {
-  await rm(stepPath(directory, id), { force: true });
+  try {
+    await rm(stepPath(directory, id), { force: true });
+  } catch (error) {
+    console.warn("[box-maintenance] step was not cleared:", error);
+  }
 }

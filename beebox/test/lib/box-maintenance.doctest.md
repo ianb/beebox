@@ -272,6 +272,20 @@ try {
 => { reason: "next", step: "none", warnings: ["[box-maintenance] step was not recorded:", "[box-maintenance] step could not be read:"] }
 ```
 
+A step that cannot be cleared does not stop a phase change either.
+
+```ts continue
+const clearWarnings = [];
+console.warn = (message) => { clearWarnings.push(message); };
+let prepared;
+try {
+  await next.prepare();
+  prepared = await boxMaintenanceStatus(stepBox.root);
+} finally { console.warn = realWarn; }
+({ phase: prepared.phase, clearWarnings })
+=> { phase: "ready", clearWarnings: ["[box-maintenance] step was not cleared:", "[box-maintenance] step could not be read:"] }
+```
+
 ```ts cleanup
 await rm(nextStep, { recursive: true, force: true });
 await next.complete();
