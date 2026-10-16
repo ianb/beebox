@@ -131,7 +131,10 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
         await refreshGeneratedDocs({ boxRoot: opts.boxRoot, withinMaintenance: true });
       }
       signal.throwIfAborted();
-      if (outcome.status !== "current") await checkPendingQuestionsAndNotify(opts.boxRoot, { now: new Date() });
+      if (outcome.status !== "current") {
+        await maintenance.step("checking pending questions");
+        await checkPendingQuestionsAndNotify(opts.boxRoot, { now: new Date() });
+      }
       signal.throwIfAborted();
       return outcome;
     });

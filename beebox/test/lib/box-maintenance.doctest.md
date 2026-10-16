@@ -220,17 +220,23 @@ await stepper.step("generating docs");
 ```
 
 The step is kept out of the phase record. Admission reads the phase record, so
-a step write racing a phase change can never restore a stale phase.
+a step write racing a phase change can never restore a stale phase. A phase
+change ends the step.
 
 ```ts continue
 Object.keys(JSON.parse(await readFile(join(stepDirectory, "phase.json"), "utf8"))).sort()
 => ["id", "phase", "reason", "since"]
+
+await stepper.prepare();
+(await boxMaintenanceStatus(stepBox.root)).step
+=> undefined
 ```
 
 A delegate names steps for its controller. After release, neither handle's
-step shows on the record of the owner that comes next.
+late step write replaces the step of the owner that comes next.
 
 ```ts continue
+await stepper.beginChanges();
 const helper = await stepper.run(() => acquireBoxMaintenance(stepBox.root, { reason: "docs", join: true }));
 await helper.step("committing");
 (await boxMaintenanceStatus(stepBox.root)).step.name
@@ -239,27 +245,35 @@ await helper.step("committing");
 await helper.release();
 await stepper.release();
 const next = await acquireBoxMaintenance(stepBox.root, { reason: "next" });
+await next.beginChanges();
+await next.step("running");
 await stepper.step("stale");
 await helper.step("stale");
-(await boxMaintenanceStatus(stepBox.root)).step
-=> undefined
+(await boxMaintenanceStatus(stepBox.root)).step.name
+=> running
 ```
 
-A step is diagnostic: when it cannot be written, the work it names goes on.
+A step is diagnostic. When it cannot be written, the work it names goes on;
+when it cannot be read, the status still says why the box is closed.
 
 ```ts continue
-await rm(join(stepDirectory, "step.json"), { force: true });
-await mkdir(join(stepDirectory, "step.json"));
+const nextStep = join(stepDirectory, `step-${(await boxMaintenanceStatus(stepBox.root)).id}.json`);
+await rm(nextStep, { force: true });
+await mkdir(nextStep);
 const warnings = [];
 const realWarn = console.warn;
 console.warn = (message) => { warnings.push(message); };
-try { await next.step("blocked"); } finally { console.warn = realWarn; }
-warnings
-=> ["[box-maintenance] step was not recorded:"]
+let status;
+try {
+  await next.step("blocked");
+  status = await boxMaintenanceStatus(stepBox.root);
+} finally { console.warn = realWarn; }
+({ reason: status.reason, step: status.step ?? "none", warnings })
+=> { reason: "next", step: "none", warnings: ["[box-maintenance] step was not recorded:", "[box-maintenance] step could not be read:"] }
 ```
 
 ```ts cleanup
-await rm(join(stepDirectory, "step.json"), { recursive: true, force: true });
+await rm(nextStep, { recursive: true, force: true });
 await next.complete();
 await stepBox.cleanup();
 ```

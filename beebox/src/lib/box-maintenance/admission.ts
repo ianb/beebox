@@ -10,7 +10,7 @@ import { writeFileAtomic } from "../atomic-write.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { invariant } from "../../shared/invariant.js";
 import { BoxMaintenanceError, type WorkHolder } from "../box-maintenance-error.js";
-import { readMaintenanceStep, writeMaintenanceStep, type MaintenanceStep } from "./step.js";
+import { clearMaintenanceStep, readMaintenanceStep, writeMaintenanceStep, type MaintenanceStep } from "./step.js";
 
 const phaseSchema = z.object({
   id: z.string().uuid(), reason: z.string(), phase: z.enum(["draining", "exclusive", "ready"]),
@@ -229,7 +229,7 @@ export interface BoxMaintenance extends BoxWork {
   drain(): Promise<void>;
   prepare(): Promise<void>;
   beginChanges(): Promise<void>;
-  /** Name the current step for status readers; a handle that no longer holds the box writes nothing. */
+  /** Name the current step for status readers until the next phase change; a handle that no longer holds the box writes nothing. */
   step(name: string): Promise<void>;
   complete(): Promise<void>;
 }
@@ -258,6 +258,7 @@ export async function closeBoxMaintenance(
       await validPermit(directory, JSON.stringify(parent));
       const since = (await readPhase(directory))?.since;
       await writeFileAtomic(join(directory, "phase.json"), { content: JSON.stringify({ id: parent.id, reason: opts.reason, phase: value, ...(since === undefined ? {} : { since }) }) });
+      await clearMaintenanceStep(directory, parent.id);
     };
     // Delegates only declare startup readiness explicitly; intermediate completion changes no phase.
     const noRelease = async (): Promise<void> => {};
@@ -289,6 +290,7 @@ export async function closeBoxMaintenance(
     await writeFileAtomic(join(directory, "phase.json"), {
       content: JSON.stringify({ id: permit.id, reason: opts.reason, phase, since, ...(phase === "draining" ? { until: new Date(Date.now() + drainMs).toISOString() } : {}) }),
     });
+    await clearMaintenanceStep(directory, permit.id);
   };
   const release = async (): Promise<void> => {
     if (released) return;
@@ -300,7 +302,8 @@ export async function closeBoxMaintenance(
         const phase = await readPhase(directory);
         changing = phase !== null && phase.phase !== "draining";
       }
-      if ((completed || !changing) && await ownsLock()) await rm(join(directory, "phase.json"), { force: true });
+      // An unfinished record keeps its last step: it says where that attempt stopped.
+      if ((completed || !changing) && await ownsLock()) await Promise.all([rm(join(directory, "phase.json"), { force: true }), clearMaintenanceStep(directory, permit.id)]);
     }
     finally { await releaseLock(leasePath(permit)); }
   };
@@ -311,6 +314,7 @@ export async function closeBoxMaintenance(
     changing = previous !== null && previous.phase !== "draining";
     since = previous?.since ?? since;
     await writePhase(changing ? "exclusive" : "draining");
+    if (previous) await clearMaintenanceStep(directory, previous.id);
     return {
       run: (fn) => context.run(permit, fn), release,
       async held() { return !released && ownsLock(); },
