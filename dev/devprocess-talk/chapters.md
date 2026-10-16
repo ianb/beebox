@@ -6,7 +6,7 @@ Fields after the heading, one per line: `span: YYYY-MM-DD — YYYY-MM-DD`; `comi
 
 The chapter's own stats, kinds and events make its first exhibit, "On the graph". Each `### title` after the bullets adds one more. An exhibit with `stats:`, `kinds:` or `events:` lines is a graph setting; one with `file: <repo path>` shows that file (optionally `lines: a-b`; a Markdown file renders as a document), with any bullets under it as its caption; one with only bullets lists them. `image: <path under this directory>` adds a picture below either; several make a two-column grid. The generator `figures.ts` writes it all to `data/chapters.json`.
 
-## Developing software with coding agents
+## How I develop software with coding agents
 span: 2026-01-27 — 2026-10-13
 tagline: Ian Bicking · Minneapolis AI Engineering Meetup · October 14, 2026
 events: key
