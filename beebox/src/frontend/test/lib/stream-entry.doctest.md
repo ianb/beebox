@@ -33,7 +33,7 @@ Tools come before the text block:
 const e = buildStreamEntry({
   uuid: "live-def",
   streamText: "done",
-  streamTools: [{ type: "tool_use", name: "Read", id: "t1", input: {} }],
+  streamTools: [{ type: "tool_use", toolName: "Read", toolId: "t1", input: {} }],
 });
 e.content.map((b) => b.type)
 =>

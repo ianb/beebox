@@ -10,11 +10,14 @@ import { createCodexAgent } from "../../src/core/agent/codex-agent.js";
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFile, access } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { strict as assert } from "node:assert";
+import type { Agent, AgentInvokeOptions, StructuredAgentResult } from "../../src/core/agent/invoke/core.js";
+import { errnoCode } from "../../src/shared/error-guards.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 import { runMigrationProcess } from "../../src/core/migration-process.js";
-import { boxMaintenanceStatus, acquireBoxWork } from "../../src/lib/box-maintenance.js";
+import { boxMaintenanceStatus, acquireBoxWork } from "../../src/lib/box-maintenance/admission.js";
 const PROBE = "annex-config-2026-08";
 async function preparedBox() {
   const box = await makeTmpBox({ git: true });
@@ -29,18 +32,18 @@ async function preparedBox() {
 // same signal, and "Draining does not consume the execution budget" below
 // covers the timer itself.
 class Expired extends Error { constructor() { super("execution budget expired"); this.name = "Expired"; } }
-async function waitForFile(file) {
+async function waitForFile(file: string) {
   while (true) {
     try { await access(file); return; }
     catch { await new Promise((resolve) => setTimeout(resolve, 25)); }
   }
 }
-const waitForAbort = (signal) => signal.aborted ? Promise.resolve() : new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
-async function stopped(pid) {
+const waitForAbort = (signal: AbortSignal) => signal.aborted ? Promise.resolve() : new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+async function stopped(pid: number) {
   const deadline = Date.now() + 2000;
   while (true) {
     try { process.kill(pid, 0); }
-    catch (error) { if (error.code === "ESRCH") return true; throw error; }
+    catch (error) { if (errnoCode(error) === "ESRCH") return true; throw error; }
     // `ps -p` exits 1 when the pid is gone, and the process can exit between
     // the kill(0) above and this call; that is the stopped outcome too.
     const ps = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" });
@@ -57,7 +60,7 @@ async function stopped(pid) {
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }
-function refs(box, prefix) {
+function refs(box: TmpBox, prefix: string) {
   return execFileSync("git", ["for-each-ref", "--format=%(refname)", prefix], { cwd: box.root, encoding: "utf8" }).trim();
 }
 ```
@@ -70,7 +73,7 @@ const pidFile = join(box.root, "child.pid");
 const childCode = "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)";
 const script = `const fs=require('node:fs');const {spawn}=require('node:child_process');const child=spawn(process.execPath,['-e',${JSON.stringify(childCode)}],{stdio:'ignore'});fs.writeFileSync(${JSON.stringify(pidFile)},String(child.pid));setInterval(()=>{},1000);`;
 const expiry = new AbortController();
-const runScript = ({ signal }) => {
+const runScript = ({ signal }: { signal?: AbortSignal | undefined }) => {
   // Expire once the descendant exists, so it is there to be stopped.
   void waitForFile(pidFile).then(() => expiry.abort(new Expired()));
   return runMigrationProcess({ file: process.execPath, args: ["-e", script], cwd: box.root, env: process.env, signal });
@@ -79,7 +82,7 @@ await sweepMigrations({ boxRoot: box.root, signal: expiry.signal, runScript })
 => throws Expired
 
 const pid = Number(await readFile(pidFile, "utf8"));
-JSON.stringify({ childAlive: !(await stopped(pid)), phase: (await boxMaintenanceStatus(box.root)).phase, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE), snapshot: refs(box, `refs/bbx/migrations/${PROBE}/snapshots/`).length > 0 })
+JSON.stringify({ childAlive: !(await stopped(pid)), phase: (await boxMaintenanceStatus(box.root))?.phase, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE), snapshot: refs(box, `refs/bbx/migrations/${PROBE}/snapshots/`).length > 0 })
 => {"childAlive":false,"phase":"exclusive","recorded":false,"snapshot":true}
 ```
 
@@ -94,18 +97,24 @@ const box = await preparedBox();
 let runs = 0;
 let invoked = 0;
 const expiry = new AbortController();
-const repairAgent = { invokeStructured: async (_schema, options) => {
-  invoked += 1;
-  // Expire while the repair is running.
-  expiry.abort(new Expired());
-  await waitForAbort(options.signal);
-  return { success: false, sessionId: "cancelled-repair", error: "cancelled", exitCode: 1 };
-} };
+const repairAgent: Agent = {
+  name: "repair",
+  sessionId: null,
+  invoke: async () => { throw new Error("the repair uses structured output"); },
+  invokeStructured: async <T>(_schema: z.ZodType<T>, options: AgentInvokeOptions): Promise<StructuredAgentResult<T>> => {
+    invoked += 1;
+    // Expire while the repair is running.
+    expiry.abort(new Expired());
+    assert.ok(options.signal);
+    await waitForAbort(options.signal);
+    return { success: false, data: null, sessionId: "cancelled-repair", error: "cancelled", output: "", exitCode: 1 };
+  },
+};
 await sweepMigrations({ boxRoot: box.root, repair: true, signal: expiry.signal,
   runScript: async () => { runs += 1; return 1; }, repairAgent })
 => throws Expired
 
-JSON.stringify({ runs, invoked, phase: (await boxMaintenanceStatus(box.root)).phase, receipt: refs(box, `refs/bbx/migrations/${PROBE}/repair-started`).length > 0 })
+JSON.stringify({ runs, invoked, phase: (await boxMaintenanceStatus(box.root))?.phase, receipt: refs(box, `refs/bbx/migrations/${PROBE}/repair-started`).length > 0 })
 => {"runs":1,"invoked":1,"phase":"exclusive","receipt":true}
 ```
 
@@ -120,8 +129,8 @@ const box = await preparedBox();
 const active = await acquireBoxWork(box.root, { reason: "test" });
 let settled = false;
 const attempt = sweepMigrations({ boxRoot: box.root, executionMs: 50,
-  runScript: async ({ signal }) => { await waitForAbort(signal); signal.throwIfAborted(); return 0; },
-}).then(() => { settled = true; }, (error) => { settled = true; return error.name; });
+  runScript: async ({ signal }) => { assert.ok(signal); await waitForAbort(signal); signal.throwIfAborted(); return 0; },
+}).then(() => { settled = true; }, (error) => { settled = true; return error instanceof Error ? error.name : String(error); });
 await new Promise((resolve) => setTimeout(resolve, 150));
 settled
 => false

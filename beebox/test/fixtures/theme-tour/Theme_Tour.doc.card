@@ -1,0 +1,24 @@
+---
+title: Card themes tour
+prominence: entry-point
+---
+Start with the same ordinary field note in four cards. The words stay fixed;
+only the card theme changes, so the paper, Post-it, and plain treatments can be
+compared directly.
+
+- [Bloom: inherited card material](./bloom-inherited.doc.card)
+- [Bloom: explicit Paper comparison](./bloom-explicit.doc.card)
+- [Theme comparison](./comparison.doc.card)
+- [Paper / cream](./comparison-paper.doc.card)
+- [Paper / manila](./comparison-manila.doc.card)
+- [Post-it / yellow](./comparison-post-it.doc.card)
+- [Plain / neutral](./comparison-plain.doc.card)
+- [Quotes and attribution](./quotes.doc.card)
+- [Structured sample](./structured.record.card)
+- [Long content](./long-form.doc.card)
+- [Stack experiment](./stack-experiment.doc.card)
+- [Mixed stocks](./mixed-stocks.doc.card)
+
+The comparison cards are deliberately ordinary fictional material. Their
+theme choices belong to the card-theme engine, so this seed stays useful while
+that engine evolves.

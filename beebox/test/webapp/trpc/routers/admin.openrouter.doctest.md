@@ -7,16 +7,19 @@ catalog and key responses here are the recorded fixtures, served through the
 `openrouterFetch` service so nothing leaves the machine.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { clearOpenRouterCatalogCache } from "../../../../src/core/openrouter-catalog.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
+import type { TestServer } from "../../../helpers/doctest-server.js";
 
 const fixture = async (name: string) => readFile(new URL(`../../../fixtures/openrouter/${name}`, import.meta.url), "utf8");
 const models = await fixture("models.json");
@@ -25,16 +28,13 @@ async function openrouterFetch(url: string) {
   return new Response(url.endsWith("/key") ? key : models, { status: 200 });
 }
 
-function caller(server, opts) {
-  return appRouter.createCaller({
+function caller(server: TestServer, opts?: { isOwner?: boolean }) {
+  return appRouter.createCaller(trpcContext({
     boxRoot: server.boxRoot,
-    boxSlug: "test",
     eventBus: server.eventBus,
     services: { openrouterFetch },
-    user: null,
-    authed: true,
     isOwner: opts?.isOwner !== false,
-  });
+  }));
 }
 
 async function message(run: () => Promise<unknown>): Promise<string> {
@@ -79,6 +79,7 @@ A valid model is saved with its label and listed with its price.
 await caller(server).admin.addOpenrouterModel({ id: "moonshotai/kimi-k2-0905:exacto", label: " Kimi K2 " });
 clearBoxConfigCache(server.boxRoot);
 const listed = (await caller(server).admin.openrouterModels()).models[0];
+assert.ok(listed);
 JSON.stringify([listed.id, listed.label, listed.catalog.ok && listed.catalog.found && listed.catalog.model.pricing.promptPerMTok])
 => ["moonshotai/kimi-k2-0905:exacto","Kimi K2",0.6]
 ```

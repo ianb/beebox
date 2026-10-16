@@ -8,11 +8,11 @@ cleanup), which the render gate (`bbx view check`) can't see.
 ```ts setup
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { typecheckViews } from "../../../../src/cli/commands/view/typecheck.js";
 
 // Views live at `<boxRoot>/src/views`.
-async function writeView(box, rel, content) {
+async function writeView(box: TmpBox, rel: string, content: string) {
   const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);

@@ -76,7 +76,7 @@ specs.map((s) => s.label).join(", ")
 Chained (`continue`) onto the previous block so `specs` is still in scope.
 
 ```ts continue
-const popover = renderToStaticMarkup(specs[0].detail);
+const popover = renderToStaticMarkup(specs[0]?.detail);
 popover.includes("two large legs")
 => true
 
@@ -105,7 +105,7 @@ const consultedSpecs = buildAudioBadgeSpecs({ consulted: { questions: ["did I so
 consultedSpecs.map((s) => s.label).join(", ")
 => This recording was analyzed
 
-const detailHtml = renderToStaticMarkup(consultedSpecs[0].detail);
+const detailHtml = renderToStaticMarkup(consultedSpecs[0]?.detail);
 print(`heading: ${detailHtml.includes("question asked")}`);
 print(`question: ${detailHtml.includes("did I sound annoyed?")}`);
 =>
@@ -113,7 +113,7 @@ heading: true
 question: true
 
 const multi = buildAudioBadgeSpecs({ consulted: { questions: ["q one?", "q two?"] } }, "x");
-renderToStaticMarkup(multi[0].detail).includes("questions asked")
+renderToStaticMarkup(multi[0]?.detail).includes("questions asked")
 => true
 ```
 
@@ -284,7 +284,7 @@ const unsureSpecs = buildAudioBadgeSpecs(
   { retranscription: { newText: "two large eggs", service: "deepgram-hq", diarized: false } },
   originalDisplayText(unsureEntry),
 );
-const unsurePopover = renderToStaticMarkup(unsureSpecs[0].detail);
+const unsurePopover = renderToStaticMarkup(unsureSpecs[0]?.detail);
 // React-escapes the apostrophe in static markup, so match the unwrapped
 // word's surroundings rather than the raw contraction.
 unsurePopover.includes("all cloud code in different ways")

@@ -1,4 +1,4 @@
-import { acquireBoxWork } from "../../../lib/box-maintenance.js";
+import { acquireBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 /**
  * ChatScheduleManager — manages timed schedules created by the chat agent.

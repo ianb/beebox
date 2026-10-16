@@ -20,6 +20,7 @@ path.
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { bodyField } from "../../../helpers/doctest-helpers.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
 
@@ -49,7 +50,7 @@ await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({ agentMod
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const { result: res } = await capturingErrors(() => ctx.request({
@@ -57,14 +58,14 @@ const { result: res } = await capturingErrors(() => ctx.request({
   url: "/api/chat/send",
   payload: { session: "new", message: "did you water the plants", messageId: "m1" },
 }));
-({ status: res.statusCode, refused: typeof res.body.error, recorded: recorded.length, runs: backend.runs.length })
+({ status: res.statusCode, refused: typeof bodyField(res.body, "error"), recorded: recorded.length, runs: backend.runs.length })
 => { status: 409, refused: "string", recorded: 0, runs: 0 }
 ```
 
 The reason names the missing setup, not a busy chat.
 
 ```ts continue
-res.body.error
+bodyField(res.body, "error")
 => This run uses the OpenRouter model qwen/qwen3-coder, but no usable OpenRouter key is available for this box (No secret named "openrouter" exists on this machine. It can be declared (bbx secrets declare openrouter), but only the boxholder can supply its value.). Add one in Admin → Secrets and grant it to this box.
 ```
 
@@ -80,7 +81,7 @@ const retry = await ctx.request({
   payload: { session: "new", message: "did you water the plants", messageId: "m1" },
 });
 await awaitFakeRuns(backend, 1);
-({ status: retry.statusCode, turn: typeof retry.body.turnId, deduplicated: retry.body.deduplicated ?? false, recorded: recorded.length })
+({ status: retry.statusCode, turn: typeof bodyField(retry.body, "turnId"), deduplicated: bodyField(retry.body, "deduplicated") ?? false, recorded: recorded.length })
 => { status: 200, turn: "string", deduplicated: false, recorded: 1 }
 ```
 

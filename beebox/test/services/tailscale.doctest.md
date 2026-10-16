@@ -15,6 +15,9 @@ import {
   hasFunnelForTarget,
   toBackendState,
   deriveTailscaleBaseUrl,
+  type ProbeResult,
+  type ServeConfigJson,
+  type TailscaleDeps,
 } from "../../src/services/tailscale.js";
 import { createFakeTailscaleDeps } from "../../src/services/tailscale-fake.js";
 import { runTailscaleStatus, reportToJson } from "../../src/services/tailscale-status/core.js";
@@ -24,7 +27,7 @@ import { formatReportHuman } from "../../src/cli/commands/tailscale.js";
 // Real `tailscale status --json` emits Self and CertDomains WITHOUT omitempty —
 // always present, JSON `null` before the node is up. Model a bare backend state
 // that way so the schema's required-key check is exercised realistically.
-const bs = (BackendState) => ({ BackendState, Self: null, CertDomains: null });
+const bs = (BackendState: string) => ({ BackendState, Self: null, CertDomains: null });
 
 // A Running status with tailnet HTTPS certs enabled — the precondition for the
 // serve/probe states. Individual tests override `serve`/`probe`.
@@ -58,9 +61,9 @@ const authed200 = {
 // — see tailscale-discovery.doctest.md). This helper mirrors that boundary.
 // Deps with a correct serve config and the given `/auth/me` probe, or with only
 // a status payload.
-const withProbe = (probe) => createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe });
-const withStatus = (status) => createFakeTailscaleDeps({ status });
-const report = (deps) => runTailscaleStatus(deps, { target: { port: 3210 } });
+const withProbe = (probe: ProbeResult) => createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe });
+const withStatus = (status: unknown) => createFakeTailscaleDeps({ status });
+const report = (deps: TailscaleDeps) => runTailscaleStatus(deps, { target: { port: 3210 } });
 ```
 
 ## Every state is its own branch
@@ -108,7 +111,7 @@ const foregroundFunnel = {
   ...correctServe,
   Foreground: { "sess-1": { AllowFunnel: { "box.tail1234.ts.net:443": true } } },
 };
-const rows = [
+const rows: Array<[string, TailscaleDeps]> = [
   ["status exits nonzero", createFakeTailscaleDeps({ status: "", statusCode: 1 })],
   ["serve exits nonzero", createFakeTailscaleDeps({ status: runningStatus, serve: "", serveCode: 1 })],
   ["status is not JSON", withStatus("not json at all")],
@@ -174,7 +177,7 @@ real Serve path, not `/auth/me` (the router has none).
 
 ```ts
 const funnelServe = { ...correctServe, AllowFunnel: { "box.tail1234.ts.net:443": true } };
-const rows = [
+const rows: Array<[TailscaleDeps, string[]]> = [
   [createFakeTailscaleDeps({ binaryPresent: false }), ["state", "ok", "docLink"]],
   [withStatus(bs("NeedsLogin")), ["state", "docLink"]],
   [createFakeTailscaleDeps({ status: runningStatus, serve: funnelServe, probe: enforced401 }), ["state", "ok"]],
@@ -183,8 +186,8 @@ const rows = [
 ];
 const lines = [];
 for (const [deps, keys] of rows) {
-  const r = await report(deps);
-  lines.push(JSON.stringify(Object.fromEntries(keys.map((k) => [k, r[k] ?? null]))));
+  const fields: Record<string, unknown> = { ...(await report(deps)) };
+  lines.push(JSON.stringify(Object.fromEntries(keys.map((k) => [k, fields[k] ?? null]))));
 }
 
 lines.join("\n")
@@ -325,7 +328,7 @@ router: it falls through to the `/auth/me` posture read (here enforced), as a
 normal bbx serve/hub with no router shape does.
 
 ```ts
-const cases = [
+const cases: Array<[string, TailscaleDeps]> = [
   ["guarded router", createFakeTailscaleDeps({ routerProbe: guardedRouterProbe })],
   ["ungated router", createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe })],
   ["401 without header", createFakeTailscaleDeps({
@@ -338,7 +341,8 @@ const lines = [];
 for (const [label, deps] of cases) {
   lines.push(`${label}: ${(await classifyTargetPosture(deps, 3210)).kind}`);
 }
-const ungated = await classifyTargetPosture(cases[1][1], 3210);
+const ungated = await classifyTargetPosture(createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe }), 3210);
+if (ungated.kind === "enforced" || ungated.kind === "router-guarded") throw new Error(`expected a refusal, got ${ungated.kind}`);
 lines.push(`refusal says update: ${describeRefusal(ungated, 3210).includes("Update/rebuild the router")}`);
 
 lines.join("\n")
@@ -361,7 +365,7 @@ the schema allows it) still counts as an exposed HTTPS mapping and falls back
 to "first host".
 
 ```ts
-const inputs = [
+const inputs: Array<[string, ServeConfigJson]> = [
   ["no Web section", {}],
   ["single HTTPS host", correctServe],
   ["loopback host preferred", {

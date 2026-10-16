@@ -360,7 +360,6 @@ const richDoc: FakeDocument = {
       resolved: true,
       createdTime: "2026-06-20T10:00:00Z",
       modifiedTime: "2026-06-21T09:00:00Z",
-      trashed: false,
       quotedFileContent: { mimeType: "text/html", value: "the Q3 numbers" },
       replies: [
         {

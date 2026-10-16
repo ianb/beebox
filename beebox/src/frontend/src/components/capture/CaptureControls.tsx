@@ -19,6 +19,14 @@ interface CaptureControlsProps {
   recording: boolean;
   finalizing: boolean;
   hasContent: boolean;
+  /**
+   * Items on the box or still uploading. Done needs at least one: a capture
+   * whose every item failed would seal empty and the box would drop it, so
+   * Done waits for a retry to land something instead.
+   */
+  sendable: number;
+  /** Picked files whose bytes could not be read; no retry is offered for these. */
+  unreadable: number;
   /** Transfers accepted and not yet settled. */
   pendingUploads: number;
   photosFailed: number;
@@ -50,6 +58,8 @@ function summarizeFailures({ photosFailed, audioFailed, filesFailed }: { photosF
 function UploadFailureBanner(props: {
   summary: string;
   totalFailed: number;
+  /** Nothing is on the box or uploading, so Done is off until a retry lands something. */
+  nothingToSend: boolean;
   feedback: RetryFeedback;
   finalizing: boolean;
   onRetryFailed: () => void;
@@ -84,7 +94,9 @@ function UploadFailureBanner(props: {
       >
         Retry {props.totalFailed} upload{props.totalFailed > 1 ? "s" : ""}
       </button>
-      <div className="text-gray-400 text-xs text-center">Or press Done to finalize without them.</div>
+      <div className="text-gray-400 text-xs text-center">
+        {props.nothingToSend ? "Nothing has uploaded yet, so Done has nothing to send." : "Or press Done to finalize without them."}
+      </div>
     </div>
   );
 }
@@ -97,7 +109,8 @@ export function CaptureControls(props: CaptureControlsProps) {
   // hold even while other transfers are still retrying — which, with a slow
   // link, is most of the time. Done waits for outstanding transfers (with the
   // skip affordance below as the escape), so nothing is silently dropped.
-  const doneDisabled = !props.sessionId || props.finalizing || !props.hasContent;
+  // A recording counts: its tail chunk uploads when Done stops the recorder.
+  const doneDisabled = !props.sessionId || props.finalizing || (props.sendable === 0 && !props.recording);
   return (
     <div className="flex flex-col items-center bg-gray-900/80">
       {props.finalizing && props.pendingUploads > 0 ? (
@@ -109,12 +122,20 @@ export function CaptureControls(props: CaptureControlsProps) {
         <UploadFailureBanner
           summary={summarizeFailures(props)}
           totalFailed={totalFailed}
+          nothingToSend={props.sendable === 0}
           feedback={props.retryFeedback}
           finalizing={props.finalizing}
           onRetryFailed={props.onRetryFailed}
           includeControlIds={props.includeControlIds}
         />
       )}
+      {props.unreadable > 0 ? (
+        <div className="text-danger-light text-sm pb-2 px-4 text-center" role="status">
+          {props.unreadable === 1
+            ? "1 picked file can't be read and won't be sent. It may have been moved or deleted; pick it again."
+            : `${String(props.unreadable)} picked files can't be read and won't be sent. They may have been moved or deleted; pick them again.`}
+        </div>
+      ) : null}
       <div className="flex items-center justify-around w-full px-6 py-4">
         {/* Always leaveable: this control is the only exit from the full-screen
             capture overlay, so it must never be disabled by "nothing to

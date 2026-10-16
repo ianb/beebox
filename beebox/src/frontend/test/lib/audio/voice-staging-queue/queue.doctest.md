@@ -83,7 +83,7 @@ const { queue: queue2, transport: transport2 } = makeQueue({ script: { "r2#0": [
 
 queue2.enqueueCreate("r2", { targetSessionId: "s1" });
 await flushMicrotasks();
-queue2.getStatusSnapshot().get("r2").queuedOps
+queue2.getStatusSnapshot().get("r2")?.queuedOps
 => 1
 ```
 
@@ -121,7 +121,7 @@ JSON.stringify(queue3.getStatusSnapshot().get("r3"))
 => {"queuedOps":0,"lastError":"409 conflict","terminal":true}
 
 const failure = queue3.getFailuresSnapshot()[0];
-JSON.stringify({ recordingId: failure.recordingId, message: failure.message })
+JSON.stringify({ recordingId: failure?.recordingId, message: failure?.message })
 => {"recordingId":"r3","message":"409 conflict"}
 
 // The finalize op that would have followed the rejected chunk never sends —
@@ -136,7 +136,7 @@ The transport classifies a 404 as success before the core ever sees it, so a
 discard for a session the box already forgot resolves silently.
 
 ```ts
-const { queue: queue4, transport: transport4 } = makeQueue({});
+const { queue: queue4 } = makeQueue({});
 queue4.enqueueDiscard("r4");
 await flushMicrotasks();
 
@@ -147,7 +147,7 @@ JSON.stringify({ pending: queue4.getStatusSnapshot().has("r4"), failures: queue4
 ## The status store is `useSyncExternalStore`-compatible
 
 ```ts
-const { queue: queue6, transport: transport6 } = makeQueue({});
+const { queue: queue6 } = makeQueue({});
 let notified = 0;
 const unsubscribe = queue6.subscribeStatus(() => { notified += 1; });
 queue6.enqueueCreate("r6", { targetSessionId: "s1" });
@@ -219,7 +219,7 @@ untouched:
 transport8.calls.join(",")
 => stuck#0:create,urgent#0:create
 
-queue8.getStatusSnapshot().get("stuck").queuedOps
+queue8.getStatusSnapshot().get("stuck")?.queuedOps
 => 1
 ```
 

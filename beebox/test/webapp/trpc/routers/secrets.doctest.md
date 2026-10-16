@@ -14,6 +14,7 @@ Placeholder values throughout.
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { TRPCError } from "@trpc/server";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
@@ -21,41 +22,38 @@ import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js
 import { getBoxTimeISO } from "../../../../src/lib/time.js";
 import { mayRevealSecretInBrowser } from "../../../../src/shared/secret-reveal.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
-const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-
-function caller(boxRoot, opts) {
-  return appRouter.createCaller({
+function caller(boxRoot: string, opts?: { isOwner?: boolean; isAuthenticatedOwner?: boolean }) {
+  return appRouter.createCaller(trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus: noBus,
-    services: {},
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
     isOwner: opts?.isOwner ?? true,
     // These procedures gate on the STRICT flag (see the open-access section at
     // the end); an ordinary owner session carries both.
     isAuthenticatedOwner: opts?.isAuthenticatedOwner ?? opts?.isOwner ?? true,
-  });
+  }));
 }
 
+type Caller = ReturnType<typeof caller>;
+
 /** The refusal code, or "allowed" — how the gating checks below read. */
-async function attempt(promise) {
+async function attempt(promise: Promise<unknown>): Promise<string> {
   try {
     await promise;
     return "allowed";
   } catch (e) {
-    return e.code ?? e.message;
+    return e instanceof TRPCError ? e.code : e instanceof Error ? e.message : String(e);
   }
 }
 
 /** The refusal's relay-ready message — what the boxholder actually reads. */
-async function explain(promise) {
+async function explain(promise: Promise<unknown>): Promise<string> {
   try {
     await promise;
     return "allowed";
   } catch (e) {
-    return e.message;
+    return e instanceof Error ? e.message : String(e);
   }
 }
 ```
@@ -81,7 +79,7 @@ const box = await makeTmpBox({ git: true });
 const member = caller(box.root, { isOwner: false });
 const open = caller(box.root, { isOwner: true, isAuthenticatedOwner: false });
 
-const gated = {
+const gated: Record<string, { who: Caller; calls: Record<string, (c: Caller) => Promise<unknown>> }> = {
   member: {
     who: member,
     calls: {
@@ -107,7 +105,7 @@ const gated = {
     },
   },
 };
-const lines = [];
+const lines: string[] = [];
 for (const [kind, { who, calls }] of Object.entries(gated)) {
   for (const [procedure, call] of Object.entries(calls)) {
     lines.push(`${kind} ${procedure} → ${await attempt(call(who))}`);
@@ -326,7 +324,7 @@ const box2 = await makeTmpBox({ git: true });
 const owner2 = caller(box2.root);
 const slug2 = await boxSlug(box2.root);
 
-const addInput = { name: "openrouter", value: "sk-or-v1-placeholder-placeholder-placeholder-placeholder-key", grant: { box: slug2, access: "server" } };
+const addInput = { name: "openrouter", value: "sk-or-v1-placeholder-placeholder-placeholder-placeholder-key", grant: { box: slug2, access: "server" as const } };
 const added = await owner2.secrets.setValue(addInput);
 print(`granted to this box: ${added.granted?.box === slug2} at ${added.granted?.access}`);
 print(`warnings: ${JSON.stringify(added.warnings)}`);
@@ -366,10 +364,12 @@ const revealBox = await makeTmpBox({ git: true });
 const ownerForReveal = caller(revealBox.root);
 await ownerForReveal.secrets.setValue({ name: "z-reveal-test", value: "reveal-value-fixture" });
 print(`non-owner refused: ${await attempt(caller(revealBox.root, { isOwner: false }).secrets.revealValue({ name: "z-reveal-test" }))}`);
-print(`legacy webdriver claim refused: ${await attempt(ownerForReveal.secrets.revealValue({ name: "z-reveal-test", webdriver: true }))}`);
+// A named variable skips the excess-property check: the unknown `webdriver` key is the point.
+const legacyClaim = { name: "z-reveal-test", webdriver: true };
+print(`legacy webdriver claim refused: ${await attempt(ownerForReveal.secrets.revealValue(legacyClaim))}`);
 const shown = await ownerForReveal.secrets.revealValue({ name: "z-reveal-test" });
 const log = await (await import("node:fs/promises")).readFile(accessLogSegmentPath(getBoxTimeISO(revealBox.root)), "utf8");
-const event = JSON.parse(log.trim().split("\n").at(-1));
+const event = JSON.parse(log.trim().split("\n").at(-1) ?? "");
 print(`value returned: ${shown.value}`);
 print(`owner-read logged: ${event.event === "owner-read" && event.secret === "z-reveal-test"}`);
 print(`value excluded from log: ${!log.includes("reveal-value-fixture")}`);

@@ -8,13 +8,13 @@ application commit hooks. Changed-path detection excludes earlier dirty input.
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile, chmod } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import {
   captureMigrationSnapshot,
   changedMigrationPaths,
   restoreMigrationIndex,
 } from "../../src/core/migration-recovery.js";
-function git(box, ...args) {
+function git(box: TmpBox, ...args: string[]) {
   return execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
 }
 ```

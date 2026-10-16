@@ -118,6 +118,17 @@ if echo "$layout_staged" | grep -qE '\.(ts|tsx|mts|cts|js|mjs|cjs)$|\.doctest\.m
   run_in beebox pnpm --silent layout-check
 fi
 
+# Staged doctests typecheck through their package's `typecheck:doctest`
+# (bin/doctest-typecheck-staged.ts). Before the docs-only exit: a doctest is a
+# `.md` file. Only the staged doctests are checked, about 2.5s per tsconfig;
+# `pnpm test:changed` and the hourly full suite catch a source change that
+# breaks a doctest left unstaged. Like the typecheck below, it reads the
+# working tree, so a partially staged doctest is checked as it is on disk.
+if echo "$staged" | grep -q '\.doctest\.md$'; then
+  echo "[pre-commit] .: doctest typecheck (staged doctests)"
+  (cd "$REPO_DIR" && node --import tsx bin/doctest-typecheck-staged.ts)
+fi
+
 # Docs-only commits need nothing further — typecheck/lint add nothing.
 if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
   exit 0

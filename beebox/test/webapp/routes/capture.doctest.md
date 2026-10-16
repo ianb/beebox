@@ -8,14 +8,51 @@ assemble → deliver pipeline is covered by `test/core/capture/prepare.doctest.m
 here we test the route boundary only.)
 
 ```ts setup
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { z } from "zod";
+import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/doctest-server.js";
+import { StagingSessionSchema, type StagingSession, type StagingVoice } from "../../../src/core/capture/staging-schema.js";
 import { buildMultipartForm } from "../../../src/lib/multipart.js";
 import { setStagingState, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 
+// Response bodies of the capture routes; every field is optional because
+// success and error responses carry different keys.
+const CaptureBody = z.looseObject({
+  sessionId: z.string().optional(),
+  error: z.string().optional(),
+  code: z.string().optional(),
+  staged: z.boolean().optional(),
+  capabilities: z.unknown().optional(),
+  hq: z.unknown().optional(),
+  handoff: z.unknown().optional(),
+  resumable: z.array(z.looseObject({ id: z.string() })).optional(),
+});
+
+async function respond(pending: Promise<InjectResult>) {
+  const res = await pending;
+  return { statusCode: res.statusCode, body: CaptureBody.parse(res.body) };
+}
+
+// The id of a created session; fails the test when the response carried none.
+function sessionIdOf(res: { body: { sessionId?: string | undefined } }): string {
+  if (res.body.sessionId === undefined) throw new Error("response carried no sessionId");
+  return res.body.sessionId;
+}
+
+interface UploadOpts {
+  sessionId: string;
+  filename: string;
+  data: Buffer;
+  contentType?: string;
+  kind?: string;
+  startedAt?: string;
+  source?: string;
+  headers?: Record<string, string>;
+}
+
 // Stage one upload via multipart, mirroring the browser client.
-async function upload(ctx, opts) {
+async function upload(ctx: TestServer, opts: UploadOpts) {
   const { body, boundary } = buildMultipartForm([
     {
       kind: "file",
@@ -27,7 +64,7 @@ async function upload(ctx, opts) {
       },
     },
   ]);
-  return ctx.request({
+  return respond(ctx.request({
     method: "POST",
     url: `/api/capture/sessions/${opts.sessionId}/upload`,
     payload: body,
@@ -36,25 +73,25 @@ async function upload(ctx, opts) {
       "x-capture-filename": opts.filename,
       ...opts.headers,
     },
-  });
+  }));
 }
 
 // Stage one raw body exactly as URLSessionUploadTask does from a file URL.
 // Wait for a voice session's (fire-and-forget) HQ job to settle before a
 // test's cleanup closes the event bus — a still-running job emitting into a
 // torn-down bus would throw asynchronously into the NEXT test.
-async function waitForHqDone(ctx, id, timeoutMs = 2000) {
+async function waitForHqDone(ctx: TestServer, id: string, timeoutMs = 2000) {
   const start = Date.now();
   for (;;) {
-    const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${id}/session.json`));
-    if (manifest.voice.hq.state === "failed" || manifest.voice.hq.state === "ready") return manifest;
+    const manifest = await manifestOf(ctx, id);
+    if (voiceOf(manifest).hq.state === "failed" || voiceOf(manifest).hq.state === "ready") return manifest;
     if (Date.now() - start > timeoutMs) return manifest;
     await new Promise((r) => setTimeout(r, 10));
   }
 }
 
-async function uploadRaw(ctx, opts) {
-  return ctx.request({
+async function uploadRaw(ctx: TestServer, opts: UploadOpts & { kind: string }) {
+  return respond(ctx.request({
     method: "POST",
     url: `/api/capture/sessions/${opts.sessionId}/upload`,
     payload: opts.data,
@@ -66,22 +103,35 @@ async function uploadRaw(ctx, opts) {
       "x-capture-source": opts.source ?? "camera-environment",
       ...opts.headers,
     },
-  });
+  }));
 }
 
 const SESSIONS = "/api/capture/sessions";
 
 // Create a capture/voice session; returns the response.
-function createSession(ctx, payload, headers) {
-  return ctx.request({ method: "POST", url: SESSIONS, payload, headers });
+function createSession(ctx: TestServer, payload: object, headers: Record<string, string> = {}) {
+  return respond(ctx.request({ method: "POST", url: SESSIONS, payload, headers }));
 }
 
-async function manifestOf(ctx, id) {
-  return JSON.parse(await ctx.read(`_tmp/capture-staging/${id}/session.json`));
+// A voice session's `voice` object; fails the test on any other kind.
+function voiceOf(session: StagingSession): StagingVoice {
+  if (session.voice === undefined) throw new Error(`session ${session.id} has no voice object`);
+  return session.voice;
+}
+
+// A voice session's recorded HQ request; fails the test when none was recorded.
+function hqRequestOf(session: StagingSession) {
+  const request = voiceOf(session).hqRequest;
+  if (request === undefined) throw new Error(`session ${session.id} recorded no HQ request`);
+  return request;
+}
+
+async function manifestOf(ctx: TestServer, id: string) {
+  return StagingSessionSchema.parse(JSON.parse(await ctx.read(`_tmp/capture-staging/${id}/session.json`)));
 }
 
 // Pair a device whose identity is `createdBy`; returns its bearer headers.
-async function pairedAuth(ctx, createdBy, deviceLabel) {
+async function pairedAuth(ctx: TestServer, createdBy: string, deviceLabel: string) {
   const ticket = createMobilePairingTicket(ctx.boxRoot, { createdBy });
   const paired = await redeemMobilePairingTicket(ctx.boxRoot, { pairingToken: ticket.token, deviceLabel });
   if (!paired) throw new Error(`pairing failed for ${createdBy}`);
@@ -89,7 +139,7 @@ async function pairedAuth(ctx, createdBy, deviceLabel) {
 }
 
 // Upload PCM chunk `n` (1-based) of a voice recording; its segment id is the recording id.
-function pcmChunk(ctx, recordingId, n, text) {
+function pcmChunk(ctx: TestServer, recordingId: string, n: number, text: string) {
   return uploadRaw(ctx, {
     sessionId: recordingId, filename: `pcm-${String(n).padStart(6, "0")}.raw`, kind: "audio", data: Buffer.from(text),
     headers: { "x-capture-segment-id": recordingId, "x-capture-audio-format": "pcm-s16le-16k" },
@@ -97,14 +147,15 @@ function pcmChunk(ctx, recordingId, n, text) {
 }
 
 // A voice session with one uploaded chunk; returns its id.
-async function voiceWithChunk(ctx) {
+async function voiceWithChunk(ctx: TestServer) {
   const created = await createSession(ctx, { kind: "voice", targetSessionId: "chat-voice" });
-  await pcmChunk(ctx, created.body.sessionId, 1, "PCM1");
-  return created.body.sessionId;
+  await pcmChunk(ctx, sessionIdOf(created), 1, "PCM1");
+  return sessionIdOf(created);
 }
 
-function finalize(ctx, sessionId, payload, headers) {
-  return ctx.request({ method: "POST", url: `${SESSIONS}/${sessionId}/finalize`, payload, headers });
+function finalize(ctx: TestServer, sessionId: string, payload?: object, headers: Record<string, string> = {}) {
+  const url = `${SESSIONS}/${sessionId}/finalize`;
+  return respond(ctx.request(payload === undefined ? { method: "POST", url, headers } : { method: "POST", url, payload, headers }));
 }
 ```
 
@@ -120,8 +171,8 @@ const created = await createSession(ctx, { targetSessionId: "chat-abc" });
 [created.statusCode, created.body.capabilities]
 => [200, { acceptedAudioFormats: ["webm-opus", "m4a-aac"], acceptedUploadEncodings: ["raw-body-v1"] }]
 
-const sessionId = created.body.sessionId;
-const segment = (id, filename, startedAt) =>
+const sessionId = sessionIdOf(created);
+const segment = (id: string, filename: string, startedAt: string) =>
   upload(ctx, {
     sessionId, filename, contentType: "audio/webm", data: Buffer.from(`SEGMENT-${id.toUpperCase()}`),
     headers: {
@@ -155,9 +206,9 @@ second file or a mixed format is rejected before either filename is staged.
 ```ts
 const ctx = await makeTestServer();
 const created = await createSession(ctx, { targetSessionId: "chat-native" });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 const m4a = { "x-capture-segment-id": "native-segment", "x-capture-segment-started-at": "2026-07-09T14:01:00.000Z", "x-capture-audio-format": "m4a-aac" };
-const sendPhoto = (data) => uploadRaw(ctx, { sessionId, filename: "ios-photo-a.jpg", kind: "photo", data: Buffer.from(data) });
+const sendPhoto = (data: string) => uploadRaw(ctx, { sessionId, filename: "ios-photo-a.jpg", kind: "photo", data: Buffer.from(data) });
 const sendAudio = () => uploadRaw(ctx, { sessionId, filename: "ios-audio-a.m4a", kind: "audio", data: Buffer.from("M4A-BYTES"), headers: m4a });
 
 const photo = await sendPhoto("JPEG-BYTES");
@@ -212,16 +263,16 @@ the same `createdBy` value used by cookie-authenticated web capture.
 const ctx = await makeTestServer();
 const auth = await pairedAuth(ctx, "owner@example.com", "Owner's phone");
 const created = await createSession(ctx, { targetSessionId: "chat-owner" }, auth);
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 await uploadRaw(ctx, {
   sessionId, filename: "ios-photo-owner.jpg", kind: "photo", data: Buffer.from("OWNER"), headers: auth,
 });
-const resumed = await ctx.request({
+const resumed = await respond(ctx.request({
   method: "GET",
   url: `${SESSIONS}/resumable?targetSessionId=chat-owner&clientSessionId=${sessionId}`,
   headers: auth,
-});
-({ status: resumed.statusCode, matches: resumed.body.resumable[0]?.id === sessionId })
+}));
+({ status: resumed.statusCode, matches: resumed.body.resumable?.[0]?.id === sessionId })
 => {"status":200,"matches":true}
 
 (await manifestOf(ctx, sessionId)).createdBy
@@ -237,7 +288,7 @@ const forbiddenUpload = await uploadRaw(ctx, {
   sessionId, filename: "other.jpg", kind: "photo", data: Buffer.from("OTHER"), headers: otherAuth,
 });
 const forbiddenFinalize = await finalize(ctx, sessionId, undefined, otherAuth);
-const forbiddenCancel = await ctx.request({ method: "DELETE", url: `${SESSIONS}/${sessionId}`, headers: otherAuth });
+const forbiddenCancel = await respond(ctx.request({ method: "DELETE", url: `${SESSIONS}/${sessionId}`, headers: otherAuth }));
 [forbiddenUpload.statusCode, forbiddenFinalize.statusCode, forbiddenCancel.statusCode]
 => [403, 403, 403]
 
@@ -284,7 +335,7 @@ with no delivery:
 ```ts
 const ctx = await makeTestServer();
 const created = await createSession(ctx, { targetSessionId: null });
-const done = await finalize(ctx, created.body.sessionId);
+const done = await finalize(ctx, sessionIdOf(created));
 [done.statusCode, done.body.staged, done.body.sessionId]
 => [200, true, "«uuid»"]
 ```
@@ -305,9 +356,9 @@ bytes to the cap so a single byte tips it over, without staging a real gigabyte.
 
 ```ts
 const ctx = await makeTestServer();
-const photo = (sessionId, filename) =>
+const photo = (sessionId: string, filename: string) =>
   upload(ctx, { sessionId, filename, data: Buffer.from("X"), headers: { "x-capture-kind": "photo" } });
-const fresh = async () => (await createSession(ctx, { targetSessionId: null })).body.sessionId;
+const fresh = async () => sessionIdOf(await createSession(ctx, { targetSessionId: null }));
 
 const traversalId = await fresh();
 const traversal = await upload(ctx, {
@@ -324,7 +375,7 @@ const sealed = await photo(sealedId, "photo-001.jpg");
 => [409, "Session is sealed; uploads are only accepted while it is open"]
 
 const fullId = await fresh();
-const session = await readStagingSession({ boxRoot: ctx.boxRoot, id: fullId });
+const session = await manifestOf(ctx, fullId);
 session.totalBytes = MAX_STAGED_BYTES;
 await writeStagingSession({ boxRoot: ctx.boxRoot, session });
 const over = await photo(fullId, "photo-001.jpg");
@@ -352,13 +403,13 @@ An `open` session — the uploader's own cancel — is still the client's to del
 
 ```ts
 const ctx = await makeTestServer();
-const withPhoto = async (filename) => {
+const withPhoto = async (filename: string) => {
   const created = await createSession(ctx, { targetSessionId: "chat-discard" });
-  await uploadRaw(ctx, { sessionId: created.body.sessionId, filename, kind: "photo", data: Buffer.from("PHOTO") });
-  return created.body.sessionId;
+  await uploadRaw(ctx, { sessionId: sessionIdOf(created), filename, kind: "photo", data: Buffer.from("PHOTO") });
+  return sessionIdOf(created);
 };
-const discard = (id) => ctx.request({ method: "DELETE", url: `${SESSIONS}/${id}` });
-const gone = (id) => readStagingSession({ boxRoot: ctx.boxRoot, id });
+const discard = (id: string) => respond(ctx.request({ method: "DELETE", url: `${SESSIONS}/${id}` }));
+const gone = (id: string) => readStagingSession({ boxRoot: ctx.boxRoot, id });
 
 const sessionId = await withPhoto("shot.jpg");
 const cancelled = await discard(sessionId);
@@ -375,7 +426,7 @@ const refused = await discard(busyId);
 [refused.statusCode, refused.body.error]
 => [409, "Capture is already preparing and can no longer be discarded"]
 
-(await gone(busyId)).state
+(await gone(busyId))?.state
 => preparing
 ```
 
@@ -445,7 +496,7 @@ const noTarget = await createSession(ctx, { kind: "voice", id: unboundId });
 noTarget.statusCode
 => 200
 
-(await manifestOf(ctx, unboundId)).voice.targetSessionId
+voiceOf(await manifestOf(ctx, unboundId)).targetSessionId
 => null
 ```
 
@@ -510,7 +561,7 @@ capture's finalize path never learned to concatenate or convert raw PCM:
 const ctx = await makeTestServer();
 const created = await createSession(ctx, { targetSessionId: "chat-abc" });
 const res = await uploadRaw(ctx, {
-  sessionId: created.body.sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM"),
+  sessionId: sessionIdOf(created), filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM"),
   headers: { "x-capture-segment-id": "seg-a", "x-capture-audio-format": "pcm-s16le-16k" },
 });
 ({ status: res.statusCode, error: res.body.error })
@@ -532,7 +583,7 @@ uploaded and finalize retried:
 ```ts
 const ctx = await makeTestServer();
 const created = await createSession(ctx, { kind: "voice", targetSessionId: "chat-voice" });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 // Only chunk 2 uploaded — chunk 1 never arrived.
 await pcmChunk(ctx, sessionId, 2, "PCM2");
 const res = await finalize(ctx, sessionId, { chunkCount: 2, emissionId: null, hq: null });
@@ -563,7 +614,7 @@ const repeat = await finalize(ctx, sessionId, body);
 [first, repeat].map((r) => ({ status: r.statusCode, hq: r.body.hq, handoff: r.body.handoff }))
 => [{"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}, {"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}]
 
-(await manifestOf(ctx, sessionId)).voice.emissionId
+voiceOf(await manifestOf(ctx, sessionId)).emissionId
 => em-idem
 ```
 
@@ -608,7 +659,7 @@ conflicting.statusCode
 // failure to settle before this test's cleanup closes the event bus, so it
 // can't emit into a torn-down bus mid-flight.
 const settled = await waitForHqDone(ctx, sessionId);
-settled.voice.hqRequest.emissionId
+hqRequestOf(settled).emissionId
 => e1
 ```
 
@@ -632,7 +683,7 @@ const res = await finalize(ctx, sessionId, {
 => {"status":200,"hq":{"state":"queued"}}
 
 const manifest = await manifestOf(ctx, sessionId);
-const { emissionId, sessionId: hqSessionId, service } = manifest.voice.hqRequest;
+const { emissionId, sessionId: hqSessionId, service } = hqRequestOf(manifest);
 ({ emissionId, sessionId: hqSessionId, service })
 => {"emissionId":"e1","sessionId":"chat-voice","service":"whisper"}
 ```
@@ -655,7 +706,7 @@ job queued); `voiceRecording.fallBack` names the session later.
 ```ts
 const ctx = await makeTestServer();
 const created = await createSession(ctx, { kind: "voice" });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 await pcmChunk(ctx, sessionId, 1, "PCM1");
 const res = await finalize(ctx, sessionId, {
   chunkCount: 1, emissionId: "e-new", hq: { emissionId: "e-new", sessionId: null },
@@ -663,7 +714,7 @@ const res = await finalize(ctx, sessionId, {
 ({ status: res.statusCode, hq: res.body.hq })
 => {"status":200,"hq":{"state":"queued"}}
 
-const { emissionId, sessionId: hqSessionId } = (await manifestOf(ctx, sessionId)).voice.hqRequest;
+const { emissionId, sessionId: hqSessionId } = hqRequestOf(await manifestOf(ctx, sessionId));
 ({ emissionId, sessionId: hqSessionId })
 => {"emissionId":"e-new","sessionId":null}
 ```

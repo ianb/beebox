@@ -7,16 +7,19 @@ written. The behavior of each procedure is in `quick-chat.submit.doctest.md`.
 
 ```ts setup
 import { readdir } from "node:fs/promises";
+import { TRPCError } from "@trpc/server";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
-function caller(boxRoot) {
-  return quickChatRouter.createCaller({ boxRoot, boxSlug: "test", authed: true, services: { jev: undefined },
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} } });
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true, services: { jev: undefined } });
+  return quickChatRouter.createCaller(ctx);
 }
-async function code(run) {
+async function code(run: () => Promise<unknown>) {
   try { await run(); return "unexpected success"; }
-  catch (error) { return error.code; }
+  catch (error) { return error instanceof TRPCError ? error.code : String(error); }
 }
 ```
 

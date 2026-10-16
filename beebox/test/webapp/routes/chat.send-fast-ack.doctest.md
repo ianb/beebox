@@ -10,6 +10,7 @@ every retry timer behind it) used to spend that whole window pending.
 
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import { bodyField } from "../../helpers/doctest-helpers.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { getTurnBuffer } from "../../../src/core/chat/turn-buffer.js";
 import { ChatSession } from "../../../src/core/chat/session/run/core.js";
@@ -64,7 +65,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const gate = openSendGate();
@@ -76,7 +77,7 @@ const res = await ctx.request({
 
 // The engine start is still parked, so the backend has not been asked for a
 // run yet — and the client already has its turn.
-`${res.statusCode} | turn=${typeof res.body.turnId} | recorded=${recorded.length} | runs=${backend.runs.length} | buffered=${getTurnBuffer(String(res.body.turnId)) !== undefined}`
+`${res.statusCode} | turn=${typeof bodyField(res.body, "turnId")} | recorded=${recorded.length} | runs=${backend.runs.length} | buffered=${getTurnBuffer(String(bodyField(res.body, "turnId"))) !== undefined}`
 => 200 | turn=string | recorded=1 | runs=0 | buffered=true
 ```
 
@@ -88,7 +89,7 @@ gate.release();
 await gate.completed;
 const started = backend.runs.length > 0;
 
-`started=${started} | errored=${getTurnBuffer(String(res.body.turnId))?.errored}`
+`started=${started} | errored=${getTurnBuffer(String(bodyField(res.body, "turnId")))?.errored}`
 => started=true | errored=null
 ```
 
@@ -116,7 +117,7 @@ const sessionIds: unknown[] = [];
 ctx.eventBus.subscribe({
   listener: (e: BusEvent) => {
     if (e.event !== "chat-user-message") return;
-    recorded.push(String(e.data.message));
+    recorded.push(e.data.message);
     sessionIds.push(e.data.sessionId);
   },
 });
@@ -127,9 +128,9 @@ const res = await ctx.request({
   url: "/api/chat/send",
   payload: { session: "new", message: "start something new", messageId: "ack-2" },
 });
-const live = getTurnBuffer(String(res.body.turnId));
+const live = getTurnBuffer(String(bodyField(res.body, "turnId")));
 
-`${res.statusCode} | turn=${typeof res.body.turnId} | recorded=${recorded.length} | sessionId=${JSON.stringify(sessionIds[0])} | runs=${backend.runs.length} | live=${live !== undefined && !live.complete}`
+`${res.statusCode} | turn=${typeof bodyField(res.body, "turnId")} | recorded=${recorded.length} | sessionId=${JSON.stringify(sessionIds[0])} | runs=${backend.runs.length} | live=${live !== undefined && !live.complete}`
 => 200 | turn=string | recorded=1 | sessionId=null | runs=0 | live=true
 ```
 

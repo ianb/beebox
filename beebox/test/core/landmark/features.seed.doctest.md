@@ -13,13 +13,14 @@ import {
   readLandmarkFeaturesForDir,
   seedFeaturesForNewChat,
 } from "../../../src/core/landmark/features.js";
+import type { LandmarkNavigationData } from "../../../src/schemas/landmark.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 
 ## readLandmarkFeatures — read from a navigation role
 
 ```ts
-const navigation = { label: "Daily dump", "chat-app": { narration: "on", prose: "off" } };
+const navigation = { label: "Daily dump", "chat-app": { narration: "on", prose: "off" } } as const;
 JSON.stringify(readLandmarkFeatures(navigation))
 => {"narration":"on","prose":"off"}
 ```
@@ -36,7 +37,9 @@ depth — the schema rejects them at parse time, but hand-edited cards
 might bypass validation).
 
 ```ts
-const navigation = { label: "x", "chat-app": { narration: "on", bogus: "yes", prose: "maybe" } };
+// Hand-edited card values that bypass schema validation, so they cannot satisfy the parsed type.
+const chatApp: Record<string, string> = { narration: "on", bogus: "yes", prose: "maybe" };
+const navigation = { label: "x", "chat-app": chatApp } as LandmarkNavigationData;
 JSON.stringify(readLandmarkFeatures(navigation))
 => {"narration":"on"}
 ```

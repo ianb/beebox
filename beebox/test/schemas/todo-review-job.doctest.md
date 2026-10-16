@@ -13,11 +13,11 @@ keep validating.
 
 ```ts setup
 import { TodoReviewJobSchema, createTodoReviewJobTemplate } from "../../src/schemas/todo-review-job.js";
-import { parseCardText } from "../../src/core/card-io.js";
+import { cardFields, parseCardText } from "../../src/core/card-io.js";
 
 const schemas = new Map([["todo-review-job", TodoReviewJobSchema]]);
 
-function parse(card) {
+function parse(card: string) {
   return parseCardText(card, { source: "job.todo-review-job.card", schemas, type: "todo-review-job" });
 }
 ```
@@ -44,10 +44,11 @@ const card = createTodoReviewJobTemplate({
 });
 
 const parsed = parse(card);
-JSON.stringify(parsed.fields.escalated[0])
+const fields = cardFields(parsed, TodoReviewJobSchema);
+JSON.stringify(fields.escalated[0])
 => {"locator":"_content/projects/Porch/Plan.doc.card:8","text":"Order lumber","detail":"due 2026-07-01","card":"Porch rebuild","section":"Build › Decking"}
 
-JSON.stringify(parsed.fields.actionable[0])
+JSON.stringify(fields.actionable[0])
 => {"locator":"_content/projects/Porch/Plan.doc.card:12","text":"Review the delivery note","assigned":"agent","detail":"agent follow-up"}
 ```
 
@@ -64,7 +65,7 @@ const older = parse([
   "priority: normal",
   "description: 'Todo review sweep: 1 escalated.'",
   "escalated:",
-  "  - locator: store/a.memo.card:5",
+  "  - locator: store/a.doc.card:5",
   "    text: An older item",
   "    detail: due 2026-07-01",
   "stirring: []",
@@ -74,6 +75,6 @@ const older = parse([
   "",
 ].join("\n"));
 
-JSON.stringify(older.fields.escalated[0])
-=> {"locator":"store/a.memo.card:5","text":"An older item","detail":"due 2026-07-01"}
+JSON.stringify(cardFields(older, TodoReviewJobSchema).escalated[0])
+=> {"locator":"store/a.doc.card:5","text":"An older item","detail":"due 2026-07-01"}
 ```

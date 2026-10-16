@@ -9,7 +9,7 @@ when every view renders.
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { checkViews } from "../../../../src/cli/commands/view/command.js";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
 
@@ -32,17 +32,16 @@ async function makeViewBox() {
 }
 
 // Views live at `<boxRoot>/src/views`.
-async function writeView(box, rel, content) {
+async function writeView(box: TmpBox, rel: string, content: string) {
   const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);
 }
 
-const MEMO_CARD = `---
-status: new
-created: 2026-03-01T12:00:00Z
+const DOC_CARD = `---
+title: Test
 ---
-Test memo content
+Test doc content
 `;
 
 const GOOD_VIEW = `export const name = "Good";
@@ -59,7 +58,7 @@ export default function Good() {
 // view-card-shape migration exists to find and fix.
 const BROKEN_VIEW = `export const name = "Broken";
 export const description = "reads a removed field";
-export const dependencies = ["_content/**/*.memo.card"];
+export const dependencies = ["_content/**/*.doc.card"];
 export const modes = ["page"];
 export default function Broken({ cards }) {
   return <ul>{cards.map((c) => <li key={c.path}>{c.attrs.title}</li>)}</ul>;
@@ -73,7 +72,7 @@ export default function Broken({ cards }) {
 const box = await makeViewBox();
 await writeView(box, "good.tsx", GOOD_VIEW);
 await writeView(box, "broken.tsx", BROKEN_VIEW);
-await box.write("_content/inbox/Test.memo.card", MEMO_CARD);
+await box.write("_content/inbox/Test.doc.card", DOC_CARD);
 
 const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
 result.ok

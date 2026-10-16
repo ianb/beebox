@@ -6,7 +6,7 @@ card's `entry` against the card path and passes the resolved box-relative path
 as `?path=`.
 
 ```ts setup
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../helpers/doctest-server.js";
 import { writeFile, utimes, symlink, rm } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -50,17 +50,17 @@ export default () => { mountSketch; };
 
 // Seed a figure card with one sketch in its attach scope (a card's attach scope
 // drops the type: `Demo.figure.card` owns `Demo.attach/`).
-async function seedSketch(ctx, name, source) {
+async function seedSketch(ctx: TestServer, name: string, source: string) {
   await ctx.seed(`_content/inbox/${name}.figure.card`, "");
   await ctx.seed(`_content/inbox/${name}.attach/sketch.ts`, source);
 }
 
 // GET the compiled module for a box-relative source path (the raw payload).
-function moduleFor(ctx, rel) {
+function moduleFor(ctx: TestServer, rel: string) {
   return ctx.rawRequest({ method: "GET", url: `/api/figure/module.js?path=${rel}` });
 }
 
-async function compile(ctx, name, source) {
+async function compile(ctx: TestServer, name: string, source: string) {
   await seedSketch(ctx, name, source);
   return moduleFor(ctx, `_content/inbox/${name}.attach/sketch.ts`);
 }
@@ -213,7 +213,7 @@ from a compile error:
 ```ts
 const ctx = await makeTestServer();
 await ctx.seed("_content/notes/loose.ts", "export default () => {};");
-const status = async (query) => (await ctx.request({ method: "GET", url: `/api/figure/module.js${query}` })).statusCode;
+const status = async (query: string) => (await ctx.request({ method: "GET", url: `/api/figure/module.js${query}` })).statusCode;
 
 await status("")
 => 400

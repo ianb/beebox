@@ -9,14 +9,14 @@ only the audio.
 import { interactionAudioChunks } from "../../../src/core/tts/interaction-stream.js";
 
 /** Every chunk the stream yields, joined. */
-async function collectInteractionAudio(body) {
-  const chunks = [];
+async function collectInteractionAudio(body: ReadableStream<Uint8Array>) {
+  const chunks: Buffer[] = [];
   for await (const chunk of interactionAudioChunks(body)) chunks.push(chunk);
   return Buffer.concat(chunks);
 }
 
 /** A byte stream that delivers `text` in the given pieces, as a network would. */
-function streamOf(...pieces) {
+function streamOf(...pieces: string[]) {
   const encoder = new TextEncoder();
   return new ReadableStream({
     start(controller) {
@@ -26,7 +26,7 @@ function streamOf(...pieces) {
   });
 }
 
-const audioEvent = (bytes) =>
+const audioEvent = (bytes: number[]) =>
   `event: step.delta\ndata: ${JSON.stringify({ event_type: "step.delta", delta: { type: "audio", data: Buffer.from(bytes).toString("base64") } })}\n\n`;
 ```
 

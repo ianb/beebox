@@ -12,11 +12,10 @@ import * as os from "node:os";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { loadViewCards } from "../../../src/core/views/cards.js";
 
-const MEMO_CARD = `---
-status: new
-created: 2026-03-01T12:00:00Z
+const DOC_CARD = `---
+title: Test
 ---
-Test memo content
+Test doc content
 `;
 ```
 
@@ -27,33 +26,33 @@ matches arriving in `files` as metadata:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Test.memo.card", MEMO_CARD);
+await box.write("_content/inbox/Test.doc.card", DOC_CARD);
 await box.write("_content/inbox/Test.attach/notes.txt", "hello");
 
 const result = await loadViewCards(box.root, ["_content/**/*.card", "_content/**/*.txt"]);
 result.cards.length
 => 1
 
-result.cards[0].type
-=> memo
+result.cards[0]?.type
+=> doc
 
-result.cards[0].path
-=> _content/inbox/Test.memo.card
+result.cards[0]?.path
+=> _content/inbox/Test.doc.card
 
-result.cards[0].frontmatter.status
-=> new
+result.cards[0]?.frontmatter?.title
+=> Test
 
-result.cards[0].body
-=> Test memo content
+result.cards[0]?.body
+=> Test doc content
 ```
 
 `bodyLineOffset` counts the file lines before the body, from the same split
 the todo collector uses, so a todo a view renders through `Markdown` gets the
-collector's locator. The memo's frontmatter block is four lines:
+collector's locator. The doc's frontmatter block is three lines:
 
 ```ts continue
-result.cards[0].bodyLineOffset
-=> 4
+result.cards[0]?.bodyLineOffset
+=> 3
 
 result.files.map((f) => f.path).join(", ")
 => _content/inbox/Test.attach/notes.txt
@@ -90,17 +89,17 @@ selected an invalid card instead of silently rendering without it:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Good.memo.card", MEMO_CARD);
+await box.write("_content/inbox/Good.doc.card", DOC_CARD);
 await box.write("_content/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema for this type\n");
 
 const result = await loadViewCards(box.root, ["_content/**/*.card"]);
 result.cards.map((c) => c.path).join(", ")
-=> _content/inbox/Good.memo.card
+=> _content/inbox/Good.doc.card
 
 result.skipped.map((s) => s.path).join(", ")
 => _content/inbox/Bad.bogus.card
 
-result.skipped[0].error.length > 0
+(result.skipped[0]?.error.length ?? 0) > 0
 => true
 ```
 
@@ -110,19 +109,19 @@ await box.cleanup();
 
 ## Round-7 hardening finding 2: a box-wide glob never reaches package internals
 
-`**/*.memo.card` from the unified root would otherwise reach a package-internal
-`src/private.memo.card` too — a dependency is box CONTENT by definition, so
+`**/*.doc.card` from the unified root would otherwise reach a package-internal
+`src/private.doc.card` too — a dependency is box CONTENT by definition, so
 every glob's root is restricted to the underscore areas before it ever
 matches:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Real.memo.card", MEMO_CARD);
-await box.write("src/private.memo.card", MEMO_CARD);
+await box.write("_content/inbox/Real.doc.card", DOC_CARD);
+await box.write("src/private.doc.card", DOC_CARD);
 
-const result = await loadViewCards(box.root, ["**/*.memo.card"]);
+const result = await loadViewCards(box.root, ["**/*.doc.card"]);
 result.cards.map((c) => c.path).join(", ")
-=> _content/inbox/Real.memo.card
+=> _content/inbox/Real.doc.card
 ```
 
 ```ts cleanup
@@ -138,14 +137,14 @@ dropped rather than served:
 ```ts
 const box = await makeTmpBox();
 const outside = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-outside-"));
-await fs.writeFile(path.join(outside, "secret.card"), MEMO_CARD);
+await fs.writeFile(path.join(outside, "secret.card"), DOC_CARD);
 await fs.mkdir(box.path("_content/inbox"), { recursive: true });
-await fs.symlink(path.join(outside, "secret.card"), box.path("_content/inbox/Escape.memo.card"));
-await box.write("_content/inbox/Real.memo.card", MEMO_CARD);
+await fs.symlink(path.join(outside, "secret.card"), box.path("_content/inbox/Escape.doc.card"));
+await box.write("_content/inbox/Real.doc.card", DOC_CARD);
 
 const result = await loadViewCards(box.root, ["_content/**/*.card"]);
 result.cards.map((c) => c.path).join(", ")
-=> _content/inbox/Real.memo.card
+=> _content/inbox/Real.doc.card
 ```
 
 ```ts cleanup

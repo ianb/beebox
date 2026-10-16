@@ -76,8 +76,8 @@ addEntry(l2, entry("deadbeef", { kind: "scan", sessionRelDir: "_content/inbox/sc
 await saveLedger(box2.root, l2);
 const reloaded = await loadLedger(box2.root);
 print(`entries=${reloaded.entries.length}`);
-print(`hash=${reloaded.entries[0].hash}`);
-print(`session=${reloaded.entries[0].sessionRelDir}`)
+print(`hash=${reloaded.entries[0]?.hash}`);
+print(`session=${reloaded.entries[0]?.sessionRelDir}`)
 =>
 entries=1
 hash=deadbeef
@@ -207,7 +207,7 @@ await Promise.all(
   )
 );
 const after = await loadLedger(boxL.root);
-JSON.stringify({ count: after.entries.length, sample: findEntry(after, "hash-7").hash })
+JSON.stringify({ count: after.entries.length, sample: findEntry(after, "hash-7")?.hash })
 => {"count":10,"sample":"hash-7"}
 ```
 

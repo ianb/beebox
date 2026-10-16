@@ -16,6 +16,7 @@ path and remove that directory afterwards.
 
 ```ts setup
 import { once } from "node:events";
+import assert from "node:assert/strict";
 import { mkdir, writeFile, appendFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -27,7 +28,9 @@ import { getSessionDir } from "../../../../src/core/chat/session/transcript-path
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { tick, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 
-const entryLine = (uuid) =>
+const FINAL_UUID = "00000000-0000-4000-8000-000000000001";
+
+const entryLine = (uuid: string) =>
   JSON.stringify({
     type: "assistant",
     uuid,
@@ -78,6 +81,7 @@ const session = new ChatSession(box.root, { backend, systemPrompt: plainTestProm
 await session.send("hello");
 await tick();
 const run = backend.lastRun();
+assert.ok(run);
 run?.emitSessionInit("tsync-gate");
 await tick();
 const logPath = await resolveSessionLogPath(box.root, "tsync-gate");
@@ -85,13 +89,7 @@ await mkdir(dirname(logPath), { recursive: true });
 await writeFile(logPath, entryLine("seg-1-uuid"));
 let doneFired = false;
 session.on("done", () => { doneFired = true; });
-run?.emitMessage({
-  type: "assistant",
-  uuid: "final-uuid",
-  session_id: "tsync-gate",
-  parent_tool_use_id: null,
-  message: { role: "assistant", content: [{ type: "text", text: "final segment" }] },
-});
+run?.emitAssistantText("final segment", { uuid: FINAL_UUID });
 run?.emitResult();
 await sleep(200);
 
@@ -99,7 +97,7 @@ doneFired
 => false
 
 const done = once(session, "done");
-await appendFile(logPath, entryLine("final-uuid"));
+await appendFile(logPath, entryLine(FINAL_UUID));
 await done;
 doneFired
 => true
@@ -124,6 +122,7 @@ const session = new ChatSession(box.root, { backend, systemPrompt: plainTestProm
 await session.send("hello");
 await tick();
 const run = backend.lastRun();
+assert.ok(run);
 const done = once(session, "done");
 run?.emitSessionInit("tsync-nouid");
 run?.emitAssistantText("plain reply");

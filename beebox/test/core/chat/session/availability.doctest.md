@@ -18,18 +18,19 @@ import { plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.j
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
+import type { ChatHuskEntry } from "../../../../src/core/chat/husk-read.js";
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-async function configure(boxRoot, config) {
+async function configure(boxRoot: string, config: Record<string, unknown>) {
   await fs.mkdir(path.join(boxRoot, "_config"), { recursive: true });
   await fs.writeFile(path.join(boxRoot, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(boxRoot);
 }
 
 /** The husk fields the derivation reads; the rest of the card is irrelevant. */
-function husk(fields) {
+function husk(fields: Partial<ChatHuskEntry>): ChatHuskEntry {
   return { path: "_content/chat/web/2026-08-26_aaaaaaaa.chat.card", session: "s", ...fields };
 }
 ```

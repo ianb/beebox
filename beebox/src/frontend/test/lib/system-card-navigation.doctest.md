@@ -7,9 +7,10 @@ resolve their semantic place on cold entry, while warm selection wins.
 ```ts setup
 import { cardChatSearch, legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/lib/system-card-navigation.js";
 import { routeConversationRequest } from "../../src/components/chat/everywhere/conversation-intent.js";
+type RouteIntentInput = Parameters<typeof routeConversationRequest>[0];
 import { SYSTEM_CARD_PATHS } from "../../../shared/system-card-paths.js";
 import { serializeViewUrl } from "../../src/lib/view-url.js";
-const browse = { path: SYSTEM_CARD_PATHS.browse, viewer: null, params: {}, viewState: { directory: "_content/recipes", detail: { path: "_content/recipes/a.memo.card", viewer: "Source", params: {}, viewState: null } } };
+const browse = { path: SYSTEM_CARD_PATHS.browse, viewer: null, params: {}, viewState: { directory: "_content/recipes", detail: { path: "_content/recipes/a.doc.card", viewer: "Source", params: {}, viewState: null } } };
 ```
 
 ## Legacy card entry preserves the complete target and shell state
@@ -20,8 +21,8 @@ state all continue into the canonical workspace entry.
 
 ```ts
 const legacyState = { bbxWorkspace: { revision: 7 }, inherited: "sentinel" };
-JSON.stringify(legacyCardRedirect({ boxSlug: "test", cardPath: "_content/Meeting Notes.memo.card", search: { view: "Source", page: "2", viewState: { cursor: 4 }, nativeComposer: "1", session: "chosen" }, state: legacyState }))
-=> {"to":"/test/views/_content/Meeting Notes.memo.card","search":{"view":"Source","page":"2","viewState":{"cursor":4},"nativeComposer":"1","session":"chosen"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
+JSON.stringify(legacyCardRedirect({ boxSlug: "test", cardPath: "_content/Meeting Notes.doc.card", search: { view: "Source", page: "2", viewState: { cursor: 4 }, nativeComposer: "1", session: "chosen" }, state: legacyState }))
+=> {"to":"/test/views/_content/Meeting Notes.doc.card","search":{"view":"Source","page":"2","viewState":{"cursor":4},"nativeComposer":"1","session":"chosen"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
 ```
 
 Questions, Landmarks, and the Chats alias use the same pure redirect adapter.
@@ -58,22 +59,22 @@ resolved landmark directory. Both carry renderer parameters and view state in
 the serialized card target.
 
 ```ts
-const selectedCard = { path: "_content/Meeting Notes.memo.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
+const selectedCard = { path: "_content/Meeting Notes.doc.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
 JSON.stringify(cardChatSearch({ mode: "recent", target: selectedCard, contextDir: "_content", sessionId: "session-7", nativeComposer: "1" }))
-=> {"session":"session-7","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2","nativeComposer":"1"}
+=> {"session":"session-7","card":"_content/Meeting Notes.doc.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2","nativeComposer":"1"}
 
 JSON.stringify(cardChatSearch({ mode: "recent", target: selectedCard, contextDir: "_content", sessionId: null }))
-=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
+=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.doc.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
 
 JSON.stringify(cardChatSearch({ mode: "new", target: selectedCard, contextDir: "_content", sessionId: "session-7" }))
-=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
+=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.doc.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
 ```
 
 ```ts
 const query = serializeViewUrl(browse).split("?")[1];
 const target = workspaceRouteTarget({ pathname: "/test/views/" + browse.path, splat: browse.path, searchStr: "?" + query + "&nativeComposer=1", search: {} });
 JSON.stringify(target)
-=> {"path":"_config/interface/browse.card","viewer":null,"params":{},"viewState":{"directory":"_content/recipes","detail":{"path":"_content/recipes/a.memo.card","viewer":"Source","params":{},"viewState":null}}}
+=> {"path":"_config/interface/browse.card","viewer":null,"params":{},"viewState":{"directory":"_content/recipes","detail":{"path":"_content/recipes/a.doc.card","viewer":"Source","params":{},"viewState":null}}}
 
 JSON.stringify(systemCardEntryContext(target))
 => {"cardPath":null,"browseDir":"_content/recipes"}
@@ -83,11 +84,11 @@ JSON.stringify([SYSTEM_CARD_PATHS.dashboard, SYSTEM_CARD_PATHS.settings, SYSTEM_
 ```
 
 ```ts
-const input = { first: true, chatPage: false, search: {}, selection: { kind: "resolving", contextDir: "", requestId: "cold" }, remembered: null, ...systemCardEntryContext(browse) };
+const input: RouteIntentInput = { first: true, chatPage: false, search: {}, selection: { kind: "resolving", contextDir: "", requestId: "cold" }, remembered: null, ...systemCardEntryContext(browse) };
 JSON.stringify(routeConversationRequest(input))
 => {"kind":"landmark","contextDir":"_content/recipes"}
 
-const chosen = { kind: "ready", target: { kind: "session", sessionId: "chosen", contextDir: "_content/work" }, label: "Work" };
+const chosen: RouteIntentInput["selection"] = { kind: "ready", target: { kind: "session", sessionId: "chosen", contextDir: "_content/work" }, label: "Work" };
 routeConversationRequest({ ...input, first: false, selection: chosen })
 => null
 
@@ -115,11 +116,11 @@ leaf router's decoded parameter, including spaces in ordinary card names.
 workspaceRouteTarget({ pathname: "/test/views/_config/interface/settings.card", searchStr: "", search: {} })?.path
 => _config/interface/settings.card
 
-workspaceRouteTarget({ pathname: "/test/views/_content/Meeting%20Notes.memo.card", searchStr: "?view=Source", search: {} })?.path
-=> _content/Meeting Notes.memo.card
+workspaceRouteTarget({ pathname: "/test/views/_content/Meeting%20Notes.doc.card", searchStr: "?view=Source", search: {} })?.path
+=> _content/Meeting Notes.doc.card
 
-JSON.stringify(withoutShellParams({ path: "_content/notes.memo.card", viewer: "Source", params: { nativeComposer: "1", session: "private-session", contextDir: "_content/work", zoom: "2" }, viewState: { page: 3 } }))
-=> {"path":"_content/notes.memo.card","viewer":"Source","params":{"zoom":"2"},"viewState":{"page":3}}
+JSON.stringify(withoutShellParams({ path: "_content/notes.doc.card", viewer: "Source", params: { nativeComposer: "1", session: "private-session", contextDir: "_content/work", zoom: "2" }, viewState: { page: 3 } }))
+=> {"path":"_content/notes.doc.card","viewer":"Source","params":{"zoom":"2"},"viewState":{"page":3}}
 ```
 
 ## Projection consumes canonical renderer parameters exactly once
@@ -135,7 +136,7 @@ Object.keys(projected).sort().join(",")
 
 workspaceRouteTarget({ pathname: "/test/chat", searchStr: "", search: projected })?.viewState?.detail
 => {
-  "path": "_content/recipes/a.memo.card",
+  "path": "_content/recipes/a.doc.card",
   "viewer": "Source",
   "params": {},
   "viewState": null

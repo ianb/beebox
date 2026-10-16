@@ -13,7 +13,21 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { installValidationHooks } from "../../src/core/install-validation-hooks.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { z } from "zod";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+
+const settingsSchema = z.object({
+  hooks: z.object({
+    PostToolUse: z.array(z.object({ matcher: z.string(), hooks: z.array(z.object({ command: z.string() })) })),
+  }),
+  permissions: z.unknown().optional(),
+  model: z.unknown().optional(),
+});
+
+/** The box's `.claude/settings.json`, parsed against the shape these tests read. */
+async function readSettings(box: TmpBox) {
+  return settingsSchema.parse(JSON.parse(await fs.readFile(path.join(box.root, ".claude/settings.json"), "utf-8")));
+}
 
 // shapeVersion 3: one root. `box.root` holds `.claude/`, `.git/`, and every
 // `_`-prefixed operational area — git needs to be initialized there for
@@ -41,16 +55,14 @@ changed.sort()
 The settings file has a single PostToolUse entry with the bbx path embedded:
 
 ```ts continue
-const settings = JSON.parse(
-  await fs.readFile(path.join(box.root, ".claude/settings.json"), "utf-8")
-);
+const settings = await readSettings(box);
 settings.hooks.PostToolUse.length
 => 1
 
-settings.hooks.PostToolUse[0].matcher
+settings.hooks.PostToolUse[0]?.matcher
 => Edit|Write|MultiEdit
 
-settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
+settings.hooks.PostToolUse[0]?.hooks[0]?.command.endsWith(" validate --hook")
 => true
 ```
 
@@ -151,10 +163,10 @@ try {
 
 const expected = JSON.stringify(path.join(await fs.realpath(engine), "bin", "bbx"));
 const preCommit = await fs.readFile(path.join(box.root, ".git/hooks/pre-commit"), "utf-8");
-const settings = JSON.parse(await fs.readFile(path.join(box.root, ".claude/settings.json"), "utf-8"));
+const settings = await readSettings(box);
 [
   preCommit.includes(`BBX=${expected}\n`),
-  settings.hooks.PostToolUse[0].hooks[0].command === `${expected} validate --hook`,
+  settings.hooks.PostToolUse[0]?.hooks[0]?.command === `${expected} validate --hook`,
 ]
 =>
 [
@@ -245,9 +257,7 @@ await fs.writeFile(
 
 await installValidationHooks(box.root);
 
-const settings = JSON.parse(
-  await fs.readFile(path.join(box.root, ".claude/settings.json"), "utf-8")
-);
+const settings = await readSettings(box);
 JSON.stringify(settings.permissions)
 => {"allow":["Bash(npm test)"]}
 
@@ -258,7 +268,7 @@ settings.model
 The validation hook was added alongside:
 
 ```ts continue
-settings.hooks.PostToolUse[0].matcher
+settings.hooks.PostToolUse[0]?.matcher
 => Edit|Write|MultiEdit
 ```
 
@@ -282,9 +292,7 @@ await fs.writeFile(
 
 await installValidationHooks(box.root);
 
-const settings = JSON.parse(
-  await fs.readFile(path.join(box.root, ".claude/settings.json"), "utf-8")
-);
+const settings = await readSettings(box);
 settings.hooks.PostToolUse.length
 => 2
 ```
@@ -293,7 +301,7 @@ User's entry is still there, untouched:
 
 ```ts continue
 const userEntry = settings.hooks.PostToolUse.find((e) => e.matcher === "Bash");
-userEntry.hooks[0].command
+userEntry?.hooks[0]?.command
 => /usr/bin/true
 ```
 
@@ -320,13 +328,11 @@ await fs.writeFile(
 
 await installValidationHooks(box.root);
 
-const settings = JSON.parse(
-  await fs.readFile(path.join(box.root, ".claude/settings.json"), "utf-8")
-);
+const settings = await readSettings(box);
 settings.hooks.PostToolUse.length
 => 1
 
-settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
+settings.hooks.PostToolUse[0]?.hooks[0]?.command.endsWith(" validate --hook")
 => true
 ```
 

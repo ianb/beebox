@@ -7,7 +7,10 @@ authenticated request. The context booleans (`authed`, `isOwner`) are computed
 in `createContext` (`server-box-scope.ts`) so these gates are pure checks.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import { router, publicProcedure, authedProcedure, ownerProcedure, authenticatedOwnerProcedure } from "../../../src/webapp/trpc/procedures.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 
 const testRouter = router({
   pub: publicProcedure.query(() => "pub-ok"),
@@ -17,27 +20,24 @@ const testRouter = router({
 });
 
 // Full context with the gate booleans defaulting to denied; override per case.
-function caller(over) {
-  const ctx = {
+function caller(over: Partial<TrpcContext>) {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: "/x",
     boxSlug: "t",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
     authed: false,
     isOwner: false,
-    isAuthenticatedOwner: false,
+    actor: "none",
     ...over,
-  };
+  });
   return testRouter.createCaller(ctx);
 }
 
 // Run a call and report either its result or the TRPCError code.
-async function attempt(fn) {
+async function attempt(fn: () => Promise<unknown>) {
   try {
     return await fn();
   } catch (e) {
-    return `THREW:${e.code}`;
+    return `THREW:${e instanceof TRPCError ? e.code : String(e)}`;
   }
 }
 ```
@@ -61,7 +61,7 @@ every other owner surface and none of the secrets ones
 both.
 
 ```ts
-const cases = [
+const cases: Array<["pub" | "authed" | "owner" | "strictOwner", string, Partial<TrpcContext>]> = [
   ["pub", "anonymous", {}],
   ["owner", "authed non-owner", { authed: true, isOwner: false }],
   ["owner", "owner / open access", { isOwner: true }],

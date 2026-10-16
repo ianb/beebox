@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  contentCardPath,
   generationStartedAt,
   isFreshGeneration,
   isRetryableVerdict,
@@ -156,4 +157,15 @@ test("pollUntilReady: a failed-to-start page stops the poll at once; a deadline 
     pollMs: 250,
   });
   assert.deepEqual(expired, { verdict: { kind: "unexpected", status: 502 }, timedOut: true });
+});
+
+test("contentCardPath: an ordinary card wins over the area's own landmark card", () => {
+  const listing = (cards: unknown[]): string => JSON.stringify({ result: { data: { path: "_content", cards } } });
+  const landmark = { relativePath: "_content/Box.landmark.card", prominence: "background" };
+  const briefing = { relativePath: "_content/briefing.briefing.card", prominence: "ordinary" };
+  assert.equal(contentCardPath(listing([landmark, briefing])), "_content/briefing.briefing.card");
+  assert.equal(contentCardPath(listing([landmark])), "_content/Box.landmark.card");
+  assert.equal(contentCardPath(listing([])), null);
+  assert.equal(contentCardPath('{"error":"Not found"}'), null);
+  assert.equal(contentCardPath("<html>"), null);
 });

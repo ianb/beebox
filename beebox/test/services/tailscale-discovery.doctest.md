@@ -19,16 +19,17 @@ import { runTailscaleSetup } from "../../src/services/tailscale-setup/core.js";
 
 // Scope the exposure file to this run (setup's guard test never records, but
 // keep it hermetic regardless).
-process.env.BBX_TAILSCALE_EXPOSURE_FILE = path.join(
+const EXPOSURE_FILE = path.join(
   os.tmpdir(),
   `bbx-exposure-discovery-test-${process.pid}-${Date.now()}.json`,
 );
+process.env.BBX_TAILSCALE_EXPOSURE_FILE = EXPOSURE_FILE;
 
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-discovery-"));
 
 // Write a hub.json into a temp dir and return its path (injected as the
 // discovery source in place of ~/.config/beebox/hub.json).
-async function writeHub(name, obj) {
+async function writeHub(name: string, obj: object): Promise<string> {
   const p = path.join(tmp, name);
   await fs.writeFile(p, JSON.stringify(obj, null, 2));
   return p;
@@ -36,8 +37,8 @@ async function writeHub(name, obj) {
 
 // Capture the discovery announcement lines.
 function capturing() {
-  const lines = [];
-  return { lines, log: (l) => lines.push(l) };
+  const lines: string[] = [];
+  return { lines, log: (l: string) => { lines.push(l); } };
 }
 
 const runningStatus = {
@@ -166,6 +167,6 @@ const result = discovered.ok
 
 ```ts cleanup
 await fs.rm(tmp, { recursive: true, force: true });
-await fs.rm(process.env.BBX_TAILSCALE_EXPOSURE_FILE, { force: true });
+await fs.rm(EXPOSURE_FILE, { force: true });
 delete process.env.BBX_TAILSCALE_EXPOSURE_FILE;
 ```

@@ -1,5 +1,5 @@
 /** Surviving hub ownership across an old child's exit and successor readiness. */
-import { acquireBoxMaintenance, type BoxMaintenance } from "../../lib/box-maintenance.js";
+import { acquireBoxMaintenance, type BoxMaintenance } from "../../lib/box-maintenance/admission.js";
 import { DEV_BUNDLE_RELOAD_REQUEST, DEV_BUNDLE_RELOAD_NOW, DEV_BUNDLE_RELOAD_ABORTED, DEV_BUNDLE_RELOAD_EXIT_CODE } from "../../lib/dev-bundle-reload.js";
 import { invariant } from "../../shared/invariant.js";
 import { BOX_KILL_GRACE_MS, describeError } from "../child-process-utils.js";

@@ -43,7 +43,7 @@ tour({ name: "deck-theme", description: "Deck appearance on settings, cards and 
     const selected = await t.eval('document.querySelector("button.bbx-system-theme-button[aria-label=Deck]")?.getAttribute("aria-pressed")');
     invariant(selected.trim() === '"true"', "Deck selection must survive navigation before inspecting theme surfaces");
     await t.checkpoint("deck-selected");
-    await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2Fbloom-inherited.memo.card");
+    await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2Fbloom-inherited.doc.card");
     await t.expect.heading("A little room to grow", { level: 2 });
     const material = await t.eval('document.querySelector(".bbx-card-surface[data-card-theme=deck]") !== null');
     await t.expect.custom("unthemed card inherits Deck", () => material.trim() === "true");
@@ -51,7 +51,7 @@ tour({ name: "deck-theme", description: "Deck appearance on settings, cards and 
     await t.expect.noPageErrors();
     await t.click({ role: "button", name: "Add" });
     await t.checkpoint("deck-composer-menu");
-    await t.go("/views/_content/theme-tour/bloom-explicit.memo.card");
+    await t.go("/views/_content/theme-tour/bloom-explicit.doc.card");
     await t.expect.heading("A note on blue paper", { level: 2 });
     const paper = await t.eval('document.querySelector(".bbx-card-surface[data-card-theme=paper][data-card-stock=blue]") !== null');
     await t.expect.custom("explicit Paper material stays intact", () => paper.trim() === "true");

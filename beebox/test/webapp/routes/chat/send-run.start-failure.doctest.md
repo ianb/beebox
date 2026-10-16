@@ -19,6 +19,7 @@ message.
 
 ```ts setup
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { bodyField } from "../../../helpers/doctest-helpers.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getTurnBuffer } from "../../../../src/core/chat/turn-buffer.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
@@ -54,7 +55,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 backend.failNextStart = Object.assign(new Error("spawn EBADF"), { code: "EBADF" });
@@ -63,10 +64,10 @@ const res = await ctx.request({
   url: "/api/chat/send",
   payload: { session: "new", message: "did you water the plants", messageId: "m1" },
 });
-const turn = await awaitTurnCompletion(res.body.turnId);
+const turn = await awaitTurnCompletion(bodyField(res.body, "turnId"));
 const failure = turn.errored ?? "(no error frame)";
 
-`${res.statusCode} | turn=${typeof res.body.turnId} | recorded=${recorded.length} | errored=${failure} | complete=${turn.complete}`
+`${res.statusCode} | turn=${typeof bodyField(res.body, "turnId")} | recorded=${recorded.length} | errored=${failure} | complete=${turn.complete}`
 => 200 | turn=string | recorded=1 | errored=spawn EBADF | complete=true
 ```
 
@@ -82,7 +83,7 @@ const retry = await ctx.request({
   payload: { session: "new", message: "did you water the plants", messageId: "m1" },
 });
 
-`${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${recorded.length}`
+`${retry.statusCode} | dedup=${bodyField(retry.body, "deduplicated")} | recorded=${recorded.length}`
 => 200 | dedup=true | recorded=1
 ```
 
@@ -101,7 +102,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const res = await ctx.request({
@@ -127,7 +128,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 await ctx.request({
@@ -142,7 +143,7 @@ const again = await ctx.request({
 });
 await awaitFakeRuns(backend, 1);
 
-`${again.statusCode} | dedup=${again.body.deduplicated} | recorded=${recorded.length}`
+`${again.statusCode} | dedup=${bodyField(again.body, "deduplicated")} | recorded=${recorded.length}`
 => 200 | dedup=true | recorded=1
 ```
 

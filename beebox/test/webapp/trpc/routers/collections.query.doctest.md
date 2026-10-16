@@ -11,39 +11,38 @@ a `todo-view` card passes its own **directory**, and the scope glob follows
 from that.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { z } from "zod";
+import type { TodoParamsSchema } from "../../../../src/core/todo/collection.js";
+import type { TodoQueryResult } from "../../../../src/core/todo/query.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
-function caller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-  };
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
-function memo(body) {
-  return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
+function doc(body: string) {
+  return `---\ntitle: Notes\n---\n${body}`;
 }
 
 /** Every item the result carries, matching or context, as `text` strings. */
-function texts(res) {
+function texts(res: TodoQueryResult) {
   return res.groups.flatMap((g) => g.rows.flatMap((r) => r.items.map((i) => i.text))).sort();
 }
 
 /** `path (via)` per row, across every group. */
-function rows(res) {
+function rows(res: TodoQueryResult) {
   return res.groups.flatMap((g) => g.rows.map((r) => `${r.card.path} (${r.via})`)).sort();
 }
 
-const OPEN = { status: ["open"] };
+const OPEN: z.input<typeof TodoParamsSchema> = { status: ["open"] };
+type QueryInput = Parameters<ReturnType<typeof caller>["collections"]["query"]>[0]["query"];
 ```
 
 ## `here` resolution: a subdirectory's view sees only its own subtree
@@ -55,8 +54,8 @@ one.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/root.memo.card", memo('{% todo %}Root-level todo{% /todo %}\n'));
-await box.write("_content/projects/kitchen/notes.memo.card", memo('{% todo %}Pick a countertop{% /todo %}\n'));
+await box.write("_content/root.doc.card", doc('{% todo %}Root-level todo{% /todo %}\n'));
+await box.write("_content/projects/kitchen/notes.doc.card", doc('{% todo %}Pick a countertop{% /todo %}\n'));
 box.commitAll("seed");
 
 const res = await caller(box.root).collections.query({
@@ -77,7 +76,7 @@ deciding what a *reference* points into.
 ```ts continue
 const explicit = await caller(box.root).collections.query({
   collection: "todos",
-  query: { here: "_content/projects/kitchen", glob: "_content/root.memo.card", params: OPEN },
+  query: { here: "_content/projects/kitchen", glob: "_content/root.doc.card", params: OPEN },
 });
 
 JSON.stringify(texts(explicit))
@@ -113,13 +112,13 @@ sibling that a `[2]` character class would otherwise match.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/porch/Draft [2].memo.card", memo('{% todo %}Sand the rail{% /todo %}\n{% todo status="done" %}Buy primer{% /todo %}\n'));
-await box.write("_content/porch/Draft 2.memo.card", memo('{% todo %}Sibling todo{% /todo %}\n'));
+await box.write("_content/porch/Draft [2].doc.card", doc('{% todo %}Sand the rail{% /todo %}\n{% todo status="done" %}Buy primer{% /todo %}\n'));
+await box.write("_content/porch/Draft 2.doc.card", doc('{% todo %}Sibling todo{% /todo %}\n'));
 box.commitAll("seed");
 
 const one = await caller(box.root).collections.query({
   collection: "todos",
-  query: { here: "_content/porch/Draft [2].memo.card", includeReferring: false, params: { status: ["open", "parked", "done", "dropped"] } },
+  query: { here: "_content/porch/Draft [2].doc.card", includeReferring: false, params: { status: ["open", "parked", "done", "dropped"] } },
 });
 
 JSON.stringify(texts(one))
@@ -141,10 +140,10 @@ marked `via: "reference"` so the list can say where they came from. Turning
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/projects/kitchen/notes.memo.card", memo('{% todo %}Pick a countertop{% /todo %}\n'));
+await box.write("_content/projects/kitchen/notes.doc.card", doc('{% todo %}Pick a countertop{% /todo %}\n'));
 await box.write(
-  "_content/errands.memo.card",
-  memo(
+  "_content/errands.doc.card",
+  doc(
     '{% todo %}Hardware run{% /todo %} — for [the kitchen](/_content/projects/kitchen)\n\n' +
     '{% todo %}Water the beans{% /todo %}\n'
   )
@@ -158,7 +157,7 @@ const withRefs = await c.collections.query({
 });
 
 JSON.stringify(rows(withRefs))
-=> ["_content/errands.memo.card (reference)","_content/projects/kitchen/notes.memo.card (scope)"]
+=> ["_content/errands.doc.card (reference)","_content/projects/kitchen/notes.doc.card (scope)"]
 
 // "Water the beans" points nowhere near the kitchen, so it stays out.
 JSON.stringify(texts(withRefs))
@@ -170,7 +169,7 @@ const scopeOnly = await c.collections.query({
 });
 
 JSON.stringify(rows(scopeOnly))
-=> ["_content/projects/kitchen/notes.memo.card (scope)"]
+=> ["_content/projects/kitchen/notes.doc.card (scope)"]
 ```
 
 ```ts cleanup
@@ -188,8 +187,8 @@ shows up as "1 done".
 const box = await makeTmpBox({ git: true });
 await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 await box.write(
-  "_content/a.memo.card",
-  memo(
+  "_content/a.doc.card",
+  doc(
     '{% todo id="t-done" status="done" %}Already finished{% /todo %}\n\n' +
     '{% todo id="t-escalated" due="2026-07-01" %}Overdue thing{% /todo %}\n\n' +
     '{% todo id="t-quiet" start="2026-09-01" %}Not yet{% /todo %}\n'
@@ -200,7 +199,7 @@ const c = caller(box.root);
 
 const openOnly = await c.collections.query({
   collection: "todos",
-  query: { here: "_content/a.memo.card", params: { status: ["open"] } },
+  query: { here: "_content/a.doc.card", params: { status: ["open"] } },
 });
 
 JSON.stringify(openOnly.groups.flatMap((g) => g.rows.flatMap((r) => r.items.map((i) => i.id))).sort())
@@ -212,7 +211,7 @@ JSON.stringify([openOnly.reduction.open, openOnly.reduction.done, openOnly.reduc
 // `onPlate` narrows further, excluding the quiet one.
 const onPlate = await c.collections.query({
   collection: "todos",
-  query: { here: "_content/a.memo.card", params: { status: ["open"], onPlate: true } },
+  query: { here: "_content/a.doc.card", params: { status: ["open"], onPlate: true } },
 });
 
 JSON.stringify(onPlate.groups.flatMap((g) => g.rows.flatMap((r) => r.items.map((i) => i.id))))
@@ -226,7 +225,7 @@ plate states, and a state with no items is absent rather than empty.
 ```ts continue
 const place = await c.collections.query({
   collection: "todos",
-  query: { here: "_content/a.memo.card", group: "place", params: { status: ["open"] } },
+  query: { here: "_content/a.doc.card", group: "place", params: { status: ["open"] } },
 });
 
 JSON.stringify(place.groups.map((g) => `${g.key}:${g.label}`))
@@ -234,7 +233,7 @@ JSON.stringify(place.groups.map((g) => `${g.key}:${g.label}`))
 
 const plate = await c.collections.query({
   collection: "todos",
-  query: { here: "_content/a.memo.card", group: "plate", params: { status: ["open"] } },
+  query: { here: "_content/a.doc.card", group: "plate", params: { status: ["open"] } },
 });
 
 JSON.stringify(plate.groups.map((g) => `${g.key}=${String(g.reduction.open)}`))
@@ -254,8 +253,8 @@ lets a header's number and the list's rows agree by construction.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(
-  "_content/a.memo.card",
-  memo(
+  "_content/a.doc.card",
+  doc(
     '{% todo %}Boxholder{% /todo %}\n\n' +
     '{% todo assigned="agent" by="agent" created="2026-07-01" %}Agent follow-up{% /todo %}\n'
   )
@@ -265,7 +264,7 @@ const c = caller(box.root);
 
 const defaultScope = await c.collections.query({
   collection: "todos",
-  query: { here: "_content/a.memo.card", params: { status: ["open"] } },
+  query: { here: "_content/a.doc.card", params: { status: ["open"] } },
 });
 
 JSON.stringify(texts(defaultScope))
@@ -276,7 +275,7 @@ defaultScope.reduction.open
 
 const allScope = await c.collections.query({
   collection: "todos",
-  query: { here: "_content/a.memo.card", params: { status: ["open"], scope: "all" } },
+  query: { here: "_content/a.doc.card", params: { status: ["open"], scope: "all" } },
 });
 
 JSON.stringify(texts(allScope).sort())
@@ -300,12 +299,12 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 const c = caller(box.root);
 
-async function refused(query) {
+async function refused(query: QueryInput) {
   try {
     await c.collections.query({ collection: "todos", query });
     return "SUCCEEDED";
   } catch (e) {
-    return e.code ?? e.name;
+    return e instanceof TRPCError ? e.code : e instanceof Error ? e.name : String(e);
   }
 }
 
@@ -323,12 +322,14 @@ An unknown collection name is refused the same way — it never reaches a
 server-side lookup.
 
 ```ts continue
-async function refusedCollection(collection) {
+async function refusedCollection(collection: string) {
   try {
-    await c.collections.query({ collection, query: { here: "", params: OPEN } });
+    // A name outside the declared collections, as an untrusted client could send it; the server must refuse it.
+    const request: Parameters<typeof c.collections.query>[0] = JSON.parse(JSON.stringify({ collection, query: { here: "", params: OPEN } }));
+    await c.collections.query(request);
     return "SUCCEEDED";
   } catch (e) {
-    return e.code ?? e.name;
+    return e instanceof TRPCError ? e.code : e instanceof Error ? e.name : String(e);
   }
 }
 
@@ -347,9 +348,9 @@ whatever todos the rest of the scan found — the router never swallows one.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/good.memo.card", memo('{% todo %}A fine todo{% /todo %}\n'));
+await box.write("_content/good.doc.card", doc('{% todo %}A fine todo{% /todo %}\n'));
 // An unterminated tag fails Markdoc parse outright.
-await box.write("_content/bad.memo.card", memo('{% todo %}Unterminated tag\n'));
+await box.write("_content/bad.doc.card", doc('{% todo %}Unterminated tag\n'));
 box.commitAll("seed");
 
 const res = await caller(box.root).collections.query({
@@ -363,8 +364,8 @@ JSON.stringify(texts(res))
 res.issues.length > 0
 => true
 
-res.issues[0].path
-=> _content/bad.memo.card
+res.issues[0]?.path
+=> _content/bad.doc.card
 ```
 
 ```ts cleanup

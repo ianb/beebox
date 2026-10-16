@@ -1,4 +1,4 @@
-import { withBoxWork } from "../../lib/box-maintenance.js";
+import { withBoxWork } from "../../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./context.js";

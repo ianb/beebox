@@ -8,35 +8,46 @@ finalize route already drive — this router adds no side effect beyond that one
 write, and both mutations are idempotent by `(recordingId, emissionId)`.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TrpcContext, TrpcUser } from "../../../../src/webapp/trpc/context.js";
+import type { HqTranscriptionService } from "../../../../src/shared/transcription-services.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createEventBus } from "../../../../src/core/event-bus/core.js";
 import { createStagingSession } from "../../../../src/core/capture/staging-store/core.js";
 import { sealVoiceSession, applyVoiceEvent } from "../../../../src/core/voice-recording/voice-staging/core.js";
 
-function caller(box, opts) {
-  return appRouter.createCaller({
+function caller(box: TmpBox, opts?: { user?: TrpcUser }) {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: box.root,
-    boxSlug: "test",
     eventBus: createEventBus(box.root),
-    services: {},
     user: (opts && opts.user) || { email: "owner@example.com", name: "Owner" },
-    authed: true,
-    isOwner: true,
+    isAuthenticatedOwner: true,
   });
+  return appRouter.createCaller(ctx);
 }
 
-async function stageVoiceRecording(box, { targetSessionId, createdBy }) {
+// The error code of a rejected call, or "no error".
+function codeOf(e: unknown): string {
+  return e instanceof TRPCError ? e.code : String(e);
+}
+
+async function stageVoiceRecording(box: TmpBox, { targetSessionId, createdBy }: { targetSessionId: string; createdBy?: string }) {
   return createStagingSession({
     boxRoot: box.root, targetSessionId, createdBy: createdBy ?? "owner@example.com", kind: "voice",
   });
 }
 
-async function requestHq(box, session, { emissionId, service, requestedAt }) {
+async function requestHq(
+  box: TmpBox,
+  session: Awaited<ReturnType<typeof stageVoiceRecording>>,
+  { emissionId, service, requestedAt }: { emissionId: string; service?: HqTranscriptionService; requestedAt?: string },
+) {
   return sealVoiceSession({
     boxRoot: box.root, id: session.id, emissionId,
     hq: {
-      emissionId, sessionId: session.voice.targetSessionId,
+      emissionId, sessionId: session.voice?.targetSessionId ?? null,
       service: service ?? "whisper", requestedAt: requestedAt ?? "2026-09-10T18:00:00.000Z",
     },
   });
@@ -144,7 +155,7 @@ const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
 await requestHq(box, session, { emissionId: "em-1" });
 const c = caller(box);
 
-await c.voiceRecording.claim({ recordingId: session.id, emissionId: "wrong-emission" }).then(() => "no error", (e) => e.code)
+await c.voiceRecording.claim({ recordingId: session.id, emissionId: "wrong-emission" }).then(() => "no error", codeOf)
 => CONFLICT
 ```
 
@@ -165,7 +176,7 @@ const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", crea
 await requestHq(box, session, { emissionId: "em-1" });
 const stranger = caller(box);
 
-await stranger.voiceRecording.status({ recordingId: session.id }).then(() => "no error", (e) => e.code)
+await stranger.voiceRecording.status({ recordingId: session.id }).then(() => "no error", codeOf)
 => NOT_FOUND
 ```
 

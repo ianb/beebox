@@ -19,7 +19,7 @@ import {
 import { readDoclingDocument } from "../../src/lib/docling/parse.js";
 
 /** Render a match map compactly: `block=page` pairs, block order. */
-function show(map) {
+function show(map: Map<number, number>) {
   return [...map.entries()].map(([block, page]) => `${block}=${page}`).join(" ");
 }
 ```

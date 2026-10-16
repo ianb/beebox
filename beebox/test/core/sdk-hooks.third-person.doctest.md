@@ -11,6 +11,7 @@ the phrase itself.
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
 import { cardValidatorHook } from "../../src/core/sdk-hooks.js";
 import { thirdPersonPhrases } from "../../src/core/card-lint/third-person.js";
 
@@ -21,11 +22,18 @@ await mkdir(join(box, "_content"), { recursive: true });
 await mkdir(join(box, "_bookkeeping/jobs"), { recursive: true });
 const { hooks } = cardValidatorHook();
 
+// The `additionalContext` a hook injected, or undefined when it injected none.
+function contextOf(out: HookJSONOutput | undefined): string | undefined {
+  if (out === undefined || "async" in out) return undefined;
+  const specific = out.hookSpecificOutput;
+  return specific !== undefined && "additionalContext" in specific ? specific.additionalContext : undefined;
+}
+
 // Write a card, run the hook as if the agent had just written it, and return
 // the injected context (null when the hook stays quiet).
-async function afterWrite(rel, toolInput) {
+async function afterWrite(rel: string, toolInput: { content?: string; old_string?: string; new_string?: string }) {
   const file_path = join(box, rel);
-  const text = toolInput.content ?? `---\ntype: memo\n---\n${toolInput.new_string ?? ""}\n`;
+  const text = toolInput.content ?? `---\ntitle: Note\n---\n${toolInput.new_string ?? ""}\n`;
   await writeFile(file_path, text);
   const out = await hooks[0]?.({
     hook_event_name: "PostToolUse",
@@ -33,29 +41,31 @@ async function afterWrite(rel, toolInput) {
     tool_input: { file_path, ...toolInput },
     tool_response: {},
     tool_use_id: "t",
+    session_id: "s",
+    transcript_path: "",
     cwd: box,
-  });
+  }, undefined, { signal: new AbortController().signal });
   // The card linter may add its own notes for these bare test cards; keep
   // only the third-person reminder.
-  const context = out?.hookSpecificOutput?.additionalContext ?? "";
-  return context.split("\n\n").find((note) => note.includes("calls them")) ?? null;
+  const context = contextOf(out) ?? "";
+  return context.split("\n\n").find((note: string) => note.includes("calls them")) ?? null;
 }
-const memo = (body) => `---\ntype: memo\n---\n${body}\n`;
+const doc = (body: string) => `---\ntitle: Note\n---\n${body}\n`;
 ```
 
 A card in the person's area that says "the user confirmed" gets the reminder,
 naming the phrase and the fix:
 
 ```ts
-await afterWrite("_content/Drill.memo.card", { content: memo("The user confirmed the drill is with Sam.") })
-=> _content/Drill.memo.card is shown to the person whose box this is, and the text you just wrote calls them "the user". Write "you" (in a briefing, their own "I": "I'm cataloguing my tools"), unless the words quote someone else.
+await afterWrite("_content/Drill.doc.card", { content: doc("The user confirmed the drill is with Sam.") })
+=> _content/Drill.doc.card is shown to the person whose box this is, and the text you just wrote calls them "the user". Write "you" (in a briefing, their own "I": "I'm cataloguing my tools"), unless the words quote someone else.
 ```
 
 "The boxholder" and its possessive count too, and an Edit is checked by its
 new text:
 
 ```ts
-(await afterWrite("_content/Tools.memo.card", { old_string: "x", new_string: "Listed from the boxholder's memory." }))?.match(/calls them ([^.]*)\./)?.[1]
+(await afterWrite("_content/Tools.doc.card", { old_string: "x", new_string: "Listed from the boxholder's memory." }))?.match(/calls them ([^.]*)\./)?.[1]
 => "the boxholder's"
 ```
 
@@ -63,10 +73,10 @@ Text that says "you" gets no reminder, and neither does agent-facing text
 outside `_content/`, where "the user" is the right word:
 
 ```ts
-await afterWrite("_content/Drill2.memo.card", { content: memo("You confirmed the drill is with Sam.") })
+await afterWrite("_content/Drill2.doc.card", { content: doc("You confirmed the drill is with Sam.") })
 => null
 
-await afterWrite("_bookkeeping/jobs/Followup.memo.card", { content: memo("Ask the user about the drill.") })
+await afterWrite("_bookkeeping/jobs/Followup.doc.card", { content: doc("Ask the user about the drill.") })
 => null
 ```
 

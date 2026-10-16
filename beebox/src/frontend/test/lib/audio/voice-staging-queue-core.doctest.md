@@ -6,7 +6,8 @@ and what happened last time, it says what to do next — send an op, wait, drop
 a recording as terminally failed, or sit idle.
 
 ```ts setup
-import { nextDrainStep, type VoiceOp, type LastOutcome } from "../../../src/lib/audio/voice-staging-queue-core.js";
+import assert from "node:assert/strict";
+import { nextDrainStep, type VoiceOp, type LastOutcome, type DrainStep } from "../../../src/lib/audio/voice-staging-queue-core.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BOUND_MS = 7 * DAY_MS;
@@ -20,6 +21,18 @@ function op(overrides: Partial<VoiceOp> & Pick<VoiceOp, "recordingId" | "seq">):
     createdAt: createdAt ?? 0,
     attempts: attempts ?? 0,
   };
+}
+
+/** The op a step sends or terminates; fails the example when the step is idle or a wait. */
+function opOf(drain: DrainStep<VoiceOp>): VoiceOp {
+  assert.ok(drain.type === "send" || drain.type === "terminal", `no op in a ${drain.type} step`);
+  return drain.op;
+}
+
+/** Why a step dropped a recording; fails the example when the step is not terminal. */
+function reasonOf(drain: DrainStep<VoiceOp>): string {
+  assert.ok(drain.type === "terminal", `not terminal: ${drain.type}`);
+  return drain.reason;
 }
 
 function step(ops: VoiceOp[], opts: { now: number; lastOutcome?: LastOutcome | null }) {
@@ -68,7 +81,7 @@ never seq 2 out of order:
 
 ```ts continue
 const afterFirstSucceeds = ops.slice(1);
-step(afterFirstSucceeds, { now: 1000 }).op.seq
+opOf(step(afterFirstSucceeds, { now: 1000 })).seq
 => 1
 ```
 
@@ -83,13 +96,13 @@ const interleaved = [
   op({ recordingId: "older", seq: 0, createdAt: 100 }),
   op({ recordingId: "newer", seq: 1, createdAt: 600 }),
 ];
-step(interleaved, { now: 1000 }).op.recordingId
+opOf(step(interleaved, { now: 1000 })).recordingId
 => older
 ```
 
 ```ts continue
 const olderDone = interleaved.filter((o) => o.recordingId !== "older");
-step(olderDone, { now: 1000 }).op.recordingId
+opOf(step(olderDone, { now: 1000 })).recordingId
 => newer
 ```
 
@@ -177,7 +190,7 @@ is about the op's age, not its attempt count.
 
 ```ts
 const ancient = op({ recordingId: "r1", seq: 0, createdAt: 0 });
-step([ancient], { now: BOUND_MS }).reason
+reasonOf(step([ancient], { now: BOUND_MS }))
 => expired
 
 step([ancient], { now: BOUND_MS - 1 }).type
@@ -223,7 +236,7 @@ never followed by sending a different recording out of turn), `newer` is
 next, with `older`'s backoff entry left untouched in the map:
 
 ```ts continue
-nextDrainStep([newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS }).op.recordingId
+opOf(nextDrainStep([newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS })).recordingId
 => newer
 
 lastOutcomes.get("older")?.at

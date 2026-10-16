@@ -25,10 +25,13 @@ interface StatusBarProps {
   photosUploading: number;
   photosUploaded: number;
   photosFailed: number;
+  /** Picked photos whose bytes could not be read; never on the box, so not in the tick count. */
+  photosUnreadable: number;
   fileTotal: number;
   filesUploading: number;
   filesUploaded: number;
   filesFailed: number;
+  filesUnreadable: number;
   /** Percent complete of the transfer currently on the wire, if any. */
   activeUploadPercent: number | null;
   /** Done is sealing: new media would race the seal, so producers are closed. */
@@ -70,7 +73,7 @@ export function StatusBar(props: StatusBarProps) {
         ) : null}
       </div>
       <div className="flex items-center gap-3 text-sm">
-        {props.photoTotal > 0 ? (
+        {props.photoTotal - props.photosUnreadable > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.photosUploading > 0 ? (
               <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.photosUploaded}/{props.photoTotal}{percentLabel(props.activeUploadPercent)}</span></>
@@ -81,11 +84,11 @@ export function StatusBar(props: StatusBarProps) {
                 {props.photosUploaded > 0 ? <span className="text-success-light">, {props.photosUploaded} ok</span> : null}
               </>
             ) : (
-              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.photoTotal} photos</span></>
+              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.photoTotal - props.photosUnreadable} photos</span></>
             )}
           </div>
         ) : null}
-        {props.fileTotal > 0 ? (
+        {props.fileTotal - props.filesUnreadable > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.filesUploading > 0 ? (
               <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files{percentLabel(props.activeUploadPercent)}</span></>
@@ -96,7 +99,7 @@ export function StatusBar(props: StatusBarProps) {
                 {props.filesUploaded > 0 ? <span className="text-success-light">, {props.filesUploaded} ok</span> : null}
               </>
             ) : (
-              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.fileTotal} files</span></>
+              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.fileTotal - props.filesUnreadable} files</span></>
             )}
           </div>
         ) : null}

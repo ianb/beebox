@@ -6,6 +6,7 @@
  */
 
 
+import type { Dirent } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
@@ -27,10 +28,10 @@ export interface TmpBox {
   list(subdir?: string): Promise<string>;
   /** Read file contents. */
   read(relativePath: string): Promise<string>;
-  /** Write a file, creating parent dirs as needed. */
-  write(relativePath: string, content: string): Promise<void>;
+  /** Write a file (text, or bytes for a binary fixture), creating parent dirs as needed. */
+  write(relativePath: string, content: string | Uint8Array): Promise<void>;
   /** Alias for write. */
-  seed(relativePath: string, content: string): Promise<void>;
+  seed(relativePath: string, content: string | Uint8Array): Promise<void>;
   /** Stage all and commit (only works if git was initialized). */
   commitAll(message: string): void;
   /** Remove the temp directory. */
@@ -39,7 +40,7 @@ export interface TmpBox {
 
 /**
  * `git` — every box has a Git directory, because box admission
- * (`src/lib/box-maintenance.ts`) keeps its gate under `.git/`: a fixture
+ * (`src/lib/box-maintenance/admission.ts`) keeps its gate under `.git/`: a fixture
  * without one throws "Box maintenance requires a Git repository" the moment
  * anything acquires box work. So the default is a bare `git init` (~60 ms);
  * `true` adds the annex init and an initial commit that a committing test
@@ -95,7 +96,7 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
       const dir = subdir ? join(root, subdir) : root;
       const entries: string[] = [];
       async function walk(d: string) {
-        let items: Awaited<ReturnType<typeof readdir>>;
+        let items: Dirent[];
         try {
           items = await readdir(d, { withFileTypes: true });
         } catch (_e) {
@@ -119,12 +120,12 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
     async read(relativePath: string) {
       return readFile(join(root, relativePath), "utf-8");
     },
-    async write(relativePath: string, content: string) {
+    async write(relativePath: string, content: string | Uint8Array) {
       const fullPath = join(root, relativePath);
       await mkdir(dirname(fullPath), { recursive: true });
       await writeFile(fullPath, content);
     },
-    async seed(relativePath: string, content: string) {
+    async seed(relativePath: string, content: string | Uint8Array) {
       return box.write(relativePath, content);
     },
     commitAll(message: string) {
@@ -147,4 +148,14 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
   };
 
   return box;
+}
+
+/** A (nested) field of a JSON response body, or undefined when any step of the path is absent. */
+export function bodyField(body: unknown, ...path: Array<string | number>): unknown {
+  let value: unknown = body;
+  for (const key of path) {
+    if (typeof value !== "object" || value === null) return undefined;
+    value = Reflect.get(value, key);
+  }
+  return value;
 }

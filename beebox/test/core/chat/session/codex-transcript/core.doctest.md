@@ -26,7 +26,7 @@ const response = {
         items: [
           { type: "userMessage", id: "user-1", content: [{ type: "text", text: "Hello" }] },
           { type: "commandExecution", id: "command-1", command: "bbx search hello", aggregatedOutput: "1 result", exitCode: 0 },
-          { type: "fileChange", id: "file-1", status: "completed", changes: [{ path: "store/Hello.memo.card", kind: { type: "add" } }] },
+          { type: "fileChange", id: "file-1", status: "completed", changes: [{ path: "store/Hello.doc.card", kind: { type: "add" } }] },
           { type: "agentMessage", id: "agent-1", text: "Hi", phase: "final_answer" },
         ],
       },
@@ -213,7 +213,7 @@ left to fail on the original ENOENT rather than being waved through:
 
 ```ts continue
 const err = (() => { try { assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content", "nonexistent-nonsense")); return null; } catch (e) { return e; } })();
-JSON.stringify({ isCodexSessionOutsideBoxError: err instanceof Error && err.name === "CodexSessionOutsideBoxError", code: err.code })
+JSON.stringify({ isCodexSessionOutsideBoxError: err instanceof Error && err.name === "CodexSessionOutsideBoxError", code: err instanceof Error && "code" in err ? err.code : undefined })
 => {"isCodexSessionOutsideBoxError":false,"code":"ENOENT"}
 ```
 

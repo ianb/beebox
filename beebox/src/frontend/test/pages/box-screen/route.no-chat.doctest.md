@@ -17,6 +17,7 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet
 import { createTRPCClient } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
 import { trpc } from "../../../src/lib/trpc/client.js";
+import type { AppRouter } from "../../../../webapp/trpc/routers.js";
 import { useStandalonePage } from "../../../src/main/standalone-page.js";
 import { boxScreenRouteOptions } from "../../../src/pages/box-screen/route.js";
 import { BoxScreenPage } from "../../../src/pages/box-screen/BoxScreenPage.js";
@@ -44,11 +45,14 @@ async function render(path: string, home?: unknown) {
   queryClient.setQueryData(["boxes"], { boxes: [{ slug: "test1", name: "Test box" }] });
   if (home !== undefined) queryClient.setQueryData([["quickChat", "home"], { type: "query" }], home);
   // A link that never answers: the render records which procedures it asked for.
-  const client = createTRPCClient({ links: [() => () => observable(() => () => {})] });
+  const client = createTRPCClient<AppRouter>({ links: [() => () => observable(() => () => {})] });
   const html = renderToString(
-    React.createElement(trpc.Provider, { client, queryClient },
-      React.createElement(QueryClientProvider, { client: queryClient },
-        React.createElement(RouterProvider, { router }))),
+    React.createElement(trpc.Provider, {
+      client,
+      queryClient,
+      children: React.createElement(QueryClientProvider, { client: queryClient },
+        React.createElement(RouterProvider, { router })),
+    }),
   );
   const procedures = queryClient.getQueryCache().getAll()
     .map((query) => query.queryKey[0])

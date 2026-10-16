@@ -1,4 +1,4 @@
-import { acquireBoxWork, type BoxWork } from "../../../../lib/box-maintenance.js";
+import { acquireBoxWork, type BoxWork } from "../../../../lib/box-maintenance/admission.js";
 /**
  * Run-lock helpers for ChatSession — acquire/release the chat-active lock
  * held for the duration of an SDK run.

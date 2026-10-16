@@ -19,6 +19,21 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+
+interface Failure { code: number; stdout: string; stderr: string }
+function isFailure(value: unknown): value is Failure {
+  return typeof value === "object" && value !== null && "code" in value && "stdout" in value && "stderr" in value;
+}
+/** Await a command that must exit non-zero and return its exit code and output. */
+async function expectFailure(attempt: Promise<unknown>): Promise<Failure> {
+  try {
+    await attempt;
+  } catch (error) {
+    if (isFailure(error)) return error;
+    throw error;
+  }
+  throw new Error("expected the command to fail");
+}
 const repoRoot = resolve(process.cwd(), "..");
 const launchLib = join(repoRoot, "bin/lib/launch-session.sh");
 const registryLib = join(repoRoot, "bin/lib/session-registry.sh");
@@ -150,12 +165,9 @@ await writeFile(
 await chmod(invalidScriptPath, 0o755);
 const invalidStateDir = join(root, "invalid-state");
 await beginLaunch(invalidStateDir, "seam", "token-seam");
-const invalid = await execFileAsync(invalidScriptPath, [], {
+const invalid = await expectFailure(execFileAsync(invalidScriptPath, [], {
   env: { ...process.env, BBX_STATE_DIR: invalidStateDir },
-}).catch((error: unknown) => error as {
-  code: number;
-  stderr: string;
-});
+}));
 JSON.stringify({ code: invalid.code, message: invalid.stderr.includes("invalid worktree path"), launch: (await launchState(invalidStateDir, "seam")).state })
 => {"code":1,"message":true,"launch":"failed"}
 
@@ -194,11 +206,11 @@ JSON.stringify([
 ])
 => [true,true,true]
 
-const badSession = await buildScript(root, {
+const badSession = await expectFailure(buildScript(root, {
   agent: "claude",
   resume: false,
   claudeSession: "--dangerously-skip-permissions",
-}).catch((error: unknown) => error as { code: number; stderr: string });
+}));
 JSON.stringify({ code: badSession.code, message: badSession.stderr.includes("is not a uuid") })
 => {"code":1,"message":true}
 ```
@@ -287,9 +299,9 @@ JSON.stringify({ observed: JSON.parse(await readFile(observation, "utf8")).state
 
 const staleObservation = join(root, "stale-agent-observation.json");
 await beginLaunch(boundaryStateDir, "seam", "newer-token");
-const stale = await execFileAsync(boundaryScriptPath, [], {
+const stale = await expectFailure(execFileAsync(boundaryScriptPath, [], {
   env: { ...process.env, AGENT_OBSERVATION: staleObservation, BBX_STATE_DIR: boundaryStateDir, PATH: `${agentBin}:${process.env.PATH ?? ""}` },
-}).catch((error: unknown) => error as { code: number; stderr: string });
+}));
 const staleAgentStarted = await readFile(staleObservation).then(() => true, () => false);
 JSON.stringify({ code: stale.code, superseded: stale.stderr.includes("was superseded"), agentStarted: staleAgentStarted, owner: JSON.parse(await readFile(join(boundaryStateDir, "workstreams/seam.json"), "utf8")).launch.token })
 => {"code":1,"superseded":true,"agentStarted":false,"owner":"newer-token"}
@@ -330,9 +342,9 @@ await mkdir(join(validWorktree, ".claude/agents"), { recursive: true });
 await writeFile(join(validWorktree, ".claude/agents/finish.md"), "---\nname: finish\n---\n");
 const unmirroredObservation = join(root, "unmirrored-agent-observation.json");
 await beginLaunch(codexBoundaryStateDir, "seam", "token-seam");
-const unmirrored = await execFileAsync(codexBoundaryScriptPath, [], {
+const unmirrored = await expectFailure(execFileAsync(codexBoundaryScriptPath, [], {
   env: { ...process.env, AGENT_OBSERVATION: unmirroredObservation, BBX_STATE_DIR: codexBoundaryStateDir, PATH: `${agentBin}:${process.env.PATH ?? ""}` },
-}).catch((error: unknown) => error as { code: number; stderr: string });
+}));
 const unmirroredStarted = await readFile(unmirroredObservation).then(() => true, () => false);
 await rm(join(validWorktree, ".claude"), { recursive: true });
 JSON.stringify({ code: unmirrored.code, refused: unmirrored.stderr.includes("missing Codex mirror for agent finish"), agentStarted: unmirroredStarted })
@@ -394,7 +406,7 @@ await writeFile(
   "#!/usr/bin/env bash\necho 'Terminal automation denied' >&2\nexit 17\n",
 );
 await chmod(failingOsascript, 0o755);
-const failedOpen = await execFileAsync(
+const failedOpen = await expectFailure(execFileAsync(
   "bash",
   [
     "-c",
@@ -404,7 +416,7 @@ const failedOpen = await execFileAsync(
     repoRoot,
   ],
   { env: { ...process.env, BBX_STATE_DIR: openStateDir, PATH: `${failingBin}:${process.env.PATH ?? ""}` } },
-).catch((error: unknown) => error as { code: number; stderr: string });
+));
 JSON.stringify({
   code: failedOpen.code,
   message: failedOpen.stderr.includes("Terminal automation denied"),
@@ -419,11 +431,11 @@ await mkdir(markerBin);
 const openMarker = join(root, "terminal-opened");
 await writeFile(join(markerBin, "osascript"), "#!/usr/bin/env bash\nprintf ran > \"$OPEN_MARKER\"\n");
 await chmod(join(markerBin, "osascript"), 0o755);
-const blockedOpen = await execFileAsync(
+const blockedOpen = await expectFailure(execFileAsync(
   "bash",
   ["-c", '. "$1"; LS_LAUNCHER=/tmp/not-run; LS_MONO="$2"; LS_AGENT=claude; LS_WORKSTREAM=blocked-open; LS_LAUNCH_TOKEN=blocked-token; launch_session_open', "launch-open-test", launchLib, repoRoot],
   { env: { ...process.env, BBX_STATE_DIR: blockedStatePath, OPEN_MARKER: openMarker, PATH: `${markerBin}:${process.env.PATH ?? ""}` } },
-).catch((error: unknown) => error as { code: number; stderr: string });
+));
 const terminalOpened = await readFile(openMarker).then(() => true, () => false);
 JSON.stringify({ code: blockedOpen.code, refused: blockedOpen.stderr.includes("Terminal was not opened"), terminalOpened })
 => {"code":1,"refused":true,"terminalOpened":false}

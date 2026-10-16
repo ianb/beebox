@@ -16,7 +16,7 @@ import type { NativeShellWindow } from "../../../../src/components/chat/native-p
 
 function bridgeHarness(initialEnabled: boolean) {
   let captures = 0;
-  const saved = [];
+  const saved: Parameters<NativeLocationBridgeDependencies["saveState"]>[1][] = [];
   const results: NativeLocationResult[] = [];
   const dependencies: NativeLocationBridgeDependencies = {
     isAvailable: () => true,

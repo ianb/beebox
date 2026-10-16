@@ -11,6 +11,9 @@ node-arg:
   - --import=./test/helpers/isolate-user-home.ts
   - --import=agent-doctest/tap
   - --import=agent-doctest/loader
+  # Compile frontend modules with the React Compiler, as the Vite build does
+  # (src/frontend/test/helpers/react-compiler-hooks.ts).
+  - --import=./src/frontend/test/helpers/react-compiler-register.ts
   # Point BBX_SECRETS_FILE at a throwaway path in every test process, so nothing
   # a test resolves or writes can reach the developer's real
   # ~/.config/bbx/secrets.json. See the module for why this is process-level.
@@ -25,6 +28,8 @@ node-arg:
   # chat, and the plugin installer behind it re-points the GLOBAL `beebox`
   # marketplace at whichever checkout is running. See the module.
   - --import=./test/helpers/isolate-codex-home.ts
+  # Chat-session logs are a server's record; in tests they are noise. See the module.
+  - --import=./test/helpers/quiet-chat-session-log.ts
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md

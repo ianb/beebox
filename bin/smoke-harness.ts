@@ -15,6 +15,7 @@ import { homedir } from "node:os";
 import { parseEnv } from "node:util";
 import { request as httpRequest } from "node:http";
 import { invariant } from "../beebox/src/shared/invariant.js";
+import { LANDMARK_CONTENT_DIR } from "../beebox/src/core/landmark/root-dir.js";
 import {
   BudgetExhaustedError,
   MissingBoxSlugError,
@@ -269,6 +270,21 @@ async function probe(input: { url: string; key: string | null; timeoutMs: number
     signal: AbortSignal.timeout(input.timeoutMs),
   });
   return { status: response.status, body: await response.text() };
+}
+
+/**
+ * The box's content-area listing, as the Browse page's own query returns it.
+ * Read over HTTP, not through the browser: each browser command costs about a
+ * second, and finding a card by clicking through Browse took sixteen of them.
+ */
+export async function contentListing(input: { baseUrl: string; key: string | null }): Promise<string> {
+  const query = encodeURIComponent(JSON.stringify({ path: LANDMARK_CONTENT_DIR }));
+  const { status, body } = await probe({
+    url: `${input.baseUrl}/api/trpc/status.browse?input=${query}`,
+    key: input.key,
+    timeoutMs: 10_000,
+  });
+  return status === 200 ? body : `HTTP ${String(status)}\n${body}`;
 }
 
 /** A router that is not listening at all, told apart from a box that is broken. */

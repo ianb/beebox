@@ -37,8 +37,8 @@ await ctx.cleanup();
 ```ts
 const ctx = await makeTestServer();
 await ctx.seed(
-  "_content/inbox/browse-test.memo.card",
-  "---\nstatus: new\ncreated: 2026-01-01T00:00:00Z\n---\nBrowse\n",
+  "_content/inbox/browse-test.doc.card",
+  "---\ntitle: Browse\n---\nBrowse\n",
 );
 await ctx.inject({ method: "GET", url: "/api/browse/_content/inbox" })
 =>
@@ -48,9 +48,9 @@ await ctx.inject({ method: "GET", url: "/api/browse/_content/inbox" })
   «*»
   "cards": [
     {
-      "relativePath": "_content/inbox/browse-test.memo.card",
+      "relativePath": "_content/inbox/browse-test.doc.card",
       «*»
-      "type": "memo"«*»
+      "type": "doc"«*»
     }
   ]
 }
@@ -163,14 +163,14 @@ fresh.payload
 verbatim file this way (card.get returns only the parsed form):
 
 ```ts continue
-await ctx.seed("_bookkeeping/archive/Note.memo.card", "---\nstatus: new\n---\nBody\n");
-const card = await ctx.rawRequest({ method: "GET", url: "/api/files/_bookkeeping/archive/Note.memo.card" });
+await ctx.seed("_bookkeeping/archive/Note.doc.card", "---\ntitle: Note\n---\nBody\n");
+const card = await ctx.rawRequest({ method: "GET", url: "/api/files/_bookkeeping/archive/Note.doc.card" });
 card.statusCode
 => 200
 
 card.payload
 => ---
-status: new
+title: Note
 ---
 Body
 ```

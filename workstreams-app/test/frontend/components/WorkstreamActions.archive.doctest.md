@@ -29,7 +29,7 @@ function row(over: {
     agent: { state: over.live === true ? "live" : "none", reason: "" },
     session: {
       agent: "claude", hasSession: false, tty: null, baseSha: null,
-      removed: over.removed ? { at: "2026-09-01T00:00:00.000Z", merged: over.removed.merged, finalSha: null } : null,
+      removed: over.removed ? { at: "2026-09-01T00:00:00.000Z", merged: over.removed.merged } : null,
       archived: over.archived === true ? { at: "2026-09-01T00:00:00.000Z" } : null,
       description: null,
       launch: { state: "none", startedAt: null, expiresAt: null, failedAt: null, reason: null },
@@ -37,7 +37,7 @@ function row(over: {
     routing: { state: over.state, action: "resume-with-briefing", lastActivityAt: null },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
     schedule: over.scheduled === true
-      ? { name: "w", cadence: "7d", enabled: true, overdue: false, lastRunAt: null, nextDueAt: null, description: null }
+      ? { cadence: "7d", enabled: true, lastRunAt: null, lastOutcome: null, overdue: false, nextDueAt: null, openAlerts: 0, heartbeat: null }
       : null,
   };
 }

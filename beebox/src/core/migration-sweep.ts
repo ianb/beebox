@@ -5,7 +5,7 @@ import { repairMigration, runProcedureMigration, finishMigrationRepair, migratio
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
-import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-error.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { errorMessage } from "../shared/error-guards.js";
@@ -131,7 +131,10 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
         await refreshGeneratedDocs({ boxRoot: opts.boxRoot, withinMaintenance: true });
       }
       signal.throwIfAborted();
-      if (outcome.status !== "current") await checkPendingQuestionsAndNotify(opts.boxRoot, { now: new Date() });
+      if (outcome.status !== "current") {
+        await maintenance.step("checking pending questions");
+        await checkPendingQuestionsAndNotify(opts.boxRoot, { now: new Date() });
+      }
       signal.throwIfAborted();
       return outcome;
     });
@@ -155,7 +158,7 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
 }
 
 /** The parts of the owner handle a migration needs: to close before writing, and to prove ownership before committing. */
-type Owner = Pick<BoxMaintenance, "beginChanges" | "held">;
+type Owner = Pick<BoxMaintenance, "beginChanges" | "held" | "step">;
 
 async function sweepUnderMaintenance(opts: SweepOptions, owner: Owner): Promise<SweepResult> {
   opts.signal?.throwIfAborted();
@@ -186,6 +189,8 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
     return { status: "needs-procedure", procedure: migration.name, applied };
   }
   await owner.beginChanges();
+  const step = (name: string): Promise<void> => owner.step(`${migration.name}: ${name}`);
+  await step("saving current files");
   const recovery = await captureMigrationSnapshot(boxRoot, migration.name);
   const baseline = await migrationOutputBaseline(boxRoot, recovery);
   const manifestBefore = await snapshotManifest(boxRoot);
@@ -209,6 +214,7 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
     await finishMigrationRepair(boxRoot, migration.name);
   };
   const convert = async (): Promise<number> => {
+    await step("running");
     let code: number;
     if (isProcedureMigration(migration)) {
       const { runProcedure } = opts;
@@ -225,6 +231,7 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
       code = await run();
     }
     if (code !== 0 && opts.repair && !isProcedureMigration(migration)) {
+      await step("repairing");
       repaired = await repairMigration({ signal: opts.signal, agent: opts.repairAgent, boxRoot, name: migration.name, recoveryRef: recovery.ref, failure, code, retry: run });
       code = repaired.code;
       await verifyManifest();
@@ -248,7 +255,9 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
     // that died) no longer excludes ordinary work; its output stays under
     // the recovery ref instead of landing beside a concurrent writer's.
     if (!(await owner.held())) { commitError = OWNERSHIP_LOST; return 1; }
+    await step("finding changed files");
     const paths = [...new Set([...await changedMigrationPaths(boxRoot, baseline), MANIFEST_PATH])];
+    await step("committing");
     try {
       await appendManifestEntry(boxRoot, { name: migration.name, "applied-at": getBoxTimeISO(boxRoot) });
       await stageAndCommitPaths(boxRoot, {
@@ -269,6 +278,7 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
   let committed = await commitOutput();
   opts.signal?.throwIfAborted();
   if (committed !== 0 && commitRepairable() && !repaired) {
+    await step("repairing");
     repaired = await repairMigration({ signal: opts.signal, agent: opts.repairAgent, boxRoot, name: migration.name, recoveryRef: recovery.ref,
       failure: commitError, code: 1, retry: async () => { const retry = await run(); return retry === 0 ? commitOutput() : retry; } });
     committed = repaired.code;

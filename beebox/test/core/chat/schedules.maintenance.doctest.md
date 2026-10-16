@@ -2,14 +2,14 @@
 
 ```ts setup
 import { ChatScheduleManager, loadChatSchedules } from "../../../src/core/chat/schedules/core.js";
-import { closeBoxMaintenance } from "../../../src/lib/box-maintenance.js";
+import { closeBoxMaintenance } from "../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const maintenance = await closeBoxMaintenance(box.root, { reason: "fixture" });
-const fired = Promise.withResolvers();
+const fired = Promise.withResolvers<void>();
 let count = 0;
 const manager = new ChatScheduleManager(box.root, { onFire: () => { count++; fired.resolve(); } });
 // Arming under the maintenance context must not give the timer that privilege.

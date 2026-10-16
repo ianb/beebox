@@ -11,19 +11,19 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import { runChanges } from "../../../src/cli/commands/changes.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { runChanges, type ChangesOptions } from "../../../src/cli/commands/changes.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 
-const card = (title) => `---\ntitle: ${title}\n---\n${title} body\n`;
+const card = (title: string) => `---\ntitle: ${title}\n---\n${title} body\n`;
 
 /** Run with output captured; returns stdout, stderr lines, and the exit code. */
-async function changes(box, options, env = {}) {
-  const out = [];
+async function changes(box: TmpBox, options: Partial<ChangesOptions>, env: NodeJS.ProcessEnv = {}) {
+  const out: string[] = [];
   const origLog = console.log;
   const origErr = console.error;
   console.log = (...args) => { out.push(args.join(" ")); };
   console.error = (...args) => { out.push(`stderr: ${args.join(" ")}`); };
-  let code;
+  let code: number | undefined;
   try {
     code = await runChanges(box.root, { options: { match: [], ...options }, env });
   } finally {
@@ -37,22 +37,22 @@ async function changes(box, options, env = {}) {
 ## Three commits add three cards; one of them is moved
 
 Before the window, the box holds an old email and a note. In the window: an
-email arrives, then a second email and a memo arrive and the note is edited,
+email arrives, then a second email and a doc arrive and the note is edited,
 then triage moves the first email (added in the window) and the old one
 (added before it) into a folder.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write("_content/inbox/old.email-message.card", card("Old"));
-await box.write("_content/notes/plan.memo.card", card("Plan"));
+await box.write("_content/notes/plan.doc.card", card("Plan"));
 box.commitAll("before the window");
 const since = execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
 
 await box.write("_content/inbox/trip.email-message.card", card("Field trip"));
 box.commitAll("Intake: trip email");
 await box.write("_content/inbox/receipt.email-message.card", card("Receipt"));
-await box.write("_content/notes/groceries.memo.card", card("Groceries"));
-await box.write("_content/notes/plan.memo.card", card("Plan, revised"));
+await box.write("_content/notes/groceries.doc.card", card("Groceries"));
+await box.write("_content/notes/plan.doc.card", card("Plan, revised"));
 box.commitAll("Intake: receipt; groceries note");
 execSync("mkdir -p _content/school && git mv _content/inbox/trip.email-message.card _content/school/ && git mv _content/inbox/old.email-message.card _content/school/ && git commit -qm 'Triage: file school mail'", { cwd: box.root });
 ```
@@ -63,7 +63,7 @@ once, at its final path; the old email, which only moved, does not.
 ```ts continue
 await changes(box, { since })
 => _content/inbox/receipt.email-message.card
-_content/notes/groceries.memo.card
+_content/notes/groceries.doc.card
 _content/school/trip.email-message.card
 exit 0
 ```
@@ -78,12 +78,12 @@ _content/school/trip.email-message.card
 exit 0
 
 await changes(box, { since, match: ["_content/notes/*", "_content/school/*"] })
-=> _content/notes/groceries.memo.card
+=> _content/notes/groceries.doc.card
 _content/school/trip.email-message.card
 exit 0
 
 await changes(box, { since, kind: "modified" })
-=> _content/notes/plan.memo.card
+=> _content/notes/plan.doc.card
 exit 0
 
 await changes(box, { since, kind: "any", match: ["_content/school/*"] })
@@ -142,7 +142,7 @@ missing `--since` exits 2 rather than guessing.
 
 ```ts continue
 await changes(box, { match: ["_content/notes/*"] }, { BBX_SINCE_COMMIT: since })
-=> _content/notes/groceries.memo.card
+=> _content/notes/groceries.doc.card
 exit 0
 
 await changes(box, {})
@@ -181,7 +181,7 @@ await changes(box, { since: "HEAD", match: ["_content/school/*"], cat: true, all
 => exit 75
 
 await changes(box, { since, match: ["_content/notes/*"], orSkip: true }, { BBX_DEFER_FILE: path.join(deferDir, "second.json") })
-=> _content/notes/groceries.memo.card
+=> _content/notes/groceries.doc.card
 exit 0
 
 await fs.access(path.join(deferDir, "second.json")).then(() => "written", () => "absent")
@@ -203,7 +203,7 @@ note.
 ```ts
 const mail = await makeTmpBox({ git: true });
 const thread = "_content/inbox/email/Field-trip.email-thread.attach";
-const message = (n) => `---\ntype: email-message\nemail:\n  subject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
+const message = (n: number) => `---\ntype: email-message\nemail:\n  subject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
 const start = execSync("git rev-parse HEAD", { cwd: mail.root }).toString().trim();
 await mail.write(`${thread}/msg-001.email-message.card`, message(1));
 await mail.write(`${thread}/msg-001.attach/msg-001.body.txt`, "Sign the permission form by Friday.\n");

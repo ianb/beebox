@@ -6,9 +6,10 @@ lead under its name, and everything else follows under "Other chats". Nothing is
 filtered out — a chat in another landmark is always still reachable.
 
 ```ts setup
-import { layoutSessionList } from "../../../../../src/components/chat/everywhere/InteractiveChat/session-list-grouping.js";
+import type { ChatSessionInfo } from "../../../../../src/api.js";
+import { layoutSessionList, sessionIdHint, type SessionListLayout } from "../../../../../src/components/chat/everywhere/InteractiveChat/session-list-grouping.js";
 
-function session(sessionId: string, contextDir: string, landmarkLabel: string, done = false) {
+function session(sessionId: string, contextDir: string, landmarkLabel: string, done = false): ChatSessionInfo {
   return {
     sessionId,
     source: "chat",
@@ -29,8 +30,8 @@ const SESSIONS = [
 ];
 
 // Compact rendering of a layout, so the expectations read like the menu does.
-function show(layout) {
-  const done = layout.done.length === 0 ? [] : [`Done: ${layout.done.map((s) => s.sessionId).join(" ")}`];
+function show(layout: SessionListLayout): string {
+  const done = layout.done.length === 0 ? [] : [`Done: ${layout.done.map((s: ChatSessionInfo) => s.sessionId).join(" ")}`];
   if (layout.kind === "flat") {
     return [`flat${layout.showLandmark ? " (tagged)" : ""}: ${layout.sessions.map((s) => s.sessionId).join(" ")}`, ...done].join("\n");
   }
@@ -126,4 +127,22 @@ show(layoutSessionList({ sessions: recipesAllDone, contextDir: "_content/recipes
 =>
 flat (tagged): n1 root1
 Done: r1
+```
+
+## The short session id shows only where labels collide
+
+Rows used to show the first eight characters of the session id beside every
+title. Chats now get generated titles, so the id only tells rows apart when two
+read the same. A row whose label already is the id prefix (an untitled, empty
+chat) does not repeat it. Every row keeps its full id in a tooltip.
+
+```ts
+const rows = [
+  { sessionId: "aaaa1111-x", label: "Lending the drill" },
+  { sessionId: "bbbb2222-x", label: "Groceries" },
+  { sessionId: "cccc3333-x", label: "Groceries" },
+  { sessionId: "dddd4444-x", label: "dddd4444" },
+];
+rows.map((row) => sessionIdHint(row, rows))
+=> [null, "bbbb2222", "cccc3333", null]
 ```

@@ -118,7 +118,7 @@ function CardSample({ name, stock }: { name: string; stock: string }) {
   return <div id="studio-reading" className="min-w-0">
     <CardThemeSurface theme={{ choice: { name, stock }, origin: { kind: "engine" }, problem: null }}
       title="A little room to grow" detail="Seed exchange · Saturday" symbol={null} boxSlug={undefined} mode="companion"
-      properties={<><h2>Properties</h2><p>Fixed sample content for checking the back of a card.</p><dl><dt>Theme</dt><dd>{name} / {stock}</dd><dt>File</dt><dd>Seed exchange.memo.card</dd></dl></>}
+      properties={<><h2>Properties</h2><p>Fixed sample content for checking the back of a card.</p><dl><dt>Theme</dt><dd>{name} / {stock}</dd><dt>File</dt><dd>Seed exchange.doc.card</dd></dl></>}
     >
       <ReadingSample />
     </CardThemeSurface>

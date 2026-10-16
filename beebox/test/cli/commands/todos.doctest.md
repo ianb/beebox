@@ -17,8 +17,8 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox();
 await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 
-async function run(options) {
-  const logs = [];
+async function run(options?: Parameters<typeof runTodosForBox>[1]) {
+  const logs: string[] = [];
   const origLog = console.log;
   console.log = (...args) => { logs.push(args.join(" ")); };
   try {
@@ -29,13 +29,13 @@ async function run(options) {
   return logs.join("\n");
 }
 
-function memo(frontmatterExtra, body) {
-  return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n${frontmatterExtra}---\n${body}`;
+function doc(frontmatterExtra: string, body: string) {
+  return `---\ntitle: Plate\n${frontmatterExtra}---\n${body}`;
 }
 
 await box.write(
-  "_content/plate.memo.card",
-  memo(
+  "_content/plate.doc.card",
+  doc(
     "",
     [
       '{% todo id="escalated-one" due="2026-07-27" assigned="Dana" %}Overdue vet call{% /todo %}',
@@ -58,12 +58,12 @@ await box.write(
 ```ts
 await run()
 =>
-ESCALATED (1)
-  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
-ON PLATE (1)
-  _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
-QUIET (1)
-  _content/plate.memo.card:9  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)
+OVERDUE (1)
+  _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+ON YOUR PLATE (1)
+  _content/plate.doc.card:6  [on-plate-one] Undated, on the plate now
+LATER (1)
+  _content/plate.doc.card:8  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)
 ```
 
 ## `--status done`
@@ -72,7 +72,7 @@ QUIET (1)
 await run({ status: "done" })
 =>
 DONE (1)
-  _content/plate.memo.card:13  [done-one] Already handled
+  _content/plate.doc.card:12  [done-one] Already handled
 ```
 
 ## `--status parked`
@@ -81,7 +81,7 @@ DONE (1)
 await run({ status: "parked" })
 =>
 PARKED (1)
-  _content/plate.memo.card:11  [parked-one] Parked
+  _content/plate.doc.card:10  [parked-one] Parked
 ```
 
 ## `--on-plate` narrows the default (open) filter further, excluding quiet
@@ -89,10 +89,10 @@ PARKED (1)
 ```ts continue
 await run({ onPlate: true })
 =>
-ESCALATED (1)
-  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
-ON PLATE (1)
-  _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
+OVERDUE (1)
+  _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+ON YOUR PLATE (1)
+  _content/plate.doc.card:6  [on-plate-one] Undated, on the plate now
 ```
 
 ## `--assigned`
@@ -100,8 +100,8 @@ ON PLATE (1)
 ```ts continue
 await run({ assigned: "Dana" })
 =>
-ESCALATED (1)
-  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+OVERDUE (1)
+  _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ```
 
 ## No match
@@ -115,24 +115,24 @@ await run({ assigned: "Nobody" })
 
 ```ts continue
 await box.write(
-  "_content/bad.memo.card",
-  '---\nstatus: new\ncreated: not-a-date\n---\n{% todo %}Never collected{% /todo %}\n'
+  "_content/bad.doc.card",
+  '---\ntitle: 42\n---\n{% todo %}Never collected{% /todo %}\n'
 );
 await run({ status: "parked" })
 =>
 PARKED (1)
-  _content/plate.memo.card:11  [parked-one] Parked
+  _content/plate.doc.card:10  [parked-one] Parked
 «blankline»
 1 cards could not be read for todos:
-  [load] _content/bad.memo.card: _content/bad.memo.card: invalid memo frontmatter:
-  - created: Invalid ISO datetime
+  [load] _content/bad.doc.card: _content/bad.doc.card: invalid doc frontmatter:
+  - title: expected string, got number
 ```
 
 ## `--json` carries the full structured records, plus `issues` alongside
 
 ```ts continue
 const jsonOut = await run({ status: "parked", json: true });
-const parsed = JSON.parse(jsonOut);
+const parsed: { todos: Array<{ id: string }>; issues: Array<{ kind: string }> } = JSON.parse(jsonOut);
 parsed.todos.map((t) => t.id).join(", ")
 => parked-one
 
@@ -143,20 +143,20 @@ parsed.issues.map((i) => i.kind).join(", ")
 ## An invalid `--status` value is a clean error, not a crash
 
 ```ts continue
-async function runCaptured(options) {
-  const errors = [];
+async function runCaptured(options: Parameters<typeof runTodosForBox>[1]) {
+  const errors: string[] = [];
   const origError = console.error;
   const origExit = process.exit;
-  let exitCode;
+  let exitCode: number | undefined;
   console.error = (...args) => { errors.push(args.join(" ")); };
-  process.exit = (code) => {
-    exitCode = code ?? 0;
+  process.exit = (code?: number | string | null) => {
+    exitCode = Number(code ?? 0);
     throw new Error("__doctest_process_exit__");
   };
   try {
     await runTodosForBox(box.root, options);
   } catch (e) {
-    if (e.message !== "__doctest_process_exit__") throw e;
+    if (!(e instanceof Error) || e.message !== "__doctest_process_exit__") throw e;
   } finally {
     console.error = origError;
     process.exit = origExit;

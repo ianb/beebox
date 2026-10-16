@@ -8,7 +8,7 @@ import { createCardContextStore, visibleCardSelectionSink } from "../../../../..
 
 ```ts
 const context = createCardContextStore();
-const captured: string[] = [];
+const captured: (string | null)[] = [];
 const releaseSink = context.registerSelection((selection) => captured.push(selection.ref));
 context.capture({ ref: "/house/pantry.doc.card", text: "Two jars", position: "paragraph 2" });
 JSON.stringify(captured)

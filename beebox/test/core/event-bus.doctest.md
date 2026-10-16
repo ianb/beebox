@@ -16,7 +16,7 @@ reconnecting across a deploy resync instead of replaying stale-shaped rows.
 import Database from "better-sqlite3";
 import { join } from "node:path";
 import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../src/core/event-bus/schemas.js";
+import { eventSchemas, isBusEventName } from "../../src/core/event-bus/schemas.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const TS = "2026-07-09T00:00:00.000Z";
@@ -29,7 +29,7 @@ const samples = {
   "chat-last-audio-request": { requestId: "req-1", messageId: "msg-1" },
   "screenshot-request": { requestId: "req-1", session: "s1", expiresAt: TS },
   "ui-scan-request": { requestId: "req-2", session: "s1", expiresAt: TS },
-  "card-created": { path: "Voice.voice-memo.card", template: "voice-memo", timestamp: TS, audioPath: "attach/a.webm" },
+  "card-created": { path: "Voice.doc.card", template: "doc", timestamp: TS, audioPath: "attach/a.webm" },
   "command-complete": { command: "wakeup", success: true, timestamp: TS },
   "question-answered": { path: "Q.question.card", answer: "yes", selectedId: "opt-1", timestamp: TS },
   "question-dismissed": { path: "Q.question.card", timestamp: TS },
@@ -60,7 +60,7 @@ schema the read boundary uses:
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true
 
-const failures = Object.entries(samples).filter((e) => !eventSchemas[e[0]].safeParse(e[1]).success).map((e) => e[0]);
+const failures = Object.entries(samples).filter(([name, sample]) => !(isBusEventName(name) && eventSchemas[name].safeParse(sample).success)).map(([name]) => name);
 JSON.stringify(failures)
 => []
 ```
@@ -92,8 +92,8 @@ const rows = bus.readSince(0);
 JSON.stringify(rows.map((r) => r.event))
 => ["card-created"]
 
-JSON.stringify(rows[0].data)
-=> {"path":"Voice.voice-memo.card","template":"voice-memo","timestamp":"2026-07-09T00:00:00.000Z","audioPath":"attach/a.webm"}
+JSON.stringify(rows[0]?.data)
+=> {"path":"Voice.doc.card","template":"doc","timestamp":"2026-07-09T00:00:00.000Z","audioPath":"attach/a.webm"}
 ```
 
 ```ts cleanup
@@ -118,7 +118,7 @@ const bus2 = createEventBus(box2.root);
 for (const source of ["a", "b", "c", "d"]) bus2.emit("cards-changed", { source });
 bus2.emit("chat-complete", { sessionId: "s-1", timestamp: TS });
 
-bus2.readRecent({ event: "cards-changed", limit: 3 }).map((e) => e.data.source).join(",")
+bus2.readRecent({ event: "cards-changed", limit: 3 }).map((e) => eventSchemas["cards-changed"].parse(e.data).source).join(",")
 => b,c,d
 ```
 
@@ -170,10 +170,10 @@ The valid sibling keeps its real payload; a sentinel carries the original event
 name and raw payload for debugging:
 
 ```ts continue
-JSON.stringify(rows[0].data)
+JSON.stringify(rows[0]?.data)
 => {"source":"gmail"}
 
-rows[1].data.originalEvent
+rows[1]?.event === "unknown" ? rows[1].data.originalEvent : undefined
 => card-created
 ```
 

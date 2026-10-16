@@ -54,7 +54,7 @@ never establish that the conversion actually happened.
 ## Admission, snapshots, and failures
 
 Migration, generated-docs refresh, supervised reload, and deployment share the
-box admission gate in `src/lib/box-maintenance.ts`. Maintenance closes admission
+box admission gate in `src/lib/box-maintenance/admission.ts`. Maintenance closes admission
 before waiting up to ten minutes for already accepted work to finish. New
 requests, independent CLI actions, queued chat turns, and scheduled deliveries
 cannot extend that drain. Accepted agents and scripts retain a validated,
@@ -86,7 +86,9 @@ since <time> (pid <n>)`); `boxWorkHolders(boxRoot)` reads them from another
 process. A closed box refuses with the maintenance that closed it and, while
 draining, the expected wait (`Box is closed for migration; expected to reopen within 10
 min`); the HTTP 503 carries `Retry-After`, and the chat client waits it out
-once before reporting the refusal.
+once before reporting the refusal. Docs refresh and the migration sweep name
+their current step with `maintenance.step(name)` (for example `<migration>:
+finding changed files`); the hub's closed page shows it and when it began.
 
 A dirty tree is normal input. Before a mutation phase, the runner retains
 `refs/bbx/migrations/<name>/snapshots/<attempt-id>` using a temporary Git index.

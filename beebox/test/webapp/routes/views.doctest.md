@@ -3,7 +3,9 @@
 The views API serves agent-generated React components. It lists available views, serves compiled JS modules, and returns cards matching a view's dependency globs.
 
 ```ts setup
+import { z } from "zod";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import { bodyField } from "../../helpers/doctest-helpers.js";
 
 const VIEW_SOURCE = `
 export const name = "Test View";
@@ -15,11 +17,10 @@ export default function TestView({ cards }) {
 }
 `;
 
-const MEMO_CARD = `---
-status: new
-created: 2026-03-01T12:00:00Z
+const DOC_CARD = `---
+title: Test doc
 ---
-Test memo content
+Test doc content
 `;
 ```
 
@@ -84,7 +85,7 @@ The cards endpoint returns cards matching a view's dependency globs:
 ```ts
 const ctx = await makeTestServer();
 await ctx.seedView("test.tsx", VIEW_SOURCE);
-await ctx.seed("_content/inbox/Test.memo.card", MEMO_CARD);
+await ctx.seed("_content/inbox/Test.doc.card", DOC_CARD);
 ctx.commitAll("add test data");
 
 const res = await ctx.request({ method: "GET", url: "/api/views/test/cards" });
@@ -93,19 +94,19 @@ res.statusCode
 ```
 
 ```ts continue
-res.body.cards.length
+bodyField(res.body, "cards", "length")
 => 1
 
-res.body.cards[0].type
-=> memo
+bodyField(res.body, "cards", 0, "type")
+=> doc
 
-res.body.cards[0].path
-=> _content/inbox/Test.memo.card
+bodyField(res.body, "cards", 0, "path")
+=> _content/inbox/Test.doc.card
 
-res.body.cards[0].frontmatter.status
-=> new
+bodyField(res.body, "cards", 0, "frontmatter", "title")
+=> Test doc
 
-JSON.stringify(res.body.files)
+JSON.stringify(bodyField(res.body, "files"))
 => []
 ```
 
@@ -127,22 +128,22 @@ const res2 = await ctx.request({ method: "GET", url: "/api/views/playground/card
 res2.statusCode
 => 200
 
-res2.body.cards[0].attachments.map((a) => a.path).join(", ")
+z.array(z.looseObject({ path: z.string() })).parse(bodyField(res2.body, "cards", 0, "attachments")).map((a) => a.path).join(", ")
 => _content/inbox/Test.attach/sessions/history.jsonl
 
-res2.body.cards[0].attachments[0].size > 0
+Number(bodyField(res2.body, "cards", 0, "attachments", 0, "size")) > 0
 => true
 
-res2.body.files.length
+bodyField(res2.body, "files", "length")
 => 1
 
-res2.body.files[0].path
+bodyField(res2.body, "files", 0, "path")
 => _content/inbox/Test.attach/sessions/history.jsonl
 
-typeof res2.body.files[0].content
+typeof bodyField(res2.body, "files", 0, "content")
 => undefined
 
-typeof res2.body.files[0].mtimeMs
+typeof bodyField(res2.body, "files", 0, "mtimeMs")
 => number
 ```
 
@@ -198,7 +199,7 @@ const res = await ctx.request({ method: "GET", url: "/api/views/empty/cards" });
 res.statusCode
 => 200
 
-res.body.cards.length
+bodyField(res.body, "cards", "length")
 => 0
 ```
 

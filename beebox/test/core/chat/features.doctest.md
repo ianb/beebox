@@ -182,9 +182,9 @@ dropping them.
 ```ts
 composeChatAppSnapshot({
   features: {},
-  openCard: "_content/notes/Trip.memo.card",
+  openCard: "_content/notes/Trip.doc.card",
 })
-=> <chat-app narration="off" prose="on" open-card="_content/notes/Trip.memo.card"/>
+=> <chat-app narration="off" prose="on" open-card="_content/notes/Trip.doc.card"/>
 ```
 
 Companion-pane activity rides as `<card-activity>` child elements (rendered by
@@ -194,10 +194,10 @@ rather than attributes so a detail can be long or multi-line.
 ```ts
 composeChatAppSnapshot({
   features: {},
-  openCard: "_content/notes/Trip.memo.card",
+  openCard: "_content/notes/Trip.doc.card",
   activityChildren: '<card-activity kind="scrolled"/>\n<card-activity kind="explored">boat-water+road -> boats</card-activity>',
 })
-=> <chat-app narration="off" prose="on" open-card="_content/notes/Trip.memo.card">
+=> <chat-app narration="off" prose="on" open-card="_content/notes/Trip.doc.card">
 <card-activity kind="scrolled"/>
 <card-activity kind="explored">boat-water+road -> boats</card-activity>
 </chat-app>

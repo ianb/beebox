@@ -12,17 +12,23 @@ import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { parseCardText } from "../../../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../../../src/schemas.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import Sharp from "sharp";
+import { z } from "zod";
+import type { ScanPageAnalysis } from "../../../../src/core/describe-images/gemini.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { FakeScanVisionService } from "../../../../src/services/scan-vision.js";
+import { isRecord } from "../../../../src/shared/is-record.js";
 
 const schemas = await createCardSchemaMap();
 
 // Seed page files OUTSIDE the box (originals stay untouched; the flow
 // archives copies). The shared runner decodes and normalizes them before the
 // fake backend sees them, so these are small but real JPEGs.
-async function seedPages(box, count) {
-  const paths = [];
+async function seedPages(box: TmpBox, count: number) {
+  const paths: string[] = [];
   for (let i = 0; i < count; i++) {
     const p = join(box.root, `page-${i}.jpg`);
     await Sharp({
@@ -33,24 +39,27 @@ async function seedPages(box, count) {
   return paths;
 }
 
-async function importPhotos(box, vision, count) {
+async function importPhotos(box: TmpBox, vision: FakeScanVisionService, count: number) {
   const imagePaths = await seedPages(box, count);
   const { ctx } = createCollectorContext(box.root);
-  return runPhotoMode(ctx, { vision, imagePaths, sourcePdfPath: null, extraContext: undefined, source: undefined });
+  const result = await runPhotoMode(ctx, { vision, imagePaths, sourcePdfPath: null, extraContext: undefined, source: undefined });
+  // `data` is `unknown` on a CommandResult; the checks below read named counters off it.
+  return { ...result, data: isRecord(result.data) ? result.data : {} };
 }
 
-async function sessionDir(box) {
+async function sessionDir(box: TmpBox) {
   const entries = await readdir(join(box.root, "_content/inbox"));
   return entries.find((e) => e.endsWith(".attach"));
 }
 
-async function sessionFiles(box) {
+async function sessionFiles(box: TmpBox) {
   const dir = await sessionDir(box);
+  assert.ok(dir !== undefined);
   const files = await readdir(join(box.root, "_content/inbox", dir), { recursive: true });
   return files.sort().join("\n");
 }
 
-async function questionFiles(box) {
+async function questionFiles(box: TmpBox) {
   const entries = await readdir(join(box.root, "_bookkeeping/questions")).catch(() => []);
   return entries.sort().join("\n");
 }
@@ -71,7 +80,7 @@ const result = await importPhotos(box, vision, 4);
 result.success
 => true
 
-`photos=${result.data.photoCount} paired=${result.data.pairedCount} orphans=${result.data.orphanBackCount} unsure=${result.data.unsureCount}`
+`photos=${result.data["photoCount"]} paired=${result.data["pairedCount"]} orphans=${result.data["orphanBackCount"]} unsure=${result.data["unsureCount"]}`
 => photos=2 paired=2 orphans=0 unsure=0
 
 vision.calls.map((c) => c.imagePaths.length).join(",")
@@ -94,7 +103,7 @@ The image card carries the analysis: description and back text.
 const dir = await sessionDir(box);
 const cardText = await box.read(`_content/inbox/${dir}/photo-001.image.card`);
 const card = parseCardText(cardText, { source: "photo-001.image.card", schemas, type: "image" });
-`${card.fields["description"]} | ${card.fields["text"]?.[0]?.content}`
+`${card.fields["description"]} | ${z.array(z.object({ content: z.string() })).parse(card.fields["text"])[0]?.content}`
 => Fake photo 0 | Fake back caption 1
 ```
 
@@ -113,11 +122,11 @@ A page flagged for review (the Claude backend does this for any
 partial/illegible slot) emits a review question card alongside the image card.
 
 ```ts
-const flaggedPage = (i, count) => ({ index: i, kind: i === 0 ? "photo" : "back", paired_with_index: i === 0 ? 1 : 0, description: i === 0 ? "A flagged photo" : "", title: i === 0 ? "Flagged" : "", rotation: 0, subject_bbox: null, has_text: i !== 0, text_blocks: i === 0 ? [] : [{ source: "back", text: "M?" }], date_hint: null, flag_for_review: i !== 0, flag_reason: i !== 0 ? "Slots needing review: 2 (partial)" : null });
+const flaggedPage = (i: number): ScanPageAnalysis => ({ index: i, kind: i === 0 ? "photo" : "back", paired_with_index: i === 0 ? 1 : 0, description: i === 0 ? "A flagged photo" : "", title: i === 0 ? "Flagged" : "", rotation: 0, subject_bbox: null, has_text: i !== 0, text_blocks: i === 0 ? [] : [{ source: "back", text: "M?" }], date_hint: null, flag_for_review: i !== 0, flag_reason: i !== 0 ? "Slots needing review: 2 (partial)" : null });
 const box2 = await makeTmpBox({ git: true });
-const vision2 = createFakeScanVision({ analyze: (paths) => paths.map((_, i) => flaggedPage(i, paths.length)) });
+const vision2 = createFakeScanVision({ analyze: (paths) => paths.map((_, i) => flaggedPage(i)) });
 const result2 = await importPhotos(box2, vision2, 2);
-`${result2.success} questions=${result2.data.reviewQuestions}`
+`${result2.success} questions=${result2.data["reviewQuestions"]}`
 => true questions=1
 
 await questionFiles(box2)
@@ -150,7 +159,7 @@ become `unsure` placeholders with questions, and the import still completes.
 const box4 = await makeTmpBox({ git: true });
 const vision4 = createFakeScanVision({ alwaysFailRetry: "batch" });
 const result4 = await importPhotos(box4, vision4, 2);
-`${result4.success} unsure=${result4.data.unsureCount} photos=${result4.data.photoCount}`
+`${result4.success} unsure=${result4.data["unsureCount"]} photos=${result4.data["photoCount"]}`
 => true unsure=2 photos=0
 
 await questionFiles(box4)
@@ -168,6 +177,6 @@ included in the run's accounting (visible in the command's token/cost lines).
 const box5 = await makeTmpBox({ git: true });
 const vision5 = createFakeScanVision({ failTimes: 1, failRetry: "transient" });
 const result5 = await importPhotos(box5, vision5, 2);
-`${result5.success} photos=${result5.data.photoCount} calls=${vision5.calls.length}`
+`${result5.success} photos=${result5.data["photoCount"]} calls=${vision5.calls.length}`
 => true photos=1 calls=2
 ```

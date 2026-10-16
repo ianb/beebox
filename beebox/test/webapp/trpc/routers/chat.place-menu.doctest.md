@@ -16,23 +16,20 @@ row's count**. Both are invisible in a type check.
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 
-function caller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-  };
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Freshness is the transcript's mtime, so a fixture has to set it.
-async function seedSession(box, args) {
+async function seedSession(box: TmpBox, args: { sessionId: string; contextDir: string; daysAgo: number }) {
   const { sessionId, contextDir, daysAgo } = args;
   const cwd = contextDir === "" ? box.root : box.path(contextDir);
   const logPath = getSessionLogPath(cwd, sessionId);
@@ -112,7 +109,7 @@ zero — otherwise the client would render them twice.
 await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
 
 const withRoot = await caller(box.root).chat.placeMenu();
-`${withRoot.rootFreshCount} / ${withRoot.landmarks.find((l) => l.dir === "").freshCount}`
+`${withRoot.rootFreshCount} / ${withRoot.landmarks.find((l) => l.dir === "")?.freshCount}`
 => 0 / 2
 ```
 

@@ -111,7 +111,7 @@ print(`hash length: ${hash.length}`);
 
 const log = await getLog(box.root);
 print(`entries: ${log.length}`);
-print(`subject: ${log[0].subject}`);
+print(`subject: ${log[0]?.subject}`);
 =>
 hash length: 40
 entries: 2
@@ -134,9 +134,9 @@ await commit(box.root, {
 });
 
 const log = await getLog(box.root);
-print(`subject: ${log[0].subject}`);
-print(`Step: ${log[0].trailers?.Step}`);
-print(`Session: ${log[0].trailers?.Session}`);
+print(`subject: ${log[0]?.subject}`);
+print(`Step: ${log[0]?.trailers?.Step}`);
+print(`Session: ${log[0]?.trailers?.Session}`);
 =>
 subject: Do work
 Step: fetch
@@ -159,14 +159,14 @@ await commit(box.root, {
 });
 
 const entries = await getLogPaginated({ boxRoot: box.root });
-entries[0].subject
+entries[0]?.subject
 => Multi-trailer
 ```
 
 ```ts continue
 // Pagination: offset skips entries
 const skipped = await getLogPaginated({ boxRoot: box.root, offset: 1 });
-skipped[0].subject
+skipped[0]?.subject
 => init
 ```
 
@@ -422,8 +422,8 @@ const hash = await stageAndCommitPaths(box.root, {
 print(`hash length: ${hash?.length}`);
 
 const log = await getLog(box.root);
-print(`subject: ${log[0].subject}`);
-print(`Created-By: ${log[0].trailers?.["Created-By"]}`);
+print(`subject: ${log[0]?.subject}`);
+print(`Created-By: ${log[0]?.trailers?.["Created-By"]}`);
 =>
 hash length: 40
 subject: Add note

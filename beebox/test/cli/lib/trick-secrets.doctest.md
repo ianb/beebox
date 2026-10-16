@@ -28,12 +28,12 @@ await box.cleanup();
 ## Resolves through the derived child environment
 
 ```ts
-const seen = [];
+const seen: { url: string; body: unknown; authorization: string | null }[] = [];
 const resolved = await resolveTrickSecret({
   env: { BBX_SERVER_URL: "http://localhost:3210", BBX_BOX_NAME: "test1", BBX_AGENT_TOKEN: "agent-token" },
   declaration: { name: "openai-images", reason: "image-generation", env: "OPENAI_API_KEY" },
   fetchImpl: async (url, init) => {
-    seen.push({ url, body: init?.body, authorization: init?.headers?.Authorization });
+    seen.push({ url: String(url), body: init?.body, authorization: new Headers(init?.headers).get("authorization") });
     return new Response(JSON.stringify({ value: "secret-value", suspect: false }), { status: 200 });
   },
 });
@@ -42,13 +42,13 @@ resolved.suspect
 ```
 
 ```ts continue
-seen[0].url
+seen[0]?.url
 => http://localhost:3210/test1/api/secrets/resolve
 
-seen[0].body
+seen[0]?.body
 => {"name":"openai-images","purpose":"image-generation"}
 
-seen[0].authorization
+seen[0]?.authorization
 => Bearer agent-token
 
 resolved.value

@@ -15,13 +15,15 @@ import { checkRequiredConnectors } from "../../../src/core/schedule/promotion.js
 import { parseScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { syncConnector, addDays } from "../../../src/connector-activity/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { invariant } from "../../../src/shared/invariant.js";
 
 // Hermetic: no engine-availability store, no Google grant, every channel fake.
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 delete process.env.BBX_GOOGLE_TOKENS_FILE;
 process.env.BBX_NOTIFY_FAKE = "1";
 
-function card({ requested, requires }) {
+function card({ requested, requires }: { requested: boolean; requires: boolean }) {
   return [
     "---",
     'cron: "0 * * * *"',
@@ -35,15 +37,15 @@ function card({ requested, requires }) {
 }
 
 /** Each logged notification: loudness, title, target, then the body. */
-async function sent(box) {
+async function sent(box: TmpBox) {
   return (await readRecent(box.root, { days: 36500 }))
     .map(({ intent }) => `${intent.loudness} | ${intent.title} | ${intent.target}\n${intent.body}`)
     .join("\n") || "nothing sent";
 }
 
 /** A forced tick of one card: the schedule gate is bypassed, the connector gate is not. */
-async function tick(box, script) {
-  return (await runTick(box.root, { quiet: true, force: true, script })).scripts[0].status;
+async function tick(box: TmpBox, script: string) {
+  return (await runTick(box.root, { quiet: true, force: true, script })).scripts[0]?.status;
 }
 ```
 
@@ -63,6 +65,7 @@ loud | Your field trip watch could not run | admin:google-services
 It needs gmail. Google is not connected or its access expired; open Admin › Google Services.
 
 const state = await loadScriptState(box.root, "watch");
+invariant(state.skipped, "skipped episode is recorded");
 `${state.skipped.reason} | ${state.alertedFor}`
 => missing-connectors | skipped:missing-connectors
 ```
@@ -71,7 +74,7 @@ Later ticks in the same episode keep its `since` and send nothing:
 
 ```ts continue
 await tick(box, "watch");
-(await loadScriptState(box.root, "watch")).skipped.since === state.skipped.since
+(await loadScriptState(box.root, "watch")).skipped?.since === state.skipped.since
 => true
 
 (await readRecent(box.root, { days: 36500 })).length
@@ -112,7 +115,7 @@ box.commitAll("add schedule");
 await tick(box, "sync")
 => skipped
 
-(await loadScriptState(box.root, "sync")).skipped.reason
+(await loadScriptState(box.root, "sync")).skipped?.reason
 => missing-connectors
 
 await sent(box)
@@ -162,11 +165,11 @@ before running it. Two days of failed gmail syncs are a failing episode:
 const box = await makeTmpBox({ git: true });
 await box.seed("_config/box.json", JSON.stringify({ timezone: "UTC" }));
 box.commitAll("seed");
-const fail = { name: "gmail", produces: [], inboxPaths: [], sync: async () => ({ success: true, created: [], updated: [], error: "invalid_grant" }) };
+const fail = { name: "gmail", inboxPaths: [], sync: async () => ({ success: true, created: [], updated: [], error: "invalid_grant" }) };
 await syncConnector(fail, { boxRoot: box.root, now: new Date("2026-09-20T15:00:00Z") });
 await syncConnector(fail, { boxRoot: box.root, now: new Date("2026-09-21T15:00:00Z") });
 
-const parsed = parseScheduledScript({ cron: "0 * * * *", "requested-by": "boxholder", requires: { connectors: ["gmail"] }, runs: "true", enabled: true });
+const parsed = parseScheduledScript({ type: "scheduled-script", cron: "0 * * * *", "requested-by": "boxholder", requires: { connectors: ["gmail"] }, runs: "true", enabled: true });
 const state = await loadScriptState(box.root, "watch");
 const ctx = { boxRoot: box.root, scriptName: "watch", parsed, state, now: new Date("2026-09-21T16:00:00Z") };
 await checkRequiredConnectors(ctx);

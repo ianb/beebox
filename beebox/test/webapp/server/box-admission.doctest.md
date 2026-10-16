@@ -4,18 +4,20 @@
 import Fastify from "fastify";
 import { router, publicProcedure } from "../../../src/webapp/trpc/procedures.js";
 import { registerBoxAdmission, boxRequestsAreIdle } from "../../../src/webapp/server/box-admission.js";
-import { acquireBoxWork, closeBoxMaintenance, boxWorkEnvironment } from "../../../src/lib/box-maintenance.js";
+import { acquireBoxWork, closeBoxMaintenance, boxWorkEnvironment } from "../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { connect } from "node:net";
+
 ```
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const server = Fastify();
 registerBoxAdmission(server, [{ slug: "test", boxRoot: box.root }]);
-const entered = Promise.withResolvers();
-const finish = Promise.withResolvers();
-let permission;
+const entered = Promise.withResolvers<void>();
+const finish = Promise.withResolvers<void>();
+let permission: string | undefined;
 server.post("/test/write", async () => {
   permission = boxWorkEnvironment().BBX_BOX_WORK;
   entered.resolve();
@@ -43,7 +45,11 @@ JSON.stringify({ retryAfter: refused.headers["retry-after"], error: refused.json
 (await server.inject({ method: "POST", url: "/auth/login" })).statusCode
 => 200
 
-const caller = router({ write: publicProcedure.mutation(() => "ok") }).createCaller({ boxRoot: box.root, boxSlug: "test", services: {}, eventBus: {}, user: null, authed: true, isOwner: true, isAuthenticatedOwner: true });
+const caller = router({ write: publicProcedure.mutation(() => "ok") }).createCaller(trpcContext({
+  boxRoot: box.root,
+  isAuthenticatedOwner: true,
+  actor: "none",
+}));
 // A WebSocket mutation has no still-open HTTP request lease.
 await caller.write().catch((error) => error.code)
 => SERVICE_UNAVAILABLE
@@ -82,7 +88,7 @@ const address = await abortServer.listen({ port: 0, host: "127.0.0.1" });
 const socket = connect(Number(new URL(address).port), "127.0.0.1");
 await new Promise((resolve) => socket.once("connect", resolve));
 socket.write("POST /test/upload HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{\"partial\":");
-const until = async (check) => { for (let i = 0; i < 100 && !check(); i += 1) await new Promise((resolve) => setTimeout(resolve, 20)); return check(); };
+const until = async (check: () => boolean) => { for (let i = 0; i < 100 && !check(); i += 1) await new Promise((resolve) => setTimeout(resolve, 20)); return check(); };
 await until(() => !boxRequestsAreIdle(abortBox.root))
 => true
 

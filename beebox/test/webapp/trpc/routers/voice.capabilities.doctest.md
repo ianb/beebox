@@ -10,13 +10,20 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { silentEventBus, trpcContext } from "../../../helpers/trpc-context.js";
 
-const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-function owner(boxRoot) {
-  return appRouter.createCaller({ boxRoot, boxSlug: "test", eventBus: noBus, services: {}, user: { email: "owner@example.com", name: "Owner" }, authed: true, isOwner: true, isAuthenticatedOwner: true });
+const noBus: TrpcContext["eventBus"] = silentEventBus;
+function owner(boxRoot: string) {
+  return appRouter.createCaller(trpcContext({
+    boxRoot,
+    eventBus: noBus,
+    user: { email: "owner@example.com", name: "Owner" },
+    isAuthenticatedOwner: true,
+  }));
 }
 ```
 

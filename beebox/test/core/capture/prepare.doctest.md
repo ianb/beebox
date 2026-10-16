@@ -11,9 +11,11 @@ import { execFileSync } from "node:child_process";
 import { mkdir, writeFile, appendFile, readFile, readdir, rm, access } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
-import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { createEventBus, type BusEvent } from "../../../src/core/event-bus/core.js";
+import type { ChatSession } from "../../../src/core/chat/session/run/core.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
@@ -30,13 +32,13 @@ import { sessionBasenameFor } from "../../../src/core/capture/prepare/write-card
 import { buildCaptureWrapper } from "../../../src/core/capture/prepare/deliver.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 
-async function pathExists(p) {
+async function pathExists(p: string) {
   try { await access(p); return true; } catch { return false; }
 }
 
 // Arrow-free-at-call-site git inspection (keeps inline `=>` out of example
 // blocks, where the doctest tracker confuses arrows with assertion markers).
-function commitReport(boxRoot, baseA, baseB) {
+function commitReport(boxRoot: string, baseA: string, baseB: string) {
   const rows = execFileSync("git", ["log", "--format=%H%x09%s"], { cwd: boxRoot })
     .toString().trim().split("\n").map((l) => l.split("\t"));
   const subjectA = "Capture: " + baseA;
@@ -45,17 +47,27 @@ function commitReport(boxRoot, baseA, baseB) {
   const countB = rows.filter((r) => r[1] === subjectB).length;
   const rowA = rows.find((r) => r[1] === subjectA);
   const rowB = rows.find((r) => r[1] === subjectB);
-  function filesOf(hash) {
+  function filesOf(hash: string) {
     return execFileSync("git", ["show", "--name-only", "--format=", hash], { cwd: boxRoot })
       .toString().trim().split("\n").filter(Boolean);
   }
-  const filesA = rowA ? filesOf(rowA[0]) : [];
-  const filesB = rowB ? filesOf(rowB[0]) : [];
+  const hashA = rowA?.[0];
+  const hashB = rowB?.[0];
+  const filesA = hashA === undefined ? [] : filesOf(hashA);
+  const filesB = hashB === undefined ? [] : filesOf(hashB);
   const aIsolated = filesA.length > 0 && filesA.every((f) => f.includes(baseA)) && !filesA.some((f) => f.includes(baseB));
   const bIsolated = filesB.length > 0 && filesB.every((f) => f.includes(baseB)) && !filesB.some((f) => f.includes(baseA));
   // Single combined verdict: each capture committed exactly once, and each
   // commit's files belong only to that capture (the F1 cross-contamination fix).
   return countA === 1 && countB === 1 && aIsolated && bIsolated;
+}
+
+// Persisted bus events carry `unknown` data; parse it with the event's own schema.
+function userMessages(events: BusEvent[]) {
+  return events.filter((e) => e.event === "chat-user-message").map((e) => e.data);
+}
+function captureStatuses(events: BusEvent[]) {
+  return events.filter((e) => e.event === "capture-status").map((e) => e.data);
 }
 
 const GITIGNORE = ["_tmp/", ".beebox/", "**/*.attach/**/*.webm", "**/*.attach/**/*.m4a", "**/*.attach/**/*.jpg"].join("\n") + "\n";
@@ -94,7 +106,7 @@ const SCRIPT = {
 
 // Stage a sealed session: two audio segments (14:00:00, 14:00:30) + one photo
 // (14:00:15). Media bytes are placeholders — the fake service keys on filenames.
-async function stageSealedSession(boxRoot) {
+async function stageSealedSession(boxRoot: string) {
   const staged = await createStagingSession({ boxRoot, targetSessionId: null, createdBy: null });
   const id = staged.id;
   await addAudioChunk({ boxRoot, id, segmentId: "seg-a", segmentStartedAt: "2026-07-09T14:00:00.000Z", filename: "audio-a-001.webm", buffer: Buffer.from("A") });
@@ -105,7 +117,7 @@ async function stageSealedSession(boxRoot) {
 }
 
 /** Write the fake-transcription config (default: the full SCRIPT) and commit it. */
-async function configureBox(box, options) {
+async function configureBox(box: TmpBox, options?: { extraIgnore?: string; script?: Record<string, unknown> }) {
   await box.write(".gitignore", GITIGNORE + (options?.extraIgnore ?? ""));
   await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
   await box.write("_config/fake-transcription.json", JSON.stringify(options?.script ?? SCRIPT, null, 2));
@@ -113,7 +125,7 @@ async function configureBox(box, options) {
 }
 
 /** A real chat registry over the fake backend plus an event bus; `close()` releases both. */
-function chatFor(box) {
+function chatFor(box: TmpBox) {
   const registry = new ChatSessionRegistry(box.root, {
     backend: createFakeChatBackend(),
     buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
@@ -123,7 +135,7 @@ function chatFor(box) {
 }
 
 /** Where a capture session's cards land (the session starts at `startedAt`). */
-function cardPaths(id, startedAt) {
+function cardPaths(id: string, startedAt?: string) {
   const basename = sessionBasenameFor({ actualStartedAt: startedAt ?? "2026-07-09T14:00:00.000Z", id });
   return {
     basename,
@@ -133,15 +145,15 @@ function cardPaths(id, startedAt) {
 }
 
 /** Prepare sealed session `id` through a real chat registry; returns the chat, event bus and card paths. */
-async function prepareOn(box, id, startedAt) {
+async function prepareOn(box: TmpBox, id: string, startedAt?: string) {
   const chat = chatFor(box);
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus: chat.eventBus, registry: chat.registry });
   await tick();
   return { ...chat, ...cardPaths(id, startedAt) };
 }
 
-const gitSubjects = (boxRoot) => execFileSync("git", ["log", "--format=%s"], { cwd: boxRoot }).toString().trim().split("\n");
-const captureCommits = (boxRoot) => gitSubjects(boxRoot).filter((l) => l.startsWith("Capture:")).length;
+const gitSubjects = (boxRoot: string) => execFileSync("git", ["log", "--format=%s"], { cwd: boxRoot }).toString().trim().split("\n");
+const captureCommits = (boxRoot: string) => gitSubjects(boxRoot).filter((l) => l.startsWith("Capture:")).length;
 ```
 
 ## Full prepare: cards, timing sidecars, exact timeline, commit, wrapper
@@ -206,8 +218,8 @@ session's media was cleaned up once delivered:
 const events = eventBus.readSince(0);
 const expectedWrapper = buildCaptureWrapper({ docPath: docRel, imageCount: 1, audioSeconds: 7, summary: "Walked through the kitchen." });
 ({
-  wrapperMatches: events.find((e) => e.event === "chat-user-message").data.message === expectedWrapper,
-  deliveredDocPath: events.find((e) => e.event === "capture-status" && e.data.status === "delivered").data.docPath,
+  wrapperMatches: userMessages(events)[0]?.message === expectedWrapper,
+  deliveredDocPath: captureStatuses(events).find((s) => s.status === "delivered")?.docPath,
   staging: await readStagingSession({ boxRoot: box.root, id }),
 })
 => {
@@ -288,7 +300,7 @@ The delivered wrapper carries `transcription-failed`, with the summary taken
 from the clip that succeeded (not the failed clip 0-or-2):
 
 ```ts continue
-const captureMsg = eventBus.readSince(0).find((e) => e.event === "chat-user-message").data.message;
+const captureMsg = userMessages(eventBus.readSince(0))[0]?.message ?? "";
 ({
   failedCount: captureMsg.includes("transcription-failed=\"1\""),
   summaryFromGoodClip: captureMsg.includes("Walked through the kitchen."),
@@ -311,30 +323,17 @@ re-write, re-transcribe, or re-commit.
 const box = await makeTmpBox({ git: true });
 await configureBox(box);
 const id = await stageSealedSession(box.root);
-const eventBus = createEventBus(box.root);
+const { registry, eventBus, close } = chatFor(box);
 
-// A registry whose first send() fails, then succeeds — simulating a transient
-// delivery error followed by a retry (the resume path).
+// The first send() fails, then succeeds — simulating a transient delivery
+// error followed by a retry (the resume path).
 let failNext = true;
-const session = {
-  isBusy: () => false,
-  enqueue: () => {},
-  send: async () => { if (failNext) { failNext = false; return false; } return true; },
-  getSessionId: () => "sess-1",
-};
-const registry = {
-  getOrCreate: () => session,
-  createNew: () => session,
-  get: () => session,
-  enforceLiveCap: () => {},
-  touch: () => {},
-  markMostActive: async () => {},
-  // No chat here was coined and reserved (chat/session/reserve.ts).
-  getReservation: () => null,
-};
+function failFirstSend(session: ChatSession) {
+  session.send = async () => { if (failNext) { failNext = false; return false; } return true; };
+}
 
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
-(await readStagingSession({ boxRoot: box.root, id })).state
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: failFirstSend });
+(await readStagingSession({ boxRoot: box.root, id }))?.state
 => failed:deliver
 ```
 
@@ -347,7 +346,7 @@ const { docRel } = cardPaths(id);
 const bodyAfterFirst = splitCardContent(await box.read(docRel)).body.trim();
 const first = { bodyStarts: bodyAfterFirst.startsWith("Walked through the kitchen."), captureCommits: captureCommits(box.root) };
 
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: failFirstSend });
 ({
   first,
   staging: await readStagingSession({ boxRoot: box.root, id }),
@@ -358,7 +357,7 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 ```
 
 ```ts cleanup
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -428,39 +427,30 @@ await writeFile(logPath, "");
 
 // Rewire the staged session's target to the known chat.
 const staged = await readStagingSession({ boxRoot: box.root, id });
+assert.ok(staged);
 staged.targetSessionId = "s-known";
 await writeFile(`${box.root}/_tmp/capture-staging/${id}/session.json`, JSON.stringify(staged, null, 2));
 
+const { registry, eventBus, close } = chatFor(box);
 let sendCount = 0;
 let crashOnSend = true;
-const session = {
-  isBusy: () => false,
-  enqueue: () => {},
-  getSessionId: () => "s-known",
-  send: async (input) => {
+// Replace the session's send with one that writes the transcript line itself.
+function scriptedSend(session: ChatSession) {
+  session.send = async (input) => {
     sendCount += 1;
-    await appendFile(logPath, JSON.stringify({ type: "user", text: input.text }) + "\n");
+    const text = typeof input === "string" ? input : input.text;
+    await appendFile(logPath, JSON.stringify({ type: "user", text }) + "\n");
     if (crashOnSend) throw new Error("simulated crash after send, before delivered marker");
     return true;
-  },
-};
-const registry = {
-  getOrCreate: () => session,
-  createNew: () => session,
-  get: () => session,
-  enforceLiveCap: () => {},
-  touch: () => {},
-  markMostActive: async () => {},
-  // No chat here was coined and reserved (chat/session/reserve.ts).
-  getReservation: () => null,
-};
+  };
+}
 
 // First run: send lands the message, then "crashes" before the delivered write.
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(box.root), registry }).catch(() => {});
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: scriptedSend }).catch(() => {});
 sendCount
 => 1
 
-(await readStagingSession({ boxRoot: box.root, id })).state
+(await readStagingSession({ boxRoot: box.root, id }))?.state
 => delivering
 ```
 
@@ -468,7 +458,7 @@ Resume: the probe short-circuits delivery — no second send, still one message:
 
 ```ts continue
 crashOnSend = false;
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(box.root), registry });
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: scriptedSend });
 ({
   sendCount,
   captureMessages: (await readFile(logPath, "utf-8")).split("\n").filter((l) => l.includes("<capture ")).length,
@@ -479,6 +469,7 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(bo
 ```
 
 ```ts cleanup
+close();
 await rm(dirname(logPath), { recursive: true, force: true });
 await box.cleanup();
 ```
@@ -500,14 +491,10 @@ const { docRel: cardRel, attach: attachRel } = cardPaths(id);
 await mkdir(`${box.root}/${attachRel}`, { recursive: true });
 await writeFile(`${box.root}/${cardRel}`, "---\ndelivered: not-a-boolean\n---\n");
 
-const registry = {
-  getOrCreate: () => ({ isBusy: () => false, enqueue: () => {}, send: async () => true, getSessionId: () => "x" }),
-  createNew: () => ({ isBusy: () => false, enqueue: () => {}, send: async () => true, getSessionId: () => "x" }),
-  get: () => null, enforceLiveCap: () => {}, touch: () => {}, markMostActive: async () => {},
-};
-await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(box.root), registry });
+const { registry, eventBus, close } = chatFor(box);
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 
-(await readStagingSession({ boxRoot: box.root, id })).state
+(await readStagingSession({ boxRoot: box.root, id }))?.state
 => failed:assemble
 ```
 
@@ -518,6 +505,7 @@ working tree clean, so a re-fire rebuilds from scratch:
 
 ```ts continue
 const [notice] = await readRecent(box.root, { days: 36500 });
+assert.ok(notice);
 ({
   notice: `${notice.intent.loudness} | ${notice.intent.target} | ${notice.intent.source} | ${notice.intent.body}`,
   cardExists: await pathExists(`${box.root}/${cardRel}`),
@@ -533,6 +521,7 @@ const [notice] = await readRecent(box.root, { days: 36500 });
 ```
 
 ```ts cleanup
+close();
 await box.cleanup();
 ```
 

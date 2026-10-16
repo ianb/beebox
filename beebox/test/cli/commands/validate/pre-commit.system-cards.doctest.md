@@ -3,14 +3,14 @@
 ```ts setup
 import { execFileSync } from "node:child_process";
 import { rm } from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { checkSystemCards, checkStagedSystemCards, seedSystemCards } from "../../../../src/core/system-cards.js";
 import { SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION } from "../../../../src/shared/system-card-paths.js";
 import { MANIFEST_PATH } from "../../../../src/core/migrations.js";
 import { runPreCommitChecks } from "../../../../src/cli/commands/validate/pre-commit.js";
 import { markMigrationApplied } from "../../../../src/cli/commands/migrate.js";
 import { appendManifestEntry, writeManifest } from "../../../../src/core/migration-run.js";
-function git(box, ...args) { return execFileSync("git", args, { cwd: box.root }).toString(); }
+function git(box: TmpBox, ...args: string[]) { return execFileSync("git", args, { cwd: box.root }).toString(); }
 const completion = { name: SYSTEM_CARD_MIGRATION, "applied-at": "2026-09-09T00:00:00Z" };
 ```
 
@@ -67,7 +67,7 @@ moved.some((message) => message.includes("Required system card missing")) && mov
 => true
 
 git(box, "reset", "--hard", "HEAD");
-await box.write(SYSTEM_CARD_PATHS.browse, "---\ntype: memo\n---\n");
+await box.write(SYSTEM_CARD_PATHS.browse, "---\ntype: doc\n---\n");
 git(box, "add", SYSTEM_CARD_PATHS.browse);
 (await checkStagedSystemCards(box.root)).some((message) => message.includes("does not match filename type"))
 => true
@@ -123,11 +123,11 @@ await seedSystemCards(trashBox.root, REMAINING_SYSTEM_CARD_MIGRATION);
 await trashBox.commitAll("discard stray copy");
 git(trashBox, "mv", SYSTEM_CARD_PATHS.browse, "_bookkeeping/trash/browse.card");
 const missingWorking = await checkSystemCards(trashBox.root);
-missingWorking.length === 1 && missingWorking[0].includes("Required system card missing")
+missingWorking.length === 1 && missingWorking[0]?.includes("Required system card missing")
 => true
 
 const missingIndex = await checkStagedSystemCards(trashBox.root);
-missingIndex.length === 1 && missingIndex[0].includes("Required system card missing")
+missingIndex.length === 1 && missingIndex[0]?.includes("Required system card missing")
 => true
 
 git(trashBox, "restore", "--source=HEAD", "--staged", "--worktree", SYSTEM_CARD_PATHS.browse);
@@ -139,7 +139,7 @@ await checkStagedSystemCards(trashBox.root)
 
 git(trashBox, "mv", SYSTEM_CARD_PATHS.admin, "_bookkeeping/trash/admin.card");
 const missingLaterIndex = await checkStagedSystemCards(trashBox.root);
-missingLaterIndex.length === 1 && missingLaterIndex[0].includes(SYSTEM_CARD_PATHS.admin)
+missingLaterIndex.length === 1 && missingLaterIndex[0]?.includes(SYSTEM_CARD_PATHS.admin)
 => true
 
 git(trashBox, "restore", "--source=HEAD", "--staged", "--worktree", SYSTEM_CARD_PATHS.admin);

@@ -21,7 +21,7 @@ const ATTACH_PREFIX = "attach/";
  * Card basename — the part of the filename before `.<type>.card`.
  *
  * `Foo.image.card` → `Foo`
- * `Voice_Memo.memo.card` → `Voice_Memo`
+ * `Voice_note.doc.card` → `Voice_note`
  * `scan-001.capture-session.card` → `scan-001`
  *
  * Returns the filename unchanged if it doesn't end with `.card` or has no type

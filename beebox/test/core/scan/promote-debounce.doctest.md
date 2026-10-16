@@ -16,19 +16,24 @@ import Fastify from "fastify";
 import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { acquireBoxWork, boxWorkEnvironment } from "../../../src/lib/box-maintenance.js";
+import { acquireBoxWork, boxWorkEnvironment } from "../../../src/lib/box-maintenance/admission.js";
 import { mock } from "node:test";
 
-function counting(opts) {
+function counting(opts: { settleMs: number }) {
   const state = { runs: 0 };
-  state.debouncer = createPromoteDebouncer({
+  const debouncer = createPromoteDebouncer({
     settleMs: opts.settleMs,
     label: "test-box",
     run: async () => {
       state.runs++;
     },
   });
-  return state;
+  return {
+    get runs() {
+      return state.runs;
+    },
+    debouncer,
+  };
 }
 
 /**
@@ -36,7 +41,7 @@ function counting(opts) {
  * and it reads one jump longer than six of its ticks as the machine sleeping,
  * so a single large jump would not count toward the window.
  */
-function advance(ms) {
+function advance(ms: number) {
   for (let elapsed = 0; elapsed < ms; elapsed += 10) mock.timers.tick(10);
 }
 ```
@@ -108,8 +113,8 @@ const box = await makeTmpBox({ git: true });
 const app = Fastify();
 let release!: () => void;
 let started!: () => void;
-const passStarted = new Promise(resolve => { started = resolve; });
-const passMayFinish = new Promise(resolve => { release = resolve; });
+const passStarted = new Promise<void>(resolve => { started = resolve; });
+const passMayFinish = new Promise<void>(resolve => { release = resolve; });
 startScanPromoteLifecycle({
   server: app,
   boxRoot: box.root,

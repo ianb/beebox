@@ -27,8 +27,8 @@ const testRouter = router({
   moved: publicProcedure.query(() => {
     throw new TRPCError({
       code: "NOT_FOUND",
-      message: "Card not found: _content/Old.memo.card",
-      cause: new MovedCardRecoveryCauseError("_content/archive/New.memo.card"),
+      message: "Card not found: _content/Old.doc.card",
+      cause: new MovedCardRecoveryCauseError("_content/archive/New.doc.card"),
     });
   }),
 });
@@ -107,7 +107,7 @@ JSON.stringify({
   message: movedBody.error.message,
   recovery: movedBody.error.data.recovery,
 })
-=> {"status":404,"message":"Card not found: _content/Old.memo.card","recovery":{"kind":"moved","path":"_content/archive/New.memo.card"}}
+=> {"status":404,"message":"Card not found: _content/Old.doc.card","recovery":{"kind":"moved","path":"_content/archive/New.doc.card"}}
 ```
 
 ```ts cleanup

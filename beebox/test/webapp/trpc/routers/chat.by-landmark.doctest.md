@@ -19,18 +19,16 @@ depends on it.
 ```ts setup
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import assert from "node:assert/strict";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../../../src/core/chat/session/origin.js";
 
-function caller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-  };
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 
@@ -38,7 +36,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Freshness is the transcript's mtime, so a fixture has to set it: `daysAgo`
 // puts a session inside or outside the 7-day fresh window on purpose.
-async function seedSession(box, args) {
+async function seedSession(
+  box: TmpBox,
+  args: { sessionId: string; contextDir: string; firstMessage: string; daysAgo: number },
+) {
   const { sessionId, contextDir, firstMessage, daysAgo } = args;
   const cwd = contextDir === "" ? box.root : box.path(contextDir);
   const logPath = getSessionLogPath(cwd, sessionId);
@@ -93,7 +94,7 @@ over, not a second home for the root.
 await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
 
 const withRoot = await caller(box.root).chat.byLandmark();
-print(`root tile: ${withRoot.landmarks.find((l) => l.dir === "").sessions.map((s) => s.sessionId).join(",")}`);
+print(`root tile: ${withRoot.landmarks.find((l) => l.dir === "")?.sessions.map((s) => s.sessionId).join(",")}`);
 print(`unassigned: ${withRoot.unassigned.sessions.map((s) => `${s.sessionId} [${s.contextDir}]`).join(" | ")}`);
 =>
 root tile: rootchat1
@@ -124,10 +125,11 @@ await seedSession(box, { sessionId: "fresh003", contextDir: "_content/recipes", 
 await seedSession(box, { sessionId: "stale001", contextDir: "_content/recipes", firstMessage: "long ago", daysAgo: 30 });
 
 const recipes = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/recipes");
+assert.ok(recipes);
 print(`visible: ${recipes.sessions.map((s) => s.sessionId).join(",")}`);
 print(`older: ${recipes.olderSessions.map((s) => s.sessionId).join(",")}`);
 print(`freshCount: ${recipes.freshCount}`);
-print(`latest is the newest session: ${recipes.latestActivity === recipes.sessions[0].lastActivity}`);
+print(`latest is the newest session: ${recipes.latestActivity === recipes.sessions[0]?.lastActivity}`);
 =>
 visible: fresh001
 older: fresh002,fresh003,stale001
@@ -142,6 +144,7 @@ await box.write("_content/trips/Trips.landmark.card",
   "---\nnavigation:\n  label: Trips\n---\n\n");
 
 const trips = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/trips");
+assert.ok(trips);
 `${trips.freshCount} / ${trips.latestActivity}`
 => 0 / null
 ```
@@ -229,6 +232,7 @@ await box.write("_content/chat/web/2026-07-19_prod.chat.card",
 
 const picked = await caller(box.root).chat.byLandmark();
 const recipes = picked.landmarks.find((l) => l.label === "Recipes");
+assert.ok(recipes);
 print(`live: ${recipes.sessions.map((s) => s.sessionId).join(",")}`);
 print(`dead: ${recipes.dead.map((d) => `${d.label} [${d.transcript.state}] -> ${d.huskPath}`).join(" | ")}`);
 =>

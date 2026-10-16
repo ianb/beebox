@@ -18,7 +18,7 @@ fields.
 **Issues addressed:**
 [review the standard card fields](../../../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md).
 Related, not resolved here:
-[retire memo](../../../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
+[retire memo](../../../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
 (owns memo's `status`, `created`, `source`, and its body-derived title),
 [codebase ontology files](../../../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md)
 (a name with two meanings is a collision; this plan removes several),

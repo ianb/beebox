@@ -28,14 +28,14 @@ nearestDirFromDirs("class/activities/shared/Logprobs.sandbox.card", ["", "class/
 A card with no enclosing non-root landmark falls back to the root (`""`):
 
 ```ts
-JSON.stringify(nearestDirFromDirs("store/notes/idea.memo.card", ["class/activities"]))
+JSON.stringify(nearestDirFromDirs("store/notes/idea.doc.card", ["class/activities"]))
 => ""
 ```
 
 A card directly at the box root resolves to the root, never a sibling landmark:
 
 ```ts
-JSON.stringify(nearestDirFromDirs("Inbox.memo.card", ["class/activities"]))
+JSON.stringify(nearestDirFromDirs("Inbox.doc.card", ["class/activities"]))
 => ""
 ```
 
@@ -73,7 +73,7 @@ A card outside any landmarked subtree falls back to the root:
 ```ts
 const box = await makeTmpBox();
 await box.write("class/activities/Activities.landmark.card", "---\ntype: landmark\n---\n");
-JSON.stringify(await nearestLandmarkDir(box.root, { cardPath: "store/notes/idea.memo.card" }))
+JSON.stringify(await nearestLandmarkDir(box.root, { cardPath: "store/notes/idea.doc.card" }))
 => ""
 ```
 

@@ -514,12 +514,12 @@ drive.files.push(driveFile({
   parent: "folder-1",
   targetId: "folder-1",
 }));
-let cycled: Awaited<ReturnType<typeof connector.sync>> | null = null;
+const cycles: Array<Awaited<ReturnType<typeof connector.sync>>> = [];
 const warnings = await captureWarnings(async () => {
-  cycled = await connector.sync();
+  cycles.push(await connector.sync());
 });
 JSON.stringify({
-  success: cycled?.success,
+  success: cycles[0]?.success,
   cycleNoted: warnings.some((line) => line.includes("cycle, not descended")),
   failed: /^error:/m.test(await box.read("_content/drive/recipes/Recipes.gfolder.card")),
 })

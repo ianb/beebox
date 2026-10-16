@@ -9,6 +9,7 @@ read the current file and the rotated one.
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { NotificationIntent } from "../../../src/core/notification/intent.js";
 import {
   appendIntent,
   appendDelivery,
@@ -17,15 +18,18 @@ import {
   rotateIfNeeded,
   notificationLogPath,
 } from "../../../src/core/notification/log.js";
+import type { LoggedNotification } from "../../../src/core/notification/log.js";
+import { invariant } from "../../../src/shared/invariant.js";
 
 const NOW = new Date("2026-09-26T09:00:00Z");
 const DAY = 24 * 60 * 60 * 1000;
 
-function intent(id, title) {
+function intent(id: string, title: string): NotificationIntent {
   return { id, title, body: "", target: { kind: "dashboard" }, loudness: "loud", source: "log-doctest" };
 }
 
-function summary(n) {
+function summary(n: LoggedNotification | null) {
+  invariant(n, "the notification is in the log");
   const deliveries = n.deliveries.map((d) => `${d.channel}=${d.status}${d.detail ? `(${d.detail})` : ""}`);
   return `${n.intent.id} ${n.intent.title}: ${deliveries.length === 0 ? "(no deliveries)" : deliveries.join(" ")}`;
 }

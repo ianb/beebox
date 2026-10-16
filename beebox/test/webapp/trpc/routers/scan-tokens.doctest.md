@@ -7,27 +7,15 @@ member — let alone a machine credential — may do.
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { verifyScanToken } from "../../../../src/core/scan/tokens.js";
 
-const eventBus = {
-  emit: () => 0,
-  emitTransient: () => {},
-  readSince: () => [],
-  subscribe: () => ({ unsubscribe: () => {} }),
-  prune: () => 0,
-  close: () => {},
-};
-
-function caller(boxRoot, { isOwner }) {
-  return appRouter.createCaller({
+function caller(boxRoot: string, { isOwner }: { isOwner: boolean }) {
+  return appRouter.createCaller(trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus,
-    services: {},
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
     isOwner,
-  });
+  }));
 }
 ```
 

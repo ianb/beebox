@@ -9,30 +9,33 @@ on the same card serialize
 throws are covered here (running a real script is exercised elsewhere).
 
 ```ts setup
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { getLog } from "../../../../src/lib/git/core/operations.js";
 import { parse as parseYaml } from "yaml";
+import assert from "node:assert/strict";
+import { TRPCError } from "@trpc/server";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 
-function caller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-  };
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 
-async function code(p) {
-  return p.then(() => "none", (e) => e.code);
+async function newestCommit(boxRoot: string) {
+  const [entry] = await getLog(boxRoot, 1);
+  assert.ok(entry);
+  return entry;
+}
+
+async function code(p: Promise<unknown>): Promise<string> {
+  return p.then(() => "none", (e: unknown) => (e instanceof TRPCError ? e.code : String(e)));
 }
 
 // Read a schedule card's frontmatter as an object.
-async function frontmatter(box, name) {
+async function frontmatter(box: TmpBox, name: string) {
   const text = await box.read(`_config/schedules/${name}.scheduled-script.card`);
   const inner = text.replace(/^---\n/, "").replace(/---\n?$/, "");
   return parseYaml(inner);
@@ -71,7 +74,7 @@ JSON.stringify([fmOff.enabled, fmOff.cron, fmOff.runs])
 ```
 
 ```ts continue
-const head = (await getLog(box.root, 1))[0];
+const head = (await newestCommit(box.root));
 head.subject
 => Disable schedule: digest
 
@@ -88,7 +91,7 @@ JSON.stringify(on)
 "enabled" in (await frontmatter(box, "digest"))
 => false
 
-(await getLog(box.root, 1))[0].subject
+(await newestCommit(box.root)).subject
 => Enable schedule: digest
 ```
 
@@ -112,11 +115,11 @@ const c = caller(box.root);
 
 // First enable settles the card into its canonical serialized form.
 await c.scheduler.setEnabled({ name: "digest", enabled: true });
-const before = (await getLog(box.root, 1))[0].hash;
+const before = (await newestCommit(box.root)).hash;
 
 // Second enable changes nothing on disk — no new commit.
 const res = await c.scheduler.setEnabled({ name: "digest", enabled: true });
-const after = (await getLog(box.root, 1))[0].hash;
+const after = (await newestCommit(box.root)).hash;
 
 JSON.stringify(res)
 => {"enabled":true}
@@ -210,7 +213,7 @@ JSON.stringify(subjects)
 // agrees with the newest commit's action. If the newest commit enabled the
 // schedule the key is absent; if it disabled, the key is false. A mismatch
 // would mean one call's write and another's commit interleaved.
-const newest = (await getLog(box.root, 1))[0].subject;
+const newest = (await newestCommit(box.root)).subject;
 const fm = await frontmatter(box, "race");
 const diskEnabled = !("enabled" in fm);
 const newestEnabled = newest.startsWith("Enable");

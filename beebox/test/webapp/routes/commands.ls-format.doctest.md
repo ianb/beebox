@@ -9,10 +9,10 @@ render as the empty string. Each formatted line is `<relative-path>\t<rendered>`
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { executeCommandStreaming } from "../../../src/webapp/routes/commands.js";
+import { executeCommandStreaming, type OutputLine } from "../../../src/webapp/routes/commands.js";
 
-async function lsLines(boxRoot, args) {
-  const out = [];
+async function lsLines(boxRoot: string, args: Record<string, unknown>) {
+  const out: (string | undefined)[] = [];
   await executeCommandStreaming({
     command: "ls",
     args,
@@ -28,16 +28,15 @@ async function lsLines(boxRoot, args) {
 ```ts
 const box = await makeTmpBox();
 await mkdir(join(box.root, "_content/inbox"), { recursive: true });
-await writeFile(join(box.root, "_content/inbox/Hello.memo.card"), `---
+await writeFile(join(box.root, "_content/inbox/Hello.doc.card"), `---
 title: Hello World
-status: new
-created: 2026-01-01T00:00:00Z
+prominence: primary
 ---
 Body.
 `);
-const lines = await lsLines(box.root, { paths: ["_content/inbox"], format: "{title} ({status})" });
+const lines = await lsLines(box.root, { paths: ["_content/inbox"], format: "{title} ({prominence})" });
 JSON.stringify(lines)
-=> ["_content/inbox/Hello.memo.card\tHello World (new)"]
+=> ["_content/inbox/Hello.doc.card\tHello World (primary)"]
 ```
 
 ```ts cleanup
@@ -73,10 +72,10 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await mkdir(join(box.root, "_content/inbox"), { recursive: true });
-await writeFile(join(box.root, "_content/inbox/Hello.memo.card"), "---\ntitle: Hi\n---\n");
+await writeFile(join(box.root, "_content/inbox/Hello.doc.card"), "---\ntitle: Hi\n---\n");
 const lines = await lsLines(box.root, { paths: ["_content/inbox"] });
 JSON.stringify(lines)
-=> ["_content/inbox/Hello.memo.card"]
+=> ["_content/inbox/Hello.doc.card"]
 ```
 
 ```ts cleanup

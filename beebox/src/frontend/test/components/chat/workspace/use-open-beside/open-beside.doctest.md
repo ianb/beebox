@@ -6,11 +6,12 @@ and "N open" on a directory's todo line, open their card through
 `useOpenBeside`, which asks `listLinkRoute` where it goes.
 
 ```ts setup
+import type { ViewTarget } from "../../../../../src/lib/view-url.js";
 import { listLinkRoute } from "../../../../../src/components/chat/workspace/use-open-beside/open-beside.js";
 import { createEmptyWorkspaceState, paneForPath } from "../../../../../src/components/chat/workspace/state-model.js";
 import { reduceWorkspace } from "../../../../../src/components/chat/workspace/state-reducer.js";
 
-const card = (path) => ({ path, viewer: null, params: {}, viewState: null });
+const card = (path: string): ViewTarget => ({ path, viewer: null, params: {}, viewState: null });
 ```
 
 ## The route
@@ -52,7 +53,7 @@ was; without a destination the reducer would have used the originating pane.
 
 ```ts
 const plate = "_content/plate.todo-view.card";
-const roof = "_content/projects/porch-rebuild/roof.memo.card";
+const roof = "_content/projects/porch-rebuild/roof.doc.card";
 let state = reduceWorkspace(createEmptyWorkspaceState(), {
   type: "openCard", target: card(plate), label: plate, at: 1, viewport: "desktop", destinationPane: "left",
 }).state;

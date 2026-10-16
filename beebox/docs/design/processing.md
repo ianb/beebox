@@ -12,7 +12,7 @@ second concurrent wakeup skips rather than waits):
 3. Run **on-wakeup scheduled scripts**.
 4. Run **connectors** — pull external data, create job cards in
    `_bookkeeping/jobs/`; then clean up stale jobs, create intake jobs for
-   unjobbed inbox items (UI memos, etc.), refresh the search index, and, when
+   unjobbed inbox items (captured notes, etc.), refresh the search index, and, when
    the refresh succeeded, queue a low-priority `contains` backfill job if
    searchable cards lack the field.
 5. **Process pending jobs** — one reactor cycle (skipping low-priority jobs).

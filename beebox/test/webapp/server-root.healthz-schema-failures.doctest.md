@@ -16,14 +16,15 @@ regression back to "just read the map" would show up as a false `total: 0`
 below.
 
 ```ts setup
-import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
+import { makeTestServer, TEST_SLUG, type TestServer } from "../helpers/doctest-server.js";
+import { bodyField } from "../helpers/doctest-helpers.js";
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { invalidateBoxSchemas } from "../../src/schemas.js";
 
 // Box-local schemas live at `<boxRoot>/src/schemas/` — resolved natively
 // through the box's own `node_modules/beebox` (the test server scaffolds it).
-async function writeSchema(server, name, content) {
+async function writeSchema(server: TestServer, name: string, content: string) {
   const full = path.join(server.boxRoot, "src/schemas", name);
   await mkdir(path.dirname(full), { recursive: true });
   await writeFile(full, content);
@@ -47,7 +48,7 @@ await writeSchema(server, "widget.ts", GOOD_SCHEMA);
 
 const headers = { authorization: "Bearer test-diag-key" };
 const clean = await server.rootRequest({ method: "GET", url: "/healthz", headers });
-JSON.stringify(clean.body.schemaLoadFailures)
+JSON.stringify(bodyField(clean.body, "schemaLoadFailures"))
 => {"total":0,"byBox":{}}
 ```
 
@@ -59,7 +60,7 @@ await writeSchema(server, "widget.ts", BROKEN_SCHEMA);
 invalidateBoxSchemas(server.boxRoot);
 
 const broken = await server.rootRequest({ method: "GET", url: "/healthz", headers });
-JSON.stringify(broken.body.schemaLoadFailures)
+JSON.stringify(bodyField(broken.body, "schemaLoadFailures"))
 => {"total":1,"byBox":{"test":1}}
 ```
 

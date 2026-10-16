@@ -9,7 +9,7 @@ import { Fragment, type ReactNode } from "react";
 import { InlineAction } from "../ui/InlineAction";
 import { summaryParts, type SummaryReduction } from "./summary";
 
-/** What "N open" does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
+/** What the line's control ("N on your plate", or "N later" when nothing is on the plate) does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
 export interface OpenAction {
   onClick: () => void;
   title: string;
@@ -30,7 +30,7 @@ export function TodoSummaryLine({ reduction, openAction }: {
       {parts.map((part, i) => (
         <Fragment key={part.key}>
           {i > 0 ? " · " : null}
-          {part.key === "open" && part.count > 0 && openAction !== null && handleOpen !== undefined ? (
+          {part.action && openAction !== null && handleOpen !== undefined ? (
             <InlineAction intent="subtle" onClick={handleOpen} title={openAction.title}>
               {part.text}
             </InlineAction>

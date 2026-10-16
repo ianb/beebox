@@ -8,12 +8,15 @@ sit on the critical path of every page load. `status.status` (the dashboard's
 payload) keeps its fuller shape.
 
 ```ts setup
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { runTodoQuery } from "../../../../src/core/todo/query.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
 /** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
-async function collectTodos(boxRoot) {
+async function collectTodos(boxRoot: string) {
   const result = await runTodoQuery(boxRoot, {
     query: { here: "", params: { status: ["open", "done", "dropped", "parked"], scope: "all" } },
     since: null,
@@ -21,21 +24,13 @@ async function collectTodos(boxRoot) {
   return { todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items), issues: result.issues };
 }
 
-function caller(box) {
-  const ctx = {
-    boxRoot: box.root,
-    boxSlug: "t",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-  };
+function caller(box: TmpBox) {
+  const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", actor: "none" });
   return statusRouter.createCaller(ctx);
 }
 
 // A question card; `lifecycle` is its lifecycle fields (none: pending).
-function question(lifecycle) {
+function question(lifecycle: string) {
   return `---
 ${lifecycle}prompt: Pick one
 input:
@@ -103,9 +98,9 @@ the same derivation `bbx todos` uses, reached through the shared collector. A
 
 ```ts continue
 await box.write(
-  "_content/notes/Plans.memo.card",
+  "_content/notes/Plans.doc.card",
   `---
-created: 2026-01-01T00:00:00Z
+title: Plans
 todos:
   - text: Undated, so on the plate
   - text: Already finished
@@ -131,9 +126,8 @@ card body rather than frontmatter.
 
 ```ts continue
 await box.write(
-  "_content/notes/Body.memo.card",
+  "_content/notes/Body.doc.card",
   `---
-created: 2026-01-01T00:00:00Z
 title: Body capture
 ---
 {% todo %}Written in the body{% /todo %}
@@ -163,9 +157,9 @@ number itself.
 ```ts
 const escBox = await makeTmpBox({ git: true });
 await escBox.write(
-  "_content/notes/Overdue.memo.card",
+  "_content/notes/Overdue.doc.card",
   `---
-created: 2026-01-01T00:00:00Z
+title: Overdue
 ---
 {% todo due="2026-07-01" %}Boxholder, overdue{% /todo %}
 

@@ -7,12 +7,15 @@ reads. A dotted directory, extensionless file, and missing path stay distinct.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../../helpers/trpc-context.js";
+import type { TrpcContext } from "../../../../../src/webapp/trpc/context.js";
 import { filesRouter } from "../../../../../src/webapp/trpc/routers/files/router.js";
 ```
 
 ```ts
 const server = await makeTestServer();
-const caller = filesRouter.createCaller({ boxRoot: server.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true });
+const ctx: TrpcContext = trpcContext({ boxRoot: server.boxRoot, boxSlug: "t", isAuthenticatedOwner: true });
+const caller = filesRouter.createCaller(ctx);
 await fs.mkdir(path.join(server.boxRoot, "_content/notes.attach"), { recursive: true });
 await server.seed("_content/README", "hello");
 JSON.stringify(await caller.kind({ path: "_content/notes.attach" }))

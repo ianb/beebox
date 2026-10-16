@@ -10,21 +10,21 @@ stderr and never does.
 
 ```ts setup
 import { execSync } from "node:child_process";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { runPreCommitChecks } from "../../../../src/cli/commands/validate/pre-commit.js";
 
-const stage = (box) => { execSync("git add -A", { cwd: box.root }); };
+const stage = (box: TmpBox) => { execSync("git add -A", { cwd: box.root }); };
 ```
 
 ## A staged card that fails validation blocks
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/notes/Plan.memo.card", "---\nstatus: not-a-real-status\n---\nBody text\n");
+await box.write("_content/notes/Plan.doc.card", "---\nstatus: not-a-doc-field\n---\nBody text\n");
 stage(box);
 
 const outcome = await runPreCommitChecks(box.root, { colors: false });
-[outcome.errorCount > 0, outcome.report.includes("Plan.memo.card")]
+[outcome.errorCount > 0, outcome.report.includes("Plan.doc.card")]
 => [
   true,
   true
@@ -36,7 +36,7 @@ single commit, so "No staged cards or markdown to validate" would be noise on
 every one of them:
 
 ```ts continue
-await box.write("_content/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nBody text\n");
+await box.write("_content/notes/Plan.doc.card", "---\ntitle: Plan\n---\nBody text\n");
 stage(box);
 
 const clean = await runPreCommitChecks(box.root, { colors: false });
@@ -54,7 +54,7 @@ same gate every other validate scope applies (`checkLegacySchemaPath` in
 schema before anything else loads the box:
 
 ```ts continue
-await box.write("_config/schemas/memo.ts", "export {};\n");
+await box.write("_config/schemas/doc.ts", "export {};\n");
 const legacy = await runPreCommitChecks(box.root, { colors: false });
 [legacy.errorCount, legacy.report.includes("legacy location")]
 => [
@@ -83,7 +83,7 @@ await box.write("_content/docs/notes.md", "See [target](/_content/docs/target.md
 stage(box);
 box.commitAll("seed");
 
-await box.write("_content/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nAn unrelated add.\n");
+await box.write("_content/notes/Plan.doc.card", "---\ntitle: Plan\n---\nAn unrelated add.\n");
 stage(box);
 const added = await runPreCommitChecks(box.root, { colors: false });
 [added.errorCount, added.linkWarnings]

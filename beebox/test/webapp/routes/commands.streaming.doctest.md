@@ -5,9 +5,9 @@
 ```ts setup
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, bodyField } from "../../helpers/doctest-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
-import { executeCommandStreaming } from "../../../src/webapp/routes/commands.js";
+import { executeCommandStreaming, type OutputLine } from "../../../src/webapp/routes/commands.js";
 ```
 
 ## Successful command emits output lines and a result
@@ -24,7 +24,7 @@ await writeFile(
   "<task>Test task</task>",
 );
 
-const messages = [];
+const messages: OutputLine[] = [];
 const result = await executeCommandStreaming({
   command: "ls",
   args: { paths: ["_content/inbox"] },
@@ -46,14 +46,14 @@ const outputLines = messages.filter(m => m.type === "output");
 outputLines.length > 0
 => true
 
-outputLines[0].text.includes("test.task.card")
+outputLines[0]?.text?.includes("test.task.card")
 => true
 ```
 
 The result includes structured data:
 
 ```ts continue
-result.data.count
+bodyField(result.data, "count")
 => 1
 ```
 
@@ -64,7 +64,7 @@ await box.cleanup();
 ## Unknown command returns error result
 
 ```ts
-const messages = [];
+const messages: OutputLine[] = [];
 const result = await executeCommandStreaming({
   command: "nonexistent-command",
   args: {},
@@ -75,7 +75,7 @@ const result = await executeCommandStreaming({
 result.success
 => false
 
-result.error.includes("nonexistent")
+result.error?.includes("nonexistent")
 => true
 ```
 
@@ -87,7 +87,7 @@ When a command returns `{ success: false }`, the result line carries the error:
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 
-const messages = [];
+const messages: OutputLine[] = [];
 const result = await executeCommandStreaming({
   command: "ls",
   args: { paths: [] },
@@ -116,7 +116,7 @@ await writeFile(join(box.root, "_content/inbox/a.task.card"), "<task>A</task>");
 await writeFile(join(box.root, "_content/inbox/b.task.card"), "<task>B</task>");
 await writeFile(join(box.root, "_content/inbox/c.task.card"), "<task>C</task>");
 
-const messages = [];
+const messages: OutputLine[] = [];
 await executeCommandStreaming({
   command: "ls",
   args: { paths: ["_content/inbox"] },
@@ -132,7 +132,7 @@ const resultLines = messages.filter(m => m.type === "result");
 resultLines.length
 => 1
 
-resultLines[0].data.count
+bodyField(resultLines[0]?.data, "count")
 => 3
 ```
 

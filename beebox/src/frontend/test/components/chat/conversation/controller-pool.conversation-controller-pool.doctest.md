@@ -4,26 +4,38 @@ These checks use the production chat machine, replacing only its network actors
 and queued POST action. Selection and actor retention are the actual pool code.
 
 ```ts setup
-import { createActor, fromPromise, fromCallback } from "xstate";
+import assert from "node:assert/strict";
+import { createActor, fromPromise, fromCallback, type EventObject, type CallbackActorLogic } from "xstate";
 import { chatMachine } from "../../../../src/machines/chatMachine/machine.js";
-import { ConversationControllerPool } from "../../../../src/components/chat/conversation/controller-pool/pool.js";
+import type { ChatEvent, ChatMachineInput } from "../../../../src/machines/chat-types.js";
+import type { SessionEntry, PendingSessionEntry } from "../../../../src/api.js";
+import type { ConversationTarget, SendBinding } from "../../../../../shared/chat-composer-binding.js";
+import type { streamActor } from "../../../../src/machines/chatMachine/chat-actors.js";
+import { ConversationControllerPool, type ChatController } from "../../../../src/components/chat/conversation/controller-pool/pool.js";
 import { StartRecords } from "../../../../src/components/chat/conversation/controller-pool/start-records.js";
 import { storageScopeFor } from "../../../../src/lib/storage-scope.js";
 import { settleReceipt, expectReceipt } from "../../../../src/input/targets/receipts.js";
+type StartTarget = Extract<ConversationTarget, { kind: "start" }>;
+type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
+/** What the fixture records per POST: a stream input (no `type`) or a queued SEND event. */
+interface Sent { type?: string; messageId: string; binding?: SendBinding }
+type StreamInput = typeof streamActor extends CallbackActorLogic<EventObject, infer Input, EventObject> ? Input : never;
+interface Loaded { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean; pending: PendingSessionEntry[] }
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 function fixture() {
-  const values = new Map();
-  const storage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
-  const sends = [];
-  const actors = [];
+  const values = new Map<string, string>();
+  const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+  const sends: Sent[] = [];
+  const actors: ChatController[] = [];
   let autoAccept = true;
   let apiBase = "/test1/api";
-  const accept = (input) => { sends.push(input); if (autoAccept) settleReceipt({ disposition: "sent", emissionId: input.messageId, deduplicated: false }); };
-  const factory = (input) => {
-    const empty = { entries: [], total: 0, sessionId: input.sessionInput === "new" ? null : input.sessionInput, running: false, busy: false, pending: [] };
+  const accept = (input: Sent) => { sends.push(input); if (autoAccept) settleReceipt({ disposition: "sent", emissionId: input.messageId, deduplicated: false }); };
+  const factory = (input: ChatMachineInput) => {
+    const empty: Loaded = { entries: [], total: 0, sessionId: input.sessionInput === "new" ? null : input.sessionInput, running: false, busy: false, pending: [] };
+    const history = { entries: empty.entries, total: 0, sessionId: empty.sessionId, running: false, busy: false };
     const actor = createActor(chatMachine.provide({
-      actors: { fetchInitial: fromPromise(async () => empty), fetchHistory: fromPromise(async () => empty), stream: fromCallback(({ input }) => accept(input)) },
-      actions: { queueSend: ({ event }) => accept(event) },
+      actors: { fetchInitial: fromPromise(async () => empty), fetchHistory: fromPromise(async () => history), stream: fromCallback<EventObject, StreamInput>(({ input }) => accept(input)) },
+      actions: { queueSend: ({ event }) => { if (event.type === "SEND") accept(event); } },
     }), { input });
     actors.push(actor);
     return actor;
@@ -31,10 +43,12 @@ function fixture() {
   const options = { storage, createController: factory, getApiBase: () => apiBase };
   return { pool: new ConversationControllerPool("test1", options), options, storage, sends, actors, holdReceipts: () => { autoAccept = false; }, acceptReceipts: () => { autoAccept = true; }, switchBox: () => { apiBase = "/test2/api"; } };
 }
-const session = (sessionId) => ({ kind: "session", sessionId, contextDir: "_content" });
-const start = { kind: "start", clientConversationId: "logical-new", contextDir: "_content", engine: "codex" };
-const bind = (target) => ({ boxSlug: "test1", target, attention: { surface: "card", focusedRef: "/_content/report.md", transcript: "hidden" } });
-const send = (messageId) => ({ type: "SEND", messageId, message: "test" });
+const session = (sessionId: string): ConversationTarget => ({ kind: "session", sessionId, contextDir: "_content" });
+const start: StartTarget = { kind: "start", clientConversationId: "logical-new", contextDir: "_content", engine: "codex" };
+const bind = (target: ConversationTarget): SendBinding => ({ boxSlug: "test1", target, attention: { surface: "card", focusedRef: "/_content/report.md", transcript: "hidden" } });
+const send = (messageId: string): SendEvent => ({ type: "SEND", messageId, message: "test" });
+/** The session id a recorded POST was bound to, if it was bound to a session. */
+const boundSession = (sent: Sent | undefined) => (sent?.binding?.target.kind === "session" ? sent.binding.target.sessionId : undefined);
 ```
 
 ## Startup recovery is isolated by API base when worktrees share a box slug
@@ -82,7 +96,7 @@ f.pool.select(session("second"));
 await tick();
 captured.send(send("captured"));
 await captured.finished();
-const result = { destination: f.sends[0].binding.target.sessionId, original: first.getSnapshot().status, count: f.actors.length };
+const result = { destination: boundSession(f.sends[0]), original: first.getSnapshot().status, count: f.actors.length };
 f.pool.suspend();
 JSON.stringify(result)
 => {"destination":"first","original":"active","count":2}
@@ -107,7 +121,7 @@ first.send({ type: "SESSION_ASSIGNED", sessionId: "real-id" });
 await followup.finished();
 const records = new StartRecords(f.storage, "test1");
 f.pool.suspend();
-JSON.stringify({ held, destination: f.sends[1].binding.target.sessionId, state: records.get("logical-new").state });
+JSON.stringify({ held, destination: boundSession(f.sends[1]), state: records.get("logical-new")?.state });
 => {"held":1,"destination":"real-id","state":"assigned"}
 ```
 
@@ -115,7 +129,7 @@ JSON.stringify({ held, destination: f.sends[1].binding.target.sessionId, state: 
 
 ```ts
 const f = fixture();
-const first = f.pool.select(start);
+f.pool.select(start);
 await tick();
 const initial = f.pool.capture(bind(start));
 initial.send(send("accepted-first"));
@@ -156,7 +170,7 @@ let message = "";
 try {
   new StartRecords({ getItem: () => "{broken", setItem: () => {} }, "test1");
 } catch (error) {
-  message = error.message;
+  message = error instanceof Error ? error.message : String(error);
 };
 message
 => Conversation startup records need recovery
@@ -170,7 +184,7 @@ const actor = f.pool.select(start);
 const captured = f.pool.capture(bind(start));
 captured.send(send("early-first"));
 await captured.finished();
-const result = { state: actor.getSnapshot().value, starts: f.sends.length, queued: f.sends[0].type === "SEND" };
+const result = { state: actor.getSnapshot().value, starts: f.sends.length, queued: f.sends[0]?.type === "SEND" };
 f.pool.suspend();
 JSON.stringify(result)
 => {"state":"streaming","starts":1,"queued":false}
@@ -191,8 +205,8 @@ await tick();
 const secondSend = f.pool.capture(bind(other));
 secondSend.send(send("two"));
 await secondSend.finished();
-const assigned = [];
-f.pool.setAssignmentHandler((id, target) => assigned.push([id, target.clientConversationId]));
+const assigned: Array<[string, string | undefined]> = [];
+f.pool.setAssignmentHandler((id, target) => assigned.push([id, target?.clientConversationId]));
 f.pool.markReady("real-two");
 second.send({ type: "SESSION_ASSIGNED", sessionId: "real-two" });
 f.pool.markReady("real-one");
@@ -231,7 +245,7 @@ f.storage.setItem = (key, value) => {
   if (writes > 1) throw new Error("disk full");
   originalWrite(key, value);
 };
-const notices = [];
+const notices: string[] = [];
 f.pool.setRecoveryHandler((notice) => { if (notice !== null) notices.push(notice); });
 const actor = f.pool.select(start);
 await tick();
@@ -298,6 +312,7 @@ actor.send({ type: "STREAM_FAILED", error: "invalid model", accepted: false });
 await first.finished();
 await waiting.finished();
 const saved = new StartRecords(f.storage, "test1").get("logical-new");
+assert.ok(saved);
 f.acceptReceipts();
 const retry = f.pool.capture(bind(start));
 retry.send(send("refused-first"));
@@ -327,6 +342,7 @@ actor.send({ type: "STREAM_FAILED", error: "network response lost", accepted: fa
 await first.finished();
 await waiting.finished();
 const saved = new StartRecords(f.storage, "test1").get("logical-new");
+assert.ok(saved);
 f.pool.suspend();
 JSON.stringify({ state: saved.state, posted: f.sends.length, heldDisposition: (await waitingReceipt).disposition })
 => {"state":"attempted","posted":1,"heldDisposition":"rejected"}
@@ -354,6 +370,7 @@ const edited = f.pool.capture(bind(start)); // a new gesture after Restore/edit
 edited.send(send("replace-edited"));
 await edited.finished();
 const record = new StartRecords(f.storage, "test1").get("logical-new");
+assert.ok(record);
 const result = { refusedDelayed: (await delayedReceipt).disposition, firstID: record.firstEmissionId, postedIDs: f.sends.map((entry) => entry.messageId) };
 f.pool.suspend();
 JSON.stringify(result)
@@ -377,6 +394,7 @@ waiting.send(send("no-init-followup"));
 actor.send({ type: "STREAM_FAILED", error: "engine crashed", accepted: true });
 await waiting.finished();
 const record = new StartRecords(f.storage, "test1").get("logical-new");
+assert.ok(record);
 // Release the selection; the uncertain alias wait itself must not pin this actor.
 pool.select(session("elsewhere"));
 await tick();

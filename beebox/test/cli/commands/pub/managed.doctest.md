@@ -21,7 +21,6 @@ const candidate: Candidate = {
   title: "Notes",
   cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
   approvalUrl: "/box-a/browse/notes/Notes.publication.card",
-  commitWarning: null,
   revision: "b".repeat(64),
   releaseId,
   requestedScope: { kind: "site", hostHandle: "notes-host", tier: "public", expiresAt: null, slug: "notes" },
@@ -37,14 +36,16 @@ function site(overrides: Partial<Site> = {}): Site {
     cardPath: "notes/Notes.publication.card",
     duplicateCardPaths: [],
     hostname: "notes.example.workers.dev",
-    requested: { tier: "public", slug: "notes" },
+    assignedCustomHostname: null,
+    customHostnameStatus: null,
+    requested: candidate.requestedScope,
     approved: { tier: "public", status: "live", slug: "notes", expiresAt: null },
     activeReleaseId: releaseId,
     activeFiles: [{ path: "index.html", bytes: 42, sha256: "c".repeat(64) }],
     pending: null,
     sharedRoute: null,
     remoteStatus: { status: "available" },
-    connection: { name: "primary", status: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "verified", workerDeploy: "verified", accessLive: "not-ready" } },
+    connection: { name: "primary", status: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "verified", workerDeploy: "verified", accessLive: "unverified" } },
     ...overrides,
   };
 }
@@ -61,18 +62,18 @@ A remote outage must not read as disabled, even when the last observed edge
 manifest had been live.
 
 ```ts
-publicationSiteLines([site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })])[0].includes("serving state unknown")
+publicationSiteLines([site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })])[0]?.includes("serving state unknown")
 => true
 
-publicationSiteLines([site({ pending: { ...candidate, requestedScope: candidate.requestedScope } })])[0].includes(`prepared ${releaseId.slice(0, 12)}`)
+publicationSiteLines([site({ pending: { ...candidate, requestedScope: candidate.requestedScope } })])[0]?.includes(`prepared ${releaseId.slice(0, 12)}`)
 => true
 
-publicationSiteLines([site({ approved: { tier: "public", status: "live", slug: "hello", expiresAt: null } })])[0].includes("serving audience public at /hello/")
+publicationSiteLines([site({ approved: { tier: "public", status: "live", slug: "hello", expiresAt: null } })])[0]?.includes("serving audience public at /hello/")
 => true
 
 const pendingSecret = { kind: "site" as const, hostHandle: "notes-host", tier: "secret" as const, expiresAt: null };
 const transitioned = publicationSiteLines([site({ pending: { ...candidate, requestedScope: pendingSecret } })])[0];
-JSON.stringify({ servingAudience: transitioned.includes("serving audience public"), preparedAudience: transitioned.includes("prepared audience secret"), oldUrl: transitioned.includes("https://notes.example.workers.dev/p/notes/"), candidateUrl: transitioned.includes("https://notes.example.workers.dev/s/abcdefghijklmnopqrstuvwxyz/") })
+JSON.stringify({ servingAudience: transitioned?.includes("serving audience public"), preparedAudience: transitioned?.includes("prepared audience secret"), oldUrl: transitioned?.includes("https://notes.example.workers.dev/p/notes/"), candidateUrl: transitioned?.includes("https://notes.example.workers.dev/s/abcdefghijklmnopqrstuvwxyz/") })
 => {"servingAudience":true,"preparedAudience":true,"oldUrl":true,"candidateUrl":true}
 ```
 
@@ -116,22 +117,22 @@ publicationSharedHostLines({ hostname: "publish.example.org", connectionName: "p
 => Shared publication host: https://publish.example.org/ (ready; connection primary)
 
 publicationSiteLines([site({
-  requested: { tier: "public", customHostname: "www.example.org" },
+  requested: { kind: "site", hostHandle: "notes-host", tier: "public", expiresAt: null, customHostname: "www.example.org" },
   approved: { tier: "public", status: "live", customHostname: "www.example.org", expiresAt: null },
-})])[0].includes("publication: https://www.example.org/")
+})])[0]?.includes("publication: https://www.example.org/")
 => true
 
 publicationSiteLines([site({
   approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
   sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
-})])[0].includes("publication: https://publish.example.org/notes/; legacy workers.dev URL: https://notes.example.workers.dev/p/notes/")
+})])[0]?.includes("publication: https://publish.example.org/notes/; legacy workers.dev URL: https://notes.example.workers.dev/p/notes/")
 => true
 
 publicationSiteLines([site({
   hostname: null,
   approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
   sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
-})])[0].includes("legacy workers.dev URL")
+})])[0]?.includes("legacy workers.dev URL")
 => false
 
 publicationApprovalUrl({ serverUrl: "https://boxes.example", approvalPath: candidate.approvalUrl })

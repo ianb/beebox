@@ -3,10 +3,11 @@
 The digest turns the JSONL `csp-reports.log` (written by the `/api/csp-report` sink) into a deduped summary the local review routine uses to decide whether the policy is safe to harden. It arranges context — it never flips the policy itself. `digestCspReports` digests a whole log; `parseCspLog` + `entriesSince` + `digestEntries` are the incremental pieces the cursor-driven CLI composes.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { digestCspReports, parseCspLog, entriesSince, newestTs, digestEntries } from "../../../src/dev/csp-report/digest.js";
 
 // One JSONL line, matching the sink's `{ ts, directive, blocked, doc }` shape.
-function line(ts, directive, blocked) {
+function line(ts: string, directive: string, blocked: string): string {
   return JSON.stringify({ ts, directive, blocked, doc: "https://app/x" });
 }
 ```
@@ -52,6 +53,7 @@ d.violations.length
 
 ```ts continue
 const top = d.violations[0];
+assert.ok(top, "expected a violation row");
 `${top.directive} ${top.blocked} ${top.count} ${top.firstSeen} ${top.lastSeen}`
 => frame-src https://vimeo.com 2 2026-06-01T10:00:00.000Z 2026-06-01T11:00:00.000Z
 
@@ -75,7 +77,7 @@ const fresh = entriesSince(entries, since);
 fresh.length
 => 1
 
-fresh[0].directive
+fresh[0]?.directive
 => img-src
 
 newestTs(entries)
@@ -96,7 +98,9 @@ delta.summary.includes("--all")
 When nothing is new since the cursor, the delta is clean — but it says so as "no *new* violations", not "safe to harden":
 
 ```ts continue
-const none = digestEntries(entriesSince(entries, newestTs(entries)), { incremental: true, since: newestTs(entries) });
+const newest = newestTs(entries);
+assert.ok(newest, "the log has entries");
+const none = digestEntries(entriesSince(entries, newest), { incremental: true, since: newest });
 none.clean
 => true
 

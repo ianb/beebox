@@ -67,7 +67,12 @@ export interface ImageItem {
 export type FileTransferState =
   | { status: "uploading"; /** 0–1, or 0 while the total is unknown. */ progress: number }
   | { status: "uploaded"; /** Path relative to box root, e.g. "_tmp/2026-04-27T15-30-12-987Z_report.pdf". */ path: string }
-  | { status: "failed"; message: string };
+  | {
+    status: "failed";
+    message: string;
+    /** The picked file's bytes could not be read (moved or deleted since the pick); a retry would fail the same way. */
+    unreadable?: true;
+  };
 
 /**
  * The box-relative path a file landed at, or `null` while it is still moving or
@@ -125,11 +130,17 @@ export interface EmissionEditor {
   setText(next: string | ((prev: string) => string)): void;
   /** Adjusts the in-flight-image counter by `delta`, floored at 0. */
   bumpPendingImages(delta: number): void;
-  /** Appends an image and decrements `pendingImages` by 1 (floor 0) — the image this pending slot was for has now landed. */
+  /**
+   * Adds an image in id order and decrements `pendingImages` by 1 (floor 0) —
+   * the image this pending slot was for has now landed. Id order, not arrival
+   * order: photos picked together encode concurrently and finish in any order,
+   * and the thumbnails and the sent `<attachments>` list must read in the order
+   * the person picked them, the order their tokens went into the text.
+   */
   addImage(item: ImageItem): void;
   /**
    * Puts images BACK that were taken out of a composition — a bulk batch the
-   * user cancelled, a persisted draft coming home. Appends without touching
+   * user cancelled, a persisted draft coming home. Adds them (in id order) without touching
    * `pendingImages`, which is what separates it from {@link addImage}: that
    * counter tracks photos still encoding, and each `addImage` clears the slot
    * its own photo was occupying. A restore has no slot to clear, so routing it
@@ -226,6 +237,11 @@ export function createEmissionStore(): EmissionStore {
   let nextSelectionIdValue = 1;
   const listeners = new Set<() => void>();
 
+  /** Images sorted by id — the order they were minted, which is the order they were picked. */
+  function inIdOrder(images: ImageItem[]): ImageItem[] {
+    return images.toSorted((a, b) => a.id - b.id);
+  }
+
   function notify(): void {
     for (const listener of listeners) listener();
   }
@@ -246,13 +262,13 @@ export function createEmissionStore(): EmissionStore {
     },
     addImage(item) {
       patch({
-        images: [...draft.images, item],
+        images: inIdOrder([...draft.images, item]),
         pendingImages: Math.max(0, draft.pendingImages - 1),
       });
     },
     restoreImages(items) {
       if (items.length === 0) return;
-      patch({ images: [...draft.images, ...items] });
+      patch({ images: inIdOrder([...draft.images, ...items]) });
     },
     addFile(item) {
       patch({ files: [...draft.files, item] });

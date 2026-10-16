@@ -16,6 +16,8 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Router
 import { createTRPCClient } from "@trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { observable } from "@trpc/server/observable";
+import type { AppRouter } from "@backend/trpc/routers.js";
+import type { FileData, FileRenderer } from "../../../../../src/file-type-registry.js";
 import { trpc } from "../../../../../src/lib/trpc/client.js";
 import { resolveCardTheme } from "@shared/card-theme/core";
 import { BoxPresentationProvider } from "../../../../../src/components/themes/BoxPresentationProvider.js";
@@ -25,7 +27,9 @@ import { ThemedFileCardProperties } from "../../../../../src/components/themes/T
 globalThis.React = React;
 
 const noop = () => undefined;
-const renderers = [{ name: "Card" }, { name: "Source" }];
+const noView = () => null;
+const cardView: FileRenderer = { name: "Card", Component: noView, priority: 10 };
+const renderers: FileRenderer[] = [cardView, { name: "Source", Component: noView, priority: 0 }];
 
 /**
  * Render the Properties face for `data` at `/test1` inside a router, a tRPC
@@ -33,17 +37,19 @@ const renderers = [{ name: "Card" }, { name: "Source" }];
  * button stands in for the actions menu, which needs the app workspace. `canEdit`
  * seeds the presentation answer that lets the viewer change appearance.
  */
-async function render(data, { canEdit }) {
+async function render(data: FileData, { canEdit }: { canEdit: boolean }): Promise<string> {
   const theme = resolveCardTheme({
     path: data.path, type: data.type ?? "", cardChoice: data.frontmatter?.theme,
     typeDefault: undefined, presentation: { status: "absent" },
   });
-  const element = React.createElement(BoxPresentationProvider, { boxSlug: "test1" },
-    React.createElement(ShowFrontContext.Provider, { value: noop }, React.createElement(ThemedFileCardProperties, {
-      data, theme, boxSlug: "test1", renderers, active: renderers[0],
+  const element = React.createElement(BoxPresentationProvider, {
+    boxSlug: "test1",
+    children: React.createElement(ShowFrontContext.Provider, { value: noop }, React.createElement(ThemedFileCardProperties, {
+      data, theme, boxSlug: "test1", renderers, active: cardView,
       hasExplicitView: false, onSelect: noop, onNavigate: noop,
       actions: data.path.endsWith(".card") ? React.createElement("button", { type: "button" }, "Card actions") : null,
-    })));
+    })),
+  });
   const root = createRootRoute({ staticData: { title: null } });
   const box = createRoute({ getParentRoute: () => root, path: "$boxSlug", staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root.addChildren([box]), history: createMemoryHistory({ initialEntries: ["/test1"] }) });
@@ -51,41 +57,43 @@ async function render(data, { canEdit }) {
   const queryClient = new QueryClient();
   queryClient.setQueryData(getQueryKey(trpc.presentation.get, { boxKey: "test1", contextDir: undefined }, "query"),
     { canEditCardThemes: canEdit, typeDefaults: {}, presentation: { status: "absent" }, chrome: { choice: { name: "plain", stock: "neutral" } } });
-  const client = createTRPCClient({ links: [() => () => observable(() => () => {})] });
-  return renderToString(React.createElement(trpc.Provider, { client, queryClient },
-    React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(RouterProvider, { router }))));
+  const client = createTRPCClient<AppRouter>({ links: [() => () => observable(() => () => {})] });
+  return renderToString(React.createElement(trpc.Provider, {
+    client, queryClient,
+    children: React.createElement(QueryClientProvider, { client: queryClient, children: React.createElement(RouterProvider, { router }) }),
+  }));
 }
 
-function textOf(html) {
+function textOf(html: string): string {
   return html.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
 }
 
 /** The section headings in document order. */
-function headings(html) {
-  return [...html.matchAll(/<h([23])[^>]*>(.*?)<\/h\1>/gs)].map(([, level, text]) => `h${level} ${textOf(text)}`);
+function headings(html: string): string[] {
+  return [...html.matchAll(/<h([23])[^>]*>(.*?)<\/h\1>/gs)].map(([, level, text = ""]) => `h${level} ${textOf(text)}`);
 }
 
 /** The Appearance section's markup. */
-function appearance(html) {
+function appearance(html: string): string {
   return /<section[^>]*data-card-section="appearance"[^>]*>.*?<\/section>(?=<section[^>]*data-card-section="view")/s.exec(html)?.[0] ?? "";
 }
 
-const memo = await render({
-  path: "_content/projects/Porch.memo.card",
-  type: "memo",
+const doc = await render({
+  path: "_content/projects/Porch.doc.card",
+  type: "doc",
   schema: { hasBodyField: true, defaultProminence: "ordinary" },
-  frontmatter: { title: "Porch", contains: "Porch repair quotes", status: "new", theme: { name: "paper", stock: "cream" } },
+  frontmatter: { title: "Porch", contains: "Porch repair quotes", "share-id": "porch-quotes", theme: { name: "paper", stock: "cream" } },
   body: "Three quotes so far.\n",
 }, { canEdit: true });
 ```
 
 ## Order
 
-A memo with `contains` and a type field shows every section; the headings
+A doc with `contains` and a type field shows every section; the headings
 come in the order above:
 
 ```ts
-headings(memo)
+headings(doc)
 => [
   "h2 Properties",
   "h3 Found by",
@@ -103,8 +111,8 @@ preferred view" button and, under it, a button that copies the card's whole
 original text (the boxholder asked for it beside "Original text", 2026-10-13):
 
 ```ts
-textOf(memo.slice(memo.lastIndexOf("<section")))
-=> View Memo Original text Use preferred view Copy original text Card actions
+textOf(doc.slice(doc.lastIndexOf("<section")))
+=> View Doc Original text Use preferred view Copy original text Card actions
 ```
 
 ## Appearance
@@ -113,7 +121,7 @@ One row names the theme, its stock, and what chose it. The swatch grid sits
 under a "Change" disclosure that is closed when Properties opens:
 
 ```ts
-const section = appearance(memo);
+const section = appearance(doc);
 [textOf(section.replace(/<details.*<\/details>/s, "")), /<details[^>]*><summary[^>]*>[^<]*<\/summary>/.exec(section)?.[0].replace(/ class="[^"]*"/g, "")]
 => ["Appearance Paper cream · Set on this card", "<details><summary>Change</summary>"]
 ```
@@ -129,14 +137,14 @@ textOf(/<details class="mt-3">.*?<\/summary>/s.exec(section)?.[0] ?? "")
 => All card themes
 ```
 
-An image card also offers the image itself; a memo does not:
+An image card also offers the image itself; a doc does not:
 
 ```ts
 const photo = await render({
   path: "_content/Porch.image.card", type: "image", schema: null,
   frontmatter: { title: "Porch", filename: { ref: "attach/porch.jpg" } },
 }, { canEdit: false });
-[textOf(memo).includes("Copy image"), textOf(photo.slice(photo.lastIndexOf("<section")))]
+[textOf(doc).includes("Copy image"), textOf(photo.slice(photo.lastIndexOf("<section")))]
 => [false, "View Image Original text Use preferred view Copy original text Copy image Card actions"]
 ```
 
@@ -145,7 +153,7 @@ drawn, first, under "This card":
 
 ```ts continue
 const custom = appearance(await render({
-  path: "_content/Studio.memo.card", type: "memo", schema: null,
+  path: "_content/Studio.doc.card", type: "doc", schema: null,
   frontmatter: { title: "Studio", theme: { name: "studio-blue", stock: "ink" } },
 }, { canEdit: true }));
 /<div role="group" aria-label="This card">.*?<\/button>/s.exec(custom)?.[0].match(/aria-label="([^"]*)"/g)

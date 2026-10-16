@@ -11,9 +11,10 @@ target.
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { notifySource, runNotify } from "../../../../src/cli/commands/notify/command.js";
+import { notifySource, runNotify, type NotifyCliOptions } from "../../../../src/cli/commands/notify/command.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
+import type { NotifyServices } from "../../../../src/core/notify-boxholder.js";
 import { addSubscription } from "../../../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../../../src/services/push.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
@@ -40,13 +41,19 @@ const push = createFakePush();
 // Run with captured output; ids are random (a letter, then 8 base64url
 // characters), so they print as <id>.
 const ID = /\bn[\w-]{8}(?=: (apns|web-push) )/;
-async function run(title, options, stdin, services = { push }, root = box.root) {
-  const out = [];
+async function run(
+  title: string | undefined,
+  options: NotifyCliOptions,
+  stdin?: string,
+  services: NotifyServices = { push },
+  root: string = box.root,
+) {
+  const out: string[] = [];
   const origLog = console.log;
   const origErr = console.error;
   console.log = (...args) => { out.push(args.join(" ")); };
   console.error = (...args) => { out.push(`stderr: ${args.join(" ")}`); };
-  let code;
+  let code: number | undefined;
   try {
     code = await runNotify(root, {
       title,
@@ -64,7 +71,9 @@ async function run(title, options, stdin, services = { push }, root = box.root) 
 
 async function lastIntent() {
   const all = await readRecent(box.root, { days: 1 });
-  return all.at(-1).intent;
+  const last = all.at(-1);
+  if (last === undefined) throw new Error("no notification was logged");
+  return last.intent;
 }
 ```
 
@@ -112,7 +121,7 @@ await run("Field trip form due", { target: "card:_content/inbox/field-trip.email
 exit 0
 
 const slug = await boxSlug(box.root);
-JSON.stringify([push.sent.at(-1).payload.body, push.sent.at(-1).payload.url.replace(slug, "<box>"), push.sent.at(-1).payload.silent])
+JSON.stringify([push.sent.at(-1)?.payload.body, push.sent.at(-1)?.payload.url.replace(slug, "<box>"), push.sent.at(-1)?.payload.silent])
 => ["Sign it by Friday.","/<box>/browse/_content/inbox/field-trip.email.card",false]
 ```
 
@@ -202,7 +211,7 @@ Line two
 ## `--targets-from-stdin` sends one notification per target
 
 ```ts
-await run("Two cards need review", { targetsFromStdin: true, body: "See the card.", loudness: "loud", channel: "web-push" }, "card:_content/a.memo.card\ncard:_content/b.memo.card\n")
+await run("Two cards need review", { targetsFromStdin: true, body: "See the card.", loudness: "loud", channel: "web-push" }, "card:_content/a.doc.card\ncard:_content/b.doc.card\n")
 =>
 <id>: web-push sent
 <id>: web-push sent
@@ -382,7 +391,7 @@ JSON.stringify({
 The server logged it, with this shell's source:
 
 ```ts continue
-JSON.stringify((await readRecent(server.boxRoot, { days: 1 })).at(-1).intent.source)
+JSON.stringify((await readRecent(server.boxRoot, { days: 1 })).at(-1)?.intent.source)
 => "doctest"
 ```
 

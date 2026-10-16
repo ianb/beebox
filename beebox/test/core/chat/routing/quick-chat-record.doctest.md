@@ -7,8 +7,11 @@ the text, the state, where it went or what to choose, and no probabilities.
 ```ts setup
 import { readdir, utimes, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import assert from "node:assert/strict";
+import type { RoutingCandidate } from "../../../../src/core/chat/routing/policy.js";
 import {
   parseQuickChatRecord, quickChatView, quickChatChoiceIds,
+  type QuickChatDelivery, type QuickChatRecord, type SendingQuickChatRecord,
 } from "../../../../src/core/chat/routing/quick-chat-record.js";
 import {
   readQuickChatRecord, saveQuickChatRecord, listOpenQuickChatRecords, listRecentlySentQuickChatRecords,
@@ -17,21 +20,26 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
 const NOW = Date.parse("2026-10-06T12:00:00.000Z");
 const ID = "11111111-1111-4111-8111-111111111111";
-const candidates = [
-  { id: "c0", label: "Trip planning", target: { kind: "existing-session", sessionId: "s-trip", contextDir: "_content/Trips" }, landmark: { path: "_content/Trips/Trips.landmark.card", label: "Trips" } },
+const tripChat: RoutingCandidate = { id: "c0", label: "Trip planning", target: { kind: "existing-session", sessionId: "s-trip", contextDir: "_content/Trips" }, landmark: { path: "_content/Trips/Trips.landmark.card", label: "Trips" } };
+const newTripChat: RoutingCandidate = { id: "c4", label: "New chat in Trips", target: { kind: "new-session", contextDir: "_content/Trips" }, landmark: { path: "_content/Trips/Trips.landmark.card", label: "Trips" } };
+const newGeneralChat: RoutingCandidate = { id: "c5", label: "New general chat", target: { kind: "new-session", contextDir: "" } };
+const candidates: RoutingCandidate[] = [
+  tripChat,
   { id: "c1", label: "Household", target: { kind: "existing-session", sessionId: "s-house", contextDir: "_content/Household" } },
   { id: "c2", label: "Garden raised beds", target: { kind: "existing-session", sessionId: "s-garden", contextDir: "_content/Garden" } },
   { id: "c3", label: "Recipes notes", target: { kind: "existing-session", sessionId: "s-recipes", contextDir: "_content/Recipes" } },
-  { id: "c4", label: "New chat in Trips", target: { kind: "new-session", contextDir: "_content/Trips" }, landmark: { path: "_content/Trips/Trips.landmark.card", label: "Trips" } },
-  { id: "c5", label: "New general chat", target: { kind: "new-session", contextDir: "" } },
+  newTripChat,
+  newGeneralChat,
 ];
 const base = { id: ID, message: "Remind me to renew my passport", createdAt: "2026-10-06T11:59:00.000Z", candidates,
   probabilities: { c0: 0.85, c1: 0.01, c2: 0, c3: 0, c4: 0, c5: 0.14 }, model: "synthetic-jev", confidence: 0.85, preferenceApplied: false };
 const trip = { label: "Trip planning", sessionId: "s-trip" };
-const delivery = { session: "s-trip", exactSession: true, contextDir: "_content/Trips", engine: "claude" };
-const sending = { ...base, state: "sending", selected: candidates[0], delivery, destination: trip,
+const delivery: QuickChatDelivery = { session: "s-trip", exactSession: true, contextDir: "_content/Trips", engine: "claude" };
+const sending: SendingQuickChatRecord = { ...base, origin: "typed", state: "sending", selected: tripChat, delivery, destination: trip,
   deliveryStartedAt: "2026-10-06T11:59:01.000Z", lastError: "Chat is not running" };
-const legacy = { ...base, selected: candidates[4], delivery: { session: "new", exactSession: false, contextDir: "_content/Trips", engine: "codex" } };
+const sentRecord: Extract<QuickChatRecord, { state: "sent" }> = { ...base, origin: "typed", state: "sent", selected: tripChat, delivery, destination: trip,
+  deliveryStartedAt: "2026-10-06T11:59:01.000Z", sentAt: "2026-10-06T11:59:02.000Z" };
+const legacy = { ...base, selected: newTripChat, delivery: { session: "new", exactSession: false, contextDir: "_content/Trips", engine: "codex" } };
 ```
 
 ## Each state has its own view
@@ -87,10 +95,12 @@ delivery window starting at creation.
 
 ```ts
 const receipted = parseQuickChatRecord({ ...legacy, receipt: { sessionId: "s-assigned", turnId: "t1", queued: true } });
+assert.ok(receipted.state === "sent");
 [receipted.state, receipted.destination, receipted.queued, "sentAt" in receipted]
 => ["sent", { label: "New chat in Trips", sessionId: "s-assigned" }, true, false]
 
 const unreceipted = parseQuickChatRecord(legacy);
+assert.ok(unreceipted.state === "sending");
 [unreceipted.state, unreceipted.destination, unreceipted.deliveryStartedAt]
 => ["sending", { label: "New chat in Trips" }, "2026-10-06T11:59:00.000Z"]
 ```
@@ -125,7 +135,7 @@ offered again.
   quickChatChoiceIds({ candidates, probabilities: { c0: 0.5, c1: 0.3, c2: 0.2, c3: 0, c4: 0, c5: 0 } }),
   quickChatChoiceIds({ candidates, probabilities: {} }),
   quickChatChoiceIds({ candidates, probabilities: base.probabilities, exclude: "c0" }),
-  quickChatChoiceIds({ candidates: [candidates[5]], probabilities: {} }),
+  quickChatChoiceIds({ candidates: [newGeneralChat], probabilities: {} }),
 ]
 => [["c0", "c5", "c1"], ["c0", "c1", "c2", "c5"], ["c0", "c1", "c2", "c5"], ["c5", "c1", "c2"], ["c5"]]
 ```
@@ -147,7 +157,7 @@ const files = async () => [
 [await files(), (await listOpenQuickChatRecords(box.root)).map((item) => item.state)]
 => [["open/11111111-1111-4111-8111-111111111111.json"], ["needs-choice"]]
 
-await saveQuickChatRecord(box.root, { ...sending, state: "sent", lastError: undefined, sentAt: new Date(NOW).toISOString() });
+await saveQuickChatRecord(box.root, { ...sentRecord, sentAt: new Date(NOW).toISOString() });
 [await files(), await listOpenQuickChatRecords(box.root), (await readQuickChatRecord(box.root, ID))?.state]
 => [["11111111-1111-4111-8111-111111111111.json"], [], "sent"]
 ```
@@ -169,8 +179,10 @@ writes it as `sending` again, the open copy is the current one.
 const OLD = "22222222-2222-4222-8222-222222222222";
 await writeFile(join(box.root, ".beebox/quick-chat", `${OLD}.json`), JSON.stringify({ ...legacy, id: OLD }));
 const oldRecord = await readQuickChatRecord(box.root, OLD);
+assert.ok(oldRecord?.state === "sending");
 await saveQuickChatRecord(box.root, { ...oldRecord, lastError: "Chat is not running" });
-(await readQuickChatRecord(box.root, OLD))?.lastError
+const retried = await readQuickChatRecord(box.root, OLD);
+retried?.state === "sending" ? retried.lastError : undefined
 => Chat is not running
 ```
 
@@ -181,8 +193,8 @@ touched later.
 ```ts continue
 const SENT_A = "33333333-3333-4333-8333-333333333333";
 const SENT_OLD = "44444444-4444-4444-8444-444444444444";
-await saveQuickChatRecord(box.root, { ...sending, id: SENT_A, state: "sent", lastError: undefined, sentAt: new Date(NOW - 60_000).toISOString() });
-await saveQuickChatRecord(box.root, { ...sending, id: SENT_OLD, state: "sent", lastError: undefined, sentAt: new Date(NOW - 2 * 86_400_000).toISOString() });
+await saveQuickChatRecord(box.root, { ...sentRecord, id: SENT_A, sentAt: new Date(NOW - 60_000).toISOString() });
+await saveQuickChatRecord(box.root, { ...sentRecord, id: SENT_OLD, sentAt: new Date(NOW - 2 * 86_400_000).toISOString() });
 const touched = new Date(NOW - 120_000);
 await utimes(join(box.root, ".beebox/quick-chat", `${SENT_A}.json`), touched, touched);
 [

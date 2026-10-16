@@ -5,6 +5,7 @@ import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import Sharp from "sharp";
 import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { bodyField } from "../../../../helpers/doctest-helpers.js";
 
 const server = await makeTestServer();
 const jpeg = await Sharp({
@@ -14,7 +15,7 @@ await mkdir(join(server.boxRoot, "_content"), { recursive: true });
 await writeFile(join(server.boxRoot, "_content/photo.jpg"), jpeg);
 
 function imageRequest(url: string, headers?: Record<string, string>) {
-  return server.server.inject({ method: "GET", url: `/test${url}`, headers });
+  return server.server.inject({ method: "GET", url: `/test${url}`, headers: headers ?? {} });
 }
 ```
 
@@ -119,7 +120,7 @@ Bad options and non-image paths fail clearly instead of returning original bytes
 ```ts continue
 const bad = await server.request({ method: "GET", url: "/api/images/_content/photo.jpg?width=9999" });
 const notImage = await server.request({ method: "GET", url: "/api/images/_content/notes.txt?width=40" });
-`${bad.statusCode} ${bad.body.option} | ${notImage.statusCode} ${notImage.body.error}`
+`${bad.statusCode} ${bodyField(bad.body, "option")} | ${notImage.statusCode} ${bodyField(notImage.body, "error")}`
 => 400 width | 400 Not an image path
 ```
 

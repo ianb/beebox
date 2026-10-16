@@ -13,17 +13,18 @@ shape, `/api/push/resubscribe` behind the wall).
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveRequestIdentity, isDiagnosticBypassRequest } from "../../src/webapp/auth.js";
+import { resolveRequestIdentity, isDiagnosticBypassRequest, type DiagRequest } from "../../src/webapp/auth.js";
 import { assertOpenAccessNotListening, startServer } from "../../src/webapp/server/app.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
+import { bodyField } from "../helpers/doctest-helpers.js";
 
 const ORIGINAL_DIAG_KEY = process.env.BBX_DIAG_API_KEY;
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
 // The resolver's cookie path (not hub mode) is what these gate cases exercise.
 delete process.env.BBX_HUB_SECRET;
 
-/** Minimal fake FastifyRequest for the diagnostic-bypass check. */
-function fakeRequest({ method, url, headers }) {
+/** The request fields the diagnostic-bypass check reads. */
+function fakeRequest({ method, url, headers }: { method?: string; url: string; headers?: Record<string, string> }): DiagRequest {
   return { method: method ?? "GET", url, headers: headers ?? {} };
 }
 ```
@@ -183,7 +184,7 @@ const atSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets
 
 if (PRIOR_STORE !== undefined) process.env.BBX_SECRETS_FILE = PRIOR_STORE;
 print(`ownerProcedure: ${asOwner.statusCode}`);
-print(`authenticatedOwnerProcedure: ${atSecrets.statusCode} ${atSecrets.body.error.data.code}`);
+print(`authenticatedOwnerProcedure: ${atSecrets.statusCode} ${bodyField(atSecrets.body, "error", "data", "code")}`);
 =>
 ownerProcedure: 200
 authenticatedOwnerProcedure: 403 FORBIDDEN
@@ -226,8 +227,8 @@ const kindCall = await plain.request({
 const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 
 print(`authedProcedure: ${authedCall.statusCode}`);
-print(`files.kind with a credential: ${kindCall.statusCode} ${kindCall.body.result?.data?.kind}`);
-print(`ownerProcedure: ${ownerCall.statusCode} ${ownerCall.body.error.data.code}`);
+print(`files.kind with a credential: ${kindCall.statusCode} ${bodyField(kindCall.body, "result", "data", "kind")}`);
+print(`ownerProcedure: ${ownerCall.statusCode} ${bodyField(ownerCall.body, "error", "data", "code")}`);
 =>
 authedProcedure: 200
 files.kind with a credential: 200 directory

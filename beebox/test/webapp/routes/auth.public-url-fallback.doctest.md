@@ -15,20 +15,20 @@ standalone box server's behavior exactly as it was.
 
 ```ts setup
 import Fastify from "fastify";
-import { registerAuthSurface } from "../../../src/webapp/routes/auth/register.js";
+import { registerAuthSurface, type AuthRoutesOptions } from "../../../src/webapp/routes/auth/register.js";
 
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-public-url-fallback-doctest";
 process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-public-url-fallback-doctest";
 delete process.env.BBX_PUBLIC_URL;
 delete process.env.PUBLIC_URL;
 
-async function loginRedirectUri(options) {
+async function loginRedirectUri(options: AuthRoutesOptions) {
   const app = Fastify({ logger: false });
   await registerAuthSurface(app, options);
   await app.ready();
   const res = await app.inject({ method: "GET", url: "/auth/google" });
   await app.close();
-  const location = new URL(res.headers.location);
+  const location = new URL(String(res.headers.location));
   return location.searchParams.get("redirect_uri");
 }
 ```

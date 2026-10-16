@@ -9,6 +9,9 @@ cold-starts a box, and never earns hub-injected identity headers — it is a bar
 
 ```ts setup
 import http from "node:http";
+import type net from "node:net";
+import assert from "node:assert/strict";
+import { z } from "zod";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -27,10 +30,32 @@ const authDir = await mkdtemp(path.join(os.tmpdir(), "bbx-hub-scan-auth-"));
 process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");
 process.env.BBX_AUTH_SCRYPT_N = "1024";
 
+/** What the fake box echoes back: the request URL and the credentials it received. */
+const BoxEcho = z.object({
+  url: z.string(),
+  authorization: z.string().nullable(),
+  xBbxAuthenticatedEmail: z.string().nullable(),
+  xBbxHubSecret: z.string().nullable(),
+});
+
+function portOf(server: http.Server): number {
+  const address = server.address();
+  assert.ok(address && typeof address === "object", "server is listening on a TCP port");
+  return address.port;
+}
+
+function listen(server: http.Server): Promise<void> {
+  return new Promise<void>((resolve) => { server.listen(0, "127.0.0.1", resolve); });
+}
+
+function close(server: http.Server): Promise<void> {
+  return new Promise<void>((resolve) => { server.close(() => { resolve(); }); });
+}
+
 /** Echoes back what the child would see, so the test can assert that no
  *  hub-injected identity rides along with a scan-token request. */
 async function startFakeBox() {
-  const sockets = [];
+  const sockets: net.Socket[] = [];
   const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({
@@ -41,8 +66,8 @@ async function startFakeBox() {
     }));
   });
   server.on("connection", (socket) => sockets.push(socket));
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return { server, sockets, origin: `http://127.0.0.1:${server.address().port}` };
+  await listen(server);
+  return { server, sockets, origin: `http://127.0.0.1:${portOf(server)}` };
 }
 
 const box = await startFakeBox();
@@ -53,11 +78,12 @@ const hubServer = await createHubServer({
   getHealth: () => ({ status: "ok", boxes: [] }),
   hubSecret: HUB_SECRET,
   boxes: [{ slug: "test1", boxRoot: scanBox.root }],
+  baseUrl: "http://127.0.0.1",
 });
-const hubSockets = [];
+const hubSockets: net.Socket[] = [];
 hubServer.on("connection", (socket) => hubSockets.push(socket));
-await new Promise((resolve) => hubServer.listen(0, "127.0.0.1", resolve));
-const hubBase = `http://127.0.0.1:${hubServer.address().port}`;
+await listen(hubServer);
+const hubBase = `http://127.0.0.1:${portOf(hubServer)}`;
 const scanAuth = { authorization: `Bearer ${scan.token}` };
 ```
 
@@ -69,7 +95,7 @@ this credential is not a person and must not be able to impersonate one.
 
 ```ts
 const accepted = await fetch(`${hubBase}/test1/api/scan/check`, { method: "POST", headers: scanAuth });
-const body = await accepted.json();
+const body = BoxEcho.parse(await accepted.json());
 JSON.stringify({
   status: accepted.status,
   url: body.url,
@@ -115,7 +141,7 @@ mobile gate has. A scan token minted for THIS box is worthless against a slug it
 doesn't own.
 
 ```ts continue
-const gates = [
+const gates: Array<[string, string, string, Record<string, string>]> = [
   ["scan token, tRPC path", "GET", "/test1/api/trpc/health.check", scanAuth],
   ["scan token, events path", "GET", "/test1/events", scanAuth],
   ["scan token, page navigation", "GET", "/test1/browse/some-card", scanAuth],
@@ -161,6 +187,6 @@ await rm(authDir, { recursive: true, force: true });
 await scanBox.cleanup();
 for (const socket of hubSockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
-await new Promise((resolve) => hubServer.close(resolve));
-await new Promise((resolve) => box.server.close(resolve));
+await close(hubServer);
+await close(box.server);
 ```

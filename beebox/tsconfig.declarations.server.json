@@ -1,0 +1,15 @@
+{
+  // Declaration-only build for the `beebox/server` export. Separate from
+  // tsconfig.declarations.json because that program adds the DOM lib for
+  // plugin views, and backend code (Node's ReadableStream, for one) does not
+  // typecheck under it. The router types become nameable through
+  // src/types/trpc-declaration-emit.d.ts.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false
+  },
+  "include": ["src/types/*.d.ts"],
+  "files": ["src/exports/server.ts"]
+}

@@ -25,7 +25,8 @@ import type { Batch } from "./attribution.js";
 import { TIERS, batchExit, completionMarker, tierProducedResults, workstreamOf } from "./lib.js";
 import { batchSlowdown, durationHistories, runIsUntrusted } from "./trust.js";
 import { readBatch } from "./batch.js";
-import { raiseCondition, report } from "./reporting.js";
+import { holdCondition, raiseCondition, report, resolveAll } from "./reporting.js";
+import { renderTypecheckAlert, typecheckDoctests } from "./doctest-typecheck.js";
 import { createCheckout, failingFiles, removeCheckout, runTier, type Checkout, type SuiteRun } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
 import { readPending, writeKnownRed, writePending } from "./state.js";
@@ -219,6 +220,27 @@ async function main(): Promise<void> {
     if (!tierProducedResults(careful)) refuse(`careful tier produced no TAP results (exit ${String(careful.exitCode)}):\n${careful.output}`);
     const output = `${ordinary.output}\n${careful.output}`;
     const runs = [ordinary, careful];
+    // Reported before the test verdict, and held, so the verdict's resolves
+    // leave a standing typecheck alert alone. When the tests are green the
+    // alert is the run's one report, so `done` is skipped.
+    const typecheck = await typecheckDoctests(checkout.dir);
+    if (typecheck.ok) {
+      await report(["resolve", "--condition", "doctest-typecheck"]);
+    } else {
+      process.stdout.write(`full-suite: doctests do not typecheck.\n${typecheck.output}\n`);
+      holdCondition("doctest-typecheck");
+      await raiseCondition({
+        kind: "doctest-typecheck",
+        culprits: [],
+        verdict: false,
+        priority: "normal",
+        title: "full suite: doctests do not typecheck",
+        message: renderTypecheckAlert({ testedCommit: batch.pinned, output: typecheck.output, landings: batch.landings }),
+      });
+    }
+    const done = async (): Promise<void> => {
+      if (typecheck.ok) await report(["done"]);
+    };
     const failures = failingFiles(runs);
     // An untrusted run yields NO verdicts in either direction: red is
     // deferred, and green neither clears known-red/pending nor resolves alert
@@ -237,7 +259,7 @@ async function main(): Promise<void> {
       if (failures.length === 0) {
         process.stdout.write("full-suite: green under load; state untouched.\n");
         await markComplete({ batch, runs });
-        await report(["done"]);
+        await done();
         return;
       }
       await deferRed({ batch, failures, factor: slowdown.factor, samples: slowdown.samples });
@@ -249,9 +271,10 @@ async function main(): Promise<void> {
       await writeKnownRed([]);
       await writePending({});
       await markComplete({ batch, runs });
-      // Green is a verdict: every condition this schedule raised has cleared.
-      await report(["resolve"]);
-      await report(["done"]);
+      // Green is a verdict: every condition this schedule raised has cleared
+      // (a held typecheck alert excepted).
+      await resolveAll();
+      await done();
       return;
     }
     const knownRed = await handleRed({ batch, checkout, failures, output, pending });

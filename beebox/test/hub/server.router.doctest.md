@@ -19,16 +19,27 @@ injects its own hub-secret-gated identity header. `createHubServer` is
 import http from "node:http";
 import net from "node:net";
 import crypto from "node:crypto";
-import { createHubServer } from "../../src/hub/server/core.js";
-import { staticEndpointProvider } from "../../src/hub/endpoints.js";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { z } from "zod";
+import { createHubServer, type HubHealth } from "../../src/hub/server/core.js";
+import { staticEndpointProvider, type Endpoint, type EndpointProvider } from "../../src/hub/endpoints.js";
+import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
+import type { BoxSpec } from "../../src/webapp/server-types.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
+// The default box has a real, empty content root, as a new box does. A missing
+// root is a broken box, and reading its name logs a warning.
+const defaultBoxRoot = await mkdtemp(join(tmpdir(), "bbx-router-"));
+await mkdir(join(defaultBoxRoot, "_content"));
 
 // Most of this file exercises hub-wide OPEN mode (the hub advertises
 // `x-bbx-hub-auth: off` to children). Auth is always-on by default now, so open
@@ -43,6 +54,30 @@ process.env.BBX_DIAG_API_KEY = DIAG_KEY;
 const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
 const BROWSE_KEY = "test-browse-key-for-router-doctest";
 
+/** The JSON the fake box and the hub's own routes answer with; every field a
+ *  check below reads is optional because each route answers with its own subset. */
+const HubJson = z.looseObject({
+  method: z.string().optional(),
+  url: z.string().optional(),
+  status: z.string().optional(),
+  slug: z.string().optional(),
+  error: z.string().optional(),
+  reason: z.string().optional(),
+  owner: z.looseObject({ pid: z.number() }).optional(),
+  boxes: z.array(z.looseObject({ slug: z.string() })).optional(),
+  headers: z.looseObject({ xBbxAuthenticatedEmail: z.string().nullable().optional() }).optional(),
+});
+
+function portOf(server: http.Server): number {
+  const address = server.address();
+  assert.ok(address && typeof address === "object", "server is listening on a TCP port");
+  return address.port;
+}
+
+function listen(server: http.Server): Promise<void> {
+  return new Promise<void>((resolve) => { server.listen(0, "127.0.0.1", resolve); });
+}
+
 /** A minimal fake "box": echoes back method/url/headers as JSON for plain
  *  HTTP, and completes a bare-bones WebSocket handshake (no framing) for
  *  upgrade requests — enough to prove the hub proxies the upgrade through
@@ -53,7 +88,7 @@ const BROWSE_KEY = "test-browse-key-for-router-doctest";
  *  `closeAllConnections()` doesn't reliably reach once it's been handed off
  *  via the "upgrade" event. */
 async function startFakeBox() {
-  const sockets = [];
+  const sockets: net.Socket[] = [];
   const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({
@@ -78,28 +113,32 @@ async function startFakeBox() {
     );
     // No frame handling needed -- the doctest only checks the handshake made it through.
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address();
+  await listen(server);
+  const port = portOf(server);
   return { server, sockets, port, origin: `http://127.0.0.1:${port}` };
 }
 
-async function startHub(endpoints, { boxes, getHealth, openAccess = true } = {}) {
-  const sockets = [];
+async function startHub(
+  endpoints: EndpointProvider,
+  { boxes, getHealth, openAccess = true }: { boxes?: BoxSpec[]; getHealth?: () => HubHealth; openAccess?: boolean } = {},
+) {
+  const sockets: net.Socket[] = [];
   const server = await createHubServer({
     endpoints,
     getHealth: getHealth ?? (() => ({ status: "ok", boxes: [] })),
     hubSecret: HUB_SECRET,
-    boxes: boxes ?? [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
+    boxes: boxes ?? [{ slug: "test1", boxRoot: defaultBoxRoot }],
+    baseUrl: "http://127.0.0.1",
     openAccess,
   });
   server.on("connection", (socket) => sockets.push(socket));
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address();
+  await listen(server);
+  const port = portOf(server);
   return { server, sockets, port, base: `http://127.0.0.1:${port}` };
 }
 
-function rawUpgradeRequest({ port, path }) {
-  return new Promise((resolve, reject) => {
+function rawUpgradeRequest({ port, path }: { port: number; path: string }): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
     const socket = net.connect(port, "127.0.0.1", () => {
       socket.write(
         `GET ${path} HTTP/1.1\r\n` +
@@ -123,19 +162,19 @@ function rawUpgradeRequest({ port, path }) {
 }
 
 // Destroy every tracked socket (a detached upgrade socket would hang close()), then close.
-async function stopHub(hub) {
+async function stopHub(hub: { sockets: net.Socket[]; server: http.Server }): Promise<void> {
   for (const socket of hub.sockets) socket.destroy();
-  await new Promise((resolve) => hub.server.close(resolve));
+  await new Promise<void>((resolve) => { hub.server.close(() => { resolve(); }); });
 }
 
 // GET through a hub; the fake box answers with JSON describing what it received.
-async function getJson(hub, path, init) {
+async function getJson(hub: { base: string }, path: string, init?: RequestInit) {
   const response = await fetch(`${hub.base}${path}`, init);
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: HubJson.parse(await response.json()) };
 }
 
 // Hub auth ON needs a (fake) OAuth client pair and a session secret.
-function setOAuthEnv(on) {
+function setOAuthEnv(on: boolean) {
   const vars = {
     GOOGLE_OAUTH_CLIENT_ID: "test-client-id-for-router-doctest",
     // registerAuthRoutes fails loudly on an ID-without-secret half-config
@@ -151,13 +190,13 @@ function setOAuthEnv(on) {
 
 // Mirrors a lazy `Supervisor`: `get()` only returns an endpoint while `running`
 // is true; `ensureRunning()` is the only thing that flips it on.
-function makeLazyProvider({ slug, origin }) {
+function makeLazyProvider({ slug, origin }: Endpoint) {
   let running = false;
   let ensureCalls = 0;
   return {
-    get: (s) => (s === slug && running ? { slug, origin } : undefined),
+    get: (s: string) => (s === slug && running ? { slug, origin } : undefined),
     slugs: () => [slug],
-    ensureRunning: async (s) => {
+    ensureRunning: async (s: string): Promise<Endpoint | undefined> => {
       if (s !== slug) return undefined;
       ensureCalls++;
       running = true;
@@ -393,7 +432,7 @@ const allowedCookie = signSession({ email: "owner@example.com", name: "Owner" })
 const allowed = await getJson(authedHub, `${CALLBACK}test1:admin`, {
   headers: { cookie: `${COOKIE_NAME}=${allowedCookie}` },
 });
-[allowed.status, allowed.body.url, allowed.body.headers.xBbxAuthenticatedEmail]
+[allowed.status, allowed.body.url, allowed.body.headers?.xBbxAuthenticatedEmail]
 => [200, "/auth/google-services/callback?code=abc123&state=test1:admin", "owner@example.com"]
 
 setOAuthEnv(false);
@@ -489,13 +528,13 @@ box latched `unhealthy` (the shape `hubVerdict` produces from supervisor state
 — see `hub-health.doctest.md` for the derivation itself).
 
 ```ts continue
-const brokenHealth = () => ({
+const brokenHealth = (): HubHealth => ({
   status: "unhealthy",
   boxes: [{ slug: "sick", status: "unhealthy", pid: undefined, port: undefined, restarts: 5, consecutiveFailures: 5, lastError: "ERR_DLOPEN_FAILED", lastStart: undefined }],
 });
 const brokenHub = await startHub(staticEndpointProvider([]), { getHealth: brokenHealth });
 const broken = await getJson(brokenHub, "/healthz", diagAuth);
-[broken.status, broken.body.status, broken.body.boxes[0].slug]
+[broken.status, broken.body.status, broken.body.boxes?.[0]?.slug]
 => [503, "unhealthy", "sick"]
 
 await stopHub(brokenHub);
@@ -572,9 +611,11 @@ rejects models the 2026-07-16 ABI crash (the child never answers `/healthz`, so
 
 ```ts continue
 const crashFixture = await makeTmpBox();
-function crashSpawn() {
-  const exitHandlers = [];
-  return { pid: 970001, on: (e, bbx) => { if (e === "exit") exitHandlers.push(bbx); }, catch: () => {}, fireExit: (c, s) => exitHandlers.forEach((bbx) => bbx(c, s)) };
+type ExitHandler = (code: number | null, signal: NodeJS.Signals | null) => void;
+function crashSpawn(): ChildProc {
+  const exitHandlers: ExitHandler[] = [];
+  // Deliberately partial fake: the supervisor reads only pid, on("exit"), and catch() before the readiness check fails.
+  return { pid: 970001, on: (e: string, bbx: ExitHandler) => { if (e === "exit") exitHandlers.push(bbx); }, catch: () => {} } as ChildProc;
 }
 const crashSupervisor = new Supervisor({
   config: {
@@ -602,7 +643,7 @@ await stopHub(crashHub);
 ```ts cleanup
 await stopHub(hub);
 for (const socket of box.sockets) socket.destroy();
-await new Promise((resolve) => box.server.close(resolve));
+await new Promise<void>((resolve) => { box.server.close(() => { resolve(); }); });
 ```
 
 ## A configured box that cannot be served answers 503 with the reason
@@ -615,7 +656,7 @@ and the owner; otherwise it carries the provider's last word on the box.
 const closedBox = await makeTmpBox({ git: true });
 const provider = {
   get: () => undefined, slugs: () => ["closed", "broken"],
-  unavailable: (slug) => (slug === "broken" ? "child exited with code 1" : undefined),
+  unavailable: (slug: string) => (slug === "broken" ? "child exited with code 1" : undefined),
 };
 const closedHub = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }, { slug: "broken", boxRoot: "/nonexistent/broken" }] });
 const owner = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
@@ -627,17 +668,17 @@ const realNow = Date.now;
 const leaseStart = Date.parse((await boxMaintenanceStatus(closedBox.root))?.until ?? "") - 600_000;
 Date.now = () => leaseStart;
 const closedResponse = await fetch(`${closedHub.base}/closed/api/x`);
-const closedBody = await closedResponse.json();
+const closedBody = HubJson.parse(await closedResponse.json());
 // Retry-After counts down from the 600 s maintenance lease, so allow a loaded run a few seconds.
 const retryAfter = closedResponse.headers.get("retry-after");
-JSON.stringify({ status: closedResponse.status, retryAfterNearLease: Number(retryAfter) > 580 && Number(retryAfter) <= 600, error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner.pid === process.pid })
+JSON.stringify({ status: closedResponse.status, retryAfterNearLease: Number(retryAfter) > 580 && Number(retryAfter) <= 600, error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner?.pid === process.pid })
 => {"status":503,"retryAfterNearLease":true,"error":"box_closed","reason":"migration","ownerIsThisProcess":true}
 
 // A page navigation (a browser, the iOS web view) gets a scriptless page: a
 // sign that swings once, the sentence, and a refresh after Retry-After.
 const page = await fetch(`${closedHub.base}/closed/chat`, { headers: { accept: "text/html,application/xhtml+xml" } });
 const html = await page.text();
-JSON.stringify({ status: page.status, type: page.headers.get("content-type"), refreshIsRetryAfter: Number(html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1]) > 580, headline: html.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="bbx-sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1].replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+JSON.stringify({ status: page.status, type: page.headers.get("content-type"), refreshIsRetryAfter: Number(html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1]) > 580, headline: html.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="bbx-sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1]?.replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
 => {"status":503,"type":"text/html; charset=utf-8","refreshIsRetryAfter":true,"headline":["Closed","for migration"],"swings":true,"script":false,"detail":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits"}
 
 // A form post that accepts HTML gets the sentence as text: a self-reload would repeat it as a GET.
@@ -645,12 +686,18 @@ const posted = await fetch(`${closedHub.base}/closed/chat`, { method: "POST", he
 JSON.stringify({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)").replace(/Retry in \d+ seconds/u, "Retry in <n> seconds") })
 => {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in <n> seconds.\n"}
 
+// Once the owner names a step, the sentence and the body say which one is running.
+await owner.step("finding changed files");
+const stepped = await (await fetch(`${closedHub.base}/closed/api/x`)).json() as { step: unknown; message: string };
+({ step: stepped.step, message: stepped.message.replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+=> { step: { name: "finding changed files", since: "«date»" }, message: "Box closed is closed for migration (pid <n>, since <time>); current step: finding changed files, since «date»; it reopens when that process finishes or exits" }
+
 Date.now = realNow;
 
 await owner.beginChanges();
 await owner.release();
 const reopened = await fetch(`${closedHub.base}/closed/api/x`);
-JSON.stringify({ status: reopened.status, error: (await reopened.json()).error })
+JSON.stringify({ status: reopened.status, error: HubJson.parse(await reopened.json()).error })
 => {"status":503,"error":"box_unavailable"}
 
 // Pairing redemption passes the auth wall unauthenticated and learns nothing about the owner.
@@ -682,4 +729,8 @@ retry gets a still sign; message text is escaped.
 const quick = renderUnavailablePage({ status: 503, retryAfter: 3, body: { error: "box_unavailable", message: "Box <b> is not running" } });
 JSON.stringify({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") })
 => {"refresh":"3","swings":false,"headline":"Not open","escaped":true}
+```
+
+```ts teardown
+await rm(defaultBoxRoot, { recursive: true, force: true });
 ```

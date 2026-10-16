@@ -9,26 +9,33 @@ a real backoff or reach a real HQ service.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
+import type { EventBus } from "../../../src/core/event-bus/core.js";
+import type { EventMap } from "../../../src/core/event-bus/schemas.js";
+import type { StagingSession } from "../../../src/core/capture/staging-schema.js";
+import type { HqTranscriptionService } from "../../../src/shared/transcription-services.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { createStagingSession, addAudioChunk, readStagingSession } from "../../../src/core/capture/staging-store/core.js";
 import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging/core.js";
 import { runHqJob } from "../../../src/core/voice-recording/hq-job/core.js";
+import type { HqJobClock, TranscribePieceFn } from "../../../src/core/voice-recording/hq-job/core.js";
 
 const GITIGNORE = ["_tmp/", ".beebox/"].join("\n") + "\n";
 
-async function configureBox(box) {
+async function configureBox(box: TmpBox) {
   await box.write(".gitignore", GITIGNORE);
   box.commitAll("configure");
 }
 
 // A no-op clock: `now()` is fixed unless advanced, `wait()` resolves
 // immediately so a scripted backoff never actually sleeps in a test.
-function fakeClock(startIso) {
+function fakeClock(startIso: string): HqJobClock & { advance(ms: number): void } {
   let current = new Date(startIso);
   return {
     now: () => current,
-    wait: async (_ms) => {},
-    advance(ms) {
+    wait: async (_ms: number) => {},
+    advance(ms: number) {
       current = new Date(current.getTime() + ms);
     },
   };
@@ -37,19 +44,23 @@ function fakeClock(startIso) {
 // Scripts a sequence of transcribePiece outcomes, consumed in call order.
 // An entry is `{ error }` (thrown, error carries permanent/status/body) or a
 // success result `{ text, diarized? }`.
-function scriptedTranscribe(script) {
+type ScriptEntry = { error: Error } | { text: string; diarized?: boolean };
+function scriptedTranscribe(script: ScriptEntry[]): TranscribePieceFn {
   let i = 0;
-  return async (_params, _opts) => {
-    if (i >= script.length) throw new Error(`scriptedTranscribe: no more scripted outcomes (call ${i + 1})`);
+  return async () => {
     const entry = script[i];
+    if (entry === undefined) throw new Error(`scriptedTranscribe: no more scripted outcomes (call ${i + 1})`);
     i++;
-    if (entry.error) throw entry.error;
+    if ("error" in entry) throw entry.error;
     return entry;
   };
 }
 
 class ScriptedTranscriptionError extends Error {
-  constructor(message, { permanent, status, body }) {
+  declare permanent: boolean | undefined;
+  declare status?: number;
+  declare body?: string;
+  constructor(message: string, { permanent, status, body }: { permanent: boolean | undefined; status?: number; body?: string }) {
     super(message);
     this.permanent = permanent;
     if (status !== undefined) this.status = status;
@@ -57,7 +68,7 @@ class ScriptedTranscriptionError extends Error {
   }
 }
 
-async function stageVoiceRecording(box, { targetSessionId, bytes }) {
+async function stageVoiceRecording(box: TmpBox, { targetSessionId, bytes }: { targetSessionId: string; bytes: number }) {
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId, createdBy: null, kind: "voice" });
   await addAudioChunk({
     boxRoot: box.root, id: session.id, segmentId: session.id, segmentStartedAt: "2026-09-10T18:00:00.000Z",
@@ -66,8 +77,9 @@ async function stageVoiceRecording(box, { targetSessionId, bytes }) {
   return session;
 }
 
-async function requestHq(box, session, opts) {
+async function requestHq(box: TmpBox, session: StagingSession, opts?: { requestedAt?: string | undefined; service?: HqTranscriptionService | undefined }) {
   const { requestedAt, service } = opts || {};
+  invariant(session.voice, "staged recording carries voice state");
   const seal = await sealVoiceSession({
     boxRoot: box.root, id: session.id, emissionId: "emission-1",
     hq: { emissionId: "emission-1", sessionId: session.voice.targetSessionId, service: service ?? "whisper", requestedAt: requestedAt ?? "2026-09-10T18:00:00.000Z" },
@@ -75,8 +87,9 @@ async function requestHq(box, session, opts) {
   return seal;
 }
 
-function collectBusEvents(eventBus) {
-  const events = [];
+type VoiceStatusEvent = EventMap["voice-recording-status"];
+function collectBusEvents(eventBus: EventBus) {
+  const events: VoiceStatusEvent[] = [];
   eventBus.subscribe({ listener: (e) => { if (e.event === "voice-recording-status") events.push(e.data); } });
   return events;
 }
@@ -84,7 +97,7 @@ function collectBusEvents(eventBus) {
 // Stage a recording of `bytes` PCM bytes, request HQ, run the job against the
 // scripted transcriber at `now`, and return the persisted `voice.hq` state,
 // the bus events, and the box (for the example's `cleanup`).
-async function runJob({ bytes, script, now, requestedAt, service }) {
+async function runJob({ bytes, script, now, requestedAt, service }: { bytes: number; script: ScriptEntry[] | TranscribePieceFn; now?: string; requestedAt?: string; service?: HqTranscriptionService }) {
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes });
@@ -94,6 +107,7 @@ async function runJob({ bytes, script, now, requestedAt, service }) {
   const transcribePiece = typeof script === "function" ? script : scriptedTranscribe(script);
   await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock: fakeClock(now ?? "2026-09-10T18:01:00.000Z"), transcribePiece });
   const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+  invariant(after?.voice, "job leaves the voice recording in place");
   return { box, hq: after.voice.hq, events };
 }
 ```
@@ -112,7 +126,7 @@ const run = await runJob({
   ],
 });
 const { box } = run;
-({ hq: run.hq, events: run.events.length, last: run.events[run.events.length - 1].hq.state })
+({ hq: run.hq, events: run.events.length, last: run.events[run.events.length - 1]?.hq.state })
 => { hq: { state: "ready", result: { text: "hello world", diarized: false, service: "whisper", pieces: 1 } }, events: 4, last: "ready" }
 ```
 
@@ -234,15 +248,14 @@ await applyVoiceEvent({
 });
 
 const eventBus = createEventBus(box.root);
-const events = [];
-eventBus.subscribe({ listener: (e) => { if (e.event === "voice-recording-status") events.push(e.data); } });
+const events = collectBusEvents(eventBus);
 
 const transcribePiece = scriptedTranscribe([{ text: "resumed" }]);
 const clock = fakeClock("2026-09-10T18:05:00.000Z"); // well past nextAttemptAt
 await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
 
 // The resumed attempt should be 6 (continuing from the persisted 5), not 1.
-JSON.stringify({ resumedAttempt: events[0].hq.state === "transcribing" ? events[0].hq.attempt : null })
+JSON.stringify({ resumedAttempt: events[0]?.hq.state === "transcribing" ? events[0].hq.attempt : null })
 => {"resumedAttempt":6}
 ```
 

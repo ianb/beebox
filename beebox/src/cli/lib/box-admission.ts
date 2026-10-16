@@ -1,7 +1,7 @@
 /** CLI actions default to box work; lifecycle owners acquire their own gates. */
 import type { Command } from "commander";
 import { findBoxRoot } from "../../lib/paths/core.js";
-import { acquireBoxWork, boxWorkEnvironment, type BoxWork } from "../../lib/box-maintenance.js";
+import { acquireBoxWork, boxWorkEnvironment, type BoxWork } from "../../lib/box-maintenance/admission.js";
 
 const independentlyOwned = new Set([
   "answer", "maintenance", "migrate", "docs", "upgrade", "serve", "hub", "scheduler",

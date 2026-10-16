@@ -8,10 +8,12 @@ subscribing under two boxes is stored once with both opt-ins.
 
 ```ts setup
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 const fixtureBox = await makeTmpBox({ git: true });
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { endpointsForBox } from "../../../../src/core/push-subscriptions.js";
 
@@ -19,13 +21,8 @@ const storeDir = path.join(os.tmpdir(), `bbx-push-router-${process.pid}-${Date.n
 process.env.BBX_PUSH_STORE_DIR = storeDir;
 delete process.env.BBX_VAPID_PUBLIC_KEY;
 
-function caller(boxSlug) {
-  const ctx = {
-    boxRoot: fixtureBox.root,
-    boxSlug,
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-  };
+function caller(boxSlug: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot: fixtureBox.root, boxSlug, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 

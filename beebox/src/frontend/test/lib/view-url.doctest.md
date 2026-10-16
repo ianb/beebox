@@ -41,8 +41,8 @@ JSON.stringify(parseViewUrl('_content/docs/report.md?k=v&viewState=%7B%22page%22
 A leading `/` is stripped — `ViewTarget.path` is box-root-relative, and consumers compare it for exact equality against the file watcher's relative paths (which have no leading slash). Card refs are conventionally written `/_content/…`, so the slash is normalized away here:
 
 ```ts
-JSON.stringify(parseViewUrl("view:/_bookkeeping/archive/Foo.memo.card"))
-=> {"path":"_bookkeeping/archive/Foo.memo.card","viewer":null,"params":{},"viewState":null}
+JSON.stringify(parseViewUrl("view:/_bookkeeping/archive/Foo.doc.card"))
+=> {"path":"_bookkeeping/archive/Foo.doc.card","viewer":null,"params":{},"viewState":null}
 ```
 
 `serializeViewUrl` is the round-trip inverse (without the `view:` prefix):
@@ -158,8 +158,8 @@ relative path resolves *inside* it, not its parent:
 
 ```ts
 JSON.stringify([
-  resolveContentTarget("_content/foo/x.md", "bar.card").path,
-  resolveContentTarget("_content/foo/", "bar.card").path,
+  resolveContentTarget("_content/foo/x.md", "bar.card")?.path,
+  resolveContentTarget("_content/foo/", "bar.card")?.path,
 ])
 => ["_content/foo/bar.card","_content/foo/bar.card"]
 ```
@@ -177,9 +177,9 @@ tier):
 
 ```ts
 JSON.stringify([
-  resolveContentTarget(undefined, "_content/sibling.card").path,
-  resolveContentTarget(undefined, "/_content/sibling.card").path,
-  resolveContentTarget(undefined, "_content/Foo.doc.card").path,
+  resolveContentTarget(undefined, "_content/sibling.card")?.path,
+  resolveContentTarget(undefined, "/_content/sibling.card")?.path,
+  resolveContentTarget(undefined, "_content/Foo.doc.card")?.path,
 ])
 => ["_content/sibling.card","_content/sibling.card","_content/Foo.doc.card"]
 ```
@@ -265,7 +265,7 @@ external URL goes to markdown-it's own encoder (stood in for here by
 `encodeURI`). A malformed escape is kept as written:
 
 ```ts
-const encode = (url) => encodeURI(url);
+const encode = (url: string) => encodeURI(url);
 [
   normalizeMarkdownLink("/_content/Beach%20walk.attach/p.jpg", encode),
   normalizeMarkdownLink("Beach%20walk.doc.card?k=%2526", encode),

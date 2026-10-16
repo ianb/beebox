@@ -80,6 +80,7 @@ store.get().pendingImages
 => 0
 ```
 
+
 ## removeImage strips the token — including the bounding whitespace
 
 Only the matching id's token is removed; another image's token, and the
@@ -100,7 +101,7 @@ JSON.stringify(store.get().images.map((i) => i.id))
 const store = createEmissionStore();
 store.editor.setText("see [file#1] please");
 const fid = store.editor.nextFileId();
-store.editor.addFile({ id: fid, path: "_tmp/report.pdf", originalName: "report.pdf", size: 10, mimetype: "application/pdf" });
+store.editor.addFile({ id: fid, originalName: "report.pdf", size: 10, mimetype: "application/pdf", state: { status: "uploaded", path: "_tmp/report.pdf" } });
 store.get().files.length
 => 1
 
@@ -145,7 +146,7 @@ store.editor.addImage({ id: a, mimeType: "image/png", dataBase64: "x", objectUrl
 const b = store.editor.nextImageId();
 store.editor.addImage({ id: b, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:b", byteLength: 1, original: { status: "uploading", progress: 0 } });
 const f = store.editor.nextFileId();
-store.editor.addFile({ id: f, path: "_tmp/x.txt", originalName: "x.txt", size: 1, mimetype: "text/plain" });
+store.editor.addFile({ id: f, originalName: "x.txt", size: 1, mimetype: "text/plain", state: { status: "uploaded", path: "_tmp/x.txt" } });
 
 const result = store.editor.reset("attachments");
 JSON.stringify(result.removedImageObjectUrls)
@@ -221,7 +222,7 @@ is how the store is told those ids are taken, so a later mint can't collide:
 
 ```ts
 const store = createEmissionStore();
-store.editor.addImage({ id: 5, mimeType: "image/png", dataBase64: "x", objectUrl: "data:x", byteLength: 1 });
+store.editor.addImage({ id: 5, mimeType: "image/png", dataBase64: "x", objectUrl: "data:x", byteLength: 1, original: { status: "uploading", progress: 0 } });
 store.editor.reserveIds({ image: 5 });
 store.editor.nextImageId()
 => 6
@@ -351,4 +352,23 @@ store.editor.uploadBatch() !== first
 store.editor.restoreUploadBatch("restored-batch-01");
 store.editor.uploadBatch()
 => restored-batch-01
+```
+
+## Images stay in pick order, whatever order their encodes finish
+
+Photos picked together encode at the same time and can finish in any order;
+a small photo picked second often finishes before a large one picked first.
+The list stays in id order, the order the person picked them and the order
+their tokens went into the text, so the thumbnails and the sent
+`<attachments>` block agree with "the first photo":
+
+```ts
+const store = createEmissionStore();
+const first = store.editor.nextImageId();
+const second = store.editor.nextImageId();
+store.editor.bumpPendingImages(2);
+store.editor.addImage({ id: second, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:small", byteLength: 1, original: { status: "uploading", progress: 0 } });
+store.editor.addImage({ id: first, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:large", byteLength: 1, original: { status: "uploading", progress: 0 } });
+store.get().images.map((image) => image.id)
+=> [1, 2]
 ```

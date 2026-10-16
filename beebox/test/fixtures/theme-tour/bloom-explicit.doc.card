@@ -1,0 +1,10 @@
+---
+title: A note on blue paper
+theme:
+  name: paper
+  stock: blue
+---
+This card keeps its explicit Paper material when the surrounding interface is
+Bloom. The [seed exchange note](./bloom-inherited.doc.card) follows the system.
+
+> Different materials can share the same desk.

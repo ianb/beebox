@@ -9,7 +9,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { acquireBoxWork } from "../../../lib/box-maintenance.js";
+import { acquireBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import type { SendOutcome, UserMessageSender } from "../../chat-runtime.js";
 import type { ChatRoutesContext } from "./context.js";

@@ -10,7 +10,7 @@ declared.
 ```ts setup
 import { GLOBAL_CARD_FIELDS } from "../../src/cards/schema.js";
 import { Prominence, effectiveLevel } from "../../src/shared/prominence.js";
-import { MemoSchema } from "../../src/schemas/memo.js";
+import { DocSchema } from "../../src/schemas/doc.js";
 import { QuestionFollowupJobSchema } from "../../src/schemas/question-followup-job.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 ```
@@ -33,7 +33,7 @@ const result = Prominence.safeParse("headline");
 result.success
 => false
 
-result.error.issues[0].message
+result.error?.issues[0]?.message
 => «*»"entry-point"|"primary"|"background"
 ```
 
@@ -54,10 +54,10 @@ QuestionFollowupJobSchema.defaultProminence
 An ordinary authored schema defaults to `ordinary`.
 
 ```ts continue
-MemoSchema.category
+DocSchema.category
 => authored
 
-MemoSchema.defaultProminence
+DocSchema.defaultProminence
 => ordinary
 ```
 

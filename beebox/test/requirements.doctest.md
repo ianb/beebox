@@ -29,7 +29,7 @@ async function useTempStore() {
 }
 
 /** What the scheduler would report as missing. */
-async function missing(boxRoot, ...connectors) {
+async function missing(boxRoot: string, ...connectors: string[]) {
   return JSON.stringify(await checkMissingConnectors(boxRoot, { connectors }));
 }
 ```

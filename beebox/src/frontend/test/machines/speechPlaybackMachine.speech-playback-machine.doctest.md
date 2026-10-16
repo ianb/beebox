@@ -8,18 +8,19 @@ the UI does not make a rapid series of playback failures look successful.
 
 ```ts setup
 import { createActor } from "xstate";
-import { speechPlaybackMachine } from "../../src/machines/speechPlaybackMachine.js";
+import { speechPlaybackMachine, type SpeechClient } from "../../src/machines/speechPlaybackMachine.js";
+import type { SpeechSegment } from "../../src/lib/audio/speech-parsing/parse.js";
 
 Object.defineProperty(globalThis, "navigator", {
   value: { userAgent: "iPhone" },
   configurable: true,
 });
 
-function segment(text) {
+function segment(text: string): SpeechSegment {
   return { text, displayText: text, hasTextBefore: false };
 }
 
-async function waitUntilIdle(actor) {
+async function waitUntilIdle(actor: { getSnapshot(): { matches(state: "idle"): boolean } }) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     if (actor.getSnapshot().matches("idle")) return;
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -36,9 +37,9 @@ the queue finishes, with the error's message kept as the reason the chunk
 shows.
 
 ```ts
-const ttsClient = {
+const ttsClient: SpeechClient = {
   async speak(text, options) {
-    options.onPlaybackStarted();
+    options?.onPlaybackStarted?.();
     if (text === "broken") throw new Error("media playback rejected");
   },
   prefetch() {
@@ -46,7 +47,7 @@ const ttsClient = {
   },
   stop() {},
 };
-const playbackErrors = [];
+const playbackErrors: unknown[][] = [];
 const originalConsoleError = console.error;
 console.error = (...args) => playbackErrors.push(args);
 const actor = createActor(speechPlaybackMachine, { input: {} });
@@ -76,12 +77,12 @@ Generation can take time. The border must stay in `waiting` until the media
 element's playback callback fires, then change to `playing`.
 
 ```ts
-let playbackStarted;
-let finishPlayback;
-const ttsClient = {
+let playbackStarted: (() => void) | undefined;
+let finishPlayback = () => {};
+const ttsClient: SpeechClient = {
   speak(_text, options) {
-    playbackStarted = options.onPlaybackStarted;
-    return new Promise((resolve) => {
+    playbackStarted = options?.onPlaybackStarted;
+    return new Promise<void>((resolve) => {
       finishPlayback = resolve;
     });
   },
@@ -103,7 +104,7 @@ await Promise.resolve();
 actor.getSnapshot().context.segmentStates[0]
 => waiting
 
-playbackStarted();
+playbackStarted?.();
 actor.getSnapshot().context.segmentStates[0]
 => playing
 

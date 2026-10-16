@@ -42,7 +42,7 @@ async function makeV3Box() {
   return {
     root,
     contentRoot: root,
-    async writeView(name, content) {
+    async writeView(name: string, content: string) {
       await writeFile(join(root, "src", "views", name), content);
     },
     async cleanup() {
@@ -61,20 +61,20 @@ export const description = "renders a CardLink from beebox/view-widgets";
 export const dependencies = [];
 export const modes = ["page"];
 export default function WidgetView() {
-  return <div><CardLink cardRef="_content/inbox/Test.memo.card" /></div>;
+  return <div><CardLink cardRef="_content/inbox/Test.doc.card" /></div>;
 }
 `;
 
-function runViewTest(contentRoot, slug) {
-  return new Promise((resolve) => {
+function runViewTest(contentRoot: string, slug: string) {
+  return new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) => {
     const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "view", "test", slug], {
       cwd: contentRoot,
     });
     let stdout = "";
     let stderr = "";
-    child.stdout.on("data", (d) => { stdout += String(d); });
-    child.stderr.on("data", (d) => { stderr += String(d); });
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
+    child.stdout.on("data", (d: Buffer) => { stdout += String(d); });
+    child.stderr.on("data", (d: Buffer) => { stderr += String(d); });
+    child.on("close", (code: number | null) => resolve({ code, stdout, stderr }));
   });
 }
 ```
@@ -97,7 +97,7 @@ import never happened:
 
 ```ts continue
 const meta = views[0];
-JSON.stringify({ name: meta.name, description: meta.description, modes: meta.modes })
+JSON.stringify({ name: meta?.name, description: meta?.description, modes: meta?.modes })
 => {"name":"Widget View","description":"renders a CardLink from beebox/view-widgets","modes":["page"]}
 ```
 
@@ -133,7 +133,7 @@ export default function Broken() {
 `);
 
 const views = await listViews(box.contentRoot);
-JSON.stringify([views[0].slug, views[0].description])
+JSON.stringify([views[0]?.slug, views[0]?.description])
 => ["broken","Failed to compile"]
 ```
 
@@ -158,7 +158,7 @@ export default function Hangs() { return null; }
 const start = Date.now();
 const views = await listViews(box.contentRoot);
 const elapsedMs = Date.now() - start;
-JSON.stringify([views[0].slug, views[0].description, elapsedMs < 10000])
+JSON.stringify([views[0]?.slug, views[0]?.description, elapsedMs < 10000])
 => ["hangs","Failed to compile",true]
 ```
 

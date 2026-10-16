@@ -44,7 +44,7 @@ const backend = createFakeChatBackend();
 const ctx = await makeTestServer({ chatBackend: backend });
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const runtime = getChatRuntime(ctx.boxRoot);

@@ -1,0 +1,19 @@
+---
+title: Mixed stocks
+theme:
+  name: paper
+  stock: blue
+---
+This card uses paper blue beside the cream paper, yellow Post-it, and neutral
+plain examples. The surrounding links are intentionally ordinary CardLink
+references. Follow them to see the cards as independent surfaces with their own
+stocks. The frameless embeds below intentionally inherit this blue paper.
+
+- [Rose Post-it](./mixed-rose.doc.card)
+- [Mint Post-it](./mixed-mint.doc.card)
+
+## Frameless inside blue paper
+
+![Rose note embedded in blue paper](./mixed-rose.doc.card)
+
+![Mint note embedded in blue paper](./mixed-mint.doc.card)

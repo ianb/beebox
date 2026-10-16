@@ -11,6 +11,9 @@ import { compileTriageInstructions } from "../../../src/core/triage/instructions
 import { buildTriageRequest, judgeItem } from "../../../src/core/triage/judge.js";
 import { LandmarkDestination } from "../../../src/schemas/landmark.js";
 import { createFakeJev } from "../../../src/services/jev.js";
+import type { JevService } from "../../../src/services/jev.js";
+import type { Evidence } from "../../../src/core/triage/evidence/core.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { fixedAnswer } from "../../../src/core/judgment/service.js";
 ```
 
@@ -32,15 +35,17 @@ destinations:
 const snapshot = await compileInstructionSnapshot(box.root);
 const bills = snapshot.destinations.find((destination) => destination.name === "bills");
 const records = snapshot.destinations.find((destination) => destination.name === "records");
-bills.todoQuestion
+bills?.todoQuestion
 => Does this bill still need payment or investigation?
 
-records.todoQuestion === undefined
+records?.todoQuestion === undefined
 => true
 
+invariant(bills && records, "fixture destinations compile");
+invariant(bills.todoQuestion, "bills destination has a todo question");
 const compiled = await compileTriageInstructions(box.root);
 const category = compiled.categories.find((destination) => destination.name === "bills");
-category.todoQuestion === bills.todoQuestion && category.landmarkRef === bills.ref && compiled.doc.includes(bills.todoQuestion)
+category?.todoQuestion === bills.todoQuestion && category?.landmarkRef === bills.ref && compiled.doc.includes(bills.todoQuestion)
 => true
 
 LandmarkDestination.safeParse({ for: ["triage"], "todo-question": "   " }).success
@@ -49,17 +54,17 @@ LandmarkDestination.safeParse({ for: ["triage"], "todo-question": "   " }).succe
 LandmarkDestination.parse({ for: ["triage"], "todo-question": " Does this need attention? " })["todo-question"]
 => Does this need attention?
 
-const evidence = { version: 1, source: { ref: "/_content/inbox/staged/Bill.memo.card", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/Bill.memo.card", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Household utility bill: payment is outstanding.", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
+const evidence: Evidence = { version: 1, source: { ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Household utility bill: payment is outstanding.", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
 const request = buildTriageRequest({ evidence, instructions: snapshot });
 Object.keys(request.questions).length
 => 2
 
-request.questions[`todo_${bills.optionId}`].type
+request.questions[`todo_${bills.optionId}`]?.type
 => noul
 
 const yes = createFakeJev({ answers: (name, { question }) => name === "destination" ? fixedAnswer(question, { yes: true }) : { type: "noul", probability: 0.9 } });
 const judgment = await judgeItem(box.root, { evidence, instructions: snapshot, jev: yes });
-judgment.destinationRef === bills.ref && judgment.todoAnswers[bills.optionId] === 0.9
+judgment.destinationRef === bills.ref && judgment.todoAnswers?.[bills.optionId] === 0.9
 => true
 
 yes.judgeCalls.length
@@ -67,12 +72,12 @@ yes.judgeCalls.length
 
 const no = createFakeJev({ answers: (name, { question }) => name === "destination" ? fixedAnswer(question, { yes: true }) : { type: "noul", probability: 0.1 } });
 const negative = await judgeItem(box.root, { evidence, instructions: snapshot, jev: no });
-negative.todoAnswers[bills.optionId]
+negative.todoAnswers?.[bills.optionId]
 => 0.1
 
 // Preparation-only judgments may lack answers; an evaluated configured
 // question cannot silently disappear from the provider result.
-const missing = { ...yes, judge: async (input) => {
+const missing: JevService = { ...yes, judge: async (input) => {
   const result = await yes.judge(input);
   delete result.answers[`todo_${bills.optionId}`];
   return result;

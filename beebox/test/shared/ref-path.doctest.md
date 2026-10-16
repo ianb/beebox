@@ -43,8 +43,8 @@ JSON.stringify(parseRef("#risks"))
 **Form 1 — leading `/` is box-root-absolute**, and ignores the referring document entirely:
 
 ```ts
-resolveRefPath({ fromPath: "_content/docs/tax/2023/return.md", ref: "/_content/Foo.memo.card", kind: "card" })
-=> _content/Foo.memo.card
+resolveRefPath({ fromPath: "_content/docs/tax/2023/return.md", ref: "/_content/Foo.doc.card", kind: "card" })
+=> _content/Foo.doc.card
 ```
 
 **Form 2 — `attach/…` is the referring card's own attach scope** (`<basename>.attach/`), the one deliberate exception to box-root addressing. A bare `attach` names the directory itself, and subdirectories inside the scope work:

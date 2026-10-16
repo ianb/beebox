@@ -48,7 +48,7 @@ a filename it is never sent. An unrecognized or absent extension falls back to
 recording cannot be read as two different formats depending on the route.
 
 ```ts
-const tokens = ["memo.wav", "memo.MP3", "memo.mpga", "memo"].map(audioFormatToken);
+const tokens = ["voice.wav", "voice.MP3", "voice.mpga", "voice"].map(audioFormatToken);
 tokens.join(",")
 => wav,mp3,webm,webm
 ```

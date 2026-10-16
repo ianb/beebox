@@ -5,7 +5,7 @@
  * - Query prompts in editions (text or voice)
  * - Comments on specific sections/expandos (text or voice)
  *
- * Voice feedback works like voice memos — the same transcribe
+ * Voice feedback uses the transcribe
  * pre-action handles them via `via.channel: voice` + audio attachment.
  * Transcribed text ends up in `transcription.text`; the markdown
  * body holds the user's text response when given typed (rather

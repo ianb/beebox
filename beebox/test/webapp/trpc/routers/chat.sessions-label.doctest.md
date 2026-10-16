@@ -12,19 +12,17 @@ which chats exist) and `resolveSessionLabel` (husk `title`, then the
 transcript's first user message, then the session-id prefix).
 
 ```ts setup
+import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 
-function caller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-  };
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot });
   return appRouter.createCaller(ctx);
 }
 
@@ -103,7 +101,7 @@ await box.write("_content/chat/web/2026-07-28_garbled9.chat.card",
   "---\nsession: garbled9\n---\n\n");
 
 const garbled = await caller(box.root).chat.sessions();
-garbled.sessions.find((s) => s.sessionId === "garbled9").label
+garbled.sessions.find((s) => s.sessionId === "garbled9")?.label
 => garbled9
 ```
 
@@ -149,6 +147,7 @@ await box.write("_content/chat/web/2026-07-28_orphaned1.chat.card",
 
 const after = await caller(box.root).chat.sessions();
 const orphan = after.sessions.find((s) => s.sessionId === "orphaned1");
+assert.ok(orphan);
 `${orphan.contextDir} / ${orphan.landmarkLabel}`
 => _content/orphan / _content/orphan
 ```

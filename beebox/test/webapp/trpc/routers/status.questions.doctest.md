@@ -9,11 +9,14 @@ violation, …) must not vanish from the list — it comes back marked
 section, pointing at the raw file) instead of silently dropping it.
 
 ```ts setup
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
-function contextFor(box) {
-  const ctx = { boxRoot: box.root, boxSlug: "t", user: null, authed: true, isOwner: true };
+function contextFor(box: TmpBox) {
+  const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", isAuthenticatedOwner: true });
   return statusRouter.createCaller(ctx);
 }
 
@@ -53,6 +56,7 @@ items.length
 => 2
 
 const good = items.find((i) => i.name === "Receipt");
+assert.ok(good);
 good.invalid
 => undefined
 
@@ -63,6 +67,7 @@ good.state
 => pending
 
 const broken = items.find((i) => i.name === "Broken");
+assert.ok(broken);
 broken.invalid
 => true
 

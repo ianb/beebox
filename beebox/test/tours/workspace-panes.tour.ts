@@ -2,7 +2,7 @@
 import { tour } from "./tour-lib/registry.js";
 
 tour({ name: "workspace-panes", description: "Pane controls, retained cards, and single-pane phone chat." }, async (t) => {
-  await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2FTheme_Tour.memo.card");
+  await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2FTheme_Tour.doc.card");
   await t.expect.heading("Card themes tour", { level: 2 });
   await t.checkpoint("card-beside-conversation");
   await t.click({ role: "button", name: "Minimize cards" });
@@ -12,7 +12,7 @@ tour({ name: "workspace-panes", description: "Pane controls, retained cards, and
   const visible = await t.eval("[...document.querySelectorAll(\"[data-workspace-card]\")].filter(n => !n.hidden).length");
   await t.expect.custom("restoring exposes exactly one retained card", () => visible.trim() === "1");
   const currentUrl = (await t.eval("location.href")).trim().replace(/^"|"$/g, "");
-  await t.expect.custom("workspace serializes the canonical card target", () => currentUrl.includes("/chat?") && currentUrl.includes("card=_content%2Ftheme-tour%2FTheme_Tour.memo.card"));
+  await t.expect.custom("workspace serializes the canonical card target", () => currentUrl.includes("/chat?") && currentUrl.includes("card=_content%2Ftheme-tour%2FTheme_Tour.doc.card"));
   await t.go(currentUrl);
   await t.expect.heading("Card themes tour", { level: 2 });
   await t.expect.button("Minimize cards");

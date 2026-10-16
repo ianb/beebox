@@ -15,20 +15,21 @@ import { executeMove } from "../../../../src/core/commands/move/command.js";
 import { extractBodyLinks } from "../../../../src/core/body-refs.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 
-async function mv(box, args) {
+async function mv(box: TmpBox, args: Record<string, unknown>) {
   const { ctx } = createCollectorContext(box.root);
   return executeMove(ctx, args);
 }
 
 /** A directory listing without scaffolding: `.gitkeep` files and the empty directories that hold only one. */
-async function listWithoutScaffolding(box, dir) {
+async function listWithoutScaffolding(box: TmpBox, dir: string) {
   const lines = (await box.list(dir)).split("\n");
   return lines.filter((l) => !l.endsWith("/.gitkeep") && !lines.includes(`${l}/.gitkeep`)).join("\n");
 }
 
 /** Build a throwaway box from a path -> content map and pass it to `fn`. */
-async function withBox(files, fn) {
+async function withBox<T>(files: Record<string, string>, fn: (box: TmpBox) => Promise<T>): Promise<T> {
   const box = await makeTmpBox();
   try {
     for (const [file, content] of Object.entries(files)) await box.write(file, content);
@@ -43,8 +44,8 @@ async function withBox(files, fn) {
  * `error: <message>`, followed by each of `paths` -- a path ending in `/` is listed
  * (`>> ls <dir>`), any other path is read (`>> <path>` and its contents).
  */
-async function moved(files, args, paths) {
-  return withBox(files, async (box) => {
+async function moved(files: Record<string, string>, args: Record<string, unknown>, paths?: string[]) {
+  return withBox(files, async (box: TmpBox) => {
     const result = await mv(box, args);
     const out = [result.success ? "success" : `error: ${result.error}`];
     for (const p of paths ?? []) {
@@ -56,13 +57,13 @@ async function moved(files, args, paths) {
 }
 
 /** The `success`/`error` of a move that is expected to be rejected. */
-const rejected = (files, args) => withBox(files, async (box) => {
+const rejected = (files: Record<string, string>, args: Record<string, unknown>) => withBox(files, async (box: TmpBox) => {
   const { success, error } = await mv(box, args);
   return { success, error };
 });
 
 /** Fixture files for an index card holding `body` (frontmatter: type doc, title Index). */
-const indexCard = (body) => `---\ntype: doc\ntitle: Index\n---\n${body}\n`;
+const indexCard = (body: string) => `---\ntype: doc\ntitle: Index\n---\n${body}\n`;
 ```
 
 ## Phase-2 card: file + attach dir move, inbound refs rewritten (relative + absolute, into attachments too)
@@ -199,17 +200,17 @@ Rel: {% source ref="../../store/people/dana.person.card" usage="y" %}b{% /source
 await moved(
   {
     "_content/box/a/Target.doc.card": "---\ntype: doc\ntitle: Target\n---\nbody\n",
-    "_content/box/a/Ref.memo.card":
-      "---\ntype: memo\nref: /_content/box/a/Target.doc.card\nrefs:\n  - Target.doc.card\n  - /_content/box/a/Target.doc.card\n---\nbody\n",
+    "_content/box/a/Ref.doc.card":
+      "---\ntype: doc\nref: /_content/box/a/Target.doc.card\nrefs:\n  - Target.doc.card\n  - /_content/box/a/Target.doc.card\n---\nbody\n",
   },
   { from: "_content/box/a/Target.doc.card", to: "_content/box/b/Target.doc.card" },
-  ["_content/box/a/Ref.memo.card"],
+  ["_content/box/a/Ref.doc.card"],
 )
 =>
 success
->> _content/box/a/Ref.memo.card
+>> _content/box/a/Ref.doc.card
 ---
-type: memo
+type: doc
 ref: /_content/box/b/Target.doc.card
 refs:
   - ../b/Target.doc.card
@@ -243,17 +244,17 @@ destinations:
 await moved(
   {
     "_content/store/notes/Plan.doc.card": "---\ntype: doc\ntitle: Plan\n---\nbody\n",
-    "_content/store/notes/Index.memo.card":
-      "---\ntype: memo\nitems:\n  - ref: Plan.doc.card\n    note: rel\n  - ref: /_content/store/notes/Plan.doc.card\n---\nbody\n",
+    "_content/store/notes/Index.doc.card":
+      "---\ntype: doc\nitems:\n  - ref: Plan.doc.card\n    note: rel\n  - ref: /_content/store/notes/Plan.doc.card\n---\nbody\n",
   },
   { from: "_content/store/notes/Plan.doc.card", to: "_bookkeeping/archive/Plan.doc.card" },
-  ["_content/store/notes/Index.memo.card"],
+  ["_content/store/notes/Index.doc.card"],
 )
 =>
 success
->> _content/store/notes/Index.memo.card
+>> _content/store/notes/Index.doc.card
 ---
-type: memo
+type: doc
 items:
   - ref: ../../../_bookkeeping/archive/Plan.doc.card
     note: rel
@@ -401,7 +402,7 @@ const links = await withBox(
     "_content/cap/Beach.image.card": "---\ntitle: Beach\n---\n",
     "_content/notes/trip.doc.card": "---\ntitle: Trip\n---\n![b](/_content/cap/Beach.image.card)\n",
   },
-  async (box) => {
+  async (box: TmpBox) => {
     await mv(box, { from: "_content/cap/Beach.image.card", to: "_content/cap/Beach walk.image.card" });
     const trip = await box.read("_content/notes/trip.doc.card");
     const spaced = trip.includes("![b](</_content/cap/Beach walk.image.card>)");
@@ -426,10 +427,10 @@ await moved(
   {
     "_content/box/Old_Name.doc.card": "---\ntype: doc\ntitle: Old\n---\nbody\n",
     "_content/box/Old_Name.attach/note.txt": "hi",
-    "_content/box/ref.memo.card": "---\ntype: memo\nref: /_content/box/Old_Name.doc.card\n---\nlink [n](Old_Name.attach/note.txt)\n",
+    "_content/box/ref.doc.card": "---\ntype: doc\nref: /_content/box/Old_Name.doc.card\n---\nlink [n](Old_Name.attach/note.txt)\n",
   },
   { from: "_content/box/Old_Name.doc.card", to: "_content/box/New_Name.doc.card" },
-  ["_content/box/", "_content/box/ref.memo.card"],
+  ["_content/box/", "_content/box/ref.doc.card"],
 )
 =>
 success
@@ -437,10 +438,10 @@ success
 _content/box/New_Name.attach
 _content/box/New_Name.attach/note.txt
 _content/box/New_Name.doc.card
-_content/box/ref.memo.card
->> _content/box/ref.memo.card
+_content/box/ref.doc.card
+>> _content/box/ref.doc.card
 ---
-type: memo
+type: doc
 ref: /_content/box/New_Name.doc.card
 ---
 link [n](New_Name.attach/note.txt)
@@ -466,16 +467,16 @@ const FENCE = "`".repeat(3);
 const text = await moved(
   {
     "_content/store/notes/Plan.doc.card": "---\ntype: doc\ntitle: Plan\n---\nbody\n",
-    "_content/store/notes/Index.memo.card":
-      "---\ntype: memo\nref: Plan.doc.card  # the plan\nitems:\n  - ref: Plan.doc.card # also\n" +
+    "_content/store/notes/Index.doc.card":
+      "---\ntype: doc\nref: Plan.doc.card  # the plan\nitems:\n  - ref: Plan.doc.card # also\n" +
       "notes: |\n  Write it as:\n  - ref: Plan.doc.card\n---\n" +
       "Inline [plan](Plan.doc.card).\n" +
       FENCE + "md\nFenced [plan](Plan.doc.card)\n" + FENCE + "\n",
   },
   { from: "_content/store/notes/Plan.doc.card", to: "_bookkeeping/archive/Plan.doc.card" },
-  ["_content/store/notes/Index.memo.card"],
+  ["_content/store/notes/Index.doc.card"],
 );
-text.split("\n").filter((line) => line.includes("Plan.doc.card")).join("\n")
+text.split("\n").filter((line: string) => line.includes("Plan.doc.card")).join("\n")
 =>
 ref: ../../../_bookkeeping/archive/Plan.doc.card  # the plan
   - ref: ../../../_bookkeeping/archive/Plan.doc.card # also
@@ -519,19 +520,19 @@ Mail [d](mailto:dana.doc.card), view [l](view:Ledger.doc.card).
 await moved(
   {
     "_content/box/A.doc.card": "---\ntype: doc\n---\nbody\n",
-    "_content/box/B.memo.card": "---\ntype: memo\nref: /_content/box/A.doc.card\n---\nx\n",
+    "_content/box/B.doc.card": "---\ntype: doc\nref: /_content/box/A.doc.card\n---\nx\n",
   },
   { from: "_content/box/A.doc.card", to: "_content/store/A.doc.card", dryRun: true },
-  ["_content/box/", "_content/box/B.memo.card"],
+  ["_content/box/", "_content/box/B.doc.card"],
 )
 =>
 success
 >> ls _content/box
 _content/box/A.doc.card
-_content/box/B.memo.card
->> _content/box/B.memo.card
+_content/box/B.doc.card
+>> _content/box/B.doc.card
 ---
-type: memo
+type: doc
 ref: /_content/box/A.doc.card
 ---
 x
@@ -545,17 +546,17 @@ dir) under the destination.
 ```ts
 await moved(
   {
-    "_content/inbox/One.memo.card": "---\ntype: memo\n---\none\n",
-    "_content/inbox/Two.memo.card": "---\ntype: memo\n---\ntwo\n",
+    "_content/inbox/One.doc.card": "---\ntype: doc\n---\none\n",
+    "_content/inbox/Two.doc.card": "---\ntype: doc\n---\ntwo\n",
   },
-  { from: ["_content/inbox/One.memo.card", "_content/inbox/Two.memo.card"], to: "_content/store/kept/" },
+  { from: ["_content/inbox/One.doc.card", "_content/inbox/Two.doc.card"], to: "_content/store/kept/" },
   ["_content/store/kept/"],
 )
 =>
 success
 >> ls _content/store/kept
-_content/store/kept/One.memo.card
-_content/store/kept/Two.memo.card
+_content/store/kept/One.doc.card
+_content/store/kept/Two.doc.card
 ```
 
 ## Errors
@@ -569,8 +570,8 @@ cards to a single file destination is rejected.
   notACard: await rejected({}, { from: "_content/box/notes.txt", to: "_content/store/notes.txt" }),
   mdToCard: await rejected({ "_content/box/notes.md": "# Notes\n" }, { from: "_content/box/notes.md", to: "_content/store/Notes.doc.card" }),
   manyToFile: await rejected(
-    { "_content/box/A.memo.card": "---\ntype: memo\n---\n", "_content/box/B.memo.card": "---\ntype: memo\n---\n" },
-    { from: ["_content/box/A.memo.card", "_content/box/B.memo.card"], to: "_content/store/C.memo.card" },
+    { "_content/box/A.doc.card": "---\ntype: doc\n---\n", "_content/box/B.doc.card": "---\ntype: doc\n---\n" },
+    { from: ["_content/box/A.doc.card", "_content/box/B.doc.card"], to: "_content/store/C.doc.card" },
   ),
 })
 => {
@@ -619,7 +620,7 @@ const result = await withBox(
     "_content/index.doc.card": "---\ntitle: Index\n---\n[S](/_content/notes/saoirse.md)\n",
     "_content/other.md": "[S](notes/saoirse.md)\n",
   },
-  async (box) => {
+  async (box: TmpBox) => {
     const first = await mv(box, { from: "_content/notes/saoirse.md", to: "_content/dossiers/" });
     const firstMove = {
       success: first.success,

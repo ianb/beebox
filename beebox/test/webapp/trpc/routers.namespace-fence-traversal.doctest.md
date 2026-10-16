@@ -22,9 +22,11 @@ import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { cardRouter } from "../../../src/webapp/trpc/routers/card.js";
 import { statusRouter } from "../../../src/webapp/trpc/routers/status.js";
 import { historyRouter } from "../../../src/webapp/trpc/routers/history.js";
+import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";
 
 /** The message a display-form-rejecting tRPC procedure throws, or "ok". */
@@ -37,16 +39,26 @@ async function trpcDisplayFormMessage(fn: () => Promise<unknown>): Promise<strin
   }
 }
 
-interface TestCtx {
-  boxRoot: string;
-  boxSlug: string;
-  user: null;
-  authed: boolean;
-  isOwner: boolean;
+/** An owner context for the box at `boxRoot`; the fence under test reads only the path. */
+function ownerCtx(boxRoot: string): TrpcContext {
+  return trpcContext({ boxRoot, boxSlug: "t", isAuthenticatedOwner: true });
+}
+
+/** The `error` string of a JSON error body. */
+function errorOf(body: unknown): unknown {
+  return typeof body === "object" && body !== null && "error" in body ? body.error : undefined;
+}
+
+/** The `cards` array of a browse response body. */
+function cardsOf(body: unknown): { name: string; conflict?: boolean }[] {
+  if (typeof body !== "object" || body === null || !("cards" in body) || !Array.isArray(body.cards)) {
+    throw new Error("browse body has no cards array");
+  }
+  return body.cards;
 }
 
 /** Whether `card.get(cardPath)` throws (any error — the fence rejects with BAD_REQUEST). */
-async function cardGetThrows(ctx: TestCtx, cardPath: string): Promise<boolean> {
+async function cardGetThrows(ctx: TrpcContext, cardPath: string): Promise<boolean> {
   try {
     await cardRouter.createCaller(ctx).get({ path: cardPath });
     return false;
@@ -157,7 +169,7 @@ tRPC input travels as a plain string (no URL encoding involved), so the raw
 traversal string reaches `resolveCardPath` directly:
 
 ```ts continue
-const ctx: TestCtx = { boxRoot: server.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+const ctx = ownerCtx(server.boxRoot);
 await cardGetThrows(ctx, "_content/../package.json")
 => true
 ```
@@ -218,7 +230,7 @@ const filesDisplayRes = await server.request({ method: "GET", url: "/api/files/C
 filesDisplayRes.statusCode
 => 400
 
-filesDisplayRes.body.error
+errorOf(filesDisplayRes.body)
 => `Config:box.json` is the boxholder's display form; write `/_config/box.json`
 
 const browseDisplayRes = await server.request({ method: "GET", url: "/api/browse/Config:box.json" });
@@ -305,7 +317,7 @@ symBrowseDeeperRes.statusCode
 `card.get` (tRPC) refuses the same path:
 
 ```ts continue
-const symCtx: TestCtx = { boxRoot: symServer.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+const symCtx = ownerCtx(symServer.boxRoot);
 await cardGetThrows(symCtx, "_content/pkg/package.json")
 => true
 ```
@@ -387,7 +399,7 @@ await annexServer.cleanup();
 The directory fence above (`/api/browse/_content/pkg`) only checks the
 listing TARGET. A separate hazard: the target directory itself is fine, but
 one CHILD entry inside it is a symlink whose target resolves outside the
-namespace (e.g. `_content/alias.memo.card -> ../src/private.memo.card`) —
+namespace (e.g. `_content/alias.doc.card -> ../src/private.doc.card`) —
 before this fix, the child loop's `loadCardFrontmatter` followed that symlink
 and returned the external card's frontmatter straight into the listing. The
 escaping child is now silently omitted; a normal sibling card still lists.
@@ -396,16 +408,16 @@ escaping child is now silently omitted; a normal sibling card still lists.
 const escServer = await makeTestServer();
 await mkdir(join(escServer.boxRoot, "src"), { recursive: true });
 await writeFile(
-  join(escServer.boxRoot, "src", "private.memo.card"),
-  '---\nconflict: true\ncreated: "2026-01-01T00:00:00.000Z"\n---\nPrivate.\n',
+  join(escServer.boxRoot, "src", "private.doc.card"),
+  '---\nconflict: true\ntitle: Private\n---\nPrivate.\n',
 );
-await escServer.seed("_content/Normal.memo.card", '---\ncreated: "2026-01-01T00:00:00.000Z"\n---\nNormal.\n');
-await symlink(join("..", "src", "private.memo.card"), join(escServer.boxRoot, "_content", "alias.memo.card"));
+await escServer.seed("_content/Normal.doc.card", '---\ntitle: Normal\n---\nNormal.\n');
+await symlink(join("..", "src", "private.doc.card"), join(escServer.boxRoot, "_content", "alias.doc.card"));
 
 const escBrowseRes = await escServer.request({ method: "GET", url: "/api/browse/_content" });
 JSON.stringify({
-  names: escBrowseRes.body.cards.map((c) => c.name).sort(),
-  conflicts: escBrowseRes.body.cards.map((c) => c.conflict === true),
+  names: cardsOf(escBrowseRes.body).map((c) => c.name).sort(),
+  conflicts: cardsOf(escBrowseRes.body).map((c) => c.conflict === true),
 })
 => {"names":["Normal"],"conflicts":[false]}
 ```

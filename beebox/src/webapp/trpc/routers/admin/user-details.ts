@@ -6,7 +6,7 @@ import { listUsers, type LocalUser } from "../../../local-users.js";
 type AllowedUserKind = "local-member" | "local-owner" | "owner-entry" | "access-only" | "unknown";
 type LocalPasswordStatus = "ready" | "unavailable";
 
-interface AllowedUserDetail {
+export interface AllowedUserDetail {
   email: string;
   kind: AllowedUserKind;
   resetEligible: boolean;

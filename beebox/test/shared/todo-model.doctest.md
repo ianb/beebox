@@ -6,6 +6,7 @@ absolute/relative date parsing, attribute validation, and the box-local
 plate-state truth table.
 
 ```ts setup
+import assert from "node:assert/strict";
 import {
   isTodoStatus,
   parseIsoDate,
@@ -189,7 +190,7 @@ errIds(noAttrs({ recheck: "next month" }))
 =>
 todo-invalid-recheck
 
-validateTodoAttributes(noAttrs({ recheck: "Never" }))[0].message
+validateTodoAttributes(noAttrs({ recheck: "Never" }))[0]?.message
 => {% todo %} `recheck` must be an ISO date (YYYY-MM-DD) or "never": "Never"
 ```
 
@@ -199,6 +200,7 @@ defers nothing (validation is what reports it).
 
 ```ts
 const today = parseIsoDate("2026-09-25");
+assert.ok(today !== null);
 JSON.stringify(["2026-09-26", "2026-09-25", "2026-09-01", "never", undefined, "soon"].map((r) => recheckDefers(r, today)))
 => [true,false,false,true,false,false]
 ```

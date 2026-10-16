@@ -6,6 +6,7 @@ highlights it with highlight.js — the same highlighter and the same palette as
 
 ```ts setup
 import React from "react";
+import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 
@@ -22,7 +23,7 @@ import {
 } from "../../../src/frontend/components/CodeBlock.js";
 import { Markdown } from "../../../src/frontend/components/Markdown.js";
 
-const render = (element) => renderToStaticMarkup(element);
+const render = (element: ReactElement) => renderToStaticMarkup(element);
 ```
 
 The extensions the repository actually holds map to a registered grammar. A

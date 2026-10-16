@@ -354,7 +354,7 @@ const report = await lintCardsDispatch(
   [box.path("_content/store/notes/Empty.doc.card")],
   { boxRoot: box.root, ctx, canonical: true },
 );
-report.results[0].warnings.map((w) => `${w.type}: ${w.message}`).join("\n")
+report.results[0]?.warnings.map((w) => `${w.type}: ${w.message}`).join("\n")
 =>
 reference: Broken reference at ref:  does not exist
 reference: Broken reference at refs[0]: #only does not exist

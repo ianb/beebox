@@ -13,7 +13,8 @@ base64 image payloads) — the allocation class that OOM'd `bbx serve`. A
 ```ts setup
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import {
   discoverSessions,
@@ -51,7 +52,7 @@ function bulk(uuid: string) {
  * omitted by default — a pre-Track-2 husk, which discovery claims on the
  * strength of the transcript being here.
  */
-async function seed(box, opts: { sessionId: string; entries: object[]; agoHours: number; origin?: string }) {
+async function seed(box: TmpBox, opts: { sessionId: string; entries: object[]; agoHours: number; origin?: string }) {
   const originLine = opts.origin === undefined ? "" : `origin: ${opts.origin}\n`;
   await box.write(`_content/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
     `---\nsession: ${opts.sessionId}\n${originLine}---\n\n`);
@@ -62,7 +63,7 @@ async function seed(box, opts: { sessionId: string; entries: object[]; agoHours:
   await utimes(logPath, when, when);
 }
 
-async function discover(box) {
+async function discover(box: TmpBox) {
   await writeFile(box.path("origin-id"), `${LOCAL_ORIGIN}\n`);
   process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
   return discoverSessions(box.root, {
@@ -82,6 +83,7 @@ process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 await seed(box, { sessionId: "sessone", entries: [bulk("a1"), bulk("a2")], agoHours: 5 });
 const result = await discover(box);
 const session = result.qualified[0];
+assert.ok(session);
 
 Object.keys(session).sort().join(",")
 => bootstrap,huskPath,logPath,mtime,needsMetadata,sessionId,snippetTitle,spanChars,titleBootstrap,titleSpanChars,userTurns
@@ -125,7 +127,9 @@ const window = await readSessionWindow({
   sessionId: "sessone",
   logPath: session.logPath,
   state: await loadReviewState(box.root),
+  consumer: "metadata",
 });
+assert.ok(window);
 JSON.stringify({
   spanEntries: window.entries.length,
   bootstrap: window.bootstrap,
@@ -141,6 +145,7 @@ await readSessionWindow({
   sessionId: "nosuch",
   logPath: box.path("claude-projects/nosuch.jsonl"),
   state: await loadReviewState(box.root),
+  consumer: "metadata",
 })
 => null
 ```
@@ -287,9 +292,10 @@ const window = await readSessionWindow({
   state: await loadReviewState(box.root),
   consumer: "metadata",
 });
+assert.ok(window);
 JSON.stringify({
   bootstrap: window.bootstrap,
-  first: window.entries[0].uuid,
+  first: window.entries[0]?.uuid,
   spanEntries: window.entries.length,
   endIndex: window.endIndex,
   clipped: window.clipped,
@@ -334,6 +340,7 @@ await seed(tbox, {
 });
 const result = await discover(tbox);
 const session = result.qualified[0];
+assert.ok(session);
 JSON.stringify({
   needsMetadata: session.needsMetadata,
   titleSpanChars: session.titleSpanChars > 100,

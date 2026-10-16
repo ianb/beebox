@@ -12,49 +12,52 @@ attribute, commits with webapp trailers, and announces a `file-change`.
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
-const events = [];
+const events: string[] = [];
 
-function caller(boxRoot, options) {
-  return appRouter.createCaller({
+function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean }) {
+  const ctx: TrpcContext = trpcContext({
     boxRoot,
-    boxSlug: "test",
     eventBus: {
       emit: () => 0,
-      emitTransient: (name, data) => { events.push(`${name} ${data.path}`); },
+      emitTransient: (name, data) => { events.push(`${name} ${"path" in data ? data.path : undefined}`); },
       readSince: () => [],
+      readRecent: () => [],
       subscribe: () => ({ unsubscribe: () => {} }),
       prune: () => 0,
       close: () => {},
     },
-    services: {},
-    user: null,
     authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
+    isAuthenticatedOwner: options?.isOwner !== false,
   });
+  return appRouter.createCaller(ctx);
 }
 
-function lastCommit(root) {
+function lastCommit(root: string) {
   return execFileSync("git", ["log", "-1", "--format=%s%n%(trailers:only,unfold)"], { cwd: root, encoding: "utf8" }).trim();
 }
 
-function commitCount(root) {
+function commitCount(root: string) {
   return execFileSync("git", ["rev-list", "--count", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
 }
 
 /** The error code a refused call rejects with, or "accepted". */
-function outcome(promise) {
-  return promise.then(() => "accepted", (error) => `${error.code}: ${error.message}`);
+function outcome(promise: Promise<unknown>): Promise<string> {
+  return promise.then(() => "accepted", (error: unknown) => (error instanceof TRPCError ? `${error.code}: ${error.message}` : String(error)));
 }
 
-const cardPath = "_content/Porch.memo.card";
+const cardPath = "_content/Porch.doc.card";
 const original = [
   "---",
-  "status: new",
-  "created: 2026-07-01T10:00:00Z",
   "title: Porch",
+  "via:",
+  "  channel: email",
   "todos:",
   "  - text: Call the inspector",
   "    due: 2026-10-01",
@@ -98,7 +101,7 @@ Source: webapp
 Endpoint: todos.setStatus
 
 JSON.stringify(events)
-=> ["file-change _content/Porch.memo.card"]
+=> ["file-change _content/Porch.doc.card"]
 ```
 
 Reopening removes the attribute (absence means open), and the file is back
@@ -208,8 +211,8 @@ await outcome(caller(box.root).todos.setStatus({
 A card whose frontmatter no longer parses has no todos to address:
 
 ```ts continue
-const brokenPath = "_content/Broken.memo.card";
-await box.write(brokenPath, "---\nstatus: [not, a, status]\ntodos:\n  - text: Fix it\n---\n{% todo %}Fix it{% /todo %}\n");
+const brokenPath = "_content/Broken.doc.card";
+await box.write(brokenPath, "---\ntitle: [not, a, title]\ntodos:\n  - text: Fix it\n---\n{% todo %}Fix it{% /todo %}\n");
 box.commitAll("broken");
 const brokenBefore = await box.read(brokenPath);
 await outcome(caller(box.root).todos.setStatus({
@@ -270,7 +273,7 @@ const warned = await caller(box.root).todos.setStatus({
 });
 console.error = originalError;
 await fs.rm(hook);
-JSON.stringify([warned.commit, warned.commitWarning, (await box.read(cardPath)).split("\n")[11].startsWith('{% todo status="done"')])
+JSON.stringify([warned.commit, warned.commitWarning, (await box.read(cardPath)).split("\n")[11]?.startsWith('{% todo status="done"')])
 => [null,"Saved, but the Git commit failed.",true]
 ```
 

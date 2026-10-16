@@ -12,10 +12,11 @@ in `hub-router.doctest.md`.
 
 ```ts setup
 import { isBoxBroken, hubVerdict } from "../../src/hub/health.js";
+import type { BoxRuntimeStatus, BoxRunStatus } from "../../src/hub/box-status.js";
 
 /** A `BoxRuntimeStatus` with the fields the verdict ignores defaulted, so each
  *  case states only what it's testing. */
-function box(status, extra = {}) {
+function box(status: BoxRunStatus, extra: Partial<BoxRuntimeStatus> = {}): BoxRuntimeStatus {
   return { slug: "b", status, pid: undefined, port: undefined, restarts: 0, consecutiveFailures: 0, lastError: undefined, lastStart: undefined, ...extra };
 }
 ```

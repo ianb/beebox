@@ -16,12 +16,13 @@ host because Markdoc identifies tags by a string check, so the assertions below
 fail if any tag's content is missing.
 
 ```ts setup
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
+import { buildProps } from "../../../src/cli/commands/view/command.js";
 import { loadViewCards } from "../../../src/core/views/cards.js";
 
 await buildPluginBundlesIntoDist();
@@ -35,16 +36,16 @@ const SCHEMA_STUB = `import { cardSchema } from "beebox/cards";
 import recipe from "beebox/plugins/recipe";
 export default cardSchema("recipe", recipe.schemas["recipe"]);
 `;
-async function activateRecipe(box) {
+async function activateRecipe(box: TmpBox) {
   await box.write("_config/box.json", JSON.stringify({ plugins: ["recipe"] }, null, 2) + "\n");
   await mkdir(join(box.root, "src", "schemas"), { recursive: true });
   await writeFile(join(box.root, "src", "schemas", "recipe.ts"), SCHEMA_STUB);
 }
 
 /** What `bbx view test` does after compiling: props from the real card loader, rendered in the node view host. */
-async function renderRecipe(box, params) {
+async function renderRecipe(box: TmpBox, params: Record<string, string>) {
   const { cards, files } = await loadViewCards(box.root, ["**/*.recipe.card"]);
-  const props = { cards, files, params, boxSlug: "test", navigate: () => {}, reportActivity: () => {} };
+  const props = buildProps({ cards, files, params, boxSlug: "test" });
   return renderToString(createElement(NodeViewHostProvider, { boxSlug: "test", children: createElement(view.default, props) }));
 }
 

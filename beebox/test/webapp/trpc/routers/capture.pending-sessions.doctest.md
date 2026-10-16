@@ -8,17 +8,14 @@ staging manifests via `listStagingSessions` and filters with `selectPendingCaptu
 
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createStagingSession, addPhoto, setStagingState } from "../../../../src/core/capture/staging-store/core.js";
 
 // Minimal tRPC context — pendingSessions only reads ctx.boxRoot.
-function caller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-  };
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 ```

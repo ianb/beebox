@@ -10,6 +10,7 @@ field, never a specific message), and unchanged success shapes
 
 ```ts setup
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { bodyField } from "../../../helpers/doctest-helpers.js";
 import { resolveChannel } from "../../../../src/webapp/routes/chat/helpers.js";
 
 const ctx = await makeTestServer();
@@ -18,7 +19,7 @@ const image = (img: Record<string, unknown>) => ({ message: "hi", session: "new"
 // One line per request: "<status> <error>".
 async function send(payload: Record<string, unknown>): Promise<string> {
   const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload });
-  return `${res.statusCode} ${res.body.error}`;
+  return `${res.statusCode} ${bodyField(res.body, "error")}`;
 }
 ```
 
@@ -50,7 +51,7 @@ const res = await ctx.request({
   url: "/api/chat/send",
   payload: { message: "hi", session: "55555555-5555-4555-8555-555555555555" },
 });
-({ status: res.statusCode, code: res.body.code })
+({ status: res.statusCode, code: bodyField(res.body, "code") })
 => { status: 410, code: "CHAT_SESSION_UNAVAILABLE" }
 ```
 

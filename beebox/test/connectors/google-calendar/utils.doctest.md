@@ -3,7 +3,7 @@
 Parsing and formatting utilities for `.ics` calendar files. `parseIcsContent` extracts events from iCalendar data. `formatEvent` produces terminal-friendly display strings. `parseTimespan` converts shorthand like `"7d"` into milliseconds.
 
 ```ts setup
-import { parseIcsContent, formatEvent, parseTimespan, filterByDateRange } from "../../../src/connectors/google-calendar/utils.js";
+import { parseIcsContent, formatEvent, parseTimespan, filterByDateRange, type CalendarEvent } from "../../../src/connectors/google-calendar/utils.js";
 ```
 
 ## parseTimespan
@@ -45,13 +45,13 @@ const events = parseIcsContent(simpleIcs, { filename: "test.ics" });
 events.length
 => 1
 
-events[0].summary
+events[0]?.summary
 => Team Standup
 
-events[0].uid
+events[0]?.uid
 => test-123
 
-events[0].allDay
+events[0]?.allDay
 => false
 ```
 
@@ -70,10 +70,10 @@ END:VCALENDAR`;
 
 ```ts
 const ev = parseIcsContent(allDayIcs, { filename: "holiday.ics" })[0];
-ev.allDay
+ev?.allDay
 => true
 
-ev.summary
+ev?.summary
 => Company Holiday
 ```
 
@@ -114,13 +114,13 @@ END:VCALENDAR`;
 
 ```ts
 const meta = parseIcsContent(metaIcs, { filename: "play.ics" })[0];
-meta.calendarId
+meta?.calendarId
 => school-cal
 
-meta.calendarName
+meta?.calendarName
 => GRS School Calendar
 
-meta.calendarRole
+meta?.calendarRole
 => reader
 ```
 
@@ -129,7 +129,7 @@ meta.calendarRole
 Formats a `CalendarEvent` for terminal display. Owned calendar events show `[free]` only if transparent; subscribed calendar events show the calendar name in parens.
 
 ```ts setup
-function makeEvent(overrides) {
+function makeEvent(overrides: Partial<CalendarEvent>): CalendarEvent {
   return {
     uid: "test",
     summary: "Meeting",
@@ -199,6 +199,6 @@ const filtered = filterByDateRange(events, {
 filtered.length
 => 1
 
-filtered[0].uid
+filtered[0]?.uid
 => b
 ```

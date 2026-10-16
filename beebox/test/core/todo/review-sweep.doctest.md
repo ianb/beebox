@@ -9,14 +9,15 @@ todo-review check` owns the baseline and the brief
 (`test/cli/commands/todo-review.doctest.md`).
 
 ```ts setup
+import assert from "node:assert/strict";
 import { computeTodoReviewSets, boxTodayEpoch, toBriefItem } from "../../../src/core/todo/review-sweep.js";
 import { parseIsoDate } from "../../../src/shared/todo-model.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
-const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
+const DOC_FM = "title: Kitchen\ncontains: Notes on the kitchen remodel.\n";
 
-function memo(body: string): string {
-  return `---\n${MEMO_FM}---\n${body}`;
+function doc(body: string): string {
+  return `---\n${DOC_FM}---\n${body}`;
 }
 
 function setTime(iso: string): void {
@@ -49,7 +50,7 @@ async function sweep(root: string, since: string | null) {
 ```ts
 const box = await seedBox();
 setTime("2026-07-28T12:00:00.000Z");
-await box.write("store/a.memo.card", memo("Just a plain memo, no todos.\n"));
+await box.write("store/a.doc.card", doc("Just a plain doc, no todos.\n"));
 await sweep(box.root, null)
 => {"escalated":[],"stirring":[],"actionable":[],"stale":[]}
 ```
@@ -62,8 +63,8 @@ actionable: the future-start, deferred, done, and boxholder todos stay out.
 
 ```ts continue
 await box.write(
-  "store/b.memo.card",
-  memo(
+  "store/b.doc.card",
+  doc(
     '{% todo id="fix-escalated" due="2026-07-01" %}Escalated item{% /todo %}\n\n' +
     '{% todo id="fix-stirring" start="2026-07-20" due="2026-08-01" %}Stirring item{% /todo %}\n\n' +
     '{% todo id="fix-quiet" start="2026-08-05" due="2026-08-10" %}Quiet item{% /todo %}\n\n' +
@@ -106,7 +107,9 @@ await box.write(
   "---\ntitle: Porch rebuild\n---\n## Decking\n\n{% todo id=\"deck\" due=\"2026-07-01\" %}Order lumber{% /todo %}\n"
 );
 const sets = await computeTodoReviewSets(box.root, { lastSweepEpoch: 0, todayEpoch: await boxTodayEpoch(box.root), neverDefers: () => true });
-JSON.stringify(toBriefItem(sets.escalated.find((t) => t.id === "deck"), "escalated"))
+const deck = sets.escalated.find((t) => t.id === "deck");
+assert.ok(deck);
+JSON.stringify(toBriefItem(deck, "escalated"))
 => {"locator":"store/Porch.doc.card:6","text":"Order lumber","detail":"due 2026-07-01","card":"Porch rebuild","section":"Decking"}
 ```
 
@@ -130,8 +133,8 @@ const boxTz = await makeTmpBox({ git: true });
 await boxTz.write("_config/box.json", JSON.stringify({ timezone: "Pacific/Kiritimati" }));
 setTime("2026-07-28T23:00:00.000Z"); // 2026-07-29, 13:00 local in Pacific/Kiritimati
 await boxTz.write(
-  "store/f.memo.card",
-  memo('{% todo id="just-turned-stale" created="2026-06-13" %}Undated, aging{% /todo %}\n')
+  "store/f.doc.card",
+  doc('{% todo id="just-turned-stale" created="2026-06-13" %}Undated, aging{% /todo %}\n')
 );
 await sweep(boxTz.root, null)
 => {"escalated":[],"stirring":[],"actionable":[],"stale":["just-turned-stale"]}
@@ -152,8 +155,8 @@ it out for good. A done todo is out regardless.
 const boxR = await seedBox();
 setTime("2026-07-28T12:00:00.000Z");
 await boxR.write(
-  "store/r.memo.card",
-  memo(
+  "store/r.doc.card",
+  doc(
     '{% todo id="later" due="2026-07-01" recheck="2026-08-10" %}Escalated, recheck ahead{% /todo %}\n\n' +
     '{% todo id="today" due="2026-07-01" recheck="2026-07-28" %}Escalated, recheck today{% /todo %}\n\n' +
     '{% todo id="retired" created="2026-01-01" recheck="never" %}Stale, retired{% /todo %}\n\n' +

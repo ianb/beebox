@@ -599,9 +599,9 @@ stray card doesn't brick a box's pre-commit/automation:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Broken.memo.card", "this is not a frontmatter card\n");
+await box.write("_content/inbox/Broken.doc.card", "this is not a frontmatter card\n");
 const result = await lintCardsDispatch(
-  [box.path("_content/inbox/Broken.memo.card")],
+  [box.path("_content/inbox/Broken.doc.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
@@ -1126,11 +1126,11 @@ await scopedBox.write(
   "---\ntype: dish\ntitle: Soup\n---\nAdd {% garnish amount=\"2\" %}parsley{% /garnish %}.\n",
 );
 await scopedBox.write(
-  "_content/box/Memo.doc.card",
-  "---\ntype: doc\ntitle: Memo\n---\nAdd {% garnish amount=\"2\" %}parsley{% /garnish %}.\n",
+  "_content/box/Notes.doc.card",
+  "---\ntype: doc\ntitle: Notes\n---\nAdd {% garnish amount=\"2\" %}parsley{% /garnish %}.\n",
 );
 const scopedResult = await lintCardsDispatch(
-  [scopedBox.path("_content/box/Soup.dish.card"), scopedBox.path("_content/box/Memo.doc.card")],
+  [scopedBox.path("_content/box/Soup.dish.card"), scopedBox.path("_content/box/Notes.doc.card")],
   { boxRoot: scopedBox.root, ctx: scopedCtx },
 );
 scopedResult.results.map((r) => r.warnings.filter((w) => w.message.includes("Undefined tag")).length)
@@ -1151,6 +1151,6 @@ await retiredBox.write(
   "---\ntype: doc\ntitle: Old\n---\n{% purpose %}\nP\n{% /purpose %}\n\n{% correction %}\nC\n{% /correction %}\n\n{% image ref=\"attach/a.image.card\" /%}\n\n{% silence duration=\"9s\" /%}\n",
 );
 const retired = await lintCardsDispatch([retiredBox.path("_content/box/Old.doc.card")], { boxRoot: retiredBox.root, ctx });
-retired.results[0].warnings.filter((w) => w.message.includes("Undefined tag")).map((w) => w.message.match(/'([a-z]+)'/)?.[1])
+retired.results[0]?.warnings.filter((w) => w.message.includes("Undefined tag")).map((w) => w.message.match(/'([a-z]+)'/)?.[1])
 => ["purpose", "correction", "image", "silence"]
 ```

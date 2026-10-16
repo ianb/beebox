@@ -13,6 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { notifyBoxholder } from "../../../src/core/notify-boxholder.js";
 import { livePresence } from "../../../src/core/notification/presence.js";
@@ -21,6 +22,8 @@ import { addSubscription } from "../../../src/core/push-subscriptions.js";
 import { pairFakePushDevice } from "../../../src/core/mobile/pairing.js";
 import { createFakePush } from "../../../src/services/push.js";
 import { createFakeApns } from "../../../src/services/apns.js";
+import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
+import { TRPCError } from "@trpc/server";
 
 const storeDir = path.join(os.tmpdir(), `bbx-notifications-router-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
@@ -28,26 +31,21 @@ for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY
 
 const box = await makeTmpBox({ git: true });
 
-function caller(over) {
-  return appRouter.createCaller({
+function caller(over: Partial<TrpcContext>) {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: box.root,
     boxSlug: "alpha",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-    actor: "user",
     ...over,
   });
+  return appRouter.createCaller(ctx);
 }
 
-async function attempt(fn) {
+async function attempt(fn: () => Promise<unknown>) {
   try {
     return await fn();
   } catch (e) {
-    return `THREW:${e.code}`;
+    return `THREW:${e instanceof TRPCError ? e.code : String(e)}`;
   }
 }
 ```
@@ -163,7 +161,7 @@ boxholder's phone is the box's voice. An unauthenticated request never gets
 that far.
 
 ```ts continue
-const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "doctest" };
+const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "doctest" } as const;
 (await caller({ services: { notify } }).notifications.send({ intent })).deliveries.length
 => 2
 

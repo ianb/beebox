@@ -8,21 +8,19 @@ verification URL and short-lived user code.
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeCodexCli } from "../../../../src/services/codex-cli/core.js";
 import { checkCodexAuth, resetCodexAuthCache } from "../../../../src/core/agent/auth-preflight.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 ```
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
-const ctx = {
+const ctx: TrpcContext = trpcContext({
   boxRoot: box.root,
-  boxSlug: "test",
-  eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
   services: { codexCli },
   user: { email: "owner@example.com", name: "Owner" },
-  authed: true,
-  isOwner: true,
-};
+});
 const admin = appRouter.createCaller(ctx).admin;
 ```
 

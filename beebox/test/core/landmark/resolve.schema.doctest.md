@@ -9,10 +9,12 @@ filing target.
 See `docs/landmarks.md` for the full design.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { utimes } from "node:fs/promises";
 import {
   createLandmarkTemplate,
   parseLandmarkFields,
+  type LandmarkNavigationData,
 } from "../../../src/schemas/landmark.js";
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
@@ -23,7 +25,7 @@ const card = (title: string) => `---\ntitle: ${title}\n---\n`;
 
 // Resolve a `Recipes` landmark's navigation over a throwaway box holding
 // `files` (box path -> title). `backdated` paths get a 2020 mtime, written first.
-async function resolveIn(files: Record<string, string>, navigation, backdated: string[] = []) {
+async function resolveIn(files: Record<string, string>, navigation: Partial<LandmarkNavigationData>, backdated: string[] = []) {
   const box = await makeTmpBox();
   try {
     for (const rel of backdated) await box.write(rel, card(files[rel]!));
@@ -69,7 +71,7 @@ destinations:
 value describes the place, not the file, so a reader must still see it.
 
 ```ts
-parseLandmarkFields("---\nnavigation:\n  label: Logs\nprominence: background\n---\n").prominence
+parseLandmarkFields("---\nnavigation:\n  label: Logs\nprominence: background\n---\n")?.prominence
 => background
 ```
 
@@ -185,8 +187,8 @@ label. The match is silently dropped, not surfaced as a broken link.
 
 ```ts
 const { links } = await resolveIn(
-  { "_content/recipes/Bread.recipe.card": "Bread", "src/private.memo.card": "Secret Memo" },
-  { expand: [{ query: "../../src/private.memo.card", "template-label": "${title}" }] },
+  { "_content/recipes/Bread.recipe.card": "Bread", "src/private.doc.card": "Secret Doc" },
+  { expand: [{ query: "../../src/private.doc.card", "template-label": "${title}" }] },
 );
 links.length
 => 0
@@ -302,8 +304,9 @@ destinations:
     rules: Articles saved for close reading and commentary.
 ---
 `);
+assert.ok(fields);
 const dest = findDestination(fields.destinations, "commentary");
-JSON.stringify(dest.for)
+JSON.stringify(dest?.for)
 => ["triage","commentary"]
 
 findDestination(fields.destinations, "triage") === dest
@@ -314,6 +317,7 @@ A landmark without a matching destination returns null:
 
 ```ts continue
 const navOnly = parseLandmarkFields("---\nnavigation:\n  label: Just a bookmark\n---\n");
+assert.ok(navOnly);
 findDestination(navOnly.destinations, "triage")
 => null
 ```

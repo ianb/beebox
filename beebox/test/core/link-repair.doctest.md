@@ -7,11 +7,11 @@ missing target is reported for an agent to resolve — never guessed.
 
 ```ts setup
 import { repairBoxLinks } from "../../src/core/link-repair.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-async function write(box, rel, content) {
+async function write(box: TmpBox, rel: string, content: string) {
   const abs = join(box.root, rel);
   await mkdir(dirname(abs), { recursive: true });
   await writeFile(abs, content);

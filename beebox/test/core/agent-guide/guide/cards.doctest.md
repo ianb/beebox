@@ -21,11 +21,11 @@ import { z } from "zod";
 ## Groups by category and carries each type's description
 
 ```ts
-const authored: CardSchema = cardSchema("memo", {
+const authored: CardSchema = cardSchema("note", {
   description: "a captured note",
   category: "authored",
   fields: { status: z.string() },
-  instructions: "How to memo.",
+  instructions: "How to note.",
 });
 const system: CardSchema = cardSchema("backfill-job", {
   description: "reactor bookkeeping",
@@ -36,7 +36,7 @@ const system: CardSchema = cardSchema("backfill-job", {
 const text = cardTypesList({ allCardSchemas: [authored, system] });
 const lines = text.split("\n");
 // A built-in type with instructions links its doc in the package
-lines.includes("- **memo** — a captured note → `node_modules/beebox/box-docs/card-memo.md`")
+lines.includes("- **note** — a captured note → `node_modules/beebox/box-docs/card-note.md`")
 => true
 
 lines.includes("- **backfill-job** — reactor bookkeeping")
@@ -58,13 +58,13 @@ words or fewer; the longer `description` is the package-docs index row. A
 schema without a brief (a box-local one) falls back to its description.
 
 ```ts
-const briefed: CardSchema = cardSchema("memo", {
+const briefed: CardSchema = cardSchema("note", {
   brief: "A captured note",
   description: "a captured text or voice note awaiting processing",
   category: "authored",
   fields: { status: z.string() },
 });
-cardTypesList({ allCardSchemas: [briefed] }).split("\n").includes("- **memo** — A captured note")
+cardTypesList({ allCardSchemas: [briefed] }).split("\n").includes("- **note** — A captured note")
 => true
 
 // Every built-in schema declares a brief of at most five words
@@ -80,17 +80,17 @@ schema reuses a built-in's type it shadows it (last write wins, as in
 `createCardSchemaMap`), so the list carries one entry pointing at the box doc.
 
 ```ts
-const builtinMemo: CardSchema = cardSchema("memo", {
+const builtinNote: CardSchema = cardSchema("note", {
   description: "a captured note",
   category: "authored",
   fields: { status: z.string() },
-  instructions: "How to memo.",
+  instructions: "How to note.",
 });
-const boxMemo: CardSchema = cardSchema("memo", {
-  description: "this box's memo",
+const boxNote: CardSchema = cardSchema("note", {
+  description: "this box's note",
   category: "authored",
   fields: { status: z.string(), mood: z.string() },
-  instructions: "How THIS box memos.",
+  instructions: "How THIS box notes.",
 });
 const boxOnly: CardSchema = cardSchema("widget", {
   description: "a box-local type",
@@ -99,10 +99,10 @@ const boxOnly: CardSchema = cardSchema("widget", {
   instructions: "How to widget.",
 });
 
-const text = cardTypesList({ allCardSchemas: [builtinMemo, boxMemo, boxOnly], boxCardSchemas: [boxMemo, boxOnly] });
+const text = cardTypesList({ allCardSchemas: [builtinNote, boxNote, boxOnly], boxCardSchemas: [boxNote, boxOnly] });
 const lines = text.split("\n");
-lines.filter((l) => l.startsWith("- **memo**")).join(" | ")
-=> - **memo** — this box's memo → `_content/docs/generated/card-memo.md`
+lines.filter((l) => l.startsWith("- **note**")).join(" | ")
+=> - **note** — this box's note → `_content/docs/generated/card-note.md`
 
 lines.includes("- **widget** — a box-local type → `_content/docs/generated/card-widget.md`")
 => true

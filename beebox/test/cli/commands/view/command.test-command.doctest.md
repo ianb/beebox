@@ -5,7 +5,7 @@ server — and prints the output, or on failure the error with a source-mapped
 stack. It loads the same cards the running app would pass the view.
 
 ```ts setup
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -26,14 +26,20 @@ async function makeViewBox() {
 }
 
 // Views live at `<boxRoot>/src/views`.
-async function writeView(box, rel, content) {
+async function writeView(box: TmpBox, rel: string, content: string) {
   const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);
 }
 
 // Run the prebuilt CLI with the box as cwd (requireBoxRoot walks up from there).
-function runViewTest(boxRoot, args) {
+interface ViewTestResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+function runViewTest(boxRoot: string, args: string[]): Promise<ViewTestResult> {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [join(PKG, "dist/cli.mjs"), "view", "test", ...args], { cwd: boxRoot });
     let stdout = "";
@@ -44,9 +50,9 @@ function runViewTest(boxRoot, args) {
   });
 }
 
-const MEMO_CARD = `---
-status: new
-created: 2026-03-01T12:00:00Z
+const DOC_CARD = `---
+title: Note
+sources: []
 ---
 Body
 `;
@@ -58,8 +64,8 @@ A view that renders off its `cards` prop produces HTML and exits 0:
 
 ```ts
 const box = await makeViewBox();
-await box.write("_content/inbox/A.memo.card", MEMO_CARD);
-await box.write("_content/inbox/B.memo.card", MEMO_CARD);
+await box.write("_content/inbox/A.doc.card", DOC_CARD);
+await box.write("_content/inbox/B.doc.card", DOC_CARD);
 await writeView(box, "count.tsx", `
 export const name = "Count";
 export const dependencies = ["_content/**/*.card"];
@@ -93,7 +99,7 @@ line 7: four frontmatter lines, then the body's third line):
 
 ```ts
 const box = await makeViewBox();
-await box.write("_content/inbox/A.memo.card", MEMO_CARD.replace("Body\n", "See [B](B.memo.card).\n\n{% todo %}Order lumber{% /todo %}\n"));
+await box.write("_content/inbox/A.doc.card", DOC_CARD.replace("Body\n", "See [B](B.doc.card).\n\n{% todo %}Order lumber{% /todo %}\n"));
 await writeView(box, "prose.tsx", `
 import { Markdown } from "beebox/view-widgets";
 export const name = "Prose";
@@ -105,7 +111,7 @@ export default function Prose({ cards }) {
 `);
 
 const r = await runViewTest(box.root, ["prose"]);
-[r.code, r.stdout.includes("/views/_content/inbox/B.memo.card"), r.stdout.includes('data-todo-locator="7"')].join(" ")
+[r.code, r.stdout.includes("/views/_content/inbox/B.doc.card"), r.stdout.includes('data-todo-locator="7"')].join(" ")
 => 0 true true
 ```
 
@@ -276,7 +282,7 @@ export default function Page({ params, viewHistory }) {
 }
 `);
 
-const r = await runViewTest(box.root, ["page", "--path", "_content/inbox/Nope.memo.card"]);
+const r = await runViewTest(box.root, ["page", "--path", "_content/inbox/Nope.doc.card"]);
 r.code
 => 0
 ```
@@ -285,7 +291,7 @@ r.code
 r.stderr.includes("is not among")
 => true
 
-r.stdout.includes("path: _content/inbox/Nope.memo.card")
+r.stdout.includes("path: _content/inbox/Nope.doc.card")
 => true
 
 r.stdout.includes("canPush: false")

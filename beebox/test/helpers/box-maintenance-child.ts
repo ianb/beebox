@@ -1,4 +1,4 @@
-import { acquireBoxWork, boxWorkEnvironment } from "../../src/lib/box-maintenance.js";
+import { acquireBoxWork, boxWorkEnvironment } from "../../src/lib/box-maintenance/admission.js";
 import { invariant } from "../../src/shared/invariant.js";
 
 const boxRoot = process.argv[2];

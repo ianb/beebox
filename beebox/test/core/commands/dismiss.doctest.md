@@ -7,8 +7,9 @@ follow-up job. Only a pending question can be dismissed.
 import { executeDismiss } from "../../../src/core/commands/dismiss.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 
-async function dismiss(box, args) {
+async function dismiss(box: TmpBox, args: Record<string, unknown>) {
   const { ctx } = createCollectorContext(box.root);
   return executeDismiss(ctx, args);
 }

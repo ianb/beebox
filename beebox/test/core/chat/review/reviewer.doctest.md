@@ -14,9 +14,10 @@ options each pass hands its agent, then shows the SDK options they become.
 ```ts setup
 import { createSdkChatReviewer } from "../../../../src/core/chat/review/reviewer.js";
 import { buildQueryOptions } from "../../../../src/core/agent/invoke/run.js";
-import { createFakeAgent } from "../../fake-agent.js";
+import { createFakeAgent, type FakeAgent } from "../../fake-agent.js";
+import { invariant } from "../../../../src/shared/invariant.js";
 
-const agents = [];
+const agents: FakeAgent[] = [];
 const reviewer = createSdkChatReviewer({
   boxRoot: "/box",
   model: "haiku",
@@ -32,8 +33,10 @@ const reviewer = createSdkChatReviewer({
 });
 
 /** The SDK options a recorded invocation becomes, cut to the access fields. */
-function sdkAccess(agent) {
-  const opts = agent.invocations[0].options;
+function sdkAccess(agent: FakeAgent | undefined) {
+  const opts = agent?.invocations[0]?.options;
+  invariant(opts !== undefined, "the agent recorded an invocation");
+  invariant(opts.maxTurns !== undefined, "the invocation set maxTurns");
   const sdk = buildQueryOptions(
     { ...opts, systemPrompt: opts.systemPrompt ?? "" },
     { env: {}, maxTurns: opts.maxTurns, binaryPath: null, appendedSystem: "" },
@@ -49,7 +52,7 @@ box `AGENTS.md`, rules, skills, or hooks.
 await reviewer.title({ sessionId: "s1", currentTitle: null, span: "**User**\nHow do I balance this?" })
 => { title: "Balancing equations" }
 
-agents.at(-1).name
+agents.at(-1)?.name
 => chat-title:s1
 
 sdkAccess(agents.at(-1))
@@ -65,7 +68,7 @@ input, so it gets the same options.
 })).contains
 => A chemistry lesson.
 
-agents.at(-1).name
+agents.at(-1)?.name
 => chat-review:s2
 
 sdkAccess(agents.at(-1))

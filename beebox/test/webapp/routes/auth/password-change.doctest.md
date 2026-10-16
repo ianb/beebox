@@ -17,7 +17,7 @@ process.env.BBX_AUTH_SCRYPT_N = "1024";
 process.env.BBX_SESSION_SECRET = "password-change-test-secret";
 delete process.env.BBX_HUB_SECRET;
 
-function cookieValue(header) {
+function cookieValue(header: unknown) {
   return String(header).split(";", 1)[0];
 }
 ```

@@ -18,18 +18,18 @@ async function find(db: SearchIndex, term: string): Promise<string> {
   return result.hits.map((h) => h.document.path as string).toSorted().join("\n");
 }
 
-const MEMO = (text: string, contains?: string) =>
-  `---\ncreated: 2026-05-22T10:00:00Z\n${contains ? `contains: ${contains}\n` : ""}---\n${text}\n`;
+const DOC = (text: string, contains?: string) =>
+  `---\ntitle: Note\n${contains ? `contains: ${contains}\n` : ""}---\n${text}\n`;
 ```
 
 ## Build: searchable cards index, operational kinds don't
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment moved to June 17.", "Dentist moved to June 17."));
-await box.write("_content/notes/Budget.memo.card", MEMO("Quarterly budget review notes."));
+await box.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment moved to June 17.", "Dentist moved to June 17."));
+await box.write("_content/notes/Budget.doc.card", DOC("Quarterly budget review notes."));
 await box.write("_bookkeeping/jobs/job-1.intake-job.card", "---\nstatus: pending\n---\nTriage the dentist email\n");
-await box.write("_bookkeeping/trash/Old.memo.card", MEMO("trashed dentist note"));
+await box.write("_bookkeeping/trash/Old.doc.card", DOC("trashed dentist note"));
 const opened = await openSearchIndex(box.root);
 JSON.stringify(opened.warnings)
 => []
@@ -38,23 +38,23 @@ opened.stale
 => false
 
 await find(opened.db, "dentist")
-=> _content/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.doc.card
 
 await find(opened.db, "budget")
-=> _content/notes/Budget.memo.card
+=> _content/notes/Budget.doc.card
 ```
 
 ## Incremental refresh: edits and new cards picked up at next open
 
 ```ts continue
-await box.write("_content/inbox/Dentist.memo.card", MEMO("Now it is an orthodontist appointment on June 19."));
-await box.write("_content/notes/Garden.memo.card", MEMO("Plant the tomatoes after the last frost."));
+await box.write("_content/inbox/Dentist.doc.card", DOC("Now it is an orthodontist appointment on June 19."));
+await box.write("_content/notes/Garden.doc.card", DOC("Plant the tomatoes after the last frost."));
 const reopened = await openSearchIndex(box.root);
 await find(reopened.db, "orthodontist")
-=> _content/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.doc.card
 
 await find(reopened.db, "tomatoes")
-=> _content/notes/Garden.memo.card
+=> _content/notes/Garden.doc.card
 
 await find(reopened.db, "dentist")
 =>
@@ -63,10 +63,10 @@ await find(reopened.db, "dentist")
 ## A moved card re-indexes under its new path
 
 ```ts continue
-await rename(box.path("_content/notes/Budget.memo.card"), box.path("_content/notes/Budget_2026.memo.card"));
+await rename(box.path("_content/notes/Budget.doc.card"), box.path("_content/notes/Budget_2026.doc.card"));
 const moved = await openSearchIndex(box.root);
 await find(moved.db, "budget")
-=> _content/notes/Budget_2026.memo.card
+=> _content/notes/Budget_2026.doc.card
 ```
 
 ## Persist → restore is stable (pins oramasearch/orama#695 at our version)
@@ -78,7 +78,7 @@ before === after
 => true
 
 after
-=> _content/notes/Garden.memo.card
+=> _content/notes/Garden.doc.card
 ```
 
 ## A corrupted index file rebuilds silently
@@ -87,7 +87,7 @@ after
 await writeFile(searchIndexPath(box.root), "not a real index");
 const recovered = await openSearchIndex(box.root);
 await find(recovered.db, "tomatoes")
-=> _content/notes/Garden.memo.card
+=> _content/notes/Garden.doc.card
 ```
 
 ## Lock contention serves the last persisted index, flagged stale
@@ -99,7 +99,7 @@ blocked.stale
 => true
 
 await find(blocked.db, "tomatoes")
-=> _content/notes/Garden.memo.card
+=> _content/notes/Garden.doc.card
 
 await releaseLock(searchLockPath(box.root));
 (await openSearchIndex(box.root)).stale
@@ -109,28 +109,28 @@ await releaseLock(searchLockPath(box.root));
 ## An unparseable card is skipped with a warning; everything else still works
 
 ```ts continue
-await box.write("_content/notes/Broken.memo.card", "---\ncreated: not-a-date\n---\nbroken body\n");
+await box.write("_content/notes/Broken.doc.card", "---\ntitle: [unclosed\n---\nbroken body\n");
 const withBad = await openSearchIndex(box.root);
 withBad.warnings.length
 => 1
 
-withBad.warnings[0].startsWith("_content/notes/Broken.memo.card: skipped")
+withBad.warnings[0]?.startsWith("_content/notes/Broken.doc.card: skipped")
 => true
 
 await find(withBad.db, "tomatoes")
-=> _content/notes/Garden.memo.card
+=> _content/notes/Garden.doc.card
 
 // An unchanged broken card warns once, not on every search.
 (await openSearchIndex(box.root)).warnings.length
 => 0
 
-await box.write("_content/notes/Broken.memo.card", MEMO("fixed broken body"));
+await box.write("_content/notes/Broken.doc.card", DOC("fixed broken body"));
 const fixedAgain = await openSearchIndex(box.root);
 JSON.stringify(fixedAgain.warnings)
 => []
 
 await find(fixedAgain.db, "broken")
-=> _content/notes/Broken.memo.card
+=> _content/notes/Broken.doc.card
 ```
 
 ## Standalone .md files index as kind "markdown"; attach-scope files don't
@@ -138,16 +138,16 @@ await find(fixedAgain.db, "broken")
 ```ts continue
 await box.write("_content/finances/Distribution_Letter.md", "# Ledger Distribution Letter\n\nEach heir receives an apportioned share.\n");
 await box.write("_content/notes/Note.attach/snippet.md", "apportioned share duplicate inside attach scope");
-await box.write("_content/docs/generated/card-memo.md", "apportioned share generated doc noise");
+await box.write("_content/docs/generated/card-doc.md", "apportioned share generated doc noise");
 const withMd = await openSearchIndex(box.root);
 await find(withMd.db, "apportioned share")
 => _content/finances/Distribution_Letter.md
 
 const mdHit = await search(withMd.db, { term: "distribution letter", properties: ["title", "content"] });
-mdHit.hits[0].document.kind
+mdHit.hits[0]?.document.kind
 => markdown
 
-mdHit.hits[0].document.title
+mdHit.hits[0]?.document.title
 => Ledger Distribution Letter
 ```
 
@@ -166,7 +166,7 @@ await find(withDocs.db, "rendersCardTypes")
 => node_modules/beebox/box-docs/views.md
 
 const docHit = await search(withDocs.db, { term: "rendersCardTypes", properties: ["content"] });
-docHit.hits[0].document.kind
+docHit.hits[0]?.document.kind
 => engine-doc
 ```
 

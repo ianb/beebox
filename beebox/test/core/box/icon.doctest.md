@@ -9,9 +9,10 @@ bytes it hands out.
 
 ```ts setup
 import { renderBoxIcon } from "../../../src/core/box/icon.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 
-const render = (box, size = 192) => renderBoxIcon({ boxRoot: box.root, slug: "kitchen", size });
+const render = (box: TmpBox, size = 192) => renderBoxIcon({ boxRoot: box.root, slug: "kitchen", size });
 
 /** Colour, so we know it drew artwork rather than a monochrome text glyph. */
 async function describe(png: Buffer) {
@@ -34,6 +35,7 @@ art, and nothing at all on a server with no emoji font.
 const box = await makeTmpBox();
 await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Kitchen\n---\n");
 const icon = await render(box);
+assert.ok(icon);
 await describe(icon.png)
 => 192x192 colour
 ```
@@ -42,7 +44,7 @@ The ETag covers the source and the size, so two sizes are not the same entity
 and a card edit changes it.
 
 ```ts continue
-(await render(box, 192)).etag === (await render(box, 180)).etag
+(await render(box, 192))?.etag === (await render(box, 180))?.etag
 => false
 ```
 

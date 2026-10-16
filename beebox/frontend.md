@@ -232,5 +232,5 @@ bin/tour card-theme-interface
 ```
 
 The installer leaves changed files alone and reports conflicts. Its entry card
-is `_content/theme-tour/Theme_Tour.memo.card`. Knowledge audits reset their test
+is `_content/theme-tour/Theme_Tour.doc.card`. Knowledge audits reset their test
 box; reinstall the gallery afterward if that box was used for an audit.

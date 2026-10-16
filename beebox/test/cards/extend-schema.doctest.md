@@ -20,6 +20,7 @@ import {
   RedeclaredTagError,
   type CardSchemaConfig,
   type CardValidateInput,
+  type FieldDecl,
   type LintIssue,
 } from "../../src/exports/cards.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
@@ -119,6 +120,7 @@ The delta sees the merged fields (`card.mood`) and the base's summary
 ```ts
 const schema = cardSchema("progress", extendSchema(progressBase, {
   fields: { mood: z.string().optional() },
+  // `base` is the base schema's result, which may carry `detail` and `attrs`.
   summarize: (card, base) => ({ ...base, detail: `${base.detail ?? ""}, mood ${card.mood ?? "unset"}` }),
 }));
 schema.summarize?.({ type: "progress", score: 7, status: "open", body: "", mood: "bright" }, sampleBase)
@@ -166,7 +168,7 @@ const merged = extendSchema(progressBase, {
   description: "Delta description",
   brief: "Delta brief",
   prominence: "primary",
-  theme: "plain",
+  theme: { name: "plain" },
 });
 const { fields: _fields, validate: _v, superRefine: _r, summarize: _s, ...rest } = merged;
 rest
@@ -176,7 +178,7 @@ rest
   brief: "Delta brief",
   category: "synced",
   prominence: "primary",
-  theme: "plain",
+  theme: { name: "plain" },
   searchable: false,
   instructions: "Base instructions."
 }
@@ -201,7 +203,9 @@ Box schemas run under type stripping, so the rule holds without `tsc` too.
 ```ts
 function redeclare(): string {
   try {
-    extendSchema(progressBase, { fields: { score: z.string() } });
+    // Widen the base's field map so the type-level rejection does not apply; the runtime check still must.
+    const looseFields: Record<string, FieldDecl> = progressFields;
+    extendSchema({ fields: looseFields }, { fields: { score: z.string() } });
     return "no error";
   } catch (e) {
     return e instanceof RedeclaredFieldError ? `${e.name}: ${e.message} (field=${e.field})` : "other";

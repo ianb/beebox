@@ -8,15 +8,16 @@ restoration needs a Linux root fixture as well.
 
 ```ts setup
 import { join, dirname } from "node:path";
-import { createServer } from "node:http";
+import assert from "node:assert/strict";
+import { createServer, type Server } from "node:http";
 import { once } from "node:events";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { defaultHubConfigPath } from "../../../src/hub/config.js";
 import { pathToFileURL } from "node:url";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runMaintenance } from "../../../src/cli/commands/maintenance.js";
-import { boxMaintenanceStatus } from "../../../src/lib/box-maintenance.js";
-const library = pathToFileURL(join(import.meta.dirname, "../../../src/lib/box-maintenance.ts")).href;
+import { boxMaintenanceStatus } from "../../../src/lib/box-maintenance/admission.js";
+const library = pathToFileURL(join(import.meta.dirname, "../../../src/lib/box-maintenance/admission.ts")).href;
 const readyScript = `
 const { acquireBoxMaintenance, boxMaintenanceStatus, acquireBoxWork } = await import(${JSON.stringify(library)});
 const roots = Object.keys(JSON.parse(process.env.BBX_MAINTENANCE_PERMITS));
@@ -36,7 +37,7 @@ for (const root of roots) {
 ```ts
 const previousKey = process.env.BBX_DIAG_API_KEY;
 const configPath = defaultHubConfigPath();
-let canary;
+let canary: Server | undefined;
 const one = await makeTmpBox({ git: true });
 const two = await makeTmpBox({ git: true });
 await one.write("input.txt", "valuable draft");
@@ -61,10 +62,10 @@ await boxMaintenanceStatus(two.root)
 await invoke(readyScript + "\nprocess.exitCode = 1;")
 => 1
 
-(await boxMaintenanceStatus(one.root)).phase
+(await boxMaintenanceStatus(one.root))?.phase
 => exclusive
 
-(await boxMaintenanceStatus(two.root)).phase
+(await boxMaintenanceStatus(two.root))?.phase
 => exclusive
 
 await invoke(readyScript)
@@ -76,22 +77,24 @@ await boxMaintenanceStatus(one.root)
 process.env.BBX_DIAG_API_KEY = "fixture-diag";
 await mkdir(dirname(configPath), { recursive: true });
 await writeFile(configPath, JSON.stringify({ boxes: { one: { path: one.root }, two: { path: two.root } } }));
-const verified = [];
+const verified: Array<string | null> = [];
 canary = createServer((request, response) => {
-  const slug = new URL(request.url, "http://localhost").searchParams.get("box");
+  const slug = new URL(request.url ?? "", "http://localhost").searchParams.get("box");
   verified.push(slug);
   const ok = slug === "one" && request.headers.authorization === "Bearer fixture-diag";
   response.writeHead(ok ? 200 : 503, { "content-type": "application/json" }).end(JSON.stringify({ status: ok ? "ok" : "canary-failed", slug }));
 });
 canary.listen(0, "127.0.0.1");
 await once(canary, "listening");
-await invoke(readyScript + "\nprocess.exitCode = 1;", `http://127.0.0.1:${canary.address().port}`)
+const address = canary.address();
+assert.ok(address && typeof address !== "string");
+await invoke(readyScript + "\nprocess.exitCode = 1;", `http://127.0.0.1:${address.port}`)
 => 1
 
 await boxMaintenanceStatus(one.root)
 => null
 
-(await boxMaintenanceStatus(two.root)).phase
+(await boxMaintenanceStatus(two.root))?.phase
 => exclusive
 
 JSON.stringify(verified.toSorted())
@@ -100,7 +103,8 @@ JSON.stringify(verified.toSorted())
 ```
 
 ```ts cleanup
-if (canary) await new Promise((resolve) => canary.close(resolve));
+const listening = canary;
+if (listening) await new Promise<void>((resolve) => listening.close(() => resolve()));
 await rm(configPath, { force: true });
 if (previousKey === undefined) delete process.env.BBX_DIAG_API_KEY;
 else process.env.BBX_DIAG_API_KEY = previousKey;

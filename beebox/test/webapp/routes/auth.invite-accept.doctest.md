@@ -8,6 +8,7 @@ cookie, and consumes the token exactly once.
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { InjectOptions } from "fastify";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { createFirstUser, listUsers } from "../../../src/webapp/local-users.js";
 import { mintAuthInvite } from "../../../src/webapp/auth-capabilities.js";
@@ -17,7 +18,7 @@ process.env.BBX_AUTH_SCRYPT_N = "1024";
 process.env.BBX_SESSION_SECRET = "invite-route-test-secret";
 delete process.env.BBX_HUB_SECRET;
 
-function inviteForm(fields) {
+function inviteForm(fields: Record<string, string>): InjectOptions {
   return {
     method: "POST",
     url: "/auth/invite",
@@ -113,8 +114,8 @@ Replay has the same dead-link response as an expired or unknown token.
 
 ```ts continue
 const originalReplayWarn = console.warn;
-const replayWarnings = [];
-console.warn = (...args) => replayWarnings.push(args);
+const replayWarnings: unknown[][] = [];
+console.warn = (...args: unknown[]) => replayWarnings.push(args);
 const replay = await ctx.server.inject(inviteForm({
   token: minted.token,
   name: "Again",
@@ -265,8 +266,8 @@ await ctx2.seed("_config/box.json", JSON.stringify({ allowedEmails: ["GoogleOnly
 const openOwner = await mintAuthInvite({ boxRoot: ctx2.boxRoot, createdBy: "owner@example.com" });
 
 const originalCollisionWarn = console.warn;
-const collisionWarnings = [];
-console.warn = (...args) => collisionWarnings.push(args);
+const collisionWarnings: unknown[][] = [];
+console.warn = (...args: unknown[]) => collisionWarnings.push(args);
 const ownerClaim = await ctx2.server.inject(inviteForm({
   token: openOwner.token,
   email: " OWNER@EXAMPLE.COM ",

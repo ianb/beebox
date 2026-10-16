@@ -12,7 +12,7 @@ const CARD = "/views/_content/theme-tour/";
 tour(
   { name: "card-themes", description: "Walk the persistent card-theme gallery across short, dense, quoted, and structured cards." },
   async (t) => {
-    await t.go(`${CARD}Theme_Tour.memo.card`);
+    await t.go(`${CARD}Theme_Tour.doc.card`);
     // The first card can cold-start the box; an expectation waits for the
     // settled card before the visual checkpoint captures it.
     await t.expect.heading("Card themes tour", { level: 2 });
@@ -45,9 +45,9 @@ tour(
     await t.expect.noPageErrors();
 
     for (const [name, heading, stock] of [
-      ["comparison-paper.memo.card", "One note, three stocks", "cream"],
-      ["comparison-post-it.memo.card", "One note, three stocks", "yellow"],
-      ["comparison-plain.memo.card", "One note, three stocks", "neutral"],
+      ["comparison-paper.doc.card", "One note, three stocks", "cream"],
+      ["comparison-post-it.doc.card", "One note, three stocks", "yellow"],
+      ["comparison-plain.doc.card", "One note, three stocks", "neutral"],
     ] as const) {
       await t.go(`${CARD}${name}`);
       await t.checkpoint(`same-content-${stock}`);
@@ -55,7 +55,7 @@ tour(
       await t.expect.noPageErrors();
     }
 
-    await t.go(`${CARD}comparison.memo.card`);
+    await t.go(`${CARD}comparison.doc.card`);
     await t.checkpoint("theme-comparison");
     await t.expect.heading("One note, three stocks", { level: 2 });
     await t.expect.custom("comparison content is visible", (snapshot) => snapshot.includes("clay samples") && snapshot.includes("Rowan Vale"));
@@ -94,13 +94,13 @@ tour(
       !snapshot.includes("Back to card") && snapshot.includes("clay samples"));
     await t.expect.noPageErrors();
 
-    await t.go(`${CARD}mixed-stocks.memo.card`);
+    await t.go(`${CARD}mixed-stocks.doc.card`);
     await t.checkpoint("mixed-stocks");
     await t.expect.heading("Mixed stocks", { level: 2 });
     await t.expect.custom("mixed stock links are visible", (snapshot) => snapshot.includes("Rose Post-it") && snapshot.includes("Mint Post-it"));
     await t.expect.noPageErrors();
 
-    await t.go(`${CARD}quotes.memo.card`);
+    await t.go(`${CARD}quotes.doc.card`);
     await t.checkpoint("quotes");
     await t.expect.heading("Quotes and attribution", { level: 2 });
     await t.expect.custom("quote attribution remains visible", (snapshot) => snapshot.includes("Rowan Vale"));
@@ -115,13 +115,13 @@ tour(
     await clickVisibleButton(t, "Back to card");
     await t.expect.noPageErrors();
 
-    await t.go(`${CARD}long-form.memo.card`);
+    await t.go(`${CARD}long-form.doc.card`);
     await t.checkpoint("long-content");
     await t.expect.heading("Long content and dense edges", { level: 2 });
     await t.expect.custom("dense content reaches its image", (snapshot) => snapshot.includes("A simple geometric test image"));
     await t.expect.noPageErrors();
 
-    await t.go(`${CARD}stack-experiment.memo.card`);
+    await t.go(`${CARD}stack-experiment.doc.card`);
     await t.checkpoint("stack-experiment");
     await t.expect.heading("Tucked-card experiment", { level: 2 });
     await t.expect.custom("stack experiment is explicitly labeled", (snapshot) => snapshot.includes("static composition study") && snapshot.includes("does not currently choose related cards"));

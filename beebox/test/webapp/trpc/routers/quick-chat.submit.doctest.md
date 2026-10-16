@@ -15,17 +15,36 @@ delivery of one id is answered as a duplicate.
 import { mkdir, writeFile, rm, utimes } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
-import { setChatRuntime, clearChatRuntime } from "../../../../src/webapp/chat-runtime.js";
+import assert from "node:assert/strict";
+import { TRPCError } from "@trpc/server";
+import { setChatRuntime, clearChatRuntime, type ChatRuntime, type SendOutcome, type SendTargetArgs, type SendTargetResult, type UserMessageSendArgs } from "../../../../src/webapp/chat-runtime.js";
+import type { ChatSession } from "../../../../src/core/chat/session/run/core.js";
+import type { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
+import type { ChatChannel } from "../../../../src/shared/chat-channel.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";
-import { createFakeJev } from "../../../../src/services/jev.js";
+import { createFakeJev, type JevService } from "../../../../src/services/jev.js";
 import { JevError } from "../../../../src/services/jev-wire.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { containedSessionCwd, getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 
-const EVENT_BUS = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-function caller(boxRoot, jev, options) {
-  return quickChatRouter.createCaller({ boxRoot, boxSlug: "test", authed: options?.authed ?? true, services: { jev },
-    user: { email: "ari@example.com", name: "Ari" }, eventBus: EVENT_BUS });
+function caller(boxRoot: string, jev?: JevService, options?: { authed?: boolean }) {
+  const ctx: TrpcContext = trpcContext({
+    boxRoot,
+    authed: options?.authed ?? true,
+    isAuthenticatedOwner: true,
+    services: { jev },
+    user: { email: "ari@example.com", name: "Ari" },
+  });
+  return quickChatRouter.createCaller(ctx);
+}
+type SubmitInput = Parameters<ReturnType<typeof caller>["submit"]>[0];
+type View = Awaited<ReturnType<ReturnType<typeof caller>["submit"]>>;
+
+/** Client JSON the declared input type forbids, as an untrusted client could send it; the server's own validation is what must refuse it. */
+function untrusted(value: object): SubmitInput {
+  return JSON.parse(JSON.stringify(value));
 }
 
 /**
@@ -33,10 +52,21 @@ function caller(boxRoot, jev, options) {
  * target resolution; `send` answers a send that claimed its id. Ids are claimed
  * on acceptance, as the durable claim is.
  */
-function scriptedRuntime(boxRoot, script) {
-  const log = { reservations: [], targets: [], sends: [] };
-  const claimed = new Set();
-  setChatRuntime(boxRoot, {
+function scriptedRuntime(
+  boxRoot: string,
+  script?: {
+    reserve?: "reserved" | "taken" | "unsupported";
+    resolve?: (args: SendTargetArgs) => SendTargetResult;
+    send?: (args: UserMessageSendArgs) => SendOutcome;
+  },
+) {
+  const log: {
+    reservations: Parameters<ChatSessionRegistry["reserve"]>[0][];
+    targets: SendTargetArgs[];
+    sends: Array<{ message: string; user: string | null; channel: ChatChannel | null }>;
+  } = { reservations: [], targets: [], sends: [] };
+  const claimed = new Set<string | undefined>();
+  const seams = {
     registry: { reserve: async (input) => {
       log.reservations.push(input);
       const kind = script?.reserve ?? "reserved";
@@ -44,7 +74,8 @@ function scriptedRuntime(boxRoot, script) {
     } },
     resolveSendTarget: async (args) => {
       log.targets.push(args);
-      return script?.resolve?.(args) ?? { ok: true, target: { session: {}, id: args.sessionParam === "new" ? null : args.sessionParam } };
+      // The scripted target carries no live session: quick chat only passes it through to the sender.
+      return script?.resolve?.(args) ?? { ok: true, target: { session: {} as ChatSession, id: args.sessionParam === "new" ? null : args.sessionParam } };
     },
     sendUserMessage: async (args) => {
       log.sends.push({ message: args.message, user: args.user?.email ?? null, channel: args.channel ?? null });
@@ -52,23 +83,25 @@ function scriptedRuntime(boxRoot, script) {
       claimed.add(args.messageId);
       return script?.send?.(args) ?? { status: 200, body: { turnId: "turn-1" } };
     },
-  });
+  } satisfies { registry: Pick<ChatSessionRegistry, "reserve"> } & Pick<ChatRuntime, "resolveSendTarget" | "sendUserMessage">;
+  // Quick chat reads only these seams; the schedule manager and session wiring of a full runtime are not exercised here.
+  setChatRuntime(boxRoot, seams as ChatRuntime);
   return log;
 }
 
 /** Run with console.warn and console.error captured: the degradations these examples cause are logged by design. */
-async function capturingLogs(run) {
-  const lines = [];
+async function capturingLogs<T>(run: () => Promise<T>) {
+  const lines: string[] = [];
   const { warn, error } = console;
-  console.warn = (...args) => { lines.push(`warn ${args.map(String).join(" ")}`); };
-  console.error = (...args) => { lines.push(`error ${args.map(String).join(" ")}`); };
+  console.warn = (...args: unknown[]) => { lines.push(`warn ${args.map(String).join(" ")}`); };
+  console.error = (...args: unknown[]) => { lines.push(`error ${args.map(String).join(" ")}`); };
   try { return { result: await run(), lines }; }
   finally { console.warn = warn; console.error = error; }
 }
 
-async function failure(run) {
+async function failure(run: () => Promise<unknown>) {
   try { await run(); return "unexpected success"; }
-  catch (error) { return `${error.code}: ${error.message}`; }
+  catch (error) { return error instanceof TRPCError ? `${error.code}: ${error.message}` : String(error); }
 }
 
 /** A box with one resumable chat at the root and a Garden landmark. Candidates: c0 the chat, c1 a new chat in Garden, c2 a new general chat. */
@@ -83,12 +116,12 @@ async function gardenBox() {
   return { box, sessionId };
 }
 
-function judged(probabilities) {
+function judged(probabilities: Record<string, number>) {
   return createFakeJev({ result: { model: "synthetic-jev", probabilities, confidence: Math.max(...Object.values(probabilities)) } });
 }
 
 /** A view without the parts every example repeats. */
-function face(view) {
+function face(view: View) {
   const { id: _id, message: _message, createdAt: _createdAt, ...rest } = view;
   return rest;
 }
@@ -113,9 +146,9 @@ const { box, sessionId } = await gardenBox();
 const runtime = scriptedRuntime(box.root);
 const fake = judged({ c0: 0.95, c1: 0.03, c2: 0.02 });
 const api = caller(box.root, fake);
-const request = { id: randomUUID(), message: "Book the plumber for Tuesday", channel: "ios-native" };
+const request: SubmitInput = { id: randomUUID(), message: "Book the plumber for Tuesday", channel: "ios-native" };
 const sent = await api.submit(request);
-[face(sent), sent.destination.sessionId === sessionId, runtime.sends]
+[face(sent), sent.destination?.sessionId === sessionId, runtime.sends]
 => [
   { state: "sent", destination: { label: "“Plan the week”", sessionId: "«*»" } },
   true,
@@ -193,10 +226,12 @@ await failure(() => api.choose({ id: unsure.id, candidateId: "c9" }))
 => BAD_REQUEST: Choose one of the offered destinations.
 
 const chosen = await api.choose({ id: unsure.id, candidateId: "c1", channel: "web-mobile" });
-[face(chosen), chosen.destination.sessionId === runtime.reservations[0].sessionId, runtime.reservations[0].contextDir, runtime.sends.map((send) => send.channel)]
+const reserved = runtime.reservations[0];
+assert.ok(reserved && chosen.destination);
+[face(chosen), chosen.destination.sessionId === reserved.sessionId, reserved.contextDir, runtime.sends.map((send) => send.channel)]
 => [{ state: "sent", destination: { label: "New chat in Garden", sessionId: "«uuid»" } }, true, "_content/Garden", ["web-mobile"]]
 
-(await api.choose({ id: unsure.id, candidateId: "c0" })).destination.label
+(await api.choose({ id: unsure.id, candidateId: "c0" })).destination?.label
 => New chat in Garden
 
 await failure(() => api.choose({ id: randomUUID(), candidateId: "c0" }))
@@ -245,7 +280,7 @@ retriedExternal.state
 An origin outside the supported inputs is refused.
 
 ```ts continue
-await failure(() => sure.submit({ id: randomUUID(), message: "Hum", origin: "video" }))
+await failure(() => sure.submit(untrusted({ id: randomUUID(), message: "Hum", origin: "video" })))
 => «BAD_REQUEST: *»
 ```
 
@@ -306,7 +341,9 @@ const runtime = scriptedRuntime(box.root);
 const api = caller(box.root, judged({ c0: 0.45, c1: 0.05, c2: 0.5 }));
 const plain = await api.submit({ id: randomUUID(), message: "Plan the dinner" });
 const fresh = await api.submit({ id: randomUUID(), message: "New chat: plan the dinner" });
-[[plain.destination.label, plain.destination.sessionId === sessionId], [fresh.destination.label, fresh.destination.sessionId === runtime.reservations[0].sessionId]]
+const reserved = runtime.reservations[0];
+assert.ok(plain.destination && fresh.destination && reserved);
+[[plain.destination.label, plain.destination.sessionId === sessionId], [fresh.destination.label, fresh.destination.sessionId === reserved.sessionId]]
 => [["“Plan the week”", true], ["New general chat", true]]
 ```
 
@@ -324,7 +361,7 @@ are the recent chats and a new general chat, built without Jev.
 ```ts
 const { box } = await gardenBox();
 scriptedRuntime(box.root);
-const reasons = [];
+const reasons: Array<ReturnType<typeof face>> = [];
 const { lines } = await capturingLogs(async () => {
   for (const jev of [undefined, createFakeJev({ error: new JevError("timeout", "request") }), createFakeJev({ error: new JevError("distribution keys did not match", "response") })]) {
     const view = await caller(box.root, jev).submit({ id: randomUUID(), message: "Remind me about the passport" });
@@ -380,7 +417,7 @@ running at the first submit. `home` lists the record as unfinished, and a repeat
 const { box } = await gardenBox();
 const fake = judged({ c0: 0.95, c1: 0.03, c2: 0.02 });
 const api = caller(box.root, fake);
-const request = { id: randomUUID(), message: "Renew the car registration", origin: "external", source: "apple-app-intents" };
+const request: SubmitInput = { id: randomUUID(), message: "Renew the car registration", origin: "external", source: "apple-app-intents" };
 face(await api.submit(request))
 => { state: "sending", destination: { label: "“Plan the week”", sessionId: "«*»" }, lastError: "Chat is not running on the box. Retry in a moment." }
 

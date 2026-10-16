@@ -12,6 +12,7 @@ import {
   getAckKind,
   parseAcks,
   parseCallouts,
+  splitCalloutParts,
   stripStructuredOutputTags,
   isNoResponseOnly,
 } from "../../src/lib/structured-output-parsing.js";
@@ -207,6 +208,27 @@ JSON.stringify(parseCallouts("<callout>no context</callout>"))
 
 JSON.stringify(parseCallouts("<callout context=\"x\"></callout>"))
 => []
+```
+
+## splitCalloutParts keeps written order
+
+A reply renders its callouts where the agent wrote them. Before, every callout
+rendered after all of the reply's prose, so a sign-off written after the
+callout showed above it. Text parts keep their other tags for the prose
+renderer; a callout without a context is dropped, as `parseCallouts` drops it.
+
+```ts
+splitCalloutParts([
+  "Here is the plan.",
+  '<callout context="Tomorrow">Pick up the drill.</callout>',
+  "Have a good evening.",
+  "<callout>no context</callout>",
+].join("\n"))
+=> [
+  { type: "text", text: "Here is the plan.\n" },
+  { type: "callout", callout: { context: "Tomorrow", body: "Pick up the drill." } },
+  { type: "text", text: "\nHave a good evening.\n" },
+]
 ```
 
 ## stripStructuredOutputTags

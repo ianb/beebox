@@ -30,6 +30,7 @@ import {
 } from "../../../helpers/chat-session-spawner-helpers.js";
 import { readFile } from "node:fs/promises";
 import { once } from "node:events";
+import assert from "node:assert/strict";
 ```
 
 ## Backend sees the right options
@@ -48,6 +49,7 @@ await session.send("hello");
 await tick();
 
 const run = backend.lastRun();
+assert.ok(run);
 run !== null && run.startOptions.systemPrompt
 => TEST PROMPT
 
@@ -73,8 +75,8 @@ When the fake emits the init system message with a `session_id`,
 ```ts
 const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
-const observed = [];
-async function recordId(id) { observed.push(id); }
+const observed: string[] = [];
+async function recordId(id: string) { observed.push(id); }
 const opts = { backend, systemPrompt: testPromptShort, onSessionIdAssigned: recordId, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
@@ -85,6 +87,7 @@ await tick();
 // synchronously, so emit/handle/"done" all fire before `once()` binds.
 const done = once(session, "done");
 const run = backend.lastRun();
+assert.ok(run);
 run.emitSessionInit("sess-xyz");
 run.emitAssistantText("hi back");
 run.emitResult();
@@ -162,6 +165,7 @@ await session.send("what is 2+2?");
 await tick();
 const done = once(session, "done");
 const run = backend.lastRun();
+assert.ok(run);
 run.emitSessionInit("sess-123");
 run.emitAssistantText("2+2 ");
 run.emitAssistantText("equals 4.");
@@ -178,7 +182,7 @@ And the backend received a user turn (one content array per send call):
 run.sent.length
 => 1
 
-run.sent[0][0].type
+run.sent[0]?.[0]?.type
 => text
 ```
 
@@ -210,6 +214,7 @@ session.enqueue("third");
 
 // Simulate the run ending mid-turn (no result emitted)
 const run1 = backend.lastRun();
+assert.ok(run1);
 await run1.close();
 await waitForRuns(backend, { count: 2, timeoutMs: 1000 });
 
@@ -220,8 +225,8 @@ backend.runs.length
 
 ```ts continue
 const run2 = backend.runs[1];
-const userTurn = run2.sent[0];
-const text = userTurn[0].text;
+const block = run2?.sent[0]?.[0];
+const text = block?.type === "text" ? block.text : "";
 text.includes("second") && text.includes("third")
 => true
 ```
@@ -256,8 +261,8 @@ backend.runs.length
 
 ```ts continue
 const run2 = backend.runs[1];
-const userTurn = run2.sent[0];
-userTurn[0].text.includes("queued after restart")
+const block = run2?.sent[0]?.[0];
+block?.type === "text" && block.text.includes("queued after restart")
 => true
 ```
 

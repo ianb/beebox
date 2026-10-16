@@ -21,10 +21,10 @@ segments.length
 ```
 
 ```ts continue
-segments[0].text
+segments[0]?.text
 => Hello there!
 
-segments[0].hasTextBefore
+segments[0]?.hasTextBefore
 => false
 ```
 
@@ -35,10 +35,10 @@ is only the spoken text:
 
 ```ts
 const segments = parseAllSpeechTags('<speech instructions="Gentle, not urgent">I found three overdue items.</speech>');
-segments[0].text
+segments[0]?.text
 => I found three overdue items.
 
-segments[0].instructions
+segments[0]?.instructions
 => Gentle, not urgent
 ```
 
@@ -47,7 +47,7 @@ double quote as `&quot;` and an ampersand as `&amp;`:
 
 ```ts
 const segments = parseAllSpeechTags('<speech instructions="Say &quot;ta-da&quot; slowly &amp; warmly">Ta-da.</speech>');
-segments[0].instructions
+segments[0]?.instructions
 => Say "ta-da" slowly & warmly
 ```
 
@@ -59,10 +59,10 @@ removed from the spoken text:
 const segments = parseAllSpeechTags(`<speech>Good morning!
 <instructions>Warm and cheerful</instructions>
 </speech>`);
-segments[0].text
+segments[0]?.text
 => Good morning!
 
-segments[0].instructions
+segments[0]?.instructions
 => Warm and cheerful
 ```
 
@@ -71,10 +71,10 @@ kept out of the spoken text:
 
 ```ts
 const segments = parseAllSpeechTags('<speech instructions="From the attribute">Hello.<instructions>From the child</instructions></speech>');
-segments[0].instructions
+segments[0]?.instructions
 => From the attribute
 
-segments[0].text
+segments[0]?.text
 => Hello.
 ```
 
@@ -83,10 +83,10 @@ spoken:
 
 ```ts
 const segments = parseAllSpeechTags('<speech>Hello.<instructions pace="slow">Gentle</instructions></speech>');
-segments[0].text
+segments[0]?.text
 => Hello.
 
-segments[0].instructions
+segments[0]?.instructions
 => Gentle
 ```
 
@@ -94,7 +94,7 @@ An empty attribute falls back to the child:
 
 ```ts
 const segments = parseAllSpeechTags('<speech instructions=" "><instructions>From the child</instructions>Hello.</speech>');
-segments[0].instructions
+segments[0]?.instructions
 => From the child
 ```
 
@@ -102,7 +102,7 @@ segments[0].instructions
 
 ```ts
 const segments = parseAllSpeechTags('<speech emotion="happy">Great news!</speech>');
-segments[0].emotion
+segments[0]?.emotion
 => happy
 ```
 
@@ -112,7 +112,7 @@ Valid voices are accepted:
 
 ```ts
 const segments = parseAllSpeechTags('<speech voice="coral">Hello</speech>');
-segments[0].voice
+segments[0]?.voice
 => coral
 ```
 
@@ -120,7 +120,10 @@ Invalid voices are silently ignored:
 
 ```ts
 const segments = parseAllSpeechTags('<speech voice="unknown">Hello</speech>');
-segments[0].voice
+segments.length
+=> 1
+
+segments[0]?.voice
 => undefined
 ```
 
@@ -133,16 +136,16 @@ segments.length
 ```
 
 ```ts continue
-segments[0].text
+segments[0]?.text
 => First
 
-segments[0].hasTextBefore
+segments[0]?.hasTextBefore
 => true
 
-segments[1].text
+segments[1]?.text
 => Second
 
-segments[1].hasTextBefore
+segments[1]?.hasTextBefore
 => true
 ```
 
@@ -178,10 +181,10 @@ const segs = parseAllSpeechTags(
 segs.length
 => 1
 
-segs[0].text
+segs[0]?.text
 => Hello there.
 
-segs[0].instructions
+segs[0]?.instructions
 => Speak warmly
 ```
 
@@ -198,10 +201,10 @@ const segs = parseAllSpeechTags(
 segs.length
 => 1
 
-segs[0].text
+segs[0]?.text
 => The alarm fired.
 
-segs[0].instructions
+segs[0]?.instructions
 => Slow and clipped
 ```
 
@@ -218,13 +221,13 @@ const segs = parseAllSpeechTags(
 segs.length
 => 1
 
-segs[0].text
+segs[0]?.text
 => What a thing to name it.
 
-segs[0].instructions
+segs[0]?.instructions
 => Quiet, dry, each word careful.
 
-segs[0].overrideInstructions
+segs[0]?.overrideInstructions
 => true
 ```
 
@@ -240,10 +243,10 @@ const segs = parseAllSpeechTags(
 segs.length
 => 1
 
-segs[0].text
+segs[0]?.text
 => Hello there.
 
-segs[0].instructions
+segs[0]?.instructions
 => Second, more specific note.
 ```
 
@@ -253,7 +256,7 @@ Empty instructions blocks are ignored when picking the last one.
 const segs = parseAllSpeechTags(
   "<speech><instructions>Real note.</instructions>Body.<instructions>   </instructions></speech>"
 );
-segs[0].instructions
+segs[0]?.instructions
 => Real note.
 ```
 
@@ -267,10 +270,10 @@ markup so the rendered message still shows the blur.
 const segs = parseAllSpeechTags(
   "<speech>The answer is {% redacted %}42{% /redacted %} — try it first.</speech>"
 );
-segs[0].text
+segs[0]?.text
 => The answer is  — try it first.
 
-segs[0].displayText
+segs[0]?.displayText
 => The answer is {% redacted %}42{% /redacted %} — try it first.
 ```
 
@@ -280,7 +283,7 @@ Multiple redacted spans in one speech tag are all dropped:
 const segs = parseAllSpeechTags(
   "<speech>{% redacted %}one{% /redacted %} and {% redacted %}two{% /redacted %} stay hidden.</speech>"
 );
-segs[0].text
+segs[0]?.text
 => and  stay hidden.
 ```
 
@@ -291,7 +294,7 @@ dropping just the marker would leak the hidden content:
 const segs = parseAllSpeechTags(
   "<speech>Before. {% redacted %}secret with no close tag</speech>"
 );
-segs[0].text
+segs[0]?.text
 => Before.
 ```
 
@@ -301,7 +304,7 @@ A stray close marker is stripped rather than spoken as literal markup:
 const segs = parseAllSpeechTags(
   "<speech>Oops {% /redacted %} extra close.</speech>"
 );
-segs[0].text
+segs[0]?.text
 => Oops  extra close.
 ```
 
@@ -312,10 +315,10 @@ machine skips the TTS call for it):
 const segs = parseAllSpeechTags(
   "<speech>{% redacted %}all hidden{% /redacted %}</speech>"
 );
-JSON.stringify(segs[0].text)
+JSON.stringify(segs[0]?.text)
 => ""
 
-segs[0].displayText
+segs[0]?.displayText
 => {% redacted %}all hidden{% /redacted %}
 ```
 
@@ -325,10 +328,10 @@ An optional `name` attribute labels the speaker of a chunk:
 
 ```ts
 const segs = parseAllSpeechTags('<speech name="Bob">hi, I am bob!</speech>');
-segs[0].name
+segs[0]?.name
 => Bob
 
-segs[0].text
+segs[0]?.text
 => hi, I am bob!
 ```
 
@@ -336,7 +339,10 @@ No `name` attribute leaves it undefined:
 
 ```ts
 const segs = parseAllSpeechTags("<speech>plain</speech>");
-segs[0].name
+segs.length
+=> 1
+
+segs[0]?.name
 => undefined
 ```
 

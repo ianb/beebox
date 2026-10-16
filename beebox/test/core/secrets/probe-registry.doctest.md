@@ -37,6 +37,13 @@ import {
 } from "../../../src/core/secrets/probe-registry.js";
 import { resolveSecret } from "../../../src/core/secrets/resolve.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { FetchLike } from "../../../src/core/secrets/probe-registry.js";
+import { invariant } from "../../../src/shared/invariant.js";
+
+interface RecordedCall {
+  url: string;
+  headers: Headers;
+}
 
 async function useTempStore() {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
@@ -45,15 +52,15 @@ async function useTempStore() {
 }
 
 /** A `fetch` that records what it was asked for and answers with one status. */
-function recordingFetch(status, calls) {
+function recordingFetch(status: number, calls: RecordedCall[]): FetchLike {
   return async (url, init) => {
-    calls.push({ url, headers: init?.headers ?? {} });
+    calls.push({ url, headers: new Headers(init?.headers) });
     return new Response("{}", { status });
   };
 }
 
 /** The stored verdict for a name — what a later resolve and the admin UI read. */
-async function storedVerified(name) {
+async function storedVerified(name: string) {
   const listing = (await listSecrets()).find((entry) => entry.name === name);
   return listing?.verified;
 }
@@ -66,13 +73,13 @@ charges nothing. The key travels in the `Authorization` header, never in the URL
 
 ```ts
 const dir = await useTempStore();
-const calls = [];
+const calls: RecordedCall[] = [];
 await setSecret({ name: "mistral", value: "placeholder-mistral-key" });
 const verified = await probeSecret({ name: "mistral", deps: { fetch: recordingFetch(200, calls) } });
 
 print(`verdict: ${verified.status}`);
 print(`called: ${calls[0]?.url}`);
-print(`key travelled in the header: ${calls[0]?.headers.Authorization === "Bearer placeholder-mistral-key"}`);
+print(`key travelled in the header: ${calls[0]?.headers.get("Authorization") === "Bearer placeholder-mistral-key"}`);
 print(`recorded on the entry: ${(await storedVerified("mistral"))?.status}`);
 =>
 verdict: ok
@@ -151,9 +158,9 @@ either hide a bad rotation behind `ok` or mark a fresh key as expired. The write
 is a compare-and-set on the entry's `updated` stamp.
 
 ```ts continue
-let release;
+let release: () => void = () => {};
 const slowFetch = async () => {
-  await new Promise((resolve) => { release = resolve; });
+  await new Promise<void>((resolve) => { release = resolve; });
   return new Response("{}", { status: 401 });
 };
 const slow = probeSecret({ name: "mistral", deps: { fetch: slowFetch } });
@@ -179,10 +186,12 @@ const slug = await boxSlug(box.root);
 await grantSecret({ slug, name: "weatherapi", access: "agent" });
 
 const before = await resolveSecret({ boxRoot: box.root, name: "weatherapi", purpose: "forecast", access: "agent" });
+invariant(before.ok, "the granted secret resolves");
 print(`before: suspect=${before.value.suspect}`);
 
 await markSecretVerificationFailed("weatherapi", "a forecast request was rejected with HTTP 401");
 const after = await resolveSecret({ boxRoot: box.root, name: "weatherapi", purpose: "forecast", access: "agent" });
+invariant(after.ok, "the suspect secret still resolves");
 print(`after: suspect=${after.value.suspect}`);
 print(`the value still resolves: ${after.value.value === "placeholder-weather-key"}`);
 print(`reason on the entry: ${(await storedVerified("weatherapi"))?.reason}`);

@@ -10,6 +10,7 @@ environment, registeredAt }`.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import {
   createMobilePairingTicket,
@@ -20,18 +21,19 @@ import {
 } from "../../../src/core/mobile/pairing.js";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "../../mobile-contract/fixtures/push-token");
-const fixture = (name) => JSON.parse(readFileSync(join(FIXTURES, name), "utf-8"));
+const Fixture = z.object({ input: z.record(z.string(), z.unknown()), expected: z.unknown() });
+const fixture = (name: string) => Fixture.parse(JSON.parse(readFileSync(join(FIXTURES, name), "utf-8")));
 
 const ctx = await makeTestServer({ openAccess: false });
 
-async function pair(label) {
+async function pair(label: string) {
   const ticket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "owner@example.com" });
   const device = await redeemMobilePairingTicket(ctx.boxRoot, { pairingToken: ticket.token, deviceLabel: label });
   if (!device) throw new Error("the ticket did not redeem");
   return device;
 }
 
-async function register(deviceToken, body) {
+async function register(deviceToken: string | null, body: Record<string, unknown>) {
   const headers = deviceToken === null ? {} : { authorization: `Bearer ${deviceToken}` };
   const response = await ctx.rawRequest({ method: "POST", url: "/api/pairing/push-token", headers, payload: body });
   return response.payload === "" ? `${response.statusCode}` : `${response.statusCode} ${response.payload}`;
@@ -75,7 +77,8 @@ held()
 ## The device list shows the registration without the token
 
 ```ts continue
-const [listed] = listMobileDevices(ctx.boxRoot);
+const listed = listMobileDevices(ctx.boxRoot)[0];
+if (listed === undefined) throw new Error("no device listed");
 JSON.stringify([listed.label, listed.push?.environment, typeof listed.push?.registeredAt, "apns" in listed, JSON.stringify(listed).includes("abcdef0123456789")])
 => ["Jamie's iPhone","sandbox","string",false,false]
 ```

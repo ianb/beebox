@@ -28,6 +28,8 @@ isolated test HOME.
 
 ```ts setup
 import { createDoclingService, doclingArgs } from "../../../src/services/docling/core.js";
+import type { DoclingExtraction } from "../../../src/services/docling/core.js";
+import type { Result } from "../../../src/shared/result.js";
 import { DOCLING_VERSION } from "../../../src/services/docling/version.js";
 import { textPdf } from "../../helpers/pdf-fixtures.js";
 import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
@@ -59,7 +61,7 @@ if (probeSkip) console.warn(`[skipped] pdf-extract-integration: ${probeSkip}`);
 // Offline, uncached weights fail inside huggingface_hub's snapshot download.
 // That is the one extraction failure that means "not warmed" rather than
 // "broken"; every other failure stays a failure.
-function weightsMissing(result) {
+function weightsMissing(result: Result<DoclingExtraction>) {
   return !result.ok && result.error.includes("huggingface_hub") && /snapshot_download|offline/i.test(result.error);
 }
 ```
@@ -99,17 +101,20 @@ await writeFile(pdfPath, textPdf());
 const workDir = join(dir, "work");
 await import("node:fs/promises").then((fs) => fs.mkdir(workDir, { recursive: true }));
 
-const result = probeSkip
-  ? { skipped: true }
+const result: Result<DoclingExtraction> | null = probeSkip
+  ? null
   : await createDoclingService().extract(pdfPath, { workDir, ocr: "off", languages: null });
-const skipReason = probeSkip ?? (weightsMissing(result) ? "Docling model weights are not in the Hugging Face hub cache" : null);
+const skipReason = probeSkip ?? (result !== null && weightsMissing(result) ? "Docling model weights are not in the Hugging Face hub cache" : null);
 if (skipReason && !probeSkip) console.warn(`[skipped] pdf-extract-integration: ${skipReason}`);
 
+const extracted = result?.ok ? result.value : null;
+const failure = result === null || result.ok ? null : result.error;
+
 // One line, whichever path ran — so a skip is visible rather than a silent pass.
-skipReason ? "SKIPPED" : (result.ok ? "EXTRACTED" : `FAILED: ${result.error}`)
+skipReason ? "SKIPPED" : (extracted ? "EXTRACTED" : `FAILED: ${failure}`)
 => «show»
 
-skipReason ? "ok" : (result.ok ? "ok" : `FAILED: ${result.error}`)
+skipReason ? "ok" : (extracted ? "ok" : `FAILED: ${failure}`)
 => ok
 ```
 
@@ -120,16 +125,16 @@ paths relative to an output root that does not match where the files land, so
 the walk is load-bearing):
 
 ```ts continue
-skipReason ? "Northwind" : (result.value.markdown.includes("Northwind") ? "Northwind" : result.value.markdown)
+skipReason ? "Northwind" : (extracted?.markdown.includes("Northwind") ? "Northwind" : extracted?.markdown)
 => Northwind
 
-skipReason ? 1 : result.value.pageImages.length
+skipReason ? 1 : extracted?.pageImages.length
 => 1
 
-skipReason ? "DoclingDocument" : JSON.parse(await readFile(result.value.jsonPath, "utf-8")).schema_name
+skipReason ? "DoclingDocument" : (extracted ? JSON.parse(await readFile(extracted.jsonPath, "utf-8")).schema_name : undefined)
 => DoclingDocument
 
-skipReason ? DOCLING_VERSION : result.value.version
+skipReason ? DOCLING_VERSION : extracted?.version
 => «show»
 ```
 
@@ -137,7 +142,7 @@ Page renders are PNGs Docling wrote — the WebP re-encode happens a layer up, i
 `pdf-extract.ts`:
 
 ```ts continue
-skipReason ? "png" : result.value.pageImages[0].filePath.split(".").pop()
+skipReason ? "png" : extracted?.pageImages[0]?.filePath.split(".").pop()
 => png
 ```
 

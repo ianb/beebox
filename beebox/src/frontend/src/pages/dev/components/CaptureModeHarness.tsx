@@ -232,6 +232,7 @@ function RetryBanners() {
               includeControlIds={false}
               sessionId="fake" recording={false} finalizing={false} hasContent
               pendingUploads={feedback.phase === "retrying" ? 3 : 0}
+              sendable={1} unreadable={0}
               photosFailed={2} audioFailed={1} filesFailed={0}
               retryFeedback={feedback}
               onDone={noop} onCancel={noop} onToggleRecording={noop}

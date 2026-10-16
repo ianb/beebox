@@ -7,30 +7,23 @@ warnings and therefore require the owner.
 ```ts setup
 import * as fs from "node:fs/promises";
 import { appRouter } from "../../../../../src/webapp/trpc/routers.js";
+import type { TrpcContext } from "../../../../../src/webapp/trpc/context.js";
 import {
   boxGrowthStatePath,
   measureBoxGrowthIfDue,
   readBoxGrowthState,
 } from "../../../../../src/core/box-growth/health.js";
 import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../../helpers/trpc-context.js";
 
-function caller(boxRoot, isOwner) {
-  return appRouter.createCaller({
+function caller(boxRoot: string, isOwner: boolean) {
+  const ctx: TrpcContext = trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus: {
-      emit: () => 0,
-      emitTransient: () => {},
-      readSince: () => [],
-      subscribe: () => ({ unsubscribe: () => {} }),
-      prune: () => 0,
-      close: () => {},
-    },
-    services: {},
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
     isOwner,
+    isAuthenticatedOwner: isOwner,
   });
+  return appRouter.createCaller(ctx);
 }
 
 const box = await makeTmpBox({ git: true });
@@ -38,6 +31,7 @@ const measured = await measureBoxGrowthIfDue(box.root, {
   now: new Date("2026-08-05T10:00:00.000Z"),
 });
 if (measured.status !== "measured") throw new Error("expected initial measurement");
+if (measured.state.status !== "measured") throw new Error("expected a measured state");
 const warningState = {
   ...measured.state,
   previous: {

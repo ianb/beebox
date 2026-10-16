@@ -20,36 +20,49 @@ Two `src/hub/supervisor/core.ts` behaviors, both found by cross-model review:
 
 ```ts setup
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
+import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 
 /** A fake `ChildProc`: just enough surface for `Supervisor.launch()` to use
  *  (`pid`, `on("exit", ...)`, `catch()`) plus a way for the test to fire the
  *  "exit" event itself, standing in for the real process death that a real
  *  `killGroup()` would eventually cause. No real process is ever spawned. */
-function makeFakeChild(pid) {
-  const exitHandlers = [];
-  const messageHandlers = [];
-  return {
+type ChildEventHandler = (...args: Array<number | string | null | { type: string }>) => void;
+type FakeChild = ChildProc & {
+  fireMessage(message: { type: string }): void;
+  fireExit(code: number | null, signal: NodeJS.Signals | null): void;
+  /** What the child does on receiving "reload-now"; a test replaces it. */
+  reloadNow: () => void;
+};
+
+function makeFakeChild(pid: number): FakeChild {
+  const exitHandlers: ChildEventHandler[] = [];
+  const messageHandlers: ChildEventHandler[] = [];
+  // Deliberately partial fake: the supervisor reads only pid, on(), catch() and send() of a ChildProc,
+  // and the full execa ResultPromise type cannot be built without spawning a process.
+  const child = {
     pid,
-    on(event, bbx) {
+    on(event: string, bbx: ChildEventHandler) {
       if (event === "exit") exitHandlers.push(bbx);
       if (event === "message") messageHandlers.push(bbx);
     },
     catch() {},
-    send(message, callback) {
+    send(message: { type: string }, callback?: (error: Error | null) => void) {
       callback?.(null);
-      if (message.type === "reload-now") setImmediate(() => this.fireExit(75, null));
+      if (message.type === "reload-now") child.reloadNow();
     },
-    fireMessage(message) {
+    reloadNow() { setImmediate(() => { child.fireExit(75, null); }); },
+    fireMessage(message: { type: string }) {
       for (const handler of messageHandlers) handler(message);
     },
-    fireExit(code, signal) {
+    fireExit(code: number | null, signal: NodeJS.Signals | null) {
       for (const bbx of exitHandlers) bbx(code, signal);
     },
-  };
+  } as FakeChild;
+  return child;
 }
 
 /** Await the supervisor's real readiness transition; the file timeout catches hangs. */
@@ -168,7 +181,7 @@ JSON.stringify(Object.keys(buildChildEnv({ sourceEnv: notifyEnv, hubExtras: {} }
 
 ```ts continue
 const fixture = await makeTmpBox({ git: true });
-const children = [];
+const children: FakeChild[] = [];
 function spawnChild() {
   const child = makeFakeChild(900000 + children.length);
   children.push(child);
@@ -184,6 +197,9 @@ const config = {
   host: undefined,
   boxes: { fixture: { path: fixture.root } },
   configPath: fixture.path("hub.json"),
+  lazy: false,
+  idleMs: 300_000,
+  keepRecent: 0,
 };
 // A long backoff, because this section is about what the readiness-timeout
 // path RECORDS, not about the retry itself. At the production 1s base, the
@@ -202,7 +218,7 @@ restart.
 
 ```ts continue
 const afterTimeout = supervisor.getStatuses()[0];
-JSON.stringify({ status: afterTimeout.status, restarts: afterTimeout.restarts })
+JSON.stringify({ status: afterTimeout?.status, restarts: afterTimeout?.restarts })
 => {"status":"starting","restarts":1}
 ```
 
@@ -212,9 +228,9 @@ scheduled restart hasn't run yet. Without the fix this double-counts the
 same failure and schedules a second, overlapping restart.
 
 ```ts continue
-children[0].fireExit(null, "SIGTERM");
+children[0]?.fireExit(null, "SIGTERM");
 const afterExit = supervisor.getStatuses()[0];
-JSON.stringify({ status: afterExit.status, restarts: afterExit.restarts })
+JSON.stringify({ status: afterExit?.status, restarts: afterExit?.restarts })
 => {"status":"starting","restarts":1}
 ```
 
@@ -227,7 +243,7 @@ await fixture.cleanup();
 
 ```ts continue
 const reloadFixture = await makeTmpBox({ git: true });
-const reloadChildren = [];
+const reloadChildren: FakeChild[] = [];
 function reloadSpawnChild() {
   const child = makeFakeChild(905000 + reloadChildren.length);
   reloadChildren.push(child);
@@ -238,6 +254,9 @@ const reloadConfig = {
   host: undefined,
   boxes: { fixture: { path: reloadFixture.root } },
   configPath: reloadFixture.path("hub.json"),
+  lazy: false,
+  idleMs: 300_000,
+  keepRecent: 0,
 };
 let rejectReloadReady = false;
 const reloadSupervisor = new Supervisor({
@@ -248,7 +267,7 @@ const reloadSupervisor = new Supervisor({
 });
 await reloadSupervisor.startAll();
 const acceptedReloadWork = await acquireBoxWork(reloadFixture.root, { reason: "test" });
-reloadChildren[0].fireMessage({ type: "reload-request" });
+reloadChildren[0]?.fireMessage({ type: "reload-request" });
 while ((await boxMaintenanceStatus(reloadFixture.root)) === null) await new Promise((resolve) => setImmediate(resolve));
 reloadChildren.length
 => 1
@@ -257,16 +276,16 @@ await acquireBoxWork(reloadFixture.root, { reason: "test" })
 => throws BoxMaintenanceError
 
 await acceptedReloadWork.release();
-while (reloadChildren.length < 2 || reloadSupervisor.getStatuses()[0].status !== "running" || (await boxMaintenanceStatus(reloadFixture.root)) !== null) {
+while (reloadChildren.length < 2 || reloadSupervisor.getStatuses()[0]?.status !== "running" || (await boxMaintenanceStatus(reloadFixture.root)) !== null) {
   await new Promise((resolve) => setImmediate(resolve));
 }
 const reloadStatus = reloadSupervisor.getStatuses()[0];
-JSON.stringify({ status: reloadStatus.status, pid: reloadStatus.pid, restarts: reloadStatus.restarts, failures: reloadStatus.consecutiveFailures })
+JSON.stringify({ status: reloadStatus?.status, pid: reloadStatus?.pid, restarts: reloadStatus?.restarts, failures: reloadStatus?.consecutiveFailures })
 => {"status":"running","pid":905001,"restarts":1,"failures":0}
 
 await new Promise((resolve) => setImmediate(resolve));
 rejectReloadReady = true;
-reloadChildren[1].fireMessage({ type: "reload-request" });
+reloadChildren[1]?.fireMessage({ type: "reload-request" });
 ```
 
 When the replacement fails readiness, the box is unhealthy and the controller
@@ -277,10 +296,10 @@ the release itself; the brief window where the owner still holds `exclusive`
 is not a state to assert on.
 
 ```ts continue
-while (reloadSupervisor.getStatuses()[0].status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.owner !== null) await new Promise((resolve) => setImmediate(resolve));
+while (reloadSupervisor.getStatuses()[0]?.status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.owner !== null) await new Promise((resolve) => setImmediate(resolve));
 const failedReload = await boxMaintenanceStatus(reloadFixture.root);
 // The record says changes began and did not complete: exclusive, unowned.
-JSON.stringify({ phase: failedReload.phase, owner: failedReload.owner })
+JSON.stringify({ phase: failedReload?.phase, owner: failedReload?.owner })
 => {"phase":"exclusive","owner":null}
 
 const afterFailedReload = await acquireBoxWork(reloadFixture.root, { reason: "test" });
@@ -299,21 +318,18 @@ A simultaneous hub stop must release maintenance rather than strand the box.
 
 ```ts continue
 const stopReloadFixture = await makeTmpBox({ git: true });
-const stopReloadChildren = [];
+const stopReloadChildren: FakeChild[] = [];
 let stopReloadAcknowledged = false;
 const stopReloadSupervisor = new Supervisor({
   config: { ...reloadConfig, boxes: { fixture: { path: stopReloadFixture.root } }, configPath: stopReloadFixture.path("hub.json") },
   hubSecret: "test-hub-secret",
   spawnChild: () => {
     const child = makeFakeChild(907000 + stopReloadChildren.length);
-    child.send = (message, callback) => {
-      callback?.(null);
-      if (message.type === "reload-now") {
-        void stopReloadSupervisor.stopAll().then(() => {
-          stopReloadAcknowledged = true;
-          child.fireExit(75, null);
-        });
-      }
+    child.reloadNow = () => {
+      void stopReloadSupervisor.stopAll().then(() => {
+        stopReloadAcknowledged = true;
+        child.fireExit(75, null);
+      });
     };
     stopReloadChildren.push(child);
     return child;
@@ -321,7 +337,7 @@ const stopReloadSupervisor = new Supervisor({
   checkReady: () => Promise.resolve(),
 });
 await stopReloadSupervisor.startAll();
-stopReloadChildren[0].fireMessage({ type: "reload-request" });
+stopReloadChildren[0]?.fireMessage({ type: "reload-request" });
 while (!stopReloadAcknowledged) await new Promise((resolve) => setImmediate(resolve));
 const stopReloadDeadline = Date.now() + 2000;
 while ((await boxMaintenanceStatus(stopReloadFixture.root)) !== null && Date.now() < stopReloadDeadline) {
@@ -331,7 +347,7 @@ const stopReloadPhase = await boxMaintenanceStatus(stopReloadFixture.root);
 stopReloadPhase
 => null
 
-stopReloadSupervisor.getStatuses()[0].status
+stopReloadSupervisor.getStatuses()[0]?.status
 => stopped
 
 stopReloadChildren.length
@@ -356,7 +372,7 @@ doctest doesn't wait out a real 5-minute default.
 
 ```ts continue
 const lazyFixture = await makeTmpBox({ git: true });
-let lazyChildren = [];
+let lazyChildren: FakeChild[] = [];
 function lazySpawnChild() {
   const child = makeFakeChild(910000 + lazyChildren.length);
   lazyChildren.push(child);
@@ -387,7 +403,7 @@ await lazySupervisor.startAll();
 `startAll()` spawned nothing -- the box starts "stopped", not "starting":
 
 ```ts continue
-lazySupervisor.getStatuses()[0].status
+lazySupervisor.getStatuses()[0]?.status
 => stopped
 
 lazyChildren.length
@@ -401,10 +417,10 @@ lazySupervisor.get("fixture")
 
 ```ts continue
 const endpoint = await lazySupervisor.ensureRunning("fixture");
-endpoint.slug
+endpoint?.slug
 => fixture
 
-lazySupervisor.getStatuses()[0].status
+lazySupervisor.getStatuses()[0]?.status
 => running
 
 lazyChildren.length
@@ -417,20 +433,20 @@ fresh `ensureRunning` spawns a NEW child (not the same generation):
 
 ```ts continue
 await new Promise((r) => setTimeout(r, 150));
-lazySupervisor.getStatuses()[0].status
+lazySupervisor.getStatuses()[0]?.status
 => stopped
 
 lazySupervisor.get("fixture")
 => undefined
 
 const revived = await lazySupervisor.ensureRunning("fixture");
-revived.slug
+revived?.slug
 => fixture
 
 lazyChildren.length
 => 2
 
-lazySupervisor.getStatuses()[0].status
+lazySupervisor.getStatuses()[0]?.status
 => running
 ```
 
@@ -547,7 +563,7 @@ persisted recency instead of leaving everything stopped.
 ```ts continue
 const rtFixture = await makeTmpBox({ git: true });
 function makeRtSupervisor() {
-  const children = [];
+  const children: FakeChild[] = [];
   const config = {
     port: undefined,
     host: undefined,
@@ -635,7 +651,7 @@ const validEntry = {
 };
 await schedFixture.write(".beebox/chat-schedules.json", JSON.stringify([validEntry]));
 
-let schedChildren = [];
+let schedChildren: FakeChild[] = [];
 const schedSupervisor = new Supervisor({
   config: {
     port: undefined,
@@ -665,7 +681,7 @@ would normally stop it. But its `chat-schedules.json` holds an entry, so
 
 ```ts continue
 await schedSupervisor.ensureRunning("rice");
-schedSupervisor.getStatuses()[0].status
+schedSupervisor.getStatuses()[0]?.status
 => running
 
 JSON.stringify(schedSupervisor.keepSetSlugs())
@@ -674,7 +690,7 @@ JSON.stringify(schedSupervisor.keepSetSlugs())
 await schedSupervisor.evaluateIdle("rice")
 => kept-schedule
 
-schedSupervisor.getStatuses()[0].status
+schedSupervisor.getStatuses()[0]?.status
 => running
 ```
 
@@ -686,7 +702,7 @@ await schedFixture.write(".beebox/chat-schedules.json", JSON.stringify([]));
 await schedSupervisor.evaluateIdle("rice")
 => stopped
 
-schedSupervisor.getStatuses()[0].status
+schedSupervisor.getStatuses()[0]?.status
 => stopped
 ```
 
@@ -703,7 +719,7 @@ schedule fires on time after a hub restart, without waiting for a request:
 const bootFixture = await makeTmpBox({ git: true });
 await bootFixture.write(".beebox/chat-schedules.json", JSON.stringify([validEntry]));
 
-let bootChildren = [];
+let bootChildren: FakeChild[] = [];
 const bootSupervisor = new Supervisor({
   config: {
     port: undefined,
@@ -726,7 +742,7 @@ const bootSupervisor = new Supervisor({
 });
 await bootSupervisor.startAll();
 
-bootSupervisor.getStatuses()[0].status
+bootSupervisor.getStatuses()[0]?.status
 => running
 
 bootChildren.length
@@ -738,7 +754,7 @@ only starts boxes that actually hold pending schedules):
 
 ```ts continue
 const idleFixture = await makeTmpBox({ git: true });
-let idleChildren = [];
+let idleChildren: FakeChild[] = [];
 const idleSupervisor = new Supervisor({
   config: {
     port: undefined,
@@ -761,7 +777,7 @@ const idleSupervisor = new Supervisor({
 });
 await idleSupervisor.startAll();
 
-idleSupervisor.getStatuses()[0].status
+idleSupervisor.getStatuses()[0]?.status
 => stopped
 
 idleChildren.length

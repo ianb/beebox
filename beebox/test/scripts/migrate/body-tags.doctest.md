@@ -92,8 +92,8 @@ plan("_content/Books/Dune.book.card", "---\ntype: book\n---\nThe cover {% image 
 A stray `purpose` outside a briefing:
 
 ```ts
-plan("_content/Notes/a.memo.card", "---\ntype: memo\n---\nHi\n\n{% purpose %}\nx\n{% /purpose %}\n")
-=> { failures: [{ path: "_content/Notes/a.memo.card", line: 6, reason: "{% purpose %} is only valid in a briefing card" }], skipped: 0 }
+plan("_content/Notes/a.doc.card", "---\ntitle: Note\n---\nHi\n\n{% purpose %}\nx\n{% /purpose %}\n")
+=> { failures: [{ path: "_content/Notes/a.doc.card", line: 6, reason: "{% purpose %} is only valid in a briefing card" }], skipped: 0 }
 ```
 
 A correction inside a list item:
@@ -106,8 +106,8 @@ plan(ROOT, briefing("- item {% correction %}\nx\n{% /correction %}\n")).failures
 An image tag inside a code fence:
 
 ```ts
-plan("_content/Notes/b.memo.card", "---\ntype: memo\n---\n```\n{% image ref=\"attach/z.image.card\" /%}\n```\n")
-=> { failures: [{ path: "_content/Notes/b.memo.card", line: 5, reason: "{% image %} inside a code fence or another tag; rewrite it by hand" }], skipped: 0 }
+plan("_content/Notes/b.doc.card", "---\ntitle: Note\n---\n```\n{% image ref=\"attach/z.image.card\" /%}\n```\n")
+=> { failures: [{ path: "_content/Notes/b.doc.card", line: 5, reason: "{% image %} inside a code fence or another tag; rewrite it by hand" }], skipped: 0 }
 ```
 
 Two purpose blocks, and a purpose that disagrees with the existing key:
@@ -189,12 +189,12 @@ One unplaceable card fails the whole box: exit 1, nothing written, and
 const box = await makeTmpBox();
 const OK = "_content/capture/a.capture-session.card";
 await box.write(OK, "---\ntype: capture-session\n---\n{% silence duration=\"3s\" /%}\n");
-await box.write("_content/Notes/a.memo.card", "---\ntype: memo\n---\n{% purpose %}\nx\n{% /purpose %}\n");
+await box.write("_content/Notes/a.doc.card", "---\ntitle: Note\n---\n{% purpose %}\nx\n{% /purpose %}\n");
 const run = await runBodyTags({ boxRoot: box.root, mode: "apply" });
 ({ code: run.code, lines: run.lines, untouched: (await box.read(OK)).includes("{% silence"),
    verify: (await runBodyTags({ boxRoot: box.root, mode: "verify" })).lines })
-=> { code: 1, lines: ["failed: _content/Notes/a.memo.card:4: {% purpose %} is only valid in a briefing card", "body-tags: 1 failure(s); nothing written."], untouched: true,
-     verify: ["still carries a retired tag: _content/Notes/a.memo.card", "still carries a retired tag: _content/capture/a.capture-session.card", "body-tags: verify failed; 2 card(s) still carry a retired tag."] }
+=> { code: 1, lines: ["failed: _content/Notes/a.doc.card:4: {% purpose %} is only valid in a briefing card", "body-tags: 1 failure(s); nothing written."], untouched: true,
+     verify: ["still carries a retired tag: _content/Notes/a.doc.card", "still carries a retired tag: _content/capture/a.capture-session.card", "body-tags: verify failed; 2 card(s) still carry a retired tag."] }
 ```
 
 `bbx validate` output was not checked here: it needs a full box command run, and
@@ -206,14 +206,14 @@ Block-form `image` (and `silence`) is not converted to a dangling close tag; it
 fails, and the closing tag is what `--verify` would also look for.
 
 ```ts
-plan("_content/Notes/c.memo.card", "---\ntype: memo\n---\n{% image ref=\"attach/a.image.card\" %}\ncaption\n{% /image %}\n").failures.map((f) => f.reason)
+plan("_content/Notes/c.doc.card", "---\ntitle: Note\n---\n{% image ref=\"attach/a.image.card\" %}\ncaption\n{% /image %}\n").failures.map((f) => f.reason)
 => ["block-form {% image %}...{% /image %} is not supported; rewrite it by hand"]
 ```
 
 A `%` inside a quoted attribute is matched and converted.
 
 ```ts
-plan("_content/Notes/d.memo.card", "---\ntype: memo\n---\nSee {% image ref=\"attach/a%20b.image.card\" /%} ok.\n").after?.split("\n")[3]
+plan("_content/Notes/d.doc.card", "---\ntitle: Note\n---\nSee {% image ref=\"attach/a%20b.image.card\" /%} ok.\n").after?.split("\n")[3]
 => See [a%20b](attach/a%20b.image.card) ok.
 ```
 
@@ -222,14 +222,14 @@ source text, so a card holding one is left to a person, even when the real
 tag differs.
 
 ```ts
-plan("_content/Notes/d2.memo.card", "---\ntype: memo\n---\nWrite `{% image ref=\"x\" /%}` then {% image ref=\"attach/a.image.card\" /%} ok.\n").failures.map((f) => f.reason)
+plan("_content/Notes/d2.doc.card", "---\ntitle: Note\n---\nWrite `{% image ref=\"x\" /%}` then {% image ref=\"attach/a.image.card\" /%} ok.\n").failures.map((f) => f.reason)
 => ["a retired tag is quoted in a code span in this card; rewrite the card by hand"]
 ```
 
 A ref that cannot be written as a markdown link fails (space in the stem):
 
 ```ts
-plan("_content/Notes/e.memo.card", "---\ntype: memo\n---\n{% image ref=\"attach/cover 2.image.card\" /%}\n").failures.map((f) => f.reason)
+plan("_content/Notes/e.doc.card", "---\ntitle: Note\n---\n{% image ref=\"attach/cover 2.image.card\" /%}\n").failures.map((f) => f.reason)
 => ["the image ref \"attach/cover 2.image.card\" cannot be written as a markdown link (whitespace or one of ] ( ) < >); rename the card or link it by hand"]
 ```
 

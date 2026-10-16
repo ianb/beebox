@@ -26,12 +26,12 @@ const schema = cardSchema("demo-job", {
 
 const fields = {
   type: "demo-job",
-  item: { ref: "store/inbox/a.memo.card" },
+  item: { ref: "store/inbox/a.doc.card" },
   "body-file": { ref: "store/mail/msg.attach/body.txt" },
 };
 
 JSON.stringify(collectInlineRefs(schema, fields))
-=> ["store/inbox/a.memo.card"]
+=> ["store/inbox/a.doc.card"]
 ```
 
 ## A bare (un-migrated) ref field still inlines by default
@@ -113,20 +113,20 @@ referenced item card verbatim, fenced:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/inbox/item.memo.card", `---\nstatus: new\n---\nSAFE METADATA BODY`);
+await box.write("store/inbox/item.doc.card", `---\ntitle: Note\n---\nSAFE METADATA BODY`);
 await box.write(
   "box/jobs/x.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: rss\npriority: normal\ndescription: Triage one item\nitems:\n  - ref: store/inbox/item.memo.card\n---\n",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: rss\npriority: normal\ndescription: Triage one item\nitems:\n  - ref: store/inbox/item.doc.card\n---\n",
 );
 const content = await box.read("box/jobs/x.intake.job.card");
 
 const desc = await buildJobDescription(
-  { card: { file: "x.intake.job.card", priority: "normal" }, relPath: "box/jobs/x.intake.job.card", content },
+  { card: { file: "x.intake.job.card", priority: "normal", createdAt: null }, relPath: "box/jobs/x.intake.job.card", content },
   box.root,
 );
 
 // The cardRef target is inlined verbatim, under its own fenced section.
-desc.includes("#### store/inbox/item.memo.card")
+desc.includes("#### store/inbox/item.doc.card")
 => true
 
 desc.includes("SAFE METADATA BODY")
@@ -151,7 +151,7 @@ await box.write(
 const content = await box.read("box/jobs/z.intake.job.card");
 
 const desc = await buildJobDescription(
-  { card: { file: "z.intake.job.card", priority: "low" }, relPath: "box/jobs/z.intake.job.card", content },
+  { card: { file: "z.intake.job.card", priority: "low", createdAt: null }, relPath: "box/jobs/z.intake.job.card", content },
   box.root,
 );
 
@@ -179,21 +179,21 @@ four-backtick fence so the inner run cannot close the section.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/inbox/tricky.memo.card", "---\nstatus: new\n---\ntext\n```\nfenced inner\n```\nmore");
+await box.write("store/inbox/tricky.doc.card", "---\ntitle: Note\n---\ntext\n```\nfenced inner\n```\nmore");
 await box.write(
   "box/jobs/y.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: rss\npriority: normal\ndescription: Triage tricky\nitems:\n  - ref: store/inbox/tricky.memo.card\n---\n",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: rss\npriority: normal\ndescription: Triage tricky\nitems:\n  - ref: store/inbox/tricky.doc.card\n---\n",
 );
 const content = await box.read("box/jobs/y.intake.job.card");
 
 const desc = await buildJobDescription(
-  { card: { file: "y.intake.job.card", priority: "normal" }, relPath: "box/jobs/y.intake.job.card", content },
+  { card: { file: "y.intake.job.card", priority: "normal", createdAt: null }, relPath: "box/jobs/y.intake.job.card", content },
   box.root,
 );
 
 // The inlined ref (its whole file, frontmatter included) sits inside a
 // four-backtick fence, so the body's own ``` run can't close it early.
-desc.includes("#### store/inbox/tricky.memo.card\n````\n")
+desc.includes("#### store/inbox/tricky.doc.card\n````\n")
 => true
 
 desc.includes("text\n```\nfenced inner\n```\nmore\n````")

@@ -13,20 +13,31 @@ import {
   evaluateTaskHealth,
 } from "../../../src/core/schedule/health.js";
 import { parseScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
+import type { ScheduledScriptFields } from "../../../src/schemas/scheduled-script/schema.js";
 import { normalizeScriptState } from "../../../src/core/schedule/state.js";
 import {
   summarizeScheduleHealth,
   selectAlertableTasks,
   formatDurationShort,
 } from "../../../src/core/schedule/health-box.js";
+import type { SchedulerHeartbeat } from "../../../src/core/schedule/health-box.js";
 
 const NOW = new Date("2026-06-09T12:00:00Z");
 
-function makeScript(fields = {}) {
+function makeScript(fields: Partial<ScheduledScriptFields> = {}) {
   return parseScheduledScript({ type: "scheduled-script", runs: "true", ...fields });
 }
 
-function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("2026-06-01T00:00:00Z"), missingConnectors = [], engineWaitReason = undefined as string | undefined } = {}) {
+type StatePatch = Parameters<typeof normalizeScriptState>[0];
+interface EvaluateOptions {
+  fields?: Partial<ScheduledScriptFields>;
+  state?: StatePatch;
+  now?: Date;
+  cardMtime?: Date;
+  missingConnectors?: string[];
+  engineWaitReason?: string | undefined;
+}
+function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("2026-06-01T00:00:00Z"), missingConnectors = [], engineWaitReason = undefined }: EvaluateOptions = {}) {
   return evaluateTaskHealth({
     name: "demo",
     parsed: makeScript(fields),
@@ -38,23 +49,23 @@ function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("20
   });
 }
 
-const statusOf = (args) => evaluate(args).status;
+const statusOf = (args: EvaluateOptions) => evaluate(args).status;
 
 /** State of a task whose last attempt, at `when`, ended `result` ("success" also sets lastSuccess). */
-const ran = (when, result = "success") =>
+const ran = (when: string, result: "success" | "failure" | "deferred" | "inconclusive" = "success"): StatePatch =>
   result === "success" ? { lastRun: when, lastResult: "success", lastSuccess: when } : { lastRun: when, lastResult: result };
 
 const dailyAt5 = { cron: "0 5 * * *" };
 const hourly = { cron: "0 * * * *" };
 
 /** Three failures since a success on 06-06. */
-const failingState = {
+const failingState: StatePatch = {
   lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom",
   lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 3,
 };
 
 /** A scheduler daemon that ticked 30s before NOW. */
-const scheduler = { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 };
+const scheduler: SchedulerHeartbeat = { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 };
 ```
 
 ## Healthy task
@@ -134,7 +145,7 @@ occurrences; pending time is measured from the earliest one:
 
 ```ts
 const h = evaluate({ fields: hourly, state: ran("2026-06-07T05:00:10Z") });
-print(`${h.status}, pending: ${formatDurationShort(h.pendingMs)}`);
+print(`${h.status}, pending: ${formatDurationShort(h.pendingMs ?? 0)}`);
 => overdue, pending: 2d
 ```
 
@@ -269,10 +280,10 @@ const oneFailure = evaluate({
   fields: dailyAt5,
   state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },
 });
-print(`one failure: ${selectAlertableTasks({ tasks: [oneFailure], scheduler }).length}`);
-print(`three failures: ${selectAlertableTasks({ tasks: [failing], scheduler }).length}`);
-print(`overdue: ${selectAlertableTasks({ tasks: [overdue], scheduler }).length}`);
-print(`ok: ${selectAlertableTasks({ tasks: [ok], scheduler }).length}`);
+print(`one failure: ${selectAlertableTasks({ tasks: [oneFailure], scheduler, engineWait: null }).length}`);
+print(`three failures: ${selectAlertableTasks({ tasks: [failing], scheduler, engineWait: null }).length}`);
+print(`overdue: ${selectAlertableTasks({ tasks: [overdue], scheduler, engineWait: null }).length}`);
+print(`ok: ${selectAlertableTasks({ tasks: [ok], scheduler, engineWait: null }).length}`);
 =>
 one failure: 0
 three failures: 1

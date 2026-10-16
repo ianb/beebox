@@ -53,7 +53,7 @@ drops user MCP servers, and cannot read the audit answer key:
 
 ```ts
 const args = devClaudeArgs({ model: "claude-sonnet-4-6", maxTurns: 10 });
-const settings: unknown = JSON.parse(args[args.indexOf("--settings") + 1]);
+const settings: unknown = JSON.parse(args[args.indexOf("--settings") + 1] ?? "");
 JSON.stringify([args.includes("--strict-mcp-config"), args[args.indexOf("--tools") + 1], args[args.indexOf("--setting-sources") + 1], settings])
 => [true,"Read,Grep,Glob,Skill","project",{"disableAllHooks":true,"permissions":{"deny":["Read(./beebox/src/dev/knowledge-audits.yaml)","Read(./beebox/src/dev/context-history.yaml)","Read(./beebox/src/dev/reports/**)","Read(./scratch/**)"]}}]
 ```

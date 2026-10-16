@@ -20,9 +20,13 @@ import type { LoadCardContext } from "../../../src/core/card-io.js";
 import courseware from "../../../src/plugins/courseware/plugin.js";
 
 const ctx: LoadCardContext = {
-  cardSchemas: new Map<string, CardSchema>(
-    Object.entries(courseware.schemas ?? {}).map(([type, base]) => [type, cardSchema(type, base)]),
-  ),
+  cardSchemas: new Map<string, CardSchema>([
+    ["course", cardSchema("course", courseware.schemas.course)],
+    ["lesson-plan", cardSchema("lesson-plan", courseware.schemas["lesson-plan"])],
+    ["exposition-plan", cardSchema("exposition-plan", courseware.schemas["exposition-plan"])],
+    ["progress", cardSchema("progress", courseware.schemas.progress)],
+    ["concept-map", cardSchema("concept-map", courseware.schemas["concept-map"])],
+  ]),
 };
 
 /** A box with the plugin active, as `_config/box.json` records it. */

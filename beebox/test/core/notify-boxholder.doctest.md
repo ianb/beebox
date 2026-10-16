@@ -12,8 +12,10 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { boxSlug } from "../../src/lib/box-slug.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { notifyBoxholder, notifyChannels } from "../../src/core/notify-boxholder.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { notifyBoxholder, notifyChannels, type NotificationInput } from "../../src/core/notify-boxholder.js";
+import type { Loudness } from "../../src/core/notification/intent.js";
+import { eventSchemas } from "../../src/core/event-bus/schemas.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
 import { createEventBus } from "../../src/core/event-bus/core.js";
@@ -36,7 +38,7 @@ async function reachableBox() {
   return box;
 }
 
-function intent(loudness) {
+function intent(loudness: Loudness): NotificationInput {
   return {
     title: "Field trip form due Friday",
     body: "The school emailed: the form is due Friday.",
@@ -46,12 +48,12 @@ function intent(loudness) {
   };
 }
 
-async function logged(box) {
+async function logged(box: TmpBox) {
   const [n] = await readRecent(box.root, { days: 1, now: NOW });
-  return n.deliveries.map((d) => `${d.channel} ${d.status}${d.detail ? `: ${d.detail}` : ""}`).join("\n");
+  return (n?.deliveries ?? []).map((d) => `${d.channel} ${d.status}${d.detail ? `: ${d.detail}` : ""}`).join("\n");
 }
 
-async function failing(box) {
+async function failing(box: TmpBox) {
   const checks = await notificationHealthChecks(box.root, { now: NOW });
   return checks.filter((c) => !c.ok).map((c) => `${c.name}: ${c.message}`).join("\n") || "all ok";
 }
@@ -89,13 +91,13 @@ got the live bus event with the same id and url:
 
 ```ts continue
 const [n] = await readRecent(box.root, { days: 1, now: NOW });
-JSON.stringify([n.intent.id === result.id, n.intent.target, n.intent.loudness, n.intent.source])
+JSON.stringify([n?.intent.id === result.id, n?.intent.target, n?.intent.loudness, n?.intent.source])
 => [true,"card:_content/inbox/field-trip.email.card","loud","notify-doctest"]
 
 const bus = createEventBus(box.root);
-const events = bus.readSince(0).filter((e) => e.event === "notification");
+const events = bus.readSince(0).filter((e) => e.event === "notification").map((e) => eventSchemas.notification.parse(e.data));
 bus.close();
-JSON.stringify([events.length, events[0]?.data.id === result.id, events[0]?.data.url === push.sent[0]?.payload.url])
+JSON.stringify([events.length, events[0]?.id === result.id, events[0]?.url === push.sent[0]?.payload.url])
 => [1,true,true]
 
 await failing(box)
@@ -205,7 +207,7 @@ one:
 
 ```ts
 const box = await reachableBox();
-const ids = [];
+const ids: string[] = [];
 for (let i = 0; i < 5; i++) ids.push((await notifyBoxholder(box.root, { intent: intent("dot"), now: NOW })).id);
 ids.every((id) => /^n[\w-]{8}$/.test(id))
 => true
@@ -279,7 +281,7 @@ const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NO
 result.deliveries.map((d) => `${d.channel} ${d.status}`).join(", ")
 => apns skipped, web-push sent
 
-(await notificationHealthChecks(box.root, { now: NOW })).find((c) => c.name === "notification-log-writable").ok
+(await notificationHealthChecks(box.root, { now: NOW })).find((c) => c.name === "notification-log-writable")?.ok
 => false
 ```
 

@@ -8,24 +8,17 @@ reopen, since absent means open), committed with its own endpoint trailer. The e
 import { execFileSync } from "node:child_process";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createBrowserTaskTemplate } from "../../../../src/schemas/browser-task.js";
 
 function caller(boxRoot: string, options?: { isOwner?: boolean }) {
-  return appRouter.createCaller({
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: options?.isOwner !== false,
-  });
+  return appRouter.createCaller(trpcContext({ boxRoot, isOwner: options?.isOwner !== false }));
 }
 
 const box = await makeTmpBox({ git: true });
 const cardPath = "_content/tasks/Task.browser-task.card";
 await box.write(cardPath, createBrowserTaskTemplate({ title: "Scan", start: "https://example.test/feed", prompt: "Find shows.\n" }));
-await box.write("_content/notes/Note.memo.card", "---\ntype: memo\nstatus: new\ncreated: 2026-09-12T00:00:00Z\n---\nA memo.\n");
+await box.write("_content/notes/Note.doc.card", "---\ntitle: Note\n---\nA doc.\n");
 box.commitAll("seed");
 ```
 
@@ -76,7 +69,7 @@ Not an owner, not a browser-task card, not a card at all:
 await caller(box.root, { isOwner: false }).browserTask.setClosed({ path: cardPath, closed: true }).then(() => "accepted", (e) => e.code)
 => FORBIDDEN
 
-await caller(box.root).browserTask.setClosed({ path: "_content/notes/Note.memo.card", closed: true }).then(() => "accepted", (e) => e.code)
+await caller(box.root).browserTask.setClosed({ path: "_content/notes/Note.doc.card", closed: true }).then(() => "accepted", (e) => e.code)
 => BAD_REQUEST
 
 await caller(box.root).browserTask.setClosed({ path: "_content/tasks/Nope.browser-task.card", closed: true }).then(() => "accepted", (e) => e.code)

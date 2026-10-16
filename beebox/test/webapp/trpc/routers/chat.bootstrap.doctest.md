@@ -16,6 +16,9 @@ report anything different from them.
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
+import type { TestServer } from "../../../helpers/doctest-server.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { getSessionDir } from "../../../../src/core/chat/session/transcript-paths.js";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -23,22 +26,25 @@ import { join } from "node:path";
 
 // A real server, because `chat.status` reads the live per-box chat runtime
 // that `registerChatRoutes` installs.
-function caller(server) {
-  const ctx = {
+function caller(server: TestServer) {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: server.boxRoot,
-    boxSlug: "test",
     eventBus: server.eventBus,
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-  };
+    isAuthenticatedOwner: true,
+  });
   return appRouter.createCaller(ctx);
+}
+
+type Bootstrap = Awaited<ReturnType<ReturnType<typeof caller>["chat"]["bootstrap"]>>;
+
+// Deliberately invalid wire input, as it would arrive from a client.
+function wire(json: string) {
+  return JSON.parse(json);
 }
 
 // The fields an example is about: the full status payload is chat.status's own
 // contract, covered in its tests, so only its session/run flags are kept.
-function shape(r) {
+function shape(r: Bootstrap) {
   const { status, history, ...rest } = r;
   return {
     ...rest,
@@ -48,7 +54,7 @@ function shape(r) {
 }
 
 // The chat page's request shape: a bounded tail window.
-const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 };
+const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 } as const;
 
 const TRANSCRIPT = [
   JSON.stringify({
@@ -66,14 +72,14 @@ const TRANSCRIPT = [
 ].join("\n");
 
 // Point session discovery at a fixture dir and write one session's transcript.
-async function seedTranscript(server, sessionId) {
+async function seedTranscript(server: TestServer, sessionId: string) {
   const dir = getSessionDir(server.boxRoot);
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, `${sessionId}.jsonl`), TRANSCRIPT);
 }
 
 // Record the default-session pointer, as sending a message would.
-async function setDefaultSession(server, sessionId) {
+async function setDefaultSession(server: TestServer, sessionId: string) {
   await mkdir(join(server.boxRoot, ".beebox"), { recursive: true });
   await writeFile(
     join(server.boxRoot, ".beebox/chat-session-id.json"),
@@ -112,8 +118,8 @@ await seedTranscript(server, "sess-explicit");
 
 const got = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: TAIL });
 print(`sessionId: ${got.sessionId}`);
-print(`total: ${got.history.total}`);
-print(`entries: ${got.history.entries.map((e) => `${e.type}:${e.content[0].text}`).join(", ")}`);
+print(`total: ${got.history?.total}`);
+print(`entries: ${got.history?.entries.map((e) => `${e.type}:${e.content[0]?.text}`).join(", ")}`);
 print(`label: ${got.label}`);
 print(`status: running=${got.status.running} busy=${got.status.busy} id=${got.status.sessionId}`);
 =>
@@ -133,8 +139,8 @@ The history slice options are the ones `chat.history` takes:
 
 ```ts continue
 const tailed = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: { mode: "tail", tail: 1 } });
-print(`kept: ${tailed.history.entries.length} of ${tailed.history.total}`);
-print(`text: ${tailed.history.entries[0].content[0].text}`);
+print(`kept: ${tailed.history?.entries.length} of ${tailed.history?.total}`);
+print(`text: ${tailed.history?.entries[0]?.content[0]?.text}`);
 =>
 kept: 1 of 2
 text: Hi there!
@@ -194,7 +200,7 @@ is an empty one — `""` is not a session id, and accepting it would report
 `sessionId: ""` next to a status that correctly says there is no session.
 
 ```ts continue
-await caller(server).chat.bootstrap({ session: 42, slice: TAIL }).then(() => "no error", (e) => e.code)
+await caller(server).chat.bootstrap(wire(`{ "session": 42, "slice": ${JSON.stringify(TAIL)} }`)).then(() => "no error", (e) => e.code)
 => BAD_REQUEST
 
 await caller(server).chat.bootstrap({ session: "", slice: TAIL }).then(() => "no error", (e) => e.code)
@@ -208,7 +214,9 @@ rather than served as a bigger read:
 
 ```ts continue
 const c2 = caller(server);
-print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 1, offset: 0, limit: 40 } }).then(() => "no error", (e) => e.code));
+// A fresh object literal would be refused at compile time; a variable is not.
+const tailWithPageFields = { mode: "tail", tail: 1, offset: 0, limit: 40 } as const;
+print(await c2.chat.history({ session: "sess-explicit", slice: tailWithPageFields }).then(() => "no error", (e) => e.code));
 print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 50_000 } }).then(() => "no error", (e) => e.code));
 print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "page", offset: -1, limit: 10 } }).then(() => "no error", (e) => e.code));
 print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 1.5 } }).then(() => "no error", (e) => e.code));

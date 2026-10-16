@@ -35,6 +35,7 @@ what differs is skipping the transport's own auth-header parsing, which is
 through real `server.inject()` with `alpha`'s actual bearer header.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { execSync } from "node:child_process";
@@ -42,43 +43,33 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTwoBoxTestServer, commitAll } from "../helpers/test-server.js";
+import { silentEventBus, trpcContext } from "../helpers/trpc-context.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
+import type { EventBus } from "../../src/core/event-bus/core.js";
 
 const BETA_MARKER = "BETA-SECRET-MARKER-9f3c1a";
 
-const noBus = {
-  emit: () => 0,
-  emitTransient: () => {},
-  readSince: () => [],
-  subscribe: () => ({ unsubscribe: () => {} }),
-  prune: () => 0,
-  close: () => {},
-};
-
 /** A tRPC caller authenticated to `alpha` (or any given box), the shape the
  *  real per-box auth wall constructs after admitting a request. */
-function callerFor(boxRoot, eventBus) {
-  return appRouter.createCaller({
+function callerFor(boxRoot: string, eventBus?: EventBus) {
+  return appRouter.createCaller(trpcContext({
     boxRoot,
     boxSlug: "alpha",
-    eventBus: eventBus ?? noBus,
-    services: {},
+    eventBus: eventBus ?? silentEventBus,
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-  });
+  }));
 }
 
 /** Run a tRPC call, reporting either its result or the error code. */
-async function attempt(fn) {
+async function attempt<T>(fn: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; code: string | undefined }> {
   try {
     return { ok: true, value: await fn() };
   } catch (e) {
-    return { ok: false, code: e.code };
+    return { ok: false, code: e instanceof TRPCError ? e.code : undefined };
   }
 }
 ```
@@ -94,8 +85,8 @@ const ctx = await createTwoBoxTestServer();
 
 await fs.mkdir(path.join(ctx.b.boxRoot, "_content"), { recursive: true });
 await fs.writeFile(
-  path.join(ctx.b.boxRoot, "_content", "Marker.memo.card"),
-  `---\ntype: memo\nstatus: new\ncreated: 2026-01-01T00:00:00Z\n---\n${BETA_MARKER}\n`,
+  path.join(ctx.b.boxRoot, "_content", "Marker.doc.card"),
+  `---\ntitle: Beta marker title\n---\n${BETA_MARKER}\n`,
 );
 await fs.mkdir(path.join(ctx.b.boxRoot, "_content", "sub"), { recursive: true });
 await fs.writeFile(
@@ -128,7 +119,7 @@ await setAndGrantSecret({ name: "beta-only-key", value: "placeholder-not-a-real-
 // layout makes alpha and beta direct siblings (each `boxRoot` is its own
 // mkdtemp), so this is exactly one ".." segment.
 const relIntoBeta = path.relative(ctx.a.boxRoot, ctx.b.boxRoot);
-const relToBetaMarker = path.relative(ctx.a.boxRoot, path.join(ctx.b.boxRoot, "_content", "Marker.memo.card"));
+const relToBetaMarker = path.relative(ctx.a.boxRoot, path.join(ctx.b.boxRoot, "_content", "Marker.doc.card"));
 
 print("seeded");
 =>
@@ -144,7 +135,7 @@ cookie either — the same 401 `two-box-fixture.doctest.md` proves for
 ```ts continue
 const filesRes = await ctx.server.inject({
   method: "GET",
-  url: "/beta/api/files/Marker.memo.card",
+  url: "/beta/api/files/Marker.doc.card",
   headers: { authorization: ctx.a.agentBearerHeader() },
 });
 print(`beta/api/files with alpha's bearer: ${filesRes.statusCode}`);
@@ -167,8 +158,8 @@ route handler at all: Fastify's router (`find-my-way`) normalizes dot
 segments before matching. The one-root layout makes alpha and beta direct
 siblings, so `relToBetaMarker` climbs out with exactly one `..` — enough to
 cancel `files` but not to leave `/api/*` — so
-`/alpha/api/files/../<sibling>/_content/Marker.memo.card` collapses to
-`/alpha/api/<sibling>/_content/Marker.memo.card`, an unmatched route under
+`/alpha/api/files/../<sibling>/_content/Marker.doc.card` collapses to
+`/alpha/api/<sibling>/_content/Marker.doc.card`, an unmatched route under
 `/api/*` that gets a plain JSON 404 rather than the browser-auth redirect a
 path landing outside `/api/*` would get. Either way B's content is never
 read or returned.
@@ -219,7 +210,7 @@ fails the namespace check before any filesystem read, so this shape 400s
 
 ```ts continue
 const caller = callerFor(ctx.a.boxRoot, ctx.a.eventBus);
-const betaMarkerAbs = path.join(ctx.b.boxRoot, "_content", "Marker.memo.card");
+const betaMarkerAbs = path.join(ctx.b.boxRoot, "_content", "Marker.doc.card");
 
 const cardGetRel = await attempt(() => caller.card.get({ path: relToBetaMarker }));
 print(`card.get (relative ..): ${cardGetRel.ok ? "SUCCEEDED" : cardGetRel.code}`);
@@ -263,7 +254,7 @@ the box namespace. This step is the regression anchor and must keep printing
 
 ```ts continue
 const summarized = await caller.files.summarize({ paths: [relToBetaMarker] });
-const leaked = JSON.stringify(summarized).includes(BETA_MARKER) || JSON.stringify(summarized).includes("memo");
+const leaked = JSON.stringify(summarized).includes(BETA_MARKER) || JSON.stringify(summarized).includes("Beta marker title");
 print(`files.summarize leaks beta's card: ${leaked}`);
 =>
 files.summarize leaks beta's card: false
@@ -378,7 +369,7 @@ print(`history.diff on alpha with beta's hash: diff empty=${diff.diff === ""}`);
 
 const blobRes = await ctx.server.inject({
   method: "GET",
-  url: `/alpha/api/history/blob/${betaHash}/_content/Marker.memo.card`,
+  url: `/alpha/api/history/blob/${betaHash}/_content/Marker.doc.card`,
   headers: { authorization: ctx.a.agentBearerHeader() },
 });
 print(`history/blob on alpha with beta's hash: ${blobRes.statusCode}`);

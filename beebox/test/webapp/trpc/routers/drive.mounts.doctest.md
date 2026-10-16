@@ -11,10 +11,13 @@ The Drive service is injected the way every service is in a tRPC test — throug
 `ctx.services` — so no procedure here reaches Google.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
+import type { TrpcActor, TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
-import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../../../src/services/google-drive/core.js";
+import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet, type GoogleDriveService } from "../../../../src/services/google-drive/core.js";
 // Importing the connector registers the docs/sheets handlers — that is what
 // makes a Doc or Sheet child syncable rather than pointer-only.
 import { createGoogleDriveConnector } from "../../../../src/connectors/google-drive/connector.js";
@@ -57,38 +60,34 @@ function recipesDrive() {
       // Outside the folder: what a pointer written by hand points at.
       driveFile({ id: "deck-9", name: "Kickoff.pptx", mimeType: "application/vnd.ms-powerpoint" }),
     ],
-    spreadsheets: [["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Budget 2026" })]],
+    spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Budget 2026" })]]),
   });
 }
 
-function caller(boxRoot, drive, actor) {
-  const ctx = {
+function caller(boxRoot: string, drive?: GoogleDriveService, actor?: TrpcActor) {
+  const ctx: TrpcContext = trpcContext({
     actor: actor ?? "user",
     boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: drive === undefined ? {} : { drive },
-    user: null,
-    authed: true,
-    isOwner: true,
-  };
+    isAuthenticatedOwner: true,
+  });
   return appRouter.createCaller(ctx);
 }
 
 /** The `Triggered-By` trailer on the box's most recent commit, or "none". */
-async function lastTrigger(boxRoot) {
+async function lastTrigger(boxRoot: string) {
   const entry = (await getLog(boxRoot, 1))[0];
   return entry?.trailers?.["Triggered-By"] ?? "none";
 }
 
 /** The tRPC error code a call fails with, or "none" when it succeeds. */
-async function code(p) {
-  return p.then(() => "none", (e) => e.code);
+async function code(p: Promise<unknown>) {
+  return p.then(() => "none", (e: unknown) => (e instanceof TRPCError ? e.code : String(e)));
 }
 
 /** The message a refusal carries — what the settings page renders inline. */
-async function refusal(p) {
-  return p.then(() => "no refusal", (e) => `${e.code}: ${e.message}`);
+async function refusal(p: Promise<unknown>) {
+  return p.then(() => "no refusal", (e: unknown) => (e instanceof TRPCError ? `${e.code}: ${e.message}` : String(e)));
 }
 ```
 
@@ -152,7 +151,7 @@ listed.connected
 => true
 
 // `last-sync` is stamped, so the row can say when Drive was last heard from.
-typeof listed.mounts[0].lastSync
+typeof listed.mounts[0]?.lastSync
 => string
 ```
 
@@ -295,8 +294,8 @@ a stale page, or a mount someone removed in between.
 await refusal(c.drive.syncFolder({ cardPath: "_content/drive/recipes/Missing.gfolder.card" }))
 => BAD_REQUEST: _content/drive/recipes/Missing.gfolder.card is not a Drive folder mount card
 
-await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.memo.card" }))
-=> BAD_REQUEST: _content/notes/Plan.memo.card is not a Drive folder mount card
+await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.doc.card" }))
+=> BAD_REQUEST: _content/notes/Plan.doc.card is not a Drive folder mount card
 ```
 
 ## A path that climbs out of the box is refused before anything is written

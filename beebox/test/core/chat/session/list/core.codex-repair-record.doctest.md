@@ -16,6 +16,7 @@ home, which has never seen the husk's thread, so the index lacks it.
 ```ts setup
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../../helpers/trpc-context.js";
 import { appRouter } from "../../../../../src/webapp/trpc/routers.js";
 import { loadDeadHusks, listSessionEntries } from "../../../../../src/core/chat/session/list/core.js";
 import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
@@ -23,13 +24,8 @@ import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
 const CODEX_CHAT = "33333333-3333-4333-8333-333333333333";
 const RECORD = ".beebox/codex-repair-attempted.json";
 
-function caller(boxRoot) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-  };
+function caller(boxRoot: string) {
+  const ctx = trpcContext({ boxRoot, authed: false, isOwner: false, actor: "none" });
   return appRouter.createCaller(ctx);
 }
 

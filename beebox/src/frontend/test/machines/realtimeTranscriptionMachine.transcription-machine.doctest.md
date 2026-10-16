@@ -16,10 +16,14 @@ bookkeeping, not about a socket.
 ```ts setup
 import { createActor } from "xstate";
 import { fromCallback } from "xstate";
+import type { TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent } from "../../src/machines/transcription-events.js";
 import { realtimeTranscriptionMachine, transcriptionStateOf } from "../../src/machines/realtimeTranscriptionMachine.js";
 
+/** A finished segment's sealing obligation; the examples here never read it. */
+const NO_AUDIO = { recordingId: "rec-none", seal: () => {}, discard: () => {} };
+
 /** A transcriber that connects and then does nothing until told. */
-const inertTranscriber = fromCallback(() => () => {});
+const inertTranscriber = fromCallback<TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent>(() => () => {});
 
 /**
  * START lands in `active.connecting`, where only mic permission and worklet
@@ -92,12 +96,12 @@ the transcript must not be blanked by a finalization that brought nothing.
 ```ts continue
 const keeper = started();
 keeper.send({ type: "TEXT_UPDATE", finalText: "kept text", interimText: "pending", finalWords: null });
-keeper.send({ type: "TRANSCRIPTION_DONE", text: "", recording: null });
+keeper.send({ type: "TRANSCRIPTION_DONE", text: "", recording: NO_AUDIO });
 const afterEmpty = { ...keeper.getSnapshot().context };
 
 const replacer = started();
 replacer.send({ type: "TEXT_UPDATE", finalText: "old", interimText: "pending", finalWords: null });
-replacer.send({ type: "TRANSCRIPTION_DONE", text: "final text", words: [], recording: null });
+replacer.send({ type: "TRANSCRIPTION_DONE", text: "final text", words: [], recording: NO_AUDIO });
 JSON.stringify({
   emptyKeptFinal: afterEmpty.finalTranscript,
   emptyClearedInterim: afterEmpty.interimTranscript,

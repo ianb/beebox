@@ -9,7 +9,7 @@
  */
 
 import getPorts from "get-port";
-import { acquireBoxStartup } from "../../lib/box-maintenance.js";
+import { acquireBoxStartup } from "../../lib/box-maintenance/admission.js";
 import { buildChildEnv } from "./child-env.js";
 import * as path from "node:path";
 import { execa, type ResultPromise } from "execa";

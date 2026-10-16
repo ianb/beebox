@@ -9,8 +9,9 @@ per-loudness vectors are also shared fixtures under
 
 ```ts setup
 import { buildApnsRequest } from "../../../../src/core/notification/apns-channel/payload.js";
+import type { NotificationIntent, Loudness } from "../../../../src/core/notification/intent.js";
 
-function intent(loudness, extra) {
+function intent(loudness: Loudness, extra: { tag?: string } = {}): NotificationIntent {
   return {
     id: "nAbc123",
     title: "Field trip form due Friday",
@@ -21,7 +22,7 @@ function intent(loudness, extra) {
     ...extra,
   };
 }
-const show = (loudness, extra) => JSON.stringify(buildApnsRequest(intent(loudness, extra), { bundleId: "app.example", box: "home" }));
+const show = (loudness: Loudness, extra: { tag?: string } = {}) => JSON.stringify(buildApnsRequest(intent(loudness, extra), { bundleId: "app.example", box: "home" }));
 ```
 
 ## `dot`: a badge and nothing else
@@ -55,7 +56,7 @@ SHA-256 hex instead: still one id per tag.
 
 ```ts
 const short = buildApnsRequest(intent("quiet", { tag: "field-trip" }), { bundleId: "app.example", box: "home" }).headers;
-const long = buildApnsRequest(intent("quiet", { tag: "x".repeat(80) }), { bundleId: "app.example", box: "home" }).headers["apns-collapse-id"];
+const long = buildApnsRequest(intent("quiet", { tag: "x".repeat(80) }), { bundleId: "app.example", box: "home" }).headers["apns-collapse-id"] ?? "";
 JSON.stringify([short["apns-collapse-id"], long.length, /^[\da-f]+$/.test(long)])
 => ["field-trip",64,true]
 ```

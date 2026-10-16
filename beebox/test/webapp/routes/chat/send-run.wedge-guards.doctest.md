@@ -17,7 +17,7 @@ retry of its message id is answered from a claim nobody will ever settle.
 ```ts setup
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, bodyField } from "../../../helpers/doctest-helpers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { captureTurn, startAckedRun } from "../../../../src/webapp/routes/chat/send-run.js";
 import { getTurnBuffer } from "../../../../src/core/chat/turn-buffer.js";
@@ -145,13 +145,18 @@ The event bus stands in for "anything between the claim and the ack" — its
 const backend = createFakeChatBackend();
 const realStart = backend.start.bind(backend);
 const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
-  backend.start = (opts) => { const run = realStart(opts); resolve(run); return run; };
+  backend.start = (opts) => {
+    const run = realStart(opts);
+    const fakeRun = backend.lastRun();
+    if (fakeRun !== null) resolve(fakeRun);
+    return run;
+  };
 });
 const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const realEmit = ctx.eventBus.emit;
@@ -190,7 +195,7 @@ const retry = await ctx.request({
   payload: { session: "new", message: "did you water the plants", messageId: "m1" },
 });
 
-`${retry.statusCode} | turn=${typeof retry.body.turnId} | recorded=${recorded.length} | ${recorded[0]}`
+`${retry.statusCode} | turn=${typeof bodyField(retry.body, "turnId")} | recorded=${recorded.length} | ${recorded[0]}`
 => 200 | turn=string | recorded=1 | did you water the plants
 ```
 
@@ -201,7 +206,7 @@ and held the process open until the file timed out.
 
 ```ts continue
 (await runStarted).emitResult();
-const ended = await awaitTurnEnd(retry.body.turnId);
+const ended = await awaitTurnEnd(String(bodyField(retry.body, "turnId")));
 `errored=${ended.errored} | complete=${ended.complete}`
 => errored=null | complete=true
 ```

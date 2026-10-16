@@ -47,7 +47,7 @@ PlaceSchema.frontmatterSchema.safeParse({ type: "place", name: "X", lat: 999, ln
 (v ? v({ fields: { name: "Home", lat: 45.5 } }) : []).length
 => 1
 
-(v ? v({ fields: { name: "Home", lat: 45.5 } }) : [])[0].severity
+(v ? v({ fields: { name: "Home", lat: 45.5 } }) : [])[0]?.severity
 => warning
 ```
 

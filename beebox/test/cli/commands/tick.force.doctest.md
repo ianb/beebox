@@ -12,13 +12,15 @@ still respected — force never preempts running work.
 skip silently), or `null` meaning "run it".
 
 ```ts setup
+import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
+import { normalizeScriptState } from "../../../src/core/schedule/state.js";
 import { evaluateSkip, effectiveBusyBlockers } from "../../../src/cli/tick-helpers.js";
 
 // Hermetic: the engine-availability skip gate must consult a store under our
 // control, never the developer's real machine-level file.
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 
-function makeScript(overrides) {
+function makeScript(overrides: Partial<ParsedScheduledScript>): ParsedScheduledScript {
   return {
     cron: undefined,
     at: undefined,
@@ -28,9 +30,10 @@ function makeScript(overrides) {
     onWakeup: false,
     once: false,
     enabled: true,
-    runs: "echo test",
+    action: { kind: "runs", command: "echo test" },
+    requestedBy: undefined,
     description: undefined,
-    source: undefined,
+    reason: undefined,
     createAfterSuccess: [],
     budget: undefined,
     lockGroup: undefined,
@@ -40,11 +43,13 @@ function makeScript(overrides) {
   };
 }
 
-function makeCtx(overrides) {
+type SkipContext = Parameters<typeof evaluateSkip>[0];
+
+function makeCtx(overrides: Partial<SkipContext> & Pick<SkipContext, "parsed">): SkipContext {
   return {
     boxRoot: "/nonexistent",
     scriptName: "test-script",
-    state: { lastRun: "2026-06-09T11:55:00Z", lastResult: "success", lastError: null, lastDurationMs: 1000, runCount: 5 },
+    state: normalizeScriptState({ lastRun: "2026-06-09T11:55:00Z", lastResult: "success", lastError: null, lastDurationMs: 1000, runCount: 5 }),
     now: new Date("2026-06-09T12:00:00Z"),
     running: new Map(),
     options: {},
@@ -69,7 +74,7 @@ script otherwise due):
 ```ts
 const overBudget = makeCtx({
   parsed: makeScript({ onWakeup: true, budget: { limitMs: 60_000, windowMs: 3_600_000 } }),
-  state: { lastRun: null, lastResult: null, lastError: null, lastDurationMs: null, runCount: 1, recentRuns: [{ ts: "2026-06-09T11:50:00Z", durationMs: 120_000 }] },
+  state: normalizeScriptState({ lastRun: null, lastResult: null, lastError: null, lastDurationMs: null, runCount: 1, recentRuns: [{ ts: "2026-06-09T11:50:00Z", durationMs: 120_000 }] }),
 });
 JSON.stringify((await evaluateSkip(overBudget))?.line)
 => "  Skipping test-script: budget exceeded (120s used)"

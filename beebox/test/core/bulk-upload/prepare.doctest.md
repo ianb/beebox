@@ -20,6 +20,7 @@ function blobNames(listing: string): string[] {
 import { execFileSync } from "node:child_process";
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import assert from "node:assert/strict";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
 import {
@@ -29,29 +30,37 @@ import {
   readStagingSession,
   writeStagingSession,
   stagingSessionDir,
+  type AddFileParams,
 } from "../../../src/core/capture/staging-store/core.js";
+import type { StagingBulkItem } from "../../../src/core/capture/staging-schema.js";
 import { selectPendingCaptures, selectResumableCaptures } from "../../../src/core/capture/pending.js";
 import { prepareBulkBatch } from "../../../src/core/bulk-upload/prepare.js";
 import { checkBoxRoot } from "../../../src/lib/box-root-check.js";
 import { parseUploadBatch } from "../../../src/schemas/upload-batch.js";
 import { attachDirFor } from "../../../src/shared/attach-path.js";
 
-async function pathExists(p) {
+async function pathExists(p: string) {
   try { await access(p); return true; } catch { return false; }
 }
 
-async function catchName(promise) {
-  try { await promise; return "no-throw"; } catch (e) { return e.name; }
+async function catchName(promise: Promise<unknown>) {
+  try { await promise; return "no-throw"; } catch (e) { return e instanceof Error ? e.name : String(e); }
 }
 
-function trackedFiles(boxRoot) {
+function trackedFiles(boxRoot: string) {
   return execFileSync("git", ["ls-files"], { cwd: boxRoot }).toString().trim().split("\n");
 }
 
 // Stage a bulk session with a predeclared item registry, then upload some of
 // the registered items' bytes. `filename` is the on-disk staged name; the
 // client-claimed `originalName` is what the batch sanitizes/dedupes to.
-async function stageBulk(boxRoot, opts) {
+async function stageBulk(
+  boxRoot: string,
+  opts: {
+    expectedItems: StagingBulkItem[];
+    files: (Omit<AddFileParams, "boxRoot" | "id" | "buffer"> & { content: string })[];
+  },
+) {
   const staged = await createStagingSession({
     boxRoot, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: opts.expectedItems,
   });
@@ -87,6 +96,7 @@ const id = await stageBulk(box.root, {
 });
 
 const batch = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(batch);
 JSON.stringify(batch.counts)
 => {"registered":2,"received":2,"missing":0,"failed":0}
 ```
@@ -169,7 +179,9 @@ const rootId = await stageBulk(box.root, { expectedItems: [{ id: "a", name: "a.j
 const scopedId = await stageBulk(box.root, { expectedItems: [{ id: "a", name: "a.jpg" }], files: [file] });
 
 const atRoot = await prepareBulkBatch({ boxRoot: box.root, id: rootId, contextDir: "" });
+assert.ok(atRoot);
 const scoped = await prepareBulkBatch({ boxRoot: box.root, id: scopedId, contextDir: "_content/projects/garden" });
+assert.ok(scoped);
 [atRoot.cardRelPath, scoped.cardRelPath].map((p) => p.replaceAll(atRoot.batchSlug, "<slug>").replaceAll(scoped.batchSlug, "<slug>")).join("\n")
 => _content/tmp-upload/<slug>/<slug>.upload-batch.card
 _content/projects/garden/tmp-upload/<slug>/<slug>.upload-batch.card
@@ -212,12 +224,14 @@ const id = await stageBulk(box.root, {
 });
 // What the old code left: the batch prepared and committed under the fixed names.
 const fresh = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(fresh);
 const dir = fresh.cardRelPath.slice(0, fresh.cardRelPath.lastIndexOf("/"));
 execFileSync("git", ["mv", fresh.cardRelPath, `${dir}/Batch.upload-batch.card`], { cwd: box.root });
 execFileSync("git", ["mv", fresh.attachRelDir, `${dir}/Batch.upload-batch.attach`], { cwd: box.root });
 execFileSync("git", ["commit", "-qm", "old names"], { cwd: box.root });
 
 const resumed = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(resumed);
 ({
   card: resumed.cardRelPath.slice(dir.length + 1),
   scope: resumed.attachRelDir.slice(dir.length + 1),
@@ -253,6 +267,7 @@ const batch = await prepareBulkBatch({
     { id: "b", name: "photo-010.jpg", reason: "The request timed out" },
   ],
 });
+assert.ok(batch);
 const card = await box.read(batch.cardRelPath);
 ({ counts: batch.counts, body: splitCardContent(card).body.trim() })
 => { counts: { registered: 2, received: 1, missing: 0, failed: 1 }, body: "1 file uploaded (4 B); 1 failed." }
@@ -261,8 +276,8 @@ const card = await box.read(batch.cardRelPath);
 Only `photo-010.jpg`, whose bytes never arrived, stays in `failed`:
 
 ```ts continue
-const fm = parseUploadBatch(card).frontmatter;
-({ failed: fm.failed.map((f) => f.name), received: fm.received.map((r) => r.name) })
+const fm = parseUploadBatch(card)?.frontmatter;
+({ failed: fm?.failed?.map((f) => f.name), received: fm?.received?.map((r) => r.name) })
 => { failed: ["photo-010.jpg"], received: ["photo-009.jpg"] }
 ```
 
@@ -291,6 +306,7 @@ const batch = await prepareBulkBatch({
   boxRoot: box.root, id, contextDir: "",
   failedItems: [{ id: "c", name: "broke.mov", reason: "upload timed out" }],
 });
+assert.ok(batch);
 JSON.stringify(batch.counts)
 => {"registered":3,"received":1,"missing":1,"failed":1}
 ```
@@ -329,6 +345,7 @@ const id = await stageBulk(box.root, {
 });
 
 const batch = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(batch);
 JSON.stringify(blobNames(await box.list(batch.attachRelDir)))
 => ["IMG_1234-2.jpg","IMG_1234.jpg"]
 ```
@@ -354,6 +371,7 @@ const id2 = await stageBulk(box2.root, {
   files: [{ filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "../../etc/My Report (final).pdf", mimeType: "application/pdf", itemId: "a", content: "X" }],
 });
 const b2 = await prepareBulkBatch({ boxRoot: box2.root, id: id2, contextDir: "" });
+assert.ok(b2);
 JSON.stringify(blobNames(await box2.list(b2.attachRelDir)))
 => ["My-Report-final.pdf"]
 ```
@@ -376,6 +394,7 @@ const id = await stageBulk(box.root, {
 });
 
 const first = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(first);
 const cardAfterFirst = await box.read(first.cardRelPath);
 const commitsAfterFirst = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n").filter((s) => s.startsWith("Upload batch:")).length;
 commitsAfterFirst
@@ -386,6 +405,7 @@ Re-running produces the same slug, an unchanged card, and still one commit:
 
 ```ts continue
 const second = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(second);
 JSON.stringify({
   sameSlug: second.batchSlug === first.batchSlug,
   sameCounts: JSON.stringify(second.counts) === JSON.stringify(first.counts),
@@ -423,7 +443,7 @@ const legacy = {
 };
 await mkdir(stagingSessionDir(box.root, "legacy-1"), { recursive: true });
 await writeFile(`${stagingSessionDir(box.root, "legacy-1")}/session.json`, JSON.stringify(legacy));
-(await readStagingSession({ boxRoot: box.root, id: "legacy-1" })).kind
+(await readStagingSession({ boxRoot: box.root, id: "legacy-1" }))?.kind
 => capture
 ```
 
@@ -477,10 +497,12 @@ const id = await stageBulk(box.root, {
 // The seal is what records the note; stage it directly here (the route-tier
 // test covers the seal itself).
 const session = await readStagingSession({ boxRoot: box.root, id });
+assert.ok(session);
 session.note = "Receipts from the Tokyo trip";
 await writeStagingSession({ boxRoot: box.root, session });
 
 const prepared = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(prepared);
 prepared.note
 => Receipts from the Tokyo trip
 ```
@@ -500,6 +522,7 @@ resumed delivery builds is identical to the first one's.
 
 ```ts continue
 const rerun = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+assert.ok(rerun);
 JSON.stringify({ note: rerun.note, sameCard: rerun.cardRelPath === prepared.cardRelPath })
 => {"note":"Receipts from the Tokyo trip","sameCard":true}
 ```
@@ -515,6 +538,7 @@ const plainId = await stageBulk(box.root, {
   ],
 });
 const plain = await prepareBulkBatch({ boxRoot: box.root, id: plainId, contextDir: "" });
+assert.ok(plain);
 JSON.stringify({ note: plain.note ?? null })
 => {"note":null}
 ```
@@ -549,6 +573,7 @@ const prepared = await prepareBulkBatch({
   contextDir: "",
   failedItems: [{ id: "a", name: "image.png", reason: "network error" }],
 });
+assert.ok(prepared);
 JSON.stringify(prepared.counts)
 => {"registered":2,"received":0,"missing":1,"failed":1}
 ```

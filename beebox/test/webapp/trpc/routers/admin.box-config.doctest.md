@@ -7,7 +7,9 @@ the saved fields.
 
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import type { TrpcContext, TrpcUser } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { simpleGit } from "simple-git";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,16 +17,8 @@ import { join } from "node:path";
 import { addInvitedMember, addUser, createFirstUser } from "../../../../src/webapp/local-users.js";
 
 // Owner context (ownerProcedure requires ctx.isOwner).
-function caller(boxRoot, user = { email: "owner@example.com", name: "Owner" }) {
-  const ctx = {
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user,
-    authed: true,
-    isOwner: true,
-  };
+function caller(boxRoot: string, user: TrpcUser | null = { email: "owner@example.com", name: "Owner" }) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, user, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
 }
 ```
@@ -127,7 +121,7 @@ const res = await caller(box.root).admin.updateBoxConfig({ googleServices: { cal
 print(`ok: ${res.success}`);
 print(`services: ${JSON.stringify(res.googleServices)}`);
 // The change was committed (a new commit exists on top of the box's initial one).
-const subject = (await simpleGit(box.root).log({ maxCount: 1 })).latest.message;
+const subject = (await simpleGit(box.root).log({ maxCount: 1 })).latest?.message;
 print(`commit: ${subject}`);
 =>
 ok: true
@@ -307,7 +301,7 @@ const { providerEnvAdditions } = await import("../../../../src/core/provider-env
 const box = await makeTmpBox({ git: true });
 const before = (await caller(box.root).admin.boxConfig()).claudeCodeTelemetry;
 const saved = await caller(box.root).admin.updateBoxConfig({ claudeCodeTelemetry: "off" });
-const subject = (await simpleGit(box.root).log({ maxCount: 1 })).latest.message;
+const subject = (await simpleGit(box.root).log({ maxCount: 1 })).latest?.message;
 const env = await providerEnvAdditions({ boxRoot: box.root, model: "claude-opus-5-5", purpose: "test" });
 JSON.stringify([before, saved.claudeCodeTelemetry, (await caller(box.root).admin.boxConfig()).claudeCodeTelemetry, subject, env])
 => ["on","off","off","Update box config: claudeCodeTelemetry",{"DISABLE_TELEMETRY":"1","DISABLE_ERROR_REPORTING":"1"}]

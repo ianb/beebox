@@ -15,12 +15,13 @@ The stub-to-render path through the view compiler is
 `test/webapp/views/compiler.plugin-view.doctest.md`.
 
 ```ts setup
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
+import { buildProps } from "../../../src/cli/commands/view/command.js";
 import { loadViewCards } from "../../../src/core/views/cards.js";
 import { parseConcepts } from "../../../src/plugins/courseware/view/concept-data.js";
 import { buildGraph } from "../../../src/plugins/courseware/view/graph/model.js";
@@ -39,7 +40,7 @@ const SCHEMA_STUB = `import { cardSchema } from "beebox/cards";
 import courseware from "beebox/plugins/courseware";
 export default cardSchema("concept-map", courseware.schemas["concept-map"]);
 `;
-async function activateCourseware(box) {
+async function activateCourseware(box: TmpBox) {
   await box.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }, null, 2) + "\n");
   await mkdir(join(box.root, "src", "schemas"), { recursive: true });
   await writeFile(join(box.root, "src", "schemas", "concept-map.ts"), SCHEMA_STUB);
@@ -47,9 +48,9 @@ async function activateCourseware(box) {
 
 // What `bbx view test` does after compiling: build the props from the real
 // card loader, render inside the node view host.
-async function renderConceptMap(box, params) {
+async function renderConceptMap(box: TmpBox, params: Record<string, string>) {
   const { cards, files } = await loadViewCards(box.root, ["**/*.concept-map.card"]);
-  const props = { cards, files, params, boxSlug: "test", navigate: () => {}, reportActivity: () => {} };
+  const props = buildProps({ cards, files, params, boxSlug: "test" });
   return renderToString(createElement(NodeViewHostProvider, { boxSlug: "test", children: createElement(view.default, props) }));
 }
 
@@ -102,7 +103,7 @@ reports it):
 const { nodes, edges } = buildGraph(parsed);
 const a = nodes.find((n) => n.id === "a");
 const b = nodes.find((n) => n.id === "b");
-[edges.map((e) => e.id).join(","), b.position.y > a.position.y, a.data.concept.name]
+[edges.map((e) => e.id).join(","), (b?.position.y ?? 0) > (a?.position.y ?? 0), a?.data.concept.name]
 => ["a__prerequisite__b", true, "A"]
 ```
 

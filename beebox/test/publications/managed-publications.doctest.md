@@ -5,6 +5,7 @@ publication remains disabled. Approval requires the current candidate revision.
 Disabling only changes the edge authority; it does not remove the Worker route.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -19,8 +20,12 @@ import { approveManagedPublication, disableManagedPublication, enableManagedPubl
 import { listManagedPublications, readManagedPublicationReleaseFile } from "../../src/publish/managed-publication-queries.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { publicationsRouter } from "../../src/webapp/trpc/routers/publications.js";
-import type { CloudflarePublishConnectionSummary } from "../../src/core/secrets/cloudflare-publish.js";
+import type { CloudflarePublishBinding, CloudflarePublishBoxHost, CloudflarePublishConnectionSummary } from "../../src/core/secrets/cloudflare-publish.js";
+import type { FakeProvisioningClient } from "../../src/services/cloudflare-provisioning/core.js";
+import type { ManagedPublicationRuntime } from "../../src/services/managed-publication-runtime/core.js";
+import type { TrpcActor } from "../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { trpcContext } from "../helpers/trpc-context.js";
 
 let pubId = "abcdefghijklmnopqrstuvwxyz";
 const box = await makeTmpBox();
@@ -30,13 +35,13 @@ await mkdir(releaseDir, { recursive: true });
 let source = "<h1>First</h1>";
 const store = createFakePublishStore();
 const provisioning = createFakeProvisioningClient({ accountSubdomain: "example-account" });
-let binding = null;
-const boxHost = { boxSlug: "box-a", connectionName: "main", accountId: "0123456789abcdef0123456789abcdef", bucketName: "box-bucket", workerName: "bbx-test-host", hostHandle: "bbx-test-host", hostname: "sites.example.com", status: "attached", createdAt: "2026-09-24T00:00:00.000Z" };
+let binding: CloudflarePublishBinding | null = null;
+const boxHost: CloudflarePublishBoxHost = { boxSlug: "box-a", connectionName: "main", accountId: "0123456789abcdef0123456789abcdef", bucketName: "box-bucket", workerName: "bbx-test-host", hostHandle: "bbx-test-host", hostname: "sites.example.com", status: "attached", createdAt: "2026-09-24T00:00:00.000Z" };
 let connectionRows: CloudflarePublishConnectionSummary[] = [];
 let tier = "public";
 let slug = "demo";
 let includeSlug = true;
-const runtime = {
+const runtime: ManagedPublicationRuntime = {
   ...defaultManagedPublicationRuntime,
   now: () => new Date(Date.UTC(2026, 8, 24, 0, 0)),
   newHostHandle: () => "bbx-test-host",
@@ -50,18 +55,18 @@ const runtime = {
   createStore: () => store,
   createProvisioning: () => provisioning,
   createWorkerDeployer: () => ({
-    deploy: async ({ mode, scriptName, bucketName, pubId: deployedPubId, hostHandle, hostname, workerVersion }) => {
-      provisioning.scripts.set(scriptName, { bindings: [
-        { type: "r2_bucket", name: "PUB_STORE", bucketName },
-        ...(mode === "shared" ? [
+    deploy: async (args) => {
+      provisioning.scripts.set(args.scriptName, { bindings: [
+        { type: "r2_bucket", name: "PUB_STORE", bucketName: args.bucketName },
+        ...(args.mode === "shared" ? [
           { type: "plain_text", name: "PUB_WORKER_MODE", text: "shared-v1" },
-          { type: "plain_text", name: "PUB_BOX_HANDLE", text: hostHandle },
-          { type: "plain_text", name: "PUB_HOSTNAME", text: hostname },
+          { type: "plain_text", name: "PUB_BOX_HANDLE", text: args.hostHandle },
+          { type: "plain_text", name: "PUB_HOSTNAME", text: args.hostname },
         ] : [
-          { type: "plain_text", name: "PUB_ID", text: deployedPubId },
-          { type: "plain_text", name: "HOST_HANDLE", text: hostHandle },
+          { type: "plain_text", name: "PUB_ID", text: args.pubId },
+          { type: "plain_text", name: "HOST_HANDLE", text: args.hostHandle },
         ]),
-        { type: "plain_text", name: "PUB_WORKER_VERSION", text: workerVersion },
+        { type: "plain_text", name: "PUB_WORKER_VERSION", text: args.workerVersion },
       ] });
     },
   }),
@@ -89,34 +94,29 @@ provisioning.scripts.set("bbx-test-host", { bindings: [
   { type: "plain_text", name: "PUB_HOSTNAME", text: "sites.example.com" },
   { type: "plain_text", name: "PUB_WORKER_VERSION", text: sharedWorkerVersion },
 ] });
-const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-function publicationCaller(actor, authenticatedOwner = actor === "user", boxSlug = "box-a", injectedRuntime = runtime) {
+function publicationCaller(actor: TrpcActor, authenticatedOwner = actor === "user", boxSlug = "box-a", injectedRuntime: ManagedPublicationRuntime = runtime) {
   const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot,
     boxSlug,
-    eventBus: noBus,
     services: { managedPublicationRuntime: injectedRuntime },
     user,
-    authed: true,
     isOwner: actor === "user",
     isAuthenticatedOwner: authenticatedOwner,
     actor,
-  });
+  }));
 }
-function publicationConnectionsCaller(actor) {
+function publicationConnectionsCaller(actor: TrpcActor) {
   const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
-  return publicationsRouter.createCaller({
+  return publicationsRouter.createCaller(trpcContext({
     boxRoot,
     boxSlug: "box-a",
-    eventBus: noBus,
     services: { managedPublicationRuntime: runtime },
     user,
-    authed: true,
     isOwner: actor === "user",
     isAuthenticatedOwner: actor === "user",
     actor,
-  });
+  }));
 }
 ```
 
@@ -151,7 +151,7 @@ A listed site names the card that claims its pubId.
 const HOME_CARD = "_content/Home.publication.card";
 await box.write(HOME_CARD, createPublicationCardTemplate({ pubId, connection: "main", title: "Home", tier: "public", slug: "demo" }));
 const listedHome = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
-({ cardPath: listedHome.cardPath, duplicateCardPaths: listedHome.duplicateCardPaths })
+({ cardPath: listedHome?.cardPath, duplicateCardPaths: listedHome?.duplicateCardPaths })
 => { cardPath: "_content/Home.publication.card", duplicateCardPaths: [] }
 ```
 
@@ -162,7 +162,7 @@ both claimants.
 await box.write("_content/Copy.publication.card", createPublicationCardTemplate({ pubId, connection: "main", title: "Copy", tier: "public", slug: "demo" }));
 const listedDuplicate = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
 await rm(box.path("_content/Copy.publication.card"));
-({ cardPath: listedDuplicate.cardPath, duplicateCardPaths: listedDuplicate.duplicateCardPaths })
+({ cardPath: listedDuplicate?.cardPath, duplicateCardPaths: listedDuplicate?.duplicateCardPaths })
 => { cardPath: null, duplicateCardPaths: ["_content/Copy.publication.card", "_content/Home.publication.card"] }
 ```
 
@@ -170,9 +170,11 @@ A binding whose pubId no card claims is an orphan: no card and no duplicates.
 
 ```ts continue
 const orphanPubId = "qrstuvwxyzabcdefghijklmnop";
-const orphanRuntime = { ...runtime, listBindings: async () => [...(await runtime.listBindings()), { ...binding, pubId: orphanPubId }] };
+assert.ok(binding !== null);
+const orphanBinding: CloudflarePublishBinding = { ...binding, pubId: orphanPubId };
+const orphanRuntime: ManagedPublicationRuntime = { ...runtime, listBindings: async (boxSlug) => [...(await runtime.listBindings(boxSlug)), orphanBinding] };
 const orphan = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, orphanRuntime)).sites.find((site) => site.pubId === orphanPubId);
-({ cardPath: orphan.cardPath, duplicateCardPaths: orphan.duplicateCardPaths })
+({ cardPath: orphan?.cardPath, duplicateCardPaths: orphan?.duplicateCardPaths })
 => { cardPath: null, duplicateCardPaths: [] }
 ```
 
@@ -188,7 +190,7 @@ const prepared = await publicationCaller("user").publications.prepare({ card: HO
 Agent and open contexts cannot change serving state; a signed-in member can.
 
 ```ts continue
-const actorResult = (actor) => Promise.resolve()
+const actorResult = (actor: TrpcActor) => Promise.resolve()
   .then(() => publicationCaller(actor).publications.disable({ pubId }))
   .then(() => ({ code: "allowed", message: "" }), (error) => ({ code: error.code, message: error.message }));
 const agentAction = await actorResult("agent");
@@ -243,7 +245,7 @@ await enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime);
 const activeWithOtherCandidate = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 const activeMarker = JSON.parse(new TextDecoder().decode(await store.get(`shared-routes/${pubId}/route.json`)));
 const listedWithOtherCandidate = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
-JSON.stringify({ status: activeWithOtherCandidate.status, tier: activeWithOtherCandidate.tier, markerPath: activeMarker.path, reportedRoute: listedWithOtherCandidate.sharedRoute, pendingTier: listedWithOtherCandidate.pending.requestedScope.tier })
+JSON.stringify({ status: activeWithOtherCandidate.status, tier: activeWithOtherCandidate.tier, markerPath: activeMarker.path, reportedRoute: listedWithOtherCandidate?.sharedRoute, pendingTier: listedWithOtherCandidate?.pending?.requestedScope.tier })
 => {"status":"live","tier":"public","markerPath":"/demo/","reportedRoute":{"hostname":"sites.example.com","path":"/demo/"},"pendingTier":"secret"}
 ```
 
@@ -305,9 +307,9 @@ They read inventory-listed text and reject traversal paths, unknown paths,
 retired releases, and another box's publication.
 
 ```ts continue
-const scopedRuntime = { ...runtime, getBinding: async (query) => (query.boxSlug === "box-a" && query.pubId === pubId ? binding : null) };
-const read = (overrides) => readManagedPublicationReleaseFile({ boxRoot, boxSlug: "box-a", pubId, releaseId: afterDisable.releaseId, path: "index.html", ...overrides }, scopedRuntime);
-const rejection = (overrides) => read(overrides).then(() => "accepted", (error) => error.message);
+const scopedRuntime: ManagedPublicationRuntime = { ...runtime, getBinding: async (query) => (query.boxSlug === "box-a" && query.pubId === pubId ? binding : null) };
+const read = (overrides: { releaseId?: string; path?: string; boxSlug?: string }) => readManagedPublicationReleaseFile({ boxRoot, boxSlug: "box-a", pubId, releaseId: afterDisable.releaseId, path: "index.html", ...overrides }, scopedRuntime);
+const rejection = (overrides: { releaseId?: string; path?: string; boxSlug?: string }) => read(overrides).then(() => "accepted", (error) => error.message);
 const pendingFile = await read({});
 const activeFile = await read({ releaseId: refreshed.releaseId });
 JSON.stringify({
@@ -338,7 +340,7 @@ cannot approve, enable, or disable.
 ```ts continue
 const agent = publicationCaller("agent").publications;
 const agentRead = await agent.releaseFile({ pubId, releaseId: afterDisable.releaseId, path: "index.html" });
-const refused = (call) => Promise.resolve().then(call).then(() => "accepted", (error) => error.code);
+const refused = (call: () => Promise<unknown>) => Promise.resolve().then(call).then(() => "accepted", (error) => error.code);
 JSON.stringify({
   read: agentRead.kind,
   approve: await refused(() => agent.approve({ pubId, expectedRevision: afterDisable.revision })),
@@ -404,7 +406,7 @@ const moved = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card:
 await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: moved.revision }, runtime);
 const oldPointerRemains = new TextDecoder().decode(await store.get("slugs/demo")) === pubId;
 const movedManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
-const oldPathInert = movedManifest.slug !== "demo";
+const oldPathInert = movedManifest.tier === "public" && movedManifest.slug !== "demo";
 pubId = "zyxwvutsrqponmlkjihgfedcba";
 binding = null;
 slug = "demo";
@@ -424,24 +426,25 @@ renaming it is refused before another provider mutation.
 
 ```ts continue
 const adminProvisioning = createFakeProvisioningClient({ zones: [{ id: "config-zone", name: "example.org", status: "active", accountId: "0123456789abcdef0123456789abcdef" }] });
-let adminMapping = null;
+let adminMapping: CloudflarePublishBoxHost | null = null;
 let adminDeploys = 0;
-const configRuntime = {
+const configRuntime: ManagedPublicationRuntime = {
   ...runtime,
   getBoxHost: async (requestedBox) => requestedBox === "box-config" ? adminMapping : null,
   listBindings: async () => [],
   reserveBoxHost: async (input) => {
     if (adminMapping !== null && (adminMapping.hostname !== input.hostname || adminMapping.connectionName !== input.connectionName)) throw new Error("This box already has a shared publishing hostname and connection. Bee Box cannot rename or move it.");
     adminMapping ??= { ...input, accountId: "0123456789abcdef0123456789abcdef", status: "pending" };
-    return { boxSlug: input.boxSlug, ...adminMapping };
+    return { ...adminMapping };
   },
   attachBoxHost: async (input) => {
     if (adminMapping === null || adminMapping.hostname !== input.hostname) throw new Error("mapping changed");
     adminMapping.status = "attached";
-    return { boxSlug: input.boxSlug, ...adminMapping };
+    return { ...adminMapping };
   },
   createProvisioning: () => adminProvisioning,
   createWorkerDeployer: () => ({ deploy: async (input) => {
+    assert.ok(input.mode === "shared");
     adminDeploys += 1;
     adminProvisioning.scripts.set(input.scriptName, { bindings: [
       { type: "r2_bucket", name: "PUB_STORE", bucketName: input.bucketName },
@@ -452,7 +455,7 @@ const configRuntime = {
     ] });
   } }),
 };
-const adminCaller = (actor, authenticatedOwner = actor === "user") => publicationCaller(actor, authenticatedOwner, "box-config", configRuntime);
+const adminCaller = (actor: TrpcActor, authenticatedOwner = actor === "user") => publicationCaller(actor, authenticatedOwner, "box-config", configRuntime);
 const unauthorizedSetup = await Promise.resolve()
   .then(() => adminCaller("user", false).publications.configureSharedHost({ connectionName: "main", hostname: "sites.example.org" }))
   .then(() => "allowed", (error) => error.code);
@@ -470,24 +473,25 @@ retry after Cloudflare attached the exact route but its response was lost
 recognizes that route without attaching it twice.
 
 ```ts continue
-function setupScenario(boxSlug, provisioning) {
-  let mapping = null;
+function setupScenario(boxSlug: string, provisioning: FakeProvisioningClient) {
+  let mapping: CloudflarePublishBoxHost | null = null;
   let deploys = 0;
-  const scenarioRuntime = {
+  const scenarioRuntime: ManagedPublicationRuntime = {
     ...configRuntime,
     newHostHandle: () => `${boxSlug}-host`,
     getBoxHost: async (requestedBox) => requestedBox === boxSlug ? mapping : null,
     reserveBoxHost: async (input) => {
       mapping ??= { ...input, accountId: "0123456789abcdef0123456789abcdef", status: "pending" };
-      return { boxSlug: input.boxSlug, ...mapping };
+      return { ...mapping };
     },
     attachBoxHost: async (input) => {
       if (mapping === null || mapping.hostname !== input.hostname) throw new Error("mapping changed");
       mapping.status = "attached";
-      return { boxSlug: input.boxSlug, ...mapping };
+      return { ...mapping };
     },
     createProvisioning: () => provisioning,
     createWorkerDeployer: () => ({ deploy: async (input) => {
+      assert.ok(input.mode === "shared");
       deploys += 1;
       provisioning.scripts.set(input.scriptName, { bindings: [
         { type: "r2_bucket", name: "PUB_STORE", bucketName: input.bucketName },
@@ -536,7 +540,7 @@ const changedBundleRuntime = { ...configRuntime, workerBundle: async () => new T
 await publicationCaller("user", true, "box-config", changedBundleRuntime).publications.configureSharedHost({ connectionName: "main", hostname: "sites.example.org" });
 JSON.stringify({
   conflictRefused: conflictError.includes("routes this hostname to another Worker"), conflictAttaches: conflictProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length,
-  missingReadbackFailed: missingReadbackError.includes("did not confirm"), missingReadbackStatus: missingReadback.mapping().status,
+  missingReadbackFailed: missingReadbackError.includes("did not confirm"), missingReadbackStatus: missingReadback.mapping()?.status,
   lostResponseFirstAttempt: firstAttempt, retryStatus: secondAttempt.status, retryAttaches: lostResponseProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length,
   staleBundleRedeployed: adminDeploys === 2, repairDidNotReattach: adminProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length === beforeRepairAttachments,
   legacyScriptUnchanged: JSON.stringify(adminProvisioning.scripts.get("legacy-worker-sentinel")) === JSON.stringify(legacyScript),
@@ -552,8 +556,8 @@ silently join the shared host until the definition opts in with a slug.
 const legacyPubId = "234567abcdefghijklmnopqrst";
 pubId = legacyPubId;
 includeSlug = false;
-const legacyBinding = { pubId: legacyPubId, boxSlug: "box-a", connectionName: "main", accountId: "0123456789abcdef0123456789abcdef", bucketName: "box-bucket", workerName: "bbx-legacy-worker", hostHandle: "bbx-legacy-host", createdAt: "2026-09-24T00:00:00.000Z" };
-const legacyRuntime = {
+const legacyBinding: CloudflarePublishBinding = { pubId: legacyPubId, boxSlug: "box-a", connectionName: "main", accountId: "0123456789abcdef0123456789abcdef", bucketName: "box-bucket", workerName: "bbx-legacy-worker", hostHandle: "bbx-legacy-host", createdAt: "2026-09-24T00:00:00.000Z" };
+const legacyRuntime: ManagedPublicationRuntime = {
   ...runtime,
   getBinding: async () => legacyBinding,
   reserveBinding: async () => legacyBinding,
@@ -563,7 +567,7 @@ const legacyCandidate = await prepareManagedPublication({ boxRoot, boxSlug: "box
 const legacyScope = legacyCandidate.requestedScope;
 await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId: legacyPubId, expectedRevision: legacyCandidate.revision }, legacyRuntime);
 const legacySite = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, legacyRuntime)).sites[0];
-JSON.stringify({ hasSharedScope: "sharedHost" in legacyScope, status: legacySite.approved?.status ?? null, legacyAlias: legacySite.hostname })
+JSON.stringify({ hasSharedScope: "sharedHost" in legacyScope, status: legacySite?.approved?.status ?? null, legacyAlias: legacySite?.hostname })
 => {"hasSharedScope":false,"status":"live","legacyAlias":"bbx-legacy-host.example-account.workers.dev"}
 ```
 

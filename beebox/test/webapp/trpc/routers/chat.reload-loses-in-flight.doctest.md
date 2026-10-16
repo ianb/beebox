@@ -22,27 +22,33 @@ gap are pinned before anything moves
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
+import type { TestServer } from "../../../helpers/doctest-server.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { SessionEntry } from "../../../../src/cli/lib/session.js";
 import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-function caller(server) {
-  return appRouter.createCaller({
+function caller(server: TestServer) {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: server.boxRoot,
-    boxSlug: "test",
     eventBus: server.eventBus,
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
+    isAuthenticatedOwner: true,
   });
+  return appRouter.createCaller(ctx);
+}
+
+// The `message` field of a chat-user-message payload.
+function messageOf(data: unknown): unknown {
+  return typeof data === "object" && data !== null && "message" in data ? data.message : undefined;
 }
 
 // What the chat page asks for on load.
-const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 };
+const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 } as const;
 
-async function readDedupState(boxRoot) {
+async function readDedupState(boxRoot: string) {
   try {
     return await readFile(join(boxRoot, ".beebox", "message-dedup.json"), "utf-8");
   } catch (_e) {
@@ -50,7 +56,7 @@ async function readDedupState(boxRoot) {
   }
 }
 
-function userText(entries) {
+function userText(entries: SessionEntry[]) {
   return entries
     .filter((e) => e.type === "user")
     .map((e) => e.content.filter((b) => b.type === "text").map((b) => b.text).join(""));
@@ -67,13 +73,13 @@ precisely the lag being modelled here.
 const backend = createFakeChatBackend();
 const realStart = backend.start.bind(backend);
 const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
-  backend.start = (opts) => { const run = realStart(opts); resolve(run); return run; };
+  backend.start = (opts) => { const run = realStart(opts); const fake = backend.lastRun(); if (fake) resolve(fake); return run; };
 });
 const ctx = await makeTestServer({ chatBackend: backend });
 
-const recorded = [];
+const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(messageOf(e.data))); },
 });
 
 const sent = await ctx.request({
@@ -103,7 +109,7 @@ JSON.stringify({ kind: boot.kind, entries: boot.history === null ? null : userTe
 record — so bootstrap now also reports what the box has *accepted*:
 
 ```ts continue
-JSON.stringify({ pending: userText(boot.pending), uuid: boot.pending[0].uuid.startsWith("accepted-") })
+JSON.stringify({ pending: userText(boot.pending), uuid: boot.pending[0]?.uuid.startsWith("accepted-") })
 => {"pending":["<typed>where did I put the drawer key?</typed>"],"uuid":true}
 ```
 
@@ -152,11 +158,14 @@ The send above carried no identity — an open box, nobody signed in — so ther
 nobody to keep it from, and any reader of that box sees it:
 
 ```ts continue
-function callerAs(server, email) {
-  return appRouter.createCaller({
-    boxRoot: server.boxRoot, boxSlug: "test", eventBus: server.eventBus,
-    services: {}, user: { email, name: email }, authed: true, isOwner: false,
+function callerAs(server: TestServer, email: string) {
+  const ctx: TrpcContext = trpcContext({
+    boxRoot: server.boxRoot,
+    eventBus: server.eventBus,
+    user: { email, name: email },
+    isOwner: false,
   });
+  return appRouter.createCaller(ctx);
 }
 const anyReader = await callerAs(ctx, "grace@example.com").chat.bootstrap({ slice: TAIL });
 anyReader.pending.length

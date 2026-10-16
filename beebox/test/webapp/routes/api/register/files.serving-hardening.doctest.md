@@ -16,6 +16,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import net from "node:net";
 import { makeTestServer, TEST_SLUG } from "../../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../../helpers/trpc-context.js";
 import { statusRouter } from "../../../../../src/webapp/trpc/routers/status.js";
 
 const server = await makeTestServer();
@@ -60,7 +61,7 @@ unhardened cached response forever:
 const notModified = await server.rawRequest({
   method: "GET",
   url: "/api/files/_content/page.html",
-  headers: { "if-none-match": html.headers.etag },
+  headers: { "if-none-match": html.headers.etag ?? "" },
 });
 `${notModified.statusCode} ${notModified.headers["content-disposition"]} ${notModified.headers["x-content-type-options"]}`
 => 304 attachment; filename="page.html" nosniff
@@ -124,13 +125,13 @@ if (listenAddr === null || typeof listenAddr === "string") {
 }
 const listenPort = listenAddr.port;
 
-function rawHttpGet(reqPath) {
-  return new Promise((resolve, reject) => {
+function rawHttpGet(reqPath: string) {
+  return new Promise<string>((resolve, reject) => {
     const sock = net.connect(listenPort, "127.0.0.1", () => {
       sock.write(`GET ${reqPath} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n`);
     });
     let data = "";
-    sock.on("data", (chunk) => { data += chunk.toString(); });
+    sock.on("data", (chunk: Buffer) => { data += chunk.toString(); });
     sock.on("end", () => resolve(data));
     sock.on("error", reject);
   });
@@ -153,7 +154,7 @@ sync `containWithinBox` call is reachable with an ordinary `../<sibling>`
 path):
 
 ```ts continue
-const ctx = { boxRoot: server.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+const ctx = trpcContext({ boxRoot: server.boxRoot, boxSlug: "t", eventBus: server.eventBus, actor: "none" });
 const escapeBrowse = await statusRouter.createCaller(ctx).browse({ path: `../${boxDirName}-other` });
 // The box root's own directory name varies per run (a temp dir), so compare
 // against the same computed sibling name rather than a fixed literal.

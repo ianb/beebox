@@ -9,18 +9,16 @@ import * as path from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { clearBoxConfigCache, loadBoxConfig, loadBoxConfigResult } from "../../../../src/core/box/config.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { execFileSync } from "node:child_process";
 
-function caller(boxRoot, options) {
-  return appRouter.createCaller({
+function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean }): ReturnType<typeof appRouter.createCaller> {
+  return appRouter.createCaller(trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
     authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
-  });
+    isAuthenticatedOwner: options?.isOwner !== false,
+  }));
 }
 ```
 
@@ -103,7 +101,7 @@ const invalidPresentation = await caller(box.root).presentation.get({ boxKey: "t
 JSON.stringify([
   (await loadBoxConfig(box.root)).timezone,
   invalidPresentation.presentation.status,
-  invalidPresentation.configProblems[0].includes("expected string"),
+  invalidPresentation.configProblems[0]?.includes("expected string"),
   invalidPresentation.chrome.choice,
 ])
 => ["America/Chicago","invalid",true,{"name":"plain","stock":"neutral"}]
@@ -145,7 +143,7 @@ comments, and the body. Clearing the choice restores inheritance.
 
 ```ts
 const cardBox = await makeTmpBox({ git: true });
-const cardPath = "_content/notes/Keep.memo.card";
+const cardPath = "_content/notes/Keep.doc.card";
 await cardBox.write(cardPath, "---\n# keep this comment\ntitle: Keep\nfuture-field: still here\n---\nBody stays here.\n");
 const landmarkPath = "_content/notes/Notes.landmark.card";
 await cardBox.write(landmarkPath, "---\n# landmark comment\nnavigation:\n  label: Notes\nfuture-field: retained\n---\n");

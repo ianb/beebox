@@ -5,23 +5,32 @@ without the agent's tool vocabulary. The raw input stays one click away in the
 expanded line; only the label is lay language.
 
 ```ts setup
+import assert from "node:assert/strict";
 import {
   describeToolCall,
   describeToolDetail,
   summarizeActivity,
+  type Excerpt,
 } from "../../src/components/chat/ChatMessages/activity-wording.js";
+import type { SessionContentBlock } from "../../src/api-chat.js";
+import type { ActivityPart } from "../../src/components/chat/message-parsing.js";
 
-function tool(toolName, input) {
+function tool(toolName: string, input: Record<string, unknown>): SessionContentBlock {
   return { type: "tool_use", toolName, input };
 }
-function tools(...blocks) {
+function tools(...blocks: SessionContentBlock[]): ActivityPart {
   return { type: "tools", tools: blocks };
 }
-function say(toolName, input) {
+// Narrows an excerpt to the change form, failing the test if there is none.
+function change(excerpt: Excerpt | null): Extract<Excerpt, { kind: "change" }> {
+  assert.ok(excerpt && excerpt.kind === "change");
+  return excerpt;
+}
+function say(toolName: string, input: Record<string, unknown>) {
   return describeToolCall(tool(toolName, input));
 }
 // A finished call: the result is grafted onto it, as the history read does.
-function detail(toolName, input) {
+function detail(toolName: string, input: Record<string, unknown>) {
   return describeToolDetail({ ...tool(toolName, input), resultSummary: "The file has been updated." });
 }
 ```
@@ -217,7 +226,7 @@ replaces every match says so.
 detail("Edit", { file_path: "_content/recipes/Lemon_Chicken.recipe.card", old_string: "Bake at 350°\n", new_string: "Bake at 375°\n" }).excerpt
 => { kind: "change", before: "Bake at 350°", after: "Bake at 375°", everywhere: false }
 
-detail("Edit", { old_string: "Marta", new_string: "Martha", replace_all: true }).excerpt.everywhere
+change(detail("Edit", { old_string: "Marta", new_string: "Martha", replace_all: true }).excerpt).everywhere
 => true
 ```
 
@@ -264,7 +273,7 @@ has no excerpt and opens straight to the raw input.
 Long text is cut to three lines and 200 characters, marked with "…":
 
 ```ts
-const long = detail("Edit", { old_string: "a\nb\nc\nd\ne", new_string: "x".repeat(300) }).excerpt;
+const long = change(detail("Edit", { old_string: "a\nb\nc\nd\ne", new_string: "x".repeat(300) }).excerpt);
 [long.before, long.after.length, long.after.endsWith("…")]
 => ["a\nb\nc…", 201, true]
 ```

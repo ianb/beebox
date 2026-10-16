@@ -11,7 +11,7 @@ manifest while that cohort's cards are missing or invalid.
 import { initBox } from "../../src/core/box/structure/core.js";
 import { rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { appendManifestEntry, writeManifest } from "../../src/core/migration-run.js";
 import { readManifest } from "../../src/core/migration-manifest.js";
 import { markMigrationApplied } from "../../src/cli/commands/migrate.js";
@@ -19,7 +19,7 @@ import { sweepMigrations } from "../../src/core/migration-sweep.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
 import { SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION } from "../../src/shared/system-card-paths.js";
 import { seedSystemCards, checkSystemCards } from "../../src/core/system-cards.js";
-async function pendingManifest(box) {
+async function pendingManifest(box: TmpBox) {
   await box.write(MANIFEST_PATH, MIGRATIONS.filter((entry) => entry.name !== SYSTEM_CARD_MIGRATION && entry.name !== REMAINING_SYSTEM_CARD_MIGRATION).map((entry) => JSON.stringify({ name: entry.name, "applied-at": "2026-09-09T00:00:00Z" })).join("\n") + "\n");
 }
 ```
@@ -167,7 +167,7 @@ bootstrap does not mark the box initialized, and retry preserves authored notes.
 const fresh = await makeTmpBox();
 await rm(fresh.path(".beebox/box.json"));
 await rm(fresh.path(MANIFEST_PATH));
-await fresh.write(SYSTEM_CARD_PATHS.settings, "---\ntype: memo\n---\nKeep this conflict.\n");
+await fresh.write(SYSTEM_CARD_PATHS.settings, "---\ntype: doc\n---\nKeep this conflict.\n");
 await initBox(fresh.root)
 => throws SystemCardInvariantError
 

@@ -26,7 +26,7 @@ async function find(db: SearchIndex, term: string): Promise<string> {
   return result.hits.map((h) => h.document.path as string).toSorted().join("\n");
 }
 
-const MEMO = (text: string) => `---\ncreated: 2026-05-22T10:00:00Z\n---\n${text}\n`;
+const DOC = (text: string) => `---\ntitle: Note\n---\n${text}\n`;
 
 async function throwName(fn: () => Promise<unknown>): Promise<string> {
   try {
@@ -44,10 +44,10 @@ Build an index over one card and snapshot the manifest that describes it.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment is on June 17."));
+await box.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment is on June 17."));
 await openSearchIndex(box.root);
 const staleManifest = await readFile(searchManifestPath(box.root), "utf8");
-staleManifest.includes("Dentist.memo.card")
+staleManifest.includes("Dentist.doc.card")
 => true
 ```
 
@@ -55,14 +55,14 @@ Edit that card and add another, then refresh so both the index and the manifest
 now reflect the new state.
 
 ```ts continue
-await box.write("_content/inbox/Dentist.memo.card", MEMO("Rescheduled to an orthodontist on June 19."));
-await box.write("store/notes/Garden.memo.card", MEMO("Plant the tomatoes after the frost."));
+await box.write("_content/inbox/Dentist.doc.card", DOC("Rescheduled to an orthodontist on June 19."));
+await box.write("store/notes/Garden.doc.card", DOC("Plant the tomatoes after the frost."));
 const fresh = await openSearchIndex(box.root);
 await find(fresh.db, "orthodontist")
-=> _content/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.doc.card
 
 await find(fresh.db, "tomatoes")
-=> store/notes/Garden.memo.card
+=> store/notes/Garden.doc.card
 ```
 
 Now simulate a crash *between* the index write and the manifest write: the index
@@ -77,10 +77,10 @@ JSON.stringify(healed.warnings)
 => []
 
 await find(healed.db, "orthodontist")
-=> _content/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.doc.card
 
 await find(healed.db, "tomatoes")
-=> store/notes/Garden.memo.card
+=> store/notes/Garden.doc.card
 
 // The pre-edit content is gone — the stale manifest didn't resurrect it.
 // ("appointment" appears only in the old body, not the rescheduled one.)
@@ -100,19 +100,19 @@ That must complete and warn about the skip — not crash asserting a missing ind
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/notes/Broken.memo.card", "---\ncreated: not-a-date\n---\nbroken body\n");
+await box.write("store/notes/Broken.doc.card", "---\ntitle: [unclosed\n---\nbroken body\n");
 const opened = await openSearchIndex(box.root);
 opened.warnings.length
 => 1
 
-opened.warnings[0].startsWith("store/notes/Broken.memo.card: skipped")
+opened.warnings[0]?.startsWith("store/notes/Broken.doc.card: skipped")
 => true
 
 // A valid card added later indexes fine on top of the recorded skip.
-await box.write("store/notes/Good.memo.card", MEMO("the garden tomatoes are ripe"));
+await box.write("store/notes/Good.doc.card", DOC("the garden tomatoes are ripe"));
 const withGood = await openSearchIndex(box.root);
 await find(withGood.db, "tomatoes")
-=> store/notes/Good.memo.card
+=> store/notes/Good.doc.card
 ```
 
 ```ts cleanup

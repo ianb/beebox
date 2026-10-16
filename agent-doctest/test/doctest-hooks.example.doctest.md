@@ -18,6 +18,13 @@ String results are compared literally (no quotes needed):
 => HELLO WORLD
 ```
 
+A checked line may end in a comment:
+
+```
+1 + 1 // the comment is the author's, not part of the value
+=> 2
+```
+
 ## Multiple examples in one block
 
 Examples in the same block share scope — variables persist between them:
@@ -39,7 +46,7 @@ items.reverse().join(", ")
 Use `ts setup` blocks for imports and helpers shared across all tests in the file:
 
 ```ts setup
-function greet(name) {
+function greet(name: string) {
   return `Hello, ${name}!`;
 }
 ```
@@ -125,8 +132,8 @@ JSON.parse("{bad json")
 Include `: message` to also check the error message:
 
 ```
-null.toString()
-=> throws TypeError: Cannot read properties of null (reading 'toString')
+new Array<number>().reduce((sum, n) => sum + n)
+=> throws TypeError: Reduce of empty array with no initial value
 ```
 
 Await-containing expressions work too — a rejected promise counts as the
@@ -140,7 +147,7 @@ await Promise.reject(new RangeError("out of range"))
 Non-throwing expressions fail the assertion:
 
 ```ts setup
-function mustThrow(fn) {
+function mustThrow(fn: () => unknown) {
   try { fn(); return "did not throw"; } catch(_e) { return "threw"; }
 }
 ```

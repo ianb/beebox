@@ -6,7 +6,10 @@ never a 404) and enqueuing when the agent is busy. A fake chat backend stands in
 for the Claude subprocess so we can inspect what was sent.
 
 ```ts setup
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { ChatBackend } from "../../../../src/services/claude-chat/core.js";
+import type { FakeChatBackendRun } from "../../../../src/services/claude-chat/fake.js";
+import type { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createEventBus } from "../../../../src/core/event-bus/core.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
@@ -16,7 +19,7 @@ import { deliverCaptureMessage, buildCaptureWrapper, resolveCaptureDeliveryTarge
 
 const W = buildCaptureWrapper({ docPath: "tmp-capture/x.capture-session.card", imageCount: 1, audioSeconds: 7, summary: "hi" });
 
-function makeRegistry(box, backend) {
+function makeRegistry(box: TmpBox, backend: ChatBackend) {
   return new ChatSessionRegistry(box.root, {
     backend,
     buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
@@ -24,8 +27,8 @@ function makeRegistry(box, backend) {
 }
 
 // All text pushed to the backend across a run's sends.
-function sentText(run) {
-  return run.sent.flat().map((b) => b.text ?? "").join("\n");
+function sentText(run: FakeChatBackendRun | null) {
+  return (run?.sent ?? []).flat().map((b) => (b.type === "text" ? b.text : "")).join("\n");
 }
 ```
 
@@ -52,7 +55,7 @@ sentText(backend.lastRun()).includes(W)
 The wrapper is composed by beebox, so the turn goes out marked client-composed.
 
 ```ts continue
-JSON.stringify(backend.lastRun().sentClientComposed)
+JSON.stringify(backend.lastRun()?.sentClientComposed)
 => [true]
 ```
 
@@ -89,7 +92,7 @@ res.queued
 The wrapper did not reach the backend — only the in-flight turn's message did:
 
 ```ts continue
-backend.lastRun().sent.length
+backend.lastRun()?.sent.length
 => 1
 ```
 
@@ -131,22 +134,19 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const registry = makeRegistry(box, createFakeChatBackend());
 const eventBus = createEventBus(box.root);
 
-const session = { isBusy: () => false, enqueue: () => {}, send: async () => false, getSessionId: () => "s-x" };
-const registry = {
-  getOrCreate: () => session, createNew: () => session, get: () => session,
-  enforceLiveCap: () => {}, touch: () => {}, markMostActive: async () => {},
-  // No chat here was coined and reserved (chat/session/reserve.ts).
-  getReservation: () => null,
-};
+// The fresh session's send is refused, as a failed non-busy send would be.
+const refuseSend = (session: ChatSession) => { session.send = async () => false; };
 
-const caught = await deliverCaptureMessage({ boxRoot: box.root, registry, eventBus, target: { sessionId: null, contextDir: null }, message: W }).then(() => "no throw", (e) => e.name);
+const caught = await deliverCaptureMessage({ boxRoot: box.root, registry, eventBus, wireSession: refuseSend, target: { sessionId: null, contextDir: null }, message: W }).then(() => "no throw", (e: unknown) => (e instanceof Error ? e.name : String(e)));
 caught
 => CaptureDeliveryError
 ```
 
 ```ts cleanup
+registry.shutdown();
 eventBus.close();
 await box.cleanup();
 ```

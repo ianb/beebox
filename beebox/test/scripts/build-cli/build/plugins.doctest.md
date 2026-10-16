@@ -103,21 +103,24 @@ async function bundleText(entry: string) {
     plugins: [cssInlinePlugin()],
     logLevel: "silent",
   });
-  return result.outputFiles[0].text;
+  const [output] = result.outputFiles;
+  if (output === undefined) throw new Error(`no output for ${entry}`);
+  return output.text;
 }
+interface FakeStyle { tag: string; attribute: string | null; hash: string | null; textContent: string; setAttribute(name: string, value: string): void }
 function fakeDocument() {
-  const styles = [];
+  const styles: FakeStyle[] = [];
   return {
     styles,
     head: {
-      querySelector(selector) {
+      querySelector(selector: string) {
         const hash = /="([0-9a-f]+)"/.exec(selector)?.[1];
         return styles.find((s) => s.hash === hash) ?? null;
       },
-      appendChild(el) { styles.push(el); },
+      appendChild(el: FakeStyle) { styles.push(el); },
     },
-    createElement(tag) {
-      return { tag, attribute: null, hash: null, textContent: "", setAttribute(name, value) { this.attribute = name; this.hash = value; } };
+    createElement(tag: string): FakeStyle {
+      return { tag, attribute: null, hash: null, textContent: "", setAttribute(name: string, value: string) { this.attribute = name; this.hash = value; } };
     },
   };
 }
@@ -125,7 +128,7 @@ function fakeDocument() {
 const oneJs = await bundleText("one.ts");
 const twoJs = await bundleText("two.ts");
 const doc = fakeDocument();
-const run = (code) => new Function("document", code)(doc);
+const run = (code: string) => new Function("document", code)(doc);
 run(oneJs);
 run(oneJs);
 run(twoJs);

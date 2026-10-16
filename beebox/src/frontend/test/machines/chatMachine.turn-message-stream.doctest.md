@@ -19,13 +19,13 @@ import type { ChatMessage } from "../../../core/chat/session/messages.js";
 import type { ChatEvent } from "../../src/machines/chat-types.js";
 
 function delta(text: string): ChatMessage {
-  return { type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text } } };
+  return { type: "stream_event", session_id: "s", parent_tool_use_id: null, event: { type: "content_block_delta", delta: { type: "text_delta", text } } };
 }
 function asstText(text: string): ChatMessage {
-  return { type: "assistant", message: { role: "assistant", content: [{ type: "text", text }] } };
+  return { type: "assistant", session_id: "s", message: { role: "assistant", content: [{ type: "text", text }] } };
 }
 function asstTool(id: string): ChatMessage {
-  return { type: "assistant", message: { role: "assistant", content: [{ type: "tool_use", id, name: "Read", input: {} }] } };
+  return { type: "assistant", session_id: "s", message: { role: "assistant", content: [{ type: "tool_use", id, name: "Read", input: {} }] } };
 }
 
 // Drive a sequence of frames through one turn's shared state and return the
@@ -37,7 +37,7 @@ function runTurn(frames: ChatMessage[]): { text: string; tools: number } {
   for (const msg of frames) {
     handleTurnMessage(msg, { sessionInput: "s", sendBack: sink, terminal: sink, state });
   }
-  const text = events.filter((e) => e.type === "STREAM_TEXT").map((e) => (e as { text: string }).text).join("");
+  const text = events.flatMap((e) => (e.type === "STREAM_TEXT" ? [e.text] : [])).join("");
   const tools = events.filter((e) => e.type === "STREAM_TOOL").length;
   return { text, tools };
 }

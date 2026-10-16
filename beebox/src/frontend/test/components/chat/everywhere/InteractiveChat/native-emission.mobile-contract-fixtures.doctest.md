@@ -39,6 +39,8 @@ import { detectKeyword, appendSendKeywordTag } from "../../../../../src/lib/audi
 import { PushTokenBody } from "../../../../../../webapp/routes/pairing.js";
 import { buildApnsRequest } from "../../../../../../core/notification/apns-channel/payload.js";
 import { parseTarget } from "../../../../../../core/notification/target.js";
+import { LOUDNESS } from "../../../../../../core/notification/intent.js";
+import { z } from "zod";
 
 // Shared cross-platform golden fixtures (also loaded by
 // test/core/notification/apns-channel/payload.doctest.md and
@@ -47,41 +49,75 @@ import { parseTarget } from "../../../../../../core/notification/target.js";
 // moved into the frontend's own test tree.
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../../../../../test/mobile-contract/fixtures");
 
-function loadFamily(family) {
+type Dict = Record<string, unknown>;
+type Verdict = { ok: boolean; detail?: string };
+// One fixture file: `input`/`expected` stay unknown until a validator narrows them.
+interface Fixture {
+  input: unknown;
+  expected?: unknown;
+  variant?: string;
+  op?: string;
+  status?: number;
+  expectedReason?: string;
+  expectedValid?: boolean;
+  expectGeneratedId?: boolean;
+  ignoredByClient?: string[];
+}
+function isDict(v: unknown): v is Dict {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+// Narrow a fixture value that must be an object; a non-object throws, which runFamily reports as a failure.
+function dict(v: unknown): Dict {
+  if (!isDict(v)) throw new Error(`expected an object, got ${JSON.stringify(v)}`);
+  return v;
+}
+const fixtureSchema = z.object({
+  input: z.unknown(),
+  expected: z.unknown().optional(),
+  variant: z.string().optional(),
+  op: z.string().optional(),
+  status: z.number().optional(),
+  expectedReason: z.string().optional(),
+  expectedValid: z.boolean().optional(),
+  expectGeneratedId: z.boolean().optional(),
+  ignoredByClient: z.array(z.string()).optional(),
+});
+
+function loadFamily(family: string): { file: string; fixture: Fixture }[] {
   const dir = join(FIXTURES_DIR, family);
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .sort()
-    .map((file) => ({ file, fixture: JSON.parse(readFileSync(join(dir, file), "utf-8")) }));
+    .map((file) => ({ file, fixture: fixtureSchema.parse(JSON.parse(readFileSync(join(dir, file), "utf-8"))) }));
 }
 
 // Order-insensitive structural equality (object keys sorted, array order kept).
-function normalize(v) {
+function normalize(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(normalize);
-  if (v && typeof v === "object") {
-    const out = {};
+  if (isDict(v)) {
+    const out: Dict = {};
     for (const k of Object.keys(v).sort()) out[k] = normalize(v[k]);
     return out;
   }
   return v;
 }
-function deepEqual(a, b) {
+function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
 }
 
 // Run one family's fixtures through a validator. Throws with per-case detail on
 // any mismatch (a loud regression); otherwise returns the summary line.
-function runFamily(family, validate) {
+function runFamily(family: string, validate: (fx: Fixture) => Verdict) {
   const entries = loadFamily(family);
   const failures = [];
   for (const { file, fixture } of entries) {
-    let result;
+    let result: Verdict;
     try {
       result = validate(fixture);
     } catch (e) {
       result = { ok: false, detail: e instanceof Error ? e.message : String(e) };
     }
-    if (!result.ok) failures.push(`${file}: ${result.detail}`);
+    if (!result.ok) failures.push(`${file}: ${result.detail ?? "failed"}`);
   }
   if (failures.length > 0) throw new Error(`${family} fixtures failed:\n${failures.join("\n")}`);
   return JSON.stringify({ family, cases: entries.length, pass: entries.length });
@@ -90,7 +126,7 @@ function runFamily(family, validate) {
 
 ```ts setup
 // ── emission: the web decoder, documented-lenient (contract §4.1) ──
-function validateEmission(fx) {
+function validateEmission(fx: Fixture): Verdict {
   const parsed = parseNativeEmissionDetail(fx.input);
   if (fx.expectedReason !== undefined) {
     if (parsed.ok) return { ok: false, detail: `expected rejection, got ${JSON.stringify(parsed.emission)}` };
@@ -107,7 +143,7 @@ function validateEmission(fx) {
     if (typeof out.id !== "string" || out.id.length === 0) {
       return { ok: false, detail: `expected a generated id, got ${JSON.stringify(out.id)}` };
     }
-    return deepEqual(out, { ...fx.expected, id: out.id })
+    return deepEqual(out, { ...dict(fx.expected), id: out.id })
       ? { ok: true }
       : { ok: false, detail: `got ${JSON.stringify(out)}` };
   }
@@ -115,7 +151,7 @@ function validateEmission(fx) {
 }
 
 // ── composer-command: strict web→native add-selection command ──
-function validateComposerCommand(fx) {
+function validateComposerCommand(fx: Fixture): Verdict {
   const out = nativeComposerCommandFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
@@ -123,7 +159,7 @@ function validateComposerCommand(fx) {
 }
 
 // ── composer-command-result: the native→web answer a V2 command produced ──
-function validateCommandResult(fx) {
+function validateCommandResult(fx: Fixture): Verdict {
   const out = nativeCommandResultFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
@@ -131,7 +167,7 @@ function validateCommandResult(fx) {
 }
 
 // ── composer-command-ack: strict native→web mutation result ──
-function validateComposerCommandAcknowledgement(fx) {
+function validateComposerCommandAcknowledgement(fx: Fixture): Verdict {
   const out = nativeComposerCommandAcknowledgementFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
@@ -139,7 +175,7 @@ function validateComposerCommandAcknowledgement(fx) {
 }
 
 // ── last-audio-request: strict web→native retranscription relay ──
-function validateLastAudioRequest(fx) {
+function validateLastAudioRequest(fx: Fixture): Verdict {
   const out = nativeLastAudioRequestFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
@@ -147,7 +183,7 @@ function validateLastAudioRequest(fx) {
 }
 
 // ── speech-command: strict native→web barge-in command ──
-function validateSpeechCommand(fx) {
+function validateSpeechCommand(fx: Fixture): Verdict {
   const out = nativeSpeechCommandFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
@@ -155,18 +191,18 @@ function validateSpeechCommand(fx) {
 }
 
 // ── receipt: the web-encoded Receipt; native decode drops `deduplicated` ──
-function isValidReceipt(r) {
-  if (!r || typeof r !== "object") return false;
+function isValidReceipt(r: unknown): r is Dict {
+  if (!isDict(r)) return false;
   if (typeof r.emissionId !== "string") return false;
   if (r.disposition === "sent") return typeof r.deduplicated === "boolean";
   if (r.disposition === "queued") return true;
   if (r.disposition === "rejected") return typeof r.reason === "string";
   return false;
 }
-function validateReceipt(fx) {
+function validateReceipt(fx: Fixture): Verdict {
   if (!isValidReceipt(fx.input)) return { ok: false, detail: `not a valid Receipt: ${JSON.stringify(fx.input)}` };
   const r = fx.input;
-  const projected = { disposition: r.disposition, emissionId: r.emissionId };
+  const projected: Dict = { disposition: r.disposition, emissionId: r.emissionId };
   if (typeof r.reason === "string") projected.reason = r.reason;
   if (typeof r.definitive === "boolean") projected.definitive = r.definitive;
   return deepEqual(projected, fx.expected)
@@ -177,43 +213,45 @@ function validateReceipt(fx) {
 
 ```ts setup
 // ── location: toggle request, result, and unsolicited current state ──
-function validateLocation(fx) {
+function validateLocation(fx: Fixture): Verdict {
   if (fx.variant === "request") {
-    const rawId = fx.input.id;
-    const action = fx.input.action;
+    const input = dict(fx.input);
+    const rawId = input.id;
+    const action = input.action;
     const got = typeof rawId === "string" && rawId.length > 0 && action === "toggle" ? { id: rawId, action } : null;
     return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
   }
   if (fx.variant === "result") {
-    const r = fx.input;
+    const r = dict(fx.input);
     if (typeof r.id !== "string" || typeof r.success !== "boolean" || typeof r.enabled !== "boolean" || typeof r.message !== "string") {
       return { ok: false, detail: `malformed location result ${JSON.stringify(r)}` };
     }
     return deepEqual(r, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(r)}` };
   }
   if (fx.variant === "state") {
-    const r = fx.input;
+    const r = dict(fx.input);
     const got = typeof r.enabled === "boolean" ? { enabled: r.enabled } : null;
     return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
   }
   return { ok: false, detail: `unknown location variant ${JSON.stringify(fx.variant)}` };
 }
 
-function validateNarrationState(fx) {
-  const got = typeof fx.input.enabled === "boolean" ? { enabled: fx.input.enabled } : null;
+function validateNarrationState(fx: Fixture): Verdict {
+  const input = dict(fx.input);
+  const got = typeof input.enabled === "boolean" ? { enabled: input.enabled } : null;
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
 // ── hq-dictation-state (contract §4.4a): `diarized` absent reads false; `enabled` is ignored ──
-function validateHqDictationState(fx) {
-  const { diarized = false } = fx.input;
+function validateHqDictationState(fx: Fixture): Verdict {
+  const { diarized = false } = dict(fx.input);
   const got = typeof diarized === "boolean" ? { diarized } : null;
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
 // ── pairing-url: a contract-faithful parse of beebox://pair (contract §1.1) ──
-function parsePairingURL(raw) {
-  let url;
+function parsePairingURL(raw: string): Dict {
+  let url: URL;
   try {
     url = new URL(raw);
   } catch {
@@ -223,14 +261,14 @@ function parsePairingURL(raw) {
   const p = url.searchParams;
   const baseURLString = p.get("baseURL") ?? p.get("url");
   if (!baseURLString) return { accepted: false };
-  let baseURL;
+  let baseURL: URL;
   try {
     baseURL = new URL(baseURLString);
   } catch {
     return { accepted: false };
   }
   if (!baseURL.protocol || !baseURL.host) return { accepted: false };
-  const result = { accepted: true, baseURL: baseURLString, label: p.get("label") ?? "Bee Box" };
+  const result: Dict = { accepted: true, baseURL: baseURLString, label: p.get("label") ?? "Bee Box" };
   const token = p.get("pairingToken") ?? p.get("token");
   if (token) result.pairingToken = token;
   const session = p.get("session");
@@ -239,14 +277,14 @@ function parsePairingURL(raw) {
   if (authToken) result.authToken = authToken; // DEBUG-build-only carrier (contract §1.1)
   return result;
 }
-function validatePairingURL(fx) {
-  const got = parsePairingURL(fx.input);
+function validatePairingURL(fx: Fixture): Verdict {
+  const got = parsePairingURL(String(fx.input));
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
 // ── redeem: POST /api/pairing/redeem request/response/error shapes (contract §1.3) ──
-function validateRedeem(fx) {
-  const r = fx.input;
+function validateRedeem(fx: Fixture): Verdict {
+  const r = dict(fx.input);
   if (fx.variant === "request") {
     if (typeof r.pairingToken !== "string" || r.pairingToken.length === 0) {
       return { ok: false, detail: "pairingToken must be a non-empty string" };
@@ -260,7 +298,7 @@ function validateRedeem(fx) {
     if (typeof r.token !== "string" || r.token.length === 0) return { ok: false, detail: "response must carry a token" };
     for (const k of fx.ignoredByClient ?? []) {
       if (!(k in r)) return { ok: false, detail: `expected ignored field ${k} in the wire body` };
-      if (k in fx.expected) return { ok: false, detail: `ignored field ${k} leaked into the client-read expected` };
+      if (k in dict(fx.expected)) return { ok: false, detail: `ignored field ${k} leaked into the client-read expected` };
     }
     return deepEqual({ token: r.token }, fx.expected)
       ? { ok: true }
@@ -276,7 +314,7 @@ function validateRedeem(fx) {
 
 // ── push-token: POST /api/pairing/push-token through the route's own body schema (contract §5.9) ──
 // A 400 case is a body the schema must refuse; the 401 case is the error body shape.
-function validatePushToken(fx) {
+function validatePushToken(fx: Fixture): Verdict {
   if (fx.variant === "request") {
     const parsed = PushTokenBody.safeParse(fx.input);
     if (!parsed.success) return { ok: false, detail: `refused: ${parsed.error.issues[0]?.message}` };
@@ -286,38 +324,55 @@ function validatePushToken(fx) {
     return PushTokenBody.safeParse(fx.input).success ? { ok: false, detail: "the schema accepted a body it must refuse" } : { ok: true };
   }
   if (fx.variant === "error" && fx.status === 401) {
-    return typeof fx.input.error === "string" && deepEqual(fx.input, fx.expected) ? { ok: true } : { ok: false, detail: "bad 401 body" };
+    return typeof dict(fx.input).error === "string" && deepEqual(fx.input, fx.expected) ? { ok: true } : { ok: false, detail: "bad 401 body" };
   }
   return { ok: false, detail: `unknown push-token case ${JSON.stringify([fx.variant, fx.status])}` };
 }
 
+const apnsFixtureInput = z.object({
+  intent: z.object({
+    id: z.string(), title: z.string(), body: z.string(), target: z.string(),
+    loudness: z.enum(LOUDNESS), tag: z.string().optional(), source: z.string(),
+  }),
+  bundleId: z.string(),
+  box: z.string(),
+});
 // ── apns-payload: the box's APNs body and headers, which the iOS client reads (contract §5.10) ──
-function validateApnsPayload(fx) {
-  const { intent, bundleId, box } = fx.input;
+function validateApnsPayload(fx: Fixture): Verdict {
+  const { intent, bundleId, box } = apnsFixtureInput.parse(fx.input);
   const got = buildApnsRequest({ ...intent, target: parseTarget(intent.target) }, { bundleId, box });
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
 // ── speech-keywords: the real web keyword functions (mirrored by iOS) ──
-function validateSpeechKeyword(fx) {
+const keywordInput = z.object({
+  transcript: z.string(),
+  atStart: z.boolean().optional(),
+  action: z.enum(["send", "sendClose", "sendCheckpoint"]).optional(),
+  matchedPhrase: z.string().optional(),
+});
+function validateSpeechKeyword(fx: Fixture): Verdict {
+  const input = keywordInput.parse(fx.input);
   if (fx.op === "detect") {
-    const result = detectKeyword(fx.input.transcript, fx.input.atStart ? { atStart: true } : undefined);
+    const result = detectKeyword(input.transcript, input.atStart ? { atStart: true } : undefined);
     if (fx.expected === null) {
       return result === null ? { ok: true } : { ok: false, detail: `expected null, got ${JSON.stringify(result)}` };
     }
     if (result === null) return { ok: false, detail: "expected a match, got null" };
-    for (const key of Object.keys(fx.expected)) {
-      if (result[key] !== fx.expected[key]) {
-        return { ok: false, detail: `${key}: expected ${JSON.stringify(fx.expected[key])}, got ${JSON.stringify(result[key])}` };
+    const expected = dict(fx.expected);
+    const actual: Dict = { ...result };
+    for (const key of Object.keys(expected)) {
+      if (actual[key] !== expected[key]) {
+        return { ok: false, detail: `${key}: expected ${JSON.stringify(expected[key])}, got ${JSON.stringify(actual[key])}` };
       }
     }
     return { ok: true };
   }
   if (fx.op === "append") {
-    const got = appendSendKeywordTag(fx.input.transcript, {
-      action: fx.input.action,
-      matchedPhrase: fx.input.matchedPhrase,
-    });
+    if (input.action === undefined || input.matchedPhrase === undefined) {
+      return { ok: false, detail: "append needs action and matchedPhrase" };
+    }
+    const got = appendSendKeywordTag(input.transcript, { action: input.action, matchedPhrase: input.matchedPhrase });
     return got === fx.expected ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
   }
   return { ok: false, detail: `unknown op ${JSON.stringify(fx.op)}` };

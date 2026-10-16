@@ -20,6 +20,7 @@ import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText, serializeCardText } from "../../../src/core/card-io.js";
 import { movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
 import { getTriageTodoDate, planTriageTodoAnnotation } from "../../../src/core/triage/todo.js";
+import type { TodoStatus } from "../../../src/shared/todo-model.js";
 import { invariant } from "../../../src/shared/invariant.js";
 
 async function receiptFixture(options?: { question?: string | null; tracked?: boolean }) {
@@ -48,13 +49,14 @@ async function receiptFixture(options?: { question?: string | null; tracked?: bo
   };
   return { box, evidence, instructions, destination, baseJudgment };
 }
-async function setTodoStatus(boxRoot, file, status) {
+async function setTodoStatus(boxRoot: string, file: string, status: TodoStatus) {
   const schemas = await createCardSchemaMap(boxRoot);
   const parsed = parseCardText(await fs.readFile(file, "utf8"), { source: file, schemas });
-  const todos = parsed.fields.todos.map((todo) => ({ ...todo, status }));
+  const existing: unknown = parsed.fields.todos;
+  const todos = Array.isArray(existing) ? existing.map((todo: unknown) => (typeof todo === "object" && todo !== null ? { ...todo, status } : todo)) : existing;
   await fs.writeFile(file, serializeCardText({ schema: parsed.schema, fields: { ...parsed.fields, todos } }));
 }
-async function capturedError(run) {
+async function capturedError(run: () => Promise<unknown>) {
   try { await run(); return ""; } catch (error) { return String(error); }
 }
 ```
@@ -137,6 +139,7 @@ const { box, evidence, instructions, destination, baseJudgment } = await receipt
 const receipt = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: { [destination.optionId]: 0.95 } } });
 const from = box.path("_content/inbox/staged/Paper.doc.card");
 const to = box.path("_content/inbox/triaged/bills/Paper.doc.card");
+invariant(destination.todoQuestion, "Fixture destination has a todo question");
 const plan = await planTriageTodoAnnotation({ file: from, boxRoot: box.root, destinationRef: destination.ref, question: destination.todoQuestion, created: await getTriageTodoDate(box.root) });
 receipt.application.state = "applied";
 receipt.application.todoAnnotation = { state: "pending", todoId: plan.todoId, beforeDigest: plan.beforeDigest, afterDigest: plan.afterDigest, created: await getTriageTodoDate(box.root) };
@@ -207,7 +210,8 @@ await box.write("_content/bills/Bills.landmark.card", "---\ndestinations:\n  - f
 await box.write("_content/inbox/staged/Legacy.doc.card", "---\ntitle: Legacy\n---\nBill.");
 const compiled = await compileTriageInstructions(box.root);
 const category = compiled.categories[0];
-const response = (todo) => applyTriage({ boxRoot: box.root, categories: compiled.categories, decisions: [{ file: "Legacy.doc.card", category: category.name, confidence: "confident", reason: "Bill", todo }] });
+invariant(category, "Fixture needs its category");
+const response = (todo: boolean) => applyTriage({ boxRoot: box.root, categories: compiled.categories, decisions: [{ file: "Legacy.doc.card", category: category.name, confidence: "confident", reason: "Bill", todo }] });
 await response(true);
 (await fs.readFile(box.path("_content/inbox/triaged/bills/Legacy.doc.card"), "utf8")).includes("assigned: agent")
 => true
@@ -225,6 +229,7 @@ const { box, destination } = await receiptFixture();
 const file = box.path("_content/inbox/staged/Paper.doc.card");
 const original = await fs.readFile(file, "utf8");
 await fs.writeFile(file, original.replace("title: Paper", "title: Paper\ntodos:\n  - id: existing\n    text: Keep this task\n    status: done\n    recheck: never\n    unknown: keep-this-too # task note"));
+invariant(destination.todoQuestion, "Fixture destination has a todo question");
 const addition = await planTriageTodoAnnotation({ file, boxRoot: box.root, destinationRef: destination.ref, question: destination.todoQuestion, created: await getTriageTodoDate(box.root) });
 addition.after.includes("unknown: keep-this-too # task note") && addition.after.includes("status: done") && addition.after.includes("recheck: never") && addition.after.includes(addition.todoId)
 => true

@@ -75,7 +75,7 @@ reads "unavailable" forever.
 
 ```ts
 const quotas = await collectAgentQuotas({
-  claudeRequest: () => Promise.resolve({ rateLimits: null }),
+  claudeRequest: () => Promise.resolve({ rate_limits: null, rate_limits_available: false }),
   codexRequest: () => Promise.resolve({ rateLimits: null }),
   stateDir: await fs.mkdtemp(path.join(os.tmpdir(), "glm-quota-")),
 });
