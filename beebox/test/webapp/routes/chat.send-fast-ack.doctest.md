@@ -15,7 +15,6 @@ import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js
 import { getTurnBuffer } from "../../../src/core/chat/turn-buffer.js";
 import { ChatSession } from "../../../src/core/chat/session/run/core.js";
 import type { BusEvent } from "../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 
 /**
  * Hold every engine start (`ChatSession`'s private `startRun`) open — the
@@ -66,7 +65,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const gate = openSendGate();
@@ -118,8 +117,8 @@ const sessionIds: unknown[] = [];
 ctx.eventBus.subscribe({
   listener: (e: BusEvent) => {
     if (e.event !== "chat-user-message") return;
-    recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message));
-    sessionIds.push(eventSchemas["chat-user-message"].parse(e.data).sessionId);
+    recorded.push(e.data.message);
+    sessionIds.push(e.data.sessionId);
   },
 });
 

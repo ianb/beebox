@@ -15,7 +15,6 @@ import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
 import { createEventBus, type BusEvent } from "../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 import type { ChatSession } from "../../../src/core/chat/session/run/core.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
@@ -65,10 +64,10 @@ function commitReport(boxRoot: string, baseA: string, baseB: string) {
 
 // Persisted bus events carry `unknown` data; parse it with the event's own schema.
 function userMessages(events: BusEvent[]) {
-  return events.filter((e) => e.event === "chat-user-message").map((e) => eventSchemas["chat-user-message"].parse(e.data));
+  return events.filter((e) => e.event === "chat-user-message").map((e) => e.data);
 }
 function captureStatuses(events: BusEvent[]) {
-  return events.filter((e) => e.event === "capture-status").map((e) => eventSchemas["capture-status"].parse(e.data));
+  return events.filter((e) => e.event === "capture-status").map((e) => e.data);
 }
 
 const GITIGNORE = ["_tmp/", ".beebox/", "**/*.attach/**/*.webm", "**/*.attach/**/*.m4a", "**/*.attach/**/*.jpg"].join("\n") + "\n";

@@ -10,7 +10,6 @@ one chat message: first the route and the runtime's sender, then the route and
 
 ```ts setup
 import type { BusEvent, EventBus } from "../../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
@@ -59,7 +58,7 @@ duplicate, answered from the durable claim.
 const ctx = await makeTestServer({ chatBackend: createFakeChatBackend() });
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const viaRoute = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { session: "new", message: "feed the cat", messageId: "route-first" } });

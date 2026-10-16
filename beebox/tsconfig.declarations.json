@@ -10,7 +10,7 @@
     // Plugin view modules (`src/plugins/*/view.tsx`) are browser code and may
     // use DOM types; the backend tsconfig excludes them, this one emits their
     // `view.d.ts`. The extra libs are additive for the other entries.
-    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    "lib": ["ES2024", "DOM", "DOM.Iterable"]
   },
   // `files` takes no globs: every plugin's `plugin.ts` and `view.tsx` emit to
   // dist/plugins/<name>/{plugin,view}.d.ts, the `types` targets of the

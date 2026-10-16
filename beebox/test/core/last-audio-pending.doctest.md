@@ -300,7 +300,7 @@ nobody answers, so the short wait ends in the relay's 504):
 ```ts continue
 const gotRelay = new Promise<string>((resolve) => {
   ctx.eventBus.subscribe({ listener: (e) => {
-    if (e.event === "chat-last-audio-request") resolve(eventSchemas["chat-last-audio-request"].parse(e.data).messageId);
+    if (e.event === "chat-last-audio-request") resolve(e.data.messageId);
   }});
 });
 const miss = await ctx.request({
