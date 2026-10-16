@@ -80,3 +80,46 @@ a manual cleanup. Two engine-side points:
 ## Re-encounter 2026-10-09 (journey walks)
 
 Seen in [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R1). The agent tested its own read-only trick while its schema, trick, five cards and edits were uncommitted. `bbx trick` commits the whole dirty tree after any successful run (`beebox/src/cli/commands/trick.ts:37-47`), so most of the evening's work landed under "Auto-commit changes from trick: loans" (`bdf9c7b`: schema, trick, five loans, the root chat's card and a usage-manifest line; then `776f849`, `92eb558`, `c42403d`). The agent's own commit `b56b498` ("…first five loans recorded") holds only the landmarks and a doc line, so its message describes files it does not contain. Testing a trick mid-build is an ordinary trigger, and the person saw the trick's subject in Properties (row 31). The priority may be stale given the repeat.
+
+## Re-encounter 2026-10-15 (box agent report)
+
+A box agent, the same box that filed the 2026-08-01 instance, reported a third
+shape. One successful test run of a trick it had just edited committed three
+unrelated edited files under "Auto-commit changes from trick: …", and none of
+the trick's output. Its points, checked against the code:
+
+- **No concurrency needed.** The trigger is "edit anything, then run any trick",
+  which is what testing a trick looks like. Three instances across three
+  months, found by three routes.
+- **Success path only.** `commitIfDirty` runs only after exit 0
+  (`beebox/src/cli/commands/trick.ts:229-233`). Confirmed.
+- **Misattribution.** The commit carries `Run-By: trick/<name>` and the trick's
+  name while holding someone else's work. Repair needs `git commit --amend`,
+  a history rewrite, which is not fine on a box that pushes.
+- **Gitignored output makes it pure.** When a trick writes only to an ignored
+  path (a `temp/` scratch directory; the root repo now ignores
+  `tmp/`, `temp/`, `tmp-*/`, `_tmp-*/` at any depth, and boxes do similar),
+  its own scoped `git add` of that path is refused, the trick still exits 0,
+  and the whole-tree commit can contain only unrelated files.
+- **Proposed fix: before/after path diff in the runner.** Record dirty paths
+  before spawning the child and after it exits 0, and commit the difference
+  with `stageAndCommitPaths`. It needs nothing from trick authors and fixes
+  every trick at once. An empty difference commits nothing, which is right for
+  ignored output. Declared output paths
+  ([sandboxed trick helpers](../features/2026-09-16-sandboxed-trick-helpers.md))
+  stay the better long-term shape, but only fix tricks written later.
+  Caveats for whoever implements it: a path that was already dirty before the
+  run and that the trick then changes again is in both sets, so the diff needs
+  content hashes, not only path names; and `git status` collapses untracked
+  directories unless run with `-uall`.
+- **Lock lifetime.** The commit runs in the parent after the child exits, so a
+  lock the trick releases on exit does not cover it. The box's workaround holds
+  its lock through the whole `bbx trick` process. Moving scoping into the
+  runner makes that unnecessary.
+- **Secondary ask, repeated:** `bbx trick --no-commit` (or an env var), so a
+  trick can be tested mid-edit and a wrong output is not history before anyone
+  looks.
+
+The report also argues that `priority: normal` understates the bug (the
+2026-10-09 note says the same). The fix does not need a decision in
+[rethink box autocommit](../decisions/2026-08-30-rethink-box-autocommit.md).
