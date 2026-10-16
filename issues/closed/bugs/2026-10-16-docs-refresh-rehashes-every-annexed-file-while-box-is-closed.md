@@ -1,12 +1,27 @@
 ---
 title: "A docs refresh re-hashes every annexed file through git-annex while the box is closed, so a large box is unreachable for minutes"
-workstream: unattached
+workstream: docs-refresh-annex
 area: beebox
 labels: [annex, migrations]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — the boxholder's iOS app showed "Box is closed for docs refresh", 2026-10-16
 ---
+
+**Closed 2026-10-16:** fixed by commits 8c0cd10a6 and 138553b33.
+`changedMigrationPaths` now runs `read-tree -i -m`, which keeps stat data for
+entries that match the snapshot. Plain `-m` was not enough because it refuses
+a worktree file that is dirty against the index. An index with unmerged,
+assume-unchanged, or skip-worktree entries falls back to the plain read,
+because `-m` would keep those flags and `add -A` would skip the migrated file.
+`test/core/migration-recovery.annex-stat.doctest.md` counts git-annex clean
+requests: only the changed photo is cleaned. On a synthetic box with 2,000
+annexed 100 KB files, the step took 0.7 s instead of 3.4 s. No other
+`read-tree` exists in the maintenance or migration paths.
+`captureMigrationSnapshot` runs `add -A` on the copied index and keeps stat
+data. The "Also worth deciding" item about a time budget moved to
+[closed box shows migration progress](../../features/2026-10-06-closed-box-shows-migration-progress.md).
 
 On 2026-10-16 a personal box on the dev host (4.1 GB, 19,896 tracked files,
 10,015 of them annexed) was closed for about 10 minutes. The hourly
@@ -55,7 +70,7 @@ or no change) is not confirmed.
   child (here, minutes with almost no CPU) keeps it closed with no alert.
   Consider a time budget with an alert, or at least a log line naming the
   current step (see
-  [closed box shows migration progress](../features/2026-10-06-closed-box-shows-migration-progress.md)).
+  [closed box shows migration progress](../../features/2026-10-06-closed-box-shows-migration-progress.md)).
 - Whether git-annex itself was slow per file or blocked (the keys database is
   SQLite; the sample showed it open by the filter only). The stack sample was
   attempted too late; the process had exited. If this recurs before the fix,
@@ -63,7 +78,7 @@ or no change) is not confirmed.
 
 ## Related
 
-- [iOS unreachable box shows a blank screen](2026-09-12-ios-unreachable-box-shows-a-blank-screen.md):
+- [iOS unreachable box shows a blank screen](../../bugs/2026-09-12-ios-unreachable-box-shows-a-blank-screen.md):
   the same day's symptom on the phone.
-- [One-root migration per-file git mv is slow (closed)](../closed/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md):
+- [One-root migration per-file git mv is slow (closed)](../code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md):
   an earlier case of a large annexed box making a migration slow.

@@ -2,7 +2,7 @@
 
 ```ts setup
 import { ChatScheduleManager, loadChatSchedules } from "../../../src/core/chat/schedules/core.js";
-import { closeBoxMaintenance } from "../../../src/lib/box-maintenance.js";
+import { closeBoxMaintenance } from "../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 

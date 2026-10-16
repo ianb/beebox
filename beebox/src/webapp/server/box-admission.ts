@@ -1,7 +1,7 @@
 /** HTTP preparation and detached work share the box's cross-process admission. */
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { BoxSpec } from "../server-types.js";
-import { acquireBoxWork, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance.js";
+import { acquireBoxWork, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
 import { parseOAuthState } from "../../google/oauth-state.js";
 import { toError } from "../../shared/error-guards.js";

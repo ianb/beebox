@@ -94,7 +94,13 @@ export async function changedMigrationPaths(
 ): Promise<string[]> {
   return withBoxGitLock(boxRoot, () =>
     withTemporaryIndex(boxRoot, async (run) => {
-      await run(["read-tree", snapshot.tree]);
+      // `-i -m` keeps cached stat data where the snapshot matches the index, so
+      // `add -A` re-cleans only changed files; a plain read-tree pipes every
+      // annexed file back through git-annex. `-m` refuses an unmerged index and
+      // keeps assume-unchanged/skip-worktree flags, which would hide migrated
+      // files from `add -A`; any entry other than plain cached (`H`) reads fresh.
+      const plain = (await run(["ls-files", "-v", "-z"])).split("\0").every((entry) => entry === "" || entry.startsWith("H "));
+      await run(["read-tree", ...(plain ? ["-i", "-m"] : []), snapshot.tree]);
       await run(["add", "-A"]);
       const tree = (await run(["write-tree"])).trim();
       return (

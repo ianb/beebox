@@ -3,7 +3,7 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { simpleGit } from "simple-git";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
-import { acquireBoxMaintenance, peekBoxWork } from "../lib/box-maintenance.js";
+import { acquireBoxMaintenance, peekBoxWork } from "../lib/box-maintenance/admission.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import {
@@ -72,14 +72,18 @@ export async function refreshGeneratedDocs(opts: {
     const result = await maintenance.run(
       async (): Promise<DocsRefreshResult> => {
         const before = await readMarker(opts.boxRoot);
+        await maintenance.step("saving current files");
         const input = await refreshSnapshot(shape.boxRoot);
         if (!input) return { status: "current" };
         const { snapshot, baseline } = input;
         let paths: string[] = [];
         await maintenance.beginChanges();
         try {
+          await maintenance.step("generating docs");
           await generateDocs(opts.boxRoot, { commit: false });
+          await maintenance.step("finding changed files");
           paths = await changedMigrationPaths(shape.boxRoot, baseline);
+          await maintenance.step("committing");
           await stageAndCommitPaths(shape.boxRoot, {
             paths,
             message: "Refresh generated docs",

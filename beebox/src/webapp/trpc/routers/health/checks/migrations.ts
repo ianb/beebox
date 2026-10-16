@@ -10,7 +10,7 @@ import { computePending } from "../../../../../core/migration-run.js";
 import { readManifest } from "../../../../../core/migration-manifest.js";
 import { migrationQuestions } from "../../../../../core/migration-repair.js";
 import { resolveGitDir } from "../../../../../lib/git-lock.js";
-import { boxMaintenanceStatus } from "../../../../../lib/box-maintenance.js";
+import { boxMaintenanceStatus } from "../../../../../lib/box-maintenance/admission.js";
 import type { HealthCheck } from "../router.js";
 
 /** Pending conversions and unresolved repair decisions share the runner's readers. */

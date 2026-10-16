@@ -1,7 +1,7 @@
 /** Request-independent processing resumes sealed records after restart. */
 import type { FastifyInstance } from "fastify";
 import type { Services } from "../../../services/container.js";
-import { withoutBoxWork, withBoxWork } from "../../../lib/box-maintenance.js";
+import { withoutBoxWork, withBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { listCaptures } from "../../../core/quick-capture/store.js";

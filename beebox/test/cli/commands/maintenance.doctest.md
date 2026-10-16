@@ -15,8 +15,8 @@ import { defaultHubConfigPath } from "../../../src/hub/config.js";
 import { pathToFileURL } from "node:url";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runMaintenance } from "../../../src/cli/commands/maintenance.js";
-import { boxMaintenanceStatus } from "../../../src/lib/box-maintenance.js";
-const library = pathToFileURL(join(import.meta.dirname, "../../../src/lib/box-maintenance.ts")).href;
+import { boxMaintenanceStatus } from "../../../src/lib/box-maintenance/admission.js";
+const library = pathToFileURL(join(import.meta.dirname, "../../../src/lib/box-maintenance/admission.ts")).href;
 const readyScript = `
 const { acquireBoxMaintenance, boxMaintenanceStatus, acquireBoxWork } = await import(${JSON.stringify(library)});
 const roots = Object.keys(JSON.parse(process.env.BBX_MAINTENANCE_PERMITS));
