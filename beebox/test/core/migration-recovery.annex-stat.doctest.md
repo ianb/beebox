@@ -74,6 +74,18 @@ execFileSync("git", ["update-index", "--index-info"], { cwd: box.root, input: `0
 => [".gitignore", "_assets/c.jpg"]
 ```
 
+A file marked assume-unchanged would keep that mark through the stat-keeping
+read and be skipped, so a flagged index also reads fresh and the migrated
+file is reported. The merge is resolved first, so only the flag differs.
+
+```ts continue
+git(box, "reset", "--quiet", "--", "_assets/a.jpg");
+git(box, "update-index", "--assume-unchanged", "_assets/a.jpg");
+await box.write("_assets/a.jpg", "photo a, migrated\n");
+(await changedMigrationPaths(box.root, second)).sort()
+=> [".gitignore", "_assets/a.jpg", "_assets/c.jpg"]
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
