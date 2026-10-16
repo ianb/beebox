@@ -38,7 +38,7 @@ which step, how long it has run, or whether it is progressing or stuck.
 way: a docs refresh spent minutes in one `git add -A` through git-annex. The
 cause was `changedMigrationPaths` dropping cached stat data, so every annexed
 file was re-hashed. That is fixed
-([closed bug](../closed/bugs/2026-10-16-docs-refresh-rehashes-every-annexed-file-while-box-is-closed.md)),
+([closed bug](../bugs/2026-10-16-docs-refresh-rehashes-every-annexed-file-while-box-is-closed.md)),
 and it is very likely what made the 2026-10-06 run slow. Still open from that
 bug: nothing alerts while a holder keeps the box closed. The convergence
 schedule kills a box's run after 25 minutes and alerts then

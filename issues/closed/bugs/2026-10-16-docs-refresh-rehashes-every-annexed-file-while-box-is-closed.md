@@ -21,7 +21,7 @@ annexed 100 KB files, the step took 0.7 s instead of 3.4 s. No other
 `read-tree` exists in the maintenance or migration paths.
 `captureMigrationSnapshot` runs `add -A` on the copied index and keeps stat
 data. The "Also worth deciding" item about a time budget moved to
-[closed box shows migration progress](../../features/2026-10-06-closed-box-shows-migration-progress.md).
+[closed box shows migration progress](../features/2026-10-06-closed-box-shows-migration-progress.md).
 
 On 2026-10-16 a personal box on the dev host (4.1 GB, 19,896 tracked files,
 10,015 of them annexed) was closed for about 10 minutes. The hourly
@@ -70,7 +70,7 @@ or no change) is not confirmed.
   child (here, minutes with almost no CPU) keeps it closed with no alert.
   Consider a time budget with an alert, or at least a log line naming the
   current step (see
-  [closed box shows migration progress](../../features/2026-10-06-closed-box-shows-migration-progress.md)).
+  [closed box shows migration progress](../features/2026-10-06-closed-box-shows-migration-progress.md)).
 - Whether git-annex itself was slow per file or blocked (the keys database is
   SQLite; the sample showed it open by the filter only). The stack sample was
   attempted too late; the process had exited. If this recurs before the fix,
