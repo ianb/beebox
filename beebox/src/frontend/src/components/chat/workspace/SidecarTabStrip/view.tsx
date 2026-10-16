@@ -59,16 +59,27 @@ function nextTabIndex(key: string, position: { index: number; length: number }):
  */
 function wholeTabStart({ scroller, from, limit }: { scroller: HTMLElement; from: number; limit: number }): number {
   for (const child of scroller.children) {
-    if (child instanceof HTMLElement && child.offsetLeft >= from) return Math.min(child.offsetLeft, limit);
+    const start = scrollPosition(scroller, child);
+    if (start >= from) return Math.min(start, limit);
   }
   return limit;
+}
+
+/**
+ * An element's left edge in the scroller's scroll coordinates. Not
+ * `offsetLeft`: the scroller is the offset parent only on a themed card
+ * (interface.css positions it there), so on a neutral card that value
+ * includes the pane's own position on the page.
+ */
+function scrollPosition(scroller: HTMLElement, el: Element): number {
+  return el.getBoundingClientRect().left - scroller.getBoundingClientRect().left - scroller.clientLeft + scroller.scrollLeft;
 }
 
 function revealTab({ activePath, tabRefs, setOverflow }: { activePath: string; tabRefs: { current: Map<string, HTMLElement> }; setOverflow: (value: { left: boolean; right: boolean }) => void }) {
   const el = tabRefs.current.get(activePath);
   const scroller = el?.parentElement;
   if (scroller === null || scroller === undefined || el === undefined) return;
-  const left = el.offsetLeft;
+  const left = scrollPosition(scroller, el);
   const right = left + el.offsetWidth;
   const trailing = parseFloat(scroller.style.getPropertyValue("--bbx-tab-trailing")) || 0;
   if (trailing > 0 && scroller.scrollWidth - trailing <= scroller.clientWidth) scroller.style.removeProperty("--bbx-tab-trailing");
