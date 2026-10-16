@@ -76,7 +76,7 @@ in a todo makes it show up on the linked place as well as its own.
 ## Tending
 
 You may run a review pass yourself, and the daily `todo-review` procedure
-also hands you a brief of overdue (escalated) / newly-on-plate / stale todos to look
+also hands you a brief of overdue / newly on your plate / stale todos to look
 at. Either way, the same rule: **you judge, the boxholder decides.**
 Suggest completion when you see evidence a todo is done; propose merging
 duplicates; flag a stale one for `parked`/`dropped`/a real date — but

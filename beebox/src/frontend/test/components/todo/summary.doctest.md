@@ -11,7 +11,7 @@ follow-up never counts. `CardTodos.tsx` owns that query; this is the line.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
-import { directoryListPath } from "../../../src/components/todo/summary.js";
+import { controlTargetSelector, directoryListPath } from "../../../src/components/todo/summary.js";
 
 globalThis.React = React;
 
@@ -83,6 +83,18 @@ text(line({ open: 3, onPlate: 2 }, () => undefined))
 
 text(line({ open: 1, onPlate: 0 }, () => undefined))
 => 0 on your plate · [1 later]
+```
+
+On a card, the control scrolls to the first todo in the set it names. A todo
+must carry that plate state explicitly: one embedded from another card has
+none here, so it is never the target.
+
+```ts
+controlTargetSelector({ onPlate: 0 }).includes('[data-todo-plate-state="quiet"]')
+=> true
+
+controlTargetSelector({ onPlate: 2 }).includes("quiet")
+=> false
 ```
 
 ## A directory's line

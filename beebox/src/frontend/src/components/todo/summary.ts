@@ -53,10 +53,17 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
  * renderer drew (`TodoItem`'s data attributes). A box view draws none, and
  * then the count is plain text rather than a button that does nothing.
  */
-export const FIRST_OPEN_TODO_SELECTOR = '[data-todo-status="open"]:not([data-todo-assigned="agent"])';
+const FIRST_OPEN_TODO_SELECTOR = '[data-todo-status="open"]:not([data-todo-assigned="agent"])';
 
-/** The first one already on the plate — what "N on your plate" goes to before a later one. */
-export const FIRST_ON_PLATE_TODO_SELECTOR = `${FIRST_OPEN_TODO_SELECTOR}:not([data-todo-plate-state="quiet"])`;
+/**
+ * Where the line's control goes: the first todo in the set it names — on the
+ * plate, else later. Plate state must be explicit, so a todo embedded from
+ * another card (no plate state here) is never the target.
+ */
+export function controlTargetSelector(reduction: { onPlate: number }): string {
+  const states = reduction.onPlate > 0 ? ["on-plate", "escalated"] : ["quiet"];
+  return states.map((state) => `${FIRST_OPEN_TODO_SELECTOR}[data-todo-plate-state="${state}"]`).join(", ");
+}
 
 /**
  * Where a directory's todo line leads (Track 4): the directory's own
