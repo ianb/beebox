@@ -26,14 +26,17 @@ import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.
 import { createFakeJev, type JevService } from "../../../../src/services/jev.js";
 import { JevError } from "../../../../src/services/jev-wire.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { containedSessionCwd, getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 
-const EVENT_BUS = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
 function caller(boxRoot: string, jev?: JevService, options?: { authed?: boolean }) {
-  const ctx: TrpcContext = {
-    boxRoot, boxSlug: "test", authed: options?.authed ?? true, isOwner: true, isAuthenticatedOwner: true, actor: "user",
-    services: { jev }, user: { email: "ari@example.com", name: "Ari" }, eventBus: EVENT_BUS,
-  };
+  const ctx: TrpcContext = trpcContext({
+    boxRoot,
+    authed: options?.authed ?? true,
+    isAuthenticatedOwner: true,
+    services: { jev },
+    user: { email: "ari@example.com", name: "Ari" },
+  });
   return quickChatRouter.createCaller(ctx);
 }
 type SubmitInput = Parameters<ReturnType<typeof caller>["submit"]>[0];

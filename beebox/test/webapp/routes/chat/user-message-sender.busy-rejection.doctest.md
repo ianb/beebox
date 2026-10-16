@@ -16,7 +16,6 @@ session refuses is answered `409` and leaves nothing behind: no
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
@@ -45,7 +44,7 @@ const backend = createFakeChatBackend();
 const ctx = await makeTestServer({ chatBackend: backend });
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const runtime = getChatRuntime(ctx.boxRoot);

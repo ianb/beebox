@@ -14,10 +14,16 @@ import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { silentEventBus, trpcContext } from "../../../helpers/trpc-context.js";
 
-const noBus: TrpcContext["eventBus"] = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
+const noBus: TrpcContext["eventBus"] = silentEventBus;
 function owner(boxRoot: string) {
-  return appRouter.createCaller({ boxRoot, boxSlug: "test", eventBus: noBus, services: {}, user: { email: "owner@example.com", name: "Owner" }, authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user" });
+  return appRouter.createCaller(trpcContext({
+    boxRoot,
+    eventBus: noBus,
+    user: { email: "owner@example.com", name: "Owner" },
+    isAuthenticatedOwner: true,
+  }));
 }
 ```
 

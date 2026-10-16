@@ -13,8 +13,7 @@ shape, `/api/push/resubscribe` behind the wall).
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { FastifyRequest } from "fastify";
-import { resolveRequestIdentity, isDiagnosticBypassRequest } from "../../src/webapp/auth.js";
+import { resolveRequestIdentity, isDiagnosticBypassRequest, type DiagRequest } from "../../src/webapp/auth.js";
 import { assertOpenAccessNotListening, startServer } from "../../src/webapp/server/app.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { bodyField } from "../helpers/doctest-helpers.js";
@@ -24,10 +23,9 @@ const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
 // The resolver's cookie path (not hub mode) is what these gate cases exercise.
 delete process.env.BBX_HUB_SECRET;
 
-/** Minimal fake FastifyRequest for the diagnostic-bypass check. */
-function fakeRequest({ method, url, headers }: { method?: string; url: string; headers?: Record<string, string> }) {
-  // Cast: isDiagnosticBypassRequest takes a full FastifyRequest but reads only method, url and headers.
-  return { method: method ?? "GET", url, headers: headers ?? {} } as FastifyRequest;
+/** The request fields the diagnostic-bypass check reads. */
+function fakeRequest({ method, url, headers }: { method?: string; url: string; headers?: Record<string, string> }): DiagRequest {
+  return { method: method ?? "GET", url, headers: headers ?? {} };
 }
 ```
 

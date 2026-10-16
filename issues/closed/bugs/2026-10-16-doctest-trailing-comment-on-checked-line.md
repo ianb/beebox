@@ -1,13 +1,19 @@
 ---
 title: "A trailing // comment on a doctest's checked line is a syntax error"
-workstream: unattached
+workstream: doctest-typecheck
 area: agent-doctest
 labels: [doctest]
 filed-by: agent
 discovered-by: agent
 discovered-in: doctest-typecheck worktree — writing the checker's cache doctest, 2026-10-16
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-10-16 (workstream `doctest-typecheck`, commit f608ac9be): the
+generator puts the check call's closing text on a generated line of its own,
+so a trailing comment on the checked line ends there. The example doctest
+shows one. The full beebox suite passed on the change.
 
 ```ts
 1 + 2 // three

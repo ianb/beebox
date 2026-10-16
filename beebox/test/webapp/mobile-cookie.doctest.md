@@ -10,7 +10,8 @@ so they get the most coverage here: a signed cookie cannot be revoked before it
 expires, so renewal is the only place revocation can take effect.
 
 ```ts setup
-import Fastify, { type FastifyReply } from "fastify";
+import Fastify from "fastify";
+import type { CookieSerializeOptions } from "@fastify/cookie";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import fastifyCookie from "@fastify/cookie";
@@ -18,25 +19,22 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket, revokeMobileDevice } from "../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession, verifyMobileSession } from "../../src/core/mobile/session.js";
 import { resolveMobileRequestAuth } from "../../src/core/mobile/request-auth.js";
-import { renewMobileSessionCookie } from "../../src/webapp/mobile-cookie.js";
+import { renewMobileSessionCookie, type CookieReply } from "../../src/webapp/mobile-cookie.js";
 import { registerPairingRoutes } from "../../src/webapp/routes/pairing.js";
 
 /** Captures what a handler did to the reply's cookies. */
 function fakeReply() {
   const calls: string[] = [];
-  const reply = {
-    setCookie(name: string, value: string, opts: Record<string, unknown>) {
-      calls.push(`set ${name} path=${String(opts.path)} httpOnly=${String(opts.httpOnly)} sameSite=${String(opts.sameSite)}`);
+  const reply: CookieReply = {
+    setCookie(name: string, value: string, opts?: CookieSerializeOptions) {
+      calls.push(`set ${name} path=${String(opts?.path)} httpOnly=${String(opts?.httpOnly)} sameSite=${String(opts?.sameSite)}`);
       calls.push(`value ${value}`);
-      return this;
     },
-    clearCookie(name: string, opts: Record<string, unknown>) {
-      calls.push(`clear ${name} path=${String(opts.path)}`);
-      return this;
+    clearCookie(name: string, opts?: CookieSerializeOptions) {
+      calls.push(`clear ${name} path=${String(opts?.path)}`);
     },
   };
-  // Cast: renewMobileSessionCookie takes a full FastifyReply but calls only setCookie and clearCookie.
-  return { calls, reply: reply as FastifyReply };
+  return { calls, reply };
 }
 ```
 

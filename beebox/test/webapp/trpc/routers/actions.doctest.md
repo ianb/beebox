@@ -11,6 +11,7 @@ import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { EventBus } from "../../../../src/core/event-bus/core.js";
 import { TRPCError } from "@trpc/server";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 // Minimal tRPC context — the actions procedures read only boxRoot + eventBus.
 // The eventBus stub records what was emitted so we can assert on it.
@@ -25,7 +26,7 @@ function contextFor(box: { root: string }) {
     prune: () => 0,
     close: () => {},
   };
-  const ctx: TrpcContext = { boxRoot: box.root, boxSlug: "t", eventBus, services: {}, user: null, authed: true, isOwner: true, isAuthenticatedOwner: false, actor: "user" };
+  const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", eventBus });
   return { caller: actionsRouter.createCaller(ctx), events };
 }
 

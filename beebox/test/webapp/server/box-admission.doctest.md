@@ -6,29 +6,17 @@ import { router, publicProcedure } from "../../../src/webapp/trpc/procedures.js"
 import { registerBoxAdmission, boxRequestsAreIdle } from "../../../src/webapp/server/box-admission.js";
 import { acquireBoxWork, closeBoxMaintenance, boxWorkEnvironment } from "../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { connect } from "node:net";
-import type { EventBus } from "../../../src/core/event-bus/core.js";
 
-// A promise with its resolver exposed (the TypeScript lib here predates Promise.withResolvers).
-function deferred() {
-  let resolve: () => void = () => {};
-  const promise = new Promise<void>((r) => { resolve = r; });
-  return { promise, resolve };
-}
-
-// The caller below never touches the bus; a no-op stand-in satisfies the context type.
-const eventBus: EventBus = {
-  emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [],
-  subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {},
-};
 ```
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const server = Fastify();
 registerBoxAdmission(server, [{ slug: "test", boxRoot: box.root }]);
-const entered = deferred();
-const finish = deferred();
+const entered = Promise.withResolvers<void>();
+const finish = Promise.withResolvers<void>();
 let permission: string | undefined;
 server.post("/test/write", async () => {
   permission = boxWorkEnvironment().BBX_BOX_WORK;
@@ -57,7 +45,11 @@ JSON.stringify({ retryAfter: refused.headers["retry-after"], error: refused.json
 (await server.inject({ method: "POST", url: "/auth/login" })).statusCode
 => 200
 
-const caller = router({ write: publicProcedure.mutation(() => "ok") }).createCaller({ boxRoot: box.root, boxSlug: "test", services: {}, eventBus, user: null, authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "none" });
+const caller = router({ write: publicProcedure.mutation(() => "ok") }).createCaller(trpcContext({
+  boxRoot: box.root,
+  isAuthenticatedOwner: true,
+  actor: "none",
+}));
 // A WebSocket mutation has no still-open HTTP request lease.
 await caller.write().catch((error) => error.code)
 => SERVICE_UNAVAILABLE

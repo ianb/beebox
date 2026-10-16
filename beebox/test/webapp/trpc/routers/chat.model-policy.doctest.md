@@ -12,6 +12,7 @@ pinning writes box configuration and is owner-gated.
 import assert from "node:assert/strict";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { ChatSessionStatus } from "../../../../src/webapp/trpc/routers/chat/control-procedures.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
@@ -24,17 +25,12 @@ function modelView(status: Pick<ChatSessionStatus, "model" | "source" | "boxDefa
 }
 
 function caller(server: TestServer, opts?: { isOwner?: boolean }) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: server.boxRoot,
-    boxSlug: "test",
     eventBus: server.eventBus,
-    services: {},
-    user: null,
-    authed: true,
     isOwner: opts?.isOwner !== false,
-    isAuthenticatedOwner: false,
     actor: "none",
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 ```

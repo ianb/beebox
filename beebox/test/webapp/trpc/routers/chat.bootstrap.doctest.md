@@ -16,6 +16,7 @@ report anything different from them.
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TestServer } from "../../../helpers/doctest-server.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { getSessionDir } from "../../../../src/core/chat/session/transcript-paths.js";
@@ -26,17 +27,11 @@ import { join } from "node:path";
 // A real server, because `chat.status` reads the live per-box chat runtime
 // that `registerChatRoutes` installs.
 function caller(server: TestServer) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot: server.boxRoot,
-    boxSlug: "test",
     eventBus: server.eventBus,
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner: true,
-    actor: "user",
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 

@@ -7,7 +7,6 @@ registry behind them is covered by `pending-browser-request.doctest.md`.
 ```ts setup
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { makeTestServer, type TestServer } from "../helpers/doctest-server.js";
-import { eventSchemas } from "../../src/core/event-bus/schemas.js";
 import { isRecord } from "../../src/shared/is-record.js";
 
 // An 8-byte PNG signature plus a trailing byte — enough to pass the route's
@@ -31,7 +30,7 @@ function captureRequestId(ctx: TestServer) {
   return new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({
       listener: (e) => {
-        if (e.event === "screenshot-request") resolve(eventSchemas["screenshot-request"].parse(e.data).requestId);
+        if (e.event === "screenshot-request") resolve(e.data.requestId);
       },
     });
   });

@@ -23,7 +23,6 @@ import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { bodyField } from "../../../helpers/doctest-helpers.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 
 /** Await the fake's real start boundary; the file-level timeout catches hangs. */
 async function awaitFakeRuns(backend: FakeChatBackend, count: number): Promise<void> {
@@ -51,7 +50,7 @@ await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({ agentMod
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const { result: res } = await capturingErrors(() => ctx.request({

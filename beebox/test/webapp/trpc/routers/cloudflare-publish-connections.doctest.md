@@ -19,25 +19,21 @@ import { resolveSecret } from "../../../../src/core/secrets/resolve.js";
 import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js";
 import { getBoxTimeISO } from "../../../../src/lib/time.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
-const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
 const storeDir = await mkdtemp(join(tmpdir(), "bbx-cf-publish-"));
 const storeFile = join(storeDir, "secrets.json");
 process.env.BBX_SECRETS_FILE = storeFile;
 const box = await makeTmpBox({ git: true });
 const verifier = createFakeCloudflarePublishTokenVerifier();
 function caller(isAuthenticatedOwner = true) {
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot: box.root,
     boxSlug: "test-box",
-    eventBus: noBus,
     services: { cloudflarePublishTokenVerifier: verifier },
     user: { email: "owner@example.com", name: "Owner" },
-    authed: true,
-    isOwner: true,
     isAuthenticatedOwner,
-    actor: "user",
-  });
+  }));
 }
 async function message(promise: Promise<unknown>) {
   try { await promise; return "allowed"; }
@@ -153,11 +149,13 @@ the credential while retaining routing metadata and grants for diagnosis.
 
 ```ts continue
 const rejectingVerifier = createFakeCloudflarePublishTokenVerifier({ error: new Error("bad token") });
-const rejecting = appRouter.createCaller({
-  boxRoot: box.root, boxSlug: "test-box", eventBus: noBus,
+const rejecting = appRouter.createCaller(trpcContext({
+  boxRoot: box.root,
+  boxSlug: "test-box",
   services: { cloudflarePublishTokenVerifier: rejectingVerifier },
-  user: { email: "owner@example.com", name: "Owner" }, authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user",
-});
+  user: { email: "owner@example.com", name: "Owner" },
+  isAuthenticatedOwner: true,
+}));
 const failed = await message(rejecting.cloudflarePublishConnections.save({
   name: "broken", accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder-invalid-token",
 }));
