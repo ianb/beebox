@@ -18,7 +18,8 @@ import {
   measureBoxGrowthIfDue,
   readBoxGrowthState,
 } from "../../../src/core/box-growth/health.js";
-const at = (iso) => new Date(iso);
+import type { GrowthMeasurement, SubtreeCounts } from "../../../src/core/box-growth/health.js";
+const at = (iso: string) => new Date(iso);
 ```
 
 ## Tree counting, exclusions, attribution, and Git
@@ -63,7 +64,7 @@ const engineGrew = measured.bytes.status === "available" && baseline.bytes.statu
   && measured.bytes.engineBytes > baseline.bytes.engineBytes;
 print(`bytes: ${measured.bytes.status} engine-grew: ${engineGrew}`);
 const baselineFiles = new Map(baseline.largestSubtrees.map((item) => [item.path, item.files]));
-const subtreeLabel = (p) => {
+const subtreeLabel = (p: string) => {
   const item = measured.largestSubtrees.find((i) => i.path === p);
   const delta = item === undefined ? undefined : item.files - (baselineFiles.get(p) ?? 0);
   return `${p}:${item?.source}:${delta}`;
@@ -89,21 +90,23 @@ await box.cleanup();
 ## Hourly and connector-weighted policy; size alone is never a finding
 
 ```ts
-const base = {
+const emailSubtree: SubtreeCounts = { path: "_content/inbox/email", directories: 20, files: 20, source: "connector", sourceLabel: "Gmail" };
+const base: GrowthMeasurement = {
   measuredAt: "2026-08-05T12:00:00.000Z",
   complete: true,
+  filesystemError: null,
   skippedDirectories: 0,
   counts: { directories: 100, files: 100 },
   history: { status: "available", gitHead: "a", commits: 10, gitObjects: 20, gitBytes: 30 },
   bytes: { status: "unavailable", error: "not measured" },
-  largestSubtrees: [{ path: "_content/inbox/email", directories: 20, files: 20, source: "connector", sourceLabel: "Gmail" }],
+  largestSubtrees: [emailSubtree],
 };
-const fast = {
+const fast: GrowthMeasurement = {
   ...base,
   measuredAt: "2026-08-05T13:00:00.000Z",
   counts: { directories: 210, files: 210 },
-  history: { ...base.history, commits: 111 },
-  largestSubtrees: [{ ...base.largestSubtrees[0], directories: 121, files: 121 }],
+  history: { status: "available", gitHead: "a", commits: 111, gitObjects: 20, gitBytes: 30 },
+  largestSubtrees: [{ ...emailSubtree, directories: 121, files: 121 }],
 };
 const findings = evaluateBoxGrowth({ previous: base, current: fast });
 print(findings.map((finding) => `${finding.kind}:${finding.path ?? "box"}`).join("\n"));
@@ -121,8 +124,8 @@ finding:
 
 ```ts continue
 const MB = 1024 * 1024;
-const sized = { ...base, bytes: { status: "available", contentBytes: 400 * MB, engineBytes: 200 * MB } };
-const indexBlewUp = { ...sized, measuredAt: "2026-08-05T13:00:00.000Z", bytes: { status: "available", contentBytes: 402 * MB, engineBytes: 365 * MB } };
+const sized: GrowthMeasurement = { ...base, bytes: { status: "available", contentBytes: 400 * MB, engineBytes: 200 * MB } };
+const indexBlewUp: GrowthMeasurement = { ...sized, measuredAt: "2026-08-05T13:00:00.000Z", bytes: { status: "available", contentBytes: 402 * MB, engineBytes: 365 * MB } };
 evaluateBoxGrowth({ previous: sized, current: indexBlewUp }).map((f) => `${f.kind}:${Math.round(f.actual / MB)}`).join(",")
 => rate-engine-bytes:165
 
@@ -136,16 +139,16 @@ fixed level warned about it permanently while saying nothing useful. A large
 box growing slowly has no finding:
 
 ```ts continue
-const large = { ...base, counts: { directories: 1_800, files: 3_500 } };
-const slightlyLarger = { ...large, measuredAt: "2026-08-05T13:00:00.000Z", counts: { directories: 1_801, files: 3_502 } };
+const large: GrowthMeasurement = { ...base, counts: { directories: 1_800, files: 3_500 } };
+const slightlyLarger: GrowthMeasurement = { ...large, measuredAt: "2026-08-05T13:00:00.000Z", counts: { directories: 1_801, files: 3_502 } };
 evaluateBoxGrowth({ previous: large, current: slightlyLarger }).length
 => 0
 
-const enteredTopTwenty = { ...fast, largestSubtrees: [{ ...fast.largestSubtrees[0], path: "_content/drive" }] };
+const enteredTopTwenty: GrowthMeasurement = { ...fast, largestSubtrees: [{ ...emailSubtree, directories: 121, files: 121, path: "_content/drive" }] };
 evaluateBoxGrowth({ previous: base, current: enteredTopTwenty }).some((item) => item.kind.startsWith("rate-connector"))
 => true
 
-const newImport = {
+const newImport: GrowthMeasurement = {
   ...fast,
   counts: { directories: 100, files: 600 },
   largestSubtrees: [{
@@ -160,7 +163,7 @@ evaluateBoxGrowth({ previous: base, current: newImport })
   .find((item) => item.kind === "rate-files")?.path
 => store/import-2026/batch1
 
-const partial = { ...fast, complete: false };
+const partial: GrowthMeasurement = { ...fast, complete: false };
 evaluateBoxGrowth({ previous: base, current: partial })
   .some((item) => item.kind.startsWith("rate-"))
 => false
@@ -205,7 +208,7 @@ const missingBackoff = await measureBoxGrowthIfDue(box.root, {
   now: at("2026-08-05T12:31:00Z"),
   maxDurationMs: 0,
 });
-print(`${missingBackoff.status}:${missingBackoff.reason}`);
+print(`${missingBackoff.status}:${missingBackoff.status === "skipped" ? missingBackoff.reason : "n/a"}`);
 =>
 measured
 skipped
@@ -217,7 +220,7 @@ await box.write("_content/inbox/email/new/message.txt", "mail");
 const replacement = await measureBoxGrowthIfDue(box.root, { now: at("2026-08-05T13:00:00Z") });
 print(replacement.status === "measured" && replacement.notice !== null);
 const followup = await measureBoxGrowthIfDue(box.root, { now: at("2026-08-05T14:00:00Z") });
-print(followup.status === "measured" && followup.state.lastNotice !== null);
+print(followup.status === "measured" && followup.state.status === "measured" && followup.state.lastNotice !== null);
 const replacementHealth = await boxGrowthHealthCheck(box.root, {
   now: at("2026-08-05T14:00:00Z"),
   schedulerStatus: "running",
@@ -258,7 +261,7 @@ print(`${corruptHealth.ok}:${corruptHealth.message.includes("state")}`);
 const invalidAttempt = await measureBoxGrowthIfDue(corrupt.root, {
   now: at("2026-08-05T13:00:00Z"),
 });
-print(`${invalidAttempt.status}:${invalidAttempt.reason}`);
+print(`${invalidAttempt.status}:${invalidAttempt.status === "skipped" ? invalidAttempt.reason : "n/a"}`);
 
 const failedBox = await makeTmpBox();
 const failed = await measureBoxGrowthIfDue(failedBox.root, {
@@ -408,13 +411,13 @@ const expectedRates = await expectCurrentBoxGrowthRates(mixedBox.root, {
 });
 if (expectedRates.status !== "measured") throw new Error("expected measured state");
 print(expectedRates.rateExpectations.map((item) => `${item.kind}:${item.thresholdPerHour}`).sort().join("\n"));
-const repeatedCurrent = {
-  ...mixedCurrent,
+const repeatedCurrent: GrowthMeasurement = {
+  ...expectedRates.current,
   measuredAt: "2026-08-05T14:00:00.000Z",
   counts: { directories: 100, files: 1_300 },
   largestSubtrees: [
-    { ...mixedCurrent.largestSubtrees[0], files: 220 },
-    { ...mixedCurrent.largestSubtrees[1], files: 1_000 },
+    { path: "_content/inbox/email", directories: 10, files: 220, source: "connector", sourceLabel: "Gmail" },
+    { path: "store/junk", directories: 0, files: 1_000, source: "unknown", sourceLabel: null },
   ],
 };
 print(evaluateBoxGrowth({

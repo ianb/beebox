@@ -189,7 +189,7 @@ try {
   thrown = e;
 }
 print(`threw: ${thrown !== null}`);
-print(`code: ${thrown?.code}`);
+print(`code: ${thrown instanceof Error && "code" in thrown ? thrown.code : undefined}`);
 =>
 threw: true
 code: EISDIR

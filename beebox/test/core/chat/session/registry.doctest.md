@@ -418,7 +418,7 @@ session's:
 
 ```ts continue
 registry.shutdown();
-`closeWarmCount=${backend.closeWarmCount} warmHeld after shutdown: ${backend.hasWarm()}`
+`closeWarmCount=${backend.closeWarmCount} warmHeld after shutdown: ${(backend.hasWarm?.() ?? false)}`
 => closeWarmCount=2 warmHeld after shutdown: false
 ```
 
@@ -437,12 +437,12 @@ await registry.prewarm();
 registry.quiesceForMaintenance();
 registry.getOrCreate("maintenance-read");
 await registry.prewarm();
-JSON.stringify({ warm: backend.hasWarm(), starts: backend.prewarmCount })
+JSON.stringify({ warm: (backend.hasWarm?.() ?? false), starts: backend.prewarmCount })
 => {"warm":false,"starts":1}
 
 registry.resumeAfterMaintenance();
 await registry.prewarm();
-JSON.stringify({ warm: backend.hasWarm(), starts: backend.prewarmCount })
+JSON.stringify({ warm: (backend.hasWarm?.() ?? false), starts: backend.prewarmCount })
 => {"warm":true,"starts":2}
 ```
 

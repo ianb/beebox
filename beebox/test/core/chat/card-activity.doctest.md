@@ -7,7 +7,6 @@ both the snapshot attribute and the queued-send union.
 
 ```ts setup
 import {
-  joinActivityKinds,
   unionActivityKinds,
   renderActivityChildren,
   mergeCardStateDetails,
@@ -94,7 +93,9 @@ JSON.stringify(mergeCardStateDetails([
 ]))
 => {"explored":"boat","modified":"x.card"}
 
-JSON.stringify(mergeCardStateDetails([{ bogus: "y" }, { explored: "" }]))
+// Detail maps arrive from clients, so a kind the server does not know can be in one.
+const fromWire: Record<string, string> = { bogus: "y" };
+JSON.stringify(mergeCardStateDetails([fromWire, { explored: "" }]))
 => {}
 ```
 

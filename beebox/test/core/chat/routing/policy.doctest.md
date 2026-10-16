@@ -7,12 +7,13 @@ landmark, or its context directory when it has none) and posts when that sum
 reaches the floor, 0.9 by default.
 
 ```ts setup
+import type { RoutingCandidate } from "../../../../src/core/chat/routing/policy.js";
 import { routingDisposition, selectRoutingDestination, thoughtAsksForNewChat } from "../../../../src/core/chat/routing/policy.js";
 
 const garden = { path: "_content/Garden/Garden.landmark.card", label: "Garden" };
 const household = { path: "_content/Household/Household.landmark.card", label: "Household" };
 const trips = { path: "_content/Trips/Trips.landmark.card", label: "Trips" };
-const candidates = [
+const candidates: RoutingCandidate[] = [
   { id: "raised-beds", label: "Garden raised beds", target: { kind: "existing-session", sessionId: "s-garden", contextDir: "_content/Garden" }, landmark: garden },
   { id: "household", label: "Household", target: { kind: "existing-session", sessionId: "s-household", contextDir: "_content/Household" }, landmark: household },
   { id: "trip", label: "Trip planning", target: { kind: "existing-session", sessionId: "s-trip", contextDir: "_content/Trips" }, landmark: trips },
@@ -23,7 +24,7 @@ const candidates = [
 ];
 
 /** Judge one thought: unnamed candidates get zero, as Jev's complete answer would. */
-function decide(scores, options) {
+function decide(scores: Record<string, number>, options?: { candidates?: RoutingCandidate[]; postFloor?: number }) {
   const pool = options?.candidates ?? candidates;
   const probabilities = Object.fromEntries(pool.map((candidate) => [candidate.id, scores[candidate.id] ?? 0]));
   const { selected, ranked } = selectRoutingDestination({ candidates: pool, probabilities });
@@ -83,7 +84,7 @@ A chat at the box root with no landmark shares the root with the new general
 chat, so their sum reaches the floor even though neither alone does.
 
 ```ts
-const unplaced = [
+const unplaced: RoutingCandidate[] = [
   { id: "loose", label: "Loose ends", target: { kind: "existing-session", sessionId: "s-loose", contextDir: "" } },
   { id: "foo", label: "Foo notes", target: { kind: "existing-session", sessionId: "s-foo", contextDir: "projects/foo" } },
   { id: "foo-2", label: "Foo budget", target: { kind: "existing-session", sessionId: "s-foo-2", contextDir: "projects/foo" } },

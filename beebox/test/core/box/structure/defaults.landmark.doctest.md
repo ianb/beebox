@@ -14,6 +14,7 @@ import { mkdtemp, writeFile, readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
+import assert from "node:assert/strict";
 
 async function makeContentBox() {
   const dir = await mkdtemp(join(tmpdir(), "lm-"));
@@ -21,7 +22,7 @@ async function makeContentBox() {
   return dir;
 }
 
-async function rootLabel(dir) {
+async function rootLabel(dir: string) {
   const contentDir = join(dir, "_content");
   const f = (await readdir(contentDir)).find((n) => n.endsWith(".landmark.card"));
   if (!f) return "(none)";
@@ -29,7 +30,7 @@ async function rootLabel(dir) {
   return fields?.navigation?.label ?? "(no label)";
 }
 
-function gitInit(dir) {
+function gitInit(dir: string) {
   execFileSync("git", ["init", "-q"], { cwd: dir });
   execFileSync("git", ["config", "user.email", "t@example.com"], { cwd: dir });
   execFileSync("git", ["config", "user.name", "Test"], { cwd: dir });
@@ -119,6 +120,7 @@ const G = await makeContentBox();
 gitInit(G);
 await writeFile(join(G, "_content", "Box.landmark.card"), "---\ncontent-type: application/x-card+xml\n---\n<landmark><navigation><label>Old</label></navigation></landmark>\n");
 const gp = await installRootLandmark(G);
+assert.ok(gp);
 await stageFiles(G, [gp]);
 await commitPaths(G, { paths: [gp], message: "Refill root landmark", trailers: { "Created-By": "housekeeping" } });
 execFileSync("git", ["ls-files"], { cwd: G }).toString().trim()

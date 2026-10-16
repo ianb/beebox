@@ -9,7 +9,7 @@ other half of the answer (`docs/implemented-plans/chat-session-identity.md`, Tra
 ```ts setup
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../../helpers/doctest-helpers.js";
 import { loadDeadHusks, listSessionEntries, deadHuskLabel } from "../../../../../src/core/chat/session/list/core.js";
 import { getSessionLogPath } from "../../../../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
@@ -20,7 +20,7 @@ const ELSEWHERE = "33333333-3333-4333-8333-333333333333";
 const LEGACY = "44444444-4444-4444-8444-444444444444";
 
 /** Write a husk card by hand, so each one's provenance is exactly stated. */
-async function writeHusk(box, opts) {
+async function writeHusk(box: TmpBox, opts: { name: string; session: string; title?: string; firstMessage?: string; origin?: string; originName?: string }) {
   const lines = [`session: ${opts.session}`];
   if (opts.title !== undefined) lines.push(`title: ${opts.title}`);
   if (opts.firstMessage !== undefined) lines.push(`first-message: ${opts.firstMessage}`);
@@ -29,7 +29,7 @@ async function writeHusk(box, opts) {
   await writeFile(box.path(`_content/chat/web/${opts.name}.chat.card`), `---\n${lines.join("\n")}\n---\n`);
 }
 
-async function writeTranscript(box, sessionId) {
+async function writeTranscript(box: TmpBox, sessionId: string) {
   const logPath = getSessionLogPath(box.root, sessionId);
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, "{}\n");

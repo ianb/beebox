@@ -29,7 +29,7 @@ async function keylessBox() {
 const box = await keylessBox();
 const reasons: string[] = [];
 const ready = await sendReadiness({ boxRoot: box.root, backend: {}, explicitModel: null, liveModel: null,
-  startOptions: { engine: "claude" }, session: new EventEmitter(), onRefused: (reason) => { reasons.push(reason.split(" (")[0]); } });
+  startOptions: { engine: "claude", cwd: box.root, systemPrompt: "", env: {} }, session: new EventEmitter(), onRefused: (reason) => { reasons.push(reason.split(" (")[0] ?? reason); } });
 ({ ready, reasons })
 => { ready: false, reasons: ["This run uses the OpenRouter model qwen/qwen3-coder, but no usable OpenRouter key is available for this box"] }
 

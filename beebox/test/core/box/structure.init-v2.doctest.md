@@ -55,7 +55,7 @@ async function makeTmpDir() {
 // `resolveBbxBin` in `install-validation-hooks.ts`), which is the hook's
 // behaviour, not this doctest's subject. The hook's CONTENT is verified
 // statically instead of executing it.
-async function fullInit(targetPath) {
+async function fullInit(targetPath: string) {
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 
@@ -93,11 +93,11 @@ async function fullInit(targetPath) {
   return { mode, boxRoot, isUpdate };
 }
 
-async function readJson(p) {
+async function readJson(p: string) {
   return JSON.parse(await fs.readFile(p, "utf-8"));
 }
 
-async function exists(p) {
+async function exists(p: string) {
   try {
     await fs.stat(p);
     return true;

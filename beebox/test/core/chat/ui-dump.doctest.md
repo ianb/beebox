@@ -185,7 +185,7 @@ const bothRows = [
 const reachable = (fields: Partial<UiScanPayload>): string => {
   const text = formatUiDump(payload({ entries: bothRows, ...fields })).replace(/\s+/g, " ");
   const match = /At this viewport (\S+) is the one/.exec(text);
-  return match === null ? "no note" : match[1];
+  return match === null ? "no note" : (match[1] ?? "no note");
 };
 print(`desktop: ${reachable({ channel: "web-desktop" })}`);
 print(`mobile: ${reachable({ channel: "web-mobile" })}`);

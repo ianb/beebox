@@ -18,21 +18,21 @@ import {
   CodexAuthError,
   redactCodexAuthDetail,
 } from "../../../src/core/agent/auth-preflight.js";
-import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../src/services/claude-cli.js";
+import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE, type ClaudeCliService } from "../../../src/services/claude-cli.js";
 import { createFakeCodexCli } from "../../../src/services/codex-cli/core.js";
 import { createChatBackend } from "../../../src/services/claude-chat/core.js";
 
 /** Run with console.error captured: a refused run logs its reason, which these examples show. */
-async function capturingErrors(run) {
-  const logged = [];
+async function capturingErrors<T>(run: () => Promise<T>) {
+  const logged: string[] = [];
   const { error } = console;
-  console.error = (...args) => { logged.push(args.map(String).join(" ")); };
+  console.error = (...args: unknown[]) => { logged.push(args.map(String).join(" ")); };
   try { return { result: await run(), logged }; }
   finally { console.error = error; }
 }
 
 /** A probe that answers `n` times with no usable result, then as given. */
-function flakyCli(inconclusiveTimes, then) {
+function flakyCli(inconclusiveTimes: number, then: Record<string, unknown>): ClaudeCliService & { calls: () => number } {
   let calls = 0;
   return {
     calls: () => calls,
@@ -42,6 +42,7 @@ function flakyCli(inconclusiveTimes, then) {
     },
     authLogin: async () => ({ authUrl: null }),
     authLogout: async () => ({ success: true }),
+    authSubmitCode: async () => ({ accepted: true }),
   };
 }
 ```
@@ -82,8 +83,8 @@ such as quick chat, would otherwise leave no trace of why the run did not start.
 
 ```ts
 resetClaudeAuthCache();
-const events = [];
-const session = { emit: (event, err) => { events.push([event, err.message]); return true; } };
+const events: Array<[string, string]> = [];
+const session = { emit: (event: "error", err: Error) => { events.push([event, err.message]); return true; } };
 
 const proceedFake = await preflightChatBackend({ backend: {}, session });
 JSON.stringify({ proceedFake, events })
@@ -150,8 +151,8 @@ silently bypass auth and never calls the Claude fake.
 
 ```ts
 resetCodexAuthCache();
-const codexEvents = [];
-const codexSession = { emit: (event, err) => { codexEvents.push([event, err.message]); return true; } };
+const codexEvents: Array<[string, string]> = [];
+const codexSession = { emit: (event: "error", err: Error) => { codexEvents.push([event, err.message]); return true; } };
 const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
 const claudeCli = createFakeClaudeCli({ loggedIn: true });
 const { result: proceedCodex } = await capturingErrors(() => preflightChatBackend({

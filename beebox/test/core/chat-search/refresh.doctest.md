@@ -10,7 +10,7 @@ files).
 ```ts setup
 import { mkdir, rm, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { searchChats } from "../../../src/core/chat-search/query.js";
 import { loadChatManifest } from "../../../src/core/chat-search/manifest.js";
@@ -28,7 +28,7 @@ function assistantEntry(uuid: string, text: string, at: string) {
   return { type: "assistant", uuid, timestamp: at, message: { role: "assistant", content: [{ type: "text", text }] } };
 }
 
-async function seed(box, opts: {
+async function seed(box: TmpBox, opts: {
   sessionId: string;
   entries: object[];
   mtime: Date;
@@ -42,7 +42,7 @@ async function seed(box, opts: {
   await writeTranscript(box, opts.sessionId, opts.entries, opts.mtime);
 }
 
-async function writeTranscript(box, sessionId: string, entries: object[], mtime: Date) {
+async function writeTranscript(box: TmpBox, sessionId: string, entries: object[], mtime: Date) {
   const logPath = getSessionLogPath(box.root, sessionId);
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
@@ -71,16 +71,16 @@ const result = await searchChats(box.root, { query: "roof claim" });
 result.total
 => 1
 
-result.results[0].sessionId
+result.results[0]?.sessionId
 => sess-roof
 
-result.results[0].anchor
+result.results[0]?.anchor
 => u1
 
-result.results[0].title
+result.results[0]?.title
 => Insurance follow-up
 
-result.results[0].snippet.includes("roof")
+result.results[0]?.snippet.includes("roof")
 => true
 
 result.stale
@@ -93,7 +93,7 @@ The manifest recorded the cursor the next refresh diffs against.
 const manifest = await loadChatManifest(box.root);
 const record = manifest.sessions["sess-roof"];
 
-JSON.stringify({ engine: record.engine, entryCount: record.entryCount, docs: record.docIds.length })
+JSON.stringify({ engine: record?.engine, entryCount: record?.entryCount, docs: record?.docIds.length })
 => {"engine":"claude","entryCount":2,"docs":1}
 ```
 
@@ -117,16 +117,16 @@ const updated = await searchChats(box.root, { query: "deductible panels" });
 updated.total
 => 1
 
-updated.results[0].anchor
+updated.results[0]?.anchor
 => u2
 
 const after = await loadChatManifest(box.root);
 const afterRecord = after.sessions["sess-roof"];
 
-afterRecord.entryCount
+afterRecord?.entryCount
 => 4
 
-afterRecord.docIds.length
+afterRecord?.docIds.length
 => 2
 ```
 
@@ -134,10 +134,10 @@ The first chunk is untouched — its doc id is stable across the append, so
 a persisted index only ever inserts.
 
 ```ts continue
-afterRecord.docIds[0]
+afterRecord?.docIds[0]
 => sess-roof#u1
 
-afterRecord.docIds.includes("sess-roof#u2")
+afterRecord?.docIds.includes("sess-roof#u2")
 => true
 ```
 
@@ -181,7 +181,7 @@ rebuilt.total
 
 const rebuiltManifest = await loadChatManifest(box.root);
 
-JSON.stringify(rebuiltManifest.sessions["sess-roof"].docIds)
+JSON.stringify(rebuiltManifest.sessions["sess-roof"]?.docIds)
 => ["sess-roof#w1"]
 ```
 
@@ -266,7 +266,7 @@ converged.total
 converged.warnings.length
 => 0
 
-(await loadChatManifest(box.root)).sessions["sess-roof"].entryCount
+(await loadChatManifest(box.root)).sessions["sess-roof"]?.entryCount
 => 2
 ```
 
