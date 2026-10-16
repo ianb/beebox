@@ -1,0 +1,157 @@
+/* Gilt: worn leaf and mineral pigments; reading surfaces remain quiet. */
+:is([data-chrome-theme="gilt"], .bbx-card-theme[data-card-theme="gilt"]) {
+  --gilt-paper: #173f50;
+  --gilt-ink: #f6ecd3;
+  --gilt-soft: #c3cbbf;
+  --gilt-edge: #667d79;
+  --gilt-accent: #e5c77e;
+  --gilt-sheet: #204c5c;
+  --gilt-art: url("./gilt-leaf.webp");
+  --gilt-leaf: linear-gradient(#edc75d80, #dcae4480), var(--gilt-art);
+  --bbx-selection: #dfbd72;
+  --bbx-selection-ink: #263c43;
+  --bbx-focus-ring: #f4d389;
+}
+.bbx-box-presentation[data-chrome-theme="gilt"] {
+  background: url("./gilt-panorama.webp") center top / 100% auto repeat-y, #9d742f;
+}
+[data-chrome-theme="gilt"] .bbx-app-nav {
+  background: linear-gradient(90deg, #172f39e8, #3c3c32c9 65%, #4f302dd9), var(--gilt-art) center 24% / cover;
+  border-bottom: 2px solid #a68b4e;
+  color: #fff0c9;
+  padding-block: 8px;
+}
+[data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more) {
+  background-color: #d9bd7f;
+  background-image: var(--gilt-leaf);
+  background-size: auto, 480px auto;
+  background-position: center, 45% 52%;
+  color: #1b3037;
+  border: 1px solid #e8c774;
+  outline: 1px solid #483d26;
+  outline-offset: 2px;
+  border-radius: 3px 5px 3px 4px;
+  font-weight: 650;
+  box-shadow: 0 2px 0 #102a3466;
+}
+[data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material) {
+  background: var(--gilt-paper);
+  color: var(--gilt-ink);
+  border: 0;
+  border-left: 3px solid #b69a50;
+  border-radius: 6px;
+  box-shadow: 0 5px 18px #20191038;
+}
+[data-chrome-theme="gilt"] .bbx-chat-user-paper {
+  background: #622b2b;
+  color: #fff0d8;
+  border: 0;
+  border-left: 3px solid #d9b463;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px #28181330;
+}
+[data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+  --tw-prose-body: var(--gilt-ink);
+  --tw-prose-headings: var(--gilt-ink);
+  --tw-prose-bold: var(--gilt-ink);
+  --tw-prose-links: var(--gilt-accent);
+  color: var(--gilt-ink);
+}
+[data-chrome-theme="gilt"] .bbx-chat-callout > .text-accent-dark {
+  color: var(--gilt-soft);
+}
+[data-chrome-theme="gilt"] .bbx-composer-material > section {
+  background: transparent;
+  border: 0;
+}
+[data-chrome-theme="gilt"] .bbx-composer-material textarea {
+  background: var(--gilt-paper);
+  color: var(--gilt-ink);
+  border-color: var(--gilt-edge);
+}
+[data-chrome-theme="gilt"] .bbx-composer-material textarea::placeholder {
+  color: var(--gilt-soft);
+}
+[data-chrome-theme="gilt"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+  background-color: #d9bd7f;
+  background-image: var(--gilt-leaf);
+  background-size: auto, 460px auto;
+  background-position: center, 55% 55%;
+  color: #1b3037;
+  border: 1px solid #e8c774;
+  outline: 1px solid #483d26;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+[data-chrome-theme="gilt"] :is(#bbx-composer-add, #bbx-composer-capture, #bbx-composer-keyboard):enabled {
+  background: #2d5662;
+  color: #f8edcf;
+  border: 1px solid #7e938c;
+  border-radius: 5px;
+}
+.bbx-card-theme[data-card-theme="gilt"] {
+  --bbx-paper: var(--gilt-paper);
+  --bbx-ink: var(--gilt-ink);
+  --bbx-ink-soft: var(--gilt-soft);
+  --bbx-pen: var(--gilt-accent);
+  --bbx-edge: var(--gilt-edge);
+  --bbx-underlay: #102e3d;
+  --bbx-tint: var(--gilt-sheet);
+  --bbx-sheet: var(--gilt-sheet);
+  --bbx-quote-paper: var(--gilt-sheet);
+  --bbx-quote-layer-paper: var(--gilt-sheet);
+  --bbx-blockquote-paper: var(--gilt-sheet);
+  --bbx-blockquote-padding: 0.6em 1em;
+  --bbx-blockquote-edge: 2px;
+  --bbx-code-paper: #112c38;
+  --bbx-code-ink: #eee3c5;
+  --bbx-sheet-radius: 6px;
+  --bbx-selection-code: #e5c77e;
+  --bbx-selection-code-ink: #112c38;
+  --bbx-bullet: #d9b56c;
+  --bbx-counter: #d9b56c;
+}
+.bbx-card-surface[data-card-theme="gilt"] {
+  border: 1px solid #ae8b42;
+  box-shadow: 0 0 0 3px #173f50, 0 0 0 4px #ae8b4280, 0 6px 20px #231c1240;
+}
+.bbx-card-surface[data-card-theme="gilt"] > .bbx-card-properties {
+  border-radius: 0 5px 0 5px;
+}
+[data-chrome-theme="gilt"] :is(button, textarea):focus-visible:not(.bbx-card-theme *) {
+  outline: 2px solid #f5d88e;
+  outline-offset: 3px;
+}
+@media (max-width: 639px) {
+  .bbx-box-presentation[data-chrome-theme="gilt"] {
+    background-size: 620px auto;
+    background-position: center top;
+  }
+}
+
+/* The heading is a worn gilded strip, with dark lettering over the leaf. */
+.bbx-card-theme[data-card-theme="gilt"] .bbx-card-heading {
+  background-color: #e3ca90;
+  background-image: var(--gilt-leaf);
+  background-position: center, 55% 55%;
+  background-size: auto, 850px auto;
+  color: #192c34;
+  --bbx-ink: #192c34;
+  --bbx-ink-soft: #304047;
+  border-bottom: 1px solid #a18143;
+}
+
+@media (hover: hover) {
+  [data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more):hover {
+    --gilt-leaf: linear-gradient(#f4d87599, #e7be5899), var(--gilt-art);
+    border-color: #dec990;
+    border-bottom-color: #8a693c;
+  }
+}
+[data-chrome-theme="gilt"] :is(#bbx-composer-send, #bbx-composer-send-mobile):disabled {
+  background: #8e947f;
+  color: #263d43;
+  border: 1px solid #acb09b;
+  border-radius: 4px;
+  opacity: .65;
+}
