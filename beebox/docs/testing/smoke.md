@@ -11,7 +11,8 @@ the box's **backend** to answer `/api/health` (vite serves pages seconds before
 Fastify is up, and a box child reloads itself after a post-commit CLI rebuild —
 both looked like a 502 flake until 2026-08-26), then walks it in a browser: the chat page renders its shell,
 the app bar's place menu opens and lists landmarks, selecting one moves you there, `/browse` lists the box's
-real content, a card opens and renders, and the page raised no uncaught errors.
+real content, the first card in the box's content area opens by URL and
+renders, and the page raised no uncaught errors.
 No model turns — nothing that spends tokens or waits on an agent. About
 thirty seconds; hard-fails; never selected by the test graph.
 
