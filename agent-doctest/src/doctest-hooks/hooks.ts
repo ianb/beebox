@@ -30,8 +30,10 @@ export {
   parseExamples,
   parseExample,
   generateTestModule,
+  type GeneratedModule,
 } from "./doctest-generate.ts";
-export { generateTestSource } from "./doctest-load.ts";
+export { generateTestSource, generateTypecheckModule } from "./doctest-load.ts";
+export { DoctestSyntaxError } from "./doctest-errors.ts";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
 //

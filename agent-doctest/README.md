@@ -349,6 +349,30 @@ Bob <bob@example.com> [member]
 
 Without the serializer, you'd be asserting against a wall of JSON. The serializer turns opaque objects into a format that makes intent obvious and diffs readable.
 
+## Typechecking
+
+tsx strips types without checking them, so a doctest that calls an API with
+the wrong shape fails only when it runs. `doctest-typecheck` checks the module
+the loader generates from each doctest, so names in a `continue` block resolve
+as they do at run time, and it prints each error on the markdown line:
+
+```
+doctest-typecheck --project tsconfig.json 'test/**/*.doctest.md' \
+  --project src/frontend/tsconfig.json 'src/frontend/test/**/*.doctest.md'
+```
+
+Each `--project` names the tsconfig for the doctests after it: the one whose
+options and path aliases the code under test is written against. The checker
+keeps every checking option and drops only emit settings (`rootDir`,
+`outDir`), since doctests usually sit outside a package's `rootDir`.
+`--by-dir N` adds an error count per directory. The command exits 1 when it
+finds an error.
+
+The check builds its module with one difference from the run: type-only
+imports in example blocks, which the run erases, are moved to module scope.
+Unused-binding errors on the runner's own bindings (`t`, `print`,
+`eventually`) are not reported.
+
 ## Exports
 
 | Import | Contents |
@@ -357,6 +381,7 @@ Without the serializer, you'd be asserting against a wall of JSON. The serialize
 | `agent-doctest/tap` | Adds `t.check()` to tap (use in `.taprc`) |
 | `agent-doctest/check` | `check()`, `inspect()`, `serialize()`, `registerSerializer()`, `CheckError` |
 | `agent-doctest/hooks` | Parser functions: `parseCodeBlocks()`, `parseExamples()`, `generateTestSource()` |
+| `agent-doctest/typecheck` | `typecheckDoctests({ tsconfig, files })`, the API behind `doctest-typecheck` |
 
 ## License
 

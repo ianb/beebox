@@ -189,3 +189,50 @@ export function rewriteImports(expression: string): string {
   }
   return lines.join("\n");
 }
+
+/** A type-only import in an example block, as a module-scope statement. */
+export interface TypeImport {
+  /** 0-based line within the code where the import starts. */
+  offset: number;
+  statement: string;
+}
+
+/**
+ * The type-only imports that {@link rewriteImports} erases: `import type …`
+ * statements, and the `type X` specifiers of a mixed import. Runtime does not
+ * need them, but a typecheck does, and an import declaration cannot sit
+ * inside the test function, so the typecheck build hoists these to module
+ * scope.
+ */
+export function typeOnlyImports(code: string): TypeImport[] {
+  if (!/^\s*import[\s"'*{]/m.test(code)) return [];
+  const lines = code.split("\n");
+  const out: TypeImport[] = [];
+  let inTemplate = false;
+  for (let i = 0; i < lines.length; i++) {
+    const startsInTemplate = inTemplate;
+    inTemplate = nextTemplateState(inTemplate, lines[i] ?? "");
+    if (startsInTemplate || !/^\s*import[\s"'*{]/.test(lines[i] ?? "")) continue;
+    let end = i;
+    while (end < lines.length - 1 && !importEnds(lines[end] ?? "")) end++;
+    const full = IMPORT_RE.exec(lines.slice(i, end + 1).join("\n"));
+    for (let j = i + 1; j <= end; j++) inTemplate = nextTemplateState(inTemplate, lines[j] ?? "");
+    const offset = i;
+    i = end;
+    if (!full) continue;
+    const clause = (full[3] ?? "").trim();
+    const source = full[4] ?? "";
+    if (full[2]) {
+      out.push({ offset, statement: `import type ${clause} from ${source};` });
+      continue;
+    }
+    const brace = /{([\S\s]*)}/.exec(clause);
+    const typeSpecs = (brace?.[1] ?? "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter((p) => p.startsWith("type "))
+      .map((p) => p.slice("type ".length).trim());
+    if (typeSpecs.length > 0) out.push({ offset, statement: `import type { ${typeSpecs.join(", ")} } from ${source};` });
+  }
+  return out;
+}

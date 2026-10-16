@@ -105,11 +105,11 @@ export function declaresName(setupText: string, name: string): boolean {
 // catching an author who expected blocks to share variables, as notebook
 // cells do. The message says where the name lives and what to write.
 const REF_HINTS = [
-  "async function __doctest_refHints(declared, fn) {",
-  "  try { return await fn(); } catch (e) {",
+  "async function __doctest_refHints(declared: Record<string, number>, fn: () => Promise<unknown>): Promise<void> {",
+  "  try { await fn(); } catch (e) {",
   "    const name = e instanceof ReferenceError ? /^(\\S+) is not defined/.exec(e.message)?.[1] : undefined;",
   "    const line = name === undefined ? undefined : declared[name];",
-  "    if (line !== undefined) {",
+  "    if (e instanceof ReferenceError && line !== undefined) {",
   "      e.message += ` — ${name} is declared in the block at line ${line}. Each block is a separate test; ` +",
   "        'to share variables, make this block a ```ts continue block, or declare the value in ```ts setup.';",
   "    }",
@@ -119,15 +119,18 @@ const REF_HINTS = [
 ];
 
 const EVENTUALLY = [
-  "async function __doctest_eventually(fn, opts = {}) {",
+  "async function __doctest_eventually<T>(",
+  "  fn: () => T | Promise<T>,",
+  "  opts: { label?: string; timeoutMs?: number; intervalMs?: number } = {},",
+  "): Promise<NonNullable<Exclude<T, false>>> {",
   "  const { label = 'condition', timeoutMs = 5000, intervalMs = 25 } = opts;",
   "  const deadline = Date.now() + timeoutMs;",
   "  for (;;) {",
-  "    let value; let error;",
+  "    let value: T | undefined; let error: unknown;",
   "    try { value = await fn(); } catch (e) { error = e; }",
-  "    if (!error && value !== false && value !== undefined && value !== null) return value;",
+  "    if (!error && value !== false && value !== undefined && value !== null) return value as NonNullable<Exclude<T, false>>;",
   "    if (Date.now() >= deadline) {",
-  "      const last = error ? `error: ${error?.message ?? error}` : `value: ${JSON.stringify(value)}`;",
+  "      const last = error ? `error: ${error instanceof Error ? error.message : String(error)}` : `value: ${JSON.stringify(value)}`;",
   "      const err = new Error(`${label} was not true after ${timeoutMs}ms; last ${last}`);",
   "      err.name = 'EventuallyTimeout';",
   "      if (error) err.cause = error;",
@@ -144,13 +147,15 @@ const EVENTUALLY = [
 // still runs. The file-level timeout still ends a real hang, now preceded by
 // the name of the example that hung.
 const WATCH = [
-  "function __doctest_makeWatch(t) {",
-  "  let timer = null;",
+  "function __doctest_makeWatch(t: { comment: (message: string) => unknown }) {",
+  "  let timer: ReturnType<typeof setTimeout> | null = null;",
   "  const done = () => { if (timer) clearTimeout(timer); timer = null; };",
-  "  const mark = (where, ms) => {",
+  "  const mark = (where: string, ms: number) => {",
   "    done();",
   "    timer = setTimeout(() => t.comment(`still running after ${ms / 1000}s: ${where}`), ms);",
-  "    timer.unref?.();",
+  // The DOM lib types a timer as a number; under Node it is an object with unref().
+  "    const handle: unknown = timer;",
+  "    if (typeof handle === 'object' && handle !== null && 'unref' in handle && typeof handle.unref === 'function') handle.unref();",
   "  };",
   "  return { mark, done };",
   "}",
@@ -161,9 +166,9 @@ export function moduleHeader(opts: { declares: (name: string) => boolean }): Gen
     'import { test as __doctest_test, t as __doctest_root } from "tap";',
     // Trailing newlines are trimmed from string results: expected values in a
     // code block cannot express them.
-    "function __doctest_trim(v) { return typeof v === 'string' ? v.replace(/\\n+$/, '') : v; }",
+    "function __doctest_trim(v: unknown): unknown { return typeof v === 'string' ? v.replace(/\\n+$/, '') : v; }",
     // print() lines drain into the next assertion, joined with its result.
-    "function __doctest_withPrints(prints, value) {",
+    "function __doctest_withPrints(prints: string[], value: unknown): unknown {",
     "  if (prints.length === 0) return __doctest_trim(value);",
     "  const lines = prints.splice(0);",
     "  if (value !== undefined && value !== null) {",
@@ -189,12 +194,12 @@ export function testHeader(opts: {
 }): GenLine[] {
   const lines = [
     `__doctest_test(${JSON.stringify(opts.name)}, (__doctest_t) => __doctest_refHints(${JSON.stringify(opts.elsewhere)}, async () => {`,
-    "  const __doctest_prints = [];",
+    "  const __doctest_prints: string[] = [];",
     "  const __doctest_watch = __doctest_makeWatch(__doctest_t);",
     "  __doctest_t.teardown(() => __doctest_watch.done());",
   ];
   if (!opts.declares("t")) lines.push("  const t = __doctest_t;");
-  if (!opts.declares("print")) lines.push("  const print = (s) => void __doctest_prints.push(String(s));");
+  if (!opts.declares("print")) lines.push("  const print = (s: unknown): void => void __doctest_prints.push(String(s));");
   // The registration line maps to the block's fence, so tap's location for
   // the test as a whole names the block rather than a nearby line.
   return lines.map((text, i) => (i === 0 ? { text, md: opts.fence, col: 0 } : gen(text)));

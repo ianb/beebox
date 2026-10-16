@@ -13,7 +13,7 @@ import { parseFenceInfo, FenceInfoError, type FenceInfo } from "./doctest-info.t
 import { type GenLine, type LineMap, buildLineMap } from "./line-map.ts";
 import { DoctestSyntaxError, formatSyntaxError, type BlockSpan } from "./doctest-errors.ts";
 import { emitExamples, gen, verbatim, type ExampleSpan } from "./doctest-emit.ts";
-import { rewriteImports } from "./doctest-split.ts";
+import { rewriteImports, typeOnlyImports } from "./doctest-split.ts";
 import { moduleHeader, testHeader, teardownRegistration, declaresName, blockDeclarations } from "./doctest-runtime.ts";
 
 export {
@@ -40,6 +40,12 @@ export interface GenerateOptions {
   filePath: string;
   /** Markdown lines of examples whose statement/expression split comes from esbuild. */
   oracle?: ReadonlySet<number>;
+  /**
+   * Build the module for a typecheck rather than a run: type-only imports
+   * from example blocks, which the run erases, are hoisted to module scope.
+   * The runnable code is otherwise identical.
+   */
+  typecheck?: boolean;
 }
 
 interface Classified {
@@ -91,6 +97,21 @@ function isVacuousWildcard(expected: string): boolean {
   return /^«(?:\*|[^=»]*=\*)»$/.test(expected.trim());
 }
 
+/** Every type-only import in a non-setup block, once each, on its markdown line. */
+function hoistedTypeImports(classified: Classified[]): GenLine[] {
+  const seen = new Set<string>();
+  const out: GenLine[] = [];
+  for (const { block, info } of classified) {
+    if (info.kind === "setup" || info.kind === "prose") continue;
+    for (const { offset, statement } of typeOnlyImports(block.content)) {
+      if (seen.has(statement)) continue;
+      seen.add(statement);
+      out.push({ text: statement, md: block.line + offset, col: 0 });
+    }
+  }
+  return out;
+}
+
 /** The module source plus the maps the loader needs to report errors. */
 export function generateTestModule(markdown: string, options: GenerateOptions): GeneratedModule {
   const { filePath } = options;
@@ -105,6 +126,7 @@ export function generateTestModule(markdown: string, options: GenerateOptions): 
     out.push(gen(`// --- setup (${fileName}:${block.line}) ---`));
     out.push(...verbatim(block.content, { md: block.line, indent: "" }));
   }
+  if (options.typecheck) out.push(...hoistedTypeImports(classified));
   for (const { block } of classified.filter((c) => c.info.kind === "teardown")) {
     out.push(...teardownRegistration(verbatim(rewriteImports(block.content), { md: block.line, indent: "    " })));
   }

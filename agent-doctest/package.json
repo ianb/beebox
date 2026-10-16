@@ -3,17 +3,26 @@
   "version": "0.1.0",
   "description": "Markdown doctest runner for tap — write tests as executable documentation",
   "type": "module",
+  "bin": {
+    "doctest-typecheck": "./bin/doctest-typecheck.mjs"
+  },
   "exports": {
     "./check": "./src/tap-check/check.ts",
     "./tap": "./src/tap-check/tap.ts",
     "./loader": "./src/doctest-loader.ts",
     "./hooks": "./src/doctest-hooks/hooks.ts",
-    "./resolve-rules": "./src/doctest-hooks/resolve-rules.ts"
+    "./resolve-rules": "./src/doctest-hooks/resolve-rules.ts",
+    "./typecheck": "./src/typecheck/check.ts"
   },
   "scripts": {
     "test": "tap",
     "typecheck": "tsc --noEmit",
+    "typecheck:doctest": "node bin/doctest-typecheck.mjs --project tsconfig.json 'test/**/*.doctest.md'",
     "lint": "eslint src/"
+  },
+  "dependencies": {
+    "tsx": "^4.23.1",
+    "typescript": "^5.7.0"
   },
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
@@ -21,9 +30,7 @@
     "@types/node": "^24.0.0",
     "esbuild": "^0.20.0",
     "eslint": "^9.39.2",
-    "tap": "^21.0.0",
-    "tsx": "^4.23.1",
-    "typescript": "^5.7.0"
+    "tap": "^21.0.0"
   },
   "peerDependencies": {
     "@tapjs/core": ">=4.0.0",
@@ -31,6 +38,7 @@
     "tap": ">=21.0.0"
   },
   "files": [
+    "bin/",
     "src/",
     "docs/"
   ],
