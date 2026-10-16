@@ -1404,7 +1404,8 @@ recording, is committed in `_content/captures/` on arrival. The doc's
 source; a shared URL is the doc's `sources` entry, and a clipping is a quoted
 `## Clipping` section of the body. An image is an image card in the attach
 scope; a recording is `recording.audio.card` there, which holds the
-transcript or transcription error. Reconciliation that finds a leftover
+transcript or transcription error. Its `via.channel` is `microphone` for an
+`apple-voice-recording` capture and the capture source otherwise. Reconciliation that finds a leftover
 `.memo.card` source (a box whose retire-memo migration has not run) fails with
 `migration-pending` (conflict) instead of treating the source as deleted. Source
 materialization (and its commit, in `_content/captures/`) precedes dispatch.

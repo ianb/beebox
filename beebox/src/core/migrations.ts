@@ -136,6 +136,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // frontmatter, its corrections to a `## Corrections` section. Fails closed
   // (exit 1, nothing written) on a tag it cannot place. See the script's plan.ts.
   { name: "body-tags-2026-10", script: "src/scripts/migrate/body-tags/run.ts" },
+  // Retires the memo card type: each memo becomes a doc with the same path
+  // stem, its recording moves under an audio card in the doc's attach scope,
+  // and mentions of the memo file follow the rename. Fails closed (exit 1,
+  // nothing written) on a field it does not map or an ambiguous recording.
+  // Legacy support to remove: issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md.
+  { name: "retire-memo-2026-10", script: "src/scripts/migrate/retire-memo/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

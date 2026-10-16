@@ -145,7 +145,7 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
       await fs.mkdir(path.join(boxRoot, recordingAttachRel), { recursive: true });
       await fs.copyFile(path.join(captureDirectory(boxRoot, record.id), "material"), path.join(boxRoot, recordingAttachRel, name));
       await writeFileAtomic(path.join(boxRoot, recordingRef), { content:
-        createAudioTemplate({ via: { channel: "microphone", at: declaration.capturedAt }, filename: name }) });
+        createAudioTemplate({ via: { channel: declaration.source === "apple-voice-recording" ? "microphone" : declaration.source, at: declaration.capturedAt }, filename: name }) });
       paths.push(recordingRef, `${recordingAttachRel}/${name}`);
       if (declaration.recordingInterrupted === true) body += `${body === "" ? "" : "\n\n"}## Recording status\nThis recording was interrupted and may end early.\n` ;
       body += `${body === "" ? "" : "\n\n"}[Recorded audio](attach/${RECORDING_CARD})\n`;
