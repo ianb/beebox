@@ -16,10 +16,11 @@ import { geminiKeyCheck } from "../../../../../../src/webapp/trpc/routers/health
 import { updateTtsConfig } from "../../../../../../src/core/tts/config.js";
 import { grantSecret, setSecret } from "../../../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../../../src/lib/box-slug.js";
+import type { TtsBackend } from "../../../../../../src/shared/tts-backends.js";
 import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
 
 /** A fresh secret store and a box with the given voice backend and grants. */
-async function boxWith({ backend, grants }) {
+async function boxWith({ backend, grants }: { backend: TtsBackend; grants: ("gemini" | "openrouter")[] }) {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
   const box = await makeTmpBox();

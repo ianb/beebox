@@ -7,19 +7,22 @@ card type and fallback body as Clerk.
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { shareDestinationsOutput } from "../../../../src/webapp/trpc/routers/share/contract.js";
 
-function caller(boxRoot) {
+function caller(boxRoot: string) {
   return appRouter.createCaller({
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: false,
+    isAuthenticatedOwner: false,
+    actor: "none",
   });
 }
 ```
@@ -29,7 +32,7 @@ the native XCTest decodes:
 
 ```ts
 const fixture = JSON.parse(await readFile("test/mobile-contract/fixtures/share-destinations.json", "utf-8"));
-shareDestinationsOutput.parse(fixture.result.data).chats[0].sessionId
+shareDestinationsOutput.parse(fixture.result.data).chats[0]?.sessionId
 => session-reading
 ```
 
@@ -75,11 +78,13 @@ const request = {
   destination: { kind: "landmark" as const, dir: "_content/reading" },
 };
 const first = await caller(box.root).share.saveTextual(request);
-const saved = await readFile(path.join(box.root, first.created[0]), "utf-8");
+const [firstCreated] = first.created;
+assert.ok(firstCreated, "the save created a card");
+const saved = await readFile(path.join(box.root, firstCreated), "utf-8");
 print(saved.includes("sources:\n  - href: https://example.com/article\n    retrieved: 2026-08-07T12:00:00.000Z\n"));
 print(saved.includes("share-id: 00000000-0000-4000-8000-000000000001"));
 print(saved.includes("[An Example](https://example.com/article)"));
-first.created[0].endsWith(".webpage.card")
+firstCreated.endsWith(".webpage.card")
 =>
 true
 true
@@ -88,11 +93,11 @@ true
 ```
 
 ```ts continue
-const moved = path.join("_content/inbox", path.basename(first.created[0]));
+const moved = path.join("_content/inbox", path.basename(firstCreated));
 await mkdir(path.join(box.root, "_content/inbox"), { recursive: true });
-await rename(path.join(box.root, first.created[0]), path.join(box.root, moved));
+await rename(path.join(box.root, firstCreated), path.join(box.root, moved));
 const replay = await caller(box.root).share.saveTextual(request);
-replay.created[0]
+replay.created.at(0)
 => _content/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card
 ```
 

@@ -25,6 +25,7 @@ import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
 import { cardRouter } from "../../../src/webapp/trpc/routers/card.js";
 import { statusRouter } from "../../../src/webapp/trpc/routers/status.js";
 import { historyRouter } from "../../../src/webapp/trpc/routers/history.js";
+import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";
 
 /** The message a display-form-rejecting tRPC procedure throws, or "ok". */
@@ -37,16 +38,30 @@ async function trpcDisplayFormMessage(fn: () => Promise<unknown>): Promise<strin
   }
 }
 
-interface TestCtx {
-  boxRoot: string;
-  boxSlug: string;
-  user: null;
-  authed: boolean;
-  isOwner: boolean;
+/** An owner context for the box at `boxRoot`; the fence under test reads only the path. */
+function ownerCtx(boxRoot: string): TrpcContext {
+  return {
+    boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true,
+    isAuthenticatedOwner: true, actor: "user", services: {},
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+  };
+}
+
+/** The `error` string of a JSON error body. */
+function errorOf(body: unknown): unknown {
+  return typeof body === "object" && body !== null && "error" in body ? body.error : undefined;
+}
+
+/** The `cards` array of a browse response body. */
+function cardsOf(body: unknown): { name: string; conflict?: boolean }[] {
+  if (typeof body !== "object" || body === null || !("cards" in body) || !Array.isArray(body.cards)) {
+    throw new Error("browse body has no cards array");
+  }
+  return body.cards;
 }
 
 /** Whether `card.get(cardPath)` throws (any error — the fence rejects with BAD_REQUEST). */
-async function cardGetThrows(ctx: TestCtx, cardPath: string): Promise<boolean> {
+async function cardGetThrows(ctx: TrpcContext, cardPath: string): Promise<boolean> {
   try {
     await cardRouter.createCaller(ctx).get({ path: cardPath });
     return false;
@@ -157,7 +172,7 @@ tRPC input travels as a plain string (no URL encoding involved), so the raw
 traversal string reaches `resolveCardPath` directly:
 
 ```ts continue
-const ctx: TestCtx = { boxRoot: server.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+const ctx = ownerCtx(server.boxRoot);
 await cardGetThrows(ctx, "_content/../package.json")
 => true
 ```
@@ -218,7 +233,7 @@ const filesDisplayRes = await server.request({ method: "GET", url: "/api/files/C
 filesDisplayRes.statusCode
 => 400
 
-filesDisplayRes.body.error
+errorOf(filesDisplayRes.body)
 => `Config:box.json` is the boxholder's display form; write `/_config/box.json`
 
 const browseDisplayRes = await server.request({ method: "GET", url: "/api/browse/Config:box.json" });
@@ -305,7 +320,7 @@ symBrowseDeeperRes.statusCode
 `card.get` (tRPC) refuses the same path:
 
 ```ts continue
-const symCtx: TestCtx = { boxRoot: symServer.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+const symCtx = ownerCtx(symServer.boxRoot);
 await cardGetThrows(symCtx, "_content/pkg/package.json")
 => true
 ```
@@ -404,8 +419,8 @@ await symlink(join("..", "src", "private.memo.card"), join(escServer.boxRoot, "_
 
 const escBrowseRes = await escServer.request({ method: "GET", url: "/api/browse/_content" });
 JSON.stringify({
-  names: escBrowseRes.body.cards.map((c) => c.name).sort(),
-  conflicts: escBrowseRes.body.cards.map((c) => c.conflict === true),
+  names: cardsOf(escBrowseRes.body).map((c) => c.name).sort(),
+  conflicts: cardsOf(escBrowseRes.body).map((c) => c.conflict === true),
 })
 => {"names":["Normal"],"conflicts":[false]}
 ```

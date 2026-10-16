@@ -10,15 +10,22 @@ that arriving at the place opens.
 ```ts setup
 import { utimes } from "node:fs/promises";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import assert from "node:assert/strict";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { expandLabel } from "../../../../src/core/landmark/expand-label.js";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
+    user: null,
+    authed: true,
+    isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }
@@ -230,7 +237,7 @@ groups(page.groups)
 Its rows are derived links with no level, titled like any other row.
 
 ```ts continue
-rows(page.groups[1].children)
+rows(page.groups[1]?.children ?? [])
 => ["derived _content/house/notes/Landlord.memo.card", "derived _content/house/Spanish.memo.card", "derived _content/house/Groceries.memo.card"]
 ```
 
@@ -266,6 +273,7 @@ for (let i = 1; i <= 30; i++) {
   await utimes(box.path(rel), 1_700_000_000 + i, 1_700_000_000 + i);
 }
 const [also] = (await payload(box.root, { dir: "_content/many", expandsAsGroups: true })).groups;
+assert.ok(also);
 ({ label: also.label, count: also.count, children: also.children.map((c) => c.ref.replace("_content/many/", "")) })
 => {
   label: "Also here",
@@ -294,7 +302,7 @@ for (const name of ["B_10", "A", "B_2"]) {
   await box.write(rel, "---\n---\n");
   await utimes(box.path(rel), 1_700_000_000, 1_700_000_000);
 }
-(await payload(box.root, { dir: "_content/same", expandsAsGroups: true })).groups[0].children.map((c) => c.ref)
+(await payload(box.root, { dir: "_content/same", expandsAsGroups: true })).groups[0]?.children.map((c) => c.ref)
 => ["_content/same/A.memo.card", "_content/same/B_2.memo.card", "_content/same/B_10.memo.card"]
 ```
 
@@ -380,6 +388,7 @@ await box.write("_content/lending/Broken.loan.card", "---\nitem: Ladder\n---\n")
 await box.write("_content/lending/Rules.memo.card", "---\ntitle: House rules\n---\n");
 await box.write("_content/lending/Mislabeled.loan.card", "---\ntype: memo\nitem: Tent\nholder: Bram\ndue: 2026-11-01\n---\n");
 const [also] = (await payload(box.root, { dir: "_content/lending", expandsAsGroups: true })).groups;
+assert.ok(also);
 also.children.map((c) => [c.title, c.detail ?? null]).toSorted()
 => [["Broken", null], ["Camp stove", "Idris has it · back by 2026-10-17"], ["House rules", null], ["Mislabeled", null]]
 ```

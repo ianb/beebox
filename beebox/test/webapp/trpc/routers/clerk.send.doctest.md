@@ -14,6 +14,17 @@ import { readFile, readdir, rm, unlink } from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { TRPCError } from "@trpc/server";
+import type { z } from "zod";
+import type { sendInput } from "../../../../src/webapp/trpc/clerk-contract.js";
+import type { EventBus } from "../../../../src/core/event-bus/core.js";
+import type { ChatSession } from "../../../../src/core/chat/session/run/core.js";
+import assert from "node:assert/strict";
+import type { ReserveResult } from "../../../../src/core/chat/session/reserve.js";
+import type { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
+import type { FakeJevService, JevService } from "../../../../src/services/jev.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { ChatRuntime, SendOutcome, SendTargetArgs, SendTargetResult, UserMessageSendArgs } from "../../../../src/webapp/chat-runtime.js";
 import { setChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeJev } from "../../../../src/services/jev.js";
@@ -21,26 +32,27 @@ import { executeMove } from "../../../../src/core/commands/move/command.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-const EVENT_BUS = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-function caller(boxRoot, jev) {
-  return appRouter.createCaller({ boxRoot, boxSlug: "test", authed: true, isOwner: true, services: { jev },
+const EVENT_BUS: EventBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
+function caller(boxRoot: string, jev: JevService | undefined) {
+  return appRouter.createCaller({ boxRoot, boxSlug: "test", authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user", services: jev === undefined ? {} : { jev },
     user: { email: "ari@example.com", name: "Ari" }, eventBus: EVENT_BUS });
 }
 
 /** A chat runtime that records each send and answers a repeated message id as a duplicate. */
-function scriptedRuntime(boxRoot) {
-  const sends = [];
-  const claimed = new Set();
+function scriptedRuntime(boxRoot: string) {
+  const sends: string[] = [];
+  const claimed = new Set<string | undefined>();
+  // Partial fakes (runtime, registry, session): the code under test reads only registry.reserve, resolveSendTarget and sendUserMessage. ChatSessionRegistry is a class with private members, so its fake cannot be typed without a double cast.
   setChatRuntime(boxRoot, {
-    registry: { reserve: async (input) => ({ kind: "reserved", sessionId: input.sessionId }) },
-    resolveSendTarget: async (args) => ({ ok: true, target: { session: {}, id: args.sessionParam === "new" ? null : args.sessionParam } }),
-    sendUserMessage: async (args) => {
+    registry: { reserve: async (input: Parameters<ChatSessionRegistry["reserve"]>[0]): Promise<ReserveResult> => ({ kind: "reserved", sessionId: input.sessionId }) } as ChatSessionRegistry,
+    resolveSendTarget: async (args: SendTargetArgs): Promise<SendTargetResult> => ({ ok: true, target: { session: {} as ChatSession, id: args.sessionParam === "new" ? null : args.sessionParam } }),
+    sendUserMessage: async (args: UserMessageSendArgs): Promise<SendOutcome> => {
       sends.push(args.message);
       if (claimed.has(args.messageId)) return { status: 200, body: { deduplicated: true } };
       claimed.add(args.messageId);
       return { status: 200, body: { turnId: "turn-1" } };
     },
-  });
+  } as ChatRuntime);
   return sends;
 }
 
@@ -56,22 +68,29 @@ async function gardenBox() {
 const clear = () => createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 0.95, c1: 0.05 }, confidence: 0.95 } });
 const unsure = () => createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 0.5, c1: 0.5 }, confidence: 0.5 } });
 
-function page(id, overrides) {
+/** What the fake Jev was asked to decide on: the message and the page, as the router sent them. */
+function decisionState(jev: FakeJevService): { message: unknown; page: unknown } {
+  const [call] = jev.calls;
+  assert.ok(call && typeof call.state === "object" && call.state !== null && "message" in call.state && "page" in call.state, "Jev was asked once");
+  return { message: call.state.message, page: call.state.page };
+}
+
+function page(id: string, overrides?: Partial<z.infer<typeof sendInput>>) {
   return { id, note: "", url: "https://example.com/beds", title: "Raised beds on a slope", siteName: "Example Gardens",
     readableMarkdown: "# Raised beds\n\nTerrace them.", frozenHtml: "<html><body>frozen</body></html>", ...overrides };
 }
 
-async function incoming(box) {
+async function incoming(box: TmpBox) {
   return (await readdir(path.join(box.root, "_content/incoming"))).toSorted();
 }
 
-function gitStatus(box) {
+function gitStatus(box: TmpBox) {
   return execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd: box.root, encoding: "utf8" }).trim();
 }
 
-async function failure(run) {
+async function failure(run: () => Promise<unknown>) {
   try { await run(); return "unexpected success"; }
-  catch (error) { return `${error.code}: ${error.message}`; }
+  catch (error) { return error instanceof TRPCError ? `${error.code}: ${error.message}` : String(error); }
 }
 ```
 
@@ -90,7 +109,7 @@ const id = randomUUID();
 const result = await caller(box.root, jev).clerk.send(page(id, { note: "for the slope out back" }));
 const card = result.card;
 ({ result, incoming: await incoming(box), gitStatus: gitStatus(box), sends,
-  jevState: { message: jev.calls[0].state.message, page: jev.calls[0].state.page } })
+  jevState: decisionState(jev) })
 => {
   result: { card: "_content/incoming/Raised_beds_on_a_slope-«uuid».webpage.card", state: "sent", destination: { label: "New chat in Garden", sessionId: "«uuid»" } },
   incoming: [".gitignore", ".gitkeep", "Raised_beds_on_a_slope-«uuid».attach", "Raised_beds_on_a_slope-«uuid».webpage.card"],
@@ -184,7 +203,7 @@ scriptedRuntime(box.root);
 const id = randomUUID();
 const result = await caller(box.root, unsure()).clerk.send(page(id));
 const row = (await caller(box.root, unsure()).quickChat.home()).open[0];
-({ state: result.state, reason: result.reason, choices: result.choices.map((choice) => choice.label), row: { message: row.message, page: row.page } })
+({ state: result.state, reason: result.reason, choices: (result.choices ?? []).map((choice) => choice.label), row: { message: row?.message, page: row?.page } })
 => { state: "needs-choice", reason: "uncertain", choices: ["New chat in Garden", "New general chat"],
   row: { message: "", page: { title: "Raised beds on a slope", url: "https://example.com/beds" } } }
 ```

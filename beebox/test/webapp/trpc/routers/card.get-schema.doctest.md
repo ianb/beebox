@@ -8,17 +8,20 @@ card did not parse against a schema.
 
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }

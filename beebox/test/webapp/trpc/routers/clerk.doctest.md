@@ -11,16 +11,20 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { readFile, readdir, mkdir, writeFile } from "node:fs/promises";
 import * as path from "node:path";
+import assert from "node:assert/strict";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }
@@ -39,7 +43,7 @@ const res = await caller(box.root).clerk.commentary({
 print(`created: ${res.created.length}`);
 print(`webpage: ${res.created.some((p) => p.endsWith(".webpage.card"))}`);
 print(`commentary: ${res.created.some((p) => p.endsWith(".commentary.card"))}`);
-print(`filed in inbox: ${res.created[0].startsWith("_content/inbox/")}`);
+print(`filed in inbox: ${res.created[0]?.startsWith("_content/inbox/")}`);
 print(`open startsWith chat: ${res.open.startsWith("chat?session=new")}`);
 =>
 created: 2
@@ -53,6 +57,7 @@ open startsWith chat: true
 
 ```ts continue
 const webpageRel = res.created.find((p) => p.endsWith(".webpage.card"));
+assert.ok(webpageRel);
 const body = await readFile(path.join(box.root, webpageRel), "utf-8");
 print(body.includes("https://example.com/article"));
 print(body.includes("Body text."));
@@ -112,7 +117,9 @@ const [retryA, retryB] = await Promise.all([
   caller(box.root).clerk.commentary(capture),
   caller(box.root).clerk.commentary(capture),
 ]);
-const card = await readFile(path.join(box.root, firstCapture.created[0]), "utf-8");
+const firstPath = firstCapture.created[0];
+assert.ok(firstPath);
+const card = await readFile(path.join(box.root, firstPath), "utf-8");
 print(`paths: ${firstCapture.created.map((p) => path.basename(p).replace(/_[\d-]+T[\dT-]+/u, "_<ts>")).join(", ")}`);
 print(`replayed: ${JSON.stringify(retryA) === JSON.stringify(firstCapture) && JSON.stringify(retryB) === JSON.stringify(firstCapture)}`);
 print(`stores capture-id: ${card.includes(`capture-id: ${capture.captureId}`)}`);
@@ -172,7 +179,7 @@ const windowId = "10000000-0000-4000-8000-000000000000";
 const tabId = "20000000-0000-4000-8000-000000000000";
 const arrangement = {
   transferId,
-  scope: "current-window",
+  scope: "current-window" as const,
   capturedAt: "2026-08-04T12:00:00.000Z",
   source: { windows: [{ id: windowId, tabs: [{ id: tabId, title: "Example", url: "https://example.com", pinned: false }] }] },
   proposal: { windows: [{ id: windowId, tabs: [tabId] }], close: [] },
@@ -212,7 +219,7 @@ list.
 
 ```ts
 const dbox = await makeTmpBox({ git: true });
-async function seedLandmark(dir, cardBody) {
+async function seedLandmark(dir: string, cardBody: string) {
   await mkdir(path.join(dbox.root, dir), { recursive: true });
   await writeFile(path.join(dbox.root, dir, `${path.basename(dir)}.landmark.card`), cardBody, "utf-8");
 }

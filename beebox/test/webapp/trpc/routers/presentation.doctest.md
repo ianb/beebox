@@ -11,15 +11,17 @@ import { clearBoxConfigCache, loadBoxConfig, loadBoxConfigResult } from "../../.
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { execFileSync } from "node:child_process";
 
-function caller(boxRoot, options) {
+function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean }): ReturnType<typeof appRouter.createCaller> {
   return appRouter.createCaller({
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
+    isAuthenticatedOwner: options?.isOwner !== false,
+    actor: "user",
   });
 }
 ```
@@ -103,7 +105,7 @@ const invalidPresentation = await caller(box.root).presentation.get({ boxKey: "t
 JSON.stringify([
   (await loadBoxConfig(box.root)).timezone,
   invalidPresentation.presentation.status,
-  invalidPresentation.configProblems[0].includes("expected string"),
+  invalidPresentation.configProblems[0]?.includes("expected string"),
   invalidPresentation.chrome.choice,
 ])
 => ["America/Chicago","invalid",true,{"name":"plain","stock":"neutral"}]

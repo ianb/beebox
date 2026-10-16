@@ -6,10 +6,11 @@ The feature read used by a page reload must therefore consult the reservation:
 disk alone has no row and would reset the UI to the registry default (`off`).
 
 ```ts setup
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
 import { appendHistory, getFeaturesForSession, updateFeaturesForSession } from "../../../../src/core/chat/session/history.js";
-import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
+import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 
 async function waitFor(condition: () => boolean | Promise<boolean>): Promise<void> {
@@ -21,8 +22,8 @@ async function waitFor(condition: () => boolean | Promise<boolean>): Promise<voi
   throw new Error("condition did not become true");
 }
 
-function caller(server) {
-  return appRouter.createCaller({
+function caller(server: TestServer) {
+  const ctx: TrpcContext = {
     boxRoot: server.boxRoot,
     boxSlug: "test",
     eventBus: server.eventBus,
@@ -30,7 +31,10 @@ function caller(server) {
     user: null,
     authed: true,
     isOwner: true,
-  });
+    isAuthenticatedOwner: true,
+    actor: "user",
+  };
+  return appRouter.createCaller(ctx);
 }
 ```
 
@@ -42,8 +46,8 @@ reserved id; reading that id must still report the seeded value.
 ```ts
 const backend = createFakeChatBackend();
 const realStart = backend.start.bind(backend);
-const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
-  backend.start = (opts) => { const run = realStart(opts); resolve(run); return run; };
+const runStarted = new Promise<void>((resolve) => {
+  backend.start = (opts) => { const run = realStart(opts); resolve(); return run; };
 });
 const server = await makeTestServer({ chatBackend: backend });
 const api = caller(server);

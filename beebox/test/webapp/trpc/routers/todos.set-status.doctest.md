@@ -12,19 +12,22 @@ attribute, commits with webapp trailers, and announces a `file-change`.
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-const events = [];
+const events: string[] = [];
 
-function caller(boxRoot, options) {
-  return appRouter.createCaller({
+function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean }) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
     eventBus: {
       emit: () => 0,
-      emitTransient: (name, data) => { events.push(`${name} ${data.path}`); },
+      emitTransient: (name, data) => { events.push(`${name} ${"path" in data ? data.path : undefined}`); },
       readSince: () => [],
+      readRecent: () => [],
       subscribe: () => ({ unsubscribe: () => {} }),
       prune: () => 0,
       close: () => {},
@@ -33,20 +36,23 @@ function caller(boxRoot, options) {
     user: null,
     authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
-  });
+    isAuthenticatedOwner: options?.isOwner !== false,
+    actor: "user",
+  };
+  return appRouter.createCaller(ctx);
 }
 
-function lastCommit(root) {
+function lastCommit(root: string) {
   return execFileSync("git", ["log", "-1", "--format=%s%n%(trailers:only,unfold)"], { cwd: root, encoding: "utf8" }).trim();
 }
 
-function commitCount(root) {
+function commitCount(root: string) {
   return execFileSync("git", ["rev-list", "--count", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
 }
 
 /** The error code a refused call rejects with, or "accepted". */
-function outcome(promise) {
-  return promise.then(() => "accepted", (error) => `${error.code}: ${error.message}`);
+function outcome(promise: Promise<unknown>): Promise<string> {
+  return promise.then(() => "accepted", (error: unknown) => (error instanceof TRPCError ? `${error.code}: ${error.message}` : String(error)));
 }
 
 const cardPath = "_content/Porch.memo.card";
@@ -270,7 +276,7 @@ const warned = await caller(box.root).todos.setStatus({
 });
 console.error = originalError;
 await fs.rm(hook);
-JSON.stringify([warned.commit, warned.commitWarning, (await box.read(cardPath)).split("\n")[11].startsWith('{% todo status="done"')])
+JSON.stringify([warned.commit, warned.commitWarning, (await box.read(cardPath)).split("\n")[11]?.startsWith('{% todo status="done"')])
 => [null,"Saved, but the Git commit failed.",true]
 ```
 

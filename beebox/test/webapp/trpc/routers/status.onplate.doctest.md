@@ -10,15 +10,20 @@ don't count.
 ```ts setup
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 
-function contextFor(box) {
-  const ctx = { boxRoot: box.root, boxSlug: "t", user: null, authed: true, isOwner: true };
+function contextFor(box: TmpBox) {
+  const ctx: TrpcContext = {
+    boxRoot: box.root, boxSlug: "t", user: null, authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user", services: {},
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+  };
   return statusRouter.createCaller(ctx);
 }
 
 const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
-function memo(body) {
+function memo(body: string) {
   return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
 }
 

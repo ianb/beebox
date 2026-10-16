@@ -8,12 +8,14 @@ sit on the critical path of every page load. `status.status` (the dashboard's
 payload) keeps its fuller shape.
 
 ```ts setup
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { runTodoQuery } from "../../../../src/core/todo/query.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
 /** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
-async function collectTodos(boxRoot) {
+async function collectTodos(boxRoot: string) {
   const result = await runTodoQuery(boxRoot, {
     query: { here: "", params: { status: ["open", "done", "dropped", "parked"], scope: "all" } },
     since: null,
@@ -21,21 +23,23 @@ async function collectTodos(boxRoot) {
   return { todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items), issues: result.issues };
 }
 
-function caller(box) {
-  const ctx = {
+function caller(box: TmpBox) {
+  const ctx: TrpcContext = {
     boxRoot: box.root,
     boxSlug: "t",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: true,
+    isAuthenticatedOwner: false,
+    actor: "none",
   };
   return statusRouter.createCaller(ctx);
 }
 
 // A question card; `lifecycle` is its lifecycle fields (none: pending).
-function question(lifecycle) {
+function question(lifecycle: string) {
   return `---
 ${lifecycle}prompt: Pick one
 input:

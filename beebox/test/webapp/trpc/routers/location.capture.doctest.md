@@ -8,14 +8,21 @@ is rejected by Zod and nothing is written.
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { loadLocation } from "../../../../src/core/location-store.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import assert from "node:assert/strict";
 
 // Minimal tRPC context — capture only reads ctx.boxRoot.
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
+    user: null,
+    authed: true,
+    isOwner: true,
+    isAuthenticatedOwner: false,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }
@@ -27,6 +34,7 @@ function caller(boxRoot) {
 const box = await makeTmpBox({ git: true });
 await caller(box.root).location.capture({ lat: 45.5, lng: -122.6, accuracy: 15 });
 const stored = await loadLocation(box.root);
+assert.ok(stored);
 JSON.stringify({ lat: stored.lat, lng: stored.lng, accuracy: stored.accuracy, source: stored.source })
 => {"lat":45.5,"lng":-122.6,"accuracy":15,"source":"web"}
 
