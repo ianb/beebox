@@ -17,7 +17,7 @@ and the second D-chemistry walk. Nothing committed it during the walk.
 
 A-lending: the first manifest line was committed only because an unrelated
 trick auto-commit swept the whole tree (see
-[trick-auto-commit-whole-tree-race-and-secrets](../../bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md)).
+[trick-auto-commit-whole-tree-race-and-secrets](2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md)).
 
 ## Mechanism
 
