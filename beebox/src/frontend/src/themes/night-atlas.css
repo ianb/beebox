@@ -22,7 +22,7 @@
   content: "";
   position: absolute;
   inset: -36px auto -36px -36px;
-  width: max(calc(200% + 72px), 2100px);
+  width: max(calc(200% + 72px), calc(300vh + 216px), 2100px);
   z-index: -1;
   pointer-events: none;
   background: url("./night-atlas-lights.webp") center top / cover no-repeat;
@@ -222,8 +222,9 @@
 .bbx-card-surface[data-card-theme="night-atlas"] > .bbx-card-properties {
   border-radius: 0 12px 0 12px;
 }
-/* Settings cards stay light even when Night Atlas is the inherited card ink. */
+/* The box picker is on a pale panel; a landmark picker is on dark card paper. */
 .bbx-card-theme[data-card-theme="night-atlas"] .bbx-system-theme-button { color: #174b4d; }
+.bbx-card-theme[data-card-theme="night-atlas"] .bbx-landmark-system-theme .bbx-system-theme-button { color: #e0f5e9; }
 .bbx-interface-tab[data-card-theme="night-atlas"] {
   background: #23666a;
   border-top-color: #5caaa4;
@@ -294,7 +295,10 @@
   }
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] [aria-label="Pane controls"] button {
-  color: #a9d2c7;
+  background: #103e46;
+  color: #e0f5e9;
+  border: 1px solid #5caaa4;
+  border-radius: 8px;
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] [aria-label="Pane controls"] button:hover {
   color: #174b4d; background: #ffd38b;
