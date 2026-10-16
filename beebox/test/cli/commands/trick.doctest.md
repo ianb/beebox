@@ -112,3 +112,156 @@ missing.stderr.includes("Expected: src/tricks/scripts/nope/index.ts")
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A successful run commits only the paths the trick changed
+
+The runner fingerprints every dirty path before the trick starts and again
+after it exits 0, and commits the paths that are new or whose content changed.
+An edit someone left uncommitted before the run stays uncommitted. Untracked
+directories are listed file by file, so a new file in a new directory is
+committed.
+
+```ts setup
+import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
+
+function git(box, args) {
+  return execFileSync("git", args, { cwd: box.root, encoding: "utf8" });
+}
+
+// The files the HEAD commit touched, and its subject and Run-By trailer.
+function headCommit(box) {
+  return {
+    subject: git(box, ["log", "-1", "--format=%s"]).trim(),
+    runBy: git(box, ["log", "-1", "--format=%(trailers:key=Run-By,valueonly)"]).trim(),
+    files: git(box, ["show", "--name-only", "--format=", "HEAD"]).trim().split("\n"),
+  };
+}
+
+function dirty(box) {
+  return git(box, ["status", "--porcelain", "--untracked-files=all"]).trim().split("\n").filter(Boolean);
+}
+
+// A trick that appends a line to each box-relative path given as an argument,
+// creating parent directories. A literal "fail" argument makes it exit 3.
+const WRITE_TRICK = `
+import { appendFileSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+const args = process.argv.slice(2);
+for (const rel of args.filter((a) => a !== "fail")) {
+  const abs = join(process.env.BBX_BOX_ROOT, rel);
+  mkdirSync(dirname(abs), { recursive: true });
+  appendFileSync(abs, "from trick\\n");
+}
+process.exit(args.includes("fail") ? 3 : 0);
+`;
+
+async function writeBoxFile(box, rel, content) {
+  await mkdir(join(box.root, rel, ".."), { recursive: true });
+  await writeFile(box.path(rel), content);
+}
+
+// A box with the write trick committed, and one unrelated uncommitted edit.
+async function boxWithPendingEdit() {
+  const box = await makeTmpBox({ git: true });
+  await writeTrick(box, "write", WRITE_TRICK);
+  await writeBoxFile(box, "notes/shared.txt", "committed\n");
+  git(box, ["add", "-A"]);
+  git(box, ["commit", "-q", "-m", "fixture"]);
+  await writeBoxFile(box, "notes/someone-else.txt", "unrelated edit\n");
+  return box;
+}
+```
+
+```ts
+const box = await boxWithPendingEdit();
+const r = await runTrickCli(box.root, ["write", "out/new/deep/result.txt"]);
+r.code
+=> 0
+
+headCommit(box)
+=> {"subject":"Auto-commit changes from trick: write","runBy":"trick/write","files":["out/new/deep/result.txt"]}
+
+dirty(box)
+=> ["?? notes/someone-else.txt"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A trick's edit to an already-dirty file is committed
+
+A path that was dirty before the run and that the trick changes again is in
+both snapshots; its content differs, so it is committed. The commit holds the
+whole file, including the earlier uncommitted edit.
+
+```ts
+const box = await boxWithPendingEdit();
+await writeFile(box.path("notes/shared.txt"), "committed\nedited before the run\n");
+const r = await runTrickCli(box.root, ["write", "notes/shared.txt"]);
+headCommit(box).files
+=> ["notes/shared.txt"]
+
+await readFile(box.path("notes/shared.txt"), "utf8")
+=> committed
+edited before the run
+from trick
+
+dirty(box)
+=> ["?? notes/someone-else.txt"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Output that git ignores commits nothing
+
+```ts
+const box = await boxWithPendingEdit();
+await writeFile(box.path(".gitignore"), (await readFile(box.path(".gitignore"), "utf8")) + "scratch/\n");
+git(box, ["commit", "-q", "-am", "ignore scratch"]);
+const headBefore = git(box, ["rev-parse", "HEAD"]);
+
+const r = await runTrickCli(box.root, ["write", "scratch/out.txt"]);
+r.code
+=> 0
+
+git(box, ["rev-parse", "HEAD"]) === headBefore
+=> true
+
+dirty(box)
+=> ["?? notes/someone-else.txt"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## `--no-commit` and a failed run leave the tree as the trick left it
+
+```ts
+const box = await boxWithPendingEdit();
+const headBefore = git(box, ["rev-parse", "HEAD"]);
+
+const skipped = await runTrickCli(box.root, ["write", "--no-commit", "out/a.txt"]);
+skipped.code
+=> 0
+```
+
+```ts continue
+const failed = await runTrickCli(box.root, ["write", "out/b.txt", "fail"]);
+failed.code
+=> 3
+
+git(box, ["rev-parse", "HEAD"]) === headBefore
+=> true
+
+dirty(box)
+=> ["?? notes/someone-else.txt","?? out/a.txt","?? out/b.txt"]
+```
+
+```ts cleanup
+await box.cleanup();
+```

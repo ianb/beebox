@@ -16,7 +16,8 @@ import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
-import { stageAll, commit, getStatus } from "../../lib/git/core/operations.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
+import { changedDirtyPaths, snapshotDirtyPaths, type DirtySnapshot } from "../../lib/git/dirty-snapshot.js";
 import { buildScriptEnv } from "../../core/script-env/core.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
@@ -32,18 +33,21 @@ function resolveTsx(): string {
 }
 
 /**
- * If the trick left uncommitted changes, stage and commit them.
+ * Commit the paths the trick changed: those dirty now that were clean before
+ * the run, or whose content differs from the `before` snapshot. Edits that
+ * were already uncommitted when the trick started stay uncommitted, and output
+ * that git ignores commits nothing.
  */
-async function commitIfDirty(boxRoot: string, trickName: string): Promise<void> {
-  const status = await getStatus(boxRoot);
-  if (status.clean) return;
-
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
+async function commitTrickChanges(
+  { boxRoot, trickName, before }: { boxRoot: string; trickName: string; before: DirtySnapshot },
+): Promise<void> {
+  const paths = changedDirtyPaths(before, await snapshotDirtyPaths(boxRoot));
+  const committed = await stageAndCommitPaths(boxRoot, {
+    paths,
     message: `Auto-commit changes from trick: ${trickName}`,
     trailers: { "Run-By": `trick/${trickName}` },
   });
-  console.log(`Committed changes left by trick "${trickName}".`);
+  if (committed !== null) console.log(`Committed ${String(paths.length)} path(s) changed by trick "${trickName}".`);
 }
 
 interface TrickInfo {
@@ -156,6 +160,7 @@ export const trickCommand = new Command("trick")
   .description("Run box-local agent-authored scripts (tricks)")
   .argument("[name]", "Trick to run")
   .option("--check-secrets", "Validate all trick secret declarations without running a trick")
+  .option("--no-commit", "Leave the trick's changes uncommitted")
   .allowUnknownOption(true)
   .allowExcessArguments(true)
   .action(async function (this: Command, name: string | undefined) {
@@ -167,7 +172,7 @@ export const trickCommand = new Command("trick")
     // agent's actual cwd (boxRoot).
     const relScriptsDir = `${boxCodePathsRelativeToBoxRoot(shape).tricksDir}/scripts`;
 
-    const options = this.opts<{ checkSecrets?: boolean }>();
+    const options = this.opts<{ checkSecrets?: boolean; commit: boolean }>();
     if (options.checkSecrets) {
       try {
         const tricks = await discoverTricks(tricksDir);
@@ -216,6 +221,10 @@ export const trickCommand = new Command("trick")
     // Collect remaining args after the trick name
     const trickArgs = this.args.slice(1);
 
+    // Snapshot before the run so the commit afterwards can leave out edits
+    // that were already uncommitted.
+    const before = options.commit ? await snapshotDirtyPaths(boxRoot) : null;
+
     let exitCode: number;
     try {
       exitCode = await runTrick({ boxRoot, tricksDir, name, entryPoint, args: trickArgs });
@@ -229,6 +238,5 @@ export const trickCommand = new Command("trick")
       return;
     }
 
-    // Auto-commit any changes the trick left uncommitted
-    await commitIfDirty(boxRoot, name);
+    if (before !== null) await commitTrickChanges({ boxRoot, trickName: name, before });
   });

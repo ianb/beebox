@@ -51,6 +51,7 @@ relative imports of `lib/` work without configuration. There is no build step.
 - `bbx trick`: list every trick with its description.
 - `bbx trick <name>`: run one.
 - `bbx trick <name> arg1 arg2`: pass arguments.
+- `bbx trick <name> --no-commit`: run one and leave its changes uncommitted.
 - `bbx trick --check-secrets`: validate every trick's secret declarations
   without running anything.
 
@@ -64,22 +65,26 @@ Facts a trick author needs and cannot see from inside the script:
   `bbx` process. A trick that checks its parent's liveness, or asks "am I
   being run by bbx", has to look at the grandparent.
 - **The engine commits after the trick exits, and only on exit code 0.**
-  Once the child closes with status 0, the engine checks the box's git
-  status and, if anything is dirty, stages the **whole working tree** (minus
-  any oversized regular blob, which the stage step unstages so a sweep cannot
-  commit one) and commits it with the trailer `Run-By: trick/<name>`. A non-zero exit, or a
-  trick that fails to start, leaves the tree as the trick left it. The trick's
-  own `finally` blocks and exit handlers all run before that commit, so a
-  trick cannot observe or guard the engine's commit from inside its own
-  process.
-- **Concurrent runs are not isolated from each other.** Because the
-  auto-commit stages everything dirty, a trick that writes files while
-  another trick or a chat session is also writing can have its output
-  committed under the other run's trailer, or find nothing left to commit
-  because the other run's commit already took it. A trick that writes files
-  and can run concurrently should commit its own paths before exiting, so the
-  engine's auto-commit finds a clean tree. That pattern stays correct if the
-  engine later narrows what it stages.
+  Before it starts the trick, the engine records every dirty path in the box
+  and a hash of its content. Once the child closes with status 0, it records
+  them again and commits only the paths the trick changed: paths that were
+  clean before the run, and already-dirty paths whose content the trick
+  changed. The commit has the trailer `Run-By: trick/<name>`. An edit that
+  was uncommitted before the run and that the trick did not touch stays
+  uncommitted. If the trick changes an already-dirty file, the commit holds
+  the whole file, including the earlier edit. Output that git ignores is
+  never committed. A non-zero exit, or a trick that fails to start, leaves
+  the tree as the trick left it. The trick's own `finally` blocks and exit
+  handlers all run before that commit, so a trick cannot observe or guard
+  the engine's commit from inside its own process.
+- **`bbx trick <name> --no-commit` skips the engine's commit.** Use it to test
+  a trick and look at its output before it becomes history. `bbx` reads the
+  flag wherever it appears, so the trick does not receive it.
+- **Concurrent runs are not isolated from each other.** The engine sees file
+  changes, not which process made them. A file that another trick or a chat
+  session writes while this trick runs is committed under this trick's
+  trailer. A trick that writes files and can run concurrently should commit
+  its own paths before exiting.
 
 ## Secrets
 

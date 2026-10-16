@@ -1,6 +1,6 @@
 ---
 title: "bbx trick's auto-commit stages the whole tree and races across concurrent trick runs, instead of using the existing scoped/race-tolerant commit helper"
-workstream: unattached
+workstream: trick-scoped-commit
 area: beebox
 filed-by: agent
 discovered-by: agent

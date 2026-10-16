@@ -1865,7 +1865,7 @@ tests:
       them. What happens to those files after it exits, and which process is
       the trick's direct parent? Do not change anything.
     expected_level: knows_about
-    watch_for: "Opens box-docs/tricks.md and reports that on exit 0 the engine stages the whole tree and commits with a Run-By: trick/<name> trailer, and that the direct parent is the tsx wrapper, not bbx."
+    watch_for: "Opens box-docs/tricks.md and reports that on exit 0 the engine commits only the paths the trick changed (not edits already uncommitted before the run) with a Run-By: trick/<name> trailer, and that the direct parent is the tsx wrapper, not bbx."
     should_read_any:
       - "box-docs/tricks.md"
     correct_contains: ["Run-By", "tsx"]
