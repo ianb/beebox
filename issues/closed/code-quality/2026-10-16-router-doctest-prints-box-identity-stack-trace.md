@@ -3,10 +3,14 @@ title: "The hub router doctest prints a box-identity stack trace for its fixture
 workstream: unattached
 area: beebox
 labels: [tests]
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: docs-refresh-annex — running test/hub/server.router.doctest.md, 2026-10-16
 ---
+
+**Closed 2026-10-16:** the fixture's default box now has a real, empty
+content root in a temp directory, removed in teardown; the run prints nothing.
 
 `beebox/test/hub/server.router.doctest.md` passes, but it prints a warning
 with a stack trace on every run:
