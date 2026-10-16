@@ -1,6 +1,6 @@
 ---
 title: "A docs refresh re-hashes every annexed file through git-annex while the box is closed, so a large box is unreachable for minutes"
-workstream: unattached
+workstream: docs-refresh-annex
 area: beebox
 labels: [annex, migrations]
 filed-by: agent
