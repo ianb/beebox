@@ -74,7 +74,12 @@ export function clearResumeSessionId(): void {
   }
 }
 
-export type UploadState = "uploading" | "uploaded" | "failed";
+/**
+ * One capture item's upload. `unreadable` is a picked file whose bytes could
+ * not be read (moved or deleted since the pick): it never reached the box, and
+ * unlike `failed` a retry cannot help, so it is not offered one.
+ */
+export type UploadState = "uploading" | "uploaded" | "failed" | "unreadable";
 
 export interface ResumableCaptureResponse {
   resumable: Array<{

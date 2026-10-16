@@ -1,12 +1,15 @@
 ---
 title: "Finishing a capture in which every upload failed says nothing in the chat"
-workstream: unattached
+workstream: capture-photo-flow
 area: beebox
 labels: [low]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — B-inventory journey walk (second walk), 2026-10-08
+resolution: implemented
 ---
+
+> Fixed in `e2d468d33`. Done is off while nothing is on the box or uploading (a recording counts), and the banner says why. A Done that still ends with nothing landed, for example after Skip, keeps the overlay open and says nothing was sent, instead of sealing an empty capture that the box drops.
 
 In the second B-inventory walk both photo uploads of a capture failed. The
 walker pressed the Done tick and returned to an empty chat with no word about
@@ -34,4 +37,4 @@ reproduction with the code instrumented.
 Finish a capture with nothing landed as a visible outcome: a chat line such as
 "No photos arrived", or keep the overlay open with the banner.
 
-Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 13, shot 06).
+Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 13, shot 06).

@@ -12,8 +12,10 @@ import { useCaptureDevices } from "./useCaptureDevices";
 import { useCaptureUploads } from "./useCaptureUploads";
 import { useCaptureInputs } from "./useCaptureInputs";
 import { useCaptureCamera } from "./useCaptureCamera";
-import { useCaptureFinish } from "./useCaptureFinish";
+import { useCaptureFinish, type CaptureExit } from "./useCaptureFinish";
 import { useRetryFeedback } from "../retry-feedback";
+
+export type { CaptureExit };
 
 /**
  * Capture-mode recorder timeslice: 5s (vs the recorder's 20s default) shortens
@@ -48,7 +50,7 @@ export interface CaptureResumeTarget {
  */
 export function useCaptureSession(opts: {
   targetSessionId: string | null;
-  onExit: () => void;
+  onExit: (outcome: CaptureExit) => void;
   resume?: CaptureResumeTarget | null;
 }) {
   const { targetSessionId, onExit } = opts;
@@ -90,9 +92,15 @@ export function useCaptureSession(opts: {
     setRecording(false);
   }, []);
 
+  // A resumed capture already has media on the box from before this page.
+  const resumedMedia = resume !== null && resume.photoCount + resume.fileCount + resume.segmentCount > 0;
+  const { readLandedSeq } = uploads;
+  const nothingLanded = useCallback(() => !resumedMedia && readLandedSeq() === 0, [resumedMedia, readLandedSeq]);
+
   const { finalizing, handleDone, handleCancel, skipPendingUploads } = useCaptureFinish({
     sessionId, recording, stopRecorder,
     readFailureSeq: uploads.readFailureSeq,
+    nothingLanded,
     closeForSealing: uploads.closeForSealing,
     reopenAfterSealing: uploads.reopenAfterSealing,
     awaitPending, abortPending, clearPendingAndFailed,
@@ -158,6 +166,15 @@ export function useCaptureSession(opts: {
   }, [recording, finalizing, sessionId, handleChunk, refreshDevices]);
 
   const photoTotal = uploads.counts.photoTotal;
+  // Photo indices handed out so far. Two shutter taps can both be awaiting
+  // their blobs before either has re-rendered `photoTotal`, so the index comes
+  // from this synchronous counter, or both would claim `photo-001`.
+  const photoSlots = useRef(0);
+  const reservePhotos = useCallback((count: number): number => {
+    const base = Math.max(photoTotal, photoSlots.current);
+    photoSlots.current = base + count;
+    return base;
+  }, [photoTotal]);
   const takePhoto = useCallback(async () => {
     if (!sessionId || finalizing) return;
     if (!cameraOn) { await startCamera(); return; }
@@ -165,11 +182,11 @@ export function useCaptureSession(opts: {
     const { blob: blobPromise, source } = camera.takePhoto();
     const blob = await blobPromise;
     if (!blob) return;
-    const index = photoTotal;
+    const index = reservePhotos(1);
     const startedAt = new Date().toISOString();
     setPhotoStates((prev) => [...prev, "uploading"]);
     uploadPhoto({ sessionId, index, blob, startedAt, source });
-  }, [sessionId, finalizing, cameraOn, photoTotal, startCamera, triggerFlash, camera, uploadPhoto, setPhotoStates]);
+  }, [sessionId, finalizing, cameraOn, reservePhotos, startCamera, triggerFlash, camera, uploadPhoto, setPhotoStates]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -182,7 +199,7 @@ export function useCaptureSession(opts: {
   }, [takePhoto, toggleRecording]);
 
   const inputs = useCaptureInputs({
-    sessionId, photoTotal, fileTotal: uploads.counts.fileTotal,
+    sessionId, reservePhotos, fileTotal: uploads.counts.fileTotal,
     setPhotoStates, setFileStates, uploadPhoto, uploadFile,
   });
 

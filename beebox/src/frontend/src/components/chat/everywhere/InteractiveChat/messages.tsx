@@ -27,6 +27,7 @@ import {
 import { MAX_RETAINED_MESSAGES } from "../../../../machines/chat-types";
 import { useRevealAnchor } from "./reveal-anchor";
 import { TranscriptSelection } from "./TranscriptSelection";
+import { useCaptureAnchor } from "./use-capture-anchor";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
@@ -141,7 +142,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, sendSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
+  totalEntries, onLoadOlder, loadingOlder, sendSignal, captureSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
   captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
 }: {
   messages: SessionEntry[];
@@ -164,6 +165,8 @@ function MessageListInner({
   loadingOlder: boolean;
   /** Increments on every send — the anchor signal, not a scroll-to-bottom. */
   sendSignal: number;
+  /** Increments when Done in capture seals a capture; its message is anchored when it arrives. */
+  captureSignal: number;
   liveTurnId: string | null;
   proseEnabled: boolean;
   /** Voice messages waiting for their HQ transcript (pending bubbles). */
@@ -223,6 +226,8 @@ function MessageListInner({
     anchorToTop(users[users.length - 1] ?? null);
   }, [sendSignal, anchorToTop]);
 
+  useCaptureAnchor({ captureSignal, sendSignal, groups, captureBubbles, contentElRef, anchorToTop });
+
   // Mounting this list IS opening a thread: `InteractiveChat` is keyed by
   // session (ChatPage), so a session switch remounts. Say so to the controller
   // rather than relying on the initial value of a ref inside it.
@@ -232,7 +237,7 @@ function MessageListInner({
 
   // The bounded open-thread hold ends once the first history render has landed.
   const loading = snapshot.matches("loading");
-  const showSendSpacer = sendSignal > 0;
+  const showSendSpacer = sendSignal > 0 || captureSignal > 0;
   useEffect(() => {
     if (!loading && messages.length > 0) settleOpen();
   }, [loading, messages.length, settleOpen]);
@@ -281,7 +286,8 @@ function MessageListInner({
     audioOverlayStore, onHqSendLive,
   }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, captureVerbs, audioOverlayStore, onHqSendLive]);
 
-  if (messages.length === 0 && !isStreaming) {
+  // A first capture into an empty chat still shows its pending bubble.
+  if (messages.length === 0 && !isStreaming && captureBubbles.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
         <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
