@@ -1,15 +1,18 @@
 ---
 title: "Chat message rows re-render on every streamed token"
-workstream: unattached
+workstream: frontend-dom-harness
 area: beebox
 labels: [performance]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — tracing the max-update-depth warning, 2026-10-08
+resolution: implemented
 ---
 
+> **Closed:** Resolved in commit 25ff24d22: settled rows render 0 times per streamed token, verified by a DOM doctest render count (red on main code, green on branch). Not re-measured in a browser.
+
 While tracing the "Maximum update depth exceeded" warning
-([closed issue](../closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md)),
+([closed issue](../bugs/2026-10-08-client-max-update-depth-after-chat-turns.md)),
 render counts during one short chat turn on test1 showed the message list
 re-rendering far more than the visible change needs:
 
