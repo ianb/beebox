@@ -50,6 +50,20 @@ function nextTabIndex(key: string, position: { index: number; length: number }):
   return key === "End" ? length - 1 : null;
 }
 
+/**
+ * Where to scroll so the strip's left edge starts on a whole tab. Scrolling
+ * only as far as the revealed tab needs cut the leftmost tab through its
+ * middle: its label went under the fade and only its "×" showed (journey
+ * walks, 2026-10-08/09). Moves on to the next tab start at or past `from`,
+ * never past `limit` (the revealed tab's own start).
+ */
+function wholeTabStart({ scroller, from, limit }: { scroller: HTMLElement; from: number; limit: number }): number {
+  for (const child of scroller.children) {
+    if (child instanceof HTMLElement && child.offsetLeft >= from) return Math.min(child.offsetLeft, limit);
+  }
+  return limit;
+}
+
 function revealTab({ activePath, tabRefs, setOverflow }: { activePath: string; tabRefs: { current: Map<string, HTMLElement> }; setOverflow: (value: { left: boolean; right: boolean }) => void }) {
   const el = tabRefs.current.get(activePath);
   const scroller = el?.parentElement;
@@ -59,7 +73,7 @@ function revealTab({ activePath, tabRefs, setOverflow }: { activePath: string; t
   if (left < scroller.scrollLeft) {
     scroller.scrollTo({ left, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   } else if (right > scroller.scrollLeft + scroller.clientWidth) {
-    scroller.scrollTo({ left: right - scroller.clientWidth, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    scroller.scrollTo({ left: wholeTabStart({ scroller, from: right - scroller.clientWidth, limit: left }), behavior: prefersReducedMotion() ? "auto" : "smooth" });
   }
   setOverflow({ left: scroller.scrollLeft > 1, right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1 });
 }
@@ -132,9 +146,12 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
           "bbx-card-theme bbx-interface-tab group flex items-center",
           // A pinned tab is compact, the way a browser's is: it is there to hold
           // its place, not to be read. The full path is still in its title.
-          tab.pinned ? "flex-shrink-0 max-w-[7rem]" : "w-56 min-w-[9rem] max-w-[14rem] shrink",
+          // Unpinned tabs shrink well below their label before the strip
+          // scrolls; a narrow one tucks its actions away (interface.css).
+          tab.pinned ? "flex-shrink-0 max-w-[7rem]" : "w-56 min-w-[5.5rem] max-w-[14rem] shrink",
         )}
         data-active={isActive || undefined}
+        data-pinned={tab.pinned || undefined}
         data-card-theme={theme.name}
         data-card-stock={theme.stock}
       >

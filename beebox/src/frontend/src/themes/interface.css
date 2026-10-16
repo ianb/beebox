@@ -50,6 +50,17 @@
   border-bottom: 3px solid transparent;
 }
 
+/* A narrow unpinned tab gives its width to the label: pin and close show
+   again on hover or keyboard focus, and always on the active tab. */
+.bbx-interface-tab:not([data-pinned]) {
+  container-type: inline-size;
+}
+@container (max-width: 8rem) {
+  .bbx-interface-tab:not([data-active], [data-pinned], :hover, :focus-within) .bbx-interface-tab-action {
+    display: none;
+  }
+}
+
 .bbx-interface-tab[data-card-theme="paper"],
 .bbx-interface-tab[data-card-theme="post-it"] {
   background-image: var(--bbx-interface-tab-grain);

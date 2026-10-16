@@ -1,6 +1,6 @@
 ---
 title: "An overflowing sidecar tab strip puts tab close buttons under the pane controls"
-workstream: unattached
+workstream: chat-chrome-fixes
 area: beebox
 filed-by: agent
 discovered-by: agent
