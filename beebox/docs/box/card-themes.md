@@ -248,7 +248,25 @@ The fins are not independently animated. Reduced motion keeps both layers still.
 Doodlebit (`doodlebit`, stock `ink`) uses black-and-white pixel doodles, compact
 regular labels, square controls and sparse lime accents. User messages are
 white on black. A labeled Properties button replaces the folded corner.
-The decorative background nudges a few pixels only while a mouse moves over
-exposed desk space, then settles; controls and reading surfaces remain still.
+Small cellular walkers advance with mouse travel over exposed desk space and
+pause when the mouse stops; the larger doodles and reading surfaces stay still.
 Touch and reduced-motion users get a static background. Both themes support
 system and individual-card selection and respect explicit nested card themes.
+
+## Tempest, Veil, and Gilt
+
+Tempest (`tempest`, stock `water`) combines luminous stormy ocean artwork with
+translucent dark reading surfaces. The water continues beneath the toolbar;
+blur softens detail behind text. The artwork remains still.
+
+Veil (`veil`, stock `pigment`) combines scraped fuchsia, jade and lime pigment
+with pale opaque painted cards. Color overlaps suggest translucence without
+making reading surfaces transparent. Controls use teal and lime; the folded
+Properties corner has a transparent fill.
+
+Gilt (`gilt`, stock `leaf`) uses worn goldleaf, mineral blue and oxblood abstract
+forms. Rich gold title strips and controls pair with dark blue reading surfaces,
+fine double card edges and narrow gilded message accents. Typography stays plain.
+
+All three support system and individual-card selection, pair with Paper and
+Sticky note, and preserve explicit card materials. Print uses light plain surfaces.

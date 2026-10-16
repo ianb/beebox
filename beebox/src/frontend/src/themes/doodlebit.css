@@ -1,4 +1,9 @@
 /* Hand-drawn pixel paper; only the background responds to pointer movement. */
+@property --doodlebit-walkers {
+  syntax: "<url>";
+  inherits: false;
+  initial-value: url("./doodlebit-walkers.svg#frame0");
+}
 .bbx-box-presentation[data-chrome-theme="doodlebit"] {
   position: relative;
   isolation: isolate;
@@ -12,12 +17,21 @@
 .bbx-box-presentation[data-chrome-theme="doodlebit"]:not(.bbx-system-theme-preview)::before {
   content: "";
   position: absolute;
-  inset: -8px;
+  inset: 0;
   pointer-events: none;
   z-index: -1;
   background: #f8f8f4 url("./doodlebit.svg") 0 0 / 720px 560px;
-  transform: translate(var(--doodlebit-x, 0px), var(--doodlebit-y, 0px));
-  transition: transform 180ms steps(3, end);
+}
+.bbx-box-presentation[data-chrome-theme="doodlebit"]:not(.bbx-system-theme-preview)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  --doodlebit-walkers: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background-image: var(--doodlebit-walkers);
+  background-size: 720px 560px;
+  background-repeat: repeat;
 }
 [data-chrome-theme="doodlebit"] .bbx-app-nav {
   background: #fff;
@@ -47,6 +61,17 @@
   border-radius: 0;
   background-clip: padding-box;
   box-shadow: 2px 3px 0 #202020;
+}
+/* Square pixel outlines avoid fractional border-image corner slices. */
+[data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-user-paper) {
+  border: 2px solid #202020;
+  border-image: none;
+  background-clip: border-box;
+  box-shadow: 2px 2px 0 #202020;
+}
+[data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout) {
+  margin: 8px 12px 12px;
+  padding: 12px 16px;
 }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper { background: #242424; color: #fff; filter: none; }
 [data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -99,6 +124,3 @@
 .bbx-card-theme[data-card-theme="doodlebit"] .bbx-card-properties { transform: none; }
 [data-chrome-theme="doodlebit"] :is(button, textarea, input):focus-visible:not(.bbx-card-theme *),
 .bbx-card-theme[data-card-theme="doodlebit"] :is(button, textarea, input):focus-visible { outline: 3px solid #6451cc; outline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) {
-  .bbx-box-presentation[data-chrome-theme="doodlebit"]:not(.bbx-system-theme-preview)::before { transform: none; transition: none; }
-}

@@ -28,7 +28,7 @@ An absent config is ordinary and exposes the stable built-in catalog.
 const box = await makeTmpBox();
 const first = await caller(box.root).presentation.get({ boxKey: "test" });
 JSON.stringify([first.catalog.map((theme) => theme.name), first.presentation, first.chrome, first.configProblems])
-=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon","deck","night-atlas","rose-trellis","gold-thread","goldfish","doodlebit"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
+=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon","deck","night-atlas","rose-trellis","gold-thread","goldfish","doodlebit","tempest","veil","gilt"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
 
 JSON.stringify([
   first.canEditCardThemes,

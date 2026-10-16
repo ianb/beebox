@@ -388,3 +388,26 @@ validateSystemThemeChoice({ name: "doodlebit" })
 systemCardThemes("doodlebit")
 => ["doodlebit", "paper", "post-it"]
 ```
+
+## Painted and gilded themes
+
+```javascript
+validateSystemThemeChoice({ name: "tempest" })
+=> { choice: { name: "tempest", stock: "water" }, problem: null }
+
+systemCardThemes("tempest")
+=> ["tempest", "paper", "post-it"]
+
+validateSystemThemeChoice({ name: "veil" })
+=> { choice: { name: "veil", stock: "pigment" }, problem: null }
+
+systemCardThemes("veil")
+=> ["veil", "paper", "post-it"]
+
+validateSystemThemeChoice({ name: "gilt" })
+=> { choice: { name: "gilt", stock: "leaf" }, problem: null }
+
+systemCardThemes("gilt")
+=> ["gilt", "paper", "post-it"]
+
+```

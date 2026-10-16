@@ -58,7 +58,7 @@
 .bbx-system-theme-preview[data-chrome-theme="doodlebit"] .bbx-system-theme-toolbar i { background: #202020; }
 .bbx-system-theme-preview[data-chrome-theme="doodlebit"] .bbx-system-theme-desk > span { background: #fff; border-color: #202020; border-radius: 0; box-shadow: 2px 2px 0 #202020; }
 @media print {
-  .bbx-box-presentation[data-chrome-theme="doodlebit"]::before, [data-chrome-theme="doodlebit"] .bbx-app-nav::before { display: none; animation: none; }
+  .bbx-box-presentation[data-chrome-theme="doodlebit"]::before, .bbx-box-presentation[data-chrome-theme="doodlebit"]::after, [data-chrome-theme="doodlebit"] .bbx-app-nav::before { display: none; animation: none; }
   .bbx-box-presentation[data-chrome-theme="doodlebit"], [data-chrome-theme="doodlebit"] :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material), .bbx-card-surface[data-card-theme="doodlebit"] { background: transparent; color: #000; border: 0; box-shadow: none; filter: none; }
   .bbx-card-theme[data-card-theme="doodlebit"], [data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
     --bbx-paper: #fff; --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
@@ -66,4 +66,32 @@
     --tw-prose-quotes: #000; --tw-prose-counters: #333; --tw-prose-bullets: #333; --tw-prose-captions: #333;
     color: #000;
   }
+}
+
+/* Shared badge segments form one square counter, without rounded clipping. */
+[data-chrome-theme="doodlebit"] .bbx-app-nav div:has(> div > :is(#bbx-nav-questions, #bbx-nav-todo, #bbx-nav-errors)) {
+  border: 2px solid #202020;
+  border-radius: 0;
+  overflow: visible;
+  background: #fff;
+  color: #202020;
+}
+[data-chrome-theme="doodlebit"] .bbx-app-nav :is(#bbx-nav-questions, #bbx-nav-todo) {
+  border: 0;
+  box-shadow: none;
+}
+[data-chrome-theme="doodlebit"] .bbx-app-nav div:has(> :is(#bbx-nav-questions, #bbx-nav-todo, #bbx-nav-errors)) + div {
+  border-left: 2px solid #202020;
+}
+.bbx-interface-tab[data-card-theme="doodlebit"] {
+  --bbx-tab-top-border: 3px;
+  border-inline: 3px solid #202020;
+  border-bottom: 0;
+}
+/* Keep the composer frame inside its clipped pane; no notches or outer shadow. */
+[data-chrome-theme="doodlebit"] .bbx-composer-material {
+  border: 3px solid #202020;
+  border-image: none;
+  box-shadow: none;
+  background-clip: border-box;
 }
