@@ -123,3 +123,35 @@ the trick's output. Its points, checked against the code:
 The report also argues that `priority: normal` understates the bug (the
 2026-10-09 note says the same). The fix does not need a decision in
 [rethink box autocommit](../decisions/2026-08-30-rethink-box-autocommit.md).
+
+## Fix 2026-10-15 (worktree `trick-scoped-commit`, not yet merged)
+
+The runner now commits only what the trick changed:
+
+- Before spawning the trick, `bbx trick` snapshots every dirty path under the
+  box (`git status --porcelain -z --untracked-files=all`, both sides of a
+  staged rename) with a content hash and mode
+  (`beebox/src/lib/git/dirty-snapshot.ts`). After exit 0 it snapshots again
+  and commits the paths that are new or whose fingerprint changed, through
+  `stageAndCommitPaths`. A path dirty before and untouched stays uncommitted.
+  A path dirty before and changed by the trick is committed whole, including
+  the earlier edit; content alone cannot separate the two.
+- An empty difference commits nothing. Ignored output therefore commits
+  nothing. There is no whole-tree fallback.
+- The 10 MB oversized-blob guard still applies, now scoped to the commit's
+  own paths (`excludeOversized` on `stageAndCommitPaths`).
+- A failed trick still commits nothing.
+- `bbx trick <name> --no-commit` skips the commit. `bbx` consumes the flag
+  wherever it appears, so the trick never receives it.
+- The race from the original report goes away with the helper:
+  `stageAndCommitPaths` holds the box git lock and treats "nothing to commit"
+  as success.
+
+Still open: the runner sees file changes, not which process made them.
+Another writer that changes a file during the trick's run gets committed
+under the trick's trailer. Declared output paths
+([sandboxed trick helpers](../features/2026-09-16-sandboxed-trick-helpers.md))
+would close that.
+
+Tests: `beebox/test/cli/commands/trick.doctest.md`. Docs:
+`beebox/docs/box/tricks.md`.
