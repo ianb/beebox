@@ -107,6 +107,28 @@ export const THEME_CATALOG = [
     systemOnly: false,
     cardThemes: ["night-atlas", "paper", "post-it"],
   },
+  {
+    name: "rose-trellis",
+    label: "Rose Trellis",
+    stocks: ["textile"],
+    defaultStock: "textile",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["rose-trellis", "paper", "post-it"],
+  },
+  {
+    name: "gold-thread",
+    label: "Gold Thread",
+    stocks: ["textile"],
+    defaultStock: "textile",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["gold-thread", "paper", "post-it"],
+  },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];

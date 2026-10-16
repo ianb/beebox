@@ -363,4 +363,16 @@ resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { 
 
 resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "deck", cardChoice: { name: "paper", stock: "blue" } }).choice
 => { name: "paper", stock: "blue" }
+
+validateSystemThemeChoice({ name: "rose-trellis" })
+=> { choice: { name: "rose-trellis", stock: "textile" }, problem: null }
+
+systemCardThemes("rose-trellis")
+=> ["rose-trellis", "paper", "post-it"]
+
+validateSystemThemeChoice({ name: "gold-thread" })
+=> { choice: { name: "gold-thread", stock: "textile" }, problem: null }
+
+systemCardThemes("gold-thread")
+=> ["gold-thread", "paper", "post-it"]
 ```
