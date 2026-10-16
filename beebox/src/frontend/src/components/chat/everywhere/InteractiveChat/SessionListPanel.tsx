@@ -45,7 +45,7 @@ import { bbxSource } from "../../../../lib/source-tag";
 import { useDropdownClose } from "../../../ui/Dropdown";
 import { TextField } from "../../../ui/fields/field";
 import { MenuItem } from "../../../ui/dropdown-menu-item";
-import { layoutSessionList } from "./session-list-grouping";
+import { layoutSessionList, sessionIdHint } from "./session-list-grouping";
 import { relativeTime, useChatSearch, ChatSearchRows } from "./session-search";
 
 type LoadState =
@@ -158,7 +158,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
     sessions,
     contextDir: activeRow?.contextDir ?? contextDir,
   });
-  const rowProps = { boxSlug, currentSessionId };
+  const rowProps = { boxSlug, currentSessionId, allRows: [...sessions, ...dead] };
   const hiddenCount = layout.done.length + dead.length;
   const liveCount = layout.kind === "flat" ? layout.sessions.length : layout.here.length + layout.elsewhere.length;
 
@@ -184,7 +184,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
           <SessionRows sessions={layout.done} showLandmark muted {...rowProps} />
         </SessionGroup>
       ) : null}
-      {showAll ? <DeadSessionGroups dead={dead} boxSlug={boxSlug} /> : null}
+      {showAll ? <DeadSessionGroups dead={dead} boxSlug={boxSlug} allRows={rowProps.allRows} /> : null}
       {hiddenCount === 0 ? null : (
         <MenuItem id="bbx-session-list-all" onClick={onToggleAll} keepOpen>
           <span className="text-warm-500">
@@ -204,27 +204,31 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
  *
  * Each row goes to the husk card: there is nothing at `/chat?session=` to open.
  */
-function DeadSessionGroups({ dead, boxSlug }: { dead: DeadChatInfo[]; boxSlug: string }) {
+function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; boxSlug: string; allRows: readonly { label: string }[] }) {
   const close = useDropdownClose();
   if (dead.length === 0) return null;
   return (
     <>
       {groupByTranscriptState(dead).map((group) => (
         <SessionGroup key={group.label} label={group.label}>
-          {group.rows.map((s) => (
-            <Link
-              key={s.sessionId}
-              role="menuitem"
-              to={href(`/${boxSlug}/browse/${s.huskPath}`)}
-              onClick={close}
-              className="block px-3 py-2 text-sm text-warm-500 hover:bg-warm-100"
-            >
-              <div className="flex items-baseline gap-2">
-                <span className="flex-1 truncate">{s.label}</span>
-                <span className="text-xs flex-shrink-0 font-mono">{s.sessionId.slice(0, 8)}</span>
-              </div>
-            </Link>
-          ))}
+          {group.rows.map((s) => {
+            const idHint = sessionIdHint(s, allRows);
+            return (
+              <Link
+                key={s.sessionId}
+                role="menuitem"
+                to={href(`/${boxSlug}/browse/${s.huskPath}`)}
+                onClick={close}
+                title={`Session ${s.sessionId}`}
+                className="block px-3 py-2 text-sm text-warm-500 hover:bg-warm-100"
+              >
+                <div className="flex items-baseline gap-2">
+                  <span className="flex-1 truncate">{s.label}</span>
+                  {idHint === null ? null : <span className="text-xs flex-shrink-0 font-mono">{idHint}</span>}
+                </div>
+              </Link>
+            );
+          })}
         </SessionGroup>
       ))}
     </>
@@ -256,8 +260,11 @@ function SessionRows({
   currentSessionId,
   showLandmark,
   muted,
+  allRows,
 }: {
   sessions: ChatSessionInfo[];
+  /** Every row the list shows, so a duplicate label is caught across groups. */
+  allRows: readonly { label: string }[];
   boxSlug: string;
   currentSessionId: string | null;
   showLandmark: boolean;
@@ -269,7 +276,7 @@ function SessionRows({
     <>
       {sessions.map((s) => {
         const isViewing = currentSessionId === s.sessionId;
-        const idSuffix = s.sessionId.slice(0, 8);
+        const idHint = sessionIdHint(s, allRows);
         return (
           <Link
             key={s.sessionId}
@@ -277,6 +284,7 @@ function SessionRows({
             to={href(`/${boxSlug}/chat`)}
             search={toSearch({ session: s.sessionId })}
             onClick={close}
+            title={`Session ${s.sessionId}`}
             {...bbxSource("session", s.sessionId)}
             className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
           >
@@ -284,7 +292,7 @@ function SessionRows({
               <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-500" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
                 {s.label}
               </span>
-              <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idSuffix}</span>
+              {idHint === null ? null : <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idHint}</span>}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               {s.isActive ? (

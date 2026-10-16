@@ -77,3 +77,16 @@ export function layoutSessionList(args: {
     done,
   };
 }
+
+/**
+ * The short session id a row shows beside its label, or null. Labels are
+ * generated titles (or a first-message snippet), so the id only helps where
+ * two rows read the same; elsewhere it is noise and stays in the row's
+ * tooltip. A label that already is the id prefix (an untitled, empty chat)
+ * does not repeat it. `rows` is every row the list shows, across groups.
+ */
+export function sessionIdHint(row: { sessionId: string; label: string }, rows: readonly { label: string }[]): string | null {
+  const short = row.sessionId.slice(0, 8);
+  if (row.label === short) return null;
+  return rows.filter((r) => r.label === row.label).length > 1 ? short : null;
+}
