@@ -6,13 +6,21 @@ labels: [tests, lint, typecheck]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "What do we compile the doctests into?", 2026-10-13
+resolution: implemented
 ---
+
+Closed 2026-10-16 (workstream `doctest-typecheck`): doctests are typechecked
+through `doctest-typecheck` (agent-doctest), at zero errors in every package,
+and checked in pre-commit (staged doctests), `pnpm test:changed` (selected
+doctests), and the hourly full suite. Linting doctests stays open in part 2
+of [try the ai-deslop rules](../../code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md);
+lint changes need the boxholder's approval.
 
 Doctest code is neither typechecked nor linted. About 1,000 `*.doctest.md`
 files run through tsx/esbuild, which strips types without checking them.
 A doctest that calls a changed API with the wrong argument shape fails only
 when it runs, and only if it is selected. Part 2 of
-[try the ai-deslop rules](2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md)
+[try the ai-deslop rules](../../code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md)
 raised this. This issue owns the mechanism.
 
 ## What exists
@@ -137,9 +145,12 @@ objects passed. No source behavior changed. Type-only source changes:
 `FakeChatBackend.hasWarm()` is declared, and `appendChunk` takes a
 `ChunkSink`. The remaining commented casts are listed with their source-side
 remedies in
-[narrower types would remove doctest casts](2026-10-16-narrow-types-to-remove-doctest-casts.md).
+[narrower types would remove doctest casts](../../code-quality/2026-10-16-narrow-types-to-remove-doctest-casts.md).
 Reviews: codex gpt-6-sol on the checker (two rounds) and on the final
 state; findings fixed or recorded in the commits.
 
-Not yet wired into `typecheck`, `test:changed`, or pre-commit; that waits
-for the boxholder.
+Wired in on 2026-10-16 with the boxholder's approval: pre-commit checks the
+staged doctests, `test:changed` the doctests it selects, and the hourly full
+suite all of them. `beebox/server` now ships declarations, so
+`test/exports.doctest.md` typechecks too; beebox's `typecheck:doctest`
+rebuilds the export declarations first.

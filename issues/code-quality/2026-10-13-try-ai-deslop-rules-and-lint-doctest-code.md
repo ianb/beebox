@@ -57,7 +57,7 @@ helper with untyped parameters in
 
 The mechanism (checking the module agent-doctest generates, with its line
 map) has its own issue:
-[typecheck and lint generated doctest modules](2026-10-13-typecheck-and-lint-generated-doctest-modules.md).
+[typecheck and lint generated doctest modules](../../closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md).
 What stays here: which of the deslop rules fit doctest code once that check
 exists. `no-poor-substring-tests` and `no-repeated-expect-call` are test-file
 versions of rules in `beebox/.claude/rules/doctest.md`.

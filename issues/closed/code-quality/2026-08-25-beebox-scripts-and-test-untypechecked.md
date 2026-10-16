@@ -51,4 +51,4 @@ and `lint:backend` now lints `src/ test/`. `beebox/tsconfig.json` still includes
 `src/**/*`, so the `.ts` files under `beebox/test/` are still never
 typechecked. The `rootDir`/`outDir` TS6059 constraint still applies. The
 `doctest-typecheck` workstream takes the `test/` half after the doctest
-errors ([typecheck generated doctest modules](../../code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md)).
+errors ([typecheck generated doctest modules](2026-10-13-typecheck-and-lint-generated-doctest-modules.md)).
