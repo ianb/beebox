@@ -1,6 +1,6 @@
 ---
 title: "No DOM or effect test harness for frontend code, so effect and event bugs surface only in review or the browser"
-workstream: unattached
+workstream: frontend-dom-harness
 area: beebox
 labels: [testing, frontend]
 filed-by: agent

@@ -1,6 +1,6 @@
 ---
 title: "Chat message rows re-render on every streamed token"
-workstream: unattached
+workstream: frontend-dom-harness
 area: beebox
 labels: [performance]
 filed-by: agent

@@ -134,6 +134,60 @@ const result = await connector.sync();
 await box.cleanup();
 ```
 
+## DOM doctests
+
+A frontend doctest can render a component two ways. `renderToStaticMarkup`
+(`react-dom/server`) shows the first render's HTML and runs no effects. A DOM
+doctest mounts the component in a [happy-dom](https://github.com/capricorn86/happy-dom)
+document with `mount()`, from
+`src/frontend/test/components/helpers/dom-harness.ts`. Use it for what only a
+live tree shows: effects and their cleanups, event handlers, state across
+re-renders, and which components re-render.
+
+Every test process loads frontend modules through the React Compiler, with
+the options the Vite build uses (`src/frontend/test/helpers/react-compiler-hooks.ts`,
+registered in `.taprc`). Memoization in a doctest therefore matches the
+browser. Compiled modules are cached in `src/frontend/node_modules/.cache/`.
+
+Rules:
+
+- Import `dom-harness.js` first in the setup block. React DOM reads the
+  window and the render-count hook when it loads; `mount()` throws
+  `HarnessLoadOrderError` if React DOM loaded first.
+- Change state through the handle: `rerender(element)` as a parent would,
+  or `act(fn)` for a setter or an event. Both resolve after effects flush.
+- `renders()` counts committed renders per component name since mount or
+  `resetRenders()`. Reset after the setup renders, then assert the exact
+  counts for the step under test; an exact object catches a component that
+  starts rendering.
+- End each example with `unmount()`, so the component's cleanups run.
+- A component that calls `useParams` needs a router around it, as in
+  `src/frontend/test/components/PersonView.person-view.doctest.md`.
+
+````markdown
+```ts setup
+import { mount } from "./helpers/dom-harness.js";
+import { createElement as h, useState } from "react";
+
+function Counter() {
+  const [n, setN] = useState(0);
+  return h("button", { onClick: () => setN(n + 1) }, `clicked ${n}`);
+}
+```
+
+```ts
+const view = await mount(h(Counter));
+await view.act(() => view.container.querySelector("button").click());
+const seen = { text: view.container.textContent, renders: view.renders() };
+await view.unmount();
+seen
+=> { text: "clicked 1", renders: { Counter: 2 } }
+```
+````
+
+Render counts cover committed renders of ordinary trees: an aborted render
+is not counted, and Suspense fallbacks get no special handling.
+
 ## Failure modes
 
 Doctest blocks are full TypeScript (compiled via esbuild's `ts` loader) — `import type`, non-null assertions, and type annotations all work, in setup and test blocks alike. The real limitations are structural: assertions compare serialized output (see the string-comparison rules in [doctest syntax](../../../agent-doctest/docs/syntax.md)), and code blocks can't express trailing newlines.
