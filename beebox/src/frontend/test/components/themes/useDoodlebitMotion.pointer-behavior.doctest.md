@@ -1,7 +1,8 @@
-# Doodlebit desk movement stays subtle and off the controls
+# Doodlebit walkers advance with mouse travel and pause outside the desk
 
-The desk shifts only for mouse movement over exposed background. Card and
-control surfaces stay still, and the small offset settles back to zero.
+The small cellular walkers advance one frame for each twelve pixels of mouse
+travel across exposed desk. They hold their frame while the pointer is still or
+over cards, labels, and controls.
 
 ```ts setup
 import { mount } from "../helpers/dom-harness.js";
@@ -30,12 +31,12 @@ function Surface({ active = true }: { active?: boolean }) {
   );
 }
 
-function pointerMove(target: Element, movementX: number, movementY: number) {
+function pointerMove(target: Element, x: number, y: number, pointerType = "mouse") {
   const event = new Event("pointermove", { bubbles: true });
   Object.defineProperties(event, {
-    pointerType: { value: "mouse" },
-    movementX: { value: movementX },
-    movementY: { value: movementY },
+    pointerType: { value: pointerType },
+    clientX: { value: x },
+    clientY: { value: y },
   });
   target.dispatchEvent(event);
 }
@@ -44,31 +45,42 @@ function pointerMove(target: Element, movementX: number, movementY: number) {
 ```ts
 const view = await mount(h(Surface));
 const surface = view.container.querySelector<HTMLElement>("#surface")!;
-await view.act(() => pointerMove(view.container.querySelector("#open")!, 10, 8));
-const shifted = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
+const open = view.container.querySelector("#open")!;
+await view.act(() => pointerMove(open, 0, 0));
+await view.act(() => pointerMove(open, 120, 0));
+const afterTravel = surface.style.getPropertyValue("--doodlebit-walkers").includes("#frame10");
+const frameAtRest = surface.style.getPropertyValue("--doodlebit-walkers");
 await new Promise((resolve) => setTimeout(resolve, 180));
-const settled = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
-await view.act(() => pointerMove(view.container.querySelector("#card")!, 10, 8));
-const overCard = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
-await view.act(() => pointerMove(view.container.querySelector("#open")!, 10, 8));
-await view.act(() => pointerMove(view.container.querySelector("#empty")!, 10, 8));
-const overLabel = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
-await view.act(() => pointerMove(view.container.querySelector("#control")!, 10, 8));
-const overControl = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
+const whileStill = surface.style.getPropertyValue("--doodlebit-walkers") === frameAtRest;
+await view.act(() => pointerMove(view.container.querySelector("#card")!, 240, 0));
+await view.act(() => pointerMove(open, 240, 0));
+await view.act(() => pointerMove(open, 252, 0));
+const afterResume = surface.style.getPropertyValue("--doodlebit-walkers").includes("#frame11");
+await view.act(() => pointerMove(view.container.querySelector("#empty")!, 360, 0));
+const overLabel = surface.style.getPropertyValue("--doodlebit-walkers").includes("#frame11");
+await view.act(() => pointerMove(view.container.querySelector("#control")!, 480, 0));
+const overControl = surface.style.getPropertyValue("--doodlebit-walkers").includes("#frame11");
 await view.unmount();
-({ shifted, overCard, overControl, overLabel, settled })
-=> { shifted: ["6px", "4px"], overCard: ["", ""], overControl: ["", ""], overLabel: ["", ""], settled: ["", ""] }
+({ afterTravel, whileStill, afterResume, overControl, overLabel })
+=> { afterTravel: true, whileStill: true, afterResume: true, overControl: true, overLabel: true }
 ```
 
-Reduced motion and touch-style environments do not shift the desk.
+Reduced motion and touch input do not advance the walkers.
 
 ```ts
 setMotionAllowed(false);
 const reduced = await mount(h(Surface));
 const reducedSurface = reduced.container.querySelector<HTMLElement>("#surface")!;
-await reduced.act(() => pointerMove(reduced.container.querySelector("#open")!, 10, 8));
-const values = [reducedSurface.style.getPropertyValue("--doodlebit-x"), reducedSurface.style.getPropertyValue("--doodlebit-y")];
+await reduced.act(() => pointerMove(reduced.container.querySelector("#open")!, 0, 0));
+await reduced.act(() => pointerMove(reduced.container.querySelector("#open")!, 120, 0));
+const reducedValue = reducedSurface.style.getPropertyValue("--doodlebit-walkers");
 await reduced.unmount();
-values
-=> ["", ""]
+setMotionAllowed(true);
+const touch = await mount(h(Surface));
+await touch.act(() => pointerMove(touch.container.querySelector("#open")!, 0, 0, "touch"));
+await touch.act(() => pointerMove(touch.container.querySelector("#open")!, 120, 0, "touch"));
+const touchValue = touch.container.querySelector<HTMLElement>("#surface")!.style.getPropertyValue("--doodlebit-walkers");
+await touch.unmount();
+({ reducedValue, touchValue })
+=> { reducedValue: "", touchValue: "" }
 ```
