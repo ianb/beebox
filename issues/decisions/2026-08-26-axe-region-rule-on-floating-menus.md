@@ -21,3 +21,7 @@ letting the weekly tour check re-report it; it is the only standing axe
 finding besides
 [the /questions heading-order](../closed/bugs/2026-08-26-questions-page-heading-order.md)
 one.
+
+Re-encountered during the Bloom theme tour on 2026-10-16 at both widths: the
+composer Add menu still reports the same `region` violation. Styling does not
+change its portal or landmark structure.

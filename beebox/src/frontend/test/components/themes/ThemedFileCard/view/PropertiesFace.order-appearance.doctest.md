@@ -16,11 +16,11 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Router
 import { createTRPCClient } from "@trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { observable } from "@trpc/server/observable";
-import { trpc } from "../../../../src/lib/trpc/client.js";
+import { trpc } from "../../../../../src/lib/trpc/client.js";
 import { resolveCardTheme } from "@shared/card-theme/core";
-import { BoxPresentationProvider } from "../../../../src/components/themes/BoxPresentationProvider.js";
-import { ShowFrontContext } from "../../../../src/components/themes/ThemedFileCard/CardThemeSurface.js";
-import { ThemedFileCardProperties } from "../../../../src/components/themes/ThemedFileCard/PropertiesFace.js";
+import { BoxPresentationProvider } from "../../../../../src/components/themes/BoxPresentationProvider.js";
+import { ShowFrontContext } from "../../../../../src/components/themes/ThemedFileCard/CardThemeSurface.js";
+import { ThemedFileCardProperties } from "../../../../../src/components/themes/ThemedFileCard/view/PropertiesFace.js";
 
 globalThis.React = React;
 

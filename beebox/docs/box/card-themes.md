@@ -24,7 +24,7 @@ theme:
 Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
 `manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), and `letter-set`
-(`strawberry`, `lemon`, `sky`). The system-only `spectrum` (`gradient`) and
+(`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), and `ribbon` (`flow`). The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
@@ -98,7 +98,7 @@ The **system theme** styles the toolbar, shared background, user-message slips,
 text selection, and floating controls such as the selection “+”. It is
 independent of card themes; a card theme may set its own selection color.
 Choose the box default in **Settings → System theme**. The system swatches preview
-these interface parts rather than a card. Flat, Spectrum, Paper, and Candy support the
+these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Bloom, and Ribbon support the
 system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
 (stored as `cream`, `manila`, and `blue` respectively). A saved system theme
 without chrome support, such as an unfamiliar name, falls back to Flat and is
@@ -168,8 +168,24 @@ For example, `"chrome": { "name": "paper", "stock": "blue" }` selects the
 blue bar. Changing this choice updates open pages through the box's existing
 configuration subscription.
 
+Bloom uses pastel cutouts on a pale mint desk, a pale blue toolbar with a narrow
+multicolor stripe, and lilac controls. Its card material is warm cream with a
+blue offset shadow and lavender inset quotes. Pink user-message slips retain
+a cream offset shadow; assistant replies have a light reading panel. The single
+`cutouts` stock is available as both a system theme and a card theme.
+
 The chrome theme also owns the common background behind chat and companion
-cards. Assistant replies sit directly on that background. In Paper chrome,
+cards. Assistant replies normally sit directly on that background; Bloom supplies a
+light panel to keep text readable over its cutouts. In Paper chrome,
 local user messages appear as dark, borderless paper slips with white text attached to the right
 edge; their tint follows the app bar stock. Flat keeps its usual message
 bubbles. This treatment does not change message or scrolling behavior.
+
+
+## Ribbon
+
+Ribbon pairs flowing rust, amber and forest-green bands with cream cards and a
+dark green toolbar. The card material has a simple green top edge, plain tabs,
+and serif titles with a sans-serif body. Replies use translucent cream panels;
+user messages are dark green. Select `ribbon` with stock `flow` for either a
+system theme or an individual card. Explicit choices on other cards stay intact.

@@ -81,10 +81,10 @@ Properties panel that answers the questions the boxholder brings to it
   symbol mark.
 - `CardMark` (`components/ui/CardMark.tsx`): *"The one component that draws a
   card's symbol."* Reused in the header.
-- `ThemeSwatchPicker` (`ThemedFileCard/ThemeSwatchPicker.tsx:17-18`): the
+- `ThemeSwatchPicker` (`ThemedFileCard/view/ThemeSwatchPicker.tsx:15`): the
   swatch grid under an "Appearance" h3. Wrapped, not rewritten.
-- `ViewChooser` at `ThemedFileCard/view.tsx:56-83`. Moved, not rewritten.
-- `CardMentions` at `CardProperties.tsx:31-70`: mounted only while open,
+- `ViewChooser` at `ThemedFileCard/view/PropertiesFace.tsx:81`. Moved, not rewritten.
+- `CardMentions` at `ThemedFileCard/view/CardProperties.tsx:80-96`: mounted only while open,
   refetches on `file-change`. The pattern Track D copies for attachments and
   last change.
 - `trpc.status.browse` (`routers/status.ts:239`) lists a directory;
@@ -101,7 +101,7 @@ Properties panel that answers the questions the boxholder brings to it
   example (`:49-57`) which shows `# Trip Report` under `title: Trip Report`.
 - Doctest precedents: `frontend/test/components/MarkdownCardView.markdown-card-view.doctest.md`
   (renderToStaticMarkup of `FrontmatterFields`) and
-  `.../ThemedFileCard/CardProperties.contains-fields.doctest.md`.
+  `.../ThemedFileCard/view/CardProperties.contains-fields.doctest.md`.
 
 ## Prior art (external)
 
@@ -284,9 +284,10 @@ sections wired into `CardFacts` order.
 **What.** Properties reads, top to bottom: Filed at, Card type; Found by;
 type fields; Attachments; Changed; Mentioned by; Appearance; View; actions.
 Appearance is one row, "<Theme> <stock> · <chosen by>", with a Change
-button that expands `ThemeSwatchPicker`. The three Theme/Stock/Chosen-by
-rows at `ThemedFileCard/view.tsx:107-111` go. `ViewChooser` moves to the
-bottom, above actions.
+button that expands `ThemeSwatchPicker`; this replaces the three earlier
+Theme/Stock/Chosen-by rows. The current section is in
+`ThemedFileCard/view/PropertiesFace.tsx:67-76`. `ViewChooser` follows it,
+above actions.
 
 **Why.** The swatch wall (A6) pushes mentions, views, and actions below the
 fold. The boxholder: the view chooser is rarely used and is not front and
@@ -404,7 +405,7 @@ isolated test1 clone before done; record the status comment.
 1. Track A (unblocks everything; Properties gains the type fields).
 2. Track C (independent; small).
 3. Track B (depends on A so Properties still lists person fields).
-4. Track D, then Track E (both edit `ThemedFileCard/view.tsx`; serialized).
+4. Track D, then Track E (both edit the `ThemedFileCard/view/` unit; serialized).
 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
    bbx-guide-schemas skill line 23: state the common-field places and the
    type-field rule.

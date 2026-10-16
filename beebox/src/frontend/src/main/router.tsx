@@ -25,6 +25,7 @@ import { RouteError } from "../components/RouteError";
 import { LoginPage } from "../pages/login/LoginPage";
 import { SetupPage } from "../pages/login/SetupPage";
 import { historyLookupFailureSearch, historyViewRedirectSearch, legacyHistoryState, normalizeHistoryViewRouteTarget } from "../components/history/card-state";
+import { themeStudioSearchSchema } from "../lib/theme-studio-search";
 import { DEV_HARNESS_PATHS } from "../lib/box-route-layout";
 
 // --- Root route ---
@@ -295,6 +296,12 @@ const devChatScrollRoute = createRoute({
   component: lazyRouteComponent(() => import("../pages/dev/ChatScrollHarness"), "ChatScrollPage"),
 });
 
+const devThemeStudioRoute = createRoute({
+  staticData: { title: "Theme studio" }, getParentRoute: () => devHarnessLayoutRoute,
+  path: DEV_HARNESS_PATHS.themeStudio, validateSearch: themeStudioSearchSchema,
+  component: lazyRouteComponent(() => import("../pages/dev/ThemeStudioPage"), "ThemeStudioPage"),
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   staticData: { title: null },
@@ -340,7 +347,7 @@ const routeTree = rootRoute.addChildren([
     // and the literal `import.meta.env.DEV` shape has to stay intact for Vite's
     // static DCE, ruling out the honest-cast pattern `lib/view-url.ts` uses instead.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see comment above
-    (import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute] : [],
+    (import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute, devThemeStudioRoute] : [],
     ),
   ]),
 ]);

@@ -8,7 +8,7 @@ disclosure), then the type fields that `splitCardFields` sends to Properties.
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CardFacts } from "../../../../src/components/themes/ThemedFileCard/CardProperties.js";
+import { CardFacts } from "../../../../../src/components/themes/ThemedFileCard/view/CardProperties.js";
 
 globalThis.React = React;
 

@@ -1,22 +1,22 @@
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
-import { themeOriginLabel } from "../../../themes/registry";
+import { themeOriginLabel } from "../../../../themes/registry";
 import { useState, type ReactNode } from "react";
-import type { FileData, FileRenderer } from "../../../file-type-registry";
-import { rendererDisplayLabel } from "../../../lib/renderer-display-label";
-import { Button } from "../../ui/Button";
-import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
-import { useBoxPresentation } from "../BoxPresentationProvider";
-import { useShowCardFront } from "./CardThemeSurface";
+import type { FileData, FileRenderer } from "../../../../file-type-registry";
+import { rendererDisplayLabel } from "../../../../lib/renderer-display-label";
+import { Button } from "../../../ui/Button";
+import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
+import { useBoxPresentation } from "../../BoxPresentationProvider";
+import { useShowCardFront } from "../CardThemeSurface";
 import { CardFacts, CardMentions } from "./CardProperties";
 import { CardAttachments } from "./CardAttachments";
 import { CardLastChange } from "./CardLastChange";
-import { Text } from "../../ui/Text";
+import { Text } from "../../../ui/Text";
 import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
-import { LandmarkSystemThemePicker } from "../SystemThemePicker";
-import { isCardPath } from "../../file-view-data";
+import { LandmarkSystemThemePicker } from "../../SystemThemePicker";
+import { isCardPath } from "../../../file-view-data";
 import { isRecord } from "@shared/is-record";
-import { resolveRelativePath } from "../../../lib/view-url";
-import { copyFileText, copyImageFile } from "../../../lib/copy-file-to-clipboard";
+import { resolveRelativePath } from "../../../../lib/view-url";
+import { copyFileText, copyImageFile } from "../../../../lib/copy-file-to-clipboard";
 
 export interface ThemedFileCardPropertiesProps {
   data: FileData;

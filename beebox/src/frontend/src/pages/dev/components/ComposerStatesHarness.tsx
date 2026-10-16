@@ -129,7 +129,7 @@ type Spec = ReturnType<typeof specFor>;
 
 function noop() {}
 
-function StateBlock({ spec, includeControlIds }: { spec: Spec; includeControlIds: boolean }) {
+export function ComposerSpecimen({ spec, includeControlIds, showHeader, material }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
@@ -196,13 +196,13 @@ function StateBlock({ spec, includeControlIds }: { spec: Spec; includeControlIds
   );
   return (
     <InputStoreProvider value={inputStore}>
-    <div className="w-full max-w-5xl mx-auto">
+    <div className={`w-full max-w-5xl mx-auto${material === true ? " bbx-composer-material" : ""}`}>
       {/* Faux header strip so the voice chip face reads in context. */}
-      <header className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
+      {showHeader !== false && <header className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
         <div className="flex-1" />
         <VoiceChipFace muted={spec.muted} narrationEnabled={spec.badge} hqInFlight={false} />
-      </header>
+      </header>}
       {targetStrip}
       <ChatComposerSection
         attachments={[]}
@@ -242,7 +242,7 @@ export function ComposerStatesHarness() {
     if (!c) return <div className="p-6 font-mono text-sm text-warm-600">Unknown state: {selected}</div>;
     return (
       <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
-        <StateBlock spec={specFor(c)} includeControlIds />
+        <ComposerSpecimen spec={specFor(c)} includeControlIds />
       </div>
     );
   }
@@ -260,7 +260,7 @@ export function ComposerStatesHarness() {
           <div className="max-w-5xl mx-auto px-4 pb-1 text-xs font-mono text-warm-500">
             {comboKey(c)} — {comboLabel(c)}
           </div>
-          <StateBlock spec={specFor(c)} includeControlIds={false} />
+          <ComposerSpecimen spec={specFor(c)} includeControlIds={false} />
         </div>
       ))}
       <div className="max-w-5xl mx-auto px-4 pt-4 mt-4 border-t border-warm-300">

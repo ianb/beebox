@@ -89,8 +89,8 @@ export function WorkspaceCanvas({ children, onAddSelection, reportActivity }: Ca
       const pane = workspace.state.panes.left.paths.includes(path) ? "left" : "right";
       return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} onAddSelection={onAddSelection} reportActivity={reportActivity} />;
     })}
-    <div hidden={!workspace.transcriptVisible} {...(!workspace.transcriptVisible ? { inert: "" } : {})} className={workspace.transcriptVisible ? "flex flex-col min-h-0 min-w-0 relative" : "hidden"}
-      style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1", background: "var(--bbx-desk-pattern, none), var(--bbx-desk-background)" }}>
+    <div hidden={!workspace.transcriptVisible} {...(!workspace.transcriptVisible ? { inert: "" } : {})} className={workspace.transcriptVisible ? "bbx-conversation-desk flex flex-col min-h-0 min-w-0 relative" : "hidden"}
+      style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1" }}>
       <TranscriptFloatingControls restore={projection.restorePane ? <RestoreCardsControl /> : null}>{children}</TranscriptFloatingControls>
     </div>
   </div></>;

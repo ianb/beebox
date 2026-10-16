@@ -107,10 +107,10 @@ lines.
 - `FrontmatterFields.tsx:133-149` `FieldRow`: `<dt>{name}:</dt>`, the raw label;
   the `todos` branch renders todos. Keep the todos branch.
 - Callers: the front (`MarkdownCardView/view.tsx`, `PersonView/view.tsx:163`)
-  and Properties (`CardProperties.tsx:72`). All three get the readable form.
+  and Properties (`ThemedFileCard/view/CardProperties.tsx:72`). All three get the readable form.
 - `themes/card-themes.css:435-440`: `.bbx-card-fields`, `.bbx-card-field-label`
   carry theme colors. Kept on the same elements.
-- `ThemedFileCard/view.tsx:40` `cardTitle` (moved to `lib/card-title.ts` in
+- `ThemedFileCard/view/ThemedFileCard.tsx:50` `cardTitle` (moved to `lib/card-title.ts` in
   implementation, to avoid an import cycle through `PropertiesFace`): the header's title (`title:`, a
   landmark's label, `name:`, or the filename). Reuse to decide which row
   repeats the header.
@@ -193,7 +193,7 @@ No design decision depends on an external premise.
 - **Raw in Properties, readable on the front:** a second rendering. Plan
   review showed it guards nothing for an empty-body card, whose fields go to
   the front and not to Properties (`card-field-faces.ts:95`,
-  `CardProperties.tsx:38`). The Source view already shows the file as
+  `ThemedFileCard/view/CardProperties.tsx:35`). The Source view already shows the file as
   written.
 - **Separate component set and a `PersonView` swap:** the boxholder said
   "maybe"; exporting the two pieces covers it until a custom view needs more.

@@ -49,7 +49,7 @@ What blocks a strict check now:
   it to a typed module that the generated code imports.
 - Authors write untyped helpers in setup blocks. Example: `render(data,
   { canEdit })` in
-  `beebox/src/frontend/test/components/themes/ThemedFileCard/PropertiesFace.order-appearance.doctest.md`.
+  `beebox/src/frontend/test/components/themes/ThemedFileCard/view/PropertiesFace.order-appearance.doctest.md`.
   A strict pass will report many of these at first.
 - Some lint rules do not fit doctest code: bare expressions whose value is
   checked, top-level `await`, `print`, and the generated `__doctest_*` names.

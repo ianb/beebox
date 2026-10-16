@@ -1,16 +1,16 @@
-import { trpc } from "../../../lib/trpc/client";
-import type { FileData } from "../../../file-type-registry";
-import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
-import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../../lib/card-field-faces";
-import { FrontmatterFields } from "../../MarkdownCardView/FrontmatterFields";
-import { cardTitle } from "../../../lib/card-title";
-import { withoutHeaderName } from "../../../lib/readable-fields";
-import { CardMark } from "../../ui/CardMark";
+import { trpc } from "../../../../lib/trpc/client";
+import type { FileData } from "../../../../file-type-registry";
+import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
+import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../../../lib/card-field-faces";
+import { FrontmatterFields } from "../../../MarkdownCardView/FrontmatterFields";
+import { cardTitle } from "../../../../lib/card-title";
+import { withoutHeaderName } from "../../../../lib/readable-fields";
+import { CardMark } from "../../../ui/CardMark";
 import { isRecord } from "@shared/is-record";
 import { readCardSymbol } from "@shared/card-symbol";
 import { Prominence, effectiveLevel } from "@shared/prominence";
 import { PropertyLink, PropertyProblem } from "./property-section";
-import { useRefetchOnFileChange } from "../../../hooks/useRefetchOnFileChange";
+import { useRefetchOnFileChange } from "../../../../hooks/useRefetchOnFileChange";
 
 /** "<level>" when the card declares one, "<level>, the type's default" when it does not; the raw value when the schema is unknown. */
 function prominenceText(value: unknown, schema: FileData["schema"]): string | null {

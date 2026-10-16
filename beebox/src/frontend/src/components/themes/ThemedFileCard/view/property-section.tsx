@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
-import { withBase } from "../../../api";
-import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../../lib/view-url";
-import { Button } from "../../ui/Button";
+import { withBase } from "../../../../api";
+import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../../../lib/view-url";
+import { Button } from "../../../ui/Button";
 
 /** A link with a real href that opens its target through `onNavigate` on a plain click. */
 export function PropertyLink({ target, hint, onNavigate, children }: {

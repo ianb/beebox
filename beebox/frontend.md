@@ -218,6 +218,9 @@ What fails lint:
 
 New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic role in frontend.md.
 
+For a fixed development preview and repeatable screenshots, use the
+[theme authoring studio](docs/theme-authoring.md).
+
 The generic theme gallery is installed explicitly into a development box from
 `test/fixtures/theme-tour`. From the monorepo root:
 

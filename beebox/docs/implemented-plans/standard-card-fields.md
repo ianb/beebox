@@ -131,7 +131,7 @@ keeps teaching it.
 - **`{% source %}` shape:** `record.sources` is an array of
   `{ref|href, time?, note?}`, and `record.tsx:20-24` says it deliberately
   mirrors the tag. Track C adopts this shape.
-- **Properties panel:** `CardFacts` (`src/frontend/src/components/themes/ThemedFileCard/CardProperties.tsx:12-23`)
+- **Properties panel:** `CardFacts` (`src/frontend/src/components/themes/ThemedFileCard/view/CardProperties.tsx:35`)
   shows `fm.created` and `fm.source` for any card type. This is the only
   generic reader of either name.
 - **Search `created`:** stored per document (`src/core/search/extract/core.ts:132`,
