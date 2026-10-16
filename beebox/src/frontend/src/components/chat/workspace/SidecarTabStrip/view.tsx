@@ -70,10 +70,19 @@ function revealTab({ activePath, tabRefs, setOverflow }: { activePath: string; t
   if (scroller === null || scroller === undefined || el === undefined) return;
   const left = el.offsetLeft;
   const right = left + el.offsetWidth;
+  const trailing = parseFloat(scroller.style.getPropertyValue("--bbx-tab-trailing")) || 0;
+  if (trailing > 0 && scroller.scrollWidth - trailing <= scroller.clientWidth) scroller.style.removeProperty("--bbx-tab-trailing");
   if (left < scroller.scrollLeft) {
     scroller.scrollTo({ left, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   } else if (right > scroller.scrollLeft + scroller.clientWidth) {
-    scroller.scrollTo({ left: wholeTabStart({ scroller, from: right - scroller.clientWidth, limit: left }), behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    const target = wholeTabStart({ scroller, from: right - scroller.clientWidth, limit: left });
+    // Near the end the browser clamps the scroll to the last tab's edge, which
+    // would cut the leftmost tab again; give the strip just enough trailing
+    // room (`--bbx-tab-trailing`, interface.css). It stays until the next
+    // reveal that scrolls right, so a later no-op reveal cannot clamp it away.
+    const short = target + scroller.clientWidth - (scroller.scrollWidth - trailing);
+    scroller.style.setProperty("--bbx-tab-trailing", `${Math.max(0, short)}px`);
+    scroller.scrollTo({ left: target, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   }
   setOverflow({ left: scroller.scrollLeft > 1, right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1 });
 }

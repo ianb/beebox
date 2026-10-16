@@ -158,7 +158,9 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
     sessions,
     contextDir: activeRow?.contextDir ?? contextDir,
   });
-  const rowProps = { boxSlug, currentSessionId, allRows: [...sessions, ...dead] };
+  // The rows on screen: a hidden done or expired chat does not make a
+  // visible title ambiguous.
+  const rowProps = { boxSlug, currentSessionId, allRows: showAll ? [...sessions, ...dead] : sessions.filter((s) => !s.done) };
   const hiddenCount = layout.done.length + dead.length;
   const liveCount = layout.kind === "flat" ? layout.sessions.length : layout.here.length + layout.elsewhere.length;
 
