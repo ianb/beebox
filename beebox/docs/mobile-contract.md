@@ -1393,13 +1393,20 @@ box/chat. Gone views omit deleted source words, material, transcript, and chat
 message payload. Context blocked by deleted parent retains its own words. An uncaptured deletion
 tombstone has no source/capturedAt payload; other views retain those fields.
 
-**Source and work.** Source memo plus attach scope lives outside the automatic
+**Source and work.** The source is a doc card (`<id>.doc.card`, title "Voice
+note" or "Saved capture" until the filing chat retitles it) plus its attach
+scope, and lives outside the automatic
 intake inbox. A capture with typed or dictated words, and no recording, is
 written uncommitted to the git-ignored `_content/incoming/`, and the chat that
 receives it files it with `bbx mv --commit`. A capture with no words, or with a
-recording, is committed in `_content/captures/` on arrival. Optional memo
-`share-id` is the stable source identity; existing memo context carries
-URL/clipping evidence. File media uses existing image/audio handling. Source
+recording, is committed in `_content/captures/` on arrival. The doc's
+`share-id` is the stable source identity; `via.channel` records the capture
+source; a shared URL is the doc's `sources` entry, and a clipping is a quoted
+`## Clipping` section of the body. An image is an image card in the attach
+scope; a recording is `recording.audio.card` there, which holds the
+transcript or transcription error. Reconciliation that finds a leftover
+`.memo.card` source (a box whose retire-memo migration has not run) fails with
+`migration-pending` (conflict) instead of treating the source as deleted. Source
 materialization (and its commit, in `_content/captures/`) precedes dispatch.
 Stored source refs are resolved through the shared containment helper and checked
 against the box's real path before source reads or transcription updates; an
@@ -1408,7 +1415,7 @@ Material without authored input is saved without inventing an agent task.
 Voice audio persists before asynchronous transcription; empty/failed transcript
 retains playable audio and an explicit retry state. An empty transcript has no
 automatic paid retry; Retry remains available. External-input framing names
-source memo and retained-recording status, without implying a live speech turn.
+the source doc and retained-recording status, without implying a live speech turn.
 `input-kind="words"` identifies separately supplied instructions; `input-kind="transcript"`
 identifies derived speech. `retained-recording="1"` asserts audio availability, not
 that separately supplied words are a transcript. `recording-interrupted="1"`

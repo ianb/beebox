@@ -64,7 +64,7 @@ await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:image,bytes
 
 const record = await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id);
 [record.state,record.sourceRef,record.sourceCommitted]
-=> ["needs-choice","_content/incoming/11111111-1111-4111-8111-111111111111.memo.card",true]
+=> ["needs-choice","_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",true]
 ```
 
 A capture with words is routed to a chat, which files it, so its source waits
@@ -79,7 +79,7 @@ await readFile(join(captureDirectory(box.root,id),"material"),"utf8")
 
 const replay = await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id);
 [replay.state,replay.sourceRef]
-=> ["needs-choice","_content/incoming/11111111-1111-4111-8111-111111111111.memo.card"]
+=> ["needs-choice","_content/incoming/11111111-1111-4111-8111-111111111111.doc.card"]
 
 await box.cleanup();
 ```
@@ -101,21 +101,21 @@ await reconcileCaptureSource(box.root,id)
 await writeCapture(box.root,first);
 
 await mkdir(box.path("_content/filed"),{recursive:true});
-await rename(box.path(first.sourceRef),box.path("_content/filed/source.memo.card"));
+await rename(box.path(first.sourceRef),box.path("_content/filed/source.doc.card"));
 const filed = await reconcileCaptureSource(box.root,id);
 [filed.sourceRef,filed.state]
-=> ["_content/filed/source.memo.card","saved"]
+=> ["_content/filed/source.doc.card","saved"]
 
 (await readCapture(box.root,id)).sourceRef
-=> _content/filed/source.memo.card
+=> _content/filed/source.doc.card
 
 // A duplicate elsewhere must not trigger a scan when the stored reference is valid.
 const sourceText=await readFile(box.path(filed.sourceRef),"utf8");
-await writeFile(box.path("_content/filed/copy.memo.card"),sourceText);
+await writeFile(box.path("_content/filed/copy.doc.card"),sourceText);
 (await reconcileCaptureSource(box.root,id)).sourceRef
-=> _content/filed/source.memo.card
+=> _content/filed/source.doc.card
 
-await rm(box.path("_content/filed/copy.memo.card"));
+await rm(box.path("_content/filed/copy.doc.card"));
 await rm(box.path(filed.sourceRef));
 await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:saved})
 => throws QuickCaptureError: This capture was deleted. It cannot be recreated by retrying.
@@ -123,7 +123,7 @@ await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:saved})
 (await readCapture(box.root,id)).state
 => gone
 
-await writeFile(box.path("_content/filed/copy.memo.card"),sourceText);
+await writeFile(box.path("_content/filed/copy.doc.card"),sourceText);
 const terminal=await reconcileCaptureSource(box.root,id);
 [terminal.state,terminal.declaration.material]
 => ["gone",null]

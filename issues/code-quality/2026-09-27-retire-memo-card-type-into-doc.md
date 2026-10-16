@@ -1,6 +1,6 @@
 ---
 title: "Retire the memo card type: move what it holds into doc cards and their attachments"
-workstream: unattached
+workstream: retire-memo
 priority: important
 needs: [design]
 area: beebox

@@ -13,6 +13,15 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { mediaVia } from "../cards/media-via.js";
+import { SourcesEntrySchema } from "../cards/sources-entry.js";
+
+/**
+ * How a doc's content arrived (`apple-share-extension`, `telegram`, `text`).
+ * No `at`: a doc is not media. When the content came with media, the capture
+ * time is that media card's `via.at`.
+ */
+const DocVia = mediaVia(z.string()).omit({ at: true, original: true });
 
 export const DocSchema = cardSchema("doc", {
   brief: "The default card for prose",
@@ -22,6 +31,8 @@ export const DocSchema = cardSchema("doc", {
     title: z.string(),
     /** Stable id supplied by an external share operation for retry deduplication. */
     "share-id": z.string().uuid().optional(),
+    via: DocVia.optional(),
+    sources: z.array(SourcesEntrySchema).optional(),
     body: body(z.string()),
   },
   instructions: `# Doc Cards

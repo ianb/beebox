@@ -217,8 +217,8 @@ await upload(ctx,declaration)
 await ctx.cleanup();
 ```
 
-A crash can land between writing the source memo and recording that it was
-written. Deleting the capture then still finds the memo by its `share-id` and
+A crash can land between writing the source and recording that it was
+written. Deleting the capture then still finds the source by its `share-id` and
 removes it.
 
 ```ts
@@ -231,7 +231,7 @@ const exists=(rel)=>access(join(ctx.boxRoot,rel)).then(()=>true,()=>false);
 const before=await exists(written);
 await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
 ({written,before,after:await exists(written)})
-=> {written:"_content/incoming/11111111-1111-4111-8111-111111111111.memo.card",before:true,after:false}
+=> {written:"_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",before:true,after:false}
 
 await ctx.cleanup();
 ```

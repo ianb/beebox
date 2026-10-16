@@ -8,7 +8,8 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
 import { processCapture } from "../../../src/core/quick-capture/worker.js";
 import { readQuickChatRecord } from "../../../src/core/chat/routing/quick-chat-store.js";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
+import { parseFrontmatterObject } from "../../../src/exports/cards.js";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { frameExternalCapture } from "../../../src/core/quick-capture/framing.js";
@@ -31,7 +32,7 @@ const record=await processCapture({boxRoot:box.root,jev:undefined,chat:undefined
 => ["saved",null]
 
 frameExternalCapture({source:"apple-share-extension",sourceRef:record.sourceRef,message:"Explain this quotation"})
-=> <external-input source="apple-share-extension" source-ref="_content/captures/11111111-1111-4111-8111-111111111111.memo.card">Explain this quotation</external-input>
+=> <external-input source="apple-share-extension" source-ref="_content/captures/11111111-1111-4111-8111-111111111111.doc.card">Explain this quotation</external-input>
 
 await box.cleanup();
 ```
@@ -45,13 +46,27 @@ const record=await processCapture({boxRoot:box.root,jev:undefined,chat:undefined
 
 const routed=await readQuickChatRecord(box.root,id);
 [routed.origin,routed.source,routed.retainedRecording,routed.sourceRef,routed.message]
-=> ["external","apple-voice-recording",true,"_content/captures/11111111-1111-4111-8111-111111111111.memo.card","Remember the meeting"]
+=> ["external","apple-voice-recording",true,"_content/captures/11111111-1111-4111-8111-111111111111.doc.card","Remember the meeting"]
 
-await readFile(box.path("_content/captures/11111111-1111-4111-8111-111111111111.attach/recording.m4a"),"utf8")
+await readFile(box.path("_content/captures/11111111-1111-4111-8111-111111111111.attach/recording.attach/recording.m4a"),"utf8")
 => audio
+```
 
+The source is a doc titled "Voice note". The recording, its capture time and
+its transcript sit on an audio card in the doc's attach scope.
+
+```ts continue
+const doc=parseFrontmatterObject(await readFile(box.path(record.sourceRef),"utf8"));
+[doc.title,doc.via,doc["share-id"]]
+=> ["Voice note",{channel:"apple-voice-recording"},"11111111-1111-4111-8111-111111111111"]
+
+parseFrontmatterObject(await readFile(box.path("_content/captures/11111111-1111-4111-8111-111111111111.attach/recording.audio.card"),"utf8"))
+=> {filename:{ref:"attach/recording.m4a",via:{channel:"microphone",at:"2026-10-12T12:00:00Z"}},transcript:"Remember the meeting"}
+```
+
+```ts continue
 frameExternalCapture({message:record.transcript,source:"apple-voice-recording",sourceRef:record.sourceRef,retainedRecording:true})
-=> <external-input source="apple-voice-recording" source-ref="_content/captures/11111111-1111-4111-8111-111111111111.memo.card" retained-recording="1">Remember the meeting</external-input>
+=> <external-input source="apple-voice-recording" source-ref="_content/captures/11111111-1111-4111-8111-111111111111.doc.card" retained-recording="1">Remember the meeting</external-input>
 
 await box.cleanup();
 ```
@@ -92,7 +107,7 @@ const routed=await readQuickChatRecord(box.root,id);
 => ["needs-choice","Explain the recording","words",true,null]
 
 frameExternalCapture({message:routed.message,source:routed.source,sourceRef:routed.sourceRef,retainedRecording:true,captureInputKind:routed.captureInputKind})
-=> <external-input source="apple-app-intents" source-ref="_content/captures/11111111-1111-4111-8111-111111111111.memo.card" retained-recording="1" input-kind="words">Explain the recording</external-input>
+=> <external-input source="apple-app-intents" source-ref="_content/captures/11111111-1111-4111-8111-111111111111.doc.card" retained-recording="1" input-kind="words">Explain the recording</external-input>
 
 await box.cleanup();
 ```
@@ -108,6 +123,25 @@ await processCapture({boxRoot:box.root,jev:undefined,chat:undefined,transcribe:u
 await processCapture({boxRoot:box.root,jev:undefined,chat:undefined,transcribe:unavailable,manualRetry:true},id);
 execFileSync("git",["log","--format=%s"],{cwd:box.root,encoding:"utf8"}).split("\n").filter(subject=>subject==="Record quick capture transcription").length
 => 1
+
+await box.cleanup();
+```
+
+A chat can file the source while the provider is still transcribing. The
+transcript still lands on the filed doc's audio card, not on the old path.
+
+```ts
+const box=await makeTmpBox({git:true});
+await voice(box);
+async function fileWhileTranscribing() {
+  await mkdir(box.path("_content/filed"),{recursive:true});
+  await rename(box.path(`_content/captures/${id}.doc.card`),box.path("_content/filed/note.doc.card"));
+  await rename(box.path(`_content/captures/${id}.attach`),box.path("_content/filed/note.attach"));
+  return {text:"Remember the meeting",language:"en",duration:1};
+}
+const record=await processCapture({boxRoot:box.root,jev:undefined,chat:undefined,transcribe:fileWhileTranscribing},id);
+[record.transcript,parseFrontmatterObject(await readFile(box.path("_content/filed/note.attach/recording.audio.card"),"utf8")).transcript]
+=> ["Remember the meeting","Remember the meeting"]
 
 await box.cleanup();
 ```
