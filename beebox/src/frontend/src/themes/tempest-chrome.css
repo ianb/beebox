@@ -59,7 +59,7 @@
 .bbx-system-theme-preview[data-chrome-theme="tempest"] .bbx-system-theme-desk > span { background: #10273d; border-color: #456477; border-radius: 12px; box-shadow: 0 3px 6px #3b858530; }
 @media print {
   .bbx-box-presentation[data-chrome-theme="tempest"]::before, [data-chrome-theme="tempest"] .bbx-app-nav::before { display: none; animation: none; }
-  .bbx-box-presentation[data-chrome-theme="tempest"], [data-chrome-theme="tempest"] :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material), .bbx-card-surface[data-card-theme="tempest"] { background: transparent; color: #000; border: 0; box-shadow: none; }
+  .bbx-box-presentation[data-chrome-theme="tempest"], [data-chrome-theme="tempest"] :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material, .bbx-card-surface[data-card-theme="tempest"]) { background: transparent; color: #000; border: 0; box-shadow: none; backdrop-filter: none; }
   .bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
     --bbx-paper: #fff; --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
     --tw-prose-body: #000; --tw-prose-bold: #000; --tw-prose-headings: #000;
