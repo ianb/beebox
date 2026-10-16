@@ -28,7 +28,7 @@ An absent config is ordinary and exposes the stable built-in catalog.
 const box = await makeTmpBox();
 const first = await caller(box.root).presentation.get({ boxKey: "test" });
 JSON.stringify([first.catalog.map((theme) => theme.name), first.presentation, first.chrome, first.configProblems])
-=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon","deck"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
+=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon","deck","night-atlas"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
 
 JSON.stringify([
   first.canEditCardThemes,
@@ -123,6 +123,11 @@ await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { 
 clearBoxConfigCache(deckBox.root);
 (await caller(deckBox.root).presentation.get({ boxKey: "deck-saved" })).chrome
 => { choice: { name: "deck", stock: "panels" }, origin: "box-chrome", problem: null }
+
+await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "night-atlas" } });
+clearBoxConfigCache(deckBox.root);
+(await caller(deckBox.root).presentation.get({ boxKey: "night-atlas-saved" })).chrome
+=> { choice: { name: "night-atlas", stock: "lights" }, origin: "box-chrome", problem: null }
 
 await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: null });
 clearBoxConfigCache(deckBox.root);

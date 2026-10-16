@@ -22,7 +22,7 @@ bin/browse screenshot
 Edit `beebox/src/frontend/src/pages/dev/theme-studio-draft.css`; Vite refreshes
 it. The URL independently selects `system`, `systemStock`, `card`, and `cardStock`.
 Unknown names render base styles until CSS matches. Existing studies are
-`undertow`, `deck-study`, and `patina` in `theme-studio-studies.css`.
+`undertow`, `deck-study`, and `patina-study` in `theme-studio-studies.css`.
 
 Scope every draft selector to `.bbx-theme-studio` and its draft attribute: lazy
 CSS stays loaded after navigation. Keep draft CSS under `pages/dev/`, out of

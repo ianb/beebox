@@ -96,6 +96,17 @@ export const THEME_CATALOG = [
     systemOnly: false,
     cardThemes: ["deck", "paper", "post-it"],
   },
+  {
+    name: "night-atlas",
+    label: "Night Atlas",
+    stocks: ["lights"],
+    defaultStock: "lights",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["night-atlas", "paper", "post-it"],
+  },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];
