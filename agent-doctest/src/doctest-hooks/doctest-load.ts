@@ -46,11 +46,12 @@ function nearestMd(lineMap: LineMap, generatedLine: number): number {
  * (see doctest-split.ts `oracleSplit`) and the module is regenerated; only
  * if that fails too is the error reported, placed on the markdown line.
  */
-function transformTestModule(markdown: string, filePath: string): { mod: GeneratedModule; code: string } {
+function transformTestModule(markdown: string, opts: { filePath: string; typecheck?: boolean }): { mod: GeneratedModule; code: string } {
+  const { filePath, typecheck = false } = opts;
   const oracle = new Set<number>();
   const mdLines = markdown.split("\n");
   for (let attempt = 0; ; attempt++) {
-    const mod = generateTestModule(markdown, { filePath, oracle });
+    const mod = generateTestModule(markdown, { filePath, oracle, typecheck });
     let code: string;
     try {
       ({ code } = transformSync(mod.source, { loader: "ts", format: "esm", sourcefile: filePath, sourcemap: "inline" }));
@@ -80,7 +81,7 @@ function transformTestModule(markdown: string, filePath: string): { mod: Generat
 
 /** The body module tap runs: the transformed test module, mapped back to the markdown. */
 export function loadDoctestBody(markdown: string, filePath: string): string {
-  const { mod, code } = transformTestModule(markdown, filePath);
+  const { mod, code } = transformTestModule(markdown, { filePath });
   return rewriteInlineSourceMap(code, { lineMap: mod.lineMap, markdown });
 }
 
@@ -92,7 +93,16 @@ export function loadDoctestBody(markdown: string, filePath: string): string {
  * rejects but tap runs fine.
  */
 export function generateTestSource(markdown: string, filePath: string): string {
-  return transformTestModule(markdown, filePath).mod.source;
+  return transformTestModule(markdown, { filePath }).mod.source;
+}
+
+/**
+ * The generated module as a typecheck sees it: the same splits as the run,
+ * plus the type-only imports the run erases (see GenerateOptions.typecheck).
+ * Throws DoctestSyntaxError where the loader would.
+ */
+export function generateTypecheckModule(markdown: string, filePath: string): GeneratedModule {
+  return transformTestModule(markdown, { filePath, typecheck: true }).mod;
 }
 
 /**

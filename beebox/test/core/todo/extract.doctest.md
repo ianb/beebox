@@ -11,6 +11,7 @@ todo whose list item contains it (`parent`), the words written after the
 closing tag (`annotation`), and whatever it points at (`refs`).
 
 ```ts setup
+import assert from "node:assert/strict";
 import { extractCardTodos } from "../../../src/core/todo/extract/core.js";
 import { deriveTodo } from "../../../src/core/todo/derive.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
@@ -341,12 +342,14 @@ const b = extractCardTodos({ relPath: CARD, content: memo(body), ctx }).items;
 JSON.stringify(a) === JSON.stringify(b)
 => true
 
-JSON.stringify(a[0]).includes("plateState")
+const first = a[0];
+assert.ok(first);
+JSON.stringify(first).includes("plateState")
 => false
 
 const early = { now: new Date("2026-07-01T12:00:00Z"), timeZone: "America/Chicago" };
 const late = { now: new Date("2026-08-01T12:00:00Z"), timeZone: "America/Chicago" };
-[deriveTodo(a[0], early).plateState, deriveTodo(a[0], late).plateState].join(" → ")
+[deriveTodo(first, early).plateState, deriveTodo(first, late).plateState].join(" → ")
 => on-plate → escalated
 ```
 

@@ -10,7 +10,8 @@ the only place a clock can enter.
 
 ```ts setup
 import { runCollection } from "../../../src/core/collection/run/core.js";
-import { todoCollection, TodoParamsSchema } from "../../../src/core/todo/collection.js";
+import { todoCollection, TodoParamsSchema, type DerivedTodo, type TodoParams, type TodoReduction } from "../../../src/core/todo/collection.js";
+import type { CollectionQuery, CollectionResult } from "../../../src/core/collection/types.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { formatTodoLocation } from "../../../src/core/todo/collect-types.js";
 
@@ -63,12 +64,12 @@ await box.write("_content/projects/Garden/Notes.doc.card", doc("Garden notes", [
 // No todos at all: it is read, contributes nothing, and never earns a row.
 await box.write("_content/Inbox.doc.card", doc("Inbox", "Nothing pending here.\n"));
 
-function params(raw: Record<string, unknown>): ReturnType<typeof TodoParamsSchema.parse> {
+function params(raw: Record<string, unknown>): TodoParams {
   return TodoParamsSchema.parse(raw);
 }
 
 /** `group / card (via) reduction` then one line per item, indented, `*` for a matching item. */
-function render(result: Awaited<ReturnType<typeof runCollection>>): string {
+function render(result: CollectionResult<DerivedTodo, TodoReduction>): string {
   const lines: string[] = [];
   for (const group of result.groups) {
     lines.push(`# ${group.key} "${group.label}" ${count(group.reduction)}`);
@@ -86,7 +87,7 @@ function count(reduction: unknown): string {
   return JSON.stringify(reduction);
 }
 
-async function run(query: Record<string, unknown>): Promise<Awaited<ReturnType<typeof runCollection>>> {
+async function run(query: CollectionQuery<TodoParams>): Promise<CollectionResult<DerivedTodo, TodoReduction>> {
   return runCollection(box.root, { def: todoCollection, query, deriveCtx: CTX });
 }
 ```
@@ -140,11 +141,11 @@ Sections come back as data, one entry per distinct section path on the card,
 each reduced over its own items.
 
 ```ts continue
-const planRow = (await run({ here: `${KITCHEN}/Plan.doc.card`, includeReferring: false, params: params({}) })).groups[0].rows[0];
-JSON.stringify(planRow.sections.map((s) => [s.path.join("/"), s.reduction.open, s.reduction.done]))
+const planRow = (await run({ here: `${KITCHEN}/Plan.doc.card`, includeReferring: false, params: params({}) })).groups[0]?.rows[0];
+JSON.stringify(planRow?.sections.map((s) => [s.path.join("/"), s.reduction.open, s.reduction.done]))
 => [["Cabinets",1,1],["Floor",1,1]]
 
-planRow.card.title
+planRow?.card.title
 => Cabinet plan
 ```
 
@@ -164,7 +165,7 @@ box-wide scan and never appears.
 
 ```ts continue
 const boxWide = await run({ here: "", params: params({}) });
-boxWide.groups[0].rows.map((r) => r.card.path).join("\n")
+boxWide.groups[0]?.rows.map((r) => r.card.path).join("\n")
 =>
 _content/projects/Garden/Notes.doc.card
 _content/projects/Kitchen/Plan.doc.card
@@ -214,12 +215,12 @@ and then nothing is stirring.
 ```ts continue
 const stirringQuery = { here: `${KITCHEN}/Supplies.doc.card`, includeReferring: false, params: params({}) };
 const quiet = await runCollection(box.root, { def: todoCollection, query: stirringQuery, deriveCtx: CTX });
-JSON.stringify(quiet.groups[0].rows[0].items.map((i) => [i.text, i.stirring]))
+JSON.stringify(quiet.groups[0]?.rows[0]?.items.map((i) => [i.text, i.stirring]))
 => [["Reorder the grout",false]]
 
 const since = Date.UTC(2026, 6, 20);
 const stirred = await runCollection(box.root, { def: todoCollection, query: stirringQuery, deriveCtx: { ...CTX, since } });
-JSON.stringify(stirred.groups[0].rows[0].items.map((i) => [i.text, i.stirring]))
+JSON.stringify(stirred.groups[0]?.rows[0]?.items.map((i) => [i.text, i.stirring]))
 => [["Reorder the grout",true]]
 ```
 
@@ -263,7 +264,7 @@ a ref to its sibling does not.
 
 ```ts continue
 const toPlan = await run({ here: `${KITCHEN}/Plan.doc.card`, params: params({}) });
-const referring = toPlan.groups[0].rows.filter((r) => r.via === "reference");
+const referring = toPlan.groups[0]?.rows.filter((r) => r.via === "reference") ?? [];
 JSON.stringify(referring.map((r) => r.items.map((i) => `${i.matching ? "*" : "-"}${i.text}`)))
 => [["*Hardware run","*Ask about the cabinet plan"]]
 ```
@@ -273,7 +274,7 @@ for the cost below.
 
 ```ts continue
 const noRefs = await run({ here: KITCHEN, includeReferring: false, params: params({}) });
-noRefs.groups[0].rows.map((r) => `${r.card.path} (${r.via})`).join("\n")
+noRefs.groups[0]?.rows.map((r) => `${r.card.path} (${r.via})`).join("\n")
 =>
 _content/projects/Kitchen/Plan.doc.card (scope)
 _content/projects/Kitchen/Supplies.doc.card (scope)
@@ -284,7 +285,7 @@ keeps all of its items — the reference pass never sees it.
 
 ```ts continue
 JSON.stringify(
-  (await run({ here: KITCHEN, params: params({}) })).groups[0].rows
+  (await run({ here: KITCHEN, params: params({}) })).groups[0]?.rows
     .filter((r) => r.card.path.startsWith(`${KITCHEN}/`))
     .map((r) => r.via)
 )
@@ -302,7 +303,7 @@ const withIssue = await run({ here: KITCHEN, includeReferring: false, params: pa
 JSON.stringify(withIssue.issues.map((i) => [i.kind, i.path]))
 => [["load","_content/projects/Kitchen/Broken.doc.card"]]
 
-withIssue.groups[0].rows.length
+withIssue.groups[0]?.rows.length
 => 2
 ```
 
@@ -337,8 +338,8 @@ await box.write(`${KITCHEN}/Move.doc.card`, doc("Move", [
   "",
 ].join("\n")));
 const move = await run({ here: `${KITCHEN}/Move.doc.card`, includeReferring: false, params: params({}) });
-const moveRow = move.groups[0].rows[0];
-moveRow.items.map((i) => `${formatTodoLocation(i)} ${JSON.stringify(i.text)} parent=${i.parent === null ? "-" : formatTodoLocation({ path: i.path, locator: i.parent })}`).join("\n")
+const moveRow = move.groups[0]?.rows[0];
+moveRow?.items.map((i) => `${formatTodoLocation(i)} ${JSON.stringify(i.text)} parent=${i.parent === null ? "-" : formatTodoLocation({ path: i.path, locator: i.parent })}`).join("\n")
 =>
 _content/projects/Kitchen/Move.doc.card:4 "Appraise" parent=-
 _content/projects/Kitchen/Move.doc.card:4#2 "Insure" parent=-
@@ -350,7 +351,7 @@ list. It was the row that dropped one, which is what the web list, `bbx query`
 and `bbx todos` all render.
 
 ```ts continue
-count(moveRow.reduction)
+count(moveRow?.reduction)
 => {"open":3,"done":0,"dropped":0,"parked":0,"onPlate":3,"escalated":0,"next":null}
 ```
 
@@ -422,7 +423,7 @@ const prefiltered = await runCollection(prefilterBox.root, {
   deriveCtx: CTX,
 });
 
-prefiltered.groups[0].rows.map((r) => r.card.path).join("\n")
+prefiltered.groups[0]?.rows.map((r) => r.card.path).join("\n")
 =>
 _content/one.doc.card
 _content/three.doc.card

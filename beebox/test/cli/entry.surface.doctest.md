@@ -7,6 +7,7 @@ being classified — which is exactly how operator commands kept landing on the
 agent's surface in the first place. These tests are that gate.
 
 ```ts setup
+import type { Command } from "commander";
 import { buildProgram } from "../../src/cli/entry/program.js";
 import { SURFACE } from "../../src/cli/entry/surface-data.js";
 import { VERB_COMMANDS } from "../../src/cli/commands.js";
@@ -14,7 +15,7 @@ import { bbxCommandsScheduling } from "../../src/core/docs-gen/package-docs/bbx-
 import { bbxCommandsConnectors } from "../../src/core/docs-gen/package-docs/bbx-commands-connectors.js";
 
 const program = buildProgram();
-const subNames = (command) =>
+const subNames = (command: Command | undefined) =>
   (command?.commands ?? []).map((c) => c.name()).filter((n) => n !== "help").sort();
 
 const topLevel = subNames(program);
@@ -53,7 +54,7 @@ const misaimedSmoke = SURFACE.filter((e) => e.audience === "agent")
 
 // Section headings in the generated box reference name the command they document.
 const reference = [...bbxCommandsScheduling(), ...bbxCommandsConnectors()].join("\n");
-const documented = [...reference.matchAll(/^## bbx (\S+)/gm)].map((m) => m[1]);
+const documented = [...reference.matchAll(/^## bbx (\S+)/gm)].map((m) => m[1] ?? "");
 const taughtButEvicted = documented.filter((verb) => engineOnly.includes(verb));
 ```
 
@@ -112,7 +113,7 @@ how the deprecated `bbx scheduler add|remove|list` aliases left the CLI.
 subNames(program.commands.find((c) => c.name() === "scheduler")).join(",")
 => log,status
 
-subNames(engineParent.commands.find((c) => c.name() === "scheduler")).join(",")
+subNames(engineParent?.commands.find((c) => c.name() === "scheduler")).join(",")
 => install,start,uninstall
 ```
 

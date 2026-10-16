@@ -8,7 +8,7 @@ inline builder wrote before this module absorbed it.
 ```ts setup
 import { buildWavHeader } from "../../src/shared/wav.js";
 
-function hex(bytes) {
+function hex(bytes: Uint8Array) {
   return Buffer.from(bytes).toString("hex");
 }
 ```

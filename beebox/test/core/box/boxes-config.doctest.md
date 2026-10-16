@@ -16,7 +16,7 @@ import * as path from "node:path";
 import { loadBoxesConfig, BoxesConfigParseError } from "../../../src/core/box/boxes-config.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
-async function tryLoad(configPath) {
+async function tryLoad(configPath: string): Promise<unknown> {
   try {
     return await loadBoxesConfig(configPath);
   } catch (e) {
@@ -52,10 +52,10 @@ const badJson = await tryLoad(configPath);
 badJson instanceof BoxesConfigParseError
 => true
 
-badJson.configPath === configPath
+badJson instanceof BoxesConfigParseError && badJson.configPath === configPath
 => true
 
-badJson.message.includes(configPath)
+badJson instanceof BoxesConfigParseError && badJson.message.includes(configPath)
 => true
 ```
 

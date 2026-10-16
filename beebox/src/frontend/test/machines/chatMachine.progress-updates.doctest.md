@@ -16,21 +16,21 @@ path (the session transcript) and on the live stream.
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { parseSessionLog } from "../../../cli/lib/session.js";
+import { parseSessionLog, type SessionLogSlice } from "../../../cli/lib/session.js";
 import { writesProgressUpdates } from "../../../shared/model-ids.js";
 import { handleTurnMessage } from "../../src/machines/chatMachine/chat-actors.js";
 import { groupIntoParts, hasProgressUpdate } from "../../src/components/chat/message-parsing.js";
 import { buildStreamEntry } from "../../src/lib/stream-entry.js";
-import type { ChatMessage } from "../../../core/chat/session/messages.js";
+import type { ChatMessage, ChatMessageContent } from "../../../core/chat/session/messages.js";
 import type { ChatEvent } from "../../src/machines/chat-types.js";
 import type { SessionContentBlock, SessionEntry } from "../../src/api-chat.js";
 
-const ALL = { mode: "page", offset: 0, limit: 5000 };
+const ALL: SessionLogSlice = { mode: "page", offset: 0, limit: 5000 };
 const dir = await mkdtemp(join(tmpdir(), "bbx-progress-updates-"));
 
 // One transcript line per content block, as Claude Code writes them.
 let n = 0;
-function assistantLine(model: string, block: Record<string, unknown>): string {
+function assistantLine(model: string, block: object): string {
   n += 1;
   return JSON.stringify({
     type: "assistant", uuid: `a${n}`, timestamp: "2026-09-25T00:00:00Z",
@@ -44,10 +44,10 @@ function toolResultLine(id: string): string {
     message: { role: "user", content: [{ type: "tool_result", tool_use_id: id, content: "ok" }] },
   });
 }
-const reasoning = { type: "thinking", thinking: "", signature: "sig" };
-const update = (text: string) => ({ type: "thinking", thinking: text, signature: "sig" });
-const bash = (id: string) => ({ type: "tool_use", id, name: "Bash", input: { command: "true" } });
-const text = (t: string) => ({ type: "text", text: t });
+const reasoning = { type: "thinking", thinking: "", signature: "sig" } as const;
+const update = (text: string) => ({ type: "thinking", thinking: text, signature: "sig" } as const);
+const bash = (id: string) => ({ type: "tool_use", id, name: "Bash", input: { command: "true" } } as const);
+const text = (t: string) => ({ type: "text", text: t } as const);
 
 // The shape of the failing turn: reasoning, update, tool; reasoning, update,
 // tool; then a bare ack as the only text.
@@ -84,7 +84,7 @@ async function historyOf(lines: string[]): Promise<SessionEntry[]> {
 
 // Drive the live handler with one assistant frame per block and build the
 // provisional entry the chat renders during the turn.
-function liveOf(model: string, blocks: Record<string, unknown>[]): SessionEntry[] {
+function liveOf(model: string, blocks: ChatMessageContent[]): SessionEntry[] {
   const state = { sawTextPartial: false };
   let streamText = "";
   const streamTools: SessionContentBlock[] = [];
@@ -93,7 +93,7 @@ function liveOf(model: string, blocks: Record<string, unknown>[]): SessionEntry[
     if (e.type === "STREAM_TOOL") streamTools.push(e.tool);
   };
   for (const block of blocks) {
-    const msg = { type: "assistant", session_id: "s", message: { role: "assistant", model, content: [block] } } as ChatMessage;
+    const msg: ChatMessage = { type: "assistant", session_id: "s", message: { role: "assistant", model, content: [block] } };
     handleTurnMessage(msg, { sessionInput: "s", sendBack: sink, terminal: sink, state });
   }
   return [buildStreamEntry({ uuid: "live", streamText, streamTools })];

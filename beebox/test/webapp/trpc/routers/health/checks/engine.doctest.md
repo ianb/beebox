@@ -26,7 +26,7 @@ async function scaffoldV3(box: Awaited<ReturnType<typeof makeTmpBox>>): Promise<
   return box.path("pkg");
 }
 
-function byName(checks: Array<{ name: string }>, name: string) {
+function byName<T extends { name: string }>(checks: T[], name: string): T | undefined {
   return checks.find((c) => c.name === name);
 }
 ```

@@ -13,8 +13,10 @@ The reviewer is a scripted fake; no model is called.
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { once } from "node:events";
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { ChatReviewer, TitleArgs } from "../../../../src/core/chat/review/reviewer.js";
 import { appendSessionManifest } from "../../../../src/core/agent/manifest.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import {
@@ -33,12 +35,12 @@ const NOW = new Date("2026-07-28T12:00:00Z");
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
 const B = "bbbbbbbb-2222-4222-8222-222222222222";
 
-function fakeReviewer(title: string) {
-  const titleCalls = [];
+function fakeReviewer(title: string): ChatReviewer & { titleCalls: string[] } {
+  const titleCalls: string[] = [];
   return {
     titleCalls,
     async review() { throw new Error("the after-turn path never runs the full review"); },
-    async title(args) { titleCalls.push(args.sessionId); return { title }; },
+    async title(args: TitleArgs) { titleCalls.push(args.sessionId); return { title }; },
   };
 }
 
@@ -55,7 +57,7 @@ function agent(uuid: string, text: string) {
 const REPLY = "Here is a plan for the evening, with a menu that works for everyone. ".repeat(6);
 
 /** A husk plus a transcript written just now (the turn that just finished). */
-async function seed(box, sessionId: string, entries: object[]) {
+async function seed(box: TmpBox, sessionId: string, entries: object[]) {
   const huskPath = `_content/chat/web/2026-07-28_${sessionId}.chat.card`;
   await box.write(huskPath, `---\nsession: ${sessionId}\n---\n\n`);
   const logPath = getSessionLogPath(box.root, sessionId);
@@ -172,7 +174,7 @@ const first = "Help me plan a birthday dinner for Saturday, eight people, one ve
 await seed(box, A, [user("a1", first), agent("a2", REPLY)]);
 const reviewer = {
   async review() { throw new Error("unused"); },
-  async title(args) {
+  async title(args: TitleArgs) {
     appendSessionManifest(box.root, { sessionId: "title-run-1", task: `chat-title:${args.sessionId}`, timestamp: NOW.toISOString() });
     return { title: "Saturday birthday dinner for eight" };
   },
@@ -215,7 +217,7 @@ const quiet = new Date(NOW.getTime() - 5 * 60 * 60 * 1000);
 await utimes(getSessionLogPath(box.root, A), quiet, quiet);
 const reviewer = {
   async review() { throw new Error("unused"); },
-  async title(args) {
+  async title(args: TitleArgs) {
     appendSessionManifest(box.root, { sessionId: "nightly-run-1", task: `chat-title:${args.sessionId}`, timestamp: NOW.toISOString() });
     return { title: "Saturday birthday dinner for eight" };
   },
@@ -304,7 +306,7 @@ const huskB = await seed(box, B, [user("b1", first), agent("b2", REPLY)]);
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
 const reviewer = fakeReviewer("Saturday birthday dinner for eight");
-const titled = [];
+const titled: Array<{ sessionId: string; title: string }> = [];
 wireAfterTurnTitling(session, {
   boxRoot: box.root, reviewer, now: () => NOW, ownerEmail: () => null,
   onTitled: (event) => { titled.push(event); },
@@ -313,6 +315,7 @@ wireAfterTurnTitling(session, {
 await session.send("hello");
 await tick();
 const run = backend.lastRun();
+assert.ok(run);
 const done = once(session, "done");
 run.emitSessionInit(A);
 run.emitAssistantText("plain reply");

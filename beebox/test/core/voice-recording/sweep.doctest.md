@@ -7,11 +7,14 @@ after sealing if it never becomes terminal.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import type { StagingSession, StagingVoice } from "../../../src/core/capture/staging-schema.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { createStagingSession, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";
 import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging/core.js";
 import { sweepVoiceSessions } from "../../../src/core/voice-recording/sweep.js";
 
-async function configureBox(box) {
+async function configureBox(box: TmpBox) {
   await box.write(".gitignore", ["_tmp/", ".beebox/"].join("\n") + "\n");
   box.commitAll("configure");
 }
@@ -19,8 +22,9 @@ async function configureBox(box) {
 // Directly backdate a timestamp field on the manifest, bypassing getBoxTimeISO
 // — the sweep's retention math is a plain wall-clock diff against whatever's
 // on disk, so this is the simplest way to make a session "old" in a test.
-async function backdate(box, id, patch) {
+async function backdate(box: TmpBox, id: string, patch: { session?: Partial<StagingSession>; voice?: Partial<StagingVoice> }) {
   const session = await readStagingSession({ boxRoot: box.root, id });
+  invariant(session?.voice, "staged voice recording exists");
   Object.assign(session, patch.session || {});
   Object.assign(session.voice, patch.voice || {});
   await writeStagingSession({ boxRoot: box.root, session });
@@ -70,6 +74,7 @@ const session = await createStagingSession({ boxRoot: box.root, targetSessionId:
 await sealVoiceSession({ boxRoot: box.root, id: session.id, emissionId: null, hq: null });
 
 const sealed = await readStagingSession({ boxRoot: box.root, id: session.id });
+invariant(sealed?.voice, "sealed recording keeps its voice state");
 JSON.stringify({ sealedAt: sealed.voice.sealedAt === sealed.voice.terminalAt, terminalAtSet: sealed.voice.terminalAt !== undefined })
 => {"sealedAt":true,"terminalAtSet":true}
 ```
@@ -131,7 +136,7 @@ set. Retention counts from `sealedAt` instead — not before 7 days:
 const box = await makeTmpBox({ git: true });
 await configureBox(box);
 
-async function sealedReadyUnclaimed(sealedAt) {
+async function sealedReadyUnclaimed(sealedAt: string) {
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
   await sealVoiceSession({
     boxRoot: box.root, id: session.id, emissionId: `e-${session.id}`,
@@ -147,7 +152,9 @@ async function sealedReadyUnclaimed(sealedAt) {
 const stale = await sealedReadyUnclaimed(EIGHT_DAYS_AGO);
 const fresh = await sealedReadyUnclaimed(SIX_DAYS_AGO);
 
-const staleVoice = (await readStagingSession({ boxRoot: box.root, id: stale.id })).voice;
+const staleSession = await readStagingSession({ boxRoot: box.root, id: stale.id });
+invariant(staleSession?.voice, "stale recording keeps its voice state");
+const staleVoice = staleSession.voice;
 JSON.stringify({ handoff: staleVoice.handoff.mode, hq: staleVoice.hq.state, terminalAt: staleVoice.terminalAt ?? null })
 => {"handoff":"open","hq":"ready","terminalAt":null}
 

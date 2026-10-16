@@ -67,10 +67,10 @@ const logged = captured("error", () => {
 logged.length
 => 1
 
-logged[0].startsWith("[codex-chat] turn failure: no id here")
+logged[0]?.startsWith("[codex-chat] turn failure: no id here")
 => true
 
-logged[0].includes("codex-chat.failure-reporting.doctest")
+logged[0]?.includes("codex-chat.failure-reporting.doctest")
 => true
 ```
 
@@ -81,7 +81,7 @@ A non-`Error` throw has no stack to print, and says so instead of printing
 const nonError = captured("error", () => {
   codexFailureEvent({ phase: "session-start", sessionId: "", error: { code: 7 } });
 });
-nonError[0].includes("non-Error throw:")
+nonError[0]?.includes("non-Error throw:")
 => true
 ```
 

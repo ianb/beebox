@@ -14,9 +14,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { boxSlug } from "../../../src/lib/box-slug.js";
 import { resolveSecret } from "../../../src/core/secrets/resolve.js";
+import type { ResolveSecretOptions } from "../../../src/core/secrets/resolve.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { grantSecret, setSecret, declareSecret, removeSecret } from "../../../src/core/secrets/lifecycle.js";
 import { accessLogSegmentPath } from "../../../src/core/secrets/access-log.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+
+function secretsFile(): string {
+  const file = process.env.BBX_SECRETS_FILE;
+  invariant(file, "useTempStore points BBX_SECRETS_FILE at a temp store");
+  return file;
+}
 
 async function useTempStore() {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
@@ -25,7 +33,7 @@ async function useTempStore() {
 }
 
 /** The refusal kind, or the resolved placeholder value on success. */
-async function outcome(opts) {
+async function outcome(opts: ResolveSecretOptions) {
   const result = await resolveSecret(opts);
   return result.ok ? `ok:${result.value.value}${result.value.suspect ? " (suspect)" : ""}` : result.error.kind;
 }
@@ -128,7 +136,7 @@ await grantSecret({ slug, name: "doomed", access: "server" });
 await removeSecret("doomed");
 print(`grant outlived entry: ${await outcome({ boxRoot: box.root, name: "doomed", purpose: "p", access: "server" })}`);
 
-await writeFile(process.env.BBX_SECRETS_FILE, "{ not json");
+await writeFile(secretsFile(), "{ not json");
 print(`store corrupt: ${await outcome({ boxRoot: box.root, name: "ungranted", purpose: "p", access: "server" })}`);
 =>
 no entry, no grant: unknown-secret
@@ -166,9 +174,9 @@ const box = await makeTmpBox();
 const slug = await boxSlug(box.root);
 await setSecret({ name: "stale", value: "placeholder-value-6" });
 await grantSecret({ slug, name: "stale", access: "server" });
-const store = JSON.parse(await readFile(process.env.BBX_SECRETS_FILE, "utf-8"));
+const store = JSON.parse(await readFile(secretsFile(), "utf-8"));
 store.secrets.stale.verified = { status: "failed", at: "2026-08-17T00:00:00.000Z", reason: "401" };
-await writeFile(process.env.BBX_SECRETS_FILE, JSON.stringify(store));
+await writeFile(secretsFile(), JSON.stringify(store));
 await outcome({ boxRoot: box.root, name: "stale", purpose: "p", access: "server" });
 => ok:placeholder-value-6 (suspect)
 ```
@@ -190,7 +198,7 @@ const slug = await boxSlug(box.root);
 await setSecret({ name: "used", value: "placeholder-value-7" });
 await grantSecret({ slug, name: "used", access: "server" });
 await resolveSecret({ boxRoot: box.root, name: "used", purpose: "p", access: "server" });
-const stamped = JSON.parse(await readFile(process.env.BBX_SECRETS_FILE, "utf-8"));
+const stamped = JSON.parse(await readFile(secretsFile(), "utf-8"));
 print(`stamped: ${typeof stamped.secrets.used.lastUsed[slug] === "string"}`);
 print(`boxes: ${Object.keys(stamped.secrets.used.lastUsed).length}`);
 =>
@@ -219,7 +227,7 @@ const slug = await boxSlug(box.root);
 await setSecret({ name: "probed", value: "placeholder-value-8" });
 await grantSecret({ slug, name: "probed", access: "server" });
 await resolveSecret({ boxRoot: box.root, name: "probed", purpose: "health-check", access: "server", observe: false });
-const probed = JSON.parse(await readFile(process.env.BBX_SECRETS_FILE, "utf-8")).secrets.probed;
+const probed = JSON.parse(await readFile(secretsFile(), "utf-8")).secrets.probed;
 const logged = JSON.parse((await readFile(accessLogSegmentPath(new Date().toISOString()), "utf-8")).trim());
 print(`logged: ${logged.event} ${logged.purpose}`);
 print(`lastUsed: ${JSON.stringify(probed.lastUsed)}`);
@@ -235,7 +243,7 @@ nowhere in the observed list:
 
 ```ts continue
 await resolveSecret({ boxRoot: box.root, name: "probed", purpose: "real-work", access: "server" });
-const used = JSON.parse(await readFile(process.env.BBX_SECRETS_FILE, "utf-8")).secrets.probed;
+const used = JSON.parse(await readFile(secretsFile(), "utf-8")).secrets.probed;
 print(`stamped: ${typeof used.lastUsed[slug] === "string"}`);
 print(`purposes: ${JSON.stringify(used.purposes)}`);
 =>
@@ -267,7 +275,7 @@ await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "Not A Label
 await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "with\nnewline", access: "server" });
 => throws InvariantError
 
-(await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "google-oauth", access: "server" })).error.kind
+await outcome({ boxRoot: box.root, name: "anything", purpose: "google-oauth", access: "server" })
 => unknown-secret
 ```
 

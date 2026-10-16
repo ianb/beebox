@@ -11,7 +11,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { boxSlug } from "../../../src/lib/box-slug.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { parseCalloutTags, notifyTurnCallouts } from "../../../src/core/chat/callout-tags.js";
 import { addSubscription } from "../../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../../src/services/push.js";
@@ -26,7 +26,7 @@ const SESSION = "5f0c2a9e-1111-4c1d-9e2b-000000000001";
 const SUB = { endpoint: "https://push.example/callouts", keys: { p256dh: "p", auth: "a" } };
 
 /** The newest logged intent and its deliveries. */
-async function lastLogged(box) {
+async function lastLogged(box: TmpBox) {
   const n = (await readRecent(box.root, { days: 1 })).at(-1);
   if (n === undefined) return "nothing logged";
   const { title, body, target, loudness, tag, source } = n.intent;
@@ -107,7 +107,7 @@ Forms are due Wednesday.
 apns skipped: no-audience
 web-push sent
 
-push.sent[0].payload.url === `/${await boxSlug(box.root)}/chat?session=${SESSION}`
+push.sent[0]?.payload.url === `/${await boxSlug(box.root)}/chat?session=${SESSION}`
 => true
 ```
 
@@ -151,7 +151,7 @@ whatever the presence.
 
 ```ts continue
 await notifyTurnCallouts(box.root, { text: `<callout context="note">Filed the receipt.</callout>`, sessionId: SESSION, services: { push } });
-(await lastLogged(box)).split("\n")[0].startsWith("dot | note")
+(await lastLogged(box)).split("\n")[0]?.startsWith("dot | note")
 => true
 ```
 

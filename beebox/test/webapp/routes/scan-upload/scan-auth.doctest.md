@@ -21,7 +21,7 @@ const ORIGINAL_OWNER_EMAIL = process.env.BBX_OWNER_EMAIL;
 
 /** A minimal box scope with the scan preHandler and one echo route behind it —
  *  the shape Track 2's routes will register. */
-async function makeScanServer(boxRoot) {
+async function makeScanServer(boxRoot: string) {
   const server = Fastify({ logger: false });
   server.decorate("openAccess", false);
   server.register(async (instance) => {
@@ -69,7 +69,7 @@ const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.
 const mobileAttempt = await server.inject({
   method: "GET",
   url: "/api/scan/whoami",
-  headers: { authorization: `Bearer ${device.deviceToken}` },
+  headers: { authorization: `Bearer ${device?.deviceToken}` },
 });
 mobileAttempt.statusCode
 => 401
@@ -111,7 +111,7 @@ isn't the owner is not enough.
 ```ts continue
 process.env.BBX_HUB_SECRET = "scan-auth-doctest-hub-secret";
 process.env.BBX_OWNER_EMAIL = "owner@example.com";
-const hubHeaders = (email) => ({
+const hubHeaders = (email: string) => ({
   "x-bbx-hub-secret": "scan-auth-doctest-hub-secret",
   "x-bbx-authenticated-email": email,
 });
@@ -174,7 +174,7 @@ const authedServer = await makeTestServer({ openAccess: false });
 const scan3 = await createScanToken(authedServer.boxRoot, { name: "uploader", createdBy: null });
 const scanBearer = { authorization: `Bearer ${scan3.token}` };
 
-const probes = [
+const probes: { method: "GET" | "POST"; url: string }[] = [
   { method: "GET", url: "/api/trpc/health.check" },
   { method: "POST", url: "/api/pairing/session" },
   { method: "GET", url: "/api/health" },

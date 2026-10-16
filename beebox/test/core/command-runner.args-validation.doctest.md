@@ -34,7 +34,7 @@ const box = await makeTmpBox();
 const badLimit = await runCommand({
   name: "search",
   args: { query: "dentist", limit: "5" },
-  ctx: createCollectorContext(box.root),
+  ctx: createCollectorContext(box.root).ctx,
 });
 badLimit.success
 => false
@@ -49,7 +49,7 @@ badLimit.error
 const badMode = await runCommand({
   name: "search",
   args: { query: "dentist", mode: "fuzzy" },
-  ctx: createCollectorContext(box.root),
+  ctx: createCollectorContext(box.root).ctx,
 });
 badMode.success
 => false
@@ -64,7 +64,7 @@ badMode.error
 const noQuery = await runCommand({
   name: "search",
   args: {},
-  ctx: createCollectorContext(box.root),
+  ctx: createCollectorContext(box.root).ctx,
 });
 noQuery.error
 => a search query is required — e.g. bbx search "dentist appointment"

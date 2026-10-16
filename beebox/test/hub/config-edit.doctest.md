@@ -13,6 +13,7 @@ import {
   planAddBoxToHubConfig,
   applyAddBoxPlan,
   describeAddBoxPlan,
+  type AddBoxToHubPlan,
   HubConfigEditError,
 } from "../../src/hub/config-edit.js";
 import { HubConfigError, loadHubConfig } from "../../src/hub/config.js";
@@ -45,21 +46,37 @@ async function makeFixture() {
   return { tmp, configPath };
 }
 
-async function tryApply(plan) {
+async function tryApply(plan: AddBoxToHubPlan): Promise<Error | null> {
   try {
     await applyAddBoxPlan(plan);
     return null;
   } catch (e) {
-    return e;
+    if (e instanceof Error) return e;
+    throw e;
   }
 }
 
-async function tryPlan(configPath, slug, boxPath) {
+async function tryPlan(configPath: string, slug: string, boxPath: string): Promise<AddBoxToHubPlan | Error> {
   try {
     return await planAddBoxToHubConfig({ configPath, slug, boxPath });
   } catch (e) {
-    return e;
+    if (e instanceof Error) return e;
+    throw e;
   }
+}
+
+/** A plan that must succeed. */
+async function planOk(configPath: string, slug: string, boxPath: string): Promise<AddBoxToHubPlan> {
+  const result = await tryPlan(configPath, slug, boxPath);
+  if (result instanceof Error) throw result;
+  return result;
+}
+
+/** A plan that must be rejected; returns the rejection. */
+async function planRejected(configPath: string, slug: string, boxPath: string): Promise<Error> {
+  const result = await tryPlan(configPath, slug, boxPath);
+  if (!(result instanceof Error)) throw new Error(`expected the plan for ${slug} to be rejected`);
+  return result;
 }
 ```
 
@@ -70,7 +87,7 @@ edit — the whole reason the command refuses to invent a config from scratch.
 
 ```ts
 const { tmp, configPath } = await makeFixture();
-const plan = await tryPlan(configPath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
+const plan = await planOk(configPath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
 plan.action
 => added
 
@@ -79,7 +96,7 @@ const config = await loadHubConfig(configPath);
 Object.keys(config.boxes).sort().join(",")
 => hearth,lighthouse
 
-config.boxes.lighthouse.path === path.join(tmp.root, "boxes/lighthouse")
+config.boxes.lighthouse?.path === path.join(tmp.root, "boxes/lighthouse")
 => true
 
 [config.port, config.host, config.lazy, config.idleMs, config.keepRecent].join(",")
@@ -93,7 +110,7 @@ The already-registered entry uses a relative path and the caller passes an
 absolute one; the comparison canonicalizes both, so they match.
 
 ```ts continue
-const again = await tryPlan(configPath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
+const again = await planOk(configPath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
 again.action
 => unchanged
 
@@ -107,7 +124,7 @@ no `content/` dir). Registering it under the same slug is a conflict the
 operator must fix, not a no-op:
 
 ```ts continue
-const viaContent = await tryPlan(configPath, "hearth", path.join(tmp.root, "boxes/hearth/content"));
+const viaContent = await planRejected(configPath, "hearth", path.join(tmp.root, "boxes/hearth/content"));
 viaContent instanceof HubConfigEditError
 => true
 ```
@@ -119,7 +136,7 @@ runs the candidate config through `parseHubConfig`, so this is the same
 rejection the hub would make at startup — reported now instead.
 
 ```ts continue
-const reserved = await tryPlan(configPath, "webhook", path.join(tmp.root, "boxes/lighthouse"));
+const reserved = await planRejected(configPath, "webhook", path.join(tmp.root, "boxes/lighthouse"));
 reserved instanceof HubConfigError
 => true
 
@@ -134,7 +151,7 @@ Object.keys((await loadHubConfig(configPath)).boxes).sort().join(",")
 A malformed slug is rejected the same way.
 
 ```ts continue
-const malformed = await tryPlan(configPath, "Lighthouse_2", path.join(tmp.root, "boxes/lighthouse"));
+const malformed = await planRejected(configPath, "Lighthouse_2", path.join(tmp.root, "boxes/lighthouse"));
 malformed instanceof HubConfigError
 => true
 ```
@@ -146,7 +163,7 @@ Two slugs resolving to one box would start two engine processes against one
 create it.
 
 ```ts continue
-const dupe = await tryPlan(configPath, "beacon", path.join(tmp.root, "boxes/lighthouse"));
+const dupe = await planRejected(configPath, "beacon", path.join(tmp.root, "boxes/lighthouse"));
 dupe instanceof HubConfigError
 => true
 
@@ -160,7 +177,7 @@ Repointing a live slug is an operator decision, not something a provisioning
 script should do silently.
 
 ```ts continue
-const repoint = await tryPlan(configPath, "hearth", path.join(tmp.root, "boxes/lighthouse"));
+const repoint = await planRejected(configPath, "hearth", path.join(tmp.root, "boxes/lighthouse"));
 repoint instanceof HubConfigEditError
 => true
 
@@ -174,7 +191,7 @@ A config written from scratch would drop the port/host/lazy settings the
 running hub depends on, so the command names the problem instead.
 
 ```ts continue
-const missing = await tryPlan(path.join(tmp.root, "nope.json"), "lighthouse", tmp.root);
+const missing = await planRejected(path.join(tmp.root, "nope.json"), "lighthouse", tmp.root);
 missing instanceof HubConfigEditError
 => true
 
@@ -196,7 +213,7 @@ await fs.writeFile(
   JSON.stringify({ boxes: { hearth: { path: "./boxes/hearth" }, api: { path: "./boxes/lighthouse" } } }),
 );
 // "hearth" is already registered there at the same path — the idempotent path.
-const onBroken = await tryPlan(brokenConfigPath, "hearth", path.join(tmp.root, "boxes/hearth"));
+const onBroken = await planRejected(brokenConfigPath, "hearth", path.join(tmp.root, "boxes/hearth"));
 onBroken instanceof HubConfigError
 => true
 
@@ -209,7 +226,7 @@ onBroken.message.includes("reserved")
 ```ts continue
 const racePath = path.join(tmp.root, "race.json");
 await fs.writeFile(racePath, JSON.stringify({ boxes: {} }, null, 2) + "\n");
-const racePlan = await tryPlan(racePath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
+const racePlan = await planOk(racePath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
 racePlan.action
 => added
 
@@ -228,7 +245,7 @@ Object.keys((await loadHubConfig(racePath)).boxes).join(",")
 ```ts continue
 const brokenPath = path.join(tmp.root, "broken.json");
 await fs.writeFile(brokenPath, "{ this is not json");
-const broken = await tryPlan(brokenPath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
+const broken = await planRejected(brokenPath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
 broken instanceof HubConfigEditError
 => true
 

@@ -28,14 +28,14 @@ Two `Text` spans in a `Stack` are flex items, so each takes its own line and
 the gap applies between them.
 
 ```ts
-html(h(Stack, { gap: "xs" }, h(Text, null, "Label"), h(Text, null, "Description")))
+html(h(Stack, { gap: "xs", children: h(React.Fragment, null, h(Text, null, "Label"), h(Text, null, "Description")) }))
 => <div class="flex flex-col gap-1"><span class="text-warm-900 text-base">Label</span><span class="text-warm-900 text-base">Description</span></div>
 ```
 
 The default gap is `md`, and `as` still selects the element:
 
 ```ts
-html(h(Stack, { as: "ul" }, h("li", null, "a")))
+html(h(Stack, { as: "ul", children: h("li", null, "a") }))
 => <ul class="flex flex-col gap-3"><li>a</li></ul>
 ```
 
@@ -45,20 +45,20 @@ and a clipping stack is `relative` so an `sr-only` descendant cannot stretch
 the document:
 
 ```ts
-html(h(Stack, { gap: "none", overflow: "auto", focusable: true }, "x"))
+html(h(Stack, { gap: "none", overflow: "auto", focusable: true, children: "x" }))
 => <div class="flex flex-col overflow-auto relative focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent" tabindex="0">x</div>
 
-html(h(Stack, { gap: "none", hideOnMobile: true, align: "center" }, "x"))
+html(h(Stack, { gap: "none", hideOnMobile: true, align: "center", children: "x" }))
 => <div class="flex-col items-center hidden sm:flex">x</div>
 ```
 
 ## Heading renders a real heading; the level decides the look
 
 ```ts
-html(h(Heading, { level: 2 }, "This box"))
+html(h(Heading, { level: 2, children: "This box" }))
 => <h2 class="text-lg font-semibold text-warm-900">This box</h2>
 
-html(h(Heading, { level: 3, className: "mb-2" }, "Engines"))
+html(h(Heading, { level: 3, className: "mb-2", children: "Engines" }))
 => <h3 class="text-sm font-semibold text-warm-900 mb-2">Engines</h3>
 ```
 
@@ -68,9 +68,9 @@ The caller's padding replaces the default `p-8` (`cn` merges with
 `tailwind-merge`, and the caller wins).
 
 ```ts
-html(h(StatusMessage, null, "Loading…"))
+html(h(StatusMessage, { children: "Loading…" }))
 => <div role="status" class="p-8 text-warm-600">Loading…</div>
 
-html(h(StatusMessage, { className: "p-4" }, "Loading…"))
+html(h(StatusMessage, { className: "p-4", children: "Loading…" }))
 => <div role="status" class="text-warm-600 p-4">Loading…</div>
 ```

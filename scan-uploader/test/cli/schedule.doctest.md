@@ -194,7 +194,7 @@ bundleInvocation.programArguments.join("|")
 ```
 
 ```continue
-bundleInvocation.environmentVariables?.PATH.includes(join(dir, "home-test", ".local", "bin"))
+bundleInvocation.environmentVariables?.PATH?.includes(join(dir, "home-test", ".local", "bin"))
 => true
 ```
 
@@ -248,7 +248,7 @@ sourceInvocation.workingDirectory === repoRootG
 ```
 
 ```continue
-sourceInvocation.environmentVariables?.PATH.includes(join(dir, "home-test", ".local", "bin"))
+sourceInvocation.environmentVariables?.PATH?.includes(join(dir, "home-test", ".local", "bin"))
 => true
 ```
 

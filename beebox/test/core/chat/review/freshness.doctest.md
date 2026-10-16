@@ -8,7 +8,7 @@ A confident yes keeps the title and advances the journal for free.
 ```ts setup
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import {
   createJevFreshnessChecker,
@@ -27,7 +27,7 @@ import { contentHash } from "../../../../src/lib/content-hash.js";
  * merely written on the card would classify as a hand edit — hands-off —
  * which is a different (also tested) behavior.
  */
-async function seedGeneratedTitle(box, sessionId, title) {
+async function seedGeneratedTitle(box: TmpBox, sessionId: string, title: string) {
   await box.write(".beebox/chat-review/state.json", JSON.stringify({
     lastRunAt: null,
     sessions: {
@@ -42,7 +42,7 @@ const CARD_PATH = "_content/chat/web/2026-07-28_session.chat.card";
  * A chat card titled "Planning a small birthday dinner" (generated ownership)
  * whose transcript, last touched 5 hours before NOW, holds two grown user turns.
  */
-async function seedChat(box, { sessionId, turns }) {
+async function seedChat(box: TmpBox, { sessionId, turns }: { sessionId: string; turns: Array<[string, string, string]> }) {
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await box.write(CARD_PATH, `---\nsession: ${sessionId}\ntitle: Planning a small birthday dinner\n---\n\n`);
   await seedGeneratedTitle(box, sessionId, "Planning a small birthday dinner");
@@ -114,7 +114,7 @@ jev.judgeCalls.length
 => 1
 
 const state = await loadReviewState(box.root);
-state.sessions[sessionId].applied["title"].endUuid
+state.sessions[sessionId]?.applied["title"]?.endUuid
 => g2
 ```
 

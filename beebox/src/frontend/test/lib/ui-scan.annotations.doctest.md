@@ -55,8 +55,8 @@ function planWebIds(plan: string): string[] {
     const cells = row.split("|").slice(1);
     // A cell that opens with an em dash is "no counterpart on this platform",
     // with or without a parenthetical saying why.
-    if (cells[1].trim().startsWith("\u2014")) return [];
-    return [...cells[0].matchAll(/`(bbx-[\w-]+)`/g)].map((m) => m[1]);
+    if (cells[1]?.trim().startsWith("\u2014")) return [];
+    return [...(cells[0] ?? "").matchAll(/`(bbx-[\w-]+)`/g)].flatMap((m) => (m[1] === undefined ? [] : [m[1]]));
   });
 }
 
@@ -275,7 +275,7 @@ const composerGallery = renderToStaticMarkup(React.createElement(React.Fragment,
 const composerSingleState = renderToStaticMarkup(composerCopy(true, true));
 const retryProps = {
   sessionId: "fake", recording: false, finalizing: false, hasContent: true,
-  pendingUploads: 0, photosFailed: 1, audioFailed: 0, filesFailed: 0,
+  pendingUploads: 0, sendable: 1, unreadable: 0, photosFailed: 1, audioFailed: 0, filesFailed: 0,
   retryFeedback: { phase: "idle" as const }, onDone: () => {}, onCancel: () => {},
   onToggleRecording: () => {}, onRetryFailed: () => {}, onSkipPending: () => {},
 };

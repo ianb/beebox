@@ -9,16 +9,18 @@ outcome that freezes — neither increments nor resets — `consecutiveFailures`
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { evaluateSkip } from "../../../src/cli/tick-helpers.js";
 import { classifyScheduleFailure } from "../../../src/core/schedule/engine-wait.js";
 import { recordEngineUnavailability } from "../../../src/core/agent/engine-availability-store.js";
 import { recordOutcome, normalizeScriptState } from "../../../src/core/schedule/state.js";
 
-function makeScript(overrides = {}) {
+function makeScript(overrides: Partial<ParsedScheduledScript> = {}): ParsedScheduledScript {
   return {
     cron: undefined, at: undefined, rrule: undefined, until: undefined,
     notBefore: undefined, onWakeup: true, once: false, enabled: true,
-    runs: "echo test", description: undefined, source: undefined,
+    action: { kind: "runs", command: "echo test" }, requestedBy: undefined,
+    description: undefined, reason: undefined,
     createAfterSuccess: [], budget: undefined, lockGroup: undefined,
     timeoutMs: undefined, requires: undefined,
     ...overrides,

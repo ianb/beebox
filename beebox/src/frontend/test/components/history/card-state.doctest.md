@@ -3,9 +3,14 @@
 ```ts setup
 import { legacyHistoryState, parseHistoryCardState, normalizeHistoryViewRouteTarget } from "../../../src/components/history/card-state.js";
 import { historyLookupFailureSearch, historyViewRedirectSearch } from "../../../src/components/history/card-state.js";
-import { parseViewUrl } from "../../../src/lib/view-url.js";
+import { parseViewUrl, type ViewState, type ViewStateValue } from "../../../src/lib/view-url.js";
 import { historySelectionMissing, resolveHistorySelection } from "../../../src/components/history/HistoryViewCard/history-selection.js";
 const canonical = "_config/interface/history.card";
+// The history filter object inside a view state ({} when absent).
+function filterOf(state: ViewState | null | undefined): Record<string, ViewStateValue> {
+  const filter = state?.filter;
+  return typeof filter === "object" && filter !== null && !Array.isArray(filter) ? filter : {};
+}
 ```
 
 The complete legacy filter vocabulary becomes validated card state.
@@ -20,10 +25,10 @@ working: its bare run names read as the procedure ids those runs have now, and
 an explicit `trigger=` wins over it.
 
 ```ts
-JSON.stringify(legacyHistoryState({ workflow: "process-news,process-pages" }).filter.triggers)
+JSON.stringify(filterOf(legacyHistoryState({ workflow: "process-news,process-pages" })).triggers)
 => ["procedure/process-news","procedure/process-pages"]
 
-JSON.stringify(legacyHistoryState({ trigger: "command/bbx wakeup", workflow: "process-news" }).filter.triggers)
+JSON.stringify(filterOf(legacyHistoryState({ trigger: "command/bbx wakeup", workflow: "process-news" })).triggers)
 => ["command/bbx wakeup"]
 ```
 
@@ -49,7 +54,7 @@ Canonical targets normalize without a metadata lookup.
 ```ts
 let loads = 0;
 const direct = await normalizeHistoryViewRouteTarget({ path: canonical, viewer: null, params: { session: "filter-chat" }, viewState: { commit: null } }, async () => { loads++; return {}; });
-[loads, direct?.params, direct?.viewState?.commit, direct?.viewState?.filter?.session]
+[loads, direct?.params, direct?.viewState?.commit, filterOf(direct?.viewState).session]
 => [
   0,
   {},
@@ -62,8 +67,8 @@ Authored History cards await identity and merge a legacy query per key over
 authored defaults.
 
 ```ts
-let release;
-const gate = new Promise(resolve => { release = resolve; });
+let release = () => {};
+const gate = new Promise<void>(resolve => { release = resolve; });
 const pending = normalizeHistoryViewRouteTarget({ path: "saved.view.card", viewer: null, params: { session: "filter-chat" }, viewState: null }, async () => { await gate; return { type: "view", frontmatter: { view: "history", params: { triggers: ["command/generateDocs"] } } }; });
 let settled = false;
 void pending.then(() => { settled = true; });
@@ -114,13 +119,13 @@ genuinely different renderers keep ownership of their query.
 
 ```ts
 const namedCanonical = await normalizeHistoryViewRouteTarget({ path: canonical, viewer: "History", params: { session: "filter-chat" }, viewState: null }, async () => { throw new Error("must not load"); });
-namedCanonical?.viewState?.filter?.session
+filterOf(namedCanonical?.viewState).session
 => filter-chat
 ```
 
 ```ts
 const namedAuthored = await normalizeHistoryViewRouteTarget({ path: "saved.view.card", viewer: "View", params: { session: "filter-chat" }, viewState: null }, async () => ({ type: "view", frontmatter: { view: "history" } }));
-namedAuthored?.viewState?.filter?.session
+filterOf(namedAuthored?.viewState).session
 => filter-chat
 ```
 

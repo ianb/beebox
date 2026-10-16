@@ -11,36 +11,42 @@ scripted fake and no model.
 import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
+import type { ChatReviewer, ReviewArgs, ReviewOutput, TitleArgs, TitleOutput } from "../../../../src/core/chat/review/reviewer.js";
 import { MAX_SESSION_ENTRIES, getSessionMetadata } from "../../../../src/cli/lib/session.js";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
 
 /** A reviewer that returns canned output and records what it was asked. */
-function fakeReviewer(outputs, titleOutputs) {
-  const calls = [];
-  const titleCalls = [];
+function fakeReviewer(
+  outputs: Array<ReviewOutput | Error>,
+  titleOutputs?: Array<TitleOutput | Error>,
+): ChatReviewer & { calls: ReviewArgs[]; titleCalls: TitleArgs[] } {
+  const calls: ReviewArgs[] = [];
+  const titleCalls: TitleArgs[] = [];
   let i = 0;
   let j = 0;
   return {
     calls,
     titleCalls,
-    async review(args) {
+    async review(args: ReviewArgs) {
       calls.push(args);
       const out = outputs[Math.min(i, outputs.length - 1)];
       i += 1;
+      if (out === undefined) throw new Error("fakeReviewer: no scripted review output");
       if (out instanceof Error) throw out;
       return out;
     },
-    async title(args) {
+    async title(args: TitleArgs) {
       titleCalls.push(args);
       if (titleOutputs === undefined) throw new Error("unexpected title call");
       const out = titleOutputs[Math.min(j, titleOutputs.length - 1)];
       j += 1;
+      if (out === undefined) throw new Error("fakeReviewer: no scripted title output");
       if (out instanceof Error) throw out;
       return out;
     },
@@ -84,7 +90,7 @@ function labelled(text: string): string {
 }
 
 /** Seed a husk card plus a backdated transcript big enough to clear the gate. */
-async function seed(box, opts: { sessionId: string; husk: string; entries: object[] }) {
+async function seed(box: TmpBox, opts: { sessionId: string; husk: string; entries: object[] }) {
   await box.write(`_content/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
     `---\nsession: ${sid(opts.sessionId)}\n${opts.husk}---\n\n`);
   const logPath = getSessionLogPath(box.root, sid(opts.sessionId));
@@ -105,7 +111,7 @@ function smallTalk(uuid: string) {
   return userEntry(uuid, "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4));
 }
 
-const OUTPUT = {
+const OUTPUT: ReviewOutput = {
   title: "Sorting out a recurring billing problem",
   contains: "Working through a repeated billing error and how to stop it.",
   notes: [
@@ -148,7 +154,7 @@ const card = await readFile(box.path(huskPath), "utf8");
 ].join(",")
 => true,true,true,true
 
-JSON.stringify({ bootstrap: reviewer.calls[0].bootstrap, account: reviewer.calls[0].currentAccount })
+JSON.stringify({ bootstrap: reviewer.calls[0]?.bootstrap, account: reviewer.calls[0]?.currentAccount })
 => {"bootstrap":true,"account":null}
 ```
 
@@ -182,9 +188,9 @@ await runChatReview(box.root, { reviewer: third, maxSessions: 10, now: NOW, owne
 // The whole transcript renders to >16k chars; the span sent is only the two
 // new entries, so it is far smaller.
 JSON.stringify({
-  bootstrap: third.calls[0].bootstrap,
-  spanIsIncrementOnly: third.calls[0].span.length < 9000,
-  carriedAccount: third.calls[0].currentAccount.includes("cancel the duplicate subscription"),
+  bootstrap: third.calls[0]?.bootstrap,
+  spanIsIncrementOnly: (third.calls[0]?.span.length ?? Infinity) < 9000,
+  carriedAccount: third.calls[0]?.currentAccount?.includes("cancel the duplicate subscription"),
 })
 => {"bootstrap":false,"spanIsIncrementOnly":true,"carriedAccount":true}
 ```
@@ -246,7 +252,7 @@ next short growth has nothing to ask about.
 ```ts continue
 const state = await loadReviewState(box.root);
 const entry = state.sessions[sid("sess5678")];
-({ owner: entry.titleOwner, title: entry.applied["title"]?.endUuid, metadata: entry.applied["metadata"]?.endUuid })
+({ owner: entry?.titleOwner, title: entry?.applied["title"]?.endUuid, metadata: entry?.applied["metadata"]?.endUuid })
 => { owner: "manual", title: "v4", metadata: "v4" }
 ```
 
@@ -282,7 +288,7 @@ The rest of the review still lands, and the field is marked `manual` from here o
 card.includes("contains: Working through a repeated billing error")
 => true
 
-(await loadReviewState(box.root)).sessions[sid("sesspre")].titleOwner
+(await loadReviewState(box.root)).sessions[sid("sesspre")]?.titleOwner
 => manual
 ```
 
@@ -427,7 +433,7 @@ nothing new either.
 => true
 
 const state = await loadReviewState(box.root);
-state.sessions[sid("sesscrash")].applied["metadata"].endUuid
+state.sessions[sid("sesscrash")]?.applied["metadata"]?.endUuid
 => c2
 ```
 
@@ -450,7 +456,7 @@ JSON.stringify({ reviewed: summary.reviewed, failures: summary.reviewerFailures 
 => {"reviewed":0,"failures":1}
 
 const state = await loadReviewState(box.root);
-state.sessions[sid("sessfail")].attempts
+state.sessions[sid("sessfail")]?.attempts
 => 1
 ```
 
@@ -469,7 +475,7 @@ selects is unchanged: oldest first, the rest deferred to the next run.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-for (const [sessionId, agoHours] of [["sessnew", 5], ["sessold", 40], ["sessmid", 20]]) {
+for (const [sessionId, agoHours] of [["sessnew", 5], ["sessold", 40], ["sessmid", 20]] satisfies Array<[string, number]>) {
   await seed(box, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
   const when = new Date(NOW.getTime() - agoHours * HOUR);
   await utimes(getSessionLogPath(box.root, sid(sessionId)), when, when);
@@ -511,16 +517,18 @@ review deletes the second's transcript, so the second re-read finds nothing.
 ```ts continue
 const box2 = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
-for (const [sessionId, agoHours] of [["sessfirst", 40], ["sessvanish", 20]]) {
+for (const [sessionId, agoHours] of [["sessfirst", 40], ["sessvanish", 20]] satisfies Array<[string, number]>) {
   await seed(box2, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
   const when = new Date(NOW.getTime() - agoHours * HOUR);
   await utimes(getSessionLogPath(box2.root, sid(sessionId)), when, when);
 }
 
-const saboteur = {
-  calls: [],
-  async review(args) {
-    this.calls.push(args);
+const sabotagedCalls: ReviewArgs[] = [];
+const saboteur: ChatReviewer & { calls: ReviewArgs[] } = {
+  calls: sabotagedCalls,
+  async title(): Promise<TitleOutput> { throw new Error("unexpected title call"); },
+  async review(args: ReviewArgs) {
+    sabotagedCalls.push(args);
     await rm(getSessionLogPath(box2.root, sid("sessvanish")), { force: true });
     return OUTPUT;
   },
@@ -555,17 +563,19 @@ thing a person typing into that chat would do.
 ```ts
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
-for (const [sessionId, agoHours] of [["sessfirst", 40], ["sesslive", 20]]) {
+for (const [sessionId, agoHours] of [["sessfirst", 40], ["sesslive", 20]] satisfies Array<[string, number]>) {
   await seed(box, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
   const when = new Date(NOW.getTime() - agoHours * HOUR);
   await utimes(getSessionLogPath(box.root, sid(sessionId)), when, when);
 }
 
 const liveLog = getSessionLogPath(box.root, sid("sesslive"));
-const interrupting = {
-  calls: [],
-  async review(args) {
-    this.calls.push(args);
+const interruptedCalls: ReviewArgs[] = [];
+const interrupting: ChatReviewer & { calls: ReviewArgs[] } = {
+  calls: interruptedCalls,
+  async title(): Promise<TitleOutput> { throw new Error("unexpected title call"); },
+  async review(args: ReviewArgs) {
+    interruptedCalls.push(args);
     await appendFile(liveLog, JSON.stringify(bulk("typed-just-now")) + "\n");
     return OUTPUT;
   },
@@ -642,8 +652,8 @@ const huskPath = await seed(box, {
 await runChatReview(box.root, {
   reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
 });
-const journalled = (await loadReviewState(box.root)).sessions[sid("sesscap")].applied["metadata"];
-JSON.stringify({ endUuid: journalled.endUuid, endIndex: journalled.endIndex })
+const journalled = (await loadReviewState(box.root)).sessions[sid("sesscap")]?.applied["metadata"];
+JSON.stringify({ endUuid: journalled?.endUuid, endIndex: journalled?.endIndex })
 => {"endUuid":"cap-1","endIndex":1}
 ```
 
@@ -662,12 +672,12 @@ const second = fakeReviewer([OUTPUT]);
 const summary = await runChatReview(box.root, {
   reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
 });
-const advanced = (await loadReviewState(box.root)).sessions[sid("sesscap")].applied["metadata"];
+const advanced = (await loadReviewState(box.root)).sessions[sid("sesscap")]?.applied["metadata"];
 JSON.stringify({
   reviewed: summary.reviewed,
   bootstrapped: summary.bootstrapped,
-  endUuid: advanced.endUuid,
-  endIndex: advanced.endIndex,
+  endUuid: advanced?.endUuid,
+  endIndex: advanced?.endIndex,
 })
 => {"reviewed":1,"bootstrapped":0,"endUuid":"cap-5001","endIndex":5001}
 ```
@@ -676,15 +686,15 @@ The reviewer saw only the new material, and the remaining ten entries are the
 next run's span — which in turn continues from `cap-5001`, not from the top.
 
 ```ts continue
-second.calls[0].span.includes("line 0") && !second.calls[0].span.includes("aaaa")
+second.calls[0]?.span.includes("line 0") && !second.calls[0]?.span.includes("aaaa")
 => true
 
 const third = fakeReviewer([OUTPUT]);
 const again = await runChatReview(box.root, {
   reviewer: third, maxSessions: 10, now: NOW, ownerEmail: null,
 });
-const final = (await loadReviewState(box.root)).sessions[sid("sesscap")].applied["metadata"];
-JSON.stringify({ bootstrapped: again.bootstrapped, endUuid: final.endUuid, endIndex: final.endIndex })
+const final = (await loadReviewState(box.root)).sessions[sid("sesscap")]?.applied["metadata"];
+JSON.stringify({ bootstrapped: again.bootstrapped, endUuid: final?.endUuid, endIndex: final?.endIndex })
 => {"bootstrapped":0,"endUuid":"cap-5011","endIndex":5011}
 ```
 
@@ -729,8 +739,8 @@ const card = await readFile(box.path(huskPath), "utf8");
 => true,false,false,false
 
 const state = await loadReviewState(box.root);
-const entry = state.sessions[sid("sessshort")].applied;
-JSON.stringify({ consumers: Object.keys(entry).sort(), end: entry["title"].endUuid })
+const entry = state.sessions[sid("sessshort")]?.applied;
+JSON.stringify({ consumers: Object.keys(entry ?? {}).sort(), end: entry?.["title"]?.endUuid })
 => {"consumers":["title"],"end":"h2"}
 ```
 
@@ -770,10 +780,10 @@ await runChatReview(box.root, {
 });
 
 const state = await loadReviewState(box.root);
-const applied = state.sessions[sid("sessboth")].applied;
+const applied = state.sessions[sid("sessboth")]?.applied;
 JSON.stringify({
-  consumers: Object.keys(applied).sort(),
-  sameBoundary: applied["metadata"].endUuid === applied["title"].endUuid,
+  consumers: Object.keys(applied ?? {}).sort(),
+  sameBoundary: applied?.["metadata"]?.endUuid === applied?.["title"]?.endUuid,
 })
 => {"consumers":["metadata","title"],"sameBoundary":true}
 ```
@@ -799,7 +809,7 @@ JSON.stringify({ reviewCalls: reviewer.calls.length, titleCalls: reviewer.titleC
 => {"reviewCalls":0,"titleCalls":1}
 
 const after = await loadReviewState(box.root);
-after.sessions[sid("sessboth")].applied["title"].endUuid
+after.sessions[sid("sessboth")]?.applied["title"]?.endUuid
 => k5
 ```
 
@@ -832,8 +842,8 @@ summary.reviewerFailures
 
 const state = await loadReviewState(box.root);
 JSON.stringify({
-  applied: Object.keys(state.sessions[sid("sessempty")].applied),
-  titleAttempts: state.sessions[sid("sessempty")].titleAttempts,
+  applied: Object.keys(state.sessions[sid("sessempty")]?.applied ?? {}),
+  titleAttempts: state.sessions[sid("sessempty")]?.titleAttempts,
 })
 => {"applied":[],"titleAttempts":1}
 
@@ -899,7 +909,7 @@ JSON.stringify({ titled: summary.titled, calls: reviewer.titleCalls.length })
 => {"titled":0,"calls":0}
 
 const state = await loadReviewState(box.root);
-state.sessions[sid("sesshand")].applied["title"].endUuid
+state.sessions[sid("sesshand")]?.applied["title"]?.endUuid
 => m2
 
 (await readFile(box.path(huskPath), "utf8")).includes("title: Notes on the roof leak")
@@ -931,7 +941,7 @@ await seed(box, { sessionId: "sesssecond", husk: "", entries: [smallTalk("q1"), 
 let seenOnDisk = null;
 const reviewer = {
   async review() { throw new Error("must not run"); },
-  async title(args) {
+  async title(args: TitleArgs) {
     if (args.sessionId === sid("sesssecond")) {
       const onDisk = JSON.parse(await readFile(box.path(".beebox/chat-review/state.json"), "utf8"));
       const first = onDisk.sessions[sid("sessfirst")];

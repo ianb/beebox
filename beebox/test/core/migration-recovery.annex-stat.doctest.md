@@ -12,11 +12,11 @@ import { readFile, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { captureMigrationSnapshot, changedMigrationPaths } from "../../src/core/migration-recovery.js";
-function git(box, ...args) {
+function git(box: { root: string }, ...args: string[]) {
   return execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
 }
 // Each request git sends to a long-running filter names its path; count those.
-async function cleanedPaths(box, fn) {
+async function cleanedPaths<T>(box: { root: string }, fn: () => Promise<T> | T) {
   const trace = join(box.root, ".git", "packet-trace");
   process.env.GIT_TRACE_PACKET = trace;
   try {

@@ -9,7 +9,7 @@ import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-const place = (name, extra) => `---\nname: ${name}\n${extra}---\nbody\n`;
+const place = (name: string, extra: string) => `---\nname: ${name}\n${extra}---\nbody\n`;
 ```
 
 ## Loads unarchived, fully-coordinated places; skips drafts/archived/half-set
@@ -42,7 +42,7 @@ await box.cleanup();
 const box = await makeTmpBox();
 await box.write("places/Office.place.card", place("Office", "lat: 40.0\nlng: -74.0\n"));
 const places = await loadPlaces(box.root);
-places[0].radius
+places[0]?.radius
 => 100
 ```
 

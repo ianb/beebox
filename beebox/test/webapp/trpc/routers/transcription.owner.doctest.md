@@ -11,27 +11,32 @@ service to everyone who can see the chat.
 import { readFile, rm } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { join } from "node:path";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import { TRPCError } from "@trpc/server";
 import { transcriptionRouter } from "../../../../src/webapp/trpc/routers/transcription.js";
 
 /** A caller with the gate booleans denied by default; override per case. */
-function caller(boxRoot, over) {
-  return transcriptionRouter.createCaller({
+function caller(boxRoot: string, over: Partial<TrpcContext>) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: false,
     isOwner: false,
+    isAuthenticatedOwner: false,
+    actor: "user",
     ...over,
-  });
+  };
+  return transcriptionRouter.createCaller(ctx);
 }
 
-async function attempt(fn) {
+async function attempt(fn: () => Promise<unknown>) {
   try {
     return await fn();
   } catch (e) {
-    return `THREW:${e.code}`;
+    return `THREW:${e instanceof TRPCError ? e.code : String(e)}`;
   }
 }
 ```

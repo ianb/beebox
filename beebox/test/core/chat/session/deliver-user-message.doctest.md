@@ -40,7 +40,7 @@ once, and removes its listener after that assignment.
 ```ts continue
 const registry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
 const session = new ChatSession(box.root, { backend: createFakeChatBackend(), sessionFile: null, initialSessionId: "target" });
-const assigned = [];
+const assigned: string[] = [];
 const detach = observeAssignedSession({ registry, session, onAssigned: (id) => { assigned.push(id); }, logPrefix: "test" });
 registry.emit("session-assigned", { sessionId: "other" });
 assigned

@@ -10,7 +10,7 @@ import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../../src/core/migrations.js";
 import { createTextQuestionTemplate } from "../../../src/schemas/question.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
@@ -29,9 +29,20 @@ async function fixture() {
   return box;
 }
 
-function cli(box, args) {
+interface CliResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+function reportStatus(stdout: string): string {
+  const report: { status: string } = JSON.parse(stdout.trim());
+  return report.status;
+}
+
+function cli(box: TmpBox, args: string[]): Promise<CliResult> {
   const script = `import { migrateCommand } from ${JSON.stringify(commandUrl)}; await migrateCommand.parseAsync(${JSON.stringify(args)}, { from: "user" });`;
-  const env = { ...process.env, BBX_PUSH_STORE_DIR: box.path(".beebox/test-push"), BBX_HOOK_BIN: join(PACKAGE_ROOT, "bin/bbx") };
+  const env: NodeJS.ProcessEnv = { ...process.env, BBX_PUSH_STORE_DIR: box.path(".beebox/test-push"), BBX_HOOK_BIN: join(PACKAGE_ROOT, "bin/bbx") };
   delete env.BBX_BOX_WORK;
   delete env.BBX_MAINTENANCE_PERMITS;
   return new Promise((resolve, reject) => {
@@ -55,7 +66,7 @@ function cli(box, args) {
 ```ts
 const box = await fixture();
 const json = await cli(box, ["--sweep", "--json"]);
-const report = JSON.parse(json.stdout.trim().split("\n").at(-1));
+const report: { status: string; questions: string[] } = JSON.parse(json.stdout.trim().split("\n").at(-1) ?? "");
 JSON.stringify({ code: json.code, status: report.status, questions: report.questions })
 => {"code":0,"status":"attention","questions":["_bookkeeping/questions/Migration_partial.question.card"]}
 
@@ -77,7 +88,7 @@ an applied migration with a question.
 const box = await makeTmpBox({ git: true });
 await rm(box.path(MANIFEST_PATH));
 const result = await cli(box, ["--sweep", "--json"]);
-JSON.stringify({ code: result.code, status: JSON.parse(result.stdout.trim()).status })
+JSON.stringify({ code: result.code, status: reportStatus(result.stdout) })
 => {"code":1,"status":"no-manifest"}
 ```
 

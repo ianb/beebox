@@ -10,6 +10,8 @@ resumable, and the nightly review ignores the mark.
 ```ts setup
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
@@ -17,18 +19,22 @@ import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-
 const SESSION = "aaaa1111-2222-4333-8444-555566667777";
 const OTHER = "bbbb1111-2222-4333-8444-555566667777";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
     isOwner: true,
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
+    user: null,
+    authed: true,
+    isAuthenticatedOwner: false,
+    actor: "none",
   };
   return appRouter.createCaller(ctx);
 }
 
-async function seedChat(box, sessionId: string, husk: string) {
+async function seedChat(box: TmpBox, sessionId: string, husk: string) {
   const logPath = getSessionLogPath(box.root, sessionId);
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, JSON.stringify({
@@ -39,7 +45,7 @@ async function seedChat(box, sessionId: string, husk: string) {
 }
 
 /** Each listed chat as `<id prefix> done|live`, sorted. */
-async function listed(boxRoot) {
+async function listed(boxRoot: string) {
   const { sessions } = await caller(boxRoot).chat.sessions();
   return sessions.map((s) => `${s.sessionId.slice(0, 8)} ${s.done ? "done" : "live"}`).toSorted();
 }
@@ -136,7 +142,7 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 await seedChat(box, SESSION, "done: finished\n");
 
-const warnings = [];
+const warnings: string[] = [];
 const warn = console.warn;
 console.warn = (...args) => { warnings.push(args.join(" ")); };
 const rows = await listed(box.root);

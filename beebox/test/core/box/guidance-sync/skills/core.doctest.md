@@ -5,13 +5,13 @@ mirroring how `generateRules` installs card rules. The box agent auto-discovers
 project-level skills, so a freshly-installed skill is invocable.
 
 ```ts setup
-import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../../helpers/doctest-helpers.js";
 import { generateSkills, skillConflicts } from "../../../../../src/core/box/guidance-sync/skills/core.js";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 // `.claude/` lives at the package root for a v2 box, not under `content/`.
-function skillFile(box, rel) {
+function skillFile(box: TmpBox, rel: string) {
   return join(box.root, ".claude/skills", rel);
 }
 ```
@@ -56,7 +56,7 @@ const box = await makeTmpBox();
 await generateSkills(box.root);
 const names = ["email", "location", "schedules", "tricks", "views"];
 const texts = await Promise.all(names.map((name) => readFile(skillFile(box, name + "/SKILL.md"), "utf8")));
-const bad = names.filter((name, i) => !(texts[i].startsWith("---\nname: " + name + "\n") && texts[i].includes("description:")));
+const bad = names.filter((name, i) => !(texts[i]?.startsWith("---\nname: " + name + "\n") && texts[i]?.includes("description:")));
 bad.join(",")
 =>
 ```

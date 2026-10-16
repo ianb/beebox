@@ -15,7 +15,7 @@ import { BOX_ROOT_VOCABULARY } from "../../../src/shared/box-root-vocabulary.js"
 import { BOX_DIRS, boxLayoutEntry, UnknownBoxDirsKeyError } from "../../../src/lib/paths/core.js";
 import { directoryLayoutRows } from "../../../src/core/agent-guide/guide/box-shape.js";
 
-const keyedEntries = BOX_LAYOUT.filter((entry) => entry.boxDirsKey !== undefined);
+const keyedEntries = BOX_LAYOUT.filter((entry) => "boxDirsKey" in entry);
 const boxLayoutDoc = await fs.readFile(new URL("../../../docs/box-layout.md", import.meta.url), "utf-8");
 ```
 
@@ -47,20 +47,21 @@ wronglyRooted
 An unrecognized key throws a typed error rather than returning `undefined` silently:
 
 ```ts
-let error;
-try { boxLayoutEntry("not-a-real-key"); } catch (e) { error = e; };
+let error: unknown;
+// The key parameter is a closed union; Reflect.apply passes a key outside it to reach the runtime guard.
+try { Reflect.apply(boxLayoutEntry, undefined, ["not-a-real-key"]); } catch (e) { error = e; };
 error instanceof UnknownBoxDirsKeyError
 => true
 
-error.message
+error instanceof Error ? error.message : String(error)
 => No box-layout-spec entry for BOX_DIRS key "not-a-real-key".
 ```
 
 ## `BOX_ROOT_VOCABULARY` covers every underscore area `BOX_LAYOUT` uses
 
 ```ts
-const rootAreaNames = new Set(keyedEntries.map((entry) => entry.path.split("/")[0]).filter((seg) => seg.startsWith("_")));
-const vocabAreaNames = new Set(BOX_ROOT_VOCABULARY.filter((e) => e.kind === "area").map((e) => e.name));
+const rootAreaNames = new Set<string>(keyedEntries.map((entry) => entry.path.split("/")[0] ?? "").filter((seg) => seg.startsWith("_")));
+const vocabAreaNames = new Set<string>(BOX_ROOT_VOCABULARY.filter((e) => e.kind === "area").map((e) => e.name));
 [...rootAreaNames].every((name) => vocabAreaNames.has(name))
 => true
 ```

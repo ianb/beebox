@@ -20,7 +20,7 @@ Three things have to line up for that to load:
   external so the box's copy is used, not a second one bundled in.
 
 ```ts setup
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -54,7 +54,7 @@ const SCHEMA_STUB = `import { cardSchema } from "beebox/cards";
 import courseware from "beebox/plugins/courseware";
 export default cardSchema("concept-map", courseware.schemas["concept-map"]);
 `;
-async function activateCourseware(box) {
+async function activateCourseware(box: TmpBox) {
   await box.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }, null, 2) + "\n");
   await mkdir(join(box.root, "src", "schemas"), { recursive: true });
   await writeFile(join(box.root, "src", "schemas", "concept-map.ts"), SCHEMA_STUB);
@@ -87,7 +87,7 @@ Fractions name parts of a whole; this map orders what to learn first.
 // What `bbx view test` does (src/cli/commands/view/command.ts): compile for
 // Node, write the module beside the box's node_modules, import it, load the
 // cards its metadata selects, render inside the node view host.
-async function renderThroughCompiler(box, params) {
+async function renderThroughCompiler(box: TmpBox, params: Record<string, string>) {
   const viewHost = boxPackageHost(await getBoxShape(box.root));
   const viewPath = join(box.root, "src", "views", "concept-map.tsx");
   const { output, meta } = await compileView(viewPath, { target: "node", viewHost });

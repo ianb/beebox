@@ -11,24 +11,30 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { notifyBoxholder, notifyChannels } from "../../../src/core/notify-boxholder.js";
+import type { NotificationInput } from "../../../src/core/notify-boxholder.js";
+import type { Loudness } from "../../../src/core/notification/intent.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { pairFakePushDevice } from "../../../src/core/mobile/pairing.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 import { writePresence } from "../../../src/core/notification/presence.js";
 
-process.env.BBX_PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-notify-fake-${process.pid}-${Date.now()}`);
+const PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-notify-fake-${process.pid}-${Date.now()}`);
+process.env.BBX_PUSH_STORE_DIR = PUSH_STORE_DIR;
 const ENV = ["BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID", "BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY"];
 for (const name of ENV) delete process.env[name];
 
 const NOW = new Date("2026-09-26T12:00:00Z");
-const intent = (loudness) => ({ title: "Fake-mode check", body: "", target: { kind: "dashboard" }, loudness, source: "fake-doctest" });
+const intent = (loudness: Loudness): NotificationInput => ({ title: "Fake-mode check", body: "", target: { kind: "dashboard" }, loudness, source: "fake-doctest" });
 
-async function logged(box) {
+async function logged(box: TmpBox) {
   const [n] = (await readRecent(box.root, { days: 1, now: NOW })).toReversed();
+  invariant(n, "a notification was logged");
   return n.deliveries.map((d) => `${d.channel} ${d.status}${d.detail ? `: ${d.detail}` : ""}`).join("\n");
 }
 
-async function debugLines(box) {
+async function debugLines(box: TmpBox) {
   const text = await fs.readFile(path.join(box.root, ".beebox", "push-debug.log"), "utf-8");
   return text.trim().split("\n").map((line) => JSON.parse(line));
 }
@@ -106,7 +112,7 @@ The old web-push-only switch is read as an alias, with a warning to rename it.
 ```ts
 const box = await makeTmpBox({ git: true });
 process.env.BBX_PUSH_FAKE = "1";
-const warnings = [];
+const warnings: string[] = [];
 const origWarn = console.warn;
 console.warn = (...args) => { warnings.push(args.join(" ")); };
 await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
@@ -121,5 +127,5 @@ web-push sent: fake
 
 ```ts cleanup
 await box.cleanup();
-await fs.rm(process.env.BBX_PUSH_STORE_DIR, { recursive: true, force: true });
+await fs.rm(PUSH_STORE_DIR, { recursive: true, force: true });
 ```

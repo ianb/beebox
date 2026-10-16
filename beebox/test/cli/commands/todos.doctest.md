@@ -17,8 +17,8 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox();
 await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 
-async function run(options) {
-  const logs = [];
+async function run(options?: Parameters<typeof runTodosForBox>[1]) {
+  const logs: string[] = [];
   const origLog = console.log;
   console.log = (...args) => { logs.push(args.join(" ")); };
   try {
@@ -29,7 +29,7 @@ async function run(options) {
   return logs.join("\n");
 }
 
-function memo(frontmatterExtra, body) {
+function memo(frontmatterExtra: string, body: string) {
   return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n${frontmatterExtra}---\n${body}`;
 }
 
@@ -132,7 +132,7 @@ PARKED (1)
 
 ```ts continue
 const jsonOut = await run({ status: "parked", json: true });
-const parsed = JSON.parse(jsonOut);
+const parsed: { todos: Array<{ id: string }>; issues: Array<{ kind: string }> } = JSON.parse(jsonOut);
 parsed.todos.map((t) => t.id).join(", ")
 => parked-one
 
@@ -143,20 +143,20 @@ parsed.issues.map((i) => i.kind).join(", ")
 ## An invalid `--status` value is a clean error, not a crash
 
 ```ts continue
-async function runCaptured(options) {
-  const errors = [];
+async function runCaptured(options: Parameters<typeof runTodosForBox>[1]) {
+  const errors: string[] = [];
   const origError = console.error;
   const origExit = process.exit;
-  let exitCode;
+  let exitCode: number | undefined;
   console.error = (...args) => { errors.push(args.join(" ")); };
-  process.exit = (code) => {
-    exitCode = code ?? 0;
+  process.exit = (code?: number | string | null) => {
+    exitCode = Number(code ?? 0);
     throw new Error("__doctest_process_exit__");
   };
   try {
     await runTodosForBox(box.root, options);
   } catch (e) {
-    if (e.message !== "__doctest_process_exit__") throw e;
+    if (!(e instanceof Error) || e.message !== "__doctest_process_exit__") throw e;
   } finally {
     console.error = origError;
     process.exit = origExit;

@@ -12,7 +12,8 @@ streams in.
 
 ```ts setup
 import { mount } from "../../../helpers/dom-harness.js";
-import { createElement as h, useState } from "react";
+import { createElement as h, useState, type ComponentProps } from "react";
+import type { SessionEntry } from "../../../../../src/api-chat.js";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { MessageList } from "../../../../../src/components/chat/everywhere/InteractiveChat/messages.js";
 import { groupMessages } from "../../../../../src/components/chat/ChatMessages/view.js";
@@ -20,46 +21,48 @@ import { createAudioOverlayStore } from "../../../../../src/components/chat/audi
 import { BoxSlugProvider } from "../../../../../src/lib/box-slug.js";
 
 const at = "2026-10-16T12:00:00Z";
-const text = (uuid, type, body) => ({ uuid, type, timestamp: at, content: [{ type: "text", text: body }] });
-const history = [
+type ListProps = ComponentProps<typeof MessageList>;
+const text = (uuid: string, type: SessionEntry["type"], body: string): SessionEntry => ({ uuid, type, timestamp: at, content: [{ type: "text", text: body }] });
+const history: SessionEntry[] = [
   text("u1", "user", "Add milk to the list"),
   text("a1", "assistant", "<ack kind=\"edited\" ref=\"_content/list.card\">Added milk</ack>\n\n<speech>Done.</speech>"),
   text("u2", "user", "And eggs"),
 ];
 const noop = () => undefined;
+const noopAsync = async (): Promise<void> => undefined;
 const notPlaying = { isPlaying: false, playingMessageId: null, statusMessageId: null, segmentStates: {}, segmentFailures: {}, playingSegmentIndex: null, remainingCount: 0 };
 
 /** MessageList props while turn `t2` streams `streamText` after `history`. */
-function streaming(streamText) {
+function streaming(streamText: string): ListProps {
   return {
     messages: history, groups: groupMessages(history), modelMarkers: [], streamTools: [], debugView: false,
     currentUserEmail: "me@example.com", currentUserName: "Me", speechPlayback: notPlaying,
     handleStopSpeech: noop, handleSkipSpeech: noop, handleReplaySpeech: noop, onZoomView: noop,
-    snapshot: { matches: (state) => state === "streaming" }, isStreaming: true, streamText,
+    snapshot: { matches: (state: string) => state === "streaming" }, isStreaming: true, streamText,
     totalEntries: history.length, onLoadOlder: noop, loadingOlder: false,
     sendSignal: 1, captureSignal: 0, liveTurnId: "t2", proseEnabled: true, pendingHq: [], onHqSendLive: noop,
-    captureBubbles: [], captureVerbs: { retry: noop, discard: noop }, audioOverlayStore: createAudioOverlayStore(),
-    openers: [], onSendOpener: () => ({ sent: true }),
+    captureBubbles: [], captureVerbs: { retry: noopAsync, discard: noopAsync }, audioOverlayStore: createAudioOverlayStore(),
+    openers: [], onSendOpener: () => "accepted" as const,
   };
 }
 
 /** Mount the list; `update(fn)` replaces its props as the chat machine's next snapshot would. */
-async function mountList(initial) {
-  let setProps;
+async function mountList(initial: ListProps) {
+  let setProps: ((fn: (props: ListProps) => ListProps) => void) | undefined;
   function List() {
     const [props, set] = useState(initial);
     setProps = set;
     return h(MessageList, props);
   }
-  const router = createRouter({ routeTree: createRootRoute({ component: List }), history: createMemoryHistory({ initialEntries: ["/"] }) });
+  const router = createRouter({ routeTree: createRootRoute({ staticData: { title: null }, component: List }), history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
-  const view = await mount(h(BoxSlugProvider, { boxSlug: "test1" }, h(RouterProvider, { router })));
-  return { view, update: (fn) => view.act(() => setProps(fn)) };
+  const view = await mount(h(BoxSlugProvider, { boxSlug: "test1", children: h(RouterProvider, { router }) }));
+  return { view, update: (fn: (props: ListProps) => ListProps) => view.act(() => setProps?.(fn)) };
 }
 
 /** Each row's entry ids, and "(playing)" where its speaker icon pulses. */
-function rows(view) {
-  return [...view.container.querySelectorAll("[data-entry-uuids]")].map((row) =>
+function rows(view: Awaited<ReturnType<typeof mount>>) {
+  return [...view.container.querySelectorAll<HTMLElement>("[data-entry-uuids]")].map((row) =>
     row.dataset.entryUuids + (row.querySelector(".animate-pulse") ? " (playing)" : ""));
 }
 ```

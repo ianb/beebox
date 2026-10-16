@@ -13,8 +13,9 @@ function and is covered by typecheck + manual verification instead.
 import { chatTargetStatus, planRestore, applyRestorePlan } from "../../../src/input/targets/chat-target.js";
 import { createTypedEmission, createVoiceEmission } from "../../../src/input/emission.js";
 import { createEmissionStore } from "../../../src/input/emission-store.js";
+import type { EmissionDraft } from "../../../src/input/emission-store.js";
 
-const emptyDraft = { text: "", images: [], pendingImages: 0, files: [], selections: [] };
+const emptyDraft: EmissionDraft = { text: "", images: [], pendingImages: 0, files: [], selections: [], uploadBatch: null };
 ```
 
 ## chatTargetStatus: idle -> ready, streaming or backend-busy -> busy

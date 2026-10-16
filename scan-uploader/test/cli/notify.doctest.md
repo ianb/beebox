@@ -29,6 +29,7 @@ const summary = (over: Partial<RunSummary>): RunSummary => ({
   skippedUnsettled: 0,
   skippedIdentityChanged: 0,
   errors: 0,
+  contractVersion: undefined,
   ...over,
 });
 

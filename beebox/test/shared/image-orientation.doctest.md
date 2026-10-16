@@ -15,10 +15,10 @@ import {
 // Build a minimal JPEG whose only content is an EXIF APP1 segment carrying the
 // given Orientation tag. `endian` selects the TIFF byte order ("II" little /
 // "MM" big) — JPEG segment lengths stay big-endian regardless.
-function exifJpeg(orientation, opts) {
+function exifJpeg(orientation: number, opts?: { endian?: "II" | "MM" }) {
   const little = (opts?.endian ?? "II") === "II";
-  const u16 = (v) => (little ? [v & 0xff, (v >> 8) & 0xff] : [(v >> 8) & 0xff, v & 0xff]);
-  const u32 = (v) =>
+  const u16 = (v: number) => (little ? [v & 0xff, (v >> 8) & 0xff] : [(v >> 8) & 0xff, v & 0xff]);
+  const u32 = (v: number) =>
     little
       ? [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff]
       : [(v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff];

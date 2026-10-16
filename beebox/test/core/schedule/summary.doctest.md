@@ -17,8 +17,11 @@ import {
   normalizeRunSummary,
   reportRunSummary,
 } from "../../../src/core/schedule/summary.js";
+import type { RunHistoryEntry } from "../../../src/core/schedule/summary.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { chatReviewRunSummary } from "../../../src/core/chat/review/run-summary.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 
@@ -31,13 +34,17 @@ runs: >-
 ---
 `;
 
-async function tick(box) {
+async function tick(box: TmpBox) {
   const result = await runTick(box.root, { quiet: true, script: "report", force: true });
   return result.scripts[0]?.status;
 }
 
 /** A history entry with its varying time and duration masked. */
-const masked = ({ ts, durationMs, ...rest }) => rest;
+const masked = (entry: RunHistoryEntry | undefined) => {
+  invariant(entry, "the run left a history entry");
+  const { ts, durationMs, ...rest } = entry;
+  return rest;
+};
 ```
 
 ## Each run lands in the history, with the summary it wrote
@@ -112,7 +119,7 @@ for (let i = 1; i <= 22; i++) {
   });
 }
 const kept = await loadRunHistory(box.root, "busy");
-[kept.length, kept[0].ts, kept.at(-1).ts]
+[kept.length, kept[0]?.ts, kept.at(-1)?.ts]
 => [20, "2026-10-07T00:00:03Z", "2026-10-07T00:00:22Z"]
 ```
 
@@ -142,7 +149,7 @@ await fs.appendFile(
   box.path("_config/schedules/.state/busy.runs.jsonl"),
   JSON.stringify({ ts: "2026-10-07T00:00:23Z", result: "deferred", durationMs: 1, triggeredBy: "schedule", error: "no-change: nothing to do" }) + "\n",
 );
-(await loadRunHistory(box.root, "busy")).at(-1).deferReason
+(await loadRunHistory(box.root, "busy")).at(-1)?.deferReason
 => no-change
 ```
 
@@ -162,7 +169,7 @@ const { summary, cut } = normalizeRunSummary({
   body: "b".repeat(2000),
   priority: "attention",
 });
-[summary.headline.length, summary.headline.slice(0, 18), summary.body.length, cut]
+[summary.headline.length, summary.headline.slice(0, 18), summary.body?.length, cut]
 => [120, "Line one line two ", 1024, ["headline (over 120 characters)", "body (over 1024 bytes)"]]
 ```
 
@@ -226,7 +233,7 @@ a schedule the block says nothing about it.
 const { buildContextBlock } = await import("../../../src/core/procedure/engine/phase.js");
 const box = await makeTmpBox();
 const base = { boxRoot: box.root, runCardPath: "run.card", stepId: "review", procedurePath: "p.procedure.card" };
-buildContextBlock({ ...base, scheduleName: "todo-review" }).split("<scheduled-run>\n")[1].split("\n")[0].includes('"todo-review"')
+buildContextBlock({ ...base, scheduleName: "todo-review" }).split("<scheduled-run>\n")[1]?.split("\n")[0]?.includes('"todo-review"')
 => true
 
 buildContextBlock(base).includes("<scheduled-run>")

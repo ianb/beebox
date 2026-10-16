@@ -5,6 +5,7 @@ a tab — and an installed app — is identifiable before React boots. The box
 server does this on the read it was already performing per request.
 
 ```ts setup
+import type { BoxIdentity } from "../../../src/core/landmark/box-identity.js";
 import { stampBoxIdentity, documentBoxSlug } from "../../../src/webapp/server-root/index-html.js";
 
 const DOC = [
@@ -18,7 +19,7 @@ const DOC = [
   "</head><body><div id=\"root\"></div></body></html>",
 ].join("\n");
 
-const stamp = (identity, slug = "kitchen") => stampBoxIdentity(DOC, { slug, ...identity });
+const stamp = (identity: Omit<BoxIdentity, "slug">, slug = "kitchen") => stampBoxIdentity(DOC, { slug, ...identity });
 const titleOf = (html: string) => /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? "(none)";
 const iconsOf = (html: string) => [...html.matchAll(/<link rel="icon"[^>]*href="([^"]*)"/g)].map((m) => m[1]);
 const tagOf = (html: string, rel: string) =>
@@ -44,7 +45,7 @@ alongside it and `type=` lets each browser take the one it renders.
 ```ts
 const stamped = stamp({ name: "Kitchen", symbol: { glyph: "🍳" } });
 const icons = iconsOf(stamped);
-[icons[0].startsWith("data:image/svg+xml,"), decodeURIComponent(icons[0]).includes("🍳"), icons[1]].join(" | ")
+[icons[0]?.startsWith("data:image/svg+xml,"), decodeURIComponent(icons[0] ?? "").includes("🍳"), icons[1]].join(" | ")
 => true | true | /kitchen/icon-192.png
 ```
 
@@ -87,7 +88,7 @@ An emoji field carrying markup can't break out of the SVG either — the icon
 stays a well-formed data URI with the markup escaped inside it.
 
 ```ts
-const nasty = iconsOf(stamp({ name: "x", symbol: { glyph: '"><script>' } }))[0];
+const nasty = iconsOf(stamp({ name: "x", symbol: { glyph: '"><script>' } }))[0] ?? "";
 [nasty.startsWith("data:image/svg+xml,"), nasty.includes("<script>"), decodeURIComponent(nasty).includes("&lt;script&gt;")].join(" ")
 => true false true
 ```
@@ -95,7 +96,7 @@ const nasty = iconsOf(stamp({ name: "x", symbol: { glyph: '"><script>' } }))[0];
 A slug is a path segment in three hrefs, so it is encoded rather than trusted.
 
 ```ts
-iconsOf(stamp({ name: "x", symbol: "", symbolSrc: null }, 'a"b'))[0]
+iconsOf(stamp({ name: "x", symbol: null }, 'a"b'))[0]
 => /a%22b/icon-192.png
 ```
 

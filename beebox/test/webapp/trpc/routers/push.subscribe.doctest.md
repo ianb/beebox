@@ -12,6 +12,7 @@ const fixtureBox = await makeTmpBox({ git: true });
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { endpointsForBox } from "../../../../src/core/push-subscriptions.js";
 
@@ -19,12 +20,17 @@ const storeDir = path.join(os.tmpdir(), `bbx-push-router-${process.pid}-${Date.n
 process.env.BBX_PUSH_STORE_DIR = storeDir;
 delete process.env.BBX_VAPID_PUBLIC_KEY;
 
-function caller(boxSlug) {
-  const ctx = {
+function caller(boxSlug: string) {
+  const ctx: TrpcContext = {
     boxRoot: fixtureBox.root,
     boxSlug,
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
+    user: null,
+    authed: true,
+    isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }

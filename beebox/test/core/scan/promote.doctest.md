@@ -11,13 +11,19 @@ a wakeup is never silently lost, and every GC state still lets `/api/scan/check`
 answer truthfully.
 
 ```ts setup
+import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { runScanPromotePass, promotionLockPath } from "../../../src/core/scan/promote/core.js";
-import { collectQuarantine } from "../../../src/core/scan/promote/gc.js";
-import { wakeupMarkerPath } from "../../../src/core/scan/promote/wakeup.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import {
+  runScanPromotePass,
+  promotionLockPath,
+  type UploadRunner,
+} from "../../../src/core/scan/promote/core.js";
+import { collectQuarantine } from "../../../src/core/scan/promote/gc.js";
+import { wakeupMarkerPath, type WakeupRunner } from "../../../src/core/scan/promote/wakeup.js";
+import {
+  type ScanQuarantineEntry,
   ensureQuarantineDir,
   quarantineFilePath,
   readAllQuarantineEntries,
@@ -34,8 +40,12 @@ const HASH_B = "b".repeat(64);
 const HASH_C = "c".repeat(64);
 
 /** Put one validated file in quarantine: sidecar plus the bytes beside it. */
-async function quarantine(box, sha256, overrides) {
-  const entry = {
+async function quarantine(
+  box: TmpBox,
+  sha256: string,
+  overrides?: Partial<ScanQuarantineEntry>,
+): Promise<ScanQuarantineEntry> {
+  const entry: ScanQuarantineEntry = {
     sha256,
     state: "pending",
     storedFilename: `${sha256}.pdf`,
@@ -53,45 +63,43 @@ async function quarantine(box, sha256, overrides) {
 }
 
 /** An upload runner that records what it was handed, and whether it was real. */
-function fakeUpload(opts) {
-  const calls = [];
-  return {
-    calls,
-    runner: async ({ files, source }) => {
-      const existing = [];
-      for (const f of files) {
-        await fs.access(f);
-        existing.push(path.basename(f));
-      }
-      calls.push({ source, files: existing });
-      return opts?.fail ? { ok: false, detail: "scan-import blew up" } : { ok: true, detail: "" };
-    },
+function fakeUpload(opts?: { fail?: boolean }) {
+  const calls: { source: string; files: string[] }[] = [];
+  const runner: UploadRunner = async ({ files, source }) => {
+    const existing: string[] = [];
+    for (const f of files) {
+      await fs.access(f);
+      existing.push(path.basename(f));
+    }
+    calls.push({ source, files: existing });
+    return opts?.fail ? { ok: false, detail: "scan-import blew up" } : { ok: true, detail: "" };
   };
+  return { calls, runner };
 }
 
-function fakeWakeup(opts) {
+function fakeWakeup(opts?: { fail?: boolean }) {
   const state = { runs: 0 };
-  state.runner = async () => {
+  const runner: WakeupRunner = async () => {
     state.runs++;
     return opts?.fail ? { ok: false, detail: "bbx wakeup exited with code 1" } : { ok: true, detail: "" };
   };
-  return state;
+  return { get runs() { return state.runs; }, runner };
 }
 
 /** Put the manifest-scheme asset ignore block back — what an older `bbx init`
  *  did to an annex-converted box, silently de-annexing it. Driven through the
  *  real `bbx attachments` subcommands so the fixture cannot drift from them. */
-async function deAnnex(boxRoot) {
+async function deAnnex(boxRoot: string) {
   await hideAssetsAgain(boxRoot);
 }
 
 /** Convert it back, the way `bbx attachments to-annex` does. */
-async function reAnnex(boxRoot) {
+async function reAnnex(boxRoot: string) {
   const { ctx } = createCollectorContext(boxRoot);
   await runCommand({ name: "attachments", args: { subcommand: "unignore" }, ctx });
 }
 
-async function exists(p) {
+async function exists(p: string) {
   try {
     await fs.access(p);
     return true;
@@ -166,7 +174,7 @@ await runScanPromotePass({
   boxRoot: box.root,
   deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
 });
-JSON.stringify(upload.calls[0].files)
+JSON.stringify(upload.calls[0]?.files)
 => ["Invoice.pdf","Invoice-2.pdf"]
 ```
 
@@ -216,7 +224,7 @@ const result = await runScanPromotePass({
   boxRoot: box.root,
   deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
 });
-JSON.stringify({ imported: result.imported, files: upload.calls[0].files })
+JSON.stringify({ imported: result.imported, files: upload.calls[0]?.files })
 => {"imported":1,"files":["Halfway.pdf"]}
 
 await exists(box.path("_tmp/scan-staging/dead-run"))
@@ -243,7 +251,7 @@ const result = await runScanPromotePass({
 JSON.stringify({ imported: result.imported, failed: result.failed, wakeup: result.wakeup })
 => {"imported":0,"failed":1,"wakeup":{"kind":"ran"}}
 
-(await readQuarantineEntry(box.root, HASH_A)).state
+(await readQuarantineEntry(box.root, HASH_A))?.state
 => promoting
 ```
 
@@ -308,6 +316,7 @@ const first = await runScanPromotePass({
   deps: { runUpload: fakeUpload().runner, runWakeup: fakeWakeup().runner },
 });
 const entry = await readQuarantineEntry(box.root, HASH_A);
+assert.ok(entry?.questionRef);
 JSON.stringify({ questions: first.questions, ref: entry.questionRef })
 => {"questions":1,"ref":"_bookkeeping/questions/scan-rejected-aaaaaaaaaaaa.question.card"}
 
@@ -357,11 +366,13 @@ JSON.stringify({
 Answering the question is what releases the bytes:
 
 ```ts continue
-const ref = (await readQuarantineEntry(box.root, HASH_A)).questionRef;
+const ref = (await readQuarantineEntry(box.root, HASH_A))?.questionRef;
+assert.ok(ref);
 await box.write(ref, (await box.read(ref)).replace("---\n", "---\nanswer:\n  text: Keep it out\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
 
 const collected = await runScanPromotePass({ boxRoot: box.root, deps });
 const tombstone = await readQuarantineEntry(box.root, HASH_A);
+assert.ok(tombstone);
 JSON.stringify({
   tombstoned: collected.tombstoned,
   file: await exists(quarantineFilePath(box.root, `${HASH_A}.pdf`)),
@@ -389,7 +400,9 @@ finishes with one:
 ```ts continue
 await quarantine(box, HASH_B, { state: "rejected", reason: "unsupported type: image/gif" });
 await runScanPromotePass({ boxRoot: box.root, deps });
-await fs.rm(box.path((await readQuarantineEntry(box.root, HASH_B)).questionRef));
+const rejectedRef = (await readQuarantineEntry(box.root, HASH_B))?.questionRef;
+assert.ok(rejectedRef);
+await fs.rm(box.path(rejectedRef));
 const gone = await runScanPromotePass({ boxRoot: box.root, deps });
 JSON.stringify({ tombstoned: gone.tombstoned, file: await exists(quarantineFilePath(box.root, `${HASH_B}.pdf`)) })
 => {"tombstoned":1,"file":false}
@@ -419,7 +432,7 @@ const gc = await collectQuarantine({
 });
 JSON.stringify({
   gc,
-  state: (await readQuarantineEntry(box.root, HASH_A)).state,
+  state: (await readQuarantineEntry(box.root, HASH_A))?.state,
   file: await exists(quarantineFilePath(box.root, `${HASH_A}.pdf`)),
 })
 => {"gc":{"importedRemoved":0,"tombstoned":0,"tombstonesRemoved":0},"state":"pending","file":true}
@@ -440,10 +453,12 @@ answerable from its tombstone.
 const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { originalFilename: "Filed.pdf" });
 // A real upload writes the ledger; the fake stands in for that half.
-const upload = async ({ files }) => {
+const upload: UploadRunner = async ({ files }) => {
+  const [file] = files;
+  assert.ok(file);
   await box.write(".beebox/uploads.json", JSON.stringify({
     version: 1,
-    entries: [{ hash: HASH_A, originalName: path.basename(files[0]), originalPath: files[0], uploadedAt: "2026-08-01T10:00:00Z", kind: "scan" }],
+    entries: [{ hash: HASH_A, originalName: path.basename(file), originalPath: file, uploadedAt: "2026-08-01T10:00:00Z", kind: "scan" }],
   }));
   return { ok: true, detail: "" };
 };
@@ -452,7 +467,7 @@ await runScanPromotePass({ boxRoot: box.root, deps: { runUpload: upload, runWake
 const ledger = await loadLedger(box.root);
 JSON.stringify({
   quarantine: await readQuarantineEntry(box.root, HASH_A),
-  ledger: findEntry(ledger, HASH_A).originalName,
+  ledger: findEntry(ledger, HASH_A)?.originalName,
 })
 => {"quarantine":null,"ledger":"Filed.pdf"}
 ```
@@ -476,7 +491,7 @@ const result = await runScanPromotePass({
   boxRoot: box.root,
   deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
 });
-JSON.stringify({ skipped: result.skipped, calls: upload.calls.length, state: (await readQuarantineEntry(box.root, HASH_A)).state })
+JSON.stringify({ skipped: result.skipped, calls: upload.calls.length, state: (await readQuarantineEntry(box.root, HASH_A))?.state })
 => {"skipped":"locked","calls":0,"state":"pending"}
 
 await releaseLock(promotionLockPath(box.root));
@@ -499,6 +514,7 @@ const result = await runScanPromotePass({
   deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
 });
 const entry = await readQuarantineEntry(box.root, HASH_A);
+assert.ok(entry);
 JSON.stringify({ imported: result.imported, calls: upload.calls.length, state: entry.state, reason: entry.reason })
 => {"imported":0,"calls":0,"state":"rejected","reason":"the quarantined copy disappeared before it could be imported"}
 ```
@@ -544,7 +560,7 @@ const second = await runScanPromotePass({
   boxRoot: box.root,
   deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
 });
-JSON.stringify({ skipped: second.skipped, imported: second.imported, files: upload.calls[0].files })
+JSON.stringify({ skipped: second.skipped, imported: second.imported, files: upload.calls[0]?.files })
 => {"skipped":null,"imported":1,"files":["Invoice_001.pdf"]}
 ```
 

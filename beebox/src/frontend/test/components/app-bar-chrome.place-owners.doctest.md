@@ -16,7 +16,7 @@ import { mount } from "./helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { AppBarChromeProvider, useAppBarPlace, useAppBarPublishedPlace } from "../../src/components/app-bar-chrome.js";
 
-function Publisher({ label }) {
+function Publisher({ label }: { label: string }) {
   useAppBarPlace({ dir: "", label });
   return null;
 }
@@ -26,7 +26,7 @@ function Bar() {
 }
 
 /** The bar, then the chat's publisher, then Browse's when it is open. */
-function page(chat, browse) {
+function page(chat: string, browse: string | null) {
   return h(AppBarChromeProvider, null,
     h(Bar),
     h(Publisher, { key: "chat", label: chat }),

@@ -7,6 +7,7 @@ source file) that produces each target.
 import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { LayoutFile } from "../../../../../src/dev/layout/model.js";
 import {
   buildEntriesFromFiles,
   buildEntriesOf,
@@ -60,10 +61,19 @@ await write("pkg/tsconfig.base.json", "{}\n");
 // parses just the one module it wrote and builds the same shape by hand.
 const buildScriptText = await readFile(join(repoRoot, buildScriptPath), "utf8");
 const buildScriptSource = parseSourceFile({ fileName: buildScriptPath, sourceText: buildScriptText });
-const files = new Map([
+const files = new Map<string, LayoutFile>([
   [
     buildScriptPath,
-    { kind: "module", path: buildScriptPath, buildEntries: buildEntriesOf(buildScriptSource) },
+    {
+      kind: "module",
+      path: buildScriptPath,
+      imports: [],
+      registries: [],
+      reexportOnly: false,
+      topLevelCalls: [],
+      relativePathLiterals: [],
+      buildEntries: buildEntriesOf(buildScriptSource),
+    },
   ],
 ]);
 const buildEntries = buildEntriesFromFiles(files);

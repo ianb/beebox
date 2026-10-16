@@ -201,7 +201,7 @@ const recordedStore = new FeatureStore({
 });
 await recordedStore.set("narration", "on");
 print(`written:   ${JSON.stringify(await getFeaturesForSession(box.root, recorded))}`);
-print(`engine kept: ${(await loadHistoryEntries(box.root)).find((e) => e.id === recorded).engine}`);
+print(`engine kept: ${(await loadHistoryEntries(box.root)).find((e) => e.id === recorded)?.engine}`);
 =>
 written:   {"narration":"on"}
 engine kept: codex

@@ -28,7 +28,7 @@ pluginByName("no-such-plugin")
 `export default definePlugin({...})` is what the registry imports.
 
 ```ts
-const def = definePlugin({ name: "example", description: "An example plugin", docs: "src/plugins/example/README.md" });
+const def = definePlugin({ name: "example", description: "An example plugin", docs: "src/plugins/example/README.md", schemas: undefined });
 def
 => { name: "example", description: "An example plugin", docs: "src/plugins/example/README.md" }
 ```

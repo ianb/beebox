@@ -46,8 +46,15 @@ else process.env.BBX_SESSION_SECRET = previousSecret;
 # Readiness rejects a listening maintenance response
 
 ```ts setup
-import { createServer } from "node:http";
+import { createServer, type Server } from "node:http";
+import assert from "node:assert/strict";
 import { waitForHttp } from "../../../src/hub/child-process-utils.js";
+
+function portOf(server: Server): number {
+  const address = server.address();
+  assert.ok(address && typeof address === "object", "server is listening on a TCP port");
+  return address.port;
+}
 ```
 
 ```ts
@@ -57,11 +64,11 @@ const server = createServer((_request, response) => {
 });
 server.listen(0, "127.0.0.1");
 await once(server, "listening");
-await waitForHttp({ port: server.address().port, reqPath: "/healthz", timeoutMs: 50, label: "fixture" })
+await waitForHttp({ port: portOf(server), reqPath: "/healthz", timeoutMs: 50, label: "fixture" })
 => throws HttpReadinessTimeoutError
 
 responseCode = 200;
-await waitForHttp({ port: server.address().port, reqPath: "/healthz", timeoutMs: 2000, label: "fixture" });
+await waitForHttp({ port: portOf(server), reqPath: "/healthz", timeoutMs: 2000, label: "fixture" });
 responseCode
 => 200
 ```

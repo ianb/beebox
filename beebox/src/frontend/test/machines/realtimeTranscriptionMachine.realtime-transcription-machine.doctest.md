@@ -20,6 +20,7 @@ import {
   realtimeTranscriptionMachine,
   transcriptionStateOf,
 } from "../../src/machines/realtimeTranscriptionMachine.js";
+import type { TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent } from "../../src/machines/transcription-events.js";
 
 // Most examples leave a segment mid-recording with its long timers pending
 // (MAX_DURATION is an hour); unref'd timers let the test process exit anyway.
@@ -45,9 +46,9 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; c
     seal: (opts: { emissionId: string | null; hq: { emissionId: string } | null }) => log.push(`seal ${opts.hq === null ? "null" : opts.hq.emissionId}`),
     discard: () => log.push("discard"),
   };
-  let toMachine = (_event: unknown) => {};
+  let toMachine: (event: TranscriptionEvent) => void = () => {};
   const emitted: string[] = [];
-  const fake = fromCallback(({ sendBack, receive, input }) => {
+  const fake = fromCallback<TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent>(({ sendBack, receive, input }) => {
     toMachine = sendBack;
     log.push(`actor start target=${String(input.targetSessionId)}`);
     receive((event) => {
@@ -74,7 +75,7 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; c
     cues,
     recording,
     emitted,
-    emit: (event: unknown) => toMachine(event),
+    emit: (event: TranscriptionEvent) => toMachine(event),
     state: () => transcriptionStateOf(actor.getSnapshot()),
     context: () => actor.getSnapshot().context,
   };

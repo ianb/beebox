@@ -1151,6 +1151,6 @@ await retiredBox.write(
   "---\ntype: doc\ntitle: Old\n---\n{% purpose %}\nP\n{% /purpose %}\n\n{% correction %}\nC\n{% /correction %}\n\n{% image ref=\"attach/a.image.card\" /%}\n\n{% silence duration=\"9s\" /%}\n",
 );
 const retired = await lintCardsDispatch([retiredBox.path("_content/box/Old.doc.card")], { boxRoot: retiredBox.root, ctx });
-retired.results[0].warnings.filter((w) => w.message.includes("Undefined tag")).map((w) => w.message.match(/'([a-z]+)'/)?.[1])
+retired.results[0]?.warnings.filter((w) => w.message.includes("Undefined tag")).map((w) => w.message.match(/'([a-z]+)'/)?.[1])
 => ["purpose", "correction", "image", "silence"]
 ```

@@ -11,9 +11,12 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BrowseSidebarList } from "../../../../../src/pages/browse/components/BrowseSidebarBody/BrowseSidebarList.js";
 
+type BrowseData = Parameters<typeof BrowseSidebarList>[0]["data"];
+
 globalThis.React = React;
 
-const mixedData = {
+const mixedData: BrowseData = {
+  path: "",
   background: false,
   dirs: [
     {
@@ -32,7 +35,7 @@ const mixedData = {
   files: [{ relativePath: "readme.txt", name: "readme.txt" }],
 };
 
-function renderList(data: unknown, mode: "compact" | "raw"): string {
+function renderList(data: BrowseData, mode: "compact" | "raw"): string {
   return renderToStaticMarkup(React.createElement(BrowseSidebarList, {
     data,
     dirPath: "",
@@ -80,7 +83,8 @@ const raw = renderList(mixedData, "raw");
 ## Nothing prominent: compact renders identically to raw, no disclosure
 
 ```ts
-const plainData = {
+const plainData: BrowseData = {
+  path: "",
   background: false,
   dirs: [{ name: "Sub", fileCount: 0, summary: { hasEntryPoint: false, primaryCount: 0, background: false } }],
   cards: [{ relativePath: "X.memo.card", name: "X", type: "memo", hasAttachments: false, prominence: "ordinary" }],

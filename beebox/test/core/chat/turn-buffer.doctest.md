@@ -11,8 +11,14 @@ text.
 import { TurnBuffer } from "../../../src/core/chat/turn-buffer.js";
 import type { ChatMessage } from "../../../src/core/chat/session/messages.js";
 
-function msg(type: ChatMessage["type"]): ChatMessage {
-  return { type };
+/** The smallest valid message of each kind these examples push. */
+function msg(type: "system" | "assistant" | "result" | "stream_event"): ChatMessage {
+  switch (type) {
+    case "system": return { type, subtype: "init", session_id: "s" };
+    case "assistant": return { type, session_id: "s", message: { role: "assistant", content: [] } };
+    case "result": return { type, subtype: "success", session_id: "s", is_error: false, duration_ms: 0, num_turns: 1 };
+    case "stream_event": return { type, session_id: "s", parent_tool_use_id: null };
+  }
 }
 
 function msgWithPayload(size: number): ChatMessage {
@@ -90,7 +96,7 @@ print(`at limit: ${b.framesAfter(0).length}`);
 print(`gap at limit: ${b.hasGapAfter(0)}`);
 b.push(msg("stream_event"));
 print(`retained: ${b.framesAfter(0).length}`);
-print(`first seq: ${b.framesAfter(0)[0].seq}`);
+print(`first seq: ${b.framesAfter(0)[0]?.seq}`);
 print(`gap after 0: ${b.hasGapAfter(0)}`);
 print(`gap after 1: ${b.hasGapAfter(1)}`);
 print(`gap after 4001: ${b.hasGapAfter(4001)}`)
@@ -115,7 +121,7 @@ b.push(msgWithPayload(3 * 1024 * 1024));
 b.push(msgWithPayload(3 * 1024 * 1024));
 b.push(msgWithPayload(3 * 1024 * 1024));
 print(`retained: ${b.framesAfter(0).length}`);
-print(`first seq: ${b.framesAfter(0)[0].seq}`);
+print(`first seq: ${b.framesAfter(0)[0]?.seq}`);
 print(`gap after 0: ${b.hasGapAfter(0)}`);
 print(`gap after 1: ${b.hasGapAfter(1)}`)
 =>

@@ -14,7 +14,7 @@ import * as os from "node:os";
 import { markMigrationApplied } from "../../../src/cli/commands/migrate.js";
 import { MANIFEST_PATH } from "../../../src/core/migrations.js";
 
-async function makeBox(entries) {
+async function makeBox(entries: string[] | null) {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-markapplied-"));
   if (entries !== null) {
     const abs = path.join(tmp, MANIFEST_PATH);
@@ -25,9 +25,13 @@ async function makeBox(entries) {
   return tmp;
 }
 
-async function readManifestNames(boxRoot) {
+function manifestEntry(line: string): { name: string } {
+  return JSON.parse(line);
+}
+
+async function readManifestNames(boxRoot: string) {
   const text = await fs.readFile(path.join(boxRoot, MANIFEST_PATH), "utf-8");
-  return text.split("\n").filter((l) => l.trim() !== "").map((l) => JSON.parse(l).name);
+  return text.split("\n").filter((l) => l.trim() !== "").map((l) => manifestEntry(l).name);
 }
 ```
 

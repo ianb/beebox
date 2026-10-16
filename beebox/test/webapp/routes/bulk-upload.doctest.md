@@ -9,7 +9,9 @@ full prepare→deliver worker (retry, at-most-once, reconciliation) is covered i
 
 ```ts setup
 import { createHash } from "node:crypto";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { z } from "zod";
+import { makeTestServer, type TestServer } from "../../helpers/doctest-server.js";
+import { StagingSessionSchema, type StagingSession } from "../../../src/core/capture/staging-schema.js";
 import { readStagingSession, writeStagingSession, sealStagingSession, setStagingState } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/session/history.js";
@@ -17,7 +19,44 @@ import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/se
 // Bind a session→dir in history. The server fires a one-shot history backfill at
 // boot that can clobber a single append; re-append until it sticks (the backfill
 // writes `migrated: true` once, after which the binding is durable).
-async function bindSession(ctx, sessionId, contextDir) {
+// Response bodies of the bulk routes; every field is optional because success
+// and error responses carry different keys.
+const BulkBody = z.looseObject({
+  sessionId: z.string().optional(),
+  error: z.string().optional(),
+  success: z.boolean().optional(),
+  staged: z.boolean().optional(),
+  registered: z.unknown().optional(),
+  capabilities: z.looseObject({ acceptedUploadEncodings: z.unknown() }).optional(),
+  state: z.unknown().optional(),
+  size: z.unknown().optional(),
+  sha256: z.unknown().optional(),
+  itemId: z.unknown().optional(),
+});
+
+// The status/resume response: registered vs received items.
+const StatusBody = z.object({
+  state: z.unknown(),
+  registered: z.array(z.looseObject({ id: z.string() })),
+  received: z.array(z.looseObject({ itemId: z.string(), size: z.number() })),
+});
+
+async function send(ctx: TestServer, opts: Parameters<TestServer["request"]>[0]) {
+  const res = await ctx.request(opts);
+  return { statusCode: res.statusCode, body: BulkBody.parse(res.body) };
+}
+
+// The id of a created session; fails the test when the response carried none.
+function sessionIdOf(res: { body: { sessionId?: string | undefined } }): string {
+  if (res.body.sessionId === undefined) throw new Error("response carried no sessionId");
+  return res.body.sessionId;
+}
+
+async function manifestOf(ctx: TestServer, id: string) {
+  return StagingSessionSchema.parse(JSON.parse(await ctx.read(`_tmp/capture-staging/${id}/session.json`)));
+}
+
+async function bindSession(ctx: TestServer, sessionId: string, contextDir: string) {
   for (let i = 0; i < 100; i++) {
     await appendHistory(ctx.boxRoot, { sessionId, contextDir });
     if ((await getDirectoryForSession(ctx.boxRoot, sessionId)) === contextDir) return;
@@ -26,16 +65,18 @@ async function bindSession(ctx, sessionId, contextDir) {
   throw new Error(`could not bind ${sessionId} in history`);
 }
 
-function sha256(text) {
+function sha256(text: string) {
   return createHash("sha256").update(Buffer.from(text)).digest("hex");
 }
 
-async function createBatch(ctx, body) {
-  return ctx.request({ method: "POST", url: "/api/bulk/sessions", payload: body });
+async function createBatch(ctx: TestServer, body: object) {
+  return send(ctx, { method: "POST", url: "/api/bulk/sessions", payload: body });
 }
 
-async function uploadItem(ctx, opts) {
-  return ctx.request({
+async function uploadItem(ctx: TestServer, opts: {
+  sessionId: string; itemId: string; filename: string; data: Buffer; originalName?: string; headers?: Record<string, string>;
+}) {
+  return send(ctx, {
     method: "POST",
     url: `/api/bulk/sessions/${opts.sessionId}/items/${opts.itemId}/upload`,
     payload: opts.data,
@@ -54,8 +95,8 @@ async function uploadItem(ctx, opts) {
 // git-annex) when the box directory vanishes hangs forever, and the file then
 // dies at tap's whole-file timeout instead of failing an assertion. Bounded, and
 // the error names the state the worker stalled in.
-async function waitForWorkerToSettle(ctx, sessionId) {
-  let session = null;
+async function waitForWorkerToSettle(ctx: TestServer, sessionId: string) {
+  let session: StagingSession | null = null;
   for (let i = 0; i < 600; i++) {
     session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
     if (session === null || session.state === "delivered" || session.state.startsWith("failed:")) return session?.state ?? "gone";
@@ -90,11 +131,11 @@ const created = await createBatch(ctx, {
     { id: "b", name: "photo.png", size: 5, mimetype: "image/png" },
   ],
 });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 JSON.stringify({
   status: created.statusCode,
   hasId: typeof sessionId === "string",
-  caps: created.body.capabilities.acceptedUploadEncodings,
+  caps: created.body.capabilities?.acceptedUploadEncodings,
 })
 => {"status":200,"hasId":true,"caps":["raw-body-v1"]}
 ```
@@ -103,12 +144,12 @@ The staging manifest is a `kind: "bulk"` session carrying the registry + the
 server-derived target context dir:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+const manifest = await manifestOf(ctx, sessionId);
 JSON.stringify({
   kind: manifest.kind,
   target: manifest.targetSessionId,
   contextDir: manifest.contextDir,
-  registered: manifest.expectedItems.map((i) => i.id),
+  registered: manifest.expectedItems?.map((i) => i.id),
 })
 => {"kind":"bulk","target":"chat-abc","contextDir":"_content/photos","registered":["a","b"]}
 ```
@@ -123,7 +164,7 @@ const sneaky = await createBatch(ctx, {
   contextDir: "../../../etc",
   items: [{ id: "a", name: "x.pdf" }],
 });
-const sneakyManifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sneaky.body.sessionId}/session.json`));
+const sneakyManifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionIdOf(sneaky)}/session.json`));
 JSON.stringify({ status: sneaky.statusCode, contextDir: sneakyManifest.contextDir })
 => {"status":200,"contextDir":""}
 ```
@@ -150,8 +191,8 @@ JSON.stringify({ status: dupeCreate.statusCode, error: dupeCreate.body.error })
 
 ```ts continue
 const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
-const collide = await ctx.request({
-  method: "POST", url: `/api/bulk/sessions/${created.body.sessionId}/items`,
+const collide = await send(ctx, {
+  method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
   payload: { items: [{ id: "a", name: "again.pdf" }, { id: "a", name: "again2.pdf" }] },
 });
 JSON.stringify({ status: collide.statusCode, error: collide.body.error })
@@ -162,8 +203,8 @@ Re-registering an EXISTING id (idempotent append while the picker streams) is
 still fine:
 
 ```ts continue
-const reAdd = await ctx.request({
-  method: "POST", url: `/api/bulk/sessions/${created.body.sessionId}/items`,
+const reAdd = await send(ctx, {
+  method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
   payload: { items: [{ id: "a", name: "x.pdf" }] },
 });
 JSON.stringify({ status: reAdd.statusCode, registered: reAdd.body.registered })
@@ -185,7 +226,7 @@ const created = await createBatch(ctx, {
   targetSessionId: "chat-1",
   items: [{ id: "a", name: "report.pdf" }],
 });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 
 const res = await uploadItem(ctx, {
   sessionId, itemId: "a", filename: "staged-a.bin", originalName: "report.pdf",
@@ -204,9 +245,9 @@ The staged file entry on the manifest carries the same server-computed values
 and links back to the registry item, and `totalBytes` accumulates:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+const manifest = await manifestOf(ctx, sessionId);
 JSON.stringify({
-  file: manifest.files.map((f) => ({ name: f.originalName, itemId: f.itemId, size: f.size, hashLen: f.sha256.length })),
+  file: manifest.files.map((f) => ({ name: f.originalName, itemId: f.itemId, size: f.size, hashLen: f.sha256?.length })),
   totalBytes: manifest.totalBytes,
 })
 => {"file":[{"name":"report.pdf","itemId":"a","size":6,"hashLen":64}],"totalBytes":6}
@@ -238,7 +279,7 @@ whose `itemId` was never registered is refused before any bytes are staged:
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 
 const res = await uploadItem(ctx, {
   sessionId, itemId: "ghost", filename: "staged.bin", data: Buffer.from("X"),
@@ -250,7 +291,7 @@ JSON.stringify({ status: res.statusCode, error: res.body.error })
 Registering it afterward (append while the picker streams) lets the upload land:
 
 ```ts continue
-const reg = await ctx.request({
+const reg = await send(ctx, {
   method: "POST", url: `/api/bulk/sessions/${sessionId}/items`,
   payload: { items: [{ id: "ghost", name: "ghost.pdf" }] },
 });
@@ -273,7 +314,7 @@ hidden name is refused before any bytes land.
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 
 const names = ["session.json", "session.json.corrupt", ".gitignore", ".hidden"];
 const codes = [];
@@ -285,7 +326,7 @@ JSON.stringify(codes)
 The manifest is untouched — the upload never overwrote it:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+const manifest = await manifestOf(ctx, sessionId);
 JSON.stringify({ kind: manifest.kind, files: manifest.files.length })
 => {"kind":"bulk","files":0}
 ```
@@ -302,8 +343,8 @@ mapped to 413 (the same staging cap capture enforces):
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "big.bin" }] });
-const sessionId = created.body.sessionId;
-const session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+const sessionId = sessionIdOf(created);
+const session = await manifestOf(ctx, sessionId);
 session.totalBytes = MAX_STAGED_BYTES;
 await writeStagingSession({ boxRoot: ctx.boxRoot, session });
 
@@ -332,10 +373,10 @@ const created = await createBatch(ctx, {
   targetSessionId: "chat-1",
   items: [{ id: "a", name: "a.pdf" }, { id: "b", name: "b.pdf" }],
 });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.pdf", data: Buffer.from("AAAA") });
 
-const status = await ctx.request({ method: "GET", url: `/api/bulk/sessions/${sessionId}` });
+const status = { body: StatusBody.parse((await ctx.request({ method: "GET", url: `/api/bulk/sessions/${sessionId}` })).body) };
 JSON.stringify({
   state: status.body.state,
   registered: status.body.registered.map((i) => i.id),
@@ -369,10 +410,10 @@ runs in the background) and CAS-seals the session so it stops accepting uploads:
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "a.pdf" }] });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.pdf", data: Buffer.from("AAAA") });
 
-const done = await ctx.request({
+const done = await send(ctx, {
   method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
   payload: { failedItems: [] },
 });
@@ -411,10 +452,10 @@ window in which a sealed batch exists without its note.
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-note", items: [{ id: "a", name: "a.jpg" }] });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
 
-const done = await ctx.request({
+const done = await send(ctx, {
   method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
   payload: { note: "Receipts from the Tokyo trip" },
 });
@@ -422,7 +463,7 @@ const done = await ctx.request({
 // "chat-note" has no recorded binding, so the worker leaves the batch retryable
 // as `failed:deliver` — and the note is still there for the resume to use.
 const settled = await waitForWorkerToSettle(ctx, sessionId);
-const sealed = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+const sealed = await manifestOf(ctx, sessionId);
 JSON.stringify({ status: done.statusCode, state: settled, note: sealed.note })
 => {"status":200,"state":"failed:deliver","note":"Receipts from the Tokyo trip"}
 ```
@@ -440,15 +481,15 @@ to its pre-note form.
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-blank", items: [{ id: "a", name: "a.jpg" }] });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
 
-await ctx.request({
+await send(ctx, {
   method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
   payload: { note: "   \n\t " },
 });
 await waitForWorkerToSettle(ctx, sessionId);
-const sealed = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+const sealed = await manifestOf(ctx, sessionId);
 JSON.stringify({ note: sealed.note ?? null })
 => {"note":null}
 ```
@@ -465,13 +506,13 @@ rather than trusted downstream.
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-big", items: [{ id: "a", name: "a.jpg" }] });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 
-const tooBig = await ctx.request({
+const tooBig = await send(ctx, {
   method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
   payload: { note: "x".repeat(10_001) },
 });
-const stillOpen = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+const stillOpen = await manifestOf(ctx, sessionId);
 JSON.stringify({ status: tooBig.statusCode, state: stillOpen.state })
 => {"status":400,"state":"open"}
 ```
@@ -497,14 +538,14 @@ request lands. Every state the worker holds the batch in refuses the cancel:
 ```ts
 const ctx = await makeTestServer();
 const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
-const sessionId = created.body.sessionId;
+const sessionId = sessionIdOf(created);
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
 await sealStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
 
-const codes = {};
-for (const state of ["sealed", "preparing", "delivering"]) {
+const codes: Record<string, number> = {};
+for (const state of ["sealed", "preparing", "delivering"] as const) {
   await setStagingState({ boxRoot: ctx.boxRoot, id: sessionId, state });
-  codes[state] = (await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${sessionId}` })).statusCode;
+  codes[state] = (await send(ctx, { method: "DELETE", url: `/api/bulk/sessions/${sessionId}` })).statusCode;
 }
 JSON.stringify(codes)
 => {"sealed":409,"preparing":409,"delivering":409}
@@ -514,7 +555,7 @@ An open batch still cancels normally:
 
 ```ts continue
 const open = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "b", name: "b.jpg" }] });
-const cancelled = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${open.body.sessionId}` });
+const cancelled = await send(ctx, { method: "DELETE", url: `/api/bulk/sessions/${sessionIdOf(open)}` });
 JSON.stringify({ status: cancelled.statusCode, success: cancelled.body.success })
 => {"status":200,"success":true}
 ```

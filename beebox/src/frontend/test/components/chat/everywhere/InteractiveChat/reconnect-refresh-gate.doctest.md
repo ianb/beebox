@@ -15,21 +15,28 @@ serviced.
 ```ts setup
 import { createReconnectRefreshGate } from "../../../../../src/components/chat/everywhere/InteractiveChat/reconnect-refresh-gate.js";
 
+type Handle = ReturnType<typeof globalThis.setTimeout>;
+// A timer handle that is unique and never fires: a real one, cancelled at once.
+function newHandle(): Handle {
+  const handle = globalThis.setTimeout(() => {}, 0);
+  globalThis.clearTimeout(handle);
+  return handle;
+}
+
 // A fake clock + timer scheduler so trailing-timer behavior is testable
 // without real wall-clock waits. `advance` moves the clock and fires any
 // timer whose deadline has been reached, in deadline order.
 function fakeClock(startAt: number) {
   let t = startAt;
-  let nextId = 1;
-  const timers: Array<{ id: number; dueAt: number; fn: () => void }> = [];
+  const timers: Array<{ id: Handle; dueAt: number; fn: () => void }> = [];
   return {
     now: () => t,
     setTimeout: (fn: () => void, delayMs: number) => {
-      const id = nextId++;
+      const id = newHandle();
       timers.push({ id, dueAt: t + delayMs, fn });
       return id;
     },
-    clearTimeout: (id: number) => {
+    clearTimeout: (id: Handle) => {
       const idx = timers.findIndex((tm) => tm.id === id);
       if (idx !== -1) timers.splice(idx, 1);
     },

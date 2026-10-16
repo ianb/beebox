@@ -20,11 +20,19 @@ import {
 } from "../../../src/core/box/file-watcher.js";
 import { watchLimitStatus } from "../../../src/core/box/watch-limit.js";
 import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/watch-limit.js";
-import { createEventBus, type EventBus } from "../../../src/core/event-bus/core.js";
+import { createEventBus, type BusEvent, type EventBus } from "../../../src/core/event-bus/core.js";
+import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+
+/** The path of a `file-change` event, or undefined for any other event. */
+function fileChangePath(event: BusEvent): string | undefined {
+  if (event.event !== "file-change") return undefined;
+  const parsed = eventSchemas["file-change"].safeParse(event.data);
+  return parsed.success ? parsed.data.path : undefined;
+}
 
 /** How many descriptors this process holds right now. */
 const openFDs = () => readdirSync("/dev/fd").length;
@@ -53,7 +61,7 @@ async function waitForWatch(root: string, bus: EventBus, relativeDir: string): P
   let seen = false;
   const subscription = bus.subscribe({
     listener: (event) => {
-      if (event.event === "file-change" && event.data.path === markerRel) seen = true;
+      if (fileChangePath(event) === markerRel) seen = true;
     },
   });
   try {
@@ -195,7 +203,8 @@ const bus = createEventBus(contentRoot, { pollInterval: 60_000 });
 const seen: string[] = [];
 const subscription = bus.subscribe({
   listener: (event) => {
-    if (event.event === "file-change") seen.push(event.data.path);
+    const changed = fileChangePath(event);
+    if (changed !== undefined) seen.push(changed);
   },
 });
 const fake = fakeWatch();
@@ -272,7 +281,7 @@ const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
 
 const seen: string[] = [];
-bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
+bus.subscribe({ listener: (e) => { const changed = fileChangePath(e); if (changed !== undefined) seen.push(changed); } });
 
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
@@ -367,7 +376,7 @@ const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
 
 const seen: string[] = [];
-bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
+bus.subscribe({ listener: (e) => { const changed = fileChangePath(e); if (changed !== undefined) seen.push(changed); } });
 
 const fake = fakeWatch();
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
@@ -454,7 +463,7 @@ const store = join(box.root, "store");
 let events = 0;
 bus.subscribe({
   listener: (e) => {
-    if (e.event === "file-change" && e.data.path === "store/Note.memo.card") events++;
+    if (fileChangePath(e) === "store/Note.memo.card") events++;
   },
 });
 

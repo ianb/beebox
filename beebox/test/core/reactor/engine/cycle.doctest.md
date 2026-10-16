@@ -8,21 +8,29 @@ in `runReactor` that consume it.
 
 ```ts setup
 import { runOneCycle } from "../../../../src/core/reactor/engine/cycle.js";
+import type { RunCycleParams } from "../../../../src/core/reactor/engine/cycle.js";
 import { runReactor } from "../../../../src/core/reactor/engine/core.js";
+import type { ReactorResult } from "../../../../src/core/reactor/engine/core.js";
+import type { createAgent } from "../../../../src/core/agent/invoke/core.js";
+import { invariant } from "../../../../src/shared/invariant.js";
 import { finishJob } from "../../../../src/core/finish-job.js";
 import { createFakeAgent } from "../../fake-agent.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 import { createIntakeJobTemplate } from "../../../../src/schemas/intake-job.js";
 import { createTodoReviewJobTemplate } from "../../../../src/schemas/todo-review-job.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-const intakeJob = (description, opts) =>
+type CreateAgentOptions = Parameters<typeof createAgent>[0];
+type FakeAct = Parameters<typeof createFakeAgent>[0]["act"];
+
+const intakeJob = (description: string, opts?: { priority?: "normal" | "low" }) =>
   createIntakeJobTemplate({ description, items: [], ...(opts ?? {}) });
 
 // Base cycle params: fast fakes for the subprocess/doc stages (same rationale
 // as reactor-integration.doctest.md), no filters, sync off.
-function cycleParams(boxRoot, agentFactory) {
+function cycleParams(boxRoot: string, agentFactory: RunCycleParams["agentFactory"]): RunCycleParams {
   return {
     boxRoot,
     dryRun: false,
@@ -40,13 +48,13 @@ function cycleParams(boxRoot, agentFactory) {
 const jobsDir = "_bookkeeping/jobs";
 
 /** An `act` that finishes the named job files. */
-const finishing = (...names) => async ({ boxRoot }) => {
+const finishing = (...names: string[]) => async ({ boxRoot }: { boxRoot: string }) => {
   for (const name of names) await finishJob({ boxRoot, jobRelPath: `${jobsDir}/${name}` });
   return { success: true };
 };
 
 /** An `act` that finishes exactly the jobs its prompt named. */
-const finishingPromptedJobs = async ({ boxRoot, prompt }) => {
+const finishingPromptedJobs = async ({ boxRoot, prompt }: { boxRoot: string; prompt: string }) => {
   for (const file of await fs.readdir(path.join(boxRoot, jobsDir))) {
     if (prompt.includes(file)) await finishJob({ boxRoot, jobRelPath: `${jobsDir}/${file}` });
   }
@@ -59,14 +67,21 @@ const finishingPromptedJobs = async ({ boxRoot, prompt }) => {
  * `invoked` (agent factory calls in the first run) and `prompts`. `after(box, run)` may inspect the box or
  * run another cycle (`run()`) before the box is removed; its return value is `after`.
  */
-async function cycleOn(jobs, { act, skipLowPriority, after }) {
+async function cycleOn<A = undefined>(
+  jobs: Record<string, string>,
+  { act, skipLowPriority, after }: {
+    act?: FakeAct;
+    skipLowPriority: boolean;
+    after?: (box: TmpBox, run: () => Promise<ReactorResult>) => Promise<A>;
+  },
+) {
   const box = await makeTmpBox({ git: true });
   try {
     for (const [name, card] of Object.entries(jobs)) await box.write(`${jobsDir}/${name}`, card);
     box.commitAll("add jobs");
     let invoked = 0;
-    const prompts = [];
-    const factory = (opts) => {
+    const prompts: string[] = [];
+    const factory = (opts: CreateAgentOptions) => {
       invoked += 1;
       return createFakeAgent({
         name: opts.name,
@@ -87,7 +102,7 @@ async function cycleOn(jobs, { act, skipLowPriority, after }) {
 }
 
 /** The cycle result and agent invocation count, without prompts. */
-const summary = ({ prompts, after, ...rest }) => rest;
+const summary = ({ prompts, after, ...rest }: { prompts?: unknown; after?: unknown; [key: string]: unknown }) => rest;
 
 /** Seven low-priority jobs dated 2020-01-01 .. 2020-01-07. */
 const overdueBacklog = () =>
@@ -157,7 +172,7 @@ days 01–05 went, 06 and 07 wait. The next cycle finds them overdue and takes
 them.
 
 ```ts
-const listJobs = async (box) =>
+const listJobs = async (box: TmpBox) =>
   (await fs.readdir(path.join(box.root, jobsDir))).filter((f) => f !== ".gitkeep").toSorted();
 const { after, ...first } = await cycleOn(overdueBacklog(), {
   skipLowPriority: true,
@@ -185,10 +200,12 @@ const { prompts, ...mixed } = await cycleOn(
   { ...overdueBacklog(), [normal]: intakeJob("Real work") },
   { skipLowPriority: true },
 );
+const [offered] = prompts;
+invariant(offered, "the agent was offered a prompt");
 ({
   ...summary(mixed),
-  hasNormal: prompts[0].includes(normal),
-  normalListedFirst: prompts[0].indexOf("2026-06-01T00-00-00-now") < prompts[0].indexOf("2020-01-01T00-00-00-b"),
+  hasNormal: offered.includes(normal),
+  normalListedFirst: offered.indexOf("2026-06-01T00-00-00-now") < offered.indexOf("2020-01-01T00-00-00-b"),
 })
 => { success: true, jobsProcessed: 0, jobsRemaining: 8, invoked: 1, hasNormal: true, normalListedFirst: true }
 ```
@@ -224,7 +241,7 @@ job lands concurrently still credits 2 processed (the old subtraction would
 have reported 1) and reports the newcomer as remaining.
 
 ```ts
-const consumeBoth = async ({ boxRoot }) => {
+const consumeBoth = async ({ boxRoot }: { boxRoot: string }) => {
   await finishing("a.intake.job.card", "b.intake.job.card")({ boxRoot });
   // A connector delivers a new job mid-cycle.
   await fs.writeFile(path.join(boxRoot, jobsDir, "new.intake.job.card"), intakeJob("Newcomer"));
@@ -250,7 +267,7 @@ for (const n of ["j1", "j2", "j3", "j4", "j5"]) {
 box3.commitAll("add jobs");
 
 let cycles = 0;
-const onePerCycle = (opts) => {
+const onePerCycle = (opts: CreateAgentOptions) => {
   const n = ++cycles;
   return createFakeAgent({ name: opts.name, act: finishing(`j${n}.intake.job.card`) });
 };
@@ -267,7 +284,7 @@ zero-progress cycle instead of burning through `maxCycles`.
 
 ```ts continue
 cycles = 0;
-const stuckFactory = (opts) => {
+const stuckFactory = (opts: CreateAgentOptions) => {
   cycles += 1;
   return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
 };

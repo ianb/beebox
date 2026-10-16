@@ -7,10 +7,19 @@ repeated on a retry. The fake agent both does the run-phase work (`act`) and
 returns the scripted verdict (`structuredResult`).
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
+import type { Result } from "../../../src/shared/result.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
+
+/** The value of a successful result; fails the test on an error. */
+function valueOf<T, E>(result: Result<T, E>): T {
+  assert.ok(result.ok);
+  return result.value;
+}
 ```
 
 ## Retry then pass
@@ -41,7 +50,7 @@ box.commitAll("Add heal procedure");
 let runCount = 0;
 let validateCount = 0;
 let retryPrompt = "";
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async ({ prompt }) => {
     runCount++;
@@ -72,8 +81,8 @@ print(`retry got failure context: ${retryPrompt.includes("<validation-failure>")
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("heal_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
-print(`validate status: ${run.steps[0].validate.status}`);
+print(`step status: ${run?.steps[0]?.status}`);
+print(`validate status: ${run?.steps[0]?.validate?.status}`);
 =>
 success: true
 agent runs: 2
@@ -119,7 +128,7 @@ await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add stuck procedure");
 
 let runCount = 0;
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     runCount++;
@@ -146,8 +155,8 @@ print(`after.txt (next step) exists: ${files.includes("after.txt")}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("stuck_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`broken step: ${run.steps[0].status}`);
-print(`validate status: ${run.steps[0].validate.status}`);
+print(`broken step: ${run?.steps[0]?.status}`);
+print(`validate status: ${run?.steps[0]?.validate?.status}`);
 =>
 success: false
 agent runs: 2
@@ -187,7 +196,7 @@ await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add noagent procedure");
 
 let validateCount = 0;
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => ({ success: true }),
   structuredResult: () => {
@@ -209,7 +218,7 @@ print(`validate calls: ${validateCount}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("noagent_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
+print(`step status: ${run?.steps[0]?.status}`);
 =>
 success: false
 validate calls: 1
@@ -249,7 +258,7 @@ await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add once procedure");
 
 let validateCount = 0;
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     await box.write("_bookkeeping/output/agentwork.txt", "work");
@@ -314,7 +323,7 @@ await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add nodecide procedure");
 
 let runCount = 0;
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     runCount++;
@@ -333,14 +342,14 @@ const result = await startProcedure({
   options: { createAgent },
 });
 print(`success: ${result.ok}`);
-print(`run status: ${result.value.status}`);
+print(`run status: ${valueOf(result).status}`);
 print(`agent runs: ${runCount}`);
 
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("nodecide_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`work step: ${run.steps[0].status}`);
-print(`validate status: ${run.steps[0].validate.status}`);
+print(`work step: ${run?.steps[0]?.status}`);
+print(`validate status: ${run?.steps[0]?.validate?.status}`);
 =>
 success: true
 run status: inconclusive

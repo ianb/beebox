@@ -9,6 +9,7 @@ credential value.
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { TRPCError } from "@trpc/server";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeCloudflarePublishTokenVerifier } from "../../../../src/services/cloudflare-publish-token-verifier.js";
 import { resolveCloudflarePublishCredential } from "../../../../src/core/secrets/cloudflare-publish.js";
@@ -19,7 +20,7 @@ import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js
 import { getBoxTimeISO } from "../../../../src/lib/time.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
+const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
 const storeDir = await mkdtemp(join(tmpdir(), "bbx-cf-publish-"));
 const storeFile = join(storeDir, "secrets.json");
 process.env.BBX_SECRETS_FILE = storeFile;
@@ -35,11 +36,12 @@ function caller(isAuthenticatedOwner = true) {
     authed: true,
     isOwner: true,
     isAuthenticatedOwner,
+    actor: "user",
   });
 }
-async function message(promise) {
+async function message(promise: Promise<unknown>) {
   try { await promise; return "allowed"; }
-  catch (error) { return error.code ?? error.message; }
+  catch (error) { return error instanceof TRPCError ? error.code : error instanceof Error ? error.message : String(error); }
 }
 ```
 
@@ -90,10 +92,12 @@ refuses Show when `navigator.webdriver` is true; this is a client-side check.
 
 ```ts continue
 print(`non-owner refused: ${await message(caller(false).cloudflarePublishConnections.revealToken({ name: "studio" }))}`);
-print(`legacy webdriver claim refused: ${await message(owner.cloudflarePublishConnections.revealToken({ name: "studio", webdriver: true }))}`);
+// A retired input field, passed through a variable so only the server-side schema rejects it.
+const legacyReveal = { name: "studio", webdriver: true };
+print(`legacy webdriver claim refused: ${await message(owner.cloudflarePublishConnections.revealToken(legacyReveal))}`);
 const revealed = await owner.cloudflarePublishConnections.revealToken({ name: "studio" });
 const log = await readFile(accessLogSegmentPath(getBoxTimeISO(box.root)), "utf8");
-const event = JSON.parse(log.trim().split("\n").at(-1));
+const event = JSON.parse(log.trim().split("\n").at(-1) ?? "");
 print(JSON.stringify({ value: revealed.token, logged: event.event === "owner-read", logContainsValue: log.includes("placeholder-cloudflare-token") }));
 =>
 non-owner refused: FORBIDDEN
@@ -152,7 +156,7 @@ const rejectingVerifier = createFakeCloudflarePublishTokenVerifier({ error: new 
 const rejecting = appRouter.createCaller({
   boxRoot: box.root, boxSlug: "test-box", eventBus: noBus,
   services: { cloudflarePublishTokenVerifier: rejectingVerifier },
-  user: { email: "owner@example.com", name: "Owner" }, authed: true, isOwner: true, isAuthenticatedOwner: true,
+  user: { email: "owner@example.com", name: "Owner" }, authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user",
 });
 const failed = await message(rejecting.cloudflarePublishConnections.save({
   name: "broken", accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder-invalid-token",

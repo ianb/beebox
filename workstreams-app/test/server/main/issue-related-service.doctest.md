@@ -18,6 +18,10 @@ import { createIssueRelatedService } from "../../../src/server/main/issue-relate
 import { ROUTER_CAPABILITY_HEADER, buildApp } from "../../../src/server/main/app.js";
 import { EMBEDDING_DIMENSIONS } from "../../../../beebox/src/services/openai-embeddings.js";
 
+async function unconfigured(): Promise<never> {
+  throw new Error("not configured");
+}
+
 function axis(index: number) {
   const vector = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0);
   vector[index] = 1;
@@ -164,7 +168,22 @@ JSON.stringify({ rows: withoutKey.rows, reason: withoutKey.problem?.reason, ment
 const app = await buildApp({
   services: {
     workstreams: { list: async () => ({ items: [], warnings: [] }) },
-    documents: { listIssues: async () => [] },
+    schedules: { alerts: async () => [], acknowledge: async () => undefined },
+    documents: {
+      listIssues: async () => [],
+      issueDetail: unconfigured,
+      listPlans: unconfigured,
+      testingQueue: unconfigured,
+      issuesForWorkstream: unconfigured,
+      saveIssueChanges: unconfigured,
+      setIssueNextAction: unconfigured,
+      readDocument: unconfigured,
+      changedFiles: unconfigured,
+      recentFiles: unconfigured,
+      pathIndex: unconfigured,
+    },
+    comments: { forDocument: unconfigured, waiting: unconfigured, add: unconfigured, clear: unconfigured },
+    transcribe: { transcribe: unconfigured },
     quotas: { get: async () => [] },
     exhibits: { inventory: async () => ({ origin: "", storeProblem: null, entries: [] }) },
     actions: { run: async () => ({ status: "complete" }), job: () => null, activeJobs: () => 0 },
@@ -182,7 +201,7 @@ const response = await app.inject({
 });
 JSON.stringify({
   status: response.statusCode,
-  paths: response.json().result.data.rows.map((row) => row.path).toSorted(),
+  paths: response.json().result.data.rows.map((row: { path: string }) => row.path).toSorted(),
 })
 => {"status":200,"paths":["beebox/docs/plans/calendar-sync.md","issues/closed/bugs/2026-01-20-calendar-resync-loops.md"]}
 ```

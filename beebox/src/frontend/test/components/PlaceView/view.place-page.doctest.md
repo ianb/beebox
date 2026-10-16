@@ -12,12 +12,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { PlacePage } from "../../../src/components/PlaceView/view.js";
-import { PlaceChatContext } from "../../../src/components/openers/place-chat.js";
+import type { PlacePayload } from "../../../src/components/PlaceView/sections.js";
+import { PlaceChatContext, type PlaceChat } from "../../../src/components/openers/place-chat.js";
 import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
 
 globalThis.React = React;
 
-function payload(overrides = {}) {
+function payload(overrides: Partial<PlacePayload> = {}): PlacePayload {
   return {
     path: "_content/lending/Lending.landmark.card",
     dir: "_content/lending",
@@ -35,10 +36,10 @@ function payload(overrides = {}) {
 }
 
 /** Render the page inside a router, a query client that never answers, and (optionally) a chat. */
-async function render(props, chat = null) {
+async function render(props: Omit<React.ComponentProps<typeof PlacePage>, "cardPath" | "onNavigate" | "onGoToPlace">, chat: PlaceChat | null = null) {
   const page = React.createElement(PlacePage, { cardPath: "_content/lending/Lending.landmark.card", onNavigate: () => undefined, onGoToPlace: () => undefined, ...props });
   const withChat = React.createElement(PlaceChatContext.Provider, { value: chat }, page);
-  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, withChat);
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: withChat });
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
@@ -46,22 +47,22 @@ async function render(props, chat = null) {
 }
 
 /** The page's visible text, tags (and a trailing cut-off tag) collapsed to single spaces. */
-function text(html) {
+function text(html: string) {
   return html.replace(/<[^>]*(?:>|$)/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
 }
 
 /** The visible text of one `data-place-section`, up to the next section. */
-function sectionText(html, name) {
-  const part = html.split('data-place-section="').find((p) => p.startsWith(`${name}"`));
+function sectionText(html: string, name: string) {
+  const part = html.split('data-place-section="').find((p: string) => p.startsWith(`${name}"`));
   return part === undefined ? null : text(part.slice(part.indexOf(">") + 1));
 }
 
 /** The `data-place-section` names, in page order. */
-function sections(html) {
+function sections(html: string) {
   return [...html.matchAll(/data-place-section="([^"]*)"/g)].map((m) => m[1]);
 }
 
-const startedLending = { contextDir: "_content/lending", showsOwnOpeners: false, busy: false, sendOpener: () => "accepted" };
+const startedLending: PlaceChat = { contextDir: "_content/lending", showsOwnOpeners: false, busy: false, sendOpener: () => "accepted" };
 ```
 
 ## An empty place says so and names its folder
@@ -140,7 +141,7 @@ const html = await render({ payload: payload({
 in Browse. Another group's overflow stays plain text.
 
 ```ts
-const tile = (name) => ({ ref: `_content/lending/${name}.memo.card`, label: null, title: name, exists: true, source: "derived" });
+const tile = (name: string) => ({ ref: `_content/lending/${name}.memo.card`, label: null, title: name, exists: true, source: "derived" as const });
 const ten = Array.from({ length: 10 }, (_, i) => tile(`Card ${i}`));
 const html = await render({ payload: payload({
   openers: [],
@@ -209,7 +210,7 @@ While that chat is busy with a turn, the openers wait: they render disabled,
 and enable again once the turn ends.
 
 ```ts
-const count = (html) => (html.match(/<button[^>]*disabled=""/g) ?? []).length;
+const count = (html: string) => (html.match(/<button[^>]*disabled=""/g) ?? []).length;
 [count(await render({ payload: payload() }, { ...startedLending, busy: true })), count(await render({ payload: payload() }, startedLending))]
 => [2, 0]
 ```

@@ -8,6 +8,11 @@ production. See `src/core/agent/token.ts`.
 import { getOrCreateAgentToken, verifyAgentBearer, resolveAgentToken } from "../../../src/core/agent/token.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+
+/** The `error` field of a JSON error body. */
+function errorOf(body: unknown): unknown {
+  return typeof body === "object" && body !== null && "error" in body ? body.error : undefined;
+}
 ```
 
 ## Token generation is idempotent and stays put
@@ -52,7 +57,7 @@ with no token must fail rather than mint one an attacker could race.
 ```ts
 const box = await makeTmpBox();
 print(`verify: ${verifyAgentBearer(box.root, "Bearer " + "x".repeat(64))}`);
-const files = await box.list(".beebox").catch(() => []);
+const files = await box.list(".beebox").catch(() => "");
 print(`token file created: ${files.includes(".beebox/agent-token")}`);
 =>
 verify: false
@@ -96,7 +101,7 @@ route validation — proof it reached the handler).
 // openAccess: false here to exercise the wall.
 const ctx = await makeTestServer({ openAccess: false });
 const anon = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload: {} });
-print(`anonymous: ${anon.statusCode} ${anon.body.error}`);
+print(`anonymous: ${anon.statusCode} ${errorOf(anon.body)}`);
 const token = getOrCreateAgentToken(ctx.boxRoot);
 const authed = await ctx.request({
   method: "POST",
@@ -104,7 +109,7 @@ const authed = await ctx.request({
   payload: {},
   headers: { authorization: `Bearer ${token}` },
 });
-print(`with bearer: ${authed.statusCode} ${authed.body.error}`);
+print(`with bearer: ${authed.statusCode} ${errorOf(authed.body)}`);
 // messageId is required since the targeted-fetch change
 // (docs/implemented-plans/retranscription-in-chat.md, Track 1b) — this test only
 // exercises the bearer wall, so any id works; no tab answers → 504.
@@ -114,7 +119,7 @@ const audio = await ctx.request({
   payload: { timeoutMs: 1, messageId: "msg-agent-token-test" },
   headers: { authorization: `Bearer ${token}` },
 });
-print(`last-audio with bearer: ${audio.statusCode} ${audio.body.error}`);
+print(`last-audio with bearer: ${audio.statusCode} ${errorOf(audio.body)}`);
 =>
 anonymous: 401 Not authenticated
 with bearer: 400 body is required

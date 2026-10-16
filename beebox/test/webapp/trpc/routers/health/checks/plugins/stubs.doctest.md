@@ -9,9 +9,10 @@ stub failed to load).
 
 ```ts setup
 import { scanStubImports, stubImportChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/stubs.js";
+import type { HealthCheck } from "../../../../../../../src/webapp/trpc/routers/health/router.js";
 import { makeTmpBox } from "../../../../../../helpers/doctest-helpers.js";
 
-function failing(checks) {
+function failing(checks: HealthCheck[]) {
   return checks.filter((c) => !c.ok).map(({ name, severity, message }) => ({ name, severity, message }));
 }
 ```

@@ -9,6 +9,7 @@ import {
   parseScheduledScript,
   createScheduledScriptTemplate,
   ScheduledScriptSchema,
+  type ParsedScheduledScript,
 } from "../../src/schemas/scheduled-script/schema.js";
 import { isDue, isDueForWakeup, isWithinBudget } from "../../src/schemas/scheduled-script/due.js";
 
@@ -20,7 +21,7 @@ function baseCardFields(overrides: Record<string, unknown> = {}): Record<string,
   };
 }
 
-function makeScript(overrides) {
+function makeScript(overrides: Partial<ParsedScheduledScript>): ParsedScheduledScript {
   return {
     cron: undefined,
     at: undefined,
@@ -30,9 +31,15 @@ function makeScript(overrides) {
     onWakeup: false,
     once: false,
     enabled: true,
-    runs: "echo test",
+    action: { kind: "runs", command: "echo test" },
+    requestedBy: undefined,
+    description: undefined,
     reason: undefined,
+    createAfterSuccess: [],
     budget: undefined,
+    lockGroup: undefined,
+    timeoutMs: undefined,
+    requires: undefined,
     ...overrides,
   };
 }
@@ -117,7 +124,7 @@ The error names the expected form:
 
 ```ts
 const badAt = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "not-a-date" }));
-badAt.success ? undefined : badAt.error.issues[0].message
+badAt.success ? undefined : badAt.error.issues[0]?.message
 => must be an ISO 8601 datetime (e.g. 2026-09-01T14:30:00)
 ```
 
@@ -128,7 +135,7 @@ ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "0 6 * 
 => true
 
 const badCron = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "not a cron" }));
-badCron.success ? undefined : badCron.error.issues[0].message
+badCron.success ? undefined : badCron.error.issues[0]?.message
 => invalid cron expression
 ```
 
@@ -141,7 +148,7 @@ ScheduledScriptSchema.frontmatterSchema.safeParse(
 => true
 
 const badRrule = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ rrule: "not an rrule" }));
-badRrule.success ? undefined : badRrule.error.issues[0].message
+badRrule.success ? undefined : badRrule.error.issues[0]?.message
 => invalid RRULE
 ```
 
@@ -160,7 +167,7 @@ A reminder carries `notify:` in place of `runs:`. A card with both, or with
 neither, fails validation with a message that names the rule.
 
 ```ts
-const issues = (fields) => {
+const issues = (fields: Record<string, unknown>) => {
   const parsed = ScheduledScriptSchema.frontmatterSchema.safeParse({ type: "scheduled-script", ...fields });
   return parsed.success ? "valid" : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
 };

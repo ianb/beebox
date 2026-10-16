@@ -51,7 +51,7 @@ async function makeV3Box() {
   return { root, boxRoot: root };
 }
 
-async function writeSchema(root, relPath, content) {
+async function writeSchema(root: string, relPath: string, content: string) {
   const full = path.join(root, relPath);
   await fs.mkdir(path.dirname(full), { recursive: true });
   await fs.writeFile(full, content);
@@ -89,7 +89,7 @@ const { root, boxRoot } = await makeV3Box();
 await writeSchema(root, "src/schemas/widget.ts", V2_WIDGET_SCHEMA);
 
 const loaded = await loadBoxSchemas(boxRoot);
-[loaded.cardSchemas.length, loaded.cardSchemas[0].type].join("|")
+[loaded.cardSchemas.length, loaded.cardSchemas[0]?.type].join("|")
 => 1|widget
 ```
 
@@ -120,7 +120,7 @@ last-good version:
 
 ```ts continue
 const failures = listSchemaLoadFailures(boxRoot);
-[failures.length, failures[0].file].join("|")
+[failures.length, failures[0]?.file].join("|")
 => 1|widget.ts
 ```
 

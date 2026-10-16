@@ -20,7 +20,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 process.env.BBX_PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-finalize-${process.pid}-${Date.now()}`);
 
 const NOW = new Date("2026-06-29T12:00:00Z");
-const question = (prompt, askedAt) =>
+const question = (prompt: string, askedAt: Date) =>
   `---\nprompt: ${prompt}\ninput:\n  type: text\nasked-at: ${askedAt.toISOString()}\n---\n`;
 ```
 
@@ -35,7 +35,7 @@ await box.write("_bookkeeping/questions/Fresh.question.card", question("Which da
 box.commitAll("seed questions");
 process.env.BBX_TIME = NOW.toISOString();
 
-const lines = [];
+const lines: string[] = [];
 const origLog = console.log;
 console.log = (...args) => { lines.push(args.join(" ")); };
 await finalizeQuestions(box.root, { push: createFakePush() });

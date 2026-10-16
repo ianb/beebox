@@ -12,25 +12,28 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { createTRPCClient } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
+import type { AppRouter } from "@backend/trpc/routers.js";
 import { trpc } from "../../../src/lib/trpc/client.js";
 import { SwitchMenuBody } from "../../../src/components/AppNav/PlacePill-panels.js";
 
 globalThis.React = React;
 
 /** Render a menu body inside a router and a tRPC client that never answers. */
-async function render(element) {
+async function render(element: React.ReactElement): Promise<string> {
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
   const queryClient = new QueryClient();
-  const client = createTRPCClient({ links: [() => () => observable(() => () => {})] });
-  return renderToString(React.createElement(trpc.Provider, { client, queryClient },
-    React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(RouterProvider, { router }))));
+  const client = createTRPCClient<AppRouter>({ links: [() => () => observable(() => () => {})] });
+  return renderToString(React.createElement(trpc.Provider, {
+    client, queryClient,
+    children: React.createElement(QueryClientProvider, { client: queryClient, children: React.createElement(RouterProvider, { router }) }),
+  }));
 }
 
 /** Each menu row as `id: text → href`, in order. */
-function rows(html) {
-  return [...html.matchAll(/<(a|button)\b[^>]*role="menuitem"[^>]*>(.*?)<\/\1>/g)].map(([tag, , body]) => {
+function rows(html: string): string[] {
+  return [...html.matchAll(/<(a|button)\b[^>]*role="menuitem"[^>]*>(.*?)<\/\1>/g)].map(([tag, , body = ""]) => {
     const id = /\bid="([^"]*)"/.exec(tag)?.[1] ?? "-";
     const href = /\bhref="([^"]*)"/.exec(tag)?.[1];
     const text = body.replace(/<[^>]*>/g, "").replace(/&rsquo;/g, "’");

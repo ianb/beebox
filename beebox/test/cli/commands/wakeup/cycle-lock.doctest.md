@@ -22,10 +22,10 @@ import { inspectLock } from "../../../../src/lib/file-lock.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
 /** Collect what the cycle printed instead of letting it reach the test output. */
-async function capture(fn) {
+async function capture(fn: () => unknown) {
   const original = console.log;
-  const lines = [];
-  console.log = (text) => lines.push(String(text));
+  const lines: string[] = [];
+  console.log = (text: unknown) => { lines.push(String(text)); };
   try {
     await fn();
   } finally {

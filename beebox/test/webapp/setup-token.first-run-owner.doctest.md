@@ -17,14 +17,15 @@ import { maybeArmFirstRunSetup } from "../../src/webapp/setup-token.js";
 
 // Point the credential store at a path that does not exist, so there are zero
 // local users in every case below — isolating the owner check as the variable.
-process.env.BBX_AUTH_FILE = path.join(os.tmpdir(), "bbx-first-run-setup-doctest-absent.json");
+const AUTH_FILE = path.join(os.tmpdir(), "bbx-first-run-setup-doctest-absent.json");
+process.env.BBX_AUTH_FILE = AUTH_FILE;
 
-function printedLines({ owner, openAccess }) {
+function printedLines({ owner, openAccess }: { owner: string | null; openAccess: boolean }) {
   if (owner === null) delete process.env.BBX_OWNER_EMAIL;
   else process.env.BBX_OWNER_EMAIL = owner;
-  const lines = [];
+  const lines: string[] = [];
   const realLog = console.log;
-  console.log = (...args) => lines.push(args.join(" "));
+  console.log = (...args: unknown[]) => lines.push(args.join(" "));
   try {
     maybeArmFirstRunSetup({ publicUrl: "https://box.example.com", openAccess });
   } finally {
@@ -47,7 +48,7 @@ printedLines({ owner: "owner@example.com", openAccess: false }).length
 
 ```ts continue
 const lines = printedLines({ owner: null, openAccess: false });
-[lines.length, lines[0].startsWith("First-run setup: https://box.example.com/auth/setup?token=")]
+[lines.length, lines[0]?.startsWith("First-run setup: https://box.example.com/auth/setup?token=")]
 => [
   1,
   true
@@ -68,13 +69,13 @@ printedLines({ owner: null, openAccess: true }).length
 An initialized store keeps an empty file as a durable setup tombstone.
 
 ```ts continue
-await writeFile(process.env.BBX_AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
+await writeFile(AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
 printedLines({ owner: null, openAccess: false }).length
 => 0
 ```
 
 ```ts cleanup
-await rm(process.env.BBX_AUTH_FILE, { force: true });
+await rm(AUTH_FILE, { force: true });
 delete process.env.BBX_AUTH_FILE;
 delete process.env.BBX_OWNER_EMAIL;
 ```

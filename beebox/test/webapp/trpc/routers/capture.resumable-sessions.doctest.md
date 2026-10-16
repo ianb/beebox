@@ -13,7 +13,7 @@ import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { createStagingSession, addPhoto, setStagingState, listStagingSessions } from "../../../../src/core/capture/staging-store/core.js";
 import { selectResumableCaptures } from "../../../../src/core/capture/pending.js";
 
-async function addPhotoTo(boxRoot, id) {
+async function addPhotoTo(boxRoot: string, id: string) {
   await addPhoto({ boxRoot, id, filename: `photo-${id}.jpg`, capturedAt: "2026-07-09T14:00:00.000Z", source: "camera-user", buffer: Buffer.from("IMG") });
 }
 ```
@@ -37,7 +37,7 @@ const byChat = selectResumableCaptures({
   clientSessionId: null,
   requestingUser: "owner@example.com",
 });
-JSON.stringify({ idsMatch: byChat.length === 1 && byChat[0].id === owned.id, counts: byChat[0].counts })
+JSON.stringify({ idsMatch: byChat.length === 1 && byChat[0]?.id === owned.id, counts: byChat[0]?.counts })
 => {"idsMatch":true,"counts":{"photos":1,"files":0,"audioSegments":0}}
 ```
 
@@ -50,7 +50,7 @@ const byId = selectResumableCaptures({
   clientSessionId: standalone.id,
   requestingUser: "owner@example.com",
 });
-byId[0].id === standalone.id
+byId[0]?.id === standalone.id
 => true
 ```
 

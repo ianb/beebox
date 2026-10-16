@@ -8,15 +8,16 @@ clip hung or failed late. These use an `EventTarget` stand-in that fires the
 spec's events in the spec's order.
 
 ```ts setup
-import { appendChunk } from "../../../../src/lib/audio/tts-client/stream-playback.js";
+import { appendChunk, type ChunkSink } from "../../../../src/lib/audio/tts-client/stream-playback.js";
 
 /** A SourceBuffer stand-in whose append fires `events`, in order, on the next tick. */
-function fakeSourceBuffer(events) {
-  const target = new EventTarget();
-  target.appendBuffer = () => {
-    setTimeout(() => { for (const name of events) target.dispatchEvent(new Event(name)); }, 0);
-  };
-  return target;
+function fakeSourceBuffer(events: string[]): ChunkSink {
+  class FakeSourceBuffer extends EventTarget {
+    appendBuffer() {
+      setTimeout(() => { for (const name of events) this.dispatchEvent(new Event(name)); }, 0);
+    }
+  }
+  return new FakeSourceBuffer();
 }
 ```
 

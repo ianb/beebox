@@ -7,9 +7,10 @@ against `BBX_TIME`: sessions are created at one frozen time, then the clock is
 advanced past the 60-minute window before the sweep runs.
 
 ```ts setup
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
@@ -41,7 +42,7 @@ const SCRIPT = {
   },
 };
 
-async function configureBox(box) {
+async function configureBox(box: TmpBox) {
   await box.write(".gitignore", GITIGNORE);
   await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
   await box.write("config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
@@ -96,7 +97,8 @@ const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
 (await box.read(docRel)).includes("partial: true")
 => true
 
-const msg = eventBus.readSince(0).find((e) => e.event === "chat-user-message").data.message;
+const sent = eventBus.readSince(0).find((e) => e.event === "chat-user-message");
+const msg = eventSchemas["chat-user-message"].parse(sent?.data).message;
 msg.includes("partial=\"1\"")
 => true
 ```
@@ -149,10 +151,10 @@ session is left `failed:deliver`, not re-sealed:
 await readStagingSession({ boxRoot: box.root, id: empty.id })
 => null
 
-(await readStagingSession({ boxRoot: box.root, id: fresh.id })).state
+(await readStagingSession({ boxRoot: box.root, id: fresh.id }))?.state
 => open
 
-(await readStagingSession({ boxRoot: box.root, id: failed.id })).state
+(await readStagingSession({ boxRoot: box.root, id: failed.id }))?.state
 => failed:deliver
 ```
 
@@ -188,7 +190,7 @@ const sealed = await createStagingSession({ boxRoot: box.root, targetSessionId: 
 await addPhoto({ boxRoot: box.root, id: sealed.id, filename: "p.jpg", capturedAt: LATE, source: "camera-user", buffer: Buffer.from("J") });
 await setStagingState({ boxRoot: box.root, id: sealed.id, state: "sealed" });
 
-const fired = [];
+const fired: string[] = [];
 const result = await sweepAbandonedCaptures({
   boxRoot: box.root,
   firePreparation: (id) => { fired.push(id); },
@@ -244,7 +246,7 @@ const sealedVoice = await createStagingSession({
 await setStagingState({ boxRoot: box.root, id: sealedVoice.id, state: "sealed" });
 
 process.env.BBX_TIME = LATE;
-const fired = [];
+const fired: string[] = [];
 const result = await sweepAbandonedCaptures({
   boxRoot: box.root,
   firePreparation: (id) => { fired.push(id); },
@@ -260,7 +262,7 @@ still `sealed`:
 ```ts continue
 const idleAfter = await readStagingSession({ boxRoot: box.root, id: idleVoice.id });
 const sealedAfter = await readStagingSession({ boxRoot: box.root, id: sealedVoice.id });
-JSON.stringify({ idle: idleAfter.state, sealed: sealedAfter.state })
+JSON.stringify({ idle: idleAfter?.state, sealed: sealedAfter?.state })
 => {"idle":"open","sealed":"sealed"}
 ```
 

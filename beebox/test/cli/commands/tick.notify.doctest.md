@@ -7,17 +7,18 @@ deletion are the same as for a command. See docs/implemented-plans/notifications
 (Track D).
 
 ```ts setup
+import assert from "node:assert/strict";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
 import { readRecent } from "../../../src/core/notification/log.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 
 // Hermetic: no engine-availability store, and every channel through its fake.
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 process.env.BBX_NOTIFY_FAKE = "1";
 
 /** The schedule cards left in the box. */
-async function scheduleCards(box) {
+async function scheduleCards(box: TmpBox) {
   return (await box.list("_config/schedules")).split("\n").filter((p) => p.endsWith(".card")).join("\n");
 }
 ```
@@ -47,6 +48,7 @@ JSON.stringify(result.scripts)
 => [{"name":"remind-vet","status":"ran","command":"notify: Call the vet about Pepper's shots","durationMs":«int»}]
 
 const [sent] = await readRecent(box.root, { days: 36500 });
+assert.ok(sent);
 const { title, body, target, loudness, tag, source } = sent.intent;
 JSON.stringify({ title, body, target, loudness, tag, source }, null, 2)
 => {
@@ -96,6 +98,7 @@ notify:
 box.commitAll("add note");
 await runTick(box.root, { quiet: true });
 const [sent] = await readRecent(box.root, { days: 36500 });
+assert.ok(sent);
 `${sent.intent.loudness} ${sent.intent.target} ${JSON.stringify(sent.intent.body)}`
 => quiet dashboard ""
 
@@ -125,7 +128,7 @@ notify:
 `);
 box.commitAll("add reminder");
 const result = await runTick(box.root, { quiet: true });
-result.scripts[0].status
+result.scripts[0]?.status
 => error
 
 const state = await loadScriptState(box.root, "remind-call");

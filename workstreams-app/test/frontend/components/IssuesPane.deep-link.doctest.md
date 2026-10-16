@@ -6,6 +6,19 @@ scroll effect to target. An explicit filter remains authoritative.
 
 ```ts setup
 import { issuePassesStatusFilter, missingIssueRelPath } from "../../../src/frontend/components/IssuesPane/panel.js";
+import type { Issue } from "../../../src/shared/documents.js";
+
+function issueAt(relPath: string): Issue {
+  return {
+    relPath,
+    category: "bugs",
+    closed: false,
+    slug: "a",
+    visibility: "public",
+    research: "none",
+    frontmatter: { title: "A", workstream: "none", needs: [], labels: [], priority: "normal" },
+  };
+}
 ```
 
 ```ts
@@ -27,7 +40,7 @@ the "select an issue" prompt, which would read as an empty queue.
 
 ```ts
 JSON.stringify({
-  requestedAndFound: missingIssueRelPath({ requested: "bugs/a.md", selected: { relPath: "bugs/a.md" } }),
+  requestedAndFound: missingIssueRelPath({ requested: "bugs/a.md", selected: issueAt("bugs/a.md") }),
   requestedAndAbsent: missingIssueRelPath({ requested: "bugs/gone.md", selected: undefined }),
   nothingRequested: missingIssueRelPath({ requested: undefined, selected: undefined }),
 })

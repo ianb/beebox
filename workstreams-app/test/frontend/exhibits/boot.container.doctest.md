@@ -36,7 +36,7 @@ function boot(overrides: Partial<ExhibitBoot>): ExhibitBoot {
 
 function render(value: ExhibitBoot): string {
   return renderToStaticMarkup(
-    createElement(ExhibitContainer, { boot: value }, createElement("p", null, "the page's own content")),
+    createElement(ExhibitContainer, { boot: value, children: createElement("p", null, "the page's own content") }),
   );
 }
 ```

@@ -17,6 +17,10 @@ import {
 import type { AppServices } from "../../../src/server/services.js";
 import type { WorkstreamSummary } from "../../../src/shared/workstreams.js";
 
+async function unconfigured(): Promise<never> {
+  throw new Error("not configured");
+}
+
 function cliRow(name = "example") {
   return {
     name,
@@ -28,16 +32,16 @@ function cliRow(name = "example") {
     runtime: { state: "cold" },
     agent: { state: "live", reason: "signal=cwd" },
     session: {
-      agent: "codex",
+      agent: "codex" as const,
       hasSession: true,
       tty: "/dev/ttys001",
       baseSha: "base123",
       removed: null,
       archived: null,
       description: "Workstream routing",
-      launch: { state: "none", startedAt: null, expiresAt: null, failedAt: null, reason: null },
+      launch: { state: "none" as const, startedAt: null, expiresAt: null, failedAt: null, reason: null },
     },
-    routing: { state: "live", action: "manual-forward", lastActivityAt: "2026-08-20T00:00:00Z" },
+    routing: { state: "live" as const, action: "manual-forward" as const, lastActivityAt: "2026-08-20T00:00:00Z" },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
     schedule: null,
   };
@@ -46,14 +50,22 @@ function cliRow(name = "example") {
 function fakeServices(workstreams: WorkstreamSummary[] = []): AppServices {
   return {
     workstreams: { list: async () => ({ items: workstreams, warnings: [] }) },
+    schedules: { alerts: async () => [], acknowledge: async () => undefined },
     documents: {
       listIssues: async () => [],
-      issueDetail: async () => { throw new Error("not configured"); },
+      issueDetail: unconfigured,
       listPlans: async () => [],
       testingQueue: async () => ({ landed: [], pending: [] }),
       issuesForWorkstream: async () => [],
       saveIssueChanges: async () => 0,
+      setIssueNextAction: unconfigured,
+      readDocument: unconfigured,
+      changedFiles: unconfigured,
+      recentFiles: unconfigured,
+      pathIndex: unconfigured,
     },
+    comments: { forDocument: unconfigured, waiting: unconfigured, add: unconfigured, clear: unconfigured },
+    transcribe: { transcribe: unconfigured },
     quotas: { get: async () => [] },
     exhibits: {
       inventory: async () => ({ origin: "http://127.0.0.1:3230", storeProblem: null, entries: [] }),
@@ -63,6 +75,7 @@ function fakeServices(workstreams: WorkstreamSummary[] = []): AppServices {
       job: () => null,
       activeJobs: () => 0,
     },
+    related: { related: unconfigured },
   };
 }
 ```

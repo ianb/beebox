@@ -8,8 +8,8 @@ chat-vocabulary lock-in, so the exact string is pinned here (parity with
 ```ts setup
 import { buildUploadWrapper } from "../../../../src/core/bulk-upload/worker/deliver.js";
 
-async function catchName(fn) {
-  try { await fn(); return "no-throw"; } catch (e) { return e.name; }
+async function catchName(fn: () => unknown) {
+  try { await fn(); return "no-throw"; } catch (e) { return e instanceof Error ? e.name : String(e); }
 }
 ```
 

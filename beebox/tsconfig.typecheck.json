@@ -1,0 +1,11 @@
+{
+  // What `typecheck:backend` checks: the backend program (tsconfig.json) plus
+  // the tap suites and helpers under test/. tsconfig.json cannot include
+  // test/ itself: `pnpm build` emits from it with rootDir src, and a file
+  // outside rootDir is TS6059. This program never emits, so its rootDir is
+  // the package. Doctests are checked separately (`typecheck:doctest`).
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "rootDir": "." },
+  // `exclude` is inherited from tsconfig.json.
+  "include": ["src/**/*", "test/**/*.ts"]
+}

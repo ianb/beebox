@@ -10,10 +10,10 @@ stderr and never does.
 
 ```ts setup
 import { execSync } from "node:child_process";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { runPreCommitChecks } from "../../../../src/cli/commands/validate/pre-commit.js";
 
-const stage = (box) => { execSync("git add -A", { cwd: box.root }); };
+const stage = (box: TmpBox) => { execSync("git add -A", { cwd: box.root }); };
 ```
 
 ## A staged card that fails validation blocks

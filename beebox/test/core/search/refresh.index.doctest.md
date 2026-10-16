@@ -114,7 +114,7 @@ const withBad = await openSearchIndex(box.root);
 withBad.warnings.length
 => 1
 
-withBad.warnings[0].startsWith("_content/notes/Broken.memo.card: skipped")
+withBad.warnings[0]?.startsWith("_content/notes/Broken.memo.card: skipped")
 => true
 
 await find(withBad.db, "tomatoes")
@@ -144,10 +144,10 @@ await find(withMd.db, "apportioned share")
 => _content/finances/Distribution_Letter.md
 
 const mdHit = await search(withMd.db, { term: "distribution letter", properties: ["title", "content"] });
-mdHit.hits[0].document.kind
+mdHit.hits[0]?.document.kind
 => markdown
 
-mdHit.hits[0].document.title
+mdHit.hits[0]?.document.title
 => Ledger Distribution Letter
 ```
 
@@ -166,7 +166,7 @@ await find(withDocs.db, "rendersCardTypes")
 => node_modules/beebox/box-docs/views.md
 
 const docHit = await search(withDocs.db, { term: "rendersCardTypes", properties: ["content"] });
-docHit.hits[0].document.kind
+docHit.hits[0]?.document.kind
 => engine-doc
 ```
 

@@ -113,8 +113,8 @@ Every `tsx` example in the generated view guide (`generateViewsDoc`,
 check rejects:
 
 ```ts
-const blocks = [...generateViewsDoc().matchAll(/\x60{3}tsx\n([\s\S]*?)\x60{3}/g)].map((m) => m[1]);
-const failing = [];
+const blocks = [...generateViewsDoc().matchAll(/\x60{3}tsx\n([\s\S]*?)\x60{3}/g)].flatMap((m) => m[1] ?? []);
+const failing: string[] = [];
 for (const block of blocks) if ((await checkViewMarkdown(block)).length > 0) failing.push(block.slice(0, 60));
 [blocks.length > 5, blocks.some((b) => b.includes("<Markdown card={card}>")), JSON.stringify(failing)].join(" ")
 => true true []

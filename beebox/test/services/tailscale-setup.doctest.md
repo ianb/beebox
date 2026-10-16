@@ -18,12 +18,15 @@ import { runTailscaleSetup, runTailscaleStop } from "../../src/services/tailscal
 import { classifyAuthPosture } from "../../src/services/tailscale-target.js";
 import { loadExposureFile, recordExposure, clearExposure } from "../../src/services/tailscale-setup/exposure.js";
 import { acquireLock, releaseLock } from "../../src/lib/file-lock.js";
+import type { SetupIo } from "../../src/services/tailscale-setup/core.js";
+import type { CommandResult, ProbeResult, ServeConfigJson, TailscaleDeps, TailscaleStatusJson } from "../../src/services/tailscale.js";
 
 // A machine-level exposure file scoped to this test run (record/clear write here).
-process.env.BBX_TAILSCALE_EXPOSURE_FILE = path.join(
+const EXPOSURE_FILE = path.join(
   os.tmpdir(),
   `bbx-exposure-setup-test-${process.pid}-${Date.now()}.json`,
 );
+process.env.BBX_TAILSCALE_EXPOSURE_FILE = EXPOSURE_FILE;
 
 // A Running status with tailnet HTTPS certs enabled — the serve/probe precondition.
 const runningStatus = {
@@ -40,12 +43,12 @@ const enforced401 = { reachable: true, status: 401, body: JSON.stringify({ error
 const guardedRouterProbe = { reachable: true, status: 401, headers: { "x-bbx-router-guarded": "1" }, body: JSON.stringify({ error: "owner-session-required" }) };
 const ungatedRouterProbe = { reachable: true, status: 200, body: JSON.stringify({ routerPort: 3210, routerPid: 1, worktrees: {} }) };
 
-function cmdOk(stdout) {
+function cmdOk(stdout: string): CommandResult {
   return { spawned: true, code: 0, stdout, stderr: "" };
 }
 
-const notSpawned = { spawned: false, code: null, stdout: "", stderr: "" };
-const setPathOf = (args) => {
+const notSpawned: CommandResult = { spawned: false, code: null, stdout: "", stderr: "" };
+const setPathOf = (args: string[]) => {
   const a = args.find((x) => x.startsWith("--set-path="));
   return a ? a.slice("--set-path=".length) : "/";
 };
@@ -57,27 +60,40 @@ const setPathOf = (args) => {
 // `/__router/status`, and non-loopback addresses each answer separately), and an
 // injected non-loopback address list are all scriptable. An UNMODELED tailscale
 // command THROWS — a fake gap must fail loudly, never pass as a no-op exit 0.
-function makeServeSim(state) {
-  state.serve = state.serve ?? {};
-  const calls = [];
-  const sleeps = [];
+interface SimState {
+  status: TailscaleStatusJson;
+  serve: ServeConfigJson;
+  probe?: ProbeResult;
+  routerProbe?: ProbeResult;
+  servedRouterProbe?: ProbeResult | ProbeResult[];
+  externalProbe?: ProbeResult;
+  networkAddresses?: string[];
+  binaryPresent?: boolean;
+  serveStatusCode?: number;
+  bgCode?: number;
+  offCode?: number;
+}
+
+function makeServeSim(state: SimState) {
+  const calls: string[] = [];
+  const sleeps: number[] = [];
   // `servedRouterProbe` may be a SEQUENCE (array): one ProbeResult per served
   // `/__router/status` call, falling back to the last element when exhausted —
   // models the first-serve cert race (`{reachable:false}` a few times, then the
   // guarded 401). A single value keeps answering the same, as before.
   let servedIdx = 0;
-  const nextServed = () => {
+  const nextServed = (): ProbeResult => {
     const sp = state.servedRouterProbe;
     if (Array.isArray(sp)) {
       const v = sp[Math.min(servedIdx, sp.length - 1)];
       servedIdx++;
-      return v;
+      return v ?? { reachable: false, status: null };
     }
     return sp ?? state.routerProbe ?? { reachable: false, status: null };
   };
   const hostPort = () => `${(state.status.Self?.DNSName ?? "").replace(/\.$/, "")}:443`;
-  const deps = {
-    run: (cmd, args) => {
+  const deps: TailscaleDeps = {
+    run: (cmd: string, args: string[]) => {
       if (cmd !== "tailscale") throw new Error(`unexpected command: ${cmd}`);
       calls.push([cmd, ...args].join(" "));
       if (state.binaryPresent === false) return Promise.resolve(notSpawned);
@@ -87,17 +103,18 @@ function makeServeSim(state) {
         return Promise.resolve({ spawned: true, code: state.serveStatusCode ?? 0, stdout: JSON.stringify(state.serve), stderr: "" });
       }
       if (args.includes("--bg")) {
-        if ((state.bgCode ?? 0) !== 0) return Promise.resolve({ spawned: true, code: state.bgCode, stdout: "", stderr: "serve write failed" });
+        if ((state.bgCode ?? 0) !== 0) return Promise.resolve({ spawned: true, code: state.bgCode ?? null, stdout: "", stderr: "serve write failed" });
         const hp = hostPort();
-        state.serve.Web = state.serve.Web ?? {};
-        state.serve.Web[hp] = state.serve.Web[hp] ?? { Handlers: {} };
-        state.serve.Web[hp].Handlers[setPathOf(args)] = { Proxy: args[args.length - 1] };
+        const webHosts = (state.serve.Web ??= {});
+        const hostEntry = (webHosts[hp] ??= { Handlers: {} });
+        const handlers = (hostEntry.Handlers ??= {});
+        handlers[setPathOf(args)] = { Proxy: args[args.length - 1] };
         return Promise.resolve(cmdOk(""));
       }
       if (args[args.length - 1] === "off") {
         // `offCode` models a teardown that ERRORS (nonzero) and leaves the
         // mapping live — the fail-closed case settleRouterExposure must catch.
-        if ((state.offCode ?? 0) !== 0) return Promise.resolve({ spawned: true, code: state.offCode, stdout: "", stderr: "serve off failed" });
+        if ((state.offCode ?? 0) !== 0) return Promise.resolve({ spawned: true, code: state.offCode ?? null, stdout: "", stderr: "serve off failed" });
         // Like the real CLI, `serve … off` addresses the node's CURRENT
         // hostname (honoring --https=<port>); it cannot remove a mapping
         // stored under a pre-rename hostname.
@@ -107,13 +124,13 @@ function makeServeSim(state) {
         const web = state.serve.Web?.[host];
         if (web?.Handlers) {
           delete web.Handlers[setPathOf(args)];
-          if (Object.keys(web.Handlers).length === 0) delete state.serve.Web[host];
+          if (Object.keys(web.Handlers).length === 0) delete state.serve.Web?.[host];
         }
         return Promise.resolve(cmdOk(""));
       }
       throw new Error(`unmodeled tailscale command: ${sub}`);
     },
-    probe: (url) => {
+    probe: (url: string) => {
       if (url.includes("/__router/status")) {
         // Loopback `/__router/status` (classification) vs the SERVED tailnet URL
         // (Track C's anonymous-denial proof) can answer differently — a gate that
@@ -133,13 +150,13 @@ function makeServeSim(state) {
     networkInterfaces: () => state.networkAddresses ?? [],
     // Instant sleep; record durations so a test can prove the retry loop did
     // (or did NOT) spin.
-    sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
+    sleep: (ms: number) => { sleeps.push(ms); return Promise.resolve(); },
   };
   return { deps, calls, sleeps };
 }
 
 // Non-interactive I/O: `--no-wait`. Never blocks on a prompt.
-const noWaitIo = { interactive: false, log: () => {}, waitForContinue: () => Promise.resolve() };
+const noWaitIo: SetupIo = { interactive: false, log: () => {}, waitForContinue: () => Promise.resolve() };
 ```
 
 ## `classifyAuthPosture`: strict match on beebox's `/auth/me` shapes
@@ -178,7 +195,7 @@ Serve unconfigured, auth enforced: setup configures serve, re-verifies to
 `ready`, records the exposure entry, and reports the working URL.
 
 ```ts
-const state = { status: runningStatus, serve: {}, probe: enforced401 };
+const state: SimState = { status: runningStatus, serve: {}, probe: enforced401 };
 const sim = makeServeSim(state);
 const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
 [result.ok, result.message.includes("https://box.tail1234.ts.net/")]
@@ -220,7 +237,7 @@ If the `tailscale serve` write fails AFTER intent is recorded, the intent STAYS
 (over-recording is the fail-closed direction — the startup guard/stop heals it).
 
 ```ts
-const state = { status: runningStatus, serve: {}, probe: enforced401, bgCode: 1 };
+const state: SimState = { status: runningStatus, serve: {}, probe: enforced401, bgCode: 1 };
 const sim = makeServeSim(state);
 const result = await runTailscaleSetup(sim.deps, { target: { port: 3230 }, io: noWaitIo });
 [
@@ -238,7 +255,7 @@ const result = await runTailscaleSetup(sim.deps, { target: { port: 3230 }, io: n
 ## Idempotent: a second run reaches the same state, no duplicate intent
 
 ```ts
-const state = { status: runningStatus, serve: {}, probe: enforced401 };
+const state: SimState = { status: runningStatus, serve: {}, probe: enforced401 };
 const sim = makeServeSim(state);
 await runTailscaleSetup(sim.deps, { target: { port: 3211 }, io: noWaitIo });
 const first = await runTailscaleSetup(sim.deps, { target: { port: 3211 }, io: noWaitIo });
@@ -258,7 +275,7 @@ the new host:443 mapping is added alongside it.
 const foreign = {
   Web: { "box.tail1234.ts.net:8443": { Handlers: { "/": { Proxy: "http://127.0.0.1:5000" } } } },
 };
-const state = { status: runningStatus, serve: foreign, probe: enforced401 };
+const state: SimState = { status: runningStatus, serve: foreign, probe: enforced401 };
 const sim = makeServeSim(state);
 await runTailscaleSetup(sim.deps, { target: { port: 3212 }, io: noWaitIo });
 [
@@ -277,7 +294,7 @@ The loopback `/auth/me` probe reports `{ open: true }` — setup refuses, never
 issues a serve command, and records no intent.
 
 ```ts
-const state = {
+const state: SimState = {
   status: runningStatus,
   serve: {},
   probe: { reachable: true, status: 200, body: JSON.stringify({ open: true }) },
@@ -327,7 +344,7 @@ If `/__router/status` answers with the dev router's status JSON, setup refuses �
 the router fronts every worktree and is never a valid Tailscale target.
 
 ```ts
-const state = {
+const state: SimState = {
   status: runningStatus,
   serve: {},
   probe: enforced401,
@@ -351,7 +368,7 @@ PROVES the denial over the served tailnet path before recording exposure — the
 exposure entry lands ONLY after the served anonymous probe returns 401 + header.
 
 ```ts
-const state = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
+const state: SimState = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
 const sim = makeServeSim(state);
 const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
 [
@@ -377,7 +394,7 @@ here) instead of falsely concluding "never became reachable"; once the guarded
 401+header lands it records exposure and succeeds.
 
 ```ts
-const state = {
+const state: SimState = {
   status: runningStatus,
   serve: {},
   routerProbe: guardedRouterProbe, // loopback: guarded → configure Serve
@@ -416,7 +433,7 @@ proven denied end-to-end. Setup tears the just-written mapping back down, refuse
 and records NO exposure intent (fail closed).
 
 ```ts
-const state = {
+const state: SimState = {
   status: runningStatus,
   serve: {},
   routerProbe: guardedRouterProbe,            // loopback: guarded → classify router-guarded, configure Serve
@@ -452,7 +469,7 @@ NOT silently orphan it: it records exposure intent (so `stop`/`status` can find
 and remove it) and returns a loud failure — the fail-closed direction.
 
 ```ts
-const state = {
+const state: SimState = {
   status: runningStatus,
   serve: {},
   routerProbe: guardedRouterProbe,       // loopback: guarded → configure Serve
@@ -486,7 +503,7 @@ await clearExposure(3271);
 The guarded-router path issues no `funnel` command and writes no `AllowFunnel`.
 
 ```ts
-const state = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
+const state: SimState = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
 const sim = makeServeSim(state);
 await runTailscaleSetup(sim.deps, { target: { port: 3271 }, io: noWaitIo });
 [sim.calls.some((c) => c.includes("funnel")), JSON.stringify(state.serve).includes("Funnel")]
@@ -502,7 +519,7 @@ The same port answers on `10.0.0.5` — the server is bound to a public interfac
 not 127.0.0.1 only. Refuse before exposing it further.
 
 ```ts
-const state = {
+const state: SimState = {
   status: runningStatus,
   serve: {},
   probe: enforced401,
@@ -525,8 +542,8 @@ At `needs-login` (a human step) with `--no-wait`, setup prints the instruction
 and returns a failing result rather than waiting.
 
 ```ts
-const logged = [];
-const io = { interactive: false, log: (l) => logged.push(l), waitForContinue: () => Promise.resolve() };
+const logged: string[] = [];
+const io: SetupIo = { interactive: false, log: (l) => { logged.push(l); }, waitForContinue: () => Promise.resolve() };
 const sim = makeServeSim({ status: { BackendState: "NeedsLogin", Self: null, CertDomains: null }, serve: {}, probe: { reachable: false, status: null } });
 const result = await runTailscaleSetup(sim.deps, { target: { port: 3224 }, io });
 [result.ok, logged.some((l) => l.startsWith("Next:")), result.message.includes("re-run")]
@@ -543,9 +560,9 @@ With a TTY, setup waits at `needs-login`; when the operator completes the step
 (here the fake flips the backend to `Running`), the loop advances to success.
 
 ```ts
-const state = { status: { BackendState: "NeedsLogin", Self: null, CertDomains: null }, serve: {}, probe: enforced401 };
+const state: SimState = { status: { BackendState: "NeedsLogin", Self: null, CertDomains: null }, serve: {}, probe: enforced401 };
 const sim = makeServeSim(state);
-const io = {
+const io: SetupIo = {
   interactive: true,
   log: () => {},
   waitForContinue: () => { state.status = runningStatus; return Promise.resolve(); },
@@ -566,7 +583,7 @@ Set up two mappings (foreign on :8443, ours on :443 via setup), then stop ours.
 const foreign = {
   Web: { "box.tail1234.ts.net:8443": { Handlers: { "/": { Proxy: "http://127.0.0.1:5000" } } } },
 };
-const state = { status: runningStatus, serve: foreign, probe: enforced401 };
+const state: SimState = { status: runningStatus, serve: foreign, probe: enforced401 };
 const sim = makeServeSim(state);
 await runTailscaleSetup(sim.deps, { target: { port: 3226 }, io: noWaitIo });
 const stop = await runTailscaleStop(sim.deps, { target: { port: 3226 } });
@@ -697,13 +714,13 @@ closed — it can't interleave its read-modify-write and lose an entry); once th
 lock is released the write succeeds.
 
 ```ts
-const lockPath = `${process.env.BBX_TAILSCALE_EXPOSURE_FILE}.lock`;
+const lockPath = `${EXPOSURE_FILE}.lock`;
 await acquireLock(lockPath, { op: "other-process" });
 let blockedName = "";
 try {
   await recordExposure({ port: 4001, dnsName: "a.ts.net" });
 } catch (e) {
-  blockedName = e.name;
+  blockedName = e instanceof Error ? e.name : String(e);
 }
 await releaseLock(lockPath);
 await recordExposure({ port: 4002, dnsName: "b.ts.net" });
@@ -716,7 +733,7 @@ await recordExposure({ port: 4002, dnsName: "b.ts.net" });
 ```
 
 ```ts cleanup
-fs.rmSync(process.env.BBX_TAILSCALE_EXPOSURE_FILE, { force: true });
-fs.rmSync(`${process.env.BBX_TAILSCALE_EXPOSURE_FILE}.lock`, { force: true });
+fs.rmSync(EXPOSURE_FILE, { force: true });
+fs.rmSync(`${EXPOSURE_FILE}.lock`, { force: true });
 delete process.env.BBX_TAILSCALE_EXPOSURE_FILE;
 ```

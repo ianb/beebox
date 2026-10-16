@@ -12,6 +12,7 @@ would miss `recordingLocal`, where audio records with no live text
 ```ts setup
 import { createActor, fromCallback } from "xstate";
 import { segmentCapturing } from "../../src/machines/transcription-events.js";
+import type { TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent } from "../../src/machines/transcription-events.js";
 import {
   realtimeTranscriptionMachine,
   transcriptionStateOf,
@@ -35,8 +36,8 @@ A fake actor stands in for the real one (which needs the audio worklet); it
 leaves `STOP` unanswered so `finalizing` stays observable.
 
 ```ts
-let toMachine = (_event: unknown) => {};
-const fake = fromCallback(({ sendBack }) => {
+let toMachine: (event: TranscriptionEvent) => void = () => {};
+const fake = fromCallback<TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent>(({ sendBack }) => {
   toMachine = sendBack;
   return () => {};
 });

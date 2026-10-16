@@ -10,18 +10,18 @@ action seams; here we replace those seams with spies and assert the
 
 ```ts setup
 import { createActor } from "xstate";
-import { composerMachine } from "../../src/machines/composerMachine.js";
+import { composerMachine, type ComposerEvent } from "../../src/machines/composerMachine.js";
 
 // Build a started actor that records the device commands it emits into `calls`.
-function mk(input) {
-  const calls = [];
+function mk(input?: { narration?: boolean; muted?: boolean }) {
+  const calls: string[] = [];
   const actor = createActor(composerMachine, { input: input ?? {} });
   actor.on("command", ({ command }) => { calls.push(command.type); });
   actor.start();
   return { actor, calls };
 }
 
-const queued = { type: "SPEECH_QUEUED", messageId: "m1", segments: [], baseIndex: 0 };
+const queued: ComposerEvent = { type: "SPEECH_QUEUED", messageId: "m1", segments: [], baseIndex: 0 };
 ```
 
 ## Starting dictation

@@ -9,6 +9,7 @@ todo-review check` owns the baseline and the brief
 (`test/cli/commands/todo-review.doctest.md`).
 
 ```ts setup
+import assert from "node:assert/strict";
 import { computeTodoReviewSets, boxTodayEpoch, toBriefItem } from "../../../src/core/todo/review-sweep.js";
 import { parseIsoDate } from "../../../src/shared/todo-model.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -106,7 +107,9 @@ await box.write(
   "---\ntitle: Porch rebuild\n---\n## Decking\n\n{% todo id=\"deck\" due=\"2026-07-01\" %}Order lumber{% /todo %}\n"
 );
 const sets = await computeTodoReviewSets(box.root, { lastSweepEpoch: 0, todayEpoch: await boxTodayEpoch(box.root), neverDefers: () => true });
-JSON.stringify(toBriefItem(sets.escalated.find((t) => t.id === "deck"), "escalated"))
+const deck = sets.escalated.find((t) => t.id === "deck");
+assert.ok(deck);
+JSON.stringify(toBriefItem(deck, "escalated"))
 => {"locator":"store/Porch.doc.card:6","text":"Order lumber","detail":"due 2026-07-01","card":"Porch rebuild","section":"Decking"}
 ```
 

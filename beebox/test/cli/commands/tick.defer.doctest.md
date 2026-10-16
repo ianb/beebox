@@ -14,11 +14,11 @@ import { runTick } from "../../../src/cli/commands/tick.js";
 import { runOnWakeupScripts } from "../../../src/cli/tick-utils.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
 import { loadScheduleHealth } from "../../../src/core/schedule/health-box.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 
-const head = (box) => execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
+const head = (box: TmpBox) => execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
 
 // Defers with the reason in `_tmp/reason` when that file exists; exits 75 with
 // no marker when `_tmp/bare75` exists; otherwise succeeds.
@@ -32,7 +32,7 @@ runs: >-
 ---
 `;
 
-async function tick(box) {
+async function tick(box: TmpBox) {
   const result = await runTick(box.root, { quiet: true, script: "watch", force: true });
   const state = await loadScriptState(box.root, "watch");
   const card = await box.read("_config/schedules/watch.scheduled-script.card").then(() => "card kept", () => "card deleted");
@@ -40,8 +40,8 @@ async function tick(box) {
 }
 
 /** Defer once per reason; each run's line and whether the cursor is still `held`. */
-async function deferEach(box, { reasons, held }) {
-  const lines = [];
+async function deferEach(box: TmpBox, { reasons, held }: { reasons: string[]; held: string | null }) {
+  const lines: string[] = [];
   for (const reason of reasons) {
     await box.write("_tmp/reason", reason);
     lines.push(await tick(box));
@@ -71,7 +71,7 @@ as waiting instead.
 
 ```ts continue
 const [task] = (await loadScheduleHealth(box.root, new Date())).tasks;
-`${task.status}: ${task.deferReason} (${task.reason})`
+`${task?.status}: ${task?.deferReason} (${task?.reason})`
 => ok: no-change (nothing to do)
 ```
 

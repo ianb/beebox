@@ -25,7 +25,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { join } from "node:path";
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // The default profile's stale window is 5 min; "well past stale" backdates a
 // guard dir's mtime beyond it to simulate a crashed holder.
@@ -38,14 +38,14 @@ const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/file-lock-child.ts");
 
 // Spawn a real child process that takes `lockPath` (request profile) and holds
 // it, then SIGKILL it mid-hold — a genuine crashed holder, guard dir and all.
-async function crashedHolder(lockPath) {
+async function crashedHolder(lockPath: string) {
   const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, lockPath], {
     cwd: PACKAGE_ROOT,
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stderr = "";
   child.stderr.on("data", (chunk) => { stderr += String(chunk); });
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     child.stdout.on("data", (chunk) => { if (String(chunk).includes("acquired")) resolve(); });
     child.once("error", reject);
     child.once("exit", (code) => reject(new Error(`child exited early (${code}): ${stderr}`)));
@@ -55,7 +55,7 @@ async function crashedHolder(lockPath) {
 }
 
 // Write a diagnostic sidecar as if another process had published it.
-function foreignSidecar(who, pid) {
+function foreignSidecar(who: string, pid: number) {
   return JSON.stringify({
     pid,
     hostname: os.hostname(),
@@ -216,7 +216,7 @@ const path = join(box.root, "test.lock");
 await acquireLock(path, { who: "A" });
 
 let acquiredCount = 0;
-const contend = async (id) => {
+const contend = async (id: string) => {
   for (let attempt = 0; attempt < 40; attempt++) {
     try {
       await acquireLock(path, { who: id });
@@ -328,7 +328,7 @@ const aged = new Date(Date.now() - LOCK_STALE_MS.request - 1000);
 await fs.utimes(lockPath + ".guard", aged, aged);
 
 print(`request profile: ${await inspectLock(requestScopedLock(lockPath))}`);
-print(`default profile: ${(await inspectLock(lockPath)).metadata.purpose}`);
+print(`default profile: ${(await inspectLock(lockPath))?.metadata.purpose}`);
 =>
 request profile: null
 default profile: file-lock-doctest-child
@@ -383,7 +383,7 @@ const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await acquireLock(path, { tag: "abc" });
 const info = await inspectLock(path);
-info.metadata.tag
+info?.metadata.tag
 => abc
 ```
 
@@ -460,8 +460,8 @@ await acquireLock(join(dir, "beta.lock"), { who: "b" });
 
 const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
 print(`size: ${map.size}`);
-print(`alpha: ${map.get("alpha").metadata.who}`);
-print(`beta: ${map.get("beta").metadata.who}`);
+print(`alpha: ${map.get("alpha")?.metadata.who}`);
+print(`beta: ${map.get("beta")?.metadata.who}`);
 =>
 size: 2
 alpha: a

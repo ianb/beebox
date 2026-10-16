@@ -8,6 +8,7 @@ HTTP — as well as answering from its own store. Contract:
 `docs/mobile-contract.md` §4.8.
 
 ```ts setup
+import assert from "node:assert/strict";
 import {
   createNativeLastAudioRequest,
   nativeLastAudioRequestFromDetail,
@@ -44,7 +45,9 @@ postNativeLastAudioRequest(shell, createNativeLastAudioRequest({
   messageId: "emission-9a21",
   sessionId: null,
 }));
-JSON.parse(calls[0].payload).sessionId
+const [call] = calls;
+assert.ok(call);
+JSON.parse(call.payload).sessionId
 => null
 ```
 

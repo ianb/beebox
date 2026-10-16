@@ -27,16 +27,16 @@ const out = concatSegments([
 out.length
 => 2
 
-out[0].segmentId
+out[0]?.segmentId
 => seg-a
 
-out[0].buffer.toString("utf-8")
+out[0]?.buffer.toString("utf-8")
 => A0A1A2
 
-out[1].segmentId
+out[1]?.segmentId
 => seg-b
 
-out[1].buffer.toString("utf-8")
+out[1]?.buffer.toString("utf-8")
 => B0B1B2
 ```
 
@@ -52,7 +52,7 @@ const out = concatSegments([
 out.length
 => 1
 
-out[0].segmentId
+out[0]?.segmentId
 => real
 ```
 
@@ -71,6 +71,6 @@ const out = concatSegments([
 out.length
 => 1
 
-out[0].buffer.toString("utf-8")
+out[0]?.buffer.toString("utf-8")
 => HEADER-cluster0-cluster1-cluster2
 ```

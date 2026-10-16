@@ -54,7 +54,8 @@ pngProblem(good);
 
 ```ts continue
 const bad = Buffer.from(good);
-bad[good.indexOf("IDAT") + 10] ^= 0x01;
+const flipAt = good.indexOf("IDAT") + 10;
+bad[flipAt] = (bad[flipAt] ?? 0) ^ 0x01;
 pngProblem(bad);
 => bad IDAT checksum at «int»
 ```

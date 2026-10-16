@@ -13,7 +13,7 @@ import { isBoxholderTodo, TODO_AGENT } from "../../../src/shared/todo-model.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 /** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
-async function collectTodos(boxRoot) {
+async function collectTodos(boxRoot: string) {
   const result = await runTodoQuery(boxRoot, {
     query: { here: "", params: { status: ["open", "done", "dropped", "parked"], scope: "all" } },
     since: null,
@@ -151,7 +151,7 @@ Agent's own follow-up, escalated
 
 const badge = await countOnPlateTodos(scopeBox.root);
 const plate = await runTodoQuery(scopeBox.root, {
-  query: { here: "", params: { status: ["open", "done", "dropped", "parked"] } },
+  query: { here: "", params: { status: ["open", "done", "dropped", "parked"], scope: "boxholder" } },
   since: null,
 });
 

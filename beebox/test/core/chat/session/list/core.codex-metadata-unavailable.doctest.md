@@ -12,7 +12,7 @@ Now the failure is contained to the chats it's actually about.
 ```ts setup
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../../helpers/doctest-helpers.js";
 import { loadDeadHusks, listSessionEntries } from "../../../../../src/core/chat/session/list/core.js";
 import { getSessionLogPath } from "../../../../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
@@ -20,14 +20,14 @@ import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
 const CLAUDE_CHAT = "11111111-1111-4111-8111-111111111111";
 const CODEX_CHAT = "22222222-2222-4222-8222-222222222222";
 
-async function writeHusk(box, opts: { name: string; session: string; engine?: string }) {
+async function writeHusk(box: TmpBox, opts: { name: string; session: string; engine?: string }) {
   const here = await localOrigin();
   const lines = [`session: ${opts.session}`, `origin: ${here.id}`, `origin-name: ${here.name}`];
   if (opts.engine !== undefined) lines.push(`engine: ${opts.engine}`);
   await writeFile(box.path(`_content/chat/web/${opts.name}.chat.card`), `---\n${lines.join("\n")}\n---\n`);
 }
 
-async function writeTranscript(box, sessionId: string) {
+async function writeTranscript(box: TmpBox, sessionId: string) {
   const logPath = getSessionLogPath(box.root, sessionId);
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, "{}\n");

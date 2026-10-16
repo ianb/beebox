@@ -16,9 +16,9 @@ const files = [
   "issues/closed/bugs/2026-01-01-old-bug.md",
   "workstreams-app/src/router/lifecycle.ts",
 ];
-const fileExists = (p) => files.includes(p);
-const check = (docRel, content) => findFilePathProblems({ docRel, content, fileExists });
-const tokens = (docRel, content) => check(docRel, content).map((p) => `${p.line} ${p.kind} ${p.token}`);
+const fileExists = (p: string) => files.includes(p);
+const check = (docRel: string, content: string) => findFilePathProblems({ docRel, content, fileExists });
+const tokens = (docRel: string, content: string) => check(docRel, content).map((p) => `${p.line} ${p.kind} ${p.token}`);
 ```
 
 ## A path resolves at the doc's directory, its package root, or the monorepo root

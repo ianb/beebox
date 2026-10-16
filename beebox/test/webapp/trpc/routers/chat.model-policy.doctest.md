@@ -9,18 +9,22 @@ Unlike `chat.setModel` — a per-chat control anyone using the box may reach —
 pinning writes box configuration and is owner-gated.
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { TestServer } from "../../../helpers/doctest-server.js";
+import type { ChatSessionStatus } from "../../../../src/webapp/trpc/routers/chat/control-procedures.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 
 // The model-choice fields of chat.status; the rest of its payload is not this file's subject.
-function modelView(status) {
+function modelView(status: Pick<ChatSessionStatus, "model" | "source" | "boxDefault">) {
   return { model: status.model, source: status.source, boxDefault: status.boxDefault };
 }
 
-function caller(server, opts) {
-  return appRouter.createCaller({
+function caller(server: TestServer, opts?: { isOwner?: boolean }) {
+  const ctx: TrpcContext = {
     boxRoot: server.boxRoot,
     boxSlug: "test",
     eventBus: server.eventBus,
@@ -28,7 +32,10 @@ function caller(server, opts) {
     user: null,
     authed: true,
     isOwner: opts?.isOwner !== false,
-  });
+    isAuthenticatedOwner: false,
+    actor: "none",
+  };
+  return appRouter.createCaller(ctx);
 }
 ```
 
@@ -66,7 +73,7 @@ stored and silently ignored later.
 
 ```ts continue
 const foreign = "gpt-6-sol";
-await caller(server).chat.setDefaultModel({ model: foreign }).catch((e) => e.message === `Model ${foreign} is unavailable for claude chats`)
+await caller(server).chat.setDefaultModel({ model: foreign }).catch((e: Error) => e.message === `Model ${foreign} is unavailable for claude chats`)
 => true
 ```
 
@@ -100,6 +107,7 @@ answer `NOT_FOUND` instead.
 const server = await makeTestServer();
 const api = caller(server);
 const claudeDefault = (await api.chat.status({})).boxDefault;
+assert.ok(claudeDefault, "an unpinned box still names a default");
 const unknown = "11111111-2222-3333-4444-555555555555";
 
 JSON.stringify([

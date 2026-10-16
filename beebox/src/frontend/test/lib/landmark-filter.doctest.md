@@ -18,7 +18,7 @@ const rows = [
   { dir: "garden-tools", label: "Tools", depth: 0 },
   { dir: "travel", label: "Trip planning", depth: 0 },
 ];
-const show = (text) => filterLandmarks(rows, text).map((row) => `${"  ".repeat(row.depth)}${row.label}`).join("\n");
+const show = (text: string) => filterLandmarks(rows, text).map((row) => `${"  ".repeat(row.depth)}${row.label}`).join("\n");
 ```
 
 | Text | Kept | Why |

@@ -12,7 +12,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { getStatus } from "../../src/lib/git/core/operations.js";
 import { join } from "node:path";
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 ```
 
 ## The lock is keyed on the git directory, not the caller's path
@@ -213,10 +213,10 @@ operation was not serialized:
 errors.length
 => 1
 
-errors[0].includes("Proceeding WITHOUT the lock")
+errors[0]?.includes("Proceeding WITHOUT the lock")
 => true
 
-errors[0].includes(`pid ${process.pid}`)
+errors[0]?.includes(`pid ${process.pid}`)
 => true
 ```
 

@@ -12,14 +12,16 @@ import { executeTrash, moveCardsToTrash } from "../../../../src/core/commands/tr
 import { rollbackTrashReceipt } from "../../../../src/core/chat/session/delete/trash-recovery.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { isRecord } from "../../../../src/shared/is-record.js";
 
 /** A directory listing without scaffolding: `.gitkeep` files and the empty directories that hold only one. */
-async function ls(box, dir) {
+async function ls(box: TmpBox, dir: string) {
   const lines = (await box.list(dir)).split("\n");
-  return lines.filter((l) => !l.endsWith("/.gitkeep") && !lines.includes(`${l}/.gitkeep`)).join("\n");
+  return lines.filter((l: string) => !l.endsWith("/.gitkeep") && !lines.includes(`${l}/.gitkeep`)).join("\n");
 }
 
-async function rm(box, args) {
+async function rm(box: TmpBox, args: Record<string, unknown>) {
   const { ctx } = createCollectorContext(box.root);
   return executeTrash(ctx, args);
 }
@@ -115,7 +117,7 @@ await linked.write("_bookkeeping/trash/Old.doc.card", "---\ntype: doc\n---\n[old
 await linked.write("_content/box/Fenced.md", "```md\n[example](notes/Target.doc.card)\n```\n");
 
 const report = await rm(linked, { paths: ["_content/box/notes/Target.doc.card"], dryRun: true });
-report.data.inboundRefs
+isRecord(report.data) ? report.data["inboundRefs"] : undefined
 => { "_content/box/notes/Target.doc.card": [{ path: "_content/box/Index.md", refs: 1 }, { path: "_content/box/notes/Source.doc.card", refs: 2 }] }
 
 await linked.read("_content/box/notes/Source.doc.card")

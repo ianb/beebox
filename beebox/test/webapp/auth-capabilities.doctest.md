@@ -19,18 +19,18 @@ import {
   mintAuthPasswordReset,
 } from "../../src/webapp/auth-capabilities.js";
 
-async function rejectionName(fn) {
+async function rejectionName(fn: () => Promise<unknown>) {
   try {
     await fn();
     return "no-throw";
   } catch (error) {
-    return error.name;
+    return error instanceof Error ? error.name : String(error);
   }
 }
 
 const PACKAGE_ROOT = join(import.meta.dirname, "../..");
 
-async function consumeInChild(token) {
+async function consumeInChild(token: string) {
   const code = `const { consumeAuthInvite } = await import("./src/webapp/auth-capabilities.ts"); console.log((await consumeAuthInvite({ token: process.env.TEST_INVITE_TOKEN })).status);`;
   const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", code], {
     cwd: PACKAGE_ROOT,

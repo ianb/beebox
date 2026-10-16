@@ -64,7 +64,7 @@ async function guideState(root: string) {
  */
 async function violations(root: string): Promise<string[]> {
   const files = await instructionFiles(root);
-  const real = (name: string) => files.filter((f) => f.endsWith(`${name} (file)`)).map((f) => path.posix.dirname(f.split(" ")[0]));
+  const real = (name: string) => files.filter((f) => f.endsWith(`${name} (file)`)).map((f) => path.posix.dirname(f.split(" ")[0] ?? f));
   const legacy = real("CLAUDE.md");
   const converted = real("AGENTS.md");
   const out = legacy.filter((d) => converted.includes(d)).map((d) => `both in ${d}`);

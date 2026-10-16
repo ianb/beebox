@@ -10,7 +10,7 @@ so they get the most coverage here: a signed cookie cannot be revoked before it
 expires, so renewal is the only place revocation can take effect.
 
 ```ts setup
-import Fastify from "fastify";
+import Fastify, { type FastifyReply } from "fastify";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import fastifyCookie from "@fastify/cookie";
@@ -24,8 +24,7 @@ import { registerPairingRoutes } from "../../src/webapp/routes/pairing.js";
 /** Captures what a handler did to the reply's cookies. */
 function fakeReply() {
   const calls: string[] = [];
-  return {
-    calls,
+  const reply = {
     setCookie(name: string, value: string, opts: Record<string, unknown>) {
       calls.push(`set ${name} path=${String(opts.path)} httpOnly=${String(opts.httpOnly)} sameSite=${String(opts.sameSite)}`);
       calls.push(`value ${value}`);
@@ -36,6 +35,8 @@ function fakeReply() {
       return this;
     },
   };
+  // Cast: renewMobileSessionCookie takes a full FastifyReply but calls only setCookie and clearCookie.
+  return { calls, reply: reply as FastifyReply };
 }
 ```
 
@@ -223,7 +224,7 @@ per request.
 const fresh = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
 if (!fresh) throw new Error("expected a session");
 const untouched = fakeReply();
-renewMobileSessionCookie(untouched, { boxRoot: box2.root, boxSlug: "test", auth: fresh });
+renewMobileSessionCookie(untouched.reply, { boxRoot: box2.root, boxSlug: "test", auth: fresh });
 untouched.calls.length
 => 0
 ```
@@ -235,7 +236,7 @@ const agedCookie = signMobileSession(box2.root, { deviceId: device.deviceId, cre
 const aged = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${agedCookie}` });
 if (!aged) throw new Error("expected a session");
 const renewed = fakeReply();
-renewMobileSessionCookie(renewed, { boxRoot: box2.root, boxSlug: "test", auth: aged });
+renewMobileSessionCookie(renewed.reply, { boxRoot: box2.root, boxSlug: "test", auth: aged });
 renewed.calls[0]
 => set bbx_mobile path=/test httpOnly=true sameSite=lax
 ```
@@ -247,7 +248,7 @@ read the device store, so there's nothing to save by waiting.
 const bearerAuth = await resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
 if (!bearerAuth) throw new Error("expected a session");
 const issued = fakeReply();
-renewMobileSessionCookie(issued, { boxRoot: box2.root, boxSlug: "test", auth: bearerAuth });
+renewMobileSessionCookie(issued.reply, { boxRoot: box2.root, boxSlug: "test", auth: bearerAuth });
 issued.calls[0]
 => set bbx_mobile path=/test httpOnly=true sameSite=lax
 ```
@@ -263,7 +264,7 @@ await revokeMobileDevice(box2.root, device.deviceId)
 => true
 
 const afterRevoke = fakeReply();
-renewMobileSessionCookie(afterRevoke, { boxRoot: box2.root, boxSlug: "test", auth: aged });
+renewMobileSessionCookie(afterRevoke.reply, { boxRoot: box2.root, boxSlug: "test", auth: aged });
 afterRevoke.calls.join(" | ")
 => clear bbx_mobile path=/test
 ```

@@ -8,6 +8,9 @@
  *
  * `pnpm test:changed` in beebox is the `--run` form, and it is the
  * agent's iteration command. `pnpm test` keeps its meaning: everything.
+ * Before running them, `--run` typechecks the selected doctests through
+ * beebox's `typecheck:doctest`: the selection is exactly the doctests a
+ * source change can break, which a commit's staged-file check cannot see.
  *
  * This is the I/O shell — git, the esbuild graph pass, spawning tap. The rule
  * itself is pure and lives in test-select-lib.ts.
@@ -168,6 +171,22 @@ function runSelected(files: string[]): number {
   return result.status ?? 1;
 }
 
+/**
+ * Typecheck the selected doctests (paths relative to beebox) under beebox's
+ * `typecheck:doctest` groups. Its output precedes tap's, so the run's last
+ * summary line is still tap's.
+ */
+function typecheckSelected(files: string[]): number {
+  const doctests = files.filter((file) => file.endsWith(".doctest.md"));
+  if (doctests.length === 0) return 0;
+  const result = spawnSync("pnpm", ["--silent", "typecheck:doctest", "--only", ...doctests], {
+    cwd: PACKAGE_ROOT,
+    stdio: "inherit",
+  });
+  if (result.error !== undefined) throw result.error;
+  return result.status ?? 1;
+}
+
 export async function main(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   // Before the graph: a bad base ref should cost a git call, not an esbuild
@@ -211,7 +230,10 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
   for (const line of estimate) console.log(line);
-  return runSelected(files);
+  // Both run either way: a type error and a failing test are separate news.
+  const typecheck = typecheckSelected(files);
+  const tests = runSelected(files);
+  return tests !== 0 ? tests : typecheck;
 }
 
 if (process.argv[1] === import.meta.filename) {

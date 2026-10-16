@@ -4,34 +4,39 @@ Tests for the procedure engine — parsing definitions, executing steps,
 tracking state in run cards, and handling various step outcomes.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { startProcedure, resumeProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { getLog } from "../../../src/lib/git/core/operations.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
+import type { ProcedureRun } from "../../../src/schemas/procedure-run.js";
+import type { Result } from "../../../src/shared/result.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import type { ProcedureOptions } from "../../../src/core/procedure/engine-types.js";
 
 /** A shell list item for a YAML `shells:` block. */
-const shells = (script) =>
-  `      shells:\n        - |\n${script.split("\n").map((l) => `          ${l}`).join("\n")}\n`;
+const shells = (script: string) =>
+  `      shells:\n        - |\n${script.split("\n").map((l: string) => `          ${l}`).join("\n")}\n`;
 
 /**
  * One procedure step as YAML. `run`, `precheck` and `validate` are shell scripts;
  * `severity` goes with `validate`; `agent` is a prompt for an agent run phase.
  */
-function step(id, { precheck, run, validate, severity, agent }) {
+function step(id: string, { precheck, run, validate, severity, agent }: { precheck?: string; run?: string; validate?: string; severity?: string; agent?: string }) {
   return [
     `  - id: ${id}\n    description: Step ${id}\n`,
     precheck === undefined ? "" : `    precheck:\n${shells(precheck)}`,
-    agent === undefined ? `    run:\n${shells(run)}` : `    run:\n      agents:\n        - prompt: ${agent}\n`,
+    agent === undefined ? `    run:\n${shells(run ?? "")}` : `    run:\n      agents:\n        - prompt: ${agent}\n`,
     validate === undefined ? "" : `    validate:\n      severity: ${severity}\n${shells(validate)}`,
   ].join("");
 }
 
 /** A procedure card; `header` adds extra frontmatter lines (e.g. `run-expiry: never`). */
-const procedure = (name, steps, header) =>
+const procedure = (name: string, steps: string[], header?: string) =>
   `---\nname: ${name}\n${header ?? ""}description: Procedure ${name}\nsteps:\n${steps.join("")}---\n`;
 
 /** A throwaway git box holding the procedure cards (name -> card text), passed to `fn`. */
-async function withBox(cards, fn) {
+async function withBox<T>(cards: Record<string, string>, fn: (box: TmpBox) => Promise<T>): Promise<T> {
   const box = await makeTmpBox({ git: true });
   try {
     for (const [name, text] of Object.entries(cards)) await box.write(`_config/procedures/${name}.procedure.card`, text);
@@ -44,21 +49,34 @@ async function withBox(cards, fn) {
 }
 
 /** A procedure context whose output lines are collected in `lines`. */
-const contextFor = (box) => {
-  const lines = [];
-  return { lines, ctx: { boxRoot: box.root, writeLine: (l) => lines.push(l), write: () => {} } };
+const contextFor = (box: TmpBox) => {
+  const lines: string[] = [];
+  return { lines, ctx: { boxRoot: box.root, writeLine: (l: string) => { lines.push(l); }, write: () => {} } };
 };
 
 /** File names the procedures created under `_bookkeeping/output`. */
-const outputsOf = async (box) =>
+const outputsOf = async (box: TmpBox) =>
   (await box.list("_bookkeeping/output")).split("\n").filter((f) => f && !f.endsWith(".gitkeep")).map((f) => f.split("/").pop());
 
 /** The run dir for procedure `name` (null before any run). */
-const runDirOf = async (box, name) =>
+const runDirOf = async (box: TmpBox, name: string) =>
   (await box.list("_bookkeeping/procedure/runs")).split("\n").find((f) => f.includes(`${name}_`)) ?? null;
 
+/** The run dir for procedure `name`; fails the test when there is none. */
+const requireRunDir = async (box: TmpBox, name: string): Promise<string> => {
+  const dir = await runDirOf(box, name);
+  assert.ok(dir !== null);
+  return dir;
+};
+
+/** The value of a successful result; fails the test on an error. */
+function valueOf<T, E>(result: Result<T, E>): T {
+  assert.ok(result.ok);
+  return result.value;
+}
+
 /** The parsed run card for procedure `name` (null before any run). */
-async function runCardOf(box, name) {
+async function runCardOf(box: TmpBox, name: string) {
   const dir = await runDirOf(box, name);
   return dir ? parseProcedureRun(await box.read(`${dir}/run.procedure-run.card`)) : null;
 }
@@ -68,14 +86,14 @@ async function runCardOf(box, name) {
  * `ok`/`error`/`status` of the result, output `lines`, the files created under
  * `_bookkeeping/output`, the parsed run card (null if none) and the commit count.
  */
-async function startOn(name, card, options) {
+async function startOn(name: string, card: string | null, options: ProcedureOptions = {}) {
   return withBox(card === null ? {} : { [name]: card }, async (box) => {
     const { ctx, lines } = contextFor(box);
     const result = await startProcedure({ ctx, procedureNameOrPath: name, options });
     return {
       ok: result.ok,
       error: result.ok ? undefined : result.error.message,
-      status: result.ok ? result.value.status : undefined,
+      status: result.ok ? valueOf(result).status : undefined,
       lines,
       files: await outputsOf(box),
       run: await runCardOf(box, name),
@@ -86,7 +104,7 @@ async function startOn(name, card, options) {
 }
 
 /** Per-step statuses of a run card as "id=status, ..." */
-const stepStatuses = (run) => run.steps.map((s) => `${s.id}=${s.status}`).join(", ");
+const stepStatuses = (run: ProcedureRun | null) => (run?.steps ?? []).map((s) => `${s.id}=${s.status}`).join(", ");
 ```
 
 ## Shell-only procedure: happy path
@@ -99,7 +117,7 @@ results in the run card.
 const r = await startOn("greet", procedure("greet", [
   step("hello", { run: 'echo "Hello from procedure" > _bookkeeping/output/greeting.txt' }),
 ]));
-({ ok: r.ok, files: r.files, outcome: r.run.outcome, steps: stepStatuses(r.run) })
+({ ok: r.ok, files: r.files, outcome: r.run?.outcome, steps: stepStatuses(r.run) })
 => { ok: true, files: ["greeting.txt"], outcome: "completed", steps: "hello=completed" }
 ```
 
@@ -147,13 +165,13 @@ const r = await startOn("fail-early", procedure("fail-early", [
   step("broken", { precheck: 'echo "missing prerequisite: config not found"\nexit 1', run: 'echo "NEVER" > _bookkeeping/output/never.txt' }),
   step("after", { run: 'echo "ALSO NEVER" > _bookkeeping/output/also.txt' }),
 ]));
-const first = r.run.steps[0];
+const first = r.run?.steps[0];
 ({
   ok: r.ok,
   files: r.files,
-  stepStatus: first.status,
-  precheckStatus: first.precheck.status,
-  recordsReason: first.precheck.stdout.includes("missing prerequisite"),
+  stepStatus: first?.status,
+  precheckStatus: first?.precheck?.status,
+  recordsReason: first?.precheck?.stdout?.includes("missing prerequisite"),
 })
 => { ok: false, files: [], stepStatus: "failed", precheckStatus: "fail", recordsReason: true }
 ```
@@ -173,7 +191,7 @@ const aborted = await startOn("abort", procedure("abort", [
   step("never", { run: 'echo "nope" > _bookkeeping/output/nope.txt' }),
 ]));
 ({
-  warn: { ok: warned.ok, files: warned.files, validateStatus: warned.run.steps.find((s) => s.id === "warned").validate.status },
+  warn: { ok: warned.ok, files: warned.files, validateStatus: warned.run?.steps.find((s) => s.id === "warned")?.validate?.status },
   abort: { ok: aborted.ok, files: aborted.files },
 })
 => {
@@ -194,15 +212,15 @@ const r = await startOn("runfail", procedure("runfail", [
   step("work", { run: 'echo "doing work"\necho "boom" >&2\nexit 3' }),
   step("after", { run: 'echo "nope" > _bookkeeping/output/nope.txt' }),
 ]));
-const detail = r.run.steps[0].run.stdout;
+const detail = r.run?.steps[0]?.run?.stdout;
 ({
   ok: r.ok,
   error: r.error,
   files: r.files,
-  stepStatus: r.run.steps[0].status,
-  outcome: r.run.outcome,
-  recordsExitCode: detail.includes("exit 3"),
-  recordsStderr: detail.includes("boom"),
+  stepStatus: r.run?.steps[0]?.status,
+  outcome: r.run?.outcome,
+  recordsExitCode: detail?.includes("exit 3"),
+  recordsStderr: detail?.includes("boom"),
 })
 => {
   ok: false,
@@ -236,10 +254,10 @@ const pipe = await startOn("pipe", procedure("pipe", [
 ({
   nounset: {
     ok: nounset.ok,
-    stepStatus: nounset.run.steps[0].status,
-    mentionsUnbound: nounset.run.steps[0].run.stdout.toLowerCase().includes("unbound variable"),
+    stepStatus: nounset.run?.steps[0]?.status,
+    mentionsUnbound: nounset.run?.steps[0]?.run?.stdout?.toLowerCase().includes("unbound variable"),
   },
-  pipefail: { ok: pipe.ok, files: pipe.files, stepStatus: pipe.run.steps[0].status },
+  pipefail: { ok: pipe.ok, files: pipe.files, stepStatus: pipe.run?.steps[0]?.status },
 })
 => {
   nounset: { ok: false, stepStatus: "failed", mentionsUnbound: true },
@@ -283,8 +301,8 @@ that is not in the procedure is an error listing the available step ids.
 const missing = await startOn("nonexistent", null);
 const badStep = await startOn("steps", procedure("steps", [step("real", { run: "true" })]), { step: "fake" });
 ({
-  missing: [missing.ok, missing.error.includes("not found")],
-  badStep: [badStep.ok, badStep.error.includes("real")],
+  missing: [missing.ok, missing.error?.includes("not found")],
+  badStep: [badStep.ok, badStep.error?.includes("real")],
 })
 => { missing: [false, true], badStep: [false, true] }
 ```
@@ -300,8 +318,9 @@ procedure.
 
 ```ts
 const dayMs = 24 * 60 * 60 * 1000;
-const expiry = async (name, card) => {
+const expiry = async (name: string, card: string) => {
   const { ok, run } = await startOn(name, card);
+  assert.ok(run?.expires !== undefined && run["completed-at"] !== undefined);
   const days = run.expires === "never" ? "never" : `${Math.round((Date.parse(run.expires) - Date.parse(run["completed-at"])) / dayMs)}d`;
   return `${ok ? "ok" : "failed"} ${run.outcome}, expires: ${days}`;
 };
@@ -335,7 +354,7 @@ const states = await withBox({ staged }, async (box) => {
   const alphaRuns = async () => (await box.read("_bookkeeping/output/alpha-runs.txt")).trim();
   const snapshot = async () => {
     const run = await runCardOf(box, "staged");
-    return { outcome: run.outcome, steps: stepStatuses(run), files: (await outputsOf(box)).filter((f) => f !== "sentinel").toSorted(), alphaRuns: await alphaRuns() };
+    return { outcome: run?.outcome, steps: stepStatuses(run), files: (await outputsOf(box)).filter((f) => f !== "sentinel").toSorted(), alphaRuns: await alphaRuns() };
   };
 
   // First run: halts at beta (sentinel missing).
@@ -345,7 +364,7 @@ const states = await withBox({ staged }, async (box) => {
   // Fix the gating condition and resume.
   await box.write("_bookkeeping/output/sentinel", "");
   box.commitAll("Add sentinel");
-  const resumed = await resumeProcedure({ ctx, runDir: await runDirOf(box, "staged") });
+  const resumed = await resumeProcedure({ ctx, runDir: await requireRunDir(box, "staged") });
   return { afterFirst, afterResume: { ok: resumed.ok, ...(await snapshot()) } };
 });
 states
@@ -363,8 +382,8 @@ Resuming an already-completed run changes nothing and reports success.
 const noop = await withBox({ done: procedure("done", [step("only", { run: 'echo "done" > _bookkeeping/output/done.txt' })]) }, async (box) => {
   const { ctx } = contextFor(box);
   await startProcedure({ ctx, procedureNameOrPath: "done" });
-  const result = await resumeProcedure({ ctx, runDir: await runDirOf(box, "done") });
-  return { ok: result.ok, outcome: (await runCardOf(box, "done")).outcome };
+  const result = await resumeProcedure({ ctx, runDir: await requireRunDir(box, "done") });
+  return { ok: result.ok, outcome: (await runCardOf(box, "done"))?.outcome };
 });
 noop
 => { ok: true, outcome: "completed" }
@@ -403,9 +422,9 @@ const { ctx } = contextFor(box);
 const result = await resumeProcedure({ ctx, runDir: dir });
 ({
   ok: result.ok,
-  status: result.value.status,
-  inconclusive: result.value.inconclusive,
-  outcomeAfter: parseProcedureRun(await box.read(`${dir}/run.procedure-run.card`)).outcome,
+  status: valueOf(result).status,
+  inconclusive: valueOf(result).inconclusive,
+  outcomeAfter: parseProcedureRun(await box.read(`${dir}/run.procedure-run.card`))?.outcome,
 })
 => {
   ok: true,

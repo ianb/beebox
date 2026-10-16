@@ -16,14 +16,15 @@ import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
+import type { SessionLogSlice } from "../../../../src/cli/lib/session.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 const SESSION = "11111111-2222-3333-4444-555555555555";
-const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 };
+const TAIL: SessionLogSlice = { mode: "tail", tail: 200, minRealUserMessages: 2 };
 
-function line(i) {
+function line(i: number) {
   return JSON.stringify({
     type: "user",
     uuid: `u${i}`,
@@ -33,21 +34,21 @@ function line(i) {
 }
 
 // Write the transcript where `resolveSessionLogPath` will look for it.
-async function seed(boxRoot, count) {
+async function seed(boxRoot: string, count: number) {
   const logPath = getSessionLogPath(boxRoot, SESSION);
   await mkdir(dirname(logPath), { recursive: true });
-  const lines = [];
+  const lines: string[] = [];
   for (let i = 0; i < count; i++) lines.push(line(i));
   await writeFile(logPath, lines.join("\n") + "\n");
   return logPath;
 }
 
 // Reads performed since a marker — the seam coalescing is visible through.
-function readsSince(before) {
+function readsSince(before: number) {
   return sessionHistoryReadStats().reads - before;
 }
 
-async function configure(boxRoot, config) {
+async function configure(boxRoot: string, config: Record<string, unknown>) {
   await mkdir(join(boxRoot, "_config"), { recursive: true });
   await writeFile(join(boxRoot, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(boxRoot);
@@ -67,7 +68,7 @@ const results = await Promise.all(
 );
 print(`parses: ${readsSince(before)}`);
 print(`all answered: ${results.every((r) => r.entries.length === 6)}`);
-print(`shared object: ${results.every((r) => r.entries === results[0].entries)}`);
+print(`shared object: ${results.every((r) => r.entries === results[0]?.entries)}`);
 =>
 parses: 1
 all answered: true
@@ -78,7 +79,7 @@ The window is shared, so it is frozen — a caller that starts mutating its
 answer would be corrupting every peer's:
 
 ```ts continue
-Object.isFrozen(results[0].entries)
+Object.isFrozen(results[0]?.entries)
 => true
 ```
 

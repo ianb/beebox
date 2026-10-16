@@ -16,6 +16,7 @@ import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 import { writeGiantLineSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
+import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { join } from "node:path";
 
@@ -280,7 +281,7 @@ const wide = await parseSessionLog({
   logPath: box.path("cjk.jsonl"),
   slice: { mode: "tail", tail: 200 },
 });
-JSON.stringify(wide.entries.map((e) => e.content[0].text))
+JSON.stringify(wide.entries.map((e) => e.content[0]?.text))
 => ["[message too large to display: ~293 KB]"]
 ```
 
@@ -367,6 +368,7 @@ await fs.writeFile(logPath2, `${turn}\n`, "utf-8");
 
 const parsed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
 const entry = parsed.entries[0];
+assert.ok(entry);
 const text = entry.content.filter((b) => b.type === "text").map((b) => b.text).join(" | ");
 print(`oversize: ${Buffer.byteLength(turn, "utf8") > MAX_SESSION_LINE_BYTES}`);
 print(`entries: ${parsed.entries.length}`);
@@ -408,7 +410,7 @@ const failed = JSON.stringify({
 await fs.writeFile(logPath2, `${failed}\n`, "utf-8");
 
 const mixed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
-JSON.stringify(mixed.entries[0].content.filter((b) => b.type !== "text" || b.text.includes("image")))
+JSON.stringify(mixed.entries[0]?.content.filter((b) => b.type !== "text" || b.text?.includes("image")))
 => [{"type":"image","imageRef":"photo-turn/uuid-2/0","mediaType":"image/jpeg"},{"type":"text","text":"[image not displayed]"}]
 ```
 

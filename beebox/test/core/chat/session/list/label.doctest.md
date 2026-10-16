@@ -18,7 +18,7 @@ that evening.
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolveSessionLabel } from "../../../../../src/core/chat/session/list/label.js";
-import { labelSource } from "../../../../../src/core/chat/session/list/core.js";
+import { labelSource, type ChatSessionEntry } from "../../../../../src/core/chat/session/list/core.js";
 import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
 
 /** The features snapshot the composer prepends to a session's first message. */
@@ -36,7 +36,7 @@ function firstMessage(text: string) {
 }
 
 /** A list row as the enumeration builds it, minus the fields labelling ignores. */
-function entry(engine: "claude" | "codex", fields: { preview?: string; logPath?: string }) {
+function entry(engine: "claude" | "codex", fields: { preview?: string; logPath?: string }): ChatSessionEntry {
   return {
     sessionId: engine === "codex" ? "01a0023e-9c1f" : "claude01-9c1f",
     engine,
@@ -45,6 +45,7 @@ function entry(engine: "claude" | "codex", fields: { preview?: string; logPath?:
     huskPath: "_content/chat/web/2026-08-14_chat.chat.card",
     logPath: fields.logPath ?? "/nonexistent/log.jsonl",
     title: undefined,
+    done: false,
     ...(fields.preview === undefined ? {} : { nativePreview: fields.preview }),
   };
 }
