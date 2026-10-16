@@ -11,6 +11,9 @@ shells anyway and, absent a gating validation, reported **completed** — under
 quota exhaustion, a silently-successful no-op step.
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
+import type { Result } from "../../../src/shared/result.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
@@ -26,6 +29,12 @@ const UNAVAILABILITY = {
   detectedAt: "2026-08-18T19:00:00.000Z",
   message: "You've hit your usage limit.",
 };
+
+/** The value of a successful result; fails the test on an error. */
+function valueOf<T, E>(result: Result<T, E>): T {
+  assert.ok(result.ok);
+  return result.value;
+}
 ```
 
 ## The step fails with the cause; nothing retries after it
@@ -53,7 +62,7 @@ box.commitAll("Add quota procedure");
 
 let agentRuns = 0;
 let validateCalls = 0;
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     agentRuns++;
@@ -80,8 +89,8 @@ print(`shell ran: ${boxFiles.includes("shell-ran.txt")}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("quota_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
-print(`step detail carries the cause: ${run.steps[0].run.stdout.includes("out of usage quota until")}`);
+print(`step status: ${run?.steps[0]?.status}`);
+print(`step detail carries the cause: ${run?.steps[0]?.run?.stdout?.includes("out of usage quota until")}`);
 =>
 success: false
 agent runs: 1

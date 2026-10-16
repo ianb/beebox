@@ -10,8 +10,9 @@ import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { appendLedgerEntries, loadEvidenceHashes, loadLedgerEntries } from "../../../../src/core/retro/scan/ledger.js";
+import type { LedgerEntry } from "../../../../src/core/retro/scan/ledger.js";
 
-const entry = (n) => ({
+const entry = (n: number): LedgerEntry => ({
   kind: "preference",
   evidence: `evidence ${n}`,
   proposal: `observation ${n}`,

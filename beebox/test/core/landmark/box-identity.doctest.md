@@ -9,8 +9,9 @@ dashboard header, and the browser tab all say.
 ```ts setup
 import { readBoxIdentity } from "../../../src/core/landmark/box-identity.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 
-const identity = (box) => readBoxIdentity({ boxRoot: box.root, slug: "kitchen-box" });
+const identity = (box: TmpBox) => readBoxIdentity({ boxRoot: box.root, slug: "kitchen-box" });
 ```
 
 ## The root landmark names the box

@@ -13,6 +13,7 @@ import {
 } from "../../../../src/core/commands/scan-import/helpers.js";
 import type { ScanVisionService } from "../../../../src/services/scan-vision.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import Sharp from "sharp";
@@ -73,13 +74,14 @@ const expectedBytes = await Sharp(originalPath)
   .resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true })
   .jpeg({ quality: 88 })
   .toBuffer();
-const observations = [];
+const observations: Array<{ backend: "claude" | "gemini"; imagePath: string; bytes: Buffer; metadata: Awaited<ReturnType<ReturnType<typeof Sharp>["metadata"]>> }> = [];
 function recordingVision(backend: "claude" | "gemini"): ScanVisionService {
   return {
     backend,
     batchSize: 8,
     async analyzeBatch({ imagePaths }) {
       const imagePath = imagePaths[0];
+      assert.ok(imagePath !== undefined);
       const bytes = await readFile(imagePath);
       const metadata = await Sharp(bytes).metadata();
       observations.push({ backend, imagePath, bytes, metadata });
@@ -121,7 +123,7 @@ for (const format of ["webp", "avif"] as const) {
   await (format === "webp" ? pipeline.webp() : pipeline.avif()).toFile(path);
   formatInputs.push({ path, original: await readFile(path) });
 }
-const formatsSeen = [];
+const formatsSeen: Array<{ extension: string; format: string | undefined }> = [];
 await runScanBatches({
   vision: {
     backend: "claude",
@@ -202,7 +204,7 @@ const pages3 = new Map<number, ScanPageAnalysis[]>();
 pages3.set(6, [photo(6, 7)]);
 pages3.set(7, [back(7, 6, "Beach"), back(7, null, "Beach")]);
 const resolved3 = resolveScanPages(pages3, 8);
-resolved3[7].pairedWith
+resolved3[7]?.pairedWith
 => 6
 ```
 
@@ -221,7 +223,7 @@ pages4.set(4, [photo(4, 5)]);
 pages4.set(5, [back(5, 4, "Lake"), back(5, 6, "Lake")]);
 pages4.set(6, [photo(6, null)]);
 const resolved4 = resolveScanPages(pages4, 8);
-`${resolved4[4].pairedWith}<->${resolved4[5].pairedWith} conflict=${resolved4[5].conflict}`
+`${resolved4[4]?.pairedWith}<->${resolved4[5]?.pairedWith} conflict=${resolved4[5]?.conflict}`
 => 5<->4 conflict=true
 ```
 
@@ -236,8 +238,8 @@ pages4.set(1, [back(1, 0, "Family reunion 1985")]);
 const resolved4 = resolveScanPages(pages4, 2);
 const result = bundleResolvedPages(resolved4);
 print(`bundles=${result.bundles.length} orphans=${result.orphanBacks.length} unsure=${result.unsurePages.length}`);
-print(`bundle0: photo=${result.bundles[0].photoIndex} back=${result.bundles[0].backIndex}`);
-print(`back text: ${result.bundles[0].back!.text_blocks[0].text}`)
+print(`bundle0: photo=${result.bundles[0]?.photoIndex} back=${result.bundles[0]?.backIndex}`);
+print(`back text: ${result.bundles[0]?.back?.text_blocks[0]?.text}`)
 =>
 bundles=1 orphans=0 unsure=0
 bundle0: photo=0 back=1
@@ -254,7 +256,7 @@ pages5.set(0, [photo(0, null)]);
 pages5.set(1, [back(1, null, "Cousin Bill")]);
 const result5 = bundleResolvedPages(resolveScanPages(pages5, 2));
 print(`bundles=${result5.bundles.length} orphans=${result5.orphanBacks.length}`);
-print(`orphan text: ${result5.orphanBacks[0].analysis.text_blocks[0].text}`)
+print(`orphan text: ${result5.orphanBacks[0]?.analysis.text_blocks[0]?.text}`)
 =>
 bundles=1 orphans=1
 orphan text: Cousin Bill
@@ -304,8 +306,8 @@ const pages7 = new Map<number, ScanPageAnalysis[]>();
 pages7.set(0, [photo(0, 1)]);
 pages7.set(1, [back(1, 0, "?? hard to read", { flag_for_review: true, flag_reason: "Handwriting unclear" })]);
 const result7 = bundleResolvedPages(resolveScanPages(pages7, 2));
-print(`flag=${result7.bundles[0].flagForReview}`);
-print(result7.bundles[0].flagReasons.join("; "))
+print(`flag=${result7.bundles[0]?.flagForReview}`);
+print(result7.bundles[0]?.flagReasons.join("; "))
 =>
 flag=true
 Back: Handwriting unclear

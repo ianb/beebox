@@ -6,15 +6,17 @@ BOTH in one commit. Every input type normalizes correctly; `expired` and
 `dismissed` questions stay answerable; only `answered` is terminal.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { executeAnswer } from "../../../src/core/commands/answer.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { execSync } from "node:child_process";
 
 const QUESTIONS = "_bookkeeping/questions";
 
 // Files touched by the HEAD commit, one path per line, sorted.
-function headFiles(root) {
+function headFiles(root: string) {
   return execSync("git diff-tree --no-commit-id --name-only -r --relative HEAD", { cwd: root, stdio: "pipe" })
     .toString()
     .trim()
@@ -30,7 +32,12 @@ function headFiles(root) {
  * follow-up job text (null when there is none), the HEAD commit's files (git boxes
  * only) and the raw jobs listing.
  */
-async function answerOn({ name, content, args, git }) {
+async function answerOn({ name, content, args, git }: {
+  name: string;
+  content?: string;
+  args: Record<string, unknown> | ((box: TmpBox) => Record<string, unknown>);
+  git?: boolean | "none";
+}) {
   const box = await makeTmpBox({ git: git ?? true });
   try {
     const rel = `${QUESTIONS}/${name}`;
@@ -39,11 +46,12 @@ async function answerOn({ name, content, args, git }) {
     const res = await executeAnswer(ctx, { question: rel, ...(typeof args === "function" ? args(box) : args) });
     const jobsListing = await box.list("_bookkeeping/jobs");
     const jobFiles = jobsListing.split("\n").filter((f) => f.endsWith(".card"));
+    const [jobFile] = jobFiles;
     return {
       success: res.success,
       error: res.error,
       card: content === undefined ? null : await box.read(rel),
-      job: jobFiles.length === 1 ? await box.read(jobFiles[0]) : null,
+      job: jobFiles.length === 1 && jobFile !== undefined ? await box.read(jobFile) : null,
       jobsListing,
       committed: git === "none" ? null : headFiles(box.root),
     };
@@ -53,10 +61,16 @@ async function answerOn({ name, content, args, git }) {
 }
 
 /** Which of `needles` appear in `text`, as { needle: boolean }. */
-const contains = (text, ...needles) => Object.fromEntries(needles.map((n) => [n, text.includes(n)]));
+const contains = (text: string | null, ...needles: string[]) => {
+  assert.ok(text !== null);
+  return Object.fromEntries(needles.map((n) => [n, text.includes(n)]));
+};
 
 /** The `selected` id and answer `text` recorded on an answered card. */
-const recorded = (card) => ({ selected: card.match(/selected: (.*)/)?.[1], text: card.match(/text: (.*)/)?.[1] });
+const recorded = (card: string | null) => {
+  assert.ok(card !== null);
+  return { selected: card.match(/selected: (.*)/)?.[1], text: card.match(/text: (.*)/)?.[1] };
+};
 
 const SELECT = `---
 prompt: Where does this receipt go?
@@ -169,7 +183,7 @@ const idJunk = await answerOn({ name: "Archive.question.card", content: CONFIRM,
 ({
   typed: typedJunk.error,
   selectedId: idJunk.error,
-  pending: [typedJunk, idJunk].every((r) => !r.card.includes("answered-at")),
+  pending: [typedJunk, idJunk].every((r) => !r.card?.includes("answered-at")),
 })
 => {
   typed: "Confirm questions require a yes/no answer",
@@ -195,7 +209,7 @@ does a dismissed one (an un-dismissal is the boxholder's prerogative); its
 `dismissed-at` is likewise cleared:
 
 ```ts
-const stamp = (field) => TEXT.replace("---\n", `---\n${field}: 2026-01-01T00:00:00-07:00\n`);
+const stamp = (field: string) => TEXT.replace("---\n", `---\n${field}: 2026-01-01T00:00:00-07:00\n`);
 const expired = await answerOn({ name: "Old.question.card", content: stamp("expired-at"), args: { answer: "Phoenix" } });
 const dismissed = await answerOn({ name: "Skipped.question.card", content: stamp("dismissed-at"), args: { answer: "Phoenix" } });
 ({
@@ -227,8 +241,8 @@ outside it, is rejected before any transition runs (the card never loads):
 const traversal = await answerOn({ name: "x", args: { question: "../../etc/passwd.card", answer: "x" } });
 const outside = await answerOn({ name: "x", args: { question: "/etc/passwd.card", answer: "x" } });
 ({
-  traversal: [traversal.success, traversal.error.startsWith("Question path escapes the box:")],
-  outside: [outside.success, outside.error.startsWith("Question path escapes the box:")],
+  traversal: [traversal.success, traversal.error?.startsWith("Question path escapes the box:")],
+  outside: [outside.success, outside.error?.startsWith("Question path escapes the box:")],
 })
 => { traversal: [false, true], outside: [false, true] }
 ```
@@ -252,7 +266,7 @@ failure can never strand an answered card without its job:
 
 ```ts
 const r = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { answer: "a" } });
-r.committed.split("\n").map((f) => f.replace(/jobs\/.*\.card$/, "jobs/«job»"))
+r.committed?.split("\n").map((f) => f.replace(/jobs\/.*\.card$/, "jobs/«job»"))
 => ["_bookkeeping/jobs/«job»", "_bookkeeping/questions/Receipt.question.card"]
 ```
 
@@ -267,8 +281,8 @@ card is untouched (still pending) and no job file was left behind:
 const r = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { answer: "a" }, git: "none" });
 ({
   success: r.success,
-  failedToCommit: r.error.startsWith("Failed to commit transition:"),
-  cardAnswered: r.card.includes("answered-at"),
+  failedToCommit: r.error?.startsWith("Failed to commit transition:"),
+  cardAnswered: r.card?.includes("answered-at"),
   jobLeft: r.jobsListing.includes(".card"),
 })
 => { success: false, failedToCommit: true, cardAnswered: false, jobLeft: false }

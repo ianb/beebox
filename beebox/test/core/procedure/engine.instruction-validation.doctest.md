@@ -6,12 +6,21 @@ the step's git diff, gated by `severity`. These tests drive a full
 the scripted verdict for the validate-phase judge.
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
+import type { Result } from "../../../src/shared/result.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 import { procedureOutcome } from "../../../src/core/commands/procedure.js";
 import { formatInconclusiveLine } from "../../../src/shared/inconclusive.js";
+
+/** The value of a successful result; fails the test on an error. */
+function valueOf<T, E>(result: Result<T, E>): T {
+  assert.ok(result.ok);
+  return result.value;
+}
 ```
 
 ## Passing instruction + the judge sees the whole multi-commit diff
@@ -40,8 +49,8 @@ steps:
 await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add instr procedure");
 
-let judgePrompt;
-const createAgent = (opts) => createFakeAgent({
+let judgePrompt = "";
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     await box.write("_bookkeeping/output/a.txt", "FIRST-CHANGE");
@@ -51,7 +60,7 @@ const createAgent = (opts) => createFakeAgent({
     return { success: true };
   },
   structuredResult: ({ systemPrompt }) => {
-    judgePrompt = systemPrompt;
+    judgePrompt = systemPrompt ?? "";
     return { passed: true, reasoning: "Both files are present in the diff." };
   },
 });
@@ -71,9 +80,9 @@ print(`diff has commit 2: ${judgePrompt.includes("SECOND-CHANGE")}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("instr_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`step status: ${run.steps[0].status}`);
-print(`validate status: ${run.steps[0].validate.status}`);
-print(`review recorded: ${run.steps[0].validate.review}`);
+print(`step status: ${run?.steps[0]?.status}`);
+print(`validate status: ${run?.steps[0]?.validate?.status}`);
+print(`review recorded: ${run?.steps[0]?.validate?.review}`);
 =>
 success: true
 diff has commit 1: true
@@ -115,7 +124,7 @@ steps:
 await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add gate procedure");
 
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     await box.write("_bookkeeping/output/partial.txt", "half done");
@@ -139,8 +148,8 @@ print(`nope.txt (second step) exists: ${files.includes("nope.txt")}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("gate_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`checked step: ${run.steps[0].status}`);
-print(`validate status: ${run.steps[0].validate.status}`);
+print(`checked step: ${run?.steps[0]?.status}`);
+print(`validate status: ${run?.steps[0]?.validate?.status}`);
 =>
 success: false
 nope.txt (second step) exists: false
@@ -180,7 +189,7 @@ steps:
 await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add soft procedure");
 
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     await box.write("_bookkeeping/output/messy.txt", "eh");
@@ -204,8 +213,8 @@ print(`after.txt exists: ${files.includes("after.txt")}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("soft_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`lax step: ${run.steps[0].status}`);
-print(`validate status: ${run.steps[0].validate.status}`);
+print(`lax step: ${run?.steps[0]?.status}`);
+print(`validate status: ${run?.steps[0]?.validate?.status}`);
 =>
 success: true
 after.txt exists: true
@@ -252,7 +261,7 @@ await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add unjudged procedure");
 
 let workAgentRuns = 0;
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     workAgentRuns++;
@@ -271,10 +280,10 @@ const result = await startProcedure({
   options: { createAgent },
 });
 print(`success: ${result.ok}`);
-print(`run status: ${result.value.status}`);
-print(`inconclusive step: ${result.value.inconclusive[0].stepId}`);
-print(`reason: ${result.value.inconclusive[0].reason}`);
-print(`detail: ${result.value.inconclusive[0].detail}`);
+print(`run status: ${valueOf(result).status}`);
+print(`inconclusive step: ${valueOf(result).inconclusive[0]?.stepId}`);
+print(`reason: ${valueOf(result).inconclusive[0]?.reason}`);
+print(`detail: ${valueOf(result).inconclusive[0]?.detail}`);
 
 // The work agent ran once. Redoing finished work because the CHECKER ran out
 // of budget is the exact confusion this state exists to end.
@@ -286,18 +295,21 @@ print(`after.txt (second step) exists: ${files.includes("after.txt")}`);
 const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("unjudged_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-print(`card run outcome: ${run.outcome}`);
-print(`checked step: ${run.steps[0].status}`);
-print(`validate status: ${run.steps[0].validate.status}`);
-print(`validate error: ${run.steps[0].validate.error}`);
+print(`card run outcome: ${run?.outcome}`);
+print(`checked step: ${run?.steps[0]?.status}`);
+print(`validate status: ${run?.steps[0]?.validate?.status}`);
+print(`validate error: ${run?.steps[0]?.validate?.error}`);
 
 // The CLI re-validates the outcome across the untyped command-runner
 // boundary before keying its exit code on it.
-const crossed = procedureOutcome({ success: true, data: result.value });
+const crossed = procedureOutcome({ success: true, data: valueOf(result) });
+assert.ok(crossed);
+const crossedStep = crossed.inconclusive[0];
+assert.ok(crossedStep);
 print(formatInconclusiveLine({
   procedure: crossed.procedure,
-  stepId: crossed.inconclusive[0].stepId,
-  detail: crossed.inconclusive[0].detail,
+  stepId: crossedStep.stepId,
+  detail: crossedStep.detail,
 }));
 =>
 success: true

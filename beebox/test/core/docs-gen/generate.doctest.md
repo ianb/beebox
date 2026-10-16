@@ -58,10 +58,10 @@ The commit lands with the expected subject and trailer:
 
 ```ts continue
 const log = await getLog(box.root, 1);
-log[0].subject
+log[0]?.subject
 => Sync templates from upstream
 
-JSON.stringify(log[0].trailers)
+JSON.stringify(log[0]?.trailers)
 => {"Triggered-By":"generateDocs"}
 ```
 
@@ -91,7 +91,7 @@ const after = await getStatus(genBox.root);
 [...after.staged, ...after.modified, ...after.untracked].filter((p) => isTemplateManagedPath(p))
 => []
 
-(await getLog(genBox.root, 1))[0].subject
+(await getLog(genBox.root, 1))[0]?.subject
 => Sync templates from upstream
 ```
 
@@ -121,7 +121,7 @@ const afterUserEdit = await getStatus(userBox.root);
 [...afterUserEdit.staged, ...afterUserEdit.modified, ...afterUserEdit.untracked].filter((p) => isTemplateManagedPath(p))
 => [".claude/rules/lending.md"]
 
-(await getLog(userBox.root, 1))[0].subject
+(await getLog(userBox.root, 1))[0]?.subject
 => Sync templates from upstream
 ```
 

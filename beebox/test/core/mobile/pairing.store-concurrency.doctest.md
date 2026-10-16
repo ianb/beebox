@@ -10,6 +10,7 @@ primitive and lands via temp-file + fsync + atomic rename (mirroring the sibling
 credential store `webapp/local-users.ts`).
 
 ```ts setup
+import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -34,6 +35,7 @@ Verification returns the device identity and no longer un-revokes anything.
 const box = await makeTmpBox();
 const ticket = createMobilePairingTicket(box.root, { createdBy: "ada@example.com" });
 const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "phone" });
+assert.ok(device);
 
 const identity = await resolveMobileBearerIdentity(box.root, `Bearer ${device.deviceToken}`);
 identity?.createdBy
@@ -60,6 +62,7 @@ the post-revoke record instead of clobbering it with a stale one.
 const box2 = await makeTmpBox();
 const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "grace@example.com" });
 const device2 = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "phone2" });
+assert.ok(device2);
 
 // Verify (RMW: stamps lastUsedAt) racing revoke (RMW: sets revokedAt).
 await Promise.all([
@@ -68,7 +71,7 @@ await Promise.all([
 ]);
 
 const devices = listMobileDevices(box2.root);
-typeof devices[0].revokedAt === "string"
+typeof devices[0]?.revokedAt === "string"
 => true
 ```
 
