@@ -33,25 +33,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.296`, Codex `0.162.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.299`, Codex `0.162.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.300` (SDK), `2.1.300` (Claude Code), `0.162.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.301` (SDK), `2.1.301` (Claude Code), `0.163.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved on 2026-10-13 — Agent SDK
-  to `0.3.296` (taking `0.3.294` and `0.3.295`), Codex to `0.162.1` (taking
-  `0.162.0`). These had settled on 2026-10-10 and 10-11, but the runner started
-  no session on 10-10 through 10-12 because nothing new was published:
-  `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
-  Next: `0.3.299` (settles 2026-10-16T00:23Z), then `0.3.300`
-  (2026-10-16T14:28Z; **check its transcript rows first**, see its entry). No
-  session will start for either unless a newer release is published (same
-  issue). Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Current recommendation:** Agent SDK moved to `0.3.299` on 2026-10-15;
+  Codex stays at `0.162.1`. Next: `0.3.300` (settles 2026-10-16T14:28Z;
+  **check its transcript rows first**, see its entry), `0.3.301`
+  (2026-10-17T14:35Z), Codex `0.163.0` (2026-10-17T21:30Z; check Daybreak
+  default, see its entry). Settled versions start no session on a day with no
+  new release: `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
+  Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -77,6 +74,42 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### Codex 0.163.0 — pending (published 2026-10-15T21:30Z, ~6h at this turn)
+
+- **Check when taken:** *"Daybreak is enabled by default for eligible
+  accounts."* In 0.161.0 it was opt-in, with automatic Cyber routing omitted by
+  default. beebox's Codex chat (`services/codex-sdk-session/core.ts`) sets no
+  Daybreak or Cyber option, so it now gets the account's default. The taking
+  run should confirm a box Codex thread still runs on the expected model and
+  route.
+- **Fixes relevant to beebox's Codex chat:** a resumed thread restores its
+  permissions and network approvals; local commands finish when a child keeps
+  an output pipe open; a follow-up sent mid-response now steers the turn.
+- Network proxy hardening (permission before DNS, duplicate `Host` rejected).
+  The bundled patched `zsh` is gone (beebox sets no shell flags). New `/config`
+  search, leader key, `/daemon` restart, parallel read-only tools.
+- **Action:** Settled path; takeable 2026-10-17T21:30Z.
+- **Sources:** [rust-v0.163.0](https://github.com/openai/codex/releases/tag/rust-v0.163.0)
+
+### 0.3.301 / Claude Code 2.1.301 — pending (published 2026-10-15T14:35Z)
+
+- **SDK:** per-tool `permission_policy` on SDK MCP servers; `BUILTIN_TOOL_NAMES`
+  and `LEGACY_TOOL_NAME_ALIASES` exports (could replace the hand list in
+  `shared/known-tools.ts`, which renders only a subset); `reloadPlugins({
+  addPlugins })`; `setModel()` works at a usage limit. A full disk that blocks
+  login refresh now reports `invalid_request` with null status, not
+  `authentication_failed`/401 — checked: beebox keys on neither code.
+- **Claude Code, RUNTIME:** a tool call cut off mid permission check by a
+  mid-turn message is no longer reported as user-rejected (beebox chat steers
+  mid-turn); Grep/Glob report a failed search instead of no matches; Read no
+  longer reads `.parquet`/`.xlsm`/`.epub`/`.heic` as text.
+- **Claude Code, HARNESS:** quitting no longer removes a `WorktreeCreate`-hook
+  worktree that may hold unpushed commits without asking — this repo creates
+  worktrees through such a hook; full-disk refresh errors now name the disk;
+  short commands exiting mid token refresh no longer cause sign-outs.
+- **Action:** Settled path; takeable 2026-10-17T14:35Z.
+- **Sources:** [SDK 0.3.301](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03301), [Claude Code 2.1.301](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21301)
 
 ### 0.3.300 / Claude Code 2.1.300 — pending (published 2026-10-14T14:28Z); check before applying
 
@@ -107,7 +140,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path after the check above; takeable 2026-10-16T14:28Z.
 - **Sources:** [SDK 0.3.300](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03300), [Claude Code 2.1.300](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21300)
 
-### 0.3.299 / Claude Code 2.1.299 — pending (published 2026-10-14T00:23Z); re-read 2026-10-14, not act-now
+### 0.3.299 / Claude Code 2.1.299 — APPLIED 2026-10-15 (published 2026-10-14T00:23Z); re-read 2026-10-14, not act-now
 
 `0.3.297` / `0.3.298` were never published to npm (their changelog lines are
 parity-only).
@@ -128,7 +161,7 @@ parity-only).
   conversations idle ~54 min (`"idleCompaction": false` turns it off);
   `/usage` warnings for max effort and workflows; a sandboxed shell can no
   longer write into a `--plugin-dir` folder.
-- **Action:** Settled path; takeable 2026-10-16T00:23Z.
+- **Action:** Applied 2026-10-15. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.299, `pnpm -C beebox test` (12,458 pass, 2 skip).
 
 ### Codex 0.162.1 — APPLIED 2026-10-13, nothing relevant (published 2026-10-09T19:44Z)
 
