@@ -243,16 +243,17 @@ async function stagedBlobSizes(boxRoot: string, paths: string[]): Promise<Map<st
 
 /**
  * After a blind `add -A`, unstage any staged file whose object exceeds
- * MAX_AUTO_STAGE_BYTES. Best-effort: a failure in the size check must never
- * break the commit, so it logs and proceeds with whatever is staged.
+ * MAX_AUTO_STAGE_BYTES; `paths` (boxRoot-relative) limits the check to them.
+ * Best-effort: a failure in the size check must never break the commit, so it
+ * logs and proceeds with whatever is staged.
  */
-export async function unstageOversizedBlobs(boxRoot: string): Promise<void> {
+export async function unstageOversizedBlobs(boxRoot: string, paths?: string[]): Promise<void> {
   try {
     const git = simpleGit(boxRoot);
-    const out = await git.raw(["diff", "--cached", "--name-only", "-z"]);
-    const paths = out.split("\0").filter((p) => p.length > 0);
+    const out = await git.raw(["diff", "--cached", "--name-only", "-z", "--", ...(paths ?? [])]);
+    const staged = out.split("\0").filter((p) => p.length > 0);
     const oversized: Array<{ path: string; bytes: number }> = [];
-    for (const [path, bytes] of await stagedBlobSizes(boxRoot, paths)) {
+    for (const [path, bytes] of await stagedBlobSizes(boxRoot, staged)) {
       if (bytes > MAX_AUTO_STAGE_BYTES) oversized.push({ path, bytes });
     }
     if (oversized.length > 0) {
