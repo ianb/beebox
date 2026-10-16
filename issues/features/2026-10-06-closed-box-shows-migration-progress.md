@@ -24,6 +24,16 @@ migration (pid …); it reopens when that process finishes or exits"
 work; the iOS web view shows the same text). Nothing says which migration,
 which step, how long it has run, or whether it is progressing or stuck.
 
+**2026-10-16:** A personal box was closed for about ten minutes in the same
+way: a docs refresh spent minutes in one `git add -A` through git-annex. The
+cause was `changedMigrationPaths` dropping cached stat data, so every annexed
+file was re-hashed. That is fixed
+([closed bug](../closed/bugs/2026-10-16-docs-refresh-rehashes-every-annexed-file-while-box-is-closed.md)),
+and it is very likely what made the 2026-10-06 run slow. Still open from that
+bug: nothing alerts while a holder keeps the box closed. The convergence
+schedule kills a box's run after 25 minutes (`schedules/box-convergence/run.ts`),
+and nothing reports the run before that.
+
 ## Wanted
 
 A progress indicator while a box is closed for maintenance:
