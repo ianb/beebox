@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1100" viewBox="0 0 1400 1100"><defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".12"/></feComponentTransfer></filter></defs><rect width="1400" height="1100" fill="#292e2c"/><g fill="#006472"><rect x="-110" y="60" width="400" height="460" rx="80"/><rect x="1080" y="320" width="420" height="500" rx="95"/><rect x="390" y="760" width="580" height="280" rx="65"/></g><g fill="#159da7"><path d="M0 190H290V265H0zM1080 590H1400V660H1080zM390 870H970V940H390z"/><rect x="1015" y="940" width="55" height="55"/><rect x="1090" y="940" width="55" height="55"/></g><g fill="none" stroke="#76d9d7" stroke-width="3"><rect x="-90" y="75" width="400" height="460" rx="80"/><rect x="1060" y="340" width="420" height="500" rx="95"/><rect x="375" y="780" width="580" height="280" rx="65"/></g><rect width="1400" height="1100" filter="url(#grain)"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1100" viewBox="0 0 1440 1100">
+<defs>
+<filter id="ink"><feTurbulence type="fractalNoise" baseFrequency=".30 .52" numOctaves="3" seed="19" result="noise"/><feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.2 -.35" result="wear"/><feComposite in="SourceGraphic" in2="wear" operator="out"/></filter>
+<filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".065 .45" numOctaves="3" seed="13"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".16"/></feComponentTransfer></filter>
+<pattern id="weave" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M1 0V6M4 0V6" stroke="#bec7b0" opacity=".10" stroke-width=".65"/><path d="M0 1H6M0 4H6" stroke="#050c0a" opacity=".21" stroke-width="1"/><path d="M1 0V2M4 3V5" stroke="#dce5cd" opacity=".09" stroke-width="1"/></pattern>
+</defs>
+<rect width="1440" height="1100" fill="#242925"/>
+<g filter="url(#ink)">
+<g fill="#056a72"><rect x="-135" y="52" width="480" height="470" rx="75"/><rect x="1030" y="215" width="510" height="560" rx="80"/><rect x="330" y="745" width="600" height="355" rx="68"/></g>
+<g fill="#24b8bd"><path d="M-80 185H345V280H-80ZM1030 545H1470V645H1030ZM330 850H930V960H330Z"/><path d="M345 278H235V400H345ZM1030 350H1130V545H1030Z"/></g>
+<g fill="#a0e5dc"><path d="M-80 185H150V280H-80ZM1190 545H1470V645H1190ZM330 850H580V960H330Z"/><rect x="1010" y="925" width="52" height="57"/><rect x="1090" y="925" width="52" height="57"/></g>
+<g fill="none" stroke="#70d7cf" stroke-width="5"><rect x="-120" y="72" width="480" height="470" rx="75"/><rect x="1012" y="235" width="510" height="560" rx="80"/><rect x="312" y="768" width="600" height="355" rx="68"/></g>
+</g>
+<rect width="1440" height="1100" filter="url(#grain)" opacity=".8"/>
+<rect width="1440" height="1100" fill="url(#weave)"/>
+</svg>
