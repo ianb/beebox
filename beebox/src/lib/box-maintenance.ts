@@ -11,16 +11,18 @@ import { errnoCode } from "../shared/error-guards.js";
 import { invariant } from "../shared/invariant.js";
 import { BoxMaintenanceError, type WorkHolder } from "./box-maintenance-error.js";
 
-const permitSchema = z.object({ directory: z.string(), id: z.string().uuid(), maintenance: z.boolean() });
-type Permit = z.infer<typeof permitSchema>;
 const phaseSchema = z.object({
   id: z.string().uuid(), reason: z.string(), phase: z.enum(["draining", "exclusive", "ready"]),
   /** When a draining phase gives up waiting; absent once changes begin, when reopening is not predictable. */
   until: z.string().datetime().optional(),
   /** When the maintenance attempt that wrote this record began; carried across a retry. */
   since: z.string().datetime().optional(),
+  /** What the owner is doing now and when that began; any phase write clears it. */
+  step: z.string().optional(), stepSince: z.string().datetime().optional(),
 });
 type Phase = z.infer<typeof phaseSchema>;
+const permitSchema = z.object({ directory: z.string(), id: z.string().uuid(), maintenance: z.boolean() });
+type Permit = z.infer<typeof permitSchema>;
 /**
  * A phase record and whether anyone still holds it. A record with a live owner
  * closes the box. A record without one is unfinished maintenance: it refuses
@@ -96,6 +98,10 @@ async function readPhase(directory: string): Promise<Phase | null> {
   try { return phaseSchema.parse(JSON.parse(await readFile(join(directory, "phase.json"), "utf8"))); }
   catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
 }
+async function writeStep(directory: string, { id, step }: { id: string; step: string }): Promise<void> {
+  const phase = await readPhase(directory);
+  if (phase?.id === id) await writeFileAtomic(join(directory, "phase.json"), { content: JSON.stringify({ ...phase, step, stepSince: new Date().toISOString() }) });
+}
 function ownerHolder(holder: LockHolder): WorkHolder {
   const reason = typeof holder.metadata.reason === "string" ? holder.metadata.reason : "maintenance";
   return { pid: holder.pid, reason, since: holder.acquiredAt };
@@ -108,8 +114,7 @@ async function ownerOf(directory: string): Promise<WorkHolder | null> {
 /** The phase that closes the box now: a record whose owner lock is still held. */
 async function closedPhase(directory: string): Promise<Phase | null> {
   const phase = await readPhase(directory);
-  if (!phase) return null;
-  return (await ownerOf(directory)) === null ? null : phase;
+  return phase && (await ownerOf(directory)) !== null ? phase : null;
 }
 async function validPermit(directory: string, inherited?: string | null): Promise<Permit | undefined> {
   if (inherited === null) return undefined;
@@ -229,6 +234,8 @@ export interface BoxMaintenance extends BoxWork {
   drain(): Promise<void>;
   prepare(): Promise<void>;
   beginChanges(): Promise<void>;
+  /** Name the current step on the closure record; a handle that no longer holds the box writes nothing. */
+  step(name: string): Promise<void>;
   complete(): Promise<void>;
 }
 
@@ -263,8 +270,9 @@ export async function closeBoxMaintenance(
       if (error instanceof BoxMaintenanceError) return false;
       throw error;
     });
+    const step = async (name: string): Promise<void> => { if (await held()) await writeStep(directory, { id: parent.id, step: name }); };
     return { run: (fn) => context.run(parent, fn), drain: noRelease, release: () => delegatedWork.release(), held,
-      prepare: () => phase("ready"), complete: noRelease, beginChanges: () => phase("exclusive") };
+      prepare: () => phase("ready"), complete: noRelease, beginChanges: () => phase("exclusive"), step };
   }
   if (await validPermit(directory)) throw new BoxMaintenanceError({ reason: "nested" });
   const permit = { directory, id: randomUUID(), maintenance: true };
@@ -325,6 +333,7 @@ export async function closeBoxMaintenance(
       },
       async prepare() { await writePhase("ready"); changing = true; },
       async beginChanges() { await writePhase("exclusive"); changing = true; },
+      async step(name) { if (!released && await ownsLock()) await writeStep(directory, { id: permit.id, step: name }); },
       async complete() {
         await withAdmission(directory, async () => {
           if (released || !(await ownsLock())) throw new BoxMaintenanceError({ reason: "expired" });

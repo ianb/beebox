@@ -72,14 +72,18 @@ export async function refreshGeneratedDocs(opts: {
     const result = await maintenance.run(
       async (): Promise<DocsRefreshResult> => {
         const before = await readMarker(opts.boxRoot);
+        await maintenance.step("saving current files");
         const input = await refreshSnapshot(shape.boxRoot);
         if (!input) return { status: "current" };
         const { snapshot, baseline } = input;
         let paths: string[] = [];
         await maintenance.beginChanges();
         try {
+          await maintenance.step("generating docs");
           await generateDocs(opts.boxRoot, { commit: false });
+          await maintenance.step("finding changed files");
           paths = await changedMigrationPaths(shape.boxRoot, baseline);
+          await maintenance.step("committing");
           await stageAndCommitPaths(shape.boxRoot, {
             paths,
             message: "Refresh generated docs",

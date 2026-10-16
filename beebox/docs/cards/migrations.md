@@ -86,7 +86,9 @@ since <time> (pid <n>)`); `boxWorkHolders(boxRoot)` reads them from another
 process. A closed box refuses with the maintenance that closed it and, while
 draining, the expected wait (`Box is closed for migration; expected to reopen within 10
 min`); the HTTP 503 carries `Retry-After`, and the chat client waits it out
-once before reporting the refusal.
+once before reporting the refusal. Docs refresh and the migration sweep name
+their current step with `maintenance.step(name)` (for example `<migration>:
+finding changed files`); the hub's closed page shows it and when it began.
 
 A dirty tree is normal input. Before a mutation phase, the runner retains
 `refs/bbx/migrations/<name>/snapshots/<attempt-id>` using a temporary Git index.

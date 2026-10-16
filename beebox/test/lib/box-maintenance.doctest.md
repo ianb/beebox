@@ -203,6 +203,50 @@ await barrier.release();
 await barrierBox.cleanup();
 ```
 
+## The owner names its current step
+
+A closed box once stayed closed for ten minutes with nothing saying what was
+running. An owner, or a delegate on its behalf, names its current step on the
+record; the next phase change clears it.
+
+```ts
+const stepBox = await makeTmpBox({ git: true });
+const stepper = await acquireBoxMaintenance(stepBox.root, { reason: "docs refresh" });
+await stepper.beginChanges();
+await stepper.step("generating docs");
+const named = await boxMaintenanceStatus(stepBox.root);
+({ step: named.step, stepSince: named.stepSince })
+=> { step: "generating docs", stepSince: "«date»" }
+
+await stepper.prepare();
+(await boxMaintenanceStatus(stepBox.root)).step
+=> undefined
+```
+
+A delegate writes its step on the controller's record. After release, neither
+handle writes over the record of the owner that comes next.
+
+```ts continue
+await stepper.beginChanges();
+const helper = await stepper.run(() => acquireBoxMaintenance(stepBox.root, { reason: "docs", join: true }));
+await helper.step("committing");
+(await boxMaintenanceStatus(stepBox.root)).step
+=> committing
+
+await helper.release();
+await stepper.release();
+const next = await acquireBoxMaintenance(stepBox.root, { reason: "next" });
+await stepper.step("stale");
+await helper.step("stale");
+(await boxMaintenanceStatus(stepBox.root)).step
+=> undefined
+```
+
+```ts cleanup
+await next.complete();
+await stepBox.cleanup();
+```
+
 ## A failed delegate leaves its controller's record behind
 
 The outer handle only entered draining. Its delegate began mutation and failed;

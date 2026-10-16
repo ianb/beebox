@@ -16,7 +16,7 @@ export interface UnavailableBox {
   /** Seconds a client should wait before retrying. */
   retryAfter: number;
   body:
-    | { error: "box_closed"; reason: string; since: string | undefined; owner: { pid: number; since: string }; message: string }
+    | { error: "box_closed"; reason: string; since: string | undefined; owner: { pid: number; since: string }; step: { name: string; since: string } | undefined; message: string }
     | { error: "box_unavailable"; message: string };
 }
 
@@ -54,9 +54,10 @@ async function describeUnavailableBox(args: { slug: string; boxRoot: string | un
     const remainingMs = maintenance.until === undefined ? undefined : Math.max(0, Date.parse(maintenance.until) - Date.now());
     const retryAfter = remainingMs === undefined ? DEFAULT_RETRY_AFTER_S : Math.max(1, Math.ceil(remainingMs / 1000));
     const owner = { pid: maintenance.owner.pid, since: maintenance.owner.since };
+    const step = maintenance.step === undefined || maintenance.stepSince === undefined ? undefined : { name: maintenance.step, since: maintenance.stepSince };
     return { status: 503, retryAfter, body: {
-      error: "box_closed", reason: maintenance.reason, since: maintenance.since, owner,
-      message: `Box ${args.slug} is closed for ${maintenance.reason} (pid ${String(owner.pid)}, since ${owner.since}); it reopens when that process finishes or exits`,
+      error: "box_closed", reason: maintenance.reason, since: maintenance.since, owner, step,
+      message: `Box ${args.slug} is closed for ${maintenance.reason} (pid ${String(owner.pid)}, since ${owner.since})${step ? `; current step: ${step.name}, since ${step.since}` : ""}; it reopens when that process finishes or exits`,
     } };
   }
   const detail = args.endpoints.unavailable?.(args.slug);
