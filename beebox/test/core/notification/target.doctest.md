@@ -7,7 +7,7 @@ scheme, parsed by `parseTarget` into a discriminated union and rendered by
 ```ts setup
 import { parseTarget, formatTarget, targetUrl } from "../../../src/core/notification/target.js";
 
-function render(value) {
+function render(value: string) {
   const target = parseTarget(value);
   return `${formatTarget(target)} -> ${targetUrl(target, { boxSlug: "family", notificationId: "n7Qx" })}`;
 }

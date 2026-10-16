@@ -7,6 +7,7 @@ and rejects inherited IDs after cleanup. It does not mutate the parent's env.
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { invariant } from "../../../src/shared/invariant.js";
 import { withTriageAllowance, reserveRunCalls } from "../../../src/core/triage/allowance.js";
 ```
 
@@ -14,6 +15,7 @@ import { withTriageAllowance, reserveRunCalls } from "../../../src/core/triage/a
 const box = await fs.mkdtemp(path.join(os.tmpdir(), "triage-allowance-"));
 let runId = "";
 const failures = await withTriageAllowance(box, async env => {
+  invariant(env.BBX_TRIAGE_RUN_ID, "allowance env carries a run id");
   runId = env.BBX_TRIAGE_RUN_ID;
   await reserveRunCalls(box, 31);
   const first = await reserveRunCalls(box, 2).catch(error => error.name);

@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 import { pathToFileURL } from "node:url";
 import { simpleGit } from "simple-git";
+import { invariant } from "../../../src/shared/invariant.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { prepareItem } from "../../../src/core/triage/evidence/core.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
@@ -58,7 +59,9 @@ message.includes(`Triage-Decision: ${receipt.id}`) && message.includes("Triage-P
 => applied
 
 const changed = await readDecisionReceipt(box.root, receipt.id);
-changed.evidence.parts[0].text = "Invented replacement";
+const changedPart = changed.evidence.parts[0];
+invariant(changedPart, "receipt has an evidence part");
+changedPart.text = "Invented replacement";
 await saveDecisionReceipt(box.root, changed)
 => throws TriageReceiptError
 
@@ -119,7 +122,7 @@ await annexBox.write("_content/home/Home.landmark.card", "---\nsymbol:\n  glyph:
 await simpleGit(annexBox.root).add("_content/home/Home.landmark.card");
 await simpleGit(annexBox.root).commit("Add triage instructions");
 await annexBox.write("_content/inbox/staged/Paper.doc.card", "---\ntitle: Paper\n---\nHousehold receipt.");
-await annexBox.write("_content/inbox/staged/Paper.attach/photo.png", Buffer.from("synthetic image bytes"));
+await annexBox.write("_content/inbox/staged/Paper.attach/photo.png", "synthetic image bytes");
 await execa("git", ["annex", "add", "--", "_content/inbox/staged/Paper.attach/photo.png"], { cwd: annexBox.root });
 await execa("git", ["annex", "unlock", "--", "_content/inbox/staged/Paper.attach/photo.png"], { cwd: annexBox.root });
 
@@ -211,7 +214,7 @@ await box.write("_content/inbox/staged/Paper.attach/new.txt", "Added after judgm
 await applyDecision({ boxRoot: box.root, decision: receipt })
 => throws InvariantError
 
-await fs.readFile(path.join(box.root, "_content/inbox/staged/Paper.doc.card"), "utf8") === evidence.parts[0].text
+await fs.readFile(path.join(box.root, "_content/inbox/staged/Paper.doc.card"), "utf8") === evidence.parts[0]?.text
 => true
 ```
 
@@ -228,9 +231,11 @@ const held = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, 
 await applyDecision({ boxRoot: box.root, decision: held });
 const questionRef = held.application.questionRef;
 const destination = instructions.destinations[0];
+invariant(questionRef, "held decision records a question");
+invariant(destination, "fixture box has a destination");
 await box.write(questionRef.slice(1), `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: cli\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
 const corrected = await correctDecision({ boxRoot: box.root, id: held.id, questionRef });
-corrected.outcomes[0].actor
+corrected.outcomes[0]?.actor
 => agent
 
 (await correctDecision({ boxRoot: box.root, id: held.id, questionRef })).id === corrected.id
@@ -239,7 +244,7 @@ corrected.outcomes[0].actor
 corrected.judgment.outcome
 => unclear
 
-corrected.resolution.destinationRef === destination.ref
+corrected.resolution?.destinationRef === destination.ref
 => true
 
 (await listDecisionReceipts(box.root, { outcome: "user-confirmed" })).length
@@ -247,7 +252,7 @@ corrected.resolution.destinationRef === destination.ref
 
 await box.write("_bookkeeping/questions/Legacy.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
 const legacy = await confirmDecision({ boxRoot: box.root, id: corrected.id, sourceRef: "/_bookkeeping/questions/Legacy.question.card", label: destination.ref });
-legacy.outcomes.at(-1).actor
+legacy.outcomes.at(-1)?.actor
 => unknown
 
 await box.write("_bookkeeping/questions/Web.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswered-via: web\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);

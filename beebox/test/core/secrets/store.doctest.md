@@ -43,7 +43,7 @@ await setSecret({ name: "mistral", value: "placeholder-value-1", note: "transcri
 await grantSecret({ slug: "demo-box", name: "mistral", access: "server" });
 const loaded = await loadSecretStore();
 print(`loaded: ${loaded.ok}`);
-print(`grant: ${loaded.ok ? loaded.value.grants["demo-box"]["mistral"] : "-"}`);
+print(`grant: ${loaded.ok ? loaded.value.grants["demo-box"]?.["mistral"] : "-"}`);
 print(`mode: ${((await stat(secretsFilePath())).mode & 0o777).toString(8)}`);
 =>
 loaded: true
@@ -55,10 +55,10 @@ mode: 600
 
 ```ts continue
 const listing = await listSecrets();
-print(`name: ${listing[0].name}`);
-print(`hasValue: ${listing[0].hasValue}`);
-print(`note: ${listing[0].note}`);
-print(`grants: ${JSON.stringify(listing[0].grants)}`);
+print(`name: ${listing[0]?.name}`);
+print(`hasValue: ${listing[0]?.hasValue}`);
+print(`note: ${listing[0]?.note}`);
+print(`grants: ${JSON.stringify(listing[0]?.grants)}`);
 print(`leaks the value: ${JSON.stringify(listing).includes("placeholder-value-1")}`);
 =>
 name: mistral

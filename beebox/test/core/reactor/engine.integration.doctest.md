@@ -9,6 +9,9 @@ import {
 } from "../../../src/core/reactor/engine/core.js";
 import { finishJob } from "../../../src/core/finish-job.js";
 import { createFakeAgent } from "../fake-agent.js";
+import type { FakeAgent } from "../fake-agent.js";
+import type { createAgent } from "../../../src/core/agent/invoke/core.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createIntakeJobTemplate } from "../../../src/schemas/intake-job.js";
 import * as fs from "node:fs/promises";
@@ -17,9 +20,10 @@ import * as os from "node:os";
 
 // Job cards are YAML frontmatter; build them with the real producer templates
 // so these integration tests exercise the same shapes connectors write.
-const intakeJob = (description, opts) =>
+type CreateAgentOptions = Parameters<typeof createAgent>[0];
+
+const intakeJob = (description: string, opts?: { priority?: "normal" | "low" }) =>
   createIntakeJobTemplate({
-    created: "2026-07-01T00:00:00Z",
     description,
     items: [],
     ...(opts ?? {}),
@@ -47,16 +51,17 @@ const box = await makeTmpBox({ git: true });
 await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("Write a haiku"));
 box.commitAll("Add job");
 
-let fakeAgent;
-const agentFactory = (opts) => {
-  fakeAgent = createFakeAgent({
+const created: FakeAgent[] = [];
+const agentFactory = (opts: CreateAgentOptions) => {
+  const agent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
       await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task.intake.job.card" });
       return { success: true };
     },
   });
-  return fakeAgent;
+  created.push(agent);
+  return agent;
 };
 
 const result = await runReactor({
@@ -76,7 +81,9 @@ result.jobsRemaining
 
 // System prompt no longer carries the absolute box path (dropped so it
 // doesn't leak this machine's temp/home directory into agent context).
-fakeAgent.invocations[0].systemPrompt.includes(box.root)
+const fakeAgent = created[0];
+invariant(fakeAgent, "the reactor created its agent");
+fakeAgent.invocations[0]?.systemPrompt?.includes(box.root)
 => false
 
 await box.cleanup();
@@ -90,9 +97,9 @@ await box.write("_bookkeeping/jobs/task1.intake.job.card", intakeJob("Task one")
 await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Task two"));
 box.commitAll("Add jobs");
 
-let fakeAgent;
-const agentFactory = (opts) => {
-  fakeAgent = createFakeAgent({
+const created: FakeAgent[] = [];
+const agentFactory = (opts: CreateAgentOptions) => {
+  const agent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
       // Finish both jobs
@@ -101,7 +108,8 @@ const agentFactory = (opts) => {
       return { success: true };
     },
   });
-  return fakeAgent;
+  created.push(agent);
+  return agent;
 };
 
 const result = await runReactor({
@@ -114,13 +122,15 @@ result.jobsProcessed
 => 2
 
 // Single agent session (one invocation with both jobs)
+const fakeAgent = created[0];
+invariant(fakeAgent, "the reactor created its agent");
 fakeAgent.invocations.length
 => 1
 
-fakeAgent.invocations[0].prompt.includes("Task one")
+fakeAgent.invocations[0]?.prompt.includes("Task one")
 => true
 
-fakeAgent.invocations[0].prompt.includes("Task two")
+fakeAgent.invocations[0]?.prompt.includes("Task two")
 => true
 
 await box.cleanup();
@@ -134,7 +144,7 @@ await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("Should not 
 box.commitAll("Add job");
 
 let agentCreated = false;
-const agentFactory = (opts) => {
+const agentFactory = (opts: CreateAgentOptions) => {
   agentCreated = true;
   return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
 };
@@ -163,7 +173,7 @@ await box.write("_bookkeeping/jobs/digest.intake.job.card", intakeJob("Daily dig
 box.commitAll("Add low-pri job");
 
 let agentCreated = false;
-const agentFactory = (opts) => {
+const agentFactory = (opts: CreateAgentOptions) => {
   agentCreated = true;
   return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
 };
@@ -239,7 +249,7 @@ await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("After stale
 box.commitAll("Add job");
 
 let fakeAgent;
-const agentFactory = (opts) => {
+const agentFactory = (opts: CreateAgentOptions) => {
   fakeAgent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
@@ -277,7 +287,7 @@ await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Second tas
 box.commitAll("Add jobs");
 
 let cycle = 0;
-const agentFactory = (opts) => {
+const agentFactory = (opts: CreateAgentOptions) => {
   const currentCycle = cycle++;
   return createFakeAgent({
     name: opts.name,

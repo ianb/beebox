@@ -105,7 +105,7 @@ const opened = await openSearchIndex(box.root);
 opened.warnings.length
 => 1
 
-opened.warnings[0].startsWith("store/notes/Broken.memo.card: skipped")
+opened.warnings[0]?.startsWith("store/notes/Broken.memo.card: skipped")
 => true
 
 // A valid card added later indexes fine on top of the recorded skip.
