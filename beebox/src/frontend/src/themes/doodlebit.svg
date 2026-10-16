@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 280" shape-rendering="crispEdges">
+<defs>
+<g id="blob"><path d="M8 0h15v3h6v6h3v15h-3v6h-6v3H6v-3H0V9h3V3h5z" fill="white" stroke="#202020" stroke-width="1.3"/><path d="M9 13h2v3H9zm10 0h2v3h-2zm-6 7h5v2h-5z" fill="#202020"/></g>
+<g id="spark"><path d="M6 0h3v6h6v3H9v6H6V9H0V6h6z" fill="#202020"/></g>
+<g id="sprout" fill="none" stroke="#202020" stroke-width="1.4"><path d="M12 28V12H9V6H3V3H0v9h3v3h9m0 6h6v-3h6V9h-6v3h-6"/></g>
+</defs>
+<g opacity=".9"><use href="#blob" x="24" y="28" transform="rotate(-8 40 44)"/><use href="#blob" x="238" y="190"/><use href="#sprout" x="155" y="92"/><use href="#sprout" x="324" y="24"/><use href="#spark" x="278" y="77"/><use href="#spark" x="70" y="223"/></g>
+<path d="M115 31h6v-3h6v6h-3v3h-3v3h-3v-3h-3v-3h-3v-6h3z" fill="#fa4a81"/>
+<path d="M314 145h9v3h6v9h-3v6h-12v-3h-6v-9h6z" fill="#b9ef38" stroke="#202020"/>
+<path d="M144 236h15v3h3v9h-3v3h-15v-3h-3v-9h3z" fill="#7670ff" stroke="#202020"/>
+<g stroke="#202020" fill="none" stroke-width="1.3"><path d="M30 154h6v-6h6v6h6v-6h6"/><path d="M207 42v6h6v6h6v-6h6"/><path d="M190 174h3v3h-3zm-86-63h3v3h-3zm220 126h3v3h-3z"/></g>
+<g fill="#202020"><path d="M91 61h2v2h-2zm124 63h2v2h-2zm-111 91h2v2h-2zm-90 43h2v2h-2zm332-148h2v2h-2z"/></g>
+</svg>

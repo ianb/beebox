@@ -237,3 +237,18 @@ Choose `rose-trellis` or `gold-thread`, both with stock `textile`, for the syste
 or an individual card. Each pairs with its own card material, Paper, and Sticky
 note. Explicit card choices retain their own material. Both backgrounds are
 static, and print uses plain light surfaces.
+
+## Goldfish and Doodlebit
+
+Goldfish (`goldfish`, stock `water`) pairs large flowing goldfish illustrations
+with cream reading surfaces and teal/periwinkle controls. Water light moves
+slowly across the toolbar; the background illustration gently drifts as a whole.
+The fins are not independently animated. Reduced motion keeps both layers still.
+
+Doodlebit (`doodlebit`, stock `ink`) uses black-and-white pixel doodles, compact
+regular labels, square controls and sparse lime accents. User messages are
+white on black. A labeled Properties button replaces the folded corner.
+The decorative background nudges a few pixels only while a mouse moves over
+exposed desk space, then settles; controls and reading surfaces remain still.
+Touch and reduced-motion users get a static background. Both themes support
+system and individual-card selection and respect explicit nested card themes.

@@ -24,6 +24,8 @@ it. The URL independently selects `system`, `systemStock`, `card`, and `cardStoc
 Unknown names render base styles until CSS matches. Existing studies are
 `undertow`, `deck-study`, and `patina-study` in `theme-studio-studies.css`;
 `rose-trellis-study` and `gold-thread-study` are in `theme-studio-textiles.css`.
+Goldfish and Doodlebit are catalog themes, available in the studio as
+`goldfish` / `water` and `doodlebit` / `ink`.
 
 Scope every draft selector to `.bbx-theme-studio` and its draft attribute: lazy
 CSS stays loaded after navigation. Keep draft CSS under `pages/dev/`, out of
