@@ -39,7 +39,7 @@ interface LiveTurnState { turnId: string | null; uuid: string | null }
  * The uuid of the group that should carry the live-turn key, given the previous
  * render's state. While streaming it's the provisional group's synthetic uuid;
  * at the moment streaming ends we bind to the *finalized* group's real uuid (the
- * last non-marker item, when it's an assistant) and hold it until the next turn.
+ * last group, when it's an assistant) and hold it until the next turn.
  *
  * Binding to a specific group — not "whichever assistant is newest" — is what
  * stops a background/queued turn that appends later from stealing the key (which
@@ -53,11 +53,12 @@ function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveT
   if (streamingShown) return provisionalUuid;
   if (prev.turnId !== liveTurnId) return null;
   // First non-streaming render after the turn streamed: bind to the finalized
-  // group (skip trailing markers; null if the turn produced no assistant group).
+  // group (null if the turn produced no assistant group). Skip what can follow
+  // the last group: markers, and pending voice and capture bubbles.
   if (provisionalUuid && prev.uuid === provisionalUuid) {
     for (const d of data.toReversed()) {
-      if (d.kind === "marker") continue;
-      return d.kind === "group" && d.group.type === "assistant" ? (d.group.entries[0]?.uuid ?? null) : null;
+      if (d.kind !== "group") continue;
+      return d.group.type === "assistant" ? (d.group.entries[0]?.uuid ?? null) : null;
     }
     return null;
   }
