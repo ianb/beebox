@@ -27,6 +27,7 @@ import {
 import { MAX_RETAINED_MESSAGES } from "../../../../machines/chat-types";
 import { useRevealAnchor } from "./reveal-anchor";
 import { TranscriptSelection } from "./TranscriptSelection";
+import { startCaptureWait, stepCaptureWait, type CaptureAnchorView, type CaptureAnchorWait } from "./capture-anchor";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
@@ -138,10 +139,59 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
   );
 }
 
+/** The newest user message's identity, to tell a new arrival from the last one. */
+function lastUserUuid(groups: MessageGroup[]): string | null {
+  const last = groups.findLast((g) => g.type === "user");
+  return last?.entries[0]?.uuid ?? null;
+}
+
+/** Done in capture anchors the capture when it shows up; see `capture-anchor.ts`. */
+function useCaptureAnchor(opts: {
+  captureSignal: number;
+  sendSignal: number;
+  groups: MessageGroup[];
+  captureBubbles: CaptureBubbleModel[];
+  contentElRef: React.RefObject<HTMLDivElement | null>;
+  anchorToTop: (el: Element | null) => void;
+}): void {
+  const { captureSignal, sendSignal, groups, captureBubbles, contentElRef, anchorToTop } = opts;
+  const newestUser = lastUserUuid(groups);
+  const wait = useRef<CaptureAnchorWait | null>(null);
+  // The list as of the previous commit: the one Done closed over.
+  const seen = useRef<CaptureAnchorView>({ newestUser, bubbleIds: [] });
+  const lastCaptureSignal = useRef(captureSignal);
+  const lastSendSignal = useRef(sendSignal);
+
+  useLayoutEffect(() => {
+    const now: CaptureAnchorView = { newestUser, bubbleIds: captureBubbles.map((b) => b.id) };
+    // A typed send takes the anchor and ends any wait.
+    if (sendSignal !== lastSendSignal.current) {
+      lastSendSignal.current = sendSignal;
+      wait.current = null;
+    }
+    if (captureSignal !== lastCaptureSignal.current) {
+      lastCaptureSignal.current = captureSignal;
+      wait.current = startCaptureWait(seen.current);
+    }
+    seen.current = now;
+    const content = contentElRef.current;
+    if (wait.current === null || !content) return;
+    const { wait: next, step } = stepCaptureWait(wait.current, now);
+    wait.current = next;
+    if (step.anchor === "user") {
+      const users = content.querySelectorAll("[data-role=\"user\"]");
+      anchorToTop(users[users.length - 1] ?? null);
+    } else if (step.anchor === "bubble") {
+      // Bubbles render in model order after the transcript, so the DOM index matches.
+      anchorToTop(content.querySelectorAll("[data-role=\"captureBubble\"]")[step.index] ?? null);
+    }
+  }, [captureSignal, sendSignal, newestUser, captureBubbles, contentElRef, anchorToTop]);
+}
+
 function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, sendSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
+  totalEntries, onLoadOlder, loadingOlder, sendSignal, captureSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
   captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
 }: {
   messages: SessionEntry[];
@@ -164,6 +214,8 @@ function MessageListInner({
   loadingOlder: boolean;
   /** Increments on every send — the anchor signal, not a scroll-to-bottom. */
   sendSignal: number;
+  /** Increments when Done in capture seals a capture; its message is anchored when it arrives. */
+  captureSignal: number;
   liveTurnId: string | null;
   proseEnabled: boolean;
   /** Voice messages waiting for their HQ transcript (pending bubbles). */
@@ -223,6 +275,8 @@ function MessageListInner({
     anchorToTop(users[users.length - 1] ?? null);
   }, [sendSignal, anchorToTop]);
 
+  useCaptureAnchor({ captureSignal, sendSignal, groups, captureBubbles, contentElRef, anchorToTop });
+
   // Mounting this list IS opening a thread: `InteractiveChat` is keyed by
   // session (ChatPage), so a session switch remounts. Say so to the controller
   // rather than relying on the initial value of a ref inside it.
@@ -232,7 +286,7 @@ function MessageListInner({
 
   // The bounded open-thread hold ends once the first history render has landed.
   const loading = snapshot.matches("loading");
-  const showSendSpacer = sendSignal > 0;
+  const showSendSpacer = sendSignal > 0 || captureSignal > 0;
   useEffect(() => {
     if (!loading && messages.length > 0) settleOpen();
   }, [loading, messages.length, settleOpen]);

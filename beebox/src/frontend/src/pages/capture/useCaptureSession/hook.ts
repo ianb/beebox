@@ -12,8 +12,10 @@ import { useCaptureDevices } from "./useCaptureDevices";
 import { useCaptureUploads } from "./useCaptureUploads";
 import { useCaptureInputs } from "./useCaptureInputs";
 import { useCaptureCamera } from "./useCaptureCamera";
-import { useCaptureFinish } from "./useCaptureFinish";
+import { useCaptureFinish, type CaptureExit } from "./useCaptureFinish";
 import { useRetryFeedback } from "../retry-feedback";
+
+export type { CaptureExit };
 
 /**
  * Capture-mode recorder timeslice: 5s (vs the recorder's 20s default) shortens
@@ -48,7 +50,7 @@ export interface CaptureResumeTarget {
  */
 export function useCaptureSession(opts: {
   targetSessionId: string | null;
-  onExit: () => void;
+  onExit: (outcome: CaptureExit) => void;
   resume?: CaptureResumeTarget | null;
 }) {
   const { targetSessionId, onExit } = opts;
@@ -90,9 +92,15 @@ export function useCaptureSession(opts: {
     setRecording(false);
   }, []);
 
+  // A resumed capture already has media on the box from before this page.
+  const resumedMedia = resume !== null && resume.photoCount + resume.fileCount + resume.segmentCount > 0;
+  const { readLandedSeq } = uploads;
+  const nothingLanded = useCallback(() => !resumedMedia && readLandedSeq() === 0, [resumedMedia, readLandedSeq]);
+
   const { finalizing, handleDone, handleCancel, skipPendingUploads } = useCaptureFinish({
     sessionId, recording, stopRecorder,
     readFailureSeq: uploads.readFailureSeq,
+    nothingLanded,
     closeForSealing: uploads.closeForSealing,
     reopenAfterSealing: uploads.reopenAfterSealing,
     awaitPending, abortPending, clearPendingAndFailed,

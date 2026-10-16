@@ -1,6 +1,6 @@
 ---
 title: "Capture shows no preview of the photos just added"
-workstream: unattached
+workstream: capture-photo-flow
 area: beebox
 filed-by: agent
 discovered-by: agent

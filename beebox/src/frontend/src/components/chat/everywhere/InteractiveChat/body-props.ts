@@ -60,6 +60,8 @@ export interface ChatBodyProps {
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;
   sendSignal: number;
+  /** Increments when Done in capture seals a capture for delivery into this chat. */
+  captureSignal: number;
   liveTurnId: string | null;
   snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
   textareaRef: React.RefObject<HTMLTextAreaElement>;

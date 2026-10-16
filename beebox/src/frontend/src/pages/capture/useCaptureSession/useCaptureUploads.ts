@@ -13,12 +13,9 @@ import { type UploadState } from "../api";
 import { useCaptureApi } from "../api-context";
 import { useUploadRunner, type ActiveUpload } from "./useUploadRunner";
 import { UploadAbortedError } from "../../../lib/binary-upload";
-
-interface AudioChunkStatus {
-  /** Composite `${segmentIndex}-${chunkIndex}` — unique across segments. */
-  key: string;
-  state: UploadState;
-}
+import { assertReadable, UnreadableFileError } from "../../../lib/file-readable";
+import { useCapturePreviews } from "./useCapturePreviews";
+import { deriveCounts, type AudioChunkStatus, type UploadCounts } from "./upload-counts";
 
 interface UploadPhotoParams {
   sessionId: string;
@@ -68,6 +65,11 @@ interface FailedRegistries {
 
 interface CaptureUploads {
   photoStates: UploadState[];
+  /**
+   * An object URL per photo index for the overlay's thumbnails, or null for a
+   * photo this page never held (one already staged by a resumed capture).
+   */
+  photoPreviews: (string | null)[];
   fileStates: UploadState[];
   audioChunks: AudioChunkStatus[];
   activeUpload: ActiveUpload | null;
@@ -87,6 +89,13 @@ interface CaptureUploads {
    */
   readFailureSeq: () => number;
   /**
+   * Monotonic count of uploads that reached the box, bumped synchronously like
+   * {@link readFailureSeq}. Done reads it after its wait to tell "something
+   * landed" from "every upload failed or was skipped", which the box would
+   * otherwise seal as an empty capture and drop without a word.
+   */
+  readLandedSeq: () => number;
+  /**
    * Refuse new media. Done closes this before draining, so no producer — a
    * late-resolving photo blob, a file picker that fires after the button was
    * disabled, a recorder tail — can enqueue into a session being sealed.
@@ -102,18 +111,10 @@ interface CaptureUploads {
   counts: UploadCounts;
 }
 
-interface UploadCounts {
-  photosUploaded: number; photosUploading: number; photosFailed: number; photoTotal: number;
-  audioUploaded: number; audioUploading: number; audioFailed: number; audioTotal: number;
-  filesUploaded: number; filesUploading: number; filesFailed: number; fileTotal: number;
-  uploadsInProgress: boolean;
-  /** Transfers accepted and not yet settled — what Done waits on. */
-  pendingUploads: number;
-}
-
 export function useCaptureUploads(): CaptureUploads {
   const { uploadCaptureFile } = useCaptureApi();
   const [photoStates, setPhotoStates] = useState<UploadState[]>([]);
+  const { photoPreviews, notePreview, resetPreviews } = useCapturePreviews();
   const [fileStates, setFileStates] = useState<UploadState[]>([]);
   const [audioChunks, setAudioChunks] = useState<AudioChunkStatus[]>([]);
   const runner = useUploadRunner();
@@ -126,9 +127,11 @@ export function useCaptureUploads(): CaptureUploads {
   const failedAudio = useRef(new Map<string, FailedAudioData>());
   const failedFiles = useRef(new Map<number, { file: File }>());
   const failureSeq = useRef(0);
+  const landedSeq = useRef(0);
   const sealed = useRef(false);
 
   const readFailureSeq = useCallback(() => failureSeq.current, []);
+  const readLandedSeq = useCallback(() => landedSeq.current, []);
   const closeForSealing = useCallback(() => { sealed.current = true; }, []);
   const reopenAfterSealing = useCallback(() => { sealed.current = false; }, []);
   const isSealed = useCallback(() => sealed.current, []);
@@ -143,23 +146,28 @@ export function useCaptureUploads(): CaptureUploads {
       const ext = blob.type.includes("png") ? "png" : "jpg";
       const filename = `photo-${String(index + 1).padStart(3, "0")}.${ext}`;
       setPhotoStates(markAt(index, "uploading"));
+      notePreview({ index, blob });
       enqueue({
         filename,
         priority: false,
-        send: ({ signal, onProgress }) =>
-          uploadCaptureFile({ sessionId: sid, kind: "photo", filename, blob, startedAt, source, signal, onProgress }),
+        send: async ({ signal, onProgress }) => {
+          await assertReadable(blob, { name: "This photo" });
+          await uploadCaptureFile({ sessionId: sid, kind: "photo", filename, blob, startedAt, source, signal, onProgress });
+        },
         onSuccess: () => {
+          landedSeq.current += 1;
           failedPhotos.current.delete(index);
           setPhotoStates(markAt(index, "uploaded"));
         },
         onFailure: (e: unknown) => {
+          if (isUnreadable({ filename, error: e })) { setPhotoStates(markAt(index, "unreadable")); return; }
           noteFailure({ filename, error: e });
           failedPhotos.current.set(index, { blob, startedAt, source });
           setPhotoStates(markAt(index, "failed"));
         },
       });
     },
-    [uploadCaptureFile, enqueue, isSealed, noteFailure]
+    [uploadCaptureFile, enqueue, isSealed, noteFailure, notePreview]
   );
 
   const handleChunk = useCallback(
@@ -178,6 +186,7 @@ export function useCaptureUploads(): CaptureUploads {
             source: "microphone", segmentId, segmentStartedAt, signal, onProgress,
           }),
         onSuccess: () => {
+          landedSeq.current += 1;
           failedAudio.current.delete(key);
           setAudioChunks(markChunk(key, "uploaded"));
         },
@@ -201,16 +210,20 @@ export function useCaptureUploads(): CaptureUploads {
       enqueue({
         filename,
         priority: false,
-        send: ({ signal, onProgress }) =>
-          uploadCaptureFile({
+        send: async ({ signal, onProgress }) => {
+          await assertReadable(file, { name: file.name });
+          await uploadCaptureFile({
             sessionId: sid, kind: "file", filename, blob: file, startedAt, source: "disk",
             originalName: file.name, mimeType: file.type || undefined, signal, onProgress,
-          }),
+          });
+        },
         onSuccess: () => {
+          landedSeq.current += 1;
           failedFiles.current.delete(index);
           setFileStates(markAt(index, "uploaded"));
         },
         onFailure: (e: unknown) => {
+          if (isUnreadable({ filename, error: e })) { setFileStates(markAt(index, "unreadable")); return; }
           noteFailure({ filename, error: e });
           failedFiles.current.set(index, { file });
           setFileStates(markAt(index, "failed"));
@@ -243,17 +256,18 @@ export function useCaptureUploads(): CaptureUploads {
   const { clearActive } = runner;
   const resetState = useCallback(() => {
     setPhotoStates([]);
+    resetPreviews();
     setFileStates([]);
     setAudioChunks([]);
     clearActive();
-  }, [clearActive]);
+  }, [clearActive, resetPreviews]);
 
   return {
-    photoStates, fileStates, audioChunks,
+    photoStates, photoPreviews, fileStates, audioChunks,
     activeUpload: runner.activeUpload,
     setPhotoStates, setFileStates,
     uploadPhoto, uploadFile, handleChunk, retryFailedUploads,
-    readFailureSeq, closeForSealing, reopenAfterSealing,
+    readFailureSeq, readLandedSeq, closeForSealing, reopenAfterSealing,
     awaitPending: runner.awaitPending,
     abortPending: runner.abortPending,
     clearPendingAndFailed, resetState,
@@ -301,6 +315,16 @@ function replayFailed(opts: {
   }
 }
 
+/**
+ * A picked file whose bytes could not be read: logged, and given no retry,
+ * since a retry would read the same missing bytes.
+ */
+function isUnreadable(opts: { filename: string; error: unknown }): boolean {
+  if (!(opts.error instanceof UnreadableFileError)) return false;
+  console.error(`[capture] ${opts.filename} could not be read before upload: ${opts.error.message}`);
+  return true;
+}
+
 /** An abort is a deliberate user action, not a fault — log it as such. */
 function logUploadFailure(opts: { filename: string; error: unknown }): void {
   const { filename, error } = opts;
@@ -310,28 +334,4 @@ function logUploadFailure(opts: { filename: string; error: unknown }): void {
   }
   const msg = error instanceof Error ? error.message : String(error);
   console.error(`[capture] Upload failed (${filename}): ${msg}`);
-}
-
-function deriveCounts(
-  { photoStates, fileStates, audioChunks }:
-  { photoStates: UploadState[]; fileStates: UploadState[]; audioChunks: AudioChunkStatus[] }
-): UploadCounts {
-  const photosUploaded = photoStates.filter((s) => s === "uploaded").length;
-  const photosUploading = photoStates.filter((s) => s === "uploading").length;
-  const photosFailed = photoStates.filter((s) => s === "failed").length;
-  const audioUploaded = audioChunks.filter((c) => c.state === "uploaded").length;
-  const audioUploading = audioChunks.filter((c) => c.state === "uploading").length;
-  const audioFailed = audioChunks.filter((c) => c.state === "failed").length;
-  const filesUploaded = fileStates.filter((s) => s === "uploaded").length;
-  const filesUploading = fileStates.filter((s) => s === "uploading").length;
-  const filesFailed = fileStates.filter((s) => s === "failed").length;
-  return {
-    photosUploaded, photosUploading, photosFailed, photoTotal: photoStates.length,
-    audioUploaded, audioUploading, audioFailed, audioTotal: audioChunks.length,
-    filesUploaded, filesUploading, filesFailed, fileTotal: fileStates.length,
-    uploadsInProgress: photosUploading > 0 || audioUploading > 0 || filesUploading > 0,
-    // An upload is "pending" exactly while it sits in the uploading state: set
-    // on enqueue, cleared only when it settles.
-    pendingUploads: photosUploading + audioUploading + filesUploading,
-  };
 }
