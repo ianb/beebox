@@ -76,7 +76,7 @@ export function Controls({ options, onChange }: { options: ViewOptions; onChange
         onChange={(group: Grouping) => onChange({ group })}
         tabs={[
           { value: "place", label: "By place" },
-          { value: "plate", label: "By date" },
+          { value: "plate", label: "By status" },
         ]}
       />
     </Row>
@@ -85,7 +85,8 @@ export function Controls({ options, onChange }: { options: ViewOptions; onChange
 
 /**
  * "15 on your plate · 4 later · 3 for the agent" — the reduction's own
- * numbers, so the first one is the nav badge's number by construction. "for
+ * numbers, so the first one is the nav badge's number by construction. "later"
+ * is left out at zero: "0 later" only raised "later than what?". "for
  * the agent" toggles `assignedView` in place, in the URL like every other
  * view control; while viewing the agent's own slice the headline names that
  * and offers the way back, rather than showing plate numbers that would no
@@ -111,7 +112,7 @@ export function PlateHeadline({ result, agentCount, viewingAgent, onChange }: {
   return (
     <Row gap="xs" wrap align="baseline">
       <Text material as="span" weight="semibold">{onPlate} on your plate</Text>
-      <Text material as="span" tone="muted">· {later} later</Text>
+      {later > 0 ? <Text material as="span" tone="muted">· {later} later</Text> : null}
       {agentCount > 0 ? (
         <InlineAction material id="bbx-todo-view-for-the-agent" intent="subtle" onClick={() => onChange({ assignedView: "agent" })}>
           · {agentCount} for the agent

@@ -67,11 +67,15 @@ export interface TodoReduction {
   next: string | null;
 }
 
-/** The plate grouping: the six states in the order and with the labels the list already uses. */
+/**
+ * The plate grouping ("By status"): the six states in the list's order, with
+ * the person's words — `escalated` reads "Overdue" like its date chip, and
+ * `quiet` reads "Later" like the plate headline and the start chip.
+ */
 const PLATE_GROUPS: ReadonlyArray<{ state: TodoPlateState; label: string }> = [
-  { state: "escalated", label: "Escalated" },
-  { state: "on-plate", label: "On the plate" },
-  { state: "quiet", label: "Quiet" },
+  { state: "escalated", label: "Overdue" },
+  { state: "on-plate", label: "On your plate" },
+  { state: "quiet", label: "Later" },
   { state: "parked", label: "Parked" },
   { state: "done", label: "Done" },
   { state: "dropped", label: "Dropped" },

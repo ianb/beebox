@@ -1,7 +1,9 @@
 # The card's todo summary line
 
-At the top of a card, one quiet line says what its todos amount to: "3 open ·
-1 overdue · 2 done" (`docs/plans/todos-ui.md`, Track 4). It is the
+At the top of a card, one quiet line says what its todos amount to: "3 on
+your plate · 1 later · 1 overdue · 2 done" (`docs/plans/todos-ui.md`, Track
+4). It splits the open todos the way the plate does, so its numbers agree with
+the plate's headline and the nav badge. It is the
 boxholder-scope reduction of a query on the card itself, so an agent
 follow-up never counts. `CardTodos.tsx` owns that query; this is the line.
 
@@ -9,11 +11,11 @@ follow-up never counts. `CardTodos.tsx` owns that query; this is the line.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
-import { directoryListPath } from "../../../src/components/todo/summary.js";
+import { controlTargetSelector, directoryListPath } from "../../../src/components/todo/summary.js";
 
 globalThis.React = React;
 
-const none = { open: 0, done: 0, parked: 0, escalated: 0 };
+const none = { open: 0, onPlate: 0, done: 0, parked: 0, escalated: 0 };
 
 function line(reduction, onClick = null) {
   const openAction = onClick === null ? null : { onClick, title: "Go to the first open todo" };
@@ -35,36 +37,64 @@ line({})
 
 ## All done
 
-The card is finished; the line still says so, and "0 open" is not a control.
+The card is finished; the line still says so, and "0 on your plate" is not a
+control.
 
 ```ts
 text(line({ done: 2 }, () => undefined))
-=> 0 open · 2 done
+=> 0 on your plate · 2 done
 ```
 
 ## Overdue
 
 `escalated` is the server's word for past due; the line calls it overdue.
-With an open todo rendered below, "3 open" is a button that scrolls to it.
+With an open todo rendered below, the first count is a button that scrolls
+to it.
 
 ```ts
-text(line({ open: 3, escalated: 1, done: 2 }, () => undefined))
-=> [3 open] · 1 overdue · 2 done
+text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, () => undefined))
+=> [3 on your plate] · 1 overdue · 2 done
 ```
 
 In a box view nothing is drawn to scroll to, so the same counts are plain
 text rather than a button that does nothing:
 
 ```ts
-text(line({ open: 3, escalated: 1, done: 2 }))
-=> 3 open · 1 overdue · 2 done
+text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }))
+=> 3 on your plate · 1 overdue · 2 done
 ```
 
 Parked todos are named when there are any:
 
 ```ts
-text(line({ open: 1, parked: 2 }))
-=> 1 open · 2 parked
+text(line({ open: 1, onPlate: 1, parked: 2 }))
+=> 1 on your plate · 2 parked
+```
+
+## Later
+
+An open todo whose `start` has not come yet is not on the plate; the line
+names it "later", as the plate's headline does. The control is the count
+of the todos it goes to: "on your plate" when any are, else "later".
+
+```ts
+text(line({ open: 3, onPlate: 2 }, () => undefined))
+=> [2 on your plate] · 1 later
+
+text(line({ open: 1, onPlate: 0 }, () => undefined))
+=> 0 on your plate · [1 later]
+```
+
+On a card, the control scrolls to the first todo in the set it names. A todo
+must carry that plate state explicitly: one embedded from another card has
+none here, so it is never the target.
+
+```ts
+controlTargetSelector({ onPlate: 0 }).includes('[data-todo-plate-state="quiet"]')
+=> true
+
+controlTargetSelector({ onPlate: 2 }).includes("quiet")
+=> false
 ```
 
 ## A directory's line
