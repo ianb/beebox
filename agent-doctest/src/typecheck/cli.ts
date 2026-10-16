@@ -10,6 +10,12 @@
  * directory. `--by-dir N` adds a count of errors per directory, N path
  * segments deep. Exits 1 when any error is found.
  *
+ * `--only <file>...`, last on the line, narrows the run to those doctests:
+ * each is checked under the group whose patterns match it, and a group with
+ * none is skipped. A hook passes a commit's staged doctests this way, keeping
+ * the package's own file-to-tsconfig mapping in one place. A listed file no
+ * group matches is an error.
+ *
  * Runs are incremental: each tsconfig keeps TypeScript build info in
  * `node_modules/.cache/doctest-typecheck/` beside it, and a doctest is
  * re-checked only when it or something it imports changed. `--no-cache`
@@ -30,10 +36,12 @@ interface Args {
   groups: Group[];
   byDir: number | null;
   cache: boolean;
+  /** Absolute paths, or null for every doctest the groups match. */
+  only: Set<string> | null;
 }
 
 function usage(problem: string): never {
-  process.stderr.write(`doctest-typecheck: ${problem}\nusage: doctest-typecheck [--by-dir N] [--no-cache] --project <tsconfig> <doctest file or glob>... [--project …]\n`);
+  process.stderr.write(`doctest-typecheck: ${problem}\nusage: doctest-typecheck [--by-dir N] [--no-cache] --project <tsconfig> <doctest file or glob>... [--project …] [--only <doctest file>...]\n`);
   process.exit(2);
 }
 
@@ -41,9 +49,13 @@ function parseArgs(argv: string[]): Args {
   const groups: Group[] = [];
   let byDir: number | null = null;
   let cache = true;
+  let only: Set<string> | null = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? "";
-    if (arg === "--project") {
+    if (arg === "--only") {
+      only = new Set(argv.slice(i + 1).map((file) => resolve(file)));
+      break;
+    } else if (arg === "--project") {
       const tsconfig = argv[++i];
       if (tsconfig === undefined) usage("--project needs a tsconfig path");
       groups.push({ tsconfig, patterns: [] });
@@ -61,7 +73,7 @@ function parseArgs(argv: string[]): Args {
     }
   }
   if (groups.length === 0) usage("no --project given");
-  return { groups, byDir, cache };
+  return { groups, byDir, cache, only };
 }
 
 function expand(patterns: string[]): string[] {
@@ -98,14 +110,20 @@ function byDirectory(diagnostics: DoctestDiagnostic[], depth: number): string[] 
 }
 
 function main(): void {
-  const { groups, byDir, cache } = parseArgs(process.argv.slice(2));
+  const { groups, byDir, cache, only } = parseArgs(process.argv.slice(2));
   const all: DoctestDiagnostic[] = [];
+  const unmatched = new Set(only);
   let checked = 0;
   for (const { tsconfig, patterns } of groups) {
     if (patterns.length === 0) usage(`--project ${tsconfig} names no doctests`);
-    const files = expand(patterns);
+    const files = only === null ? expand(patterns) : expand(patterns).filter((file) => only.has(file));
+    for (const file of files) unmatched.delete(file);
+    if (files.length === 0) continue;
     checked += files.length;
     all.push(...typecheckDoctests({ tsconfig, files, ...(cache ? { cacheFile: cacheFileFor(tsconfig) } : {}) }));
+  }
+  if (unmatched.size > 0) {
+    usage(`no --project group covers ${[...unmatched].map((file) => relative(process.cwd(), file)).join(", ")}`);
   }
   for (const d of all) process.stdout.write(`${format(d)}\n`);
   if (byDir !== null && all.length > 0) process.stdout.write(`\nerrors by directory:\n${byDirectory(all, byDir).join("\n")}\n`);
