@@ -26,10 +26,10 @@ import { fileChangeAffectsPath } from "../../lib/moved-card-recovery";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { CardTodosContext, indexPlateStates } from "./card-todos-context";
 import { TodoSummaryLine } from "./TodoSummaryLine";
-import { FIRST_OPEN_TODO_SELECTOR } from "./summary";
+import { controlTargetSelector } from "./summary";
 
-function firstOpenTodo(container: HTMLElement | null): Element | null {
-  return container === null ? null : container.querySelector(FIRST_OPEN_TODO_SELECTOR);
+function controlTarget(container: HTMLElement | null, reduction: { onPlate: number } | undefined): Element | null {
+  return container === null || reduction === undefined ? null : container.querySelector(controlTargetSelector(reduction));
 }
 
 /** Every status, so the items carry plate state for each todo; the reduction counts all of them regardless. */
@@ -65,14 +65,14 @@ export function CardTodos({ path, children }: { path: string; children: ReactNod
   // Whenever the body or the result changes: the renderer below may have
   // drawn todos (a core body) or none (a box view).
   useEffect(() => {
-    setHasOpenTarget(firstOpenTodo(containerRef.current) !== null);
+    setHasOpenTarget(controlTarget(containerRef.current, result?.reduction) !== null);
   }, [children, result]);
 
   const todos = result === undefined
     ? null
     : indexPlateStates(path, result.groups.flatMap((group) => group.rows.flatMap((row) => row.items)));
   const jumpToOpen = (): void => {
-    firstOpenTodo(containerRef.current)?.scrollIntoView({ block: "center" });
+    controlTarget(containerRef.current, result?.reduction)?.scrollIntoView({ block: "center" });
   };
 
   return (

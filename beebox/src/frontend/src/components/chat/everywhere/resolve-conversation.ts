@@ -100,7 +100,8 @@ function restoreTarget(input: { target: ConversationTarget; label: string | unde
 /** A bootstrapped session is unstarted only when it is empty and still holds this tab's receipt (read after `retireUsedReceipt`). */
 function resumed(data: Extract<Bootstrap, { kind: "resumable" }>, receipts: ReservationReceipts | null): ResolvedConversation {
   const unstarted = data.history.total === 0 && receipts?.get(data.sessionId) !== undefined;
-  return { unstarted, selection: { kind: "ready", label: data.label ?? "Conversation", target: {
+  const label = data.label ?? (unstarted ? "New conversation" : "Conversation");
+  return { unstarted, selection: { kind: "ready", label, target: {
     kind: "session", sessionId: data.sessionId, contextDir: data.contextDir,
   } }, initial: preload(data) };
 }

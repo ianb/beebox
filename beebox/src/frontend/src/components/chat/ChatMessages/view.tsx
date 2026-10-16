@@ -9,8 +9,8 @@ import type { SessionEntry } from "../../../api";
 import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../../../lib/audio/speech-parsing/parse";
 import { SpeechMenu } from "../SpeechMenu";
 import { SpeechChunk } from "../SpeechChunk";
-import { parseCallouts } from "../../../lib/structured-output-parsing";
-import { CalloutStack } from "../CalloutBlock";
+import { splitCalloutParts, type CalloutPart } from "../../../lib/structured-output-parsing";
+import { CalloutBlock } from "../CalloutBlock";
 import { ActivityGroup } from "./activity-rendering";
 import { MarkdownContent, type OnZoomView } from "../markdown-rendering";
 import { countSpeech, groupIntoParts, type SelfNoteInfo } from "../message-parsing";
@@ -70,6 +70,49 @@ function AssistantSpeechText({
   );
 }
 
+/**
+ * One text group, with its callouts in the place the agent wrote them. Prose
+ * between them renders through AssistantSpeechText; each prose part's speech
+ * offset continues from the parts before it. With prose hidden, only the
+ * callouts render.
+ */
+function AssistantTextGroup({
+  text,
+  indexOffset,
+  showProse,
+  onZoomView,
+  ...speech
+}: {
+  text: string;
+  indexOffset: number;
+  showProse: boolean;
+  activeIndex: number | null;
+  segmentStates: Record<number, SpeechSegmentState>;
+  segmentFailures: Record<number, string>;
+  onZoomView?: OnZoomView;
+}) {
+  const parts = useMemo(() => {
+    const out: { part: CalloutPart; offset: number }[] = [];
+    let offset = indexOffset;
+    for (const part of splitCalloutParts(text)) {
+      out.push({ part, offset });
+      if (part.type === "text") offset += countSpeech(part.text);
+    }
+    return out;
+  }, [text, indexOffset]);
+  return (
+    <>
+      {parts.map(({ part, offset }, i) =>
+        part.type === "callout" ? (
+          <CalloutBlock key={i} callout={part.callout} onZoomView={onZoomView} />
+        ) : showProse ? (
+          <AssistantSpeechText key={i} text={part.text} indexOffset={offset} onZoomView={onZoomView} {...speech} />
+        ) : null
+      )}
+    </>
+  );
+}
+
 export function AssistantMessage({
   entries,
   debugView,
@@ -115,10 +158,8 @@ export function AssistantMessage({
   const isPlaying = speechPlaying === true;
   const segments = useMemo(() => (hasSpeech ? parseAllSpeechTags(allText) : []), [hasSpeech, allText]);
   const messageId = entries[0]?.uuid ?? "";
-  // Pulled out of the message body so prose rendering doesn't show raw XML;
-  // rendered in their own surfaces below/after the markdown groups. Acks
-  // are rendered as badges on the preceding user message — see InteractiveChat.
-  const callouts = useMemo(() => parseCallouts(allText), [allText]);
+  // Callouts render in text order inside each group (AssistantTextGroup).
+  // Acks are rendered as badges on the preceding user message — see InteractiveChat.
   const showProse = proseEnabled !== false;
   const activeIndex = speechActiveIndex === undefined ? null : speechActiveIndex;
   const segmentStates = speechSegmentStates ?? {};
@@ -168,28 +209,28 @@ export function AssistantMessage({
           sibling of the sticky bar, not an ancestor, so it doesn't capture the
           icon's sticky positioning. */}
       <div className="min-w-0 overflow-hidden">
-        {showProse ? grouped.map((group, i) =>
+        {grouped.map((group, i) =>
           group.kind === "text" ? (
             debugView ? (
-              <Pre key={i} size="xs" boxed>{group.text}</Pre>
+              showProse ? <Pre key={i} size="xs" boxed>{group.text}</Pre> : null
             ) : (
-              <AssistantSpeechText
+              <AssistantTextGroup
                 key={i}
                 text={group.text}
                 indexOffset={groupSpeechOffsets[i] ?? 0}
+                showProse={showProse}
                 activeIndex={activeIndex}
                 segmentStates={segmentStates}
                 segmentFailures={segmentFailures}
                 onZoomView={onZoomView}
               />
             )
-          ) : group.kind === "update" ? (
+          ) : !showProse ? null : group.kind === "update" ? (
             <p key={i} className="my-1 text-sm text-warm-600 whitespace-pre-wrap">{group.text}</p>
           ) : (
             <ActivityGroup key={i} parts={group.parts} />
           )
-        ) : null}
-        {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
+        )}
       </div>
     </div>
   );

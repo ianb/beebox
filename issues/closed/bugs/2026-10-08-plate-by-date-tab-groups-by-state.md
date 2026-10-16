@@ -1,19 +1,22 @@
 ---
 title: "The plate's \"By date\" tab groups by plate state and shows no dates"
-workstream: unattached
+workstream: plate-wording
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending, C-reconnecting and F-newcomer journey walks, 2026-10-08
+resolution: implemented
 ---
+
+Closed 2026-10-16 on worktree-plate-wording (8eaccd8ac): the tab is renamed "By status", and its groups read Overdue / On your plate / Later / Parked / Done / Dropped (`core/todo/collection.ts`). The internal grouping value stays `plate`. The Dated strip still renders above both tabs; it is the date view.
 
 The plate has two grouping tabs, "By place" and "By date". "By date" does not
 group by date. It groups by plate state (Escalated, On the plate, Quiet,
 Parked, Done, Dropped). When every todo is in one state, the tab shows one
 group, "On the plate (4)", with no dates, and looks the same as "By place".
-Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 56),
-[C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 30),
-[F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 32: "DATED, ON THE
+Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 56),
+[C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 30),
+[F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 32: "DATED, ON THE
 PLATE (2), QUIET (1)").
 
 ## Mechanism
@@ -34,4 +37,4 @@ the only user-visible part.
 
 ## Re-encounter 2026-10-09 (journey walks)
 
-Seen again in [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 58): "By date" does not sort by date; the walker saw DATED, then ON THE PLATE (3), the same grouped list with a relabelled header (shot 21).
+Seen again in [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 58): "By date" does not sort by date; the walker saw DATED, then ON THE PLATE (3), the same grouped list with a relabelled header (shot 21).

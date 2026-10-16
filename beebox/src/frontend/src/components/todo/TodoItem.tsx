@@ -167,6 +167,7 @@ export function TodoItem(props: TodoItemProps): ReactNode {
   const data = {
     "data-todo-status": props.status,
     "data-todo-assigned": assigned,
+    "data-todo-plate-state": props.plateState ?? undefined,
     "data-todo-locator": locatorAttr(locator),
   };
   const chips = muted ? null : <Chips props={props} />;

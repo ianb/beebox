@@ -93,12 +93,12 @@ export function AttentionBadges({ base, pendingQuestions, onPlateTodos, escalate
         className={`${SEGMENT} relative`}
         title={
           escalatedTodos > 0
-            ? `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate, ${escalatedTodos} escalated`
+            ? `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate, ${escalatedTodos} overdue`
             : `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate`
         }
         aria-label={
           escalatedTodos > 0
-            ? `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate, ${escalatedTodos} escalated`
+            ? `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate, ${escalatedTodos} overdue`
             : `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate`
         }
       >

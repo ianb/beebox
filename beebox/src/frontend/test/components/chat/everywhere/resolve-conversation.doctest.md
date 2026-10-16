@@ -300,6 +300,16 @@ const resumed = await resolveConversation({ utils: fakeUtils({ bootstraps: [resu
 => { reload: true, emptyNoReceipt: false, resumed: false }
 ```
 
+An untitled chat's label follows the same state. Reloading the unstarted chat
+keeps "New conversation", the label it had before the reload; an untitled
+session that is not unstarted reads "Conversation".
+
+```ts continue
+({ reload: reload.selection.kind === "ready" ? reload.selection.label : null,
+  emptyNoReceipt: emptyNoReceipt.selection.kind === "ready" ? emptyNoReceipt.selection.label : null })
+=> { reload: "New conversation", emptyNoReceipt: "Conversation" }
+```
+
 A restored `start` target (a Codex chat chosen before its first send) is
 unstarted; a restored session target is unstarted only while this tab holds
 its receipt.
