@@ -102,10 +102,11 @@ export function computePending(applied: ManifestEntry[]): Migration[] {
 /**
  * Run one migrator script against a box.
  *
- * Exit-code convention shared with the harness and every migrator: 0 success,
- * 2 means the migration ran but some individual cards could not be converted
- * (a soft, per-card failure — record it and continue; the cards are printed and
- * `bbx validate` surfaces them), anything else is a hard failure that stops the
+ * Exit-code convention for every migrator: 0 means nothing is left. 2 means it
+ * ran but left work: cards it could not convert, or box code and fields still
+ * in the old shape. The sweep's agent repair takes that work, and a rerun
+ * confirms it. Never print a warning and exit 0; see "Leftover work exits 2" in
+ * docs/cards/migrations.md. Anything else is a hard failure that stops the
  * queue.
  */
 export function runMigrationScript(args: { script: string; boxRoot: string; signal?: AbortSignal | undefined; diagnosticsToStderr?: boolean | undefined; onOutput?: (text: string) => void }): Promise<number> {
@@ -116,5 +117,5 @@ export function runMigrationScript(args: { script: string; boxRoot: string; sign
   });
 }
 
-/** A soft (per-card) failure records the migration and continues; see {@link runMigrationScript}. */
+/** Leftover work for the agent repair; see {@link runMigrationScript}. */
 export const SOFT_FAILURE_EXIT = 2;

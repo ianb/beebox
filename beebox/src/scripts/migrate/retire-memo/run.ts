@@ -14,11 +14,16 @@
  *    (annex links kept valid), docs, referrers, then memo deletes. Every write
  *    is atomic.
  * 3. Verify: no memo is left, and every doc and audio card written parses.
- *    `--verify` alone runs only this phase.
+ *    `--verify` alone runs this phase and the next.
  *
- * Before planning, box code (`src/`, `_config/` scripts and JSON) that names
- * memo cards is printed as a warning; conversion still runs (boxholder,
- * 2026-10-16). A box view selecting `*.memo.card` shows nothing afterwards.
+ * 4. Leftovers: box code (`src/`, `_config/` scripts and JSON) or a card's
+ *    frontmatter that still names memo cards, such as a view's dependency glob
+ *    or a styling rule. The exact-filename rewrite cannot fix these. Conversion
+ *    still runs (boxholder, 2026-10-16); the run then exits 2 with each path
+ *    printed last, so the sweep's bounded agent repair fixes them and a rerun
+ *    confirms (docs/cards/migrations.md, "Leftover work exits 2"). Body prose
+ *    and `.md` files are not checked: old guides and prompts may quote memo
+ *    filenames, and an agent should not rewrite them.
  *
  * Generated guidance (`.claude/`, `.agents/`), parked template mirrors
  * (`_config/_template-updates/`), `.git` and `node_modules` are skipped; the
@@ -38,7 +43,9 @@ import { TEMPLATE_UPDATES_DIR } from "../../../core/install-template-file.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { movePathPreservingAnnexSymlink } from "../../../core/card-files/move-phase2.js";
 import { parseCardText } from "../../../core/card-io.js";
+import { splitCardContent } from "../../../cards/frontmatter.js";
 import { createCardSchemaMap } from "../../../schemas.js";
+import { SOFT_FAILURE_EXIT } from "../../../core/migration-run.js";
 import { planRetireMemo, type PlannedWrite } from "./plan.js";
 
 const SKIP_DIRS = new Set([".git", "node_modules", ".claude", ".agents"]);
@@ -46,6 +53,7 @@ const TEXT_SUFFIXES = [".card", ".md"];
 const CODE_SUFFIXES = [".ts", ".tsx", ".js", ".mjs", ".json"];
 const CODE_DIRS = ["src", "_config"];
 const MEMO_IN_CODE = /\.memo\.card|["']memo["']/;
+const MEMO_SUFFIX = ".memo.card";
 
 /** Every file under `rel`, box-relative and sorted, with whether it is a regular file. */
 async function walk(boxRoot: string, rel: string): Promise<Array<{ path: string; regular: boolean }>> {
@@ -68,14 +76,20 @@ async function walk(boxRoot: string, rel: string): Promise<Array<{ path: string;
   return out.toSorted((a, b) => a.path.localeCompare(b.path));
 }
 
-/** Box code that names memo cards: printed, not fixed. */
-async function codeWarnings(boxRoot: string): Promise<string[]> {
+/** Box code and card fields that still name memo cards after conversion: the repair agent's work list. */
+async function leftovers(boxRoot: string): Promise<string[]> {
   const lines: string[] = [];
   for (const dir of CODE_DIRS) {
     for (const file of await walk(boxRoot, dir)) {
       if (!file.regular || !CODE_SUFFIXES.some((suffix) => file.path.endsWith(suffix))) continue;
       const text = await fs.readFile(path.join(boxRoot, file.path), "utf8");
-      if (MEMO_IN_CODE.test(text)) lines.push(`warning: ${file.path} names memo cards; it needs updating by hand after this migration`);
+      if (MEMO_IN_CODE.test(text)) lines.push(`leftover: ${file.path} is box code that names memo cards; change it to doc cards`);
+    }
+  }
+  for (const file of await walk(boxRoot, "")) {
+    if (!file.regular || !file.path.endsWith(".card")) continue;
+    if (splitCardContent(await fs.readFile(path.join(boxRoot, file.path), "utf8")).frontmatterText.includes(MEMO_SUFFIX)) {
+      lines.push(`leftover: ${file.path} names memo cards in a field; change it to doc cards`);
     }
   }
   return lines;
@@ -128,7 +142,6 @@ export async function runRetireMemo({ boxRoot, mode }: { boxRoot: string; mode: 
   let written: PlannedWrite[] = [];
   let moved: string[] = [];
   if (mode !== "verify") {
-    lines.push(...await codeWarnings(boxRoot));
     const all = await walk(boxRoot, "");
     const texts = new Map<string, string>();
     for (const file of all) {
@@ -164,6 +177,11 @@ export async function runRetireMemo({ boxRoot, mode }: { boxRoot: string; mode: 
   if (problems.length > 0) {
     lines.push(...problems, `retire-memo: verify failed; ${String(problems.length)} problem(s).`);
     return { code: 1, lines };
+  }
+  const left = await leftovers(boxRoot);
+  if (left.length > 0) {
+    lines.push(...left, `retire-memo: converted; ${String(left.length)} leftover(s) still name memo cards.`);
+    return { code: SOFT_FAILURE_EXIT, lines };
   }
   if (mode === "verify") lines.push("retire-memo: verify clean.");
   return { code: 0, lines };
