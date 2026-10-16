@@ -21,8 +21,8 @@ const box = await makeTmpBox();
 const ctx = await buildLoadContext(box.root);
 
 // Four frontmatter lines, so body line 1 is file line 5.
-function memo(body: string): string {
-  return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
+function doc(body: string): string {
+  return `---\ntitle: Kitchen\ncontains: Notes on the kitchen remodel.\n---\n${body}`;
 }
 
 /** A locator the way this file reads it: the file line, plus `#n` for the second and later todo on that line. */
@@ -33,7 +33,7 @@ function where(locator: TodoLocator): string {
 
 /** One line per todo: `line [section path] parent "text" ann="…" refs=…` */
 function show(relPath: string, body: string): string {
-  const { items, issues } = extractCardTodos({ relPath, content: memo(body), ctx });
+  const { items, issues } = extractCardTodos({ relPath, content: doc(body), ctx });
   if (issues.length > 0) return issues.map((i) => `[${i.kind}] ${i.message}`).join("\n");
   return items
     .map((item) => {
@@ -50,7 +50,7 @@ function show(relPath: string, body: string): string {
     .join("\n");
 }
 
-const CARD = "_content/projects/Kitchen.memo.card";
+const CARD = "_content/projects/Kitchen.doc.card";
 ```
 
 ## The heading path above a todo, outermost first
@@ -233,11 +233,11 @@ agent writes for a line — `path:5` — still means the todo they meant.
 ```ts continue
 const twoOnALine = extractCardTodos({
   relPath: CARD,
-  content: memo("- {% todo %}Appraise{% /todo %} — ask Marisol {% todo %}Insure{% /todo %}"),
+  content: doc("- {% todo %}Appraise{% /todo %} — ask Marisol {% todo %}Insure{% /todo %}"),
   ctx,
 });
 twoOnALine.items.map((item) => formatTodoLocation(item)).join(" ")
-=> _content/projects/Kitchen.memo.card:5 _content/projects/Kitchen.memo.card:5#2
+=> _content/projects/Kitchen.doc.card:5 _content/projects/Kitchen.doc.card:5#2
 ```
 
 A third on the same line keeps counting, and a todo on a line of its own never
@@ -264,12 +264,12 @@ both count, in order of appearance.
 
 ```ts continue
 show(CARD, [
-  "- {% todo %}Sell [the piano](../Piano.memo.card){% /todo %} — see [the appraisal](/_content/Appraisal.memo.card)",
-  '- {% todo %}Insure it {% see-also ref="Insurance.memo.card" %}policy{% /see-also %}{% /todo %}',
+  "- {% todo %}Sell [the piano](../Piano.doc.card){% /todo %} — see [the appraisal](/_content/Appraisal.doc.card)",
+  '- {% todo %}Insure it {% see-also ref="Insurance.doc.card" %}policy{% /see-also %}{% /todo %}',
 ].join("\n"))
 =>
-5 [] parent=- "Sell the piano" ann="see the appraisal" refs=_content/Piano.memo.card,_content/Appraisal.memo.card
-6 [] parent=- "Insure it" ann="" refs=_content/projects/Insurance.memo.card
+5 [] parent=- "Sell the piano" ann="see the appraisal" refs=_content/Piano.doc.card,_content/Appraisal.doc.card
+6 [] parent=- "Insure it" ann="" refs=_content/projects/Insurance.doc.card
 ```
 
 A relative ref resolves against the card's own directory and a box-root ref
@@ -296,10 +296,10 @@ Refs are deduped in order of first appearance.
 
 ```ts continue
 show(CARD, [
-  "- {% todo %}Two links to [one card](Piano.memo.card){% /todo %} — and [again](./Piano.memo.card)",
+  "- {% todo %}Two links to [one card](Piano.doc.card){% /todo %} — and [again](./Piano.doc.card)",
 ].join("\n"))
 =>
-5 [] parent=- "Two links to one card" ann="and again" refs=_content/projects/Piano.memo.card
+5 [] parent=- "Two links to one card" ann="and again" refs=_content/projects/Piano.doc.card
 ```
 
 ## Frontmatter todos have no body position
@@ -312,12 +312,12 @@ const fm = extractCardTodos({
   relPath: CARD,
   content: [
     "---",
-    "status: new",
-    "created: 2026-07-01T10:00:00Z",
+    "title: Kitchen",
+    "contains: Notes on the kitchen remodel.",
     "todos:",
     '  - text: "Renew the permit"',
     "    see-also:",
-    '      - ref: "/_content/Permit.memo.card"',
+    '      - ref: "/_content/Permit.doc.card"',
     '      - href: "https://example.com/forms"',
     "---",
     "",
@@ -325,7 +325,7 @@ const fm = extractCardTodos({
   ctx,
 });
 JSON.stringify(fm.items.map((i) => ({ sectionPath: i.sectionPath, parent: i.parent, annotation: i.annotation, refs: i.refs })))
-=> [{"sectionPath":[],"parent":null,"annotation":"","refs":["_content/Permit.memo.card"]}]
+=> [{"sectionPath":[],"parent":null,"annotation":"","refs":["_content/Permit.doc.card"]}]
 ```
 
 ## Extraction is pure: the clock cannot reach it
@@ -336,8 +336,8 @@ one, and that is where plate-state comes from.
 
 ```ts continue
 const body = '{% todo due="2026-07-27" %}Overdue somewhere{% /todo %}\n';
-const a = extractCardTodos({ relPath: CARD, content: memo(body), ctx }).items;
-const b = extractCardTodos({ relPath: CARD, content: memo(body), ctx }).items;
+const a = extractCardTodos({ relPath: CARD, content: doc(body), ctx }).items;
+const b = extractCardTodos({ relPath: CARD, content: doc(body), ctx }).items;
 JSON.stringify(a) === JSON.stringify(b)
 => true
 

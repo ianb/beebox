@@ -1,7 +1,7 @@
 # Actions API
 
-The actions API handles raw-Fastify mutations — creating cards and uploading
-voice memos. (Answering and dismissing questions moved to the tRPC
+The actions API handles one raw-Fastify mutation — creating a card from a
+template. (Answering and dismissing questions moved to the tRPC
 `actions.answer`/`actions.dismiss` mutations — see `trpc-actions.doctest.md`;
 the raw `/api/actions/answer` duplicate was removed.)
 
@@ -19,9 +19,9 @@ const res = await ctx.request({
   method: "POST",
   url: "/api/actions/create",
   payload: {
-    path: "_content/inbox/new.memo.card",
-    template: "memo",
-    args: { content: "Hello from the API" },
+    path: "_content/inbox/new.doc.card",
+    template: "doc",
+    args: { title: "From the API", body: "Hello from the API" },
   },
 });
 res.statusCode
@@ -33,13 +33,13 @@ res.body.success
 => true
 
 res.body.path
-=> _content/inbox/new.memo.card
+=> _content/inbox/new.doc.card
 ```
 
 The card exists on disk:
 
 ```ts continue
-const content = await ctx.read("_content/inbox/new.memo.card");
+const content = await ctx.read("_content/inbox/new.doc.card");
 content.includes("Hello from the API")
 => true
 ```
@@ -55,7 +55,7 @@ const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
   url: "/api/actions/create",
-  payload: { template: "memo" },
+  payload: { template: "doc" },
 });
 res.statusCode
 => 400
@@ -72,7 +72,7 @@ const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
   url: "/api/actions/create",
-  payload: { path: "_content/inbox/test.memo.card" },
+  payload: { path: "_content/inbox/test.doc.card" },
 });
 res.statusCode
 => 400

@@ -8549,3 +8549,19 @@ bbx-siri-capture-audit-20261012:
       peak: 42077
       added: 2885
       turns: 5
+box1:
+  captured-voice-note-shape:
+    - date: 2026-10-16T17:12:52.067Z
+      boxCommit: 186b451e4c6f3c37e5f24828a06ebddfc6254ca4
+      repoCommit: 025ec7285c9f87225b73add2258d529c750e5c1f
+      initial: 31628
+      peak: 31628
+      added: 0
+      turns: 2
+    - date: 2026-10-16T17:14:11.677Z
+      boxCommit: 3c2f29e7971341499f07d365cd347142992507cd
+      repoCommit: 025ec7285c9f87225b73add2258d529c750e5c1f
+      initial: 31625
+      peak: 40880
+      added: 9255
+      turns: 16

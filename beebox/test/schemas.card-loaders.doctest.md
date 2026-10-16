@@ -4,13 +4,13 @@ Each card type owns how it appears in a list, through its schema's `summarize`
 hook. The registry builds the base summary and the type extends or replaces it.
 
 ```ts setup
-import { MemoSchema } from "../src/schemas/memo.js";
+import { DocSchema } from "../src/schemas/doc.js";
 import { ImageSchema } from "../src/schemas/image/schema.js";
 import { summarize } from "../src/core/loader-registry.js";
 import type { CardSchema } from "../src/cards/schema.js";
 
 const schemas = new Map<string, CardSchema>([
-  ["memo", MemoSchema],
+  ["doc", DocSchema],
   ["image", ImageSchema],
 ]);
 
@@ -20,76 +20,22 @@ function summaryOf(path: string, fields: Record<string, unknown>) {
 }
 ```
 
-## Memo — title from body
+## Doc — the base summary, title from `title:`
+
+A doc has no `summarize` hook, so its list entry is the base summary: the
+authored `title:` and no summary attributes.
 
 ```ts
-const m1 = {
-  type: "memo",
-  status: "new",
-  created: "2024-01-15T10:00:00Z",
-  body: "Pick up milk on the way home.",
-};
-const s = summaryOf("_content/inbox/Groceries.memo.card", m1);
+const d1 = { type: "doc", title: "Groceries for the week", body: "Pick up milk on the way home." };
+const s = summaryOf("_content/inbox/Groceries.doc.card", d1);
 s.title
-=> Pick up milk on the way home.
+=> Groceries for the week
 
 s.type
-=> memo
+=> doc
 
-JSON.stringify(s.attrs)
-=> {"status":"new"}
-```
-
-## Memo — falls back to `transcription.text` when body is empty
-
-```ts
-const m2 = {
-  type: "memo",
-  status: "processing",
-  created: "2024-01-15T10:00:00Z",
-  body: "",
-  transcription: { text: "This is the transcribed audio." },
-};
-summaryOf("Voice.memo.card", m2).title
-=> This is the transcribed audio.
-```
-
-## Memo — filename fallback when neither is present
-
-```ts
-const m3 = {
-  type: "memo",
-  status: "new",
-  created: "2024-01-15T10:00:00Z",
-  body: "",
-};
-summaryOf("_content/inbox/Blank_Thought.memo.card", m3).title
-=> Blank Thought
-```
-
-A memo with neither body nor transcription but an authored `title:` shows the
-title: the fallback is the base summary, not the bare filename.
-
-```ts continue
-summaryOf("_content/inbox/Blank_Thought.memo.card", { ...m3, title: "Something I meant to write" }).title
-=> Something I meant to write
-```
-
-## Memo — truncates long titles
-
-```ts
-const m4 = {
-  type: "memo",
-  status: "new",
-  created: "2024-01-15T10:00:00Z",
-  body: "a".repeat(200),
-};
-const s = summaryOf("x.memo.card", m4);
-s.title.length
-=> 80
-
-s.title.endsWith("…")
-=> true
+s.attrs
+=> undefined
 ```
 
 ## Image — title from description field
@@ -131,14 +77,15 @@ JSON.stringify(s.attrs)
 => {"has-text":true,"rotation":"90","filename":"attach/p.jpg"}
 ```
 
-## An unparsed card of either type keeps the filename
+## An unparsed card keeps the filename
 
-Neither type's hook runs without validated fields.
+Without validated fields there is no `title:` to read and no type hook runs, so
+either type falls back to the filename.
 
 ```ts
-const memo = summarize({ path: "_content/inbox/Unread_Note.memo.card" }, schemas);
+const doc = summarize({ path: "_content/inbox/Unread_Note.doc.card" }, schemas);
 const image = summarize({ path: "_content/inbox/photo-002.image.card" }, schemas);
-[memo.title, memo.attrs, image.title, image.attrs].join("|")
+[doc.title, doc.attrs, image.title, image.attrs].join("|")
 => Unread Note||photo 002|
 ```
 
@@ -156,7 +103,7 @@ const record = (fields: Record<string, unknown>) =>
 [
   record({ location: { text: "Tray 3" }, quantity: { value: "2 spools" } }),
   record({ location: { text: "Tray 3" } }),
-  record({ location: { ref: "../Garage.memo.card" }, quantity: { value: "2 spools" } }),
+  record({ location: { ref: "../Garage.doc.card" }, quantity: { value: "2 spools" } }),
   record({}),
 ].map((s) => [s.title, s.detail ?? null])
 => [["Solder", "Tray 3 · 2 spools"], ["Solder", "Tray 3"], ["Solder", "2 spools"], ["Solder", null]]

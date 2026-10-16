@@ -269,16 +269,19 @@ applies them; a verify phase re-scans. Shape copied from
   - Keeps `share-id` and every global field (`title`, `todos`, `theme`,
     `prominence`, `symbol`, `contains`, `contains-evidence`). Any other
     top-level or nested field is a planning error naming path and field.
-- **References.** The planner builds one path map: each memo → its doc, each
-  recording → its new path. Every card and `.md` file in the box is rewritten
-  in memory with the resolution-based rewriter
-  (`src/core/rewrite-card-refs/core.ts`, text-and-path API, needs no schema).
-  The planner then searches each rewritten text for any remaining memo
-  filename (`<base>.memo.card`) or old recording path inside an attach folder
-  (`<base>.attach/<file>`). Searching for the filename, not the full path,
-  also catches relative references in forms the rewriter skips (inline YAML
-  maps, `core.ts:29-31`). A match is a planning error naming the file. Nothing
-  is written when planning fails.
+- **References.** The doc keeps the memo's directory and basename, so the
+  planner replaces each exact memo filename (`<base>.memo.card` →
+  `<base>.doc.card`) in every card and `.md` file, the new docs included.
+  This catches every form a mention takes: relative and absolute links,
+  frontmatter refs, inline YAML maps the resolver-based rewriter skips
+  (`src/core/rewrite-card-refs/core.ts:29-31`), and prose. A recording in an
+  attach scope keeps its `<base>.attach/` prefix, so mentions of
+  `<base>.attach/<file>` gain the new folder the same way. A sibling
+  recording's bare filename cannot be told apart from prose; a remaining
+  mention of it is a planning error naming the file. Nothing is written
+  when planning fails. (Implementation note, 2026-10-16: this replaced the
+  path-map-plus-resolver design the plan review examined; it is simpler and
+  covers more reference forms.)
 - **Retry.** Every write is atomic (`writeFileAtomic`). The runner writes in this order per memo: audio card, recording
   move, doc, referrer rewrites, memo delete. The planner recognises each
   partial state and continues from it: a recording already at its new path

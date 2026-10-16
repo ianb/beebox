@@ -16,7 +16,7 @@ reports nothing:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/x.memo.card", "---\nstatus: new\n---\n");
+await box.write("_content/inbox/x.doc.card", "---\ntitle: Note\n---\n");
 await box.write("package.json", "{}");
 await box.write("AGENTS.md", "# Box\n");
 JSON.stringify(await checkBoxRoot(box.root))
@@ -69,7 +69,7 @@ recreated-two-root failure mode this check exists to catch:
 
 ```ts
 const legacyBox = await makeTmpBox();
-await legacyBox.write("content/box/inbox/x.memo.card", "---\nstatus: new\n---\n");
+await legacyBox.write("content/box/inbox/x.doc.card", "---\ntitle: Note\n---\n");
 const legacyStrays = await checkBoxRoot(legacyBox.root);
 legacyStrays[0]!.message
 => content: the box root is a closed vocabulary — user content goes under /_content/ (this is the pre-migration operational-root name — a v2 leftover, not a place to write to)

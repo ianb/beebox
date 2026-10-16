@@ -49,12 +49,12 @@ function outcome(promise) {
   return promise.then(() => "accepted", (error) => `${error.code}: ${error.message}`);
 }
 
-const cardPath = "_content/Porch.memo.card";
+const cardPath = "_content/Porch.doc.card";
 const original = [
   "---",
-  "status: new",
-  "created: 2026-07-01T10:00:00Z",
   "title: Porch",
+  "via:",
+  "  channel: email",
   "todos:",
   "  - text: Call the inspector",
   "    due: 2026-10-01",
@@ -98,7 +98,7 @@ Source: webapp
 Endpoint: todos.setStatus
 
 JSON.stringify(events)
-=> ["file-change _content/Porch.memo.card"]
+=> ["file-change _content/Porch.doc.card"]
 ```
 
 Reopening removes the attribute (absence means open), and the file is back
@@ -208,8 +208,8 @@ await outcome(caller(box.root).todos.setStatus({
 A card whose frontmatter no longer parses has no todos to address:
 
 ```ts continue
-const brokenPath = "_content/Broken.memo.card";
-await box.write(brokenPath, "---\nstatus: [not, a, status]\ntodos:\n  - text: Fix it\n---\n{% todo %}Fix it{% /todo %}\n");
+const brokenPath = "_content/Broken.doc.card";
+await box.write(brokenPath, "---\ntitle: [not, a, title]\ntodos:\n  - text: Fix it\n---\n{% todo %}Fix it{% /todo %}\n");
 box.commitAll("broken");
 const brokenBefore = await box.read(brokenPath);
 await outcome(caller(box.root).todos.setStatus({

@@ -16,7 +16,7 @@ tour({ name: "ribbon-theme", description: "Ribbon appearance on settings, cards 
     const selected = await t.eval('document.querySelector("button.bbx-system-theme-button[aria-label=Ribbon]")?.getAttribute("aria-pressed")');
     await t.expect.custom("Ribbon selection survives navigation", () => selected.trim() === '"true"');
     await t.checkpoint("ribbon-selected");
-    await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2Fbloom-inherited.memo.card");
+    await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2Fbloom-inherited.doc.card");
     await t.expect.heading("A little room to grow", { level: 2 });
     const material = await t.eval('document.querySelector(".bbx-card-surface[data-card-theme=ribbon]") !== null');
     await t.expect.custom("unthemed card inherits Ribbon", () => material.trim() === "true");
@@ -24,7 +24,7 @@ tour({ name: "ribbon-theme", description: "Ribbon appearance on settings, cards 
     await t.expect.noPageErrors();
     await t.click({ role: "button", name: "Add" });
     await t.checkpoint("ribbon-composer-menu");
-    await t.go("/views/_content/theme-tour/bloom-explicit.memo.card");
+    await t.go("/views/_content/theme-tour/bloom-explicit.doc.card");
     await t.expect.heading("A note on blue paper", { level: 2 });
     const paper = await t.eval('document.querySelector(".bbx-card-surface[data-card-theme=paper][data-card-stock=blue]") !== null');
     await t.expect.custom("explicit Paper material stays intact", () => paper.trim() === "true");

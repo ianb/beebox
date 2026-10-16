@@ -17,10 +17,10 @@ import { buildLoadContext } from "../../../src/core/load-context.js";
 import { computeContainsBasis } from "../../../src/core/search/contains-state.js";
 import { readFile } from "node:fs/promises";
 
-const CARD = "store/notes/Trip.memo.card";
+const CARD = "store/notes/Trip.doc.card";
 
-function memo(fields: string) {
-  return `---\nstatus: new\ncreated: 2026-07-28T03:00:00Z\n${fields}\n---\nBody text.\n`;
+function doc(fields: string) {
+  return `---\ntitle: Coast trip\n${fields}\n---\nBody text.\n`;
 }
 ```
 
@@ -34,7 +34,7 @@ have been silently dropped.
 
 ```ts
 const box = await makeTmpBox();
-await box.write(CARD, memo("contains: A trip to the coast."));
+await box.write(CARD, doc("contains: A trip to the coast."));
 
 const first = await setDerivedContains(box.root, {
   relPath: CARD,
@@ -157,7 +157,7 @@ the summary.
 const box = await makeTmpBox();
 const longText = "x".repeat(400);
 
-await box.write(CARD, memo(`contains: ${longText}`));
+await box.write(CARD, doc(`contains: ${longText}`));
 const ctx = await buildLoadContext(box.root);
 const overLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
 overLong.results[0].warnings.filter((i) => i.type === "contains").length
@@ -167,7 +167,7 @@ overLong.results[0].warnings.filter((i) => i.type === "contains").length
 The same length in `contains-evidence`, with a short `contains`, is clean.
 
 ```ts continue
-await box.write(CARD, memo(`contains: A trip.\ncontains-evidence: ${longText}`));
+await box.write(CARD, doc(`contains: A trip.\ncontains-evidence: ${longText}`));
 const evidenceLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
 evidenceLong.results[0].warnings.filter((i) => i.type === "contains").length
 => 0

@@ -105,16 +105,16 @@ payload. Here Garden holds Herbs, and Shed sits beside Garden.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n");
-await box.write("_content/Welcome.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Welcome.doc.card", "---\ntitle: Welcome\nprominence: entry-point\n---\n");
 await box.write("_content/Garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
-await box.write("_content/Garden/Start.memo.card", "---\nprominence: entry-point\n---\n");
-await box.write("_content/Garden/Beds.memo.card", "---\nprominence: primary\n---\n");
-await box.write("_content/Garden/notes/Soil.memo.card", "---\n---\n");
+await box.write("_content/Garden/Start.doc.card", "---\ntitle: Start\nprominence: entry-point\n---\n");
+await box.write("_content/Garden/Beds.doc.card", "---\ntitle: Beds\nprominence: primary\n---\n");
+await box.write("_content/Garden/notes/Soil.doc.card", "---\ntitle: Soil\n---\n");
 await box.write("_content/Garden/Herbs/Herbs.landmark.card", "---\nnavigation:\n  label: Herbs\n---\n");
-await box.write("_content/Garden/Herbs/Basil.memo.card", "---\nprominence: primary\n---\n");
-await box.write("_content/Garden/Herbs/Mint.memo.card", "---\n---\n");
+await box.write("_content/Garden/Herbs/Basil.doc.card", "---\ntitle: Basil\nprominence: primary\n---\n");
+await box.write("_content/Garden/Herbs/Mint.doc.card", "---\ntitle: Mint\n---\n");
 await box.write("_content/Shed/Shed.landmark.card", "---\nnavigation:\n  label: Shed\n---\n");
-await box.write("_content/Shed/Tools.memo.card", "---\n---\n");
+await box.write("_content/Shed/Tools.doc.card", "---\ntitle: Tools\n---\n");
 
 const { landmarks } = await caller(box.root).landmarks.list();
 const view = (l) => ({ label: l.label, depth: l.depth, arrival: l.arrival, links: l.links.map((k) => `${k.source} ${k.ref}`) });
@@ -128,7 +128,7 @@ arrival is Welcome, its only entry point. Depth is 0 for top-level places
 
 ```ts continue
 view(landmarks[0])
-=> { label: "Home", depth: 0, arrival: "_content/Welcome.memo.card", links: ["derived _content/Welcome.memo.card", "place _content/Garden/Start.memo.card", "place _content/Shed/Shed.landmark.card"] }
+=> { label: "Home", depth: 0, arrival: "_content/Welcome.doc.card", links: ["derived _content/Welcome.doc.card", "place _content/Garden/Start.doc.card", "place _content/Shed/Shed.landmark.card"] }
 ```
 
 Garden lists its entry point, then its primary card, then Herbs. Herbs has no
@@ -137,7 +137,7 @@ listed. Garden's own Start card is its arrival.
 
 ```ts continue
 view(landmarks[1])
-=> { label: "Garden", depth: 0, arrival: "_content/Garden/Start.memo.card", links: ["derived _content/Garden/Start.memo.card", "derived _content/Garden/Beds.memo.card", "place _content/Garden/Herbs/Herbs.landmark.card"] }
+=> { label: "Garden", depth: 0, arrival: "_content/Garden/Start.doc.card", links: ["derived _content/Garden/Start.doc.card", "derived _content/Garden/Beds.doc.card", "place _content/Garden/Herbs/Herbs.landmark.card"] }
 ```
 
 Herbs is one level under Garden. It lists Basil, its primary card; Mint is
@@ -146,7 +146,7 @@ nothing: its one card is ordinary.
 
 ```ts continue
 [view(landmarks[2]), view(landmarks[3])]
-=> [{ label: "Herbs", depth: 1, arrival: "_content/Garden/Herbs/Herbs.landmark.card", links: ["derived _content/Garden/Herbs/Basil.memo.card"] }, { label: "Shed", depth: 0, arrival: "_content/Shed/Shed.landmark.card", links: [] }]
+=> [{ label: "Herbs", depth: 1, arrival: "_content/Garden/Herbs/Herbs.landmark.card", links: ["derived _content/Garden/Herbs/Basil.doc.card"] }, { label: "Shed", depth: 0, arrival: "_content/Shed/Shed.landmark.card", links: [] }]
 ```
 
 `forDir` resolves one landmark alone, with no shared walk. Each `list`

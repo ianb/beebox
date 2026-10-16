@@ -49,7 +49,7 @@ LandmarkDestination.safeParse({ for: ["triage"], "todo-question": "   " }).succe
 LandmarkDestination.parse({ for: ["triage"], "todo-question": " Does this need attention? " })["todo-question"]
 => Does this need attention?
 
-const evidence = { version: 1, source: { ref: "/_content/inbox/staged/Bill.memo.card", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/Bill.memo.card", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Household utility bill: payment is outstanding.", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
+const evidence = { version: 1, source: { ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Household utility bill: payment is outstanding.", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
 const request = buildTriageRequest({ evidence, instructions: snapshot });
 Object.keys(request.questions).length
 => 2

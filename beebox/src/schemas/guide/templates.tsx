@@ -23,7 +23,7 @@ interface GuideSeed {
 const DOMAIN_SEEDS: Record<string, GuideSeed> = {
   intake: {
     jobTypes: "intake-job",
-    appliesTo: "Use when triaging new inbox items (memos, bookmarks, captures)",
+    appliesTo: "Use when triaging new inbox items (notes, bookmarks, captures)",
     actions: [
       {
         name: "Archive",
@@ -73,12 +73,12 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Create Reminder",
         when: "Event needs preparation (meeting prep, travel, etc.)",
-        instructions: "Create a memo card in _content/inbox/ with preparation notes",
+        instructions: "Create a doc card in _content/inbox/ with preparation notes",
       },
       {
         name: "Note Change",
         when: "Significant change that user should know about (time/location change, cancellation)",
-        instructions: "Create a memo card highlighting what changed and any needed adjustments",
+        instructions: "Create a doc card highlighting what changed and any needed adjustments",
       },
       {
         name: "Create Event",

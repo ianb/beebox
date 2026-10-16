@@ -196,7 +196,7 @@ from filtered runs):
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "_bookkeeping/jobs");
-await box.write("_bookkeeping/jobs/y1.intake.job.card", "---\nconnector: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/a.memo.card\n---\n");
+await box.write("_bookkeeping/jobs/y1.intake.job.card", "---\nconnector: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/a.doc.card\n---\n");
 await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nconnector: rss\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
 
 const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });

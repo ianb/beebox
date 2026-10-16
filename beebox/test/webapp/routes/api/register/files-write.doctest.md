@@ -95,7 +95,7 @@ createOnly.body.error
 ## Cards and escapes are rejected
 
 ```ts continue
-(await ctx.request({ method: "PUT", url: "/api/files/_content/notes/A.memo.card", payload: { content: "x" } })).statusCode
+(await ctx.request({ method: "PUT", url: "/api/files/_content/notes/A.doc.card", payload: { content: "x" } })).statusCode
 => 403
 
 // Fastify resolves dot-segments before routing, so a traversal never even

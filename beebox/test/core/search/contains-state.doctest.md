@@ -24,52 +24,52 @@ const ctx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),
 };
 
-const MEMO = (text: string, contains?: string) =>
-  "---\ncreated: 2026-05-22T10:00:00Z\n" + (contains ? "contains: " + contains + "\n" : "") + "---\n" + text + "\n";
+const DOC = (text: string, contains?: string) =>
+  "---\ntitle: Note\n" + (contains ? "contains: " + contains + "\n" : "") + "---\n" + text + "\n";
 ```
 
 ## The refresh records contains text and basis; fresh cards aren't stale
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/notes/Dentist.memo.card", MEMO("Appointment moved to June 17.", "Dentist moved to June 17."));
-await box.write("store/notes/Bare.memo.card", MEMO("No contains here yet."));
+await box.write("store/notes/Dentist.doc.card", DOC("Appointment moved to June 17.", "Dentist moved to June 17."));
+await box.write("store/notes/Bare.doc.card", DOC("No contains here yet."));
 await openSearchIndex(box.root);
 const state = await loadContainsState(box.root);
-state.cards["store/notes/Dentist.memo.card"].containsText
+state.cards["store/notes/Dentist.doc.card"].containsText
 => Dentist moved to June 17.
 
 JSON.stringify(listStale(state))
 => []
 
 JSON.stringify(listMissing(state))
-=> ["store/notes/Bare.memo.card"]
+=> ["store/notes/Bare.doc.card"]
 ```
 
 ## Editing the body while keeping contains flags the card stale
 
 ```ts continue
-await box.write("store/notes/Dentist.memo.card", MEMO("Appointment moved AGAIN, now July 2.", "Dentist moved to June 17."));
+await box.write("store/notes/Dentist.doc.card", DOC("Appointment moved AGAIN, now July 2.", "Dentist moved to June 17."));
 await openSearchIndex(box.root);
 JSON.stringify(listStale(await loadContainsState(box.root)))
-=> ["store/notes/Dentist.memo.card"]
+=> ["store/notes/Dentist.doc.card"]
 ```
 
 ## The hook-time warning fires live, even before any refresh
 
 ```ts continue
-const warning = await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.memo.card", ctx });
-warning !== null && warning.startsWith("store/notes/Dentist.memo.card: card content changed but contains: didn't")
+const warning = await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.doc.card", ctx });
+warning !== null && warning.startsWith("store/notes/Dentist.doc.card: card content changed but contains: didn't")
 => true
 
-await staleContainsWarning(box.root, { relPath: "store/notes/Bare.memo.card", ctx })
+await staleContainsWarning(box.root, { relPath: "store/notes/Bare.doc.card", ctx })
 => null
 ```
 
 ## Updating the contains text re-bases; the flag clears
 
 ```ts continue
-await box.write("store/notes/Dentist.memo.card", MEMO("Appointment moved AGAIN, now July 2.", "Dentist moved to July 2."));
+await box.write("store/notes/Dentist.doc.card", DOC("Appointment moved AGAIN, now July 2.", "Dentist moved to July 2."));
 await openSearchIndex(box.root);
 JSON.stringify(listStale(await loadContainsState(box.root)))
 => []
@@ -78,20 +78,20 @@ JSON.stringify(listStale(await loadContainsState(box.root)))
 ## Confirming unchanged text re-bases too (the bbx contains update path)
 
 ```ts continue
-await box.write("store/notes/Dentist.memo.card", MEMO("Tweaked wording, July 2 still right.", "Dentist moved to July 2."));
+await box.write("store/notes/Dentist.doc.card", DOC("Tweaked wording, July 2 still right.", "Dentist moved to July 2."));
 await openSearchIndex(box.root);
 JSON.stringify(listStale(await loadContainsState(box.root)))
-=> ["store/notes/Dentist.memo.card"]
+=> ["store/notes/Dentist.doc.card"]
 
 // What `bbx contains update` does with identical text: re-base at the live basis.
-const confirm = await computeBasisForCardPath(box.root, { relPath: "store/notes/Dentist.memo.card", ctx });
+const confirm = await computeBasisForCardPath(box.root, { relPath: "store/notes/Dentist.doc.card", ctx });
 const state2 = await loadContainsState(box.root);
-rebaseContains(state2, { cardPath: "store/notes/Dentist.memo.card", contains: confirm.contains, basis: confirm.basis ?? "" });
+rebaseContains(state2, { cardPath: "store/notes/Dentist.doc.card", contains: confirm.contains, basis: confirm.basis ?? "" });
 await saveContainsState(box.root, state2);
 JSON.stringify(listStale(await loadContainsState(box.root)))
 => []
 
-await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.memo.card", ctx })
+await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.doc.card", ctx })
 => null
 ```
 

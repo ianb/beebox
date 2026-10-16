@@ -16,7 +16,7 @@ const box = await makeTmpBox();
 const path = await createOrAppendIntakeJob({
   boxRoot: box.root,
   connector: "test-connector",
-  items: ["_content/inbox/item1.memo.card"],
+  items: ["_content/inbox/item1.doc.card"],
   description: "Triage 1 item",
 });
 path.startsWith("_bookkeeping/jobs/") && path.endsWith("-test-connector.intake.job.card")
@@ -31,7 +31,7 @@ connector: test-connector
 priority: normal
 description: Triage 1 item
 items:
-  - ref: _content/inbox/item1.memo.card
+  - ref: _content/inbox/item1.doc.card
 ---
 ```
 
@@ -48,13 +48,13 @@ const box = await makeTmpBox();
 const path1 = await createOrAppendIntakeJob({
   boxRoot: box.root,
   connector: "test-connector",
-  items: ["_content/inbox/item1.memo.card"],
+  items: ["_content/inbox/item1.doc.card"],
   description: "Triage 1 item",
 });
 const path2 = await createOrAppendIntakeJob({
   boxRoot: box.root,
   connector: "test-connector",
-  items: ["_content/inbox/item2.memo.card"],
+  items: ["_content/inbox/item2.doc.card"],
   description: "Triage 2 items",
 });
 path1 === path2
@@ -71,8 +71,8 @@ connector: test-connector
 priority: normal
 description: Triage 2 items
 items:
-  - ref: _content/inbox/item1.memo.card
-  - ref: _content/inbox/item2.memo.card
+  - ref: _content/inbox/item1.doc.card
+  - ref: _content/inbox/item2.doc.card
 ---
 ```
 
@@ -90,9 +90,9 @@ for the no-connector case:
 ```ts
 const box = await makeTmpBox();
 const created = [
-  await createOrAppendIntakeJob({ boxRoot: box.root, connector: "connector-a", items: ["_content/inbox/a.memo.card"], description: "From A" }),
-  await createOrAppendIntakeJob({ boxRoot: box.root, connector: "connector-b", items: ["_content/inbox/b.memo.card"], description: "From B" }),
-  await createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/c.memo.card"], description: "Inbox" }),
+  await createOrAppendIntakeJob({ boxRoot: box.root, connector: "connector-a", items: ["_content/inbox/a.doc.card"], description: "From A" }),
+  await createOrAppendIntakeJob({ boxRoot: box.root, connector: "connector-b", items: ["_content/inbox/b.doc.card"], description: "From B" }),
+  await createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/c.doc.card"], description: "Inbox" }),
   await createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/d.image.card"], priority: "low", description: "Captures" }),
 ];
 JSON.stringify(created.map((p) => p.replace(/^.*T\d\d-\d\d-\d\d-/, "")))
@@ -154,13 +154,13 @@ The lock is per batching key, so a `gmail`-scoped sync and a scan import
 ```ts
 const box = await makeTmpBox();
 const [scanJob, gmailJob] = await Promise.all([
-  createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/a.memo.card"], description: "Scan" }),
-  createOrAppendIntakeJob({ boxRoot: box.root, connector: "gmail", items: ["_content/inbox/b.memo.card"], description: "Mail" }),
+  createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/a.doc.card"], description: "Scan" }),
+  createOrAppendIntakeJob({ boxRoot: box.root, connector: "gmail", items: ["_content/inbox/b.doc.card"], description: "Mail" }),
 ]);
 JSON.stringify({
   distinct: scanJob !== gmailJob,
-  scan: (await box.read(scanJob)).includes("ref: _content/inbox/a.memo.card"),
-  gmail: (await box.read(gmailJob)).includes("ref: _content/inbox/b.memo.card"),
+  scan: (await box.read(scanJob)).includes("ref: _content/inbox/a.doc.card"),
+  gmail: (await box.read(gmailJob)).includes("ref: _content/inbox/b.doc.card"),
 })
 => {"distinct":true,"scan":true,"gmail":true}
 ```

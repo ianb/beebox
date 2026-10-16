@@ -167,7 +167,7 @@ bootstrap does not mark the box initialized, and retry preserves authored notes.
 const fresh = await makeTmpBox();
 await rm(fresh.path(".beebox/box.json"));
 await rm(fresh.path(MANIFEST_PATH));
-await fresh.write(SYSTEM_CARD_PATHS.settings, "---\ntype: memo\n---\nKeep this conflict.\n");
+await fresh.write(SYSTEM_CARD_PATHS.settings, "---\ntype: doc\n---\nKeep this conflict.\n");
 await initBox(fresh.root)
 => throws SystemCardInvariantError
 

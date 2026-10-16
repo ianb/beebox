@@ -319,18 +319,20 @@ export function planRetireMemo(input: PlanInput): RetireMemoPlan {
 
   const rewriter = mentionRewriter(memoPaths, recordings);
   const siblings = mentionPattern(recordings.filter((r) => r.sibling && r.from !== r.to).map((r) => r.name));
-  const written = new Map(plan.writes.map((w) => [w.path, w]));
+  const check = (file: string, text: string): void => {
+    if (siblings !== null && text.match(siblings) !== null) plan.failures.push(`${file}: mentions a recording that moves into an attach scope; update it by hand first`);
+  };
+  // New docs first: a memo that links another memo links its doc.
+  for (const write of plan.writes) {
+    write.after = rewriteMentions(write.after, rewriter);
+    if (write.kind === "doc") check(write.path, write.after);
+  }
+  const planned = new Set(plan.writes.map((w) => w.path));
   for (const [file, text] of input.texts) {
-    if (file.endsWith(".memo.card")) continue;
-    const planned = written.get(file);
-    const before = planned?.after ?? text;
-    const after = rewriteMentions(before, rewriter);
-    if (siblings !== null && after.match(siblings) !== null && planned?.kind !== "audio") {
-      plan.failures.push(`${file}: mentions a recording that moves into an attach scope; update it by hand first`);
-    }
-    if (after === before) continue;
-    if (planned === undefined) plan.writes.push({ kind: "referrer", path: file, after });
-    else planned.after = after;
+    if (file.endsWith(".memo.card") || planned.has(file)) continue;
+    const after = rewriteMentions(text, rewriter);
+    check(file, after);
+    if (after !== text) plan.writes.push({ kind: "referrer", path: file, after });
   }
   return plan;
 }

@@ -15,7 +15,7 @@ import { parseGitRenameRecords, resolveMovedCardPath } from "../../src/core/move
 import { fileExists } from "../../src/lib/file-exists.js";
 
 const CARD = `---
-type: memo
+type: doc
 title: A card with enough content for rename detection
 ---
 The body stays recognizable when the card moves to another directory.
@@ -36,13 +36,13 @@ const ANNEX = hasAnnex();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.seed("_content/Old.memo.card", CARD);
+await box.seed("_content/Old.doc.card", CARD);
 box.commitAll("seed old card");
 await box.seed("_content/archive/.keep", "");
-await rename(box.path("_content/Old.memo.card"), box.path("_content/archive/New.memo.card"));
+await rename(box.path("_content/Old.doc.card"), box.path("_content/archive/New.doc.card"));
 
-JSON.stringify(await resolveMovedCardPath({ boxRoot: box.root, missingPath: "_content/Old.memo.card" }))
-=> {"kind":"moved","path":"_content/archive/New.memo.card"}
+JSON.stringify(await resolveMovedCardPath({ boxRoot: box.root, missingPath: "_content/Old.doc.card" }))
+=> {"kind":"moved","path":"_content/archive/New.doc.card"}
 ```
 
 The scratch lookup did not stage either end in the real index.
@@ -57,8 +57,8 @@ realIndex
 If a new card reuses the old path, that card wins before historical recovery.
 
 ```ts continue
-await box.seed("_content/Old.memo.card", CARD.replace("title: A card", "title: Reused path"));
-JSON.stringify(await resolveMovedCardPath({ boxRoot: box.root, missingPath: "_content/Old.memo.card" }))
+await box.seed("_content/Old.doc.card", CARD.replace("title: A card", "title: Reused path"));
+JSON.stringify(await resolveMovedCardPath({ boxRoot: box.root, missingPath: "_content/Old.doc.card" }))
 => {"kind":"not-moved"}
 ```
 
@@ -158,14 +158,14 @@ The same lookup follows a committed move into a second, still-uncommitted move.
 
 ```ts
 const chain = await makeTmpBox({ git: true });
-await chain.seed("_content/First.memo.card", CARD);
+await chain.seed("_content/First.doc.card", CARD);
 chain.commitAll("seed first path");
-await rename(chain.path("_content/First.memo.card"), chain.path("_content/Second.memo.card"));
+await rename(chain.path("_content/First.doc.card"), chain.path("_content/Second.doc.card"));
 chain.commitAll("first move");
-await rename(chain.path("_content/Second.memo.card"), chain.path("_content/Third.memo.card"));
+await rename(chain.path("_content/Second.doc.card"), chain.path("_content/Third.doc.card"));
 
-JSON.stringify(await resolveMovedCardPath({ boxRoot: chain.root, missingPath: "_content/First.memo.card" }))
-=> {"kind":"moved","path":"_content/Third.memo.card"}
+JSON.stringify(await resolveMovedCardPath({ boxRoot: chain.root, missingPath: "_content/First.doc.card" }))
+=> {"kind":"moved","path":"_content/Third.doc.card"}
 ```
 
 ```ts cleanup
@@ -179,15 +179,15 @@ so the resolver needs no separate directory-forwarding format.
 
 ```ts
 const directory = await makeTmpBox({ git: true });
-await directory.seed("_content/session/Note.memo.card", CARD);
+await directory.seed("_content/session/Note.doc.card", CARD);
 directory.commitAll("seed session");
 await rename(directory.path("_content/session"), directory.path("_content/archive-session"));
 
 JSON.stringify(await resolveMovedCardPath({
   boxRoot: directory.root,
-  missingPath: "_content/session/Note.memo.card",
+  missingPath: "_content/session/Note.doc.card",
 }))
-=> {"kind":"moved","path":"_content/archive-session/Note.memo.card"}
+=> {"kind":"moved","path":"_content/archive-session/Note.doc.card"}
 ```
 
 ```ts cleanup
@@ -200,18 +200,18 @@ The NUL-delimited parser is exercised through Git as well as directly.
 
 ```ts
 const unusual = await makeTmpBox({ git: true });
-await unusual.seed("_content/Old name.memo.card", CARD);
+await unusual.seed("_content/Old name.doc.card", CARD);
 unusual.commitAll("seed unusual path");
 await rename(
-  unusual.path("_content/Old name.memo.card"),
-  unusual.path("_content/New\tname.memo.card"),
+  unusual.path("_content/Old name.doc.card"),
+  unusual.path("_content/New\tname.doc.card"),
 );
 
 JSON.stringify(await resolveMovedCardPath({
   boxRoot: unusual.root,
-  missingPath: "_content/Old name.memo.card",
+  missingPath: "_content/Old name.doc.card",
 }))
-=> {"kind":"moved","path":"_content/New\tname.memo.card"}
+=> {"kind":"moved","path":"_content/New\tname.doc.card"}
 ```
 
 ```ts cleanup
@@ -229,7 +229,7 @@ const plain = await makeTmpBox();
 const warnings: string[] = [];
 const result = await resolveMovedCardPath({
   boxRoot: plain.root,
-  missingPath: "_content/Gone.memo.card",
+  missingPath: "_content/Gone.doc.card",
   warn: message => warnings.push(message),
 });
 print(JSON.stringify(result));
@@ -248,12 +248,12 @@ symlink stays an ordinary miss.
 
 ```ts
 const deleted = await makeTmpBox({ git: true });
-await deleted.seed("_content/Old.memo.card", CARD);
+await deleted.seed("_content/Old.doc.card", CARD);
 deleted.commitAll("seed deleted destination");
-await rename(deleted.path("_content/Old.memo.card"), deleted.path("_content/Gone.memo.card"));
+await rename(deleted.path("_content/Old.doc.card"), deleted.path("_content/Gone.doc.card"));
 deleted.commitAll("move before delete");
-await rm(deleted.path("_content/Gone.memo.card"));
-JSON.stringify(await resolveMovedCardPath({ boxRoot: deleted.root, missingPath: "_content/Old.memo.card" }))
+await rm(deleted.path("_content/Gone.doc.card"));
+JSON.stringify(await resolveMovedCardPath({ boxRoot: deleted.root, missingPath: "_content/Old.doc.card" }))
 => {"kind":"not-moved"}
 ```
 
@@ -277,16 +277,16 @@ await otherFile.cleanup();
 
 ```ts
 const unsafe = await makeTmpBox({ git: true });
-await unsafe.seed("_content/Old.memo.card", CARD);
+await unsafe.seed("_content/Old.doc.card", CARD);
 unsafe.commitAll("seed unsafe destination");
-await rename(unsafe.path("_content/Old.memo.card"), unsafe.path("_content/New.memo.card"));
+await rename(unsafe.path("_content/Old.doc.card"), unsafe.path("_content/New.doc.card"));
 unsafe.commitAll("move before symlink replacement");
 const outsideRoot = await mkdtemp(join(tmpdir(), "bbx-move-outside-"));
-const outsideCard = join(outsideRoot, "Outside.memo.card");
+const outsideCard = join(outsideRoot, "Outside.doc.card");
 await writeFile(outsideCard, CARD);
-await rm(unsafe.path("_content/New.memo.card"));
-await symlink(outsideCard, unsafe.path("_content/New.memo.card"));
-JSON.stringify(await resolveMovedCardPath({ boxRoot: unsafe.root, missingPath: "_content/Old.memo.card" }))
+await rm(unsafe.path("_content/New.doc.card"));
+await symlink(outsideCard, unsafe.path("_content/New.doc.card"));
+JSON.stringify(await resolveMovedCardPath({ boxRoot: unsafe.root, missingPath: "_content/Old.doc.card" }))
 => {"kind":"not-moved"}
 ```
 

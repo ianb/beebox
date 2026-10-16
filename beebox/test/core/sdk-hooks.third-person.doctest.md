@@ -25,7 +25,7 @@ const { hooks } = cardValidatorHook();
 // the injected context (null when the hook stays quiet).
 async function afterWrite(rel, toolInput) {
   const file_path = join(box, rel);
-  const text = toolInput.content ?? `---\ntype: memo\n---\n${toolInput.new_string ?? ""}\n`;
+  const text = toolInput.content ?? `---\ntitle: Note\n---\n${toolInput.new_string ?? ""}\n`;
   await writeFile(file_path, text);
   const out = await hooks[0]?.({
     hook_event_name: "PostToolUse",
@@ -40,22 +40,22 @@ async function afterWrite(rel, toolInput) {
   const context = out?.hookSpecificOutput?.additionalContext ?? "";
   return context.split("\n\n").find((note) => note.includes("calls them")) ?? null;
 }
-const memo = (body) => `---\ntype: memo\n---\n${body}\n`;
+const doc = (body) => `---\ntitle: Note\n---\n${body}\n`;
 ```
 
 A card in the person's area that says "the user confirmed" gets the reminder,
 naming the phrase and the fix:
 
 ```ts
-await afterWrite("_content/Drill.memo.card", { content: memo("The user confirmed the drill is with Sam.") })
-=> _content/Drill.memo.card is shown to the person whose box this is, and the text you just wrote calls them "the user". Write "you" (in a briefing, their own "I": "I'm cataloguing my tools"), unless the words quote someone else.
+await afterWrite("_content/Drill.doc.card", { content: doc("The user confirmed the drill is with Sam.") })
+=> _content/Drill.doc.card is shown to the person whose box this is, and the text you just wrote calls them "the user". Write "you" (in a briefing, their own "I": "I'm cataloguing my tools"), unless the words quote someone else.
 ```
 
 "The boxholder" and its possessive count too, and an Edit is checked by its
 new text:
 
 ```ts
-(await afterWrite("_content/Tools.memo.card", { old_string: "x", new_string: "Listed from the boxholder's memory." }))?.match(/calls them ([^.]*)\./)?.[1]
+(await afterWrite("_content/Tools.doc.card", { old_string: "x", new_string: "Listed from the boxholder's memory." }))?.match(/calls them ([^.]*)\./)?.[1]
 => "the boxholder's"
 ```
 
@@ -63,10 +63,10 @@ Text that says "you" gets no reminder, and neither does agent-facing text
 outside `_content/`, where "the user" is the right word:
 
 ```ts
-await afterWrite("_content/Drill2.memo.card", { content: memo("You confirmed the drill is with Sam.") })
+await afterWrite("_content/Drill2.doc.card", { content: doc("You confirmed the drill is with Sam.") })
 => null
 
-await afterWrite("_bookkeeping/jobs/Followup.memo.card", { content: memo("Ask the user about the drill.") })
+await afterWrite("_bookkeeping/jobs/Followup.doc.card", { content: doc("Ask the user about the drill.") })
 => null
 ```
 

@@ -11,11 +11,11 @@ import { resolveLoadState } from "../../src/lib/file-load-state.js";
 ```ts
 JSON.stringify(cardLoadRecovery({
   message: "Card not found",
-  data: { recovery: { kind: "moved", path: "_content/archive/New.memo.card" } },
+  data: { recovery: { kind: "moved", path: "_content/archive/New.doc.card" } },
 }))
-=> {"kind":"moved","path":"_content/archive/New.memo.card"}
+=> {"kind":"moved","path":"_content/archive/New.doc.card"}
 
-cardLoadRecovery({ message: "moved to _content/Guess.memo.card" })
+cardLoadRecovery({ message: "moved to _content/Guess.doc.card" })
 => null
 
 cardLoadRecovery({ data: { recovery: { kind: "moved", path: "not-a-card.md" } } })
@@ -27,8 +27,8 @@ two decisions are intentionally independent.
 
 ```ts
 const movedError = {
-  message: "Card not found: _content/Old.memo.card",
-  data: { recovery: { kind: "moved", path: "_content/New.memo.card" } },
+  message: "Card not found: _content/Old.doc.card",
+  data: { recovery: { kind: "moved", path: "_content/New.doc.card" } },
 };
 const cached = resolveLoadState({
   data: "the old cached body",
@@ -41,7 +41,7 @@ print(cached.value);
 JSON.stringify(cardLoadRecovery(movedError))
 =>
 the old cached body
-{"kind":"moved","path":"_content/New.memo.card"}
+{"kind":"moved","path":"_content/New.doc.card"}
 ```
 
 An exact file event always refreshes the open file. An ancestor event matters
@@ -50,26 +50,26 @@ ordinary directory writes refetch every descendant.
 
 ```ts
 fileChangeAffectsPath(
-  { event: "change", path: "/_content/session/Note.memo.card" },
-  "_content/session/Note.memo.card",
+  { event: "change", path: "/_content/session/Note.doc.card" },
+  "_content/session/Note.doc.card",
 )
 => true
 
 fileChangeAffectsPath(
   { event: "rename", path: "_content/session" },
-  "_content/session/Note.memo.card",
+  "_content/session/Note.doc.card",
 )
 => true
 
 fileChangeAffectsPath(
   { event: "change", path: "_content/session" },
-  "_content/session/Note.memo.card",
+  "_content/session/Note.doc.card",
 )
 => false
 
 fileChangeAffectsPath(
   { event: "rename", path: "_content/sess" },
-  "_content/session/Note.memo.card",
+  "_content/session/Note.doc.card",
 )
 => false
 ```

@@ -25,7 +25,7 @@ The ref value and a `view:<line>:<index>` path are returned.
 
 ```ts
 JSON.stringify(
-  extractViewRefs('<CardLink cardRef="/_content/Foo.memo.card">Foo</CardLink>'),
+  extractViewRefs('<CardLink cardRef="/_content/Foo.doc.card">Foo</CardLink>'),
   null,
   2,
 )
@@ -33,7 +33,7 @@ JSON.stringify(
 [
   {
     "path": "view:1:0",
-    "ref": "/_content/Foo.memo.card"
+    "ref": "/_content/Foo.doc.card"
   }
 ]
 ```
@@ -53,7 +53,7 @@ Lines are 1-indexed; the index increments per match.
 const src = [
   'import { CardLink, CardRef } from "beebox/view-widgets";',
   "",
-  '<CardLink cardRef="/_content/a.memo.card" />',
+  '<CardLink cardRef="/_content/a.doc.card" />',
   '<CardRef cardRef="/_content/b.record.card" />',
 ].join("\n");
 JSON.stringify(extractViewRefs(src), null, 2)
@@ -61,7 +61,7 @@ JSON.stringify(extractViewRefs(src), null, 2)
 [
   {
     "path": "view:3:0",
-    "ref": "/_content/a.memo.card"
+    "ref": "/_content/a.doc.card"
   },
   {
     "path": "view:4:1",
@@ -91,14 +91,14 @@ extractViewRefs("plain source, no widgets").length
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Real.memo.card", "---\ntype: memo\n---\nhi");
+await box.write("_content/Real.doc.card", "---\ntitle: Real\n---\nhi");
 await box.write(
   "views/v.tsx",
-  '<CardLink cardRef="/_content/Real.memo.card" /><CardRef cardRef="/_content/Missing.memo.card" />',
+  '<CardLink cardRef="/_content/Real.doc.card" /><CardRef cardRef="/_content/Missing.doc.card" />',
 );
 const warnings = await lintViewRefs(`${box.root}/views/v.tsx`, box.root);
 warnings.join("\n")
-=> Broken reference at view:1:1: /_content/Missing.memo.card does not exist
+=> Broken reference at view:1:1: /_content/Missing.doc.card does not exist
 ```
 
 ## listBoxViewFiles resolves a box's views under `src/views/`
@@ -151,14 +151,14 @@ JSON.stringify(moved)
 
 ```ts
 const boxRoot = "/box";
-const text = '<CardLink cardRef="/_content/Foo.memo.card" /><CardRef cardRef="/_content/Stay.card" />';
+const text = '<CardLink cardRef="/_content/Foo.doc.card" /><CardRef cardRef="/_content/Stay.card" />';
 const remap = (abs: string) =>
-  abs === "/box/_content/Foo.memo.card" ? "/box/_bookkeeping/archive/Foo.memo.card" : null;
+  abs === "/box/_content/Foo.doc.card" ? "/box/_bookkeeping/archive/Foo.doc.card" : null;
 const result = rewriteViewRefs({ boxRoot, viewAbsPath: "/box/views/v.tsx", text, remap });
 JSON.stringify({ count: result.count, text: result.text }, null, 2)
 =>
 {
   "count": 1,
-  "text": "<CardLink cardRef=\"/_bookkeeping/archive/Foo.memo.card\" /><CardRef cardRef=\"/_content/Stay.card\" />"
+  "text": "<CardLink cardRef=\"/_bookkeeping/archive/Foo.doc.card\" /><CardRef cardRef=\"/_content/Stay.card\" />"
 }
 ```

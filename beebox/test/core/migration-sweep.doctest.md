@@ -252,10 +252,10 @@ The recovery ref preserves input while the path-scoped output commit leaves unre
 const box = await makeTmpBox({ git: true });
 await seedManifest(box, { pending: [PROBE] });
 await box.commitAll("seed migration manifest");
-await box.write("_content/inbox/Half_Written.memo.card", "---\nstatus: new\n---\nmid-edit\n");
+await box.write("_content/inbox/Half_Written.doc.card", "---\ntitle: Note\n---\nmid-edit\n");
 
 const result = await sweepMigrations({ boxRoot: box.root });
-JSON.stringify({ status: result.status, untracked: git(box, "ls-files", "--others", "--exclude-standard").includes("Half_Written.memo.card") })
+JSON.stringify({ status: result.status, untracked: git(box, "ls-files", "--others", "--exclude-standard").includes("Half_Written.doc.card") })
 => {"status":"applied","untracked":true}
 ```
 
@@ -475,7 +475,7 @@ bytes on retry must still commit those bytes with the manifest.
 ```ts
 const box = await makeTmpBox({ git: true });
 await seedManifest(box, { pending: [PROBE] });
-await box.write("_content/Converted.memo.card", "---\nstatus: new\n---\nOriginal\n");
+await box.write("_content/Converted.doc.card", "---\ntitle: Note\n---\nOriginal\n");
 await box.write("_content/unrelated.txt", "original\n");
 await box.commitAll("seed");
 await box.write("_content/unrelated.txt", "staged unrelated\n");
@@ -483,8 +483,8 @@ git(box, "add", "_content/unrelated.txt");
 const hook = join(git(box, "rev-parse", "--absolute-git-dir"), "hooks/pre-commit");
 await writeFile(hook, "#!/bin/sh\nexit 1\n");
 await chmod(hook, 0o755);
-const converted = "---\nstatus: new\n---\nConverted\n";
-const runScript = async () => { await box.write("_content/Converted.memo.card", converted); return 0; };
+const converted = "---\ntitle: Note\n---\nConverted\n";
+const runScript = async () => { await box.write("_content/Converted.doc.card", converted); return 0; };
 (await sweepMigrations({ boxRoot: box.root, runScript })).status
 => commit-failed
 
@@ -492,7 +492,7 @@ await rm(hook);
 (await sweepMigrations({ boxRoot: box.root, repair: true, runScript })).status
 => applied
 
-JSON.stringify({ committed: git(box, "show", "HEAD:_content/Converted.memo.card").endsWith("Converted"), staged: git(box, "diff", "--cached", "--name-only"), unstaged: git(box, "diff", "--name-only"), pendingRef: git(box, "for-each-ref", "--format=%(refname)", `refs/bbx/migrations/${PROBE}/pending`) })
+JSON.stringify({ committed: git(box, "show", "HEAD:_content/Converted.doc.card").endsWith("Converted"), staged: git(box, "diff", "--cached", "--name-only"), unstaged: git(box, "diff", "--name-only"), pendingRef: git(box, "for-each-ref", "--format=%(refname)", `refs/bbx/migrations/${PROBE}/pending`) })
 => {"committed":true,"staged":"_content/unrelated.txt","unstaged":"","pendingRef":""}
 ```
 

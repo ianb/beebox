@@ -57,14 +57,14 @@ await fs.mkdir(path.join(repo, "Note.attach"), { recursive: true });
 for (const name of ["lower.jpg", "UPPER.JPG", "Mixed.Jpg"]) {
   await fs.writeFile(path.join(repo, "Note.attach", name), Buffer.alloc(200_000, 0x42));
 }
-await fs.writeFile(path.join(repo, "Note.memo.card"), "a card is text, wherever it sits\n");
+await fs.writeFile(path.join(repo, "Note.doc.card"), "a card is text, wherever it sits\n");
 execFileSync("git", ["add", "-A"], { cwd: repo });
 execFileSync("git", ["commit", "-q", "-m", "assets"], { cwd: repo });
 
 ANNEX ? classify(repo) : "skipped: git-annex not installed"
 =>
 Mixed.Jpg ANNEXED
-Note.memo.card in-git
+Note.doc.card in-git
 UPPER.JPG ANNEXED
 lower.jpg ANNEXED
 ```

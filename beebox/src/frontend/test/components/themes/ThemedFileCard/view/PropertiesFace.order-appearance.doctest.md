@@ -70,22 +70,22 @@ function appearance(html) {
   return /<section[^>]*data-card-section="appearance"[^>]*>.*?<\/section>(?=<section[^>]*data-card-section="view")/s.exec(html)?.[0] ?? "";
 }
 
-const memo = await render({
-  path: "_content/projects/Porch.memo.card",
-  type: "memo",
+const doc = await render({
+  path: "_content/projects/Porch.doc.card",
+  type: "doc",
   schema: { hasBodyField: true, defaultProminence: "ordinary" },
-  frontmatter: { title: "Porch", contains: "Porch repair quotes", status: "new", theme: { name: "paper", stock: "cream" } },
+  frontmatter: { title: "Porch", contains: "Porch repair quotes", "share-id": "porch-quotes", theme: { name: "paper", stock: "cream" } },
   body: "Three quotes so far.\n",
 }, { canEdit: true });
 ```
 
 ## Order
 
-A memo with `contains` and a type field shows every section; the headings
+A doc with `contains` and a type field shows every section; the headings
 come in the order above:
 
 ```ts
-headings(memo)
+headings(doc)
 => [
   "h2 Properties",
   "h3 Found by",
@@ -103,8 +103,8 @@ preferred view" button and, under it, a button that copies the card's whole
 original text (the boxholder asked for it beside "Original text", 2026-10-13):
 
 ```ts
-textOf(memo.slice(memo.lastIndexOf("<section")))
-=> View Memo Original text Use preferred view Copy original text Card actions
+textOf(doc.slice(doc.lastIndexOf("<section")))
+=> View Doc Original text Use preferred view Copy original text Card actions
 ```
 
 ## Appearance
@@ -113,7 +113,7 @@ One row names the theme, its stock, and what chose it. The swatch grid sits
 under a "Change" disclosure that is closed when Properties opens:
 
 ```ts
-const section = appearance(memo);
+const section = appearance(doc);
 [textOf(section.replace(/<details.*<\/details>/s, "")), /<details[^>]*><summary[^>]*>[^<]*<\/summary>/.exec(section)?.[0].replace(/ class="[^"]*"/g, "")]
 => ["Appearance Paper cream · Set on this card", "<details><summary>Change</summary>"]
 ```
@@ -129,14 +129,14 @@ textOf(/<details class="mt-3">.*?<\/summary>/s.exec(section)?.[0] ?? "")
 => All card themes
 ```
 
-An image card also offers the image itself; a memo does not:
+An image card also offers the image itself; a doc does not:
 
 ```ts
 const photo = await render({
   path: "_content/Porch.image.card", type: "image", schema: null,
   frontmatter: { title: "Porch", filename: { ref: "attach/porch.jpg" } },
 }, { canEdit: false });
-[textOf(memo).includes("Copy image"), textOf(photo.slice(photo.lastIndexOf("<section")))]
+[textOf(doc).includes("Copy image"), textOf(photo.slice(photo.lastIndexOf("<section")))]
 => [false, "View Image Original text Use preferred view Copy original text Copy image Card actions"]
 ```
 
@@ -145,7 +145,7 @@ drawn, first, under "This card":
 
 ```ts continue
 const custom = appearance(await render({
-  path: "_content/Studio.memo.card", type: "memo", schema: null,
+  path: "_content/Studio.doc.card", type: "doc", schema: null,
   frontmatter: { title: "Studio", theme: { name: "studio-blue", stock: "ink" } },
 }, { canEdit: true }));
 /<div role="group" aria-label="This card">.*?<\/button>/s.exec(custom)?.[0].match(/aria-label="([^"]*)"/g)

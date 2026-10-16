@@ -25,11 +25,11 @@ async function findBoxRootThrowsPreV3(dir: string): Promise<boolean> {
 Card files follow the pattern `Name.type.card`. The name can contain dots, but the type is always the last segment before `.card`.
 
 ```ts
-parseCardName("Test.memo.card")
+parseCardName("Test.doc.card")
 =>
 {
   "name": "Test",
-  "type": "memo"
+  "type": "doc"
 }
 ```
 
@@ -60,7 +60,7 @@ parseCardName(".card")
 `isCardFile` is a simple extension check — any path ending in `.card`:
 
 ```ts
-isCardFile("Test.memo.card")
+isCardFile("Test.doc.card")
 => true
 
 isCardFile("Test.card.bak")

@@ -21,9 +21,9 @@ const landmark = {
   depth: 0,
   features: {},
   links: [
-    { ref: "_content/Welcome.memo.card", label: "Welcome", title: "Welcome", exists: true },
+    { ref: "_content/Welcome.doc.card", label: "Welcome", title: "Welcome", exists: true },
     { ref: "https://example.com/guide", label: "Guide", title: "Guide", exists: false },
-    { ref: "_content/Missing.memo.card", label: null, title: "Missing", exists: false },
+    { ref: "_content/Missing.doc.card", label: null, title: "Missing", exists: false },
   ],
   groups: [],
 };
@@ -87,7 +87,7 @@ const listing = renderToStaticMarkup(React.createElement(BrowseSidebarList, {
     dirs: [],
     cards: [
       { relativePath: "Box.landmark.card", name: "Box", type: "landmark", hasAttachments: false, prominence: "background" },
-      { relativePath: "briefing.memo.card", name: "briefing", type: "memo", hasAttachments: false, prominence: "ordinary" },
+      { relativePath: "briefing.doc.card", name: "briefing", type: "doc", hasAttachments: false, prominence: "ordinary" },
     ],
     files: [{ relativePath: "MAP.md", name: "MAP.md" }],
   },

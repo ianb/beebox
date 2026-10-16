@@ -21,7 +21,7 @@ function answer(probability) {
 
 ```ts
 const box = await makeTmpBox();
-const sourceRef = "/_content/inbox/staged/Notice.memo.card";
+const sourceRef = "/_content/inbox/staged/Notice.doc.card";
 const originalBytes = "---\ntitle: Notice\n---\nUtility bill is outstanding.\n";
 await box.write(sourceRef.slice(1), originalBytes);
 await box.write("_content/bills/Bills.landmark.card", "---\ndestinations:\n  - for: [triage]\n    rules: Utility bills.\n    todo-question: Does this require attention?\n---\n");

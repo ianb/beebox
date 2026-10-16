@@ -199,7 +199,7 @@ const content = createIntakeJobTemplate({
   created: "2026-06-09T00:00:00Z",
   connector: "gmail",
   description: "Triage 1 inbox item",
-  items: ["_content/inbox/a.memo.card"],
+  items: ["_content/inbox/a.doc.card"],
 });
 const loaded = await loadCardFromText({ content, source: "2026-06-09-gmail.intake.job.card", ctx: registryCtx });
 loaded.kind
@@ -219,8 +219,8 @@ const tryLoad = async (content: string, source: string): Promise<string> => {
 };
 
 // A bare XML body (no frontmatter) no longer loads
-await tryLoad("<memo status=\"new\"/>", "legacy.memo.card")
-=> legacy.memo.card: not a recognized card: no frontmatter block with a registered type
+await tryLoad("<doc title=\"Legacy\"/>", "legacy.doc.card")
+=> legacy.doc.card: not a recognized card: no frontmatter block with a registered type
 
 // Frontmatter whose filename type has no registered schema is also rejected
 await tryLoad("---\nthread-id: t1\n---\n", "x.unknown.card")

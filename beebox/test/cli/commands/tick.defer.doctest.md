@@ -82,7 +82,7 @@ the budget, an unavailable judge, or a missing key holds it, so the next run
 sees the same items.
 
 ```ts continue
-await box.write("_content/notes/a.memo.card", "---\ntitle: A\n---\n");
+await box.write("_content/notes/a.doc.card", "---\ntitle: A\n---\n");
 box.commitAll("add a");
 await box.write("_tmp/reason", "no-pass");
 await tick(box)
@@ -92,7 +92,7 @@ await tick(box)
 => true
 
 const held = head(box);
-await box.write("_content/notes/b.memo.card", "---\ntitle: B\n---\n");
+await box.write("_content/notes/b.doc.card", "---\ntitle: B\n---\n");
 box.commitAll("add b");
 await deferEach(box, { reasons: ["budget"], held })
 => skipped | deferred budget failures=0 | card kept

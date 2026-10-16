@@ -469,9 +469,9 @@ const missing = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.
 JSON.stringify([missing.success, missing.error])
 => [false,"Card not found: _content/inbox/Nope.pdf.card"]
 
-const wrongType = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.memo.card" } });
+const wrongType = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.doc.card" } });
 wrongType.error
-=> Not a pdf card: _content/inbox/Nope.memo.card
+=> Not a pdf card: _content/inbox/Nope.doc.card
 ```
 
 The `card` argument is user-supplied, so it resolves through `shared/ref-path.ts`

@@ -18,8 +18,8 @@ function contextFor(box) {
 
 const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
-function memo(body) {
-  return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
+function doc(body) {
+  return `---\ntitle: Notes\n---\n${body}`;
 }
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
@@ -31,8 +31,8 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox({ git: true });
 await box.seed(".beebox/box.json", MARKER);
 await box.write(
-  "_content/a.memo.card",
-  memo(
+  "_content/a.doc.card",
+  doc(
     '{% todo due="2026-07-01" %}Overdue thing{% /todo %}\n\n' +      // escalated
     '{% todo %}Undated thing{% /todo %}\n\n' +                       // on-plate
     '{% todo start="2026-09-01" %}Not yet{% /todo %}\n\n' +          // quiet
@@ -49,7 +49,7 @@ counts.onPlateTodos
 ## Zero when there are none
 
 ```ts continue
-await box.write("_content/a.memo.card", memo("No todos here.\n"));
+await box.write("_content/a.doc.card", doc("No todos here.\n"));
 box.commitAll("clear");
 
 const after = await contextFor(box).status();

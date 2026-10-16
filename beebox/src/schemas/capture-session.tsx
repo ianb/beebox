@@ -81,7 +81,7 @@ This body is generated, not hand-written — don't edit it directly; if somethin
 
 **Your duties on a capture card, in order:**
 1. **Annotate by default.** OCR any images with text and add descriptions for the rest, via subagents reading the actual image files (don't invent content from the transcript alone) — write the results onto the child image cards, commit, and set \`annotated: true\` on this card.
-2. **Then file it.** Either \`bbx mv\` the card (and its attach scope) out of \`tmp-capture/\` to wherever it belongs — a project, a person, a memo, a record — or, if you can fully process the capture on the spot (e.g. it's just a quick note that becomes a todo), complete that work and **delete the card** instead of filing it.
+2. **Then file it.** Either \`bbx mv\` the card (and its attach scope) out of \`tmp-capture/\` to wherever it belongs — a project, a person, a doc, a record — or, if you can fully process the capture on the spot (e.g. it's just a quick note that becomes a todo), complete that work and **delete the card** instead of filing it.
 3. **\`tmp-capture/\` must not accumulate.** It's a landing zone, not storage — a capture left there is unfinished work. If you can't finish filing it in one turn, say so and come back to it; don't leave it silently.`,
 });
 

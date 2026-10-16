@@ -41,7 +41,7 @@ messages and to Markdown pages that a publication renders.
 
 Other marks exist for particular kinds of card, such as a recipe's
 ingredients and steps. A kind of card declares its own marks, and they are
-valid only in that kind's body; the same mark typed into a memo is reported as
+valid only in that kind's body; the same mark typed into a plain doc is reported as
 an error rather than accepted silently. A box can declare marks for its own
 kinds. The baseline three are the ones the whole system agrees on, and the only
 ones every card shares.

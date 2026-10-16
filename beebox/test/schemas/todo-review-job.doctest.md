@@ -64,7 +64,7 @@ const older = parse([
   "priority: normal",
   "description: 'Todo review sweep: 1 escalated.'",
   "escalated:",
-  "  - locator: store/a.memo.card:5",
+  "  - locator: store/a.doc.card:5",
   "    text: An older item",
   "    detail: due 2026-07-01",
   "stirring: []",
@@ -75,5 +75,5 @@ const older = parse([
 ].join("\n"));
 
 JSON.stringify(older.fields.escalated[0])
-=> {"locator":"store/a.memo.card:5","text":"An older item","detail":"due 2026-07-01"}
+=> {"locator":"store/a.doc.card:5","text":"An older item","detail":"due 2026-07-01"}
 ```

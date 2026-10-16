@@ -48,7 +48,7 @@ async function handle(box, outcome = { outcome: "completed" }) {
 async function recipesBox() {
   const box = await makeTmpBox();
   await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
-  await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
+  await box.write("_content/inbox/triaged/recipes/Bread.doc.card", "<doc/>");
   return box;
 }
 ```
@@ -64,10 +64,10 @@ marker beside an item is not an item.
 const box = await makeTmpBox();
 await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
 await box.write("_content/receipts/Receipts.landmark.card", landmark("Receipts", procedureRef("/_config/procedures/archive.procedure.card")));
-await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
-await box.write("_content/inbox/triaged/recipes/Pasta.memo.card", "<memo>pasta</memo>");
-await box.write("_content/inbox/triaged/recipes/Pasta.memo.card.probable.txt", "Reason: judgment call.");
-await box.write("_content/inbox/triaged/receipts/Lunch.memo.card", "<memo>lunch</memo>");
+await box.write("_content/inbox/triaged/recipes/Bread.doc.card", "<doc>bread</doc>");
+await box.write("_content/inbox/triaged/recipes/Pasta.doc.card", "<doc>pasta</doc>");
+await box.write("_content/inbox/triaged/recipes/Pasta.doc.card.probable.txt", "Reason: judgment call.");
+await box.write("_content/inbox/triaged/receipts/Lunch.doc.card", "<doc>lunch</doc>");
 
 const { calls, results } = await handle(box);
 ({ calls, buckets: results.map((r) => ({ category: r.category, outcome: r.outcome })) })
@@ -76,13 +76,13 @@ const { calls, results } = await handle(box);
   calls: [
     {
       procedurePath: "_config/procedures/archive.procedure.card",
-      triageItems: ["_content/inbox/triaged/receipts/Lunch.memo.card"]
+      triageItems: ["_content/inbox/triaged/receipts/Lunch.doc.card"]
     },
     {
       procedurePath: "_content/recipes/archive.procedure.card",
       triageItems: [
-        "_content/inbox/triaged/recipes/Bread.memo.card",
-        "_content/inbox/triaged/recipes/Pasta.memo.card"
+        "_content/inbox/triaged/recipes/Bread.doc.card",
+        "_content/inbox/triaged/recipes/Pasta.doc.card"
       ]
     }
   ],
@@ -105,8 +105,8 @@ const box = await makeTmpBox();
 await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
 await box.write("_content/inbox/triaged/recipes/.gitkeep", ""); // bucket directory, no items
 await box.write("_content/notes/Notes.landmark.card", landmark("Notes", ""));
-await box.write("_content/inbox/triaged/notes/Item.memo.card", "<memo/>");
-await box.write("_content/inbox/triaged/_unsure/Mystery.memo.card", "<memo/>");
+await box.write("_content/inbox/triaged/notes/Item.doc.card", "<doc/>");
+await box.write("_content/inbox/triaged/_unsure/Mystery.doc.card", "<doc/>");
 
 const { calls, results } = await handle(box);
 ({ calls, buckets: results.map((r) => ({ category: r.category, outcome: r.outcome })) })

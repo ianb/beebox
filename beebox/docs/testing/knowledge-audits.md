@@ -36,7 +36,7 @@ When we talk about what the agent "knows," there are distinct phenomena worth na
 
 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `AGENTS.md` → `.beebox/agent-guide.md`, plus any `.claude/rules/` files triggered by the current task. These answers should be immediate and accurate.
 
-2. **Knows about** — Knows *that* something exists and *where to learn more*. The agent guide references docs or files by path (e.g., "see `node_modules/beebox/box-docs/card-memo.md`"), so the agent can follow the pointer to get details. May require multiple hops of file reading (e.g., guide → table of contents → specific doc), but each hop is straightforward traversal — the agent knows where to go next without searching or guessing. Reliability depends on whether the agent actually follows the references vs. guessing from the name alone.
+2. **Knows about** — Knows *that* something exists and *where to learn more*. The agent guide references docs or files by path (e.g., "see `node_modules/beebox/box-docs/card-doc.md`"), so the agent can follow the pointer to get details. May require multiple hops of file reading (e.g., guide → table of contents → specific doc), but each hop is straightforward traversal — the agent knows where to go next without searching or guessing. Reliability depends on whether the agent actually follows the references vs. guessing from the name alone.
 
 3. **Discoverable** — Information is available locally but requires search or exploration to locate. For example, grepping docs for a keyword, listing directory contents, or reading config files. The agent isn't told where to look — it has to figure that out. Success depends on search strategy and how discoverable the information is.
 
@@ -58,18 +58,18 @@ The same information can sit at different levels depending on what the agent is 
 
 - `src/schemas/AGENTS.md` is **knows directly** once the agent reads a file in `src/schemas/` (Claude Code loads a directory's `AGENTS.md` then). But when the agent is working on something unrelated, the same information is only **discoverable** — the agent would have to navigate to that directory and find the file.
 
-- `.claude/rules/card-memo.md` is **knows directly** when the agent reads or edits a `*.memo.card` file (the `paths:` glob triggers loading). When working on other card types, memo-specific knowledge is **discoverable** at best.
+- `.claude/rules/card-doc.md` is **knows directly** when the agent reads or edits a `*.doc.card` file (the `paths:` glob triggers loading). When working on other card types, doc-specific knowledge is **discoverable** at best.
 
 - A guide card's compiled rules (e.g., `_content/docs/generated/intake-guide.md`) are **knows directly** when processing an intake job (the job-specific rule file references them). Outside that context, the same information is **knows about** (referenced in the agent guide's card type list) or **discoverable** (via directory listing).
 
-This means testing should consider: what was the agent *doing* when it answered? A question about memo card structure might be "knows directly" mid-procedure but "knows about" in a cold prompt.
+This means testing should consider: what was the agent *doing* when it answered? A question about doc card structure might be "knows directly" mid-procedure but "knows about" in a cold prompt.
 
 ### How the knowledge chain works in Claude Code
 
 The agent's context is built in layers, each corresponding to a knowledge level:
 
 - **Always loaded** → *knows directly*: `AGENTS.md` → `.beebox/agent-guide.md` (~128 lines of operational overview, directory layout, command summaries, card type catalog with doc references)
-- **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `AGENTS.md` files (e.g., `src/schemas/AGENTS.md`) are loaded when the agent reads a file in that directory.
+- **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-doc.md` loads when touching `*.doc.card`). Also, directory-level `AGENTS.md` files (e.g., `src/schemas/AGENTS.md`) are loaded when the agent reads a file in that directory.
 - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card type specs, command reference, procedure authoring guide, domain guides — see its `README.md` index) and box-compiled docs in `_content/docs/generated/*.md` (guide compilations, personality, box-local card type specs). The agent guide points to these by path.
 - **Present but not referenced** → *discoverable*: config files, procedure definitions, guide cards. Available in the box but the agent has to find them by exploring.
 - **Outside the box** → *deducible*: beebox source code (`src/cards/`, `src/schemas/`, etc., or `node_modules/beebox` from inside the box). Accessible if the agent knows where to look, but outside the box.
@@ -171,7 +171,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Names _content/inbox/ directly without searching"
     correct_contains: ["_content/inbox"]
-    should_read: ["node_modules/beebox/box-docs/card-memo.md"]   # optional
+    should_read: ["node_modules/beebox/box-docs/card-doc.md"]   # optional
     should_not_read: ["some/file.md"]              # optional
     tags: [navigation]
 ```

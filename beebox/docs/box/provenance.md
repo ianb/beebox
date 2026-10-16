@@ -63,14 +63,14 @@ See `node_modules/beebox/box-docs/narration-mode.md`.
 ## PROVENANCE — the `{% source %}` tag
 
 When you write content that's derived from another card or file —
-a summary of a memo, an inference from an email, a name pulled from
+a summary of a voice note, an inference from an email, a name pulled from
 a transcript — wrap it in a `{% source %}` tag so the origin stays
 visible. The complement to `{% quote %}`: where `{% quote %}` answers
 *whose exact words*, `{% source %}` answers *where the content came
 from*, optionally *how* it was derived.
 
 ```
-{% source ref="/_content/inbox/Voice_2026-03-15.memo.card" usage="summary" %}
+{% source ref="/_content/inbox/Voice_2026-03-15.doc.card" usage="summary" %}
 She's been going back and forth on the kitchen — open shelves vs.
 closed, mostly because she doesn't trust herself to keep them tidy.
 {% /source %}
@@ -124,7 +124,7 @@ is sharper.
 The two tags compose to express "verbatim from there":
 
 ```
-{% source ref="/_content/inbox/Voice_2026-03-15.memo.card" usage="verbatim" %}
+{% source ref="/_content/inbox/Voice_2026-03-15.doc.card" usage="verbatim" %}
 {% quote %}I keep going back and forth on the kitchen.{% /quote %}
 {% /source %}
 ```

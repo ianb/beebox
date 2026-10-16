@@ -106,11 +106,11 @@ when one sits directly in it, else the plate.
 
 ```ts
 directoryListPath([
-  { relativePath: "_content/projects/porch-rebuild/budget.memo.card", type: "memo" },
+  { relativePath: "_content/projects/porch-rebuild/budget.doc.card", type: "doc" },
   { relativePath: "_content/projects/porch-rebuild/todos.todo-view.card", type: "todo-view" },
 ])
 => _content/projects/porch-rebuild/todos.todo-view.card
 
-directoryListPath([{ relativePath: "_content/projects/porch-rebuild/budget.memo.card", type: "memo" }])
+directoryListPath([{ relativePath: "_content/projects/porch-rebuild/budget.doc.card", type: "doc" }])
 => _content/plate.todo-view.card
 ```

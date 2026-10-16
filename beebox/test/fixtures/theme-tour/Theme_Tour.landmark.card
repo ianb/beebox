@@ -2,7 +2,7 @@
 navigation:
   label: Theme tour
   links:
-    - ref: /_content/theme-tour/Theme_Tour.memo.card
+    - ref: /_content/theme-tour/Theme_Tour.doc.card
       label: Card and system themes
     - ref: /_content/Box.landmark.card
       label: Inspect the box landmark

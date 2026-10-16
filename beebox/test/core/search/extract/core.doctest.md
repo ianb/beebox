@@ -26,24 +26,26 @@ async function docsFor(path: string, text: string, inputContents?: Map<string, s
 }
 ```
 
-## A memo becomes one document titled from its body
+## A doc card becomes one document titled from its `title:` field
+
+A short body stays a single document; the `contains` sentence rides along.
 
 ```ts
 const docs = await docsFor(
-  "_content/inbox/Voice_Note.memo.card",
-  "---\ncreated: 2026-05-22T10:00:00Z\ncontains: Dentist moved to June 17; confirmation in this email.\n---\nThe dentist called — appointment moved to June 17.\n"
+  "_content/inbox/Dentist_Call.doc.card",
+  "---\ntitle: Dentist call\ncontains: Dentist moved to June 17; confirmation in this email.\n---\nThe dentist called — appointment moved to June 17.\n"
 );
 docs.length
 => 1
 
 docs[0].id
-=> _content/inbox/Voice_Note.memo.card#
+=> _content/inbox/Dentist_Call.doc.card#
 
 docs[0].kind
-=> memo
+=> doc
 
 docs[0].title
-=> The dentist called — appointment moved to June 17.
+=> Dentist call
 
 docs[0].contains
 => Dentist moved to June 17; confirmation in this email.

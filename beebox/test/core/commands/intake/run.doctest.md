@@ -24,7 +24,7 @@ then (since its filename is already safe) advanced through to
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Note.memo.card", "<memo/>");
+await box.write("_content/inbox/Note.doc.card", "<doc/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
@@ -36,11 +36,11 @@ JSON.stringify({
 =>
 {
   "routed": [
-    "Note.memo.card"
+    "Note.doc.card"
   ],
   "applied": [],
   "staged": [
-    "Note.memo.card"
+    "Note.doc.card"
   ]
 }
 
@@ -51,7 +51,7 @@ _content/inbox/intake
 _content/inbox/intake/.gitkeep
 _content/inbox/staged
 _content/inbox/staged/.gitkeep
-_content/inbox/staged/Note.memo.card
+_content/inbox/staged/Note.doc.card
 _content/inbox/triaged
 _content/inbox/triaged/.gitkeep
 _content/inbox/triaged/_unsure
@@ -62,7 +62,7 @@ _content/inbox/unhandled/.gitkeep
 await box.list("_content/inbox/staged")
 =>
 _content/inbox/staged/.gitkeep
-_content/inbox/staged/Note.memo.card
+_content/inbox/staged/Note.doc.card
 ```
 
 ```ts cleanup
@@ -76,7 +76,7 @@ renamed file then advances to `staged/`.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Voice Memo (raw).memo.card", "<memo/>");
+await box.write("_content/inbox/Voice Note (raw).doc.card", "<doc/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
@@ -89,12 +89,12 @@ JSON.stringify({
   "applied": [
     {
       "step": "filename-normalization",
-      "file": "Voice Memo (raw).memo.card",
-      "newName": "Voice_Memo_raw.memo.card"
+      "file": "Voice Note (raw).doc.card",
+      "newName": "Voice_Note_raw.doc.card"
     }
   ],
   "staged": [
-    "Voice_Memo_raw.memo.card"
+    "Voice_Note_raw.doc.card"
   ]
 }
 ```
@@ -110,9 +110,9 @@ re-routed, and items in unrecognized subdirectories are left alone too.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/Fresh.memo.card", "<memo/>");
-await box.write("_content/inbox/oldbucket/Legacy.memo.card", "<memo/>");
-await box.write("_content/inbox/staged/Already.memo.card", "<memo/>");
+await box.write("_content/inbox/Fresh.doc.card", "<doc/>");
+await box.write("_content/inbox/oldbucket/Legacy.doc.card", "<doc/>");
+await box.write("_content/inbox/staged/Already.doc.card", "<doc/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
@@ -123,18 +123,18 @@ JSON.stringify({
 =>
 {
   "routed": [
-    "Fresh.memo.card"
+    "Fresh.doc.card"
   ],
   "staged": [
-    "Fresh.memo.card"
+    "Fresh.doc.card"
   ]
 }
 
-await box.read("_content/inbox/oldbucket/Legacy.memo.card")
-=> <memo/>
+await box.read("_content/inbox/oldbucket/Legacy.doc.card")
+=> <doc/>
 
-await box.read("_content/inbox/staged/Already.memo.card")
-=> <memo/>
+await box.read("_content/inbox/staged/Already.doc.card")
+=> <doc/>
 ```
 
 ```ts cleanup
@@ -150,12 +150,12 @@ context don't get swept into intake. Only `*.card` files are routed.
 const box = await makeTmpBox();
 await box.write("_content/inbox/AGENTS.md", "# Inbox context");
 await box.write("_content/inbox/MAP.md", "# Inbox map");
-await box.write("_content/inbox/Note.memo.card", "<memo/>");
+await box.write("_content/inbox/Note.doc.card", "<doc/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
 JSON.stringify({ routed: result.routed, staged: result.staged })
-=> {"routed":["Note.memo.card"],"staged":["Note.memo.card"]}
+=> {"routed":["Note.doc.card"],"staged":["Note.doc.card"]}
 
 await box.read("_content/inbox/AGENTS.md")
 => # Inbox context

@@ -74,7 +74,7 @@ questions:
       true: "At least one email is from the school about the spring field trip."
       false: "None is; a newsletter that mentions the school does not count."
 situation:
-  ref: /_content/about/family.memo.card
+  ref: /_content/about/family.doc.card
 ---
 You are looking at the email cards that arrived since the last check.
 `, { source: "field-trip.judgment.card", schemas });
@@ -82,7 +82,7 @@ JSON.stringify(judgmentQuestions(card.fields))
 => {"trip":{"type":"noul","instructions":[],"criteria":{"true":"At least one email is from the school about the spring field trip.","false":"None is; a newsletter that mentions the school does not count."}}}
 
 card.fields.situation.ref
-=> /_content/about/family.memo.card
+=> /_content/about/family.doc.card
 
 parseError("---\nquestions:\n  trip:\n    type: noul\n    criteria: { true: a, false: b }\n---\n\n", schemas)
 => «*»the body is the instructions Jev receives: say what the state is«*»

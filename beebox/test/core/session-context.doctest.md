@@ -151,8 +151,8 @@ The `todos` extra (Track 5a's ambient line) rides on every send, unlike
 => undefined
 
 await box.write(
-  "store/errand.memo.card",
-  '---\nstatus: new\ncreated: 2026-06-01T10:00:00Z\n---\n{% todo id="call-vet" %}Call the vet{% /todo %}\n'
+  "store/errand.doc.card",
+  '---\ntitle: Errand\n---\n{% todo id="call-vet" %}Call the vet{% /todo %}\n'
 );
 
 (await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).todos

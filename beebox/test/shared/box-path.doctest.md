@@ -14,8 +14,8 @@ import { boxRelativePath } from "../../src/shared/box-path.js";
 A leading slash (the authoring/ref form) is stripped:
 
 ```ts
-boxRelativePath("/_bookkeeping/archive/Foo.memo.card")
-=> _bookkeeping/archive/Foo.memo.card
+boxRelativePath("/_bookkeeping/archive/Foo.doc.card")
+=> _bookkeeping/archive/Foo.doc.card
 ```
 
 Redundant leading slashes collapse, and the empty string (the box root) is left

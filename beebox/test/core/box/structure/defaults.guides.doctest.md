@@ -4,8 +4,10 @@ Stock guides used to mark their seed experiment `status: active`; they now
 write `active: true`, last in the entry, where the `status-fields-2026-09`
 migration puts it. Their triage rules then said `source: default`; they now
 say `basis: default`, where the `source-fields-2026-09` migration puts it. An
-untracked box (no `_config/template-versions.json` entry) still holding either
-old stock copy takes the update in place instead of parking it. A tracked box
+Their actions then said to create memo cards; they now say doc cards (the
+memo type was retired in 2026-10). An untracked box (no
+`_config/template-versions.json` entry) still holding any old stock copy takes
+the update in place instead of parking it. A tracked box
 whose copy differs from its recorded version keeps its copy: that is an edit.
 
 ```ts setup
@@ -15,9 +17,16 @@ import * as os from "node:os";
 import { installGuides } from "../../../../src/core/box/structure/core.js";
 import { createInitialGuideTemplate } from "../../../../src/schemas/guide/templates.js";
 
+/** The stock form before memo cards were retired: actions said "memo card". */
+function preDocStock(name: string): string {
+  return createInitialGuideTemplate({ name })
+    .replace("(notes, bookmarks, captures)", "(memos, bookmarks, captures)")
+    .replaceAll("Create a doc card", "Create a memo card");
+}
+
 /** The stock form before triage rules' `source` became `basis`. */
 function preBasisStock(name: string): string {
-  return createInitialGuideTemplate({ name }).replaceAll("\n    basis: ", "\n    source: ");
+  return preDocStock(name).replaceAll("\n    basis: ", "\n    source: ");
 }
 
 /** The pre-2026-09 stock form: `status: active` right after the experiment id. */
@@ -63,6 +72,14 @@ JSON.stringify((await installGuides(preBasis)).filter((entry) => entry.includes(
 
 (await fs.readFile(path.join(preBasis, "_config/intake.guide.card"), "utf-8")) === createInitialGuideTemplate({ name: "intake" })
 => true
+```
+
+## An untracked box's pre-doc stock guides update in place
+
+```ts continue
+const preDoc = await boxWith({ "_config/intake.guide.card": preDocStock("intake"), "_config/calendar.guide.card": preDocStock("calendar") });
+JSON.stringify(await installGuides(preDoc))
+=> ["intake.guide.card (updated)","calendar.guide.card (updated)"]
 ```
 
 ## A tracked box that diverged from its recorded version parks the update

@@ -67,7 +67,7 @@ moved.some((message) => message.includes("Required system card missing")) && mov
 => true
 
 git(box, "reset", "--hard", "HEAD");
-await box.write(SYSTEM_CARD_PATHS.browse, "---\ntype: memo\n---\n");
+await box.write(SYSTEM_CARD_PATHS.browse, "---\ntype: doc\n---\n");
 git(box, "add", SYSTEM_CARD_PATHS.browse);
 (await checkStagedSystemCards(box.root)).some((message) => message.includes("does not match filename type"))
 => true

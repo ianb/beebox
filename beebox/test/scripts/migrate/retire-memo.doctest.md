@@ -192,6 +192,17 @@ refs: [{ref: X.doc.card}]
 See [it](/c/X.doc.card), `X.doc.card`, and [audio](X.attach/recording.attach/recording.m4a). Not `**/*.memo.card`.
 ```
 
+A memo that links another memo links the other memo's doc.
+
+```ts
+written({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: A\n", "See [B](./B.memo.card)\n"), "n/B.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: B\n") }, "n/A.doc.card")
+=>
+---
+title: A
+---
+See [B](./B.doc.card)
+```
+
 A sibling recording's bare filename cannot be told apart from prose, so a
 remaining mention of it is a failure to fix by hand.
 

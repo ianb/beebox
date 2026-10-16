@@ -44,12 +44,12 @@ ordinary entry after it is still created.
 ```ts
 const box = await makeTmpBox();
 const { errors } = await runChain(box, [
-  { path: "../outside/Evil.memo.card", args: { content: "escaped" } },
-  { path: "_content/notes/Daily.memo.card", args: { content: "ok" } },
+  { path: "../outside/Evil.doc.card", args: { title: "Evil", body: "escaped" } },
+  { path: "_content/notes/Daily.doc.card", args: { title: "Daily", body: "ok" } },
 ]);
 JSON.stringify(errors, null, 2)
 => [
-  "  Chain: nightly-notes: path \"../outside/Evil.memo.card\" escapes the box — skipping"
+  "  Chain: nightly-notes: path \"../outside/Evil.doc.card\" escapes the box — skipping"
 ]
 ```
 
@@ -60,43 +60,43 @@ existsSync(join(box.root, "outside"))
 => false
 ```
 
-The normal entry created its card from the `memo` default template:
+The normal entry created its card from the `doc` default template:
 
 ```ts continue
 await box.list("_content/notes")
 =>
-_content/notes/Daily.memo.card
+_content/notes/Daily.doc.card
 
-(await box.read("_content/notes/Daily.memo.card")).includes("ok")
+(await box.read("_content/notes/Daily.doc.card")).includes("ok")
 => true
 ```
 
 ## A leading `/` addresses the box root, not the OS root
 
-`/_content/kept/Weekly.memo.card` is the canonical box-root form, so it lands
+`/_content/kept/Weekly.doc.card` is the canonical box-root form, so it lands
 inside the box like any other in-box path.
 
 ```ts continue
 const second = await runChain(box, [
-  { path: "/_content/kept/Weekly.memo.card", args: { content: "weekly" } },
+  { path: "/_content/kept/Weekly.doc.card", args: { title: "Weekly", body: "weekly" } },
 ]);
 second.errors.length
 => 0
 
 await box.list("_content/kept")
 =>
-_content/kept/Weekly.memo.card
+_content/kept/Weekly.doc.card
 ```
 
 Re-running the same chain is idempotent — an existing target is left alone:
 
 ```ts continue
 const third = await runChain(box, [
-  { path: "/_content/kept/Weekly.memo.card", args: { content: "changed" } },
+  { path: "/_content/kept/Weekly.doc.card", args: { title: "Weekly", body: "changed" } },
 ]);
 JSON.stringify(third.logs, null, 2)
 => [
-  "  Chain: /_content/kept/Weekly.memo.card already exists, skipping"
+  "  Chain: /_content/kept/Weekly.doc.card already exists, skipping"
 ]
 ```
 

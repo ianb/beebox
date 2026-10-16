@@ -62,7 +62,7 @@ back on the next run.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/notes/old.memo.card", "---\ntitle: Old\n---\n");
+await box.write("_content/notes/old.doc.card", "---\ntitle: Old\n---\n");
 await box.write("_config/schedules/watch.scheduled-script.card", WATCH);
 box.commitAll("setup");
 await box.write("_tmp/next-carry", "told them about old");
@@ -98,7 +98,7 @@ It writes no carry file, so the carry is kept.
 
 ```ts continue
 await fs.rm(box.path("_tmp/next-carry"));
-await box.write("_content/notes/new.memo.card", "---\ntitle: New\n---\n");
+await box.write("_content/notes/new.doc.card", "---\ntitle: New\n---\n");
 box.commitAll("add new");
 (await tick(box)).status
 => ran
@@ -107,7 +107,7 @@ box.commitAll("add new");
 => since: setup
 time: <first run>
 carry: told them about old
-added: [_content/notes/new.memo.card]
+added: [_content/notes/new.doc.card]
 
 (await loadScriptState(box.root, "watch")).carry
 => told them about old
@@ -128,7 +128,7 @@ nothing is dropped.
 
 ```ts continue
 const beforeFailure = (await loadScriptState(box.root, "watch")).lastCommit;
-await box.write("_content/notes/third.memo.card", "---\ntitle: Third\n---\n");
+await box.write("_content/notes/third.doc.card", "---\ntitle: Third\n---\n");
 box.commitAll("add third");
 await box.write("_tmp/fail", "");
 (await tick(box)).status
@@ -143,7 +143,7 @@ await fs.rm(box.path("_tmp/fail"));
 => ran
 
 (await box.read("_tmp/seen.txt")).split("\n").find((l) => l.startsWith("added:"))
-=> added: [_content/notes/third.memo.card]
+=> added: [_content/notes/third.doc.card]
 ```
 
 ## A carry over 4 KB is truncated, with a warning

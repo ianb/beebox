@@ -17,11 +17,11 @@ const paths = (cards: { boxPath: string }[]) => cards.map((c) => c.boxPath);
 
 ```ts
 const pick = alsoHere(
-  [card("/_content/A.memo.card", 1), card("/_content/B.memo.card", 3), card("/_content/C.memo.card", 2)],
-  { shownRefs: new Set(["_content/B.memo.card"]), cap: 10 },
+  [card("/_content/A.doc.card", 1), card("/_content/B.doc.card", 3), card("/_content/C.doc.card", 2)],
+  { shownRefs: new Set(["_content/B.doc.card"]), cap: 10 },
 );
 ({ cards: paths(pick.cards), count: pick.count })
-=> { cards: ["/_content/C.memo.card", "/_content/A.memo.card"], count: 2 }
+=> { cards: ["/_content/C.doc.card", "/_content/A.doc.card"], count: 2 }
 ```
 
 ## The cap limits the cards, not the count

@@ -68,17 +68,17 @@ surface it.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/projects/Big_Refactor.memo.card", `---
+await box.write("_content/projects/Big_Refactor.doc.card", `---
 title: The Big Refactor
-contains: project memo
+contains: project notes
 ---
 Notes.
 `);
 await box.write("nav.card", `---
 entries:
   - { href: /browse }
-  - { ref: _content/projects/Big_Refactor.memo.card }
-  - { ref: _content/gone/Missing.memo.card, label: Ghost }
+  - { ref: _content/projects/Big_Refactor.doc.card }
+  - { ref: _content/gone/Missing.doc.card, label: Ghost }
 ---
 `);
 const result = await resolveNav(box.root);
@@ -87,20 +87,20 @@ JSON.stringify(result.status === "ok" ? result.entries.slice(1) : null, null, 2)
 [
   {
     "kind": "ref",
-    "target": "_content/projects/Big_Refactor.memo.card",
+    "target": "_content/projects/Big_Refactor.doc.card",
     "label": "The Big Refactor",
     "exists": true
   },
   {
     "kind": "ref",
-    "target": "_content/gone/Missing.memo.card",
+    "target": "_content/gone/Missing.doc.card",
     "label": "Ghost",
     "exists": false
   }
 ]
 
 JSON.stringify(result.status === "ok" ? result.problems : null)
-=> ["ref \"_content/gone/Missing.memo.card\" does not point at an existing file"]
+=> ["ref \"_content/gone/Missing.doc.card\" does not point at an existing file"]
 ```
 
 ## A box path (leading `/`) is the canonical ref form
@@ -112,16 +112,16 @@ must not survive into the entry).
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/projects/Big_Refactor.memo.card", `---
+await box.write("_content/projects/Big_Refactor.doc.card", `---
 title: The Big Refactor
-contains: project memo
+contains: project notes
 ---
 Notes.
 `);
 await box.write("nav.card", `---
 entries:
-  - { ref: /_content/projects/Big_Refactor.memo.card }
-  - { ref: _content/projects/Big_Refactor.memo.card, label: Bare }
+  - { ref: /_content/projects/Big_Refactor.doc.card }
+  - { ref: _content/projects/Big_Refactor.doc.card, label: Bare }
 ---
 `);
 const result = await resolveNav(box.root);
@@ -130,13 +130,13 @@ JSON.stringify(result.status === "ok" ? result.entries : null, null, 2)
 [
   {
     "kind": "ref",
-    "target": "_content/projects/Big_Refactor.memo.card",
+    "target": "_content/projects/Big_Refactor.doc.card",
     "label": "The Big Refactor",
     "exists": true
   },
   {
     "kind": "ref",
-    "target": "_content/projects/Big_Refactor.memo.card",
+    "target": "_content/projects/Big_Refactor.doc.card",
     "label": "Bare",
     "exists": true
   }
@@ -152,15 +152,15 @@ other — reported in `problems`, still rendered:
 ```ts continue
 await box.write("nav.card", `---
 entries:
-  - { ref: /_content/gone/Missing.memo.card }
+  - { ref: /_content/gone/Missing.doc.card }
 ---
 `);
 const missing = await resolveNav(box.root);
 JSON.stringify(missing.status === "ok" ? missing.problems : null)
-=> ["ref \"/_content/gone/Missing.memo.card\" does not point at an existing file"]
+=> ["ref \"/_content/gone/Missing.doc.card\" does not point at an existing file"]
 
 JSON.stringify(missing.status === "ok" ? missing.entries[0].target : null)
-=> "_content/gone/Missing.memo.card"
+=> "_content/gone/Missing.doc.card"
 ```
 
 ## An unknown href fails validation with the valid set enumerated
@@ -204,26 +204,26 @@ after the realpath check. Neither entry renders.
 ```ts
 const box = await makeTmpBox();
 const outsideDir = await mkdtemp(`${tmpdir()}/bbx-nav-outside-`);
-const outside = `${outsideDir}/Secret.memo.card`;
+const outside = `${outsideDir}/Secret.doc.card`;
 await writeFile(outside, "---\ntitle: Secret\n---\n");
 await box.write("_content/.keep", "");
-await symlink(outside, box.path("_content/Leak.memo.card"));
+await symlink(outside, box.path("_content/Leak.doc.card"));
 
 await box.write("nav.card", `---
 entries:
   - { href: / }
-  - { ref: ../outside/Secret.memo.card }
-  - { ref: /../outside/Secret.memo.card }
-  - { ref: /_content/Leak.memo.card }
+  - { ref: ../outside/Secret.doc.card }
+  - { ref: /../outside/Secret.doc.card }
+  - { ref: /_content/Leak.doc.card }
 ---
 `);
 const result = await resolveNav(box.root);
 JSON.stringify(result.status === "ok" ? result.problems : null, null, 2)
 =>
 [
-  "ref \"../outside/Secret.memo.card\" must be box-relative (must not escape the box via ..)",
-  "ref \"/../outside/Secret.memo.card\" must be box-relative (must not escape the box via ..)",
-  "ref \"/_content/Leak.memo.card\" must be box-relative (must not escape the box via a symlink)"
+  "ref \"../outside/Secret.doc.card\" must be box-relative (must not escape the box via ..)",
+  "ref \"/../outside/Secret.doc.card\" must be box-relative (must not escape the box via ..)",
+  "ref \"/_content/Leak.doc.card\" must be box-relative (must not escape the box via a symlink)"
 ]
 
 result.status === "ok" ? result.entries.length : null
@@ -240,7 +240,7 @@ await rm(outsideDir, { recursive: true, force: true });
 ```ts
 const bad = parseNavFields(`---
 entries:
-  - { href: /chat, ref: _content/x.memo.card }
+  - { href: /chat, ref: _content/x.doc.card }
 ---
 `);
 bad.fields === null

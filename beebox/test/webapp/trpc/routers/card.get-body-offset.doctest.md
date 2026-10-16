@@ -26,15 +26,15 @@ function caller(boxRoot) {
 }
 ```
 
-A memo with a three-field frontmatter block: five lines precede the body.
+A doc with a three-field frontmatter block: five lines precede the body.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/Porch.memo.card", [
+await box.write("_content/Porch.doc.card", [
   "---",
-  "status: new",
-  "created: 2026-07-01T10:00:00Z",
   "title: Porch",
+  "via: {channel: telegram}",
+  "sources: []",
   "---",
   "Intro line.",
   "",
@@ -43,7 +43,7 @@ await box.write("_content/Porch.memo.card", [
 ].join("\n"));
 box.commitAll("seed");
 
-const card = await caller(box.root).card.get({ path: "_content/Porch.memo.card" });
+const card = await caller(box.root).card.get({ path: "_content/Porch.doc.card" });
 card.bodyLineOffset
 => 5
 ```
@@ -56,7 +56,7 @@ JSON.stringify([...assignLocators(Markdoc.parse(card.body ?? ""), card.bodyLineO
 
 const res = await caller(box.root).collections.query({
   collection: "todos",
-  query: { here: "_content/Porch.memo.card", includeReferring: false, params: { status: ["open"] } },
+  query: { here: "_content/Porch.doc.card", includeReferring: false, params: { status: ["open"] } },
 });
 JSON.stringify(res.groups.flatMap((g) => g.rows.flatMap((r) => r.items.map((i) => i.locator))))
 => [{"kind":"body","line":8}]
@@ -66,8 +66,8 @@ A card whose frontmatter does not validate still reports the offset, since
 its body is still shown:
 
 ```ts continue
-await box.write("_content/Broken.memo.card", "---\nstatus: [not, a, status]\n---\nBody\n");
-const broken = await caller(box.root).card.get({ path: "_content/Broken.memo.card" });
+await box.write("_content/Broken.doc.card", "---\ntitle: [not, a, title]\n---\nBody\n");
+const broken = await caller(box.root).card.get({ path: "_content/Broken.doc.card" });
 JSON.stringify([broken.validationError === undefined, broken.bodyLineOffset, broken.body])
 => [false,3,"Body\n"]
 ```

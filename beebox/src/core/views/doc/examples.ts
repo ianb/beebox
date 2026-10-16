@@ -10,18 +10,18 @@ export const examplesSection = `## Examples
 \`\`\`tsx
 import { Markdown } from "beebox/view-widgets";
 
-export const name = "Recent Memos";
-export const description = "Every processed memo, newest first";
-export const dependencies = ["_content/**/*.memo.card"];
+export const name = "Recent Notes";
+export const description = "Every captured note, newest first";
+export const dependencies = ["_content/captures/*.doc.card"];
 export const modes = ["page", "chat"];
 export const rendersCardTypes = ["dashboard"];
 
-export default function RecentMemos({ cards }) {
-  const memos = cards.filter(c => c.type === "memo");
+export default function RecentNotes({ cards }) {
+  const notes = cards.filter(c => c.type === "doc");
   return (
     <div>
-      <h2>Memos</h2>
-      {memos.map(card => (
+      <h2>Notes</h2>
+      {notes.map(card => (
         <div key={card.path} style={{ marginBottom: "1rem" }}>
           <h3>{String(card.frontmatter?.title ?? card.path)}</h3>
           {card.body ? <Markdown card={card}>{card.body}</Markdown> : null}

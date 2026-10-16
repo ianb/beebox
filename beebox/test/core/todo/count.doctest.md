@@ -21,8 +21,8 @@ async function collectTodos(boxRoot) {
   return { todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items), issues: result.issues };
 }
 
-const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
-const memo = (body: string): string => `---\n${MEMO_FM}---\n${body}`;
+const DOC_FM = "title: Kitchen\ncontains: Notes on the kitchen remodel.\n";
+const doc = (body: string): string => `---\n${DOC_FM}---\n${body}`;
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox();
@@ -35,7 +35,7 @@ wrote but left to the boxholder (`by` is provenance, `assigned` is ownership,
 and only ownership decides the badge).
 
 ```ts
-await box.write("_content/notes/Plate.memo.card", memo(`
+await box.write("_content/notes/Plate.doc.card", doc(`
 {% todo %}Call the vet back{% /todo %}
 
 {% todo assigned="agent" by="agent" created="2026-07-28" %}
@@ -87,7 +87,7 @@ because the author meant the boxholder, so it stays the boxholder's.
 Escalation is about the date, not about who is owed the work.
 
 ```ts continue
-await box.write("_content/notes/Overdue.memo.card", memo(`
+await box.write("_content/notes/Overdue.doc.card", doc(`
 {% todo assigned="agent" by="agent" created="2026-07-01" due="2026-07-02" %}
 Re-check the frozen snapshot
 {% /todo %}
@@ -100,7 +100,7 @@ await countOnPlateTodos(box.root)
 A boxholder todo past due does count, and reads as escalated:
 
 ```ts continue
-await box.write("_content/notes/Late.memo.card", memo(`
+await box.write("_content/notes/Late.doc.card", doc(`
 {% todo due="2026-07-02" %}Renew the parking permit{% /todo %}
 `));
 
@@ -108,7 +108,7 @@ await countOnPlateTodos(box.root)
 => 3
 ```
 
-Ordering follows card path, so `Late.memo.card` precedes `Overdue.memo.card`:
+Ordering follows card path, so `Late.doc.card` precedes `Overdue.doc.card`:
 
 ```ts continue
 JSON.stringify((await collectTodos(box.root)).todos.filter((t) => t.plateState === "escalated").map((t) => [t.text.slice(0, 10), t.assigned ?? null]))
@@ -131,7 +131,7 @@ on the same number both ways.
 const scopeBox = await makeTmpBox();
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
-await scopeBox.write("_content/notes/Everything.memo.card", memo(`
+await scopeBox.write("_content/notes/Everything.doc.card", doc(`
 {% todo %}Undated, on the plate{% /todo %}
 
 {% todo due="2026-07-01" %}Escalated{% /todo %}
@@ -176,7 +176,7 @@ placeholder `"user"` todo does.
 const othersBox = await makeTmpBox();
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
-await othersBox.write("_content/notes/Others.memo.card", memo(`
+await othersBox.write("_content/notes/Others.doc.card", doc(`
 {% todo %}Book the hall{% /todo %}
 
 {% todo assigned="Dana" %}Bring the folding chairs{% /todo %}

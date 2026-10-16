@@ -277,11 +277,11 @@ out.split("\n").find((l) => l.startsWith("stderr:"))
 A `situation:` ref replaces the briefing; with neither, the dry run says so.
 
 ```ts continue
-await box.write("_content/about/household.memo.card", "---\ntitle: Household\n---\nTwo adults share this box.\n");
-await box.write("_config/judgments/with-situation.judgment.card", TRIP.replace("---\nY", "situation:\n  ref: /_content/about/household.memo.card\n---\nY"));
+await box.write("_content/about/household.doc.card", "---\ntitle: Household\n---\nTwo adults share this box.\n");
+await box.write("_config/judgments/with-situation.judgment.card", TRIP.replace("---\nY", "situation:\n  ref: /_content/about/household.doc.card\n---\nY"));
 const stdout = (out) => out.split("\n").filter((l) => !l.startsWith("stderr:"));
 stdout(await judge(box, "_config/judgments/with-situation.judgment.card", { dryRun: true }, { stdin: "x" }))[0]
-=> situation: _content/about/household.memo.card
+=> situation: _content/about/household.doc.card
 
 await fs.rm(box.path("_content/briefing.briefing.card"));
 stdout(await judge(box, "_config/judgments/field-trip.judgment.card", { dryRun: true }, { stdin: "x" }))[0]
