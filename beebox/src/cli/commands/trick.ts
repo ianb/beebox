@@ -44,6 +44,7 @@ async function commitTrickChanges(
   const paths = changedDirtyPaths(before, await snapshotDirtyPaths(boxRoot));
   const committed = await stageAndCommitPaths(boxRoot, {
     paths,
+    excludeOversized: true,
     message: `Auto-commit changes from trick: ${trickName}`,
     trailers: { "Run-By": `trick/${trickName}` },
   });

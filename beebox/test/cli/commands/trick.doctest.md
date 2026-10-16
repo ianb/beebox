@@ -216,6 +216,39 @@ dirty(box)
 await box.cleanup();
 ```
 
+## A file over the auto-stage limit stays uncommitted
+
+The 10 MB guard that protects a blind sweep also applies to the trick's own
+paths: an oversized file is left unstaged with a warning, and the rest of the
+trick's output is committed.
+
+```ts
+const box = await boxWithPendingEdit();
+await writeTrick(box, "big", `
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+writeFileSync(join(process.env.BBX_BOX_ROOT, "out/big.dat"), Buffer.alloc(11 * 1024 * 1024, 1));
+writeFileSync(join(process.env.BBX_BOX_ROOT, "out/small.txt"), "small\\n");
+`);
+await mkdir(box.path("out"), { recursive: true });
+git(box, ["add", "-A", "src"]);
+git(box, ["commit", "-q", "-m", "big trick"]);
+
+const r = await runTrickCli(box.root, ["big"]);
+headCommit(box).files
+=> ["out/small.txt"]
+
+r.stderr.includes("out/big.dat (11.0MB)")
+=> true
+
+dirty(box)
+=> ["?? notes/someone-else.txt","?? out/big.dat"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Output that git ignores commits nothing
 
 ```ts

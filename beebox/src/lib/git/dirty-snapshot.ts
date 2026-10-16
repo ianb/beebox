@@ -7,8 +7,10 @@
  */
 
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { pipeline } from "node:stream/promises";
 import { simpleGit } from "simple-git";
 import { errnoCode } from "../../shared/error-guards.js";
 
@@ -27,7 +29,7 @@ export async function listDirtyPaths(boxRoot: string): Promise<string[]> {
   const git = simpleGit(boxRoot);
   // Porcelain paths are repo-root-relative whatever the cwd; strip the prefix
   // to return them in boxRoot's frame, which `stageAndCommitPaths` expects.
-  const prefix = (await git.raw(["rev-parse", "--show-prefix"])).trim();
+  const prefix = (await git.raw(["rev-parse", "--show-prefix"])).replace(/\n$/, "");
   const output = await git.raw(["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", "."]);
   const fields = output.split("\0");
   const paths = new Set<string>();
@@ -55,8 +57,10 @@ async function fingerprint(absPath: string): Promise<string> {
   }
   if (stat.isSymbolicLink()) return `link:${await fs.readlink(absPath)}`;
   if (!stat.isFile()) return `other:${stat.mode.toString(8)}`;
-  const digest = createHash("sha256").update(await fs.readFile(absPath)).digest("hex");
-  return `file:${stat.mode.toString(8)}:${digest}`;
+  const hash = createHash("sha256");
+  // Streamed: a dirty file can be large media the trick never touches.
+  await pipeline(createReadStream(absPath), hash);
+  return `file:${stat.mode.toString(8)}:${hash.digest("hex")}`;
 }
 
 /** Fingerprint every dirty path under boxRoot. */
