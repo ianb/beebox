@@ -36,7 +36,7 @@ import { toError } from "../../../shared/error-guards.js";
 import type { TrpcContext } from "../context.js";
 
 /** The DTO `status` returns. */
-interface VoiceStatusDto {
+export interface VoiceStatusDto {
   recordingId: string;
   hq: VoiceHqState;
   handoff: VoiceHandoff;
