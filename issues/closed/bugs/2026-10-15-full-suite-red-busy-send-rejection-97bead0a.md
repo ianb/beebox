@@ -3,10 +3,18 @@ title: "Full-suite red: test/webapp/routes/chat.send-fast-ack.doctest.md"
 workstream: busy-send-rejection
 area: beebox
 priority: important
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-busy-send-rejection — the hourly full-suite run on main
 ---
+
+> **Closed 2026-10-16: fixed by `9099b2965`** ("Test: park the engine start, not
+> send(), in the fast-ack doctest"). The busy-send change made the route ack
+> only after the session admits a send; the doctest parked `send()` before
+> admission, so the ack never came. The gate now parks the engine start. Later
+> hourly full-suite runs on `main` passed. Commit IDs below predate the
+> 2026-10-15 history rewrite and no longer resolve.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `ca25026f`. Bisecting the landings since the last tested
