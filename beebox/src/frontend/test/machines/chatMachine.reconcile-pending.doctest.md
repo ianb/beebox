@@ -7,7 +7,7 @@ rest stay visible. Entries explicitly queued while the agent is busy also
 carry `pending: true`, which gives them the dimmed "queued — waiting" UI.
 
 ```ts setup
-import { reconcilePending, mergeAcceptedIntoPending } from "../../src/machines/chatMachine/chat-shared.js";
+import { reconcilePending, mergeAcceptedIntoPending, holdInjectedMessage } from "../../src/machines/chatMachine/chat-shared.js";
 import type { PendingSessionEntry, SessionEntry } from "../../src/api.js";
 
 function userEntry(uuid: string, text: string): SessionEntry {
@@ -291,4 +291,31 @@ const echoed = reconcilePending({
 });
 JSON.stringify({ messages: echoed.messages.length, pending: echoed.pendingMessages.length })
 => {"messages":1,"pending":0}
+```
+
+## A message the box injected stays on screen until the transcript has it
+
+A delivered capture is announced before the agent writes it to the
+transcript. A refresh in that gap must keep it, and the refresh after the
+write must retire it without a duplicate.
+
+```ts
+const capture = '<capture doc="captures/a.md">2 photos</capture>';
+const shown = [userEntry("s1", "<typed>hi</typed>")];
+const held = holdInjectedMessage({ messages: shown, pendingMessages: [], message: capture, timestamp: "2026-10-16T12:00:00Z" });
+print(`held: ${held.messages.map((m) => m.uuid).join(", ")}`);
+const early = reconcilePending({ serverMessages: shown, pendingMessages: held.pendingMessages });
+print(`refresh before the write: ${early.messages.map((m) => m.uuid).join(", ")}`);
+const late = reconcilePending({ serverMessages: [...shown, userEntry("s2", capture)], pendingMessages: early.pendingMessages });
+print(`refresh after the write: ${late.messages.map((m) => m.uuid).join(", ")}`);
+const again = holdInjectedMessage({ messages: held.messages, pendingMessages: held.pendingMessages, message: capture, timestamp: "2026-10-16T12:00:00Z" });
+print(`announced twice: ${again.messages.length}`);
+const already = holdInjectedMessage({ messages: late.messages, pendingMessages: [], message: capture, timestamp: "2026-10-16T12:00:00Z" });
+print(`already in the transcript: ${already.messages.length}`);
+=>
+held: s1, injected-2026-10-16T12:00:00Z
+refresh before the write: s1, injected-2026-10-16T12:00:00Z
+refresh after the write: s1, s2
+announced twice: 2
+already in the transcript: 2
 ```

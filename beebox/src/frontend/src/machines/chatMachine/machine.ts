@@ -10,7 +10,7 @@
 
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
-import { buildOptimisticContent, mergeAcceptedIntoPending } from "./chat-shared";
+import { buildOptimisticContent, holdInjectedMessage, mergeAcceptedIntoPending } from "./chat-shared";
 import { initialChatContext } from "./chat-machine-context";
 import {
   chatTailSlice,
@@ -97,6 +97,16 @@ export const chatMachine = setup({
     // Global handler: another user sent a message (via SSE broadcast)
     OTHER_USER_MESSAGE: {
       actions: assign(appendOtherUserMessage),
+    },
+    // Global handler: the box injected a message (a delivered capture or
+    // upload); show it until the transcript has it (holdInjectedMessage).
+    INJECTED_USER_MESSAGE: {
+      actions: assign(({ context, event }) => holdInjectedMessage({
+        messages: context.messages,
+        pendingMessages: context.pendingMessages,
+        message: event.message,
+        timestamp: event.timestamp,
+      })),
     },
     // Global handler: prepend older messages loaded on demand (bounded — see
     // prependOlderMessages).
