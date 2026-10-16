@@ -28,15 +28,11 @@ function isComponentType(type: unknown): type is ComponentType {
 }
 
 function nameOf(type: ComponentType, fallback?: string): string {
-  if (type.displayName !== undefined) return type.displayName;
-  return fallback !== undefined && fallback !== "" ? fallback : "Anonymous";
+  return type.displayName ?? (fallback || "Anonymous");
 }
 
 /** A component's name, or null for a host or internal fiber. */
-type ComponentName = string | null;
-type PreviousFiber = Fiber | null;
-
-function componentName(fiber: Fiber): ComponentName {
+function componentName(fiber: Fiber): string | null {
   const { type, tag } = fiber;
   if (!isComponentType(type)) return null;
   if (tag === FUNCTION_COMPONENT || tag === CLASS_COMPONENT || tag === SIMPLE_MEMO_COMPONENT) return nameOf(type, type.name);
@@ -50,11 +46,10 @@ function componentName(fiber: Fiber): ComponentName {
  * not render has no PerformedWork flag. React DevTools uses the same two tests.
  */
 function countCommit(root: FiberRoot, counts: Map<string, number>): void {
-  const visit = (next: Fiber, prev: PreviousFiber): void => {
+  const visit = (next: Fiber, prev: Fiber | null): void => {
     const name = componentName(next);
     if (name !== null && (prev === null || (next.flags & PERFORMED_WORK) !== 0)) {
-      const before = counts.get(name);
-      counts.set(name, before === undefined ? 1 : before + 1);
+      counts.set(name, (counts.get(name) ?? 0) + 1);
     }
     if (prev !== null && next.child === prev.child) return;
     for (let child = next.child; child !== null; child = child.sibling) {
@@ -64,8 +59,7 @@ function countCommit(root: FiberRoot, counts: Map<string, number>): void {
   visit(root.current, root.current.alternate);
 }
 
-type StepResult = void | Promise<void>;
-type Step = () => StepResult;
+type Step = () => void | Promise<void>;
 
 export interface Mounted {
   container: HTMLElement;

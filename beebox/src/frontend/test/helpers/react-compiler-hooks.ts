@@ -24,27 +24,22 @@ export class CompilerOutputError extends Error {
   }
 }
 
-/** Every path this hook reads or writes is built from its own URL, a frontend module URL, or a hash. */
 async function readText(path: string): Promise<string> {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- module and cache paths, built above
   return readFile(path, "utf8");
 }
 
 /** Write then rename, so a parallel test process never reads a partial file. */
 async function writeCached(path: string, code: string): Promise<void> {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- constant cache directory
   await mkdir(CACHE_DIR, { recursive: true });
   const partial = `${path}.${process.pid}.tmp`;
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-named file in the cache directory
   await writeFile(partial, code);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-named files in the cache directory
   await rename(partial, path);
 }
 
 /** A change to this hook or to any package in the transform invalidates every cached module. */
 const require = createRequire(import.meta.url);
 const CACHE_SALT = [
-  await readText(fileURLToPath(import.meta.url)),
+  await readText(import.meta.filename),
   ...await Promise.all(["babel-plugin-react-compiler", "@babel/core", "esbuild"].map(
     async (name) => readText(require.resolve(`${name}/package.json`)),
   )),
