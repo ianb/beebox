@@ -7,7 +7,13 @@ filed-by: agent
 discovered-by: agent
 discovered-in: mjs-to-typescript worktree — adding `scripts/build-cli.ts` (moved to `beebox/src/scripts/build-cli/build/bundle.ts`) to a tsconfig
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-10-16 (workstream `doctest-typecheck`): `beebox/tsconfig.typecheck.json`
+extends `tsconfig.json` with `test/**/*.ts` and `rootDir: "."`, and
+`typecheck:backend` now checks it. The 16 errors the first check found are
+fixed. The `scripts/` half had already gone with the directory.
 
 `beebox/package.json` lints four trees:
 
@@ -45,4 +51,4 @@ and `lint:backend` now lints `src/ test/`. `beebox/tsconfig.json` still includes
 `src/**/*`, so the `.ts` files under `beebox/test/` are still never
 typechecked. The `rootDir`/`outDir` TS6059 constraint still applies. The
 `doctest-typecheck` workstream takes the `test/` half after the doctest
-errors ([typecheck generated doctest modules](2026-10-13-typecheck-and-lint-generated-doctest-modules.md)).
+errors ([typecheck generated doctest modules](../../code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md)).

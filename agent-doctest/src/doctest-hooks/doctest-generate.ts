@@ -97,7 +97,11 @@ function isVacuousWildcard(expected: string): boolean {
   return /^«(?:\*|[^=»]*=\*)»$/.test(expected.trim());
 }
 
-/** Every type-only import in a non-setup block, once each, on its markdown line. */
+/**
+ * Every type-only import in a non-setup block, one statement per bound name,
+ * once each, on its markdown line. Two blocks that bind one name to
+ * different types collide at module scope (TS2300); the run never sees it.
+ */
 function hoistedTypeImports(classified: Classified[]): GenLine[] {
   const seen = new Set<string>();
   const out: GenLine[] = [];

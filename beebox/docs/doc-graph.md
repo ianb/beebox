@@ -4827,7 +4827,7 @@ References:
 - → AGENTS.md (mention)
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
 - → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
-- → ../issues/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
+- → ../issues/closed/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
 - → ../issues/closed/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
 - → ../issues/closed/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
 - → ../issues/closed/bugs/2026-09-29-bin-test-doctests-not-run.md (link)

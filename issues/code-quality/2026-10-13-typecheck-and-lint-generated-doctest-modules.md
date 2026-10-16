@@ -87,6 +87,16 @@ prelude is typed in `doctest-runtime.ts`. Type-only imports in example blocks
 are hoisted for the check. Each package has a `typecheck:doctest` script.
 None is wired into `typecheck`, `test:changed`, or pre-commit yet.
 
+beebox frontend doctests are checked under `src/frontend/tsconfig.json`
+although tap runs them under `beebox/tsconfig.json`. The frontend config
+gives the DOM lib and the types the modules under test are written against.
+Its extra aliases (`@core`, `@backend`, `@schemas`) let a value import pass
+the check that fails at run time; the run reports that failure.
+
+`beebox/test/**/*.ts` is now checked by `typecheck:backend` through
+`beebox/tsconfig.typecheck.json` (16 errors fixed, including the test
+server's inject options, which typed 31 doctest call sites as `Chain`).
+
 Baseline on 2026-10-16: 5,756 errors in 604 of 1,086 doctests.
 
 | Package / tsconfig | Errors | Failing / checked |

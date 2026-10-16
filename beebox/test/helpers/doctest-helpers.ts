@@ -6,6 +6,7 @@
  */
 
 
+import type { Dirent } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
@@ -95,7 +96,7 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
       const dir = subdir ? join(root, subdir) : root;
       const entries: string[] = [];
       async function walk(d: string) {
-        let items: Awaited<ReturnType<typeof readdir>>;
+        let items: Dirent[];
         try {
           items = await readdir(d, { withFileTypes: true });
         } catch (_e) {

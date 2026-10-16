@@ -51,7 +51,7 @@ function virtualPath(mdPath: string): string {
   return `${mdPath}.ts`;
 }
 
-function readCompilerOptions(tsconfig: string): { options: ts.CompilerOptions; declarations: string[] } {
+function readCompilerOptions(tsconfig: string): { options: ts.CompilerOptions; packageFiles: string[] } {
   const config = ts.readConfigFile(tsconfig, (p) => ts.sys.readFile(p));
   if (config.error) throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, "\n"));
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, dirname(tsconfig), undefined, tsconfig);
@@ -70,9 +70,10 @@ function readCompilerOptions(tsconfig: string): { options: ts.CompilerOptions; d
     incremental: false,
     sourceMap: false,
   };
-  // Ambient declarations the package's own program includes (a `types/*.d.ts`).
-  const declarations = parsed.fileNames.filter((f) => f.endsWith(".d.ts"));
-  return { options, declarations };
+  // The package's whole program, not just what the doctests import: a
+  // `declare module` augmentation or ambient `.d.ts` changes types only when
+  // its file is in the program. Only the doctests' own diagnostics are read.
+  return { options, packageFiles: parsed.fileNames };
 }
 
 interface Generated {
@@ -96,7 +97,7 @@ function mapPosition(mod: GeneratedModule, at: ts.LineAndCharacter): { line: num
 
 /** Typecheck doctests under one tsconfig; diagnostics are on markdown lines, sorted. */
 export function typecheckDoctests({ tsconfig, files }: TypecheckOptions): DoctestDiagnostic[] {
-  const { options, declarations } = readCompilerOptions(resolve(tsconfig));
+  const { options, packageFiles } = readCompilerOptions(resolve(tsconfig));
   const diagnostics: DoctestDiagnostic[] = [];
   const generated = new Map<string, Generated>();
   for (const md of files) {
@@ -122,7 +123,7 @@ export function typecheckDoctests({ tsconfig, files }: TypecheckOptions): Doctes
   };
 
   const program = ts.createProgram({
-    rootNames: [...generated.keys(), ...declarations, TAP_AUGMENTATION],
+    rootNames: [...generated.keys(), ...packageFiles, TAP_AUGMENTATION],
     options,
     host,
   });

@@ -190,11 +190,20 @@ export function rewriteImports(expression: string): string {
   return lines.join("\n");
 }
 
-/** A type-only import in an example block, as a module-scope statement. */
+/** One name a type-only import binds, in an example block. */
 export interface TypeImport {
   /** 0-based line within the code where the import starts. */
   offset: number;
+  /** The module-scope statement that binds just this name, on one line. */
   statement: string;
+}
+
+/** `A`, `A as B`, `default as B`: one `import type` specifier per name. */
+function typeSpecifiers(named: string): string[] {
+  return named
+    .split(",")
+    .map((p) => p.trim().replace(/\s+/g, " "))
+    .filter((p) => p.length > 0);
 }
 
 /**
@@ -202,7 +211,7 @@ export interface TypeImport {
  * statements, and the `type X` specifiers of a mixed import. Runtime does not
  * need them, but a typecheck does, and an import declaration cannot sit
  * inside the test function, so the typecheck build hoists these to module
- * scope.
+ * scope, one statement per bound name.
  */
 export function typeOnlyImports(code: string): TypeImport[] {
   if (!/^\s*import[\s"'*{]/m.test(code)) return [];
@@ -220,19 +229,15 @@ export function typeOnlyImports(code: string): TypeImport[] {
     const offset = i;
     i = end;
     if (!full) continue;
-    const clause = (full[3] ?? "").trim();
+    const clause = (full[3] ?? "").trim().replace(/\s+/g, " ");
     const source = full[4] ?? "";
-    if (full[2]) {
-      out.push({ offset, statement: `import type ${clause} from ${source};` });
-      continue;
-    }
-    const brace = /{([\S\s]*)}/.exec(clause);
-    const typeSpecs = (brace?.[1] ?? "")
-      .split(",")
-      .map((p) => p.trim())
-      .filter((p) => p.startsWith("type "))
-      .map((p) => p.slice("type ".length).trim());
-    if (typeSpecs.length > 0) out.push({ offset, statement: `import type { ${typeSpecs.join(", ")} } from ${source};` });
+    const brace = /{(.*)}/.exec(clause);
+    const outside = clause.replace(/,?\s*{.*}/, "").trim();
+    const specifiers = typeSpecifiers(brace?.[1] ?? "");
+    const named = full[2] ? specifiers : specifiers.filter((p) => p.startsWith("type ")).map((p) => p.slice("type ".length));
+    for (const spec of named) out.push({ offset, statement: `import type { ${spec} } from ${source};` });
+    // `import type D from` and `import type * as NS from`; a value import's default is not a type import.
+    if (full[2] && outside) out.push({ offset, statement: `import type ${outside} from ${source};` });
   }
   return out;
 }

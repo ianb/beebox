@@ -64,7 +64,7 @@
     "dev": "echo 'The dev server is the monorepo router. Run \\`pnpm dev\\` from the monorepo root.' && exit 1",
     "bbx": "./bin/bbx",
     "typecheck": "node --import tsx ../bin/with-slot.ts -- pnpm run '/^typecheck:(backend|frontend)$/'",
-    "typecheck:backend": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/backend.tsbuildinfo",
+    "typecheck:backend": "tsc --noEmit -p tsconfig.typecheck.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/backend.tsbuildinfo",
     "typecheck:frontend": "cd src/frontend && pnpm typecheck",
     "typecheck:doctest": "doctest-typecheck --project tsconfig.json 'test/**/*.doctest.md' --project src/frontend/tsconfig.json 'src/frontend/test/**/*.doctest.md' --project ../tsconfig.json '../bin/test/**/*.doctest.md'",
     "lint": "node --import tsx ../bin/with-slot.ts -- pnpm run '/^lint:(backend|frontend)$/'",

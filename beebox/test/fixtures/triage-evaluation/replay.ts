@@ -11,6 +11,7 @@ import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/c
 import { gmailMessageSchema } from "../../../src/services/google-gmail/core.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import type { JudgeInput } from "../../../src/services/jev-judge.js";
+import type { GmailMessage } from "../../../src/services/google-gmail-types.js";
 
 const { values } = parseArgs({ options: {
   group: { type: "string", default: "destinations" },
@@ -28,6 +29,9 @@ const out = path.resolve(values.out);
 await fs.mkdir(out, { recursive: false });
 const readJSON = async (relative: string): Promise<unknown> => JSON.parse(await fs.readFile(path.join(root, relative), "utf8"));
 const rulesSchema = z.record(z.string(), z.string());
+// The schema's output types an absent field as `T | undefined`; GmailMessage,
+// under exactOptionalPropertyTypes, does not admit an explicit undefined.
+const isGmailMessage = (value: unknown): value is GmailMessage => gmailMessageSchema.safeParse(value).success;
 const destinationSchema = z.object({ rules: rulesSchema, cases: z.array(z.object({ id: z.string(), body: z.string(), expected: z.string().nullable() })) });
 const emailSchema = z.object({ purpose: z.string(), rules: rulesSchema, cases: z.array(z.object({ id: z.string(), relevance: z.string(), category: z.string().nullable(), needsAttachmentExtraction: z.boolean().optional() })) });
 interface Sample { id: string; variant: string; state: unknown; body: string; }
@@ -44,7 +48,8 @@ if (values.group === "destinations") {
   rules = corpus.rules;
   situation = corpus.purpose;
   for (const item of corpus.cases) {
-    const raw = gmailMessageSchema.parse(await readJSON(`emails/raw/${item.id}.json`));
+    const raw = await readJSON(`emails/raw/${item.id}.json`);
+    invariant(isGmailMessage(raw), `emails/raw/${item.id}.json is not a Gmail message`);
     const bytes = item.needsAttachmentExtraction ? await fs.readFile(path.join(root, "documents/raw/scan-financial.pdf")) : Buffer.alloc(0);
     const attachments = new Map([[`${raw.id}:document`, { data: bytes.toString("base64url"), size: bytes.length }]]);
     const parsed = await parseGmailMessage(raw, { service: createFakeGoogleGmail({ attachments }), labelMap: new Map() });
