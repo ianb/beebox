@@ -74,16 +74,15 @@ text(line({ open: 1, onPlate: 1, parked: 2 }))
 ## Later
 
 An open todo whose `start` has not come yet is not on the plate; the line
-names it "later", as the plate's headline does. The first count stays a
-control while any todo is open, even at zero, since a later todo is still
-there to go to.
+names it "later", as the plate's headline does. The control is the count
+of the todos it goes to: "on your plate" when any are, else "later".
 
 ```ts
 text(line({ open: 3, onPlate: 2 }, () => undefined))
 => [2 on your plate] · 1 later
 
 text(line({ open: 1, onPlate: 0 }, () => undefined))
-=> [0 on your plate] · 1 later
+=> 0 on your plate · [1 later]
 ```
 
 ## A directory's line

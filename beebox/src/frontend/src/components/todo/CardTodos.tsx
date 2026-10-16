@@ -26,7 +26,7 @@ import { fileChangeAffectsPath } from "../../lib/moved-card-recovery";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { CardTodosContext, indexPlateStates } from "./card-todos-context";
 import { TodoSummaryLine } from "./TodoSummaryLine";
-import { FIRST_OPEN_TODO_SELECTOR } from "./summary";
+import { FIRST_ON_PLATE_TODO_SELECTOR, FIRST_OPEN_TODO_SELECTOR } from "./summary";
 
 function firstOpenTodo(container: HTMLElement | null): Element | null {
   return container === null ? null : container.querySelector(FIRST_OPEN_TODO_SELECTOR);
@@ -71,8 +71,10 @@ export function CardTodos({ path, children }: { path: string; children: ReactNod
   const todos = result === undefined
     ? null
     : indexPlateStates(path, result.groups.flatMap((group) => group.rows.flatMap((row) => row.items)));
+  // The control reads "N on your plate" whenever one is, so go to that one before a later one.
   const jumpToOpen = (): void => {
-    firstOpenTodo(containerRef.current)?.scrollIntoView({ block: "center" });
+    const container = containerRef.current;
+    (container?.querySelector(FIRST_ON_PLATE_TODO_SELECTOR) ?? firstOpenTodo(container))?.scrollIntoView({ block: "center" });
   };
 
   return (

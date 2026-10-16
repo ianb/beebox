@@ -28,7 +28,7 @@ function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | und
   // In a workspace pane the card opens in the other pane (`docs/plans/todos-ui.md`, Track 5).
   const openBeside = useOpenBeside();
   const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;
-  const word = dated.kind === "due" ? "due" : startPrefix(dated.item.plateState, Date.parse(dated.date));
+  const word = dated.kind === "due" ? "due" : startPrefix({ plateState: dated.item.plateState, startIso: dated.date });
   const title = word === "due" ? "Due" : word === "since" ? "On your plate since this day" : "Joins your plate on this day";
   return (
     <Row gap="sm" wrap align="baseline">

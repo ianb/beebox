@@ -62,7 +62,7 @@ and the `todo-review` sweep brings the stale ones back to you.
 
 `bbx query todos` is your query path. `--here <dir>` asks about one
 project: its own todos, plus todos elsewhere that link into it.
-`--group plate` is the date view, `--assigned agent` your own follow-ups;
+`--group plate` groups by status (overdue, on your plate, later, …), `--assigned agent` your own follow-ups;
 also `--status`, `--glob`, `--on-plate`, and `--json`. There is no
 mutation command: to change a todo, edit its `{% todo %}` tag or frontmatter
 entry directly, like any other card content — normal validation, git
@@ -76,7 +76,7 @@ in a todo makes it show up on the linked place as well as its own.
 ## Tending
 
 You may run a review pass yourself, and the daily `todo-review` procedure
-also hands you a brief of escalated / newly-on-plate / stale todos to look
+also hands you a brief of overdue (escalated) / newly-on-plate / stale todos to look
 at. Either way, the same rule: **you judge, the boxholder decides.**
 Suggest completion when you see evidence a todo is done; propose merging
 duplicates; flag a stale one for `parked`/`dropped`/a real date — but

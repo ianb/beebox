@@ -10,7 +10,7 @@ server, so only a todo the server calls `escalated` reads as overdue.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoItem } from "../../../src/components/todo/TodoItem.js";
-import { dateChips, hiddenInReading, recheckChip } from "../../../src/components/todo/item-logic.js";
+import { dateChips, hiddenInReading, recheckChip, startPrefix } from "../../../src/components/todo/item-logic.js";
 
 globalThis.React = React;
 
@@ -109,7 +109,8 @@ dateChips({ due: "2027-01-04", start: undefined, plateState: null }, format)[0].
 
 A `start` is the day the todo joins the plate. Until then the todo is
 "later", the plate headline's word for it; after, the date reads "since".
-Before the server answers, the clock decides.
+Only an open todo's plate state says which. For a parked or finished todo,
+or before the server answers, the start is compared with today's local date.
 
 ```ts continue
 dateChips({ due: undefined, start: "2026-10-23", plateState: "quiet" }, format)[0].text
@@ -123,6 +124,20 @@ dateChips({ due: undefined, start: "2099-10-23", plateState: null }, format)[0].
 
 dateChips({ due: undefined, start: "2020-10-23", plateState: null }, format)[0].text
 => since Oct 23, 2020
+
+dateChips({ due: undefined, start: "2099-10-23", plateState: "parked" }, format)[0].text
+=> later · Oct 23, 2099
+```
+
+The comparison is by calendar day, so the start day itself is "since":
+
+```ts continue
+[
+  startPrefix({ plateState: null, startIso: "2026-10-23", todayIso: "2026-10-22" }),
+  startPrefix({ plateState: null, startIso: "2026-10-23", todayIso: "2026-10-23" }),
+  startPrefix({ plateState: "done", startIso: "2026-10-23", todayIso: "2026-10-24" }),
+].join(", ")
+=> later ·, since, since
 ```
 
 Rendered, the escalated chip takes the warning tone and keeps the machine
