@@ -1,0 +1,192 @@
+/* Exploratory surfaces only: never registered in the product catalog. */
+.bbx-theme-studio [data-chrome-theme="undertow"] {
+  --study-desk: #252e30;
+  --study-art: url("./undertow-study.svg");
+  --study-paper: #183b42;
+  --study-ink: #d8f4ef;
+  --study-soft: #a4cbc9;
+  --study-edge: #397e88;
+  --study-bar: #074652;
+  --study-accent: #71dbe2;
+  --study-user: #006777;
+  --study-user-ink: #e0fffb;
+  --study-radius: 20px;
+  --study-shadow: 0 5px 0 #14282d;
+}
+.bbx-theme-studio [data-chrome-theme="deck"] {
+  --study-desk: #292e2c;
+  --study-art: url("./deck-study.svg");
+  --study-paper: #242f30;
+  --study-ink: #e0f4ed;
+  --study-soft: #b2cbc5;
+  --study-edge: #44959a;
+  --study-bar: #202b2c;
+  --study-accent: #78dedc;
+  --study-user: #91e1db;
+  --study-user-ink: #173d41;
+  --study-radius: 28px;
+  --study-shadow: 5px 6px 0 #087f8a;
+}
+.bbx-theme-studio [data-chrome-theme="patina"] {
+  --study-desk: #2e9290;
+  --study-art: url("./patina-study.svg?v=2");
+  --study-paper: #e1eee2;
+  --study-ink: #173e42;
+  --study-soft: #436365;
+  --study-edge: #6eaaa3;
+  --study-bar: #124c53;
+  --study-accent: #f3c16e;
+  --study-user: #f7d4ac;
+  --study-user-ink: #493d2f;
+  --study-radius: 12px;
+  --study-shadow: 3px 5px 0 #205e6066;
+}
+.bbx-theme-studio .bbx-box-presentation:is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) {
+  background: var(--study-art) center top / cover, var(--study-desk);
+  --bbx-selection: var(--study-accent);
+  --bbx-selection-ink: #133e42;
+  --bbx-focus-ring: var(--study-accent);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-app-nav {
+  background: var(--study-bar);
+  color: #e0f6ef;
+  border-bottom: 3px solid var(--study-edge);
+  padding-block: 8px;
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-app-nav button {
+  background: transparent;
+  color: #d7efeb;
+  border: 1px solid var(--study-edge);
+  border-radius: 8px;
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-app-nav button[aria-pressed="true"] {
+  background: var(--study-accent);
+  color: #133e42;
+}
+.bbx-theme-studio [data-chrome-theme="undertow"] .bbx-app-nav button[aria-pressed="true"] {
+  background: transparent;
+  color: #c8ffff;
+  border-color: transparent;
+  border-bottom: 3px solid #71dbe2;
+  border-radius: 0;
+}
+.bbx-theme-studio [data-chrome-theme="deck"] .bbx-app-nav button {
+  border-radius: 10px 10px 5px 5px;
+  box-shadow: 0 3px 0 #087f8a;
+  min-width: 66px;
+}
+.bbx-theme-studio [data-chrome-theme="patina"] .bbx-app-nav {
+  border-bottom-color: #d6ac62;
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material) {
+  background: var(--study-paper);
+  color: var(--study-ink);
+  border: 1px solid var(--study-edge);
+  border-radius: var(--study-radius);
+  box-shadow: var(--study-shadow);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-chat-callout > .text-accent-dark {
+  color: var(--study-ink);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-chat-user-paper {
+  background: var(--study-user);
+  color: var(--study-user-ink);
+  border: 1px solid var(--study-edge);
+  border-radius: var(--study-radius) var(--study-radius) 4px var(--study-radius);
+  box-shadow: var(--study-shadow);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-composer-material > section {
+  background: transparent;
+  border: 0;
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-composer-material textarea {
+  background: var(--study-paper);
+  color: var(--study-ink);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) .bbx-composer-material textarea::placeholder {
+  color: var(--study-soft);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled {
+  background: var(--study-accent);
+  color: #173e42;
+}
+.bbx-theme-studio [data-chrome-theme="deck"] .bbx-composer-material {
+  border: 4px double #78dedc;
+}
+/* Cards reset their own materials, including dark code and control surfaces. */
+.bbx-theme-studio .bbx-card-theme:is([data-card-theme="undertow"], [data-card-theme="deck"]) {
+  --bbx-paper: #183b42;
+  --bbx-ink: #d8f4ef;
+  --bbx-ink-soft: #a4cbc9;
+  --bbx-pen: #83e7ec;
+  --bbx-edge: #397e88;
+  --bbx-underlay: #122e35;
+  --bbx-sheet: #244c53;
+  --bbx-code-paper: #10272d;
+  --bbx-code-ink: #d8f4ef;
+  --bbx-sheet-radius: 20px;
+  --bbx-quote-paper: #204b53;
+  --bbx-blockquote-paper: #204b53;
+  --bbx-blockquote-padding: 0.6em 1em;
+  --bbx-blockquote-edge: 3px;
+  --bbx-selection: #83e7ec;
+  --bbx-selection-ink: #143b40;
+}
+.bbx-theme-studio .bbx-card-theme[data-card-theme="deck"] {
+  --bbx-paper: #242f30;
+  --bbx-sheet: #354748;
+  --bbx-edge: #44959a;
+  --bbx-sheet-radius: 28px;
+  --bbx-quote-paper: #304747;
+  --bbx-blockquote-paper: #304747;
+}
+.bbx-theme-studio .bbx-card-surface[data-card-theme="deck"] {
+  box-shadow: 6px 7px 0 #087f8a;
+  border-top: 6px solid #78dedc;
+}
+.bbx-theme-studio .bbx-card-theme[data-card-theme="patina"] {
+  --bbx-paper: #e1eee2;
+  --bbx-ink: #173e42;
+  --bbx-ink-soft: #436365;
+  --bbx-pen: #825319;
+  --bbx-edge: #6eaaa3;
+  --bbx-underlay: #c5dfd2;
+  --bbx-sheet-radius: 12px;
+  --bbx-quote-paper: #f4e4bc;
+  --bbx-blockquote-paper: #f4e4bc;
+  --bbx-blockquote-padding: 0.6em 1em;
+  --bbx-blockquote-edge: 3px;
+  --bbx-selection: #f3c16e;
+  --bbx-selection-ink: #173e42;
+}
+.bbx-theme-studio .bbx-card-surface[data-card-theme="patina"] {
+  box-shadow: 3px 5px 0 #205e6066;
+  border-top: 3px solid #c39954;
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose {
+  --bbx-ink: var(--study-ink);
+  --bbx-ink-soft: var(--study-soft);
+  --bbx-pen: var(--study-ink);
+  --tw-prose-body: var(--study-ink);
+  --tw-prose-bold: var(--study-ink);
+  --tw-prose-headings: var(--study-ink);
+  --tw-prose-links: var(--study-ink);
+  color: var(--study-ink);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) :is(#bbx-composer-add, #bbx-composer-mic.bg-primary) {
+  background: var(--study-accent);
+  color: #173e42;
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) #bbx-composer-input {
+  border-color: var(--study-edge);
+}
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) :is(button, textarea):focus-visible {
+  outline: 2px solid var(--study-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 639px) {
+  .bbx-theme-studio .bbx-box-presentation:is([data-chrome-theme="undertow"], [data-chrome-theme="deck"], [data-chrome-theme="patina"]) {
+    background-size: auto 1000px;
+    background-position: left top;
+  }
+}
