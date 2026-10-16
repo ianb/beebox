@@ -62,11 +62,11 @@ column({ type: "glink", conflict: true })
 
 ## A card Drive knows nothing about is named, not hidden
 
-Someone can write a memo into a mirrored directory. The mirror leaves it alone,
+Someone can write a doc into a mirrored directory. The mirror leaves it alone,
 and the column says that rather than implying the mirror covers it.
 
 ```ts
-column({ type: "memo" })
+column({ type: "doc" })
 => not a Drive card
 ```
 

@@ -143,7 +143,7 @@ comments, and the body. Clearing the choice restores inheritance.
 
 ```ts
 const cardBox = await makeTmpBox({ git: true });
-const cardPath = "_content/notes/Keep.memo.card";
+const cardPath = "_content/notes/Keep.doc.card";
 await cardBox.write(cardPath, "---\n# keep this comment\ntitle: Keep\nfuture-field: still here\n---\nBody stays here.\n");
 const landmarkPath = "_content/notes/Notes.landmark.card";
 await cardBox.write(landmarkPath, "---\n# landmark comment\nnavigation:\n  label: Notes\nfuture-field: retained\n---\n");

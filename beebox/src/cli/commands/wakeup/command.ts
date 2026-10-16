@@ -7,7 +7,7 @@
  * 3. Run on-wakeup scheduled scripts
  * 4. Run connectors (pull external data, create jobs)
  *    4a. Clean up stale jobs whose refs all point at deleted files
- *    4b. Create intake jobs for unjobbed inbox items (UI memos, etc.)
+ *    4b. Create intake jobs for unjobbed inbox items (captured notes, etc.)
  * 5. Process pending jobs via reactor (one cycle, skip low-priority)
  * 6. Push committed changes to the box's git remote (non-fatal if it fails)
  *

@@ -29,7 +29,7 @@ export interface TemplateDefinition<T extends ZodRawShape = ZodRawShape> {
    * single `bbx create` scaffolds a working card + its source.
    */
   attachments?: (args: z.infer<ZodObject<T>>) => Array<{ relPath: string; content: string }>;
-  /** Card types this template can create (e.g., "memo", "question") */
+  /** Card types this template can create (e.g., "doc", "question") */
   cardTypes: string[];
   /** If set, this template is the default when creating cards of these types */
   defaultForTypes?: string[];

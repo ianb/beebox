@@ -294,8 +294,8 @@ a stale page, or a mount someone removed in between.
 await refusal(c.drive.syncFolder({ cardPath: "_content/drive/recipes/Missing.gfolder.card" }))
 => BAD_REQUEST: _content/drive/recipes/Missing.gfolder.card is not a Drive folder mount card
 
-await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.memo.card" }))
-=> BAD_REQUEST: _content/notes/Plan.memo.card is not a Drive folder mount card
+await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.doc.card" }))
+=> BAD_REQUEST: _content/notes/Plan.doc.card is not a Drive folder mount card
 ```
 
 ## A path that climbs out of the box is refused before anything is written

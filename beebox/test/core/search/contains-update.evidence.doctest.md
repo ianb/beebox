@@ -20,10 +20,10 @@ import { createCardSchemaMap } from "../../../src/schemas.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import { readFile } from "node:fs/promises";
 
-const CARD = "store/notes/Trip.memo.card";
+const CARD = "store/notes/Trip.doc.card";
 
-function memo(fields: string) {
-  return `---\nstatus: new\ncreated: 2026-07-28T03:00:00Z\n${fields}\n---\nBody text.\n`;
+function doc(fields: string) {
+  return `---\ntitle: Coast trip\n${fields}\n---\nBody text.\n`;
 }
 ```
 
@@ -37,7 +37,7 @@ have been silently dropped.
 
 ```ts
 const box = await makeTmpBox();
-await box.write(CARD, memo("contains: A trip to the coast."));
+await box.write(CARD, doc("contains: A trip to the coast."));
 
 const first = await setDerivedContains(box.root, {
   relPath: CARD,
@@ -101,15 +101,15 @@ rather than a live bug, and the cases that need it are the frontmatter-only
 ones.
 
 ```ts
-// Real schemas: `memo` has a body field, `file` is frontmatter-only.
+// Real schemas: `doc` has a body field, `file` is frontmatter-only.
 const cardSchemas = await createCardSchemaMap();
-const memoSchema = cardSchemas.get("memo");
+const docSchema = cardSchemas.get("doc");
 const fileSchema = cardSchemas.get("file");
-invariant(memoSchema && fileSchema, "memo and file schemas are registered");
+invariant(docSchema && fileSchema, "doc and file schemas are registered");
 const bodied = (fields: Record<string, unknown>): LoadedCard => ({
   kind: "frontmatter",
-  path: "Trip.memo.card",
-  schema: memoSchema,
+  path: "Trip.doc.card",
+  schema: docSchema,
   fields: { body: "Body text.", ...fields },
 });
 const flat = (fields: Record<string, unknown>): LoadedCard => ({
@@ -149,8 +149,8 @@ counts as empty.
 ```ts continue
 const emptyBodied = (fields: Record<string, unknown>): LoadedCard => ({
   kind: "frontmatter",
-  path: "Person.memo.card",
-  schema: memoSchema,
+  path: "Person.doc.card",
+  schema: docSchema,
   fields: { body: "\n", ...fields },
 });
 computeContainsBasis({ card: emptyBodied({ phone: "555-0100" }) })
@@ -171,7 +171,7 @@ the summary.
 const box = await makeTmpBox();
 const longText = "x".repeat(400);
 
-await box.write(CARD, memo(`contains: ${longText}`));
+await box.write(CARD, doc(`contains: ${longText}`));
 const ctx = await buildLoadContext(box.root);
 const overLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
 overLong.results[0]?.warnings.filter((i) => i.type === "contains").length
@@ -181,7 +181,7 @@ overLong.results[0]?.warnings.filter((i) => i.type === "contains").length
 The same length in `contains-evidence`, with a short `contains`, is clean.
 
 ```ts continue
-await box.write(CARD, memo(`contains: A trip.\ncontains-evidence: ${longText}`));
+await box.write(CARD, doc(`contains: A trip.\ncontains-evidence: ${longText}`));
 const evidenceLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
 evidenceLong.results[0]?.warnings.filter((i) => i.type === "contains").length
 => 0

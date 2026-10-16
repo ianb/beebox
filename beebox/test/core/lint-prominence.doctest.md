@@ -27,7 +27,7 @@ async function warningsFor(files: Record<string, string>) {
 const marked = (prominence: string) => `---\nprominence: ${prominence}\n---\n`;
 /** `n` cards P1..Pn in `_content/notes`, all with the given mark. */
 const cards = (n: number, prominence: string) =>
-  Object.fromEntries(Array.from({ length: n }, (_, i) => [`_content/notes/P${i + 1}.memo.card`, marked(prominence)]));
+  Object.fromEntries(Array.from({ length: n }, (_, i) => [`_content/notes/P${i + 1}.doc.card`, marked(prominence)]));
 ```
 
 ## A clean box says nothing
@@ -37,10 +37,10 @@ no `prominence` at all is ordinary and never counted.
 
 ```ts
 await warningsFor({
-  "_content/notes/Index.memo.card": marked("entry-point"),
-  "_content/notes/Overview.memo.card": marked("entry-point"),
+  "_content/notes/Index.doc.card": marked("entry-point"),
+  "_content/notes/Overview.doc.card": marked("entry-point"),
   ...cards(7, "primary"),
-  "_content/notes/Aside.memo.card": "---\ntitle: Aside\n---\n",
+  "_content/notes/Aside.doc.card": "---\ntitle: Aside\n---\n",
 })
 =>
 ```
@@ -52,9 +52,9 @@ warns about.
 
 ```ts
 await warningsFor({
-  "_content/notes/A.memo.card": marked("entry-point"),
-  "_content/notes/B.memo.card": marked("entry-point"),
-  "_content/notes/C.memo.card": marked("entry-point"),
+  "_content/notes/A.doc.card": marked("entry-point"),
+  "_content/notes/B.doc.card": marked("entry-point"),
+  "_content/notes/C.doc.card": marked("entry-point"),
 })
 => too-many-entry-points: _content/notes: 3 entry points in one directory; an entry point is where a newcomer starts, and a directory usually has one
 ```
@@ -77,9 +77,9 @@ cards.
 ```ts
 await warningsFor({
   "_content/logs/Logs.landmark.card": marked("background"),
-  "_content/logs/Run.memo.card": marked("primary"),
+  "_content/logs/Run.doc.card": marked("primary"),
 })
-=> under-background-landmark: _content/logs/Run.memo.card: _content/logs/Run.memo.card is marked primary, but its landmark _content/logs/Logs.landmark.card is marked prominence: background — a background place folds away everything under it
+=> under-background-landmark: _content/logs/Run.doc.card: _content/logs/Run.doc.card is marked primary, but its landmark _content/logs/Logs.landmark.card is marked prominence: background — a background place folds away everything under it
 ```
 
 A card under an ordinary (unmarked) landmark is unaffected — the cascade is
@@ -103,9 +103,9 @@ one.
 await warningsFor({
   "_content/A/A.landmark.card": marked("background"),
   "_content/A/B/B.landmark.card": "---\nnavigation:\n  label: B\n---\n",
-  "_content/A/B/C/Deep.memo.card": marked("primary"),
+  "_content/A/B/C/Deep.doc.card": marked("primary"),
 })
-=> under-background-landmark: _content/A/B/C/Deep.memo.card: _content/A/B/C/Deep.memo.card is marked primary, but its landmark _content/A/A.landmark.card is marked prominence: background — a background place folds away everything under it
+=> under-background-landmark: _content/A/B/C/Deep.doc.card: _content/A/B/C/Deep.doc.card is marked primary, but its landmark _content/A/A.landmark.card is marked prominence: background — a background place folds away everything under it
 ```
 
 ## `entry-point`/`primary` written on a landmark card itself
@@ -127,17 +127,17 @@ its owner.
 
 ```ts
 await warningsFor({
-  "_content/projects/Foo.memo.card": "---\ntitle: Foo\n---\n",
-  "_content/projects/Foo.attach/Note.memo.card": marked("primary"),
+  "_content/projects/Foo.doc.card": "---\ntitle: Foo\n---\n",
+  "_content/projects/Foo.attach/Note.doc.card": marked("primary"),
 })
-=> inside-attach-scope: _content/projects/Foo.attach/Note.memo.card: prominence inside an attach scope has no effect; mark the owner card, or list it in the landmark's `links:`
+=> inside-attach-scope: _content/projects/Foo.attach/Note.doc.card: prominence inside an attach scope has no effect; mark the owner card, or list it in the landmark's `links:`
 ```
 
 An UNOWNED `.attach/`-suffixed directory (no sibling card named `Foo`) is not
 a real attach scope for this rule's purposes — nothing to warn about.
 
 ```ts
-await warningsFor({ "_content/projects/Foo.attach/Note.memo.card": marked("primary") })
+await warningsFor({ "_content/projects/Foo.attach/Note.doc.card": marked("primary") })
 =>
 ```
 
@@ -149,7 +149,7 @@ list and is not warned about.
 await warningsFor({
   "_content/courses/Foo.course.card": "---\ntitle: Foo\n---\n",
   "_content/courses/Foo.attach/Foo.landmark.card": "---\nnavigation:\n  label: Foo\n---\n",
-  "_content/courses/Foo.attach/Plan.memo.card": marked("primary"),
+  "_content/courses/Foo.attach/Plan.doc.card": marked("primary"),
 })
 =>
 ```
@@ -174,17 +174,17 @@ await warningsFor({ "_content/logs/Logs.landmark.card": marked("background") })
 
 ## A redundant `links:` entry — info, not a warning
 
-The landmark links its own `Plan.memo.card`, which is already marked
+The landmark links its own `Plan.doc.card`, which is already marked
 `primary` and inside the landmark's pruned subtree, with no label: the
 derived list already shows it, so the entry is redundant.
 
 ```ts
 await warningsFor({
   "_content/proj/Proj.landmark.card":
-    "---\nnavigation:\n  label: Proj\n  links:\n    - ref: /_content/proj/Plan.memo.card\n---\n",
-  "_content/proj/Plan.memo.card": marked("primary"),
+    "---\nnavigation:\n  label: Proj\n  links:\n    - ref: /_content/proj/Plan.doc.card\n---\n",
+  "_content/proj/Plan.doc.card": marked("primary"),
 })
-=> redundant-link: _content/proj/Proj.landmark.card: link to _content/proj/Plan.memo.card is redundant with the target's own prominence: primary — the derived list already surfaces it
+=> redundant-link: _content/proj/Proj.landmark.card: link to _content/proj/Plan.doc.card is redundant with the target's own prominence: primary — the derived list already surfaces it
 ```
 
 A LABELED entry, or one pointing outside the landmark's pruned subtree
@@ -193,8 +193,8 @@ A LABELED entry, or one pointing outside the landmark's pruned subtree
 ```ts
 await warningsFor({
   "_content/proj/Proj.landmark.card":
-    "---\nnavigation:\n  label: Proj\n  links:\n    - ref: /_content/proj/Plan.memo.card\n      label: the plan\n---\n",
-  "_content/proj/Plan.memo.card": marked("primary"),
+    "---\nnavigation:\n  label: Proj\n  links:\n    - ref: /_content/proj/Plan.doc.card\n      label: the plan\n---\n",
+  "_content/proj/Plan.doc.card": marked("primary"),
 })
 =>
 ```

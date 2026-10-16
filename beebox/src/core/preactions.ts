@@ -3,7 +3,7 @@
  *
  * Pre-actions run during sync to prepare inbox items before
  * they're processed by agents. Examples:
- * - Transcribe voice memos
+ * - Transcribe voice feedback
  * - Extract text from images (OCR)
  * - Parse email attachments
  *

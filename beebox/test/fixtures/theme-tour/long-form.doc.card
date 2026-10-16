@@ -1,7 +1,5 @@
 ---
-status: new
 title: Long content and dense edges
-created: "2026-09-07T12:03:00+00:00"
 theme:
   name: paper
   stock: manila

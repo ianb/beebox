@@ -187,8 +187,8 @@ label. The match is silently dropped, not surfaced as a broken link.
 
 ```ts
 const { links } = await resolveIn(
-  { "_content/recipes/Bread.recipe.card": "Bread", "src/private.memo.card": "Secret Memo" },
-  { expand: [{ query: "../../src/private.memo.card", "template-label": "${title}" }] },
+  { "_content/recipes/Bread.recipe.card": "Bread", "src/private.doc.card": "Secret Doc" },
+  { expand: [{ query: "../../src/private.doc.card", "template-label": "${title}" }] },
 );
 links.length
 => 0

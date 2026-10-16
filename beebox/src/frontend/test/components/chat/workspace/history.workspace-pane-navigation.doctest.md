@@ -27,7 +27,7 @@ Legacy overlay conversion opens the incoming card before revealing chat. It
 does not invent return metadata, so Show cards restores in place.
 
 ```ts
-const legacyCard = { path: "_content/legacy.memo.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
+const legacyCard = { path: "_content/legacy.doc.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
 const legacyActions = legacyOverlayActions({ state: createEmptyWorkspaceState(), incoming: legacyCard, viewport: "mobile", at: 9 });
 legacyActions.map(action => action.type)
 => [

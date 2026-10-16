@@ -30,9 +30,9 @@ the same `prominence` is not mistaken for one.
 ```ts
 outline(placeSections({
   links: [
-    link("Pinned.memo.card", "listed"),
-    link("List.memo.card", "derived", "entry-point"),
-    link("Rules.memo.card", "derived", "primary"),
+    link("Pinned.doc.card", "listed"),
+    link("List.doc.card", "derived", "entry-point"),
+    link("Rules.doc.card", "derived", "primary"),
     link("tools/Tools.landmark.card", "place", "background"),
   ],
   groups: [
@@ -41,10 +41,10 @@ outline(placeSections({
   ],
 }))
 => [
-  "entry-point: List.memo.card",
-  "primary: Rules.memo.card",
+  "entry-point: List.doc.card",
+  "primary: Rules.doc.card",
   "places: tools/Tools.landmark.card",
-  "pinned: Pinned.memo.card",
+  "pinned: Pinned.doc.card",
   "Every loan card here (2)",
   "Every receipt card here (0)",
 ]
@@ -60,13 +60,13 @@ derived level stays pinned.
 ```ts
 outline(placeSections({
   links: [
-    link("List.memo.card", "listed", "entry-point"),
-    link("Rules.memo.card", "listed", "primary"),
-    link("Pinned.memo.card", "listed"),
+    link("List.doc.card", "listed", "entry-point"),
+    link("Rules.doc.card", "listed", "primary"),
+    link("Pinned.doc.card", "listed"),
   ],
   groups: [],
 }))
-=> ["entry-point: List.memo.card", "primary: Rules.memo.card", "pinned: Pinned.memo.card"]
+=> ["entry-point: List.doc.card", "primary: Rules.doc.card", "pinned: Pinned.doc.card"]
 ```
 
 ## A group that matches nothing still makes the place non-empty
@@ -86,13 +86,13 @@ keeps the server's group order.
 
 ```ts
 outline(placeSections({
-  links: [link("List.memo.card", "derived", "entry-point")],
+  links: [link("List.doc.card", "derived", "entry-point")],
   groups: [
     { label: "Every loan card here", count: 2, children: [] },
-    { label: "Also here", count: 30, children: [link("Groceries.memo.card", "derived")], alsoHere: true },
+    { label: "Also here", count: 30, children: [link("Groceries.doc.card", "derived")], alsoHere: true },
   ],
 }))
-=> ["entry-point: List.memo.card", "Every loan card here (2)", "Also here (30)"]
+=> ["entry-point: List.doc.card", "Every loan card here (2)", "Also here (30)"]
 ```
 
 ## No links and no groups is an empty place

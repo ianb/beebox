@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-16T16:36:57Z
-Total documents: 536
+Generated: 2026-10-16T19:07:55Z
+Total documents: 537
 
 ## Issues
 
@@ -344,6 +344,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-17-bbx-init-prints-a-screenful-on-every-run.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-09-26-generated-guidance-families-without-pruning.md:2 (mention) — title: "Two generated guidance families still leave orphans: guides-for-<type> rules and dangling AGENTS.md symlinks"
+- ../issues/closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:65 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
 - ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -375,7 +376,6 @@ Referenced by:
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
 - ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:11 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:47 (mention) — needs the boxholder's approval (root `AGENTS.md`).
-- ../issues/closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:57 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in AGENTS.md/docs here. Not needed.
 - ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:14 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:30 (mention) — - **Decide which directories get their own AGENTS.md.** Candidates that
@@ -1393,7 +1393,7 @@ Referenced by:
 
 #### docs/glossary.md
 
-Title: "Glossary" | 92 lines | current reference
+Title: "Glossary" | 95 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:63 (link) — holds those terms ([`../glossary.md`](../glossary.md#user-facing-register)).
@@ -1408,10 +1408,10 @@ Referenced by:
 - docs/plans/pdf-intake-design.md:61 (link) — **Intake-time extraction.** When a PDF arrives (`bbx import`, capture endpoint, email connector), the intake path runs d
 - ../dev/devprocess-talk/reports/sweep-instructions.md:342 (mention) — - **Lives in:** `beebox/docs/glossary.md` (91 lines).
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:18 (mention) — > glossary's new user-facing register (`beebox/docs/glossary.md`). UI copy
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:50 (mention) — and mostly needs a line in `docs/glossary.md` so the next agent chooses
 - ../issues/closed/docs-and-chores/2026-05-21-fill-out-the-glossary.md:12 (mention) — > apply and kept current through planning, replace `docs/glossary.md`. Its
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:45 (mention) — shows actual state with pending shown explicitly (`docs/glossary.md`,
 - ../issues/closed/features/2026-10-08-invisible-plumbing-reference-for-box-replies.md:41 (mention) — glossary's user-facing register (`beebox/docs/glossary.md`), the agent
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:47 (mention) — and mostly needs a line in `docs/glossary.md` so the next agent chooses
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:17 (mention) — them reached a shared document. `beebox/docs/glossary.md` has 25 entries and
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:100 (mention) — checking against the glossary (`beebox/docs/glossary.md`) — the codebase
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:29 (mention) — > settled — `beebox/docs/glossary.md` has a user-facing register per term
@@ -1523,7 +1523,7 @@ Title: "Landmarks" | 327 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:115 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
-- docs/glossary.md:78 (mention) — **landmark** — A curated navigation anchor for a box directory (`*.landmark.card`): symbol, label, bookmarks, routing de
+- docs/glossary.md:81 (mention) — **landmark** — A curated navigation anchor for a box directory (`*.landmark.card`): symbol, label, bookmarks, routing de
 - docs/guides.md:44 (link) — | Landmarks: the navigation surface | [landmarks](landmarks.md) |
 - docs/implemented-plans/architectural-review.md:832 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/card-prominence.md:67 (mention) — row (`docs/landmarks.md`: "Parse warnings — a row naming any
@@ -1573,7 +1573,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1873 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1881 lines | current reference
 
 Referenced by:
 - AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1594,6 +1594,7 @@ Referenced by:
 - docs/implemented-plans/notifications-design-notes.md:52 (mention) — record from pairing (`docs/mobile-contract.md`, `pairing.devices`), which
 - docs/implemented-plans/notifications.md:263 (mention) — - **Mobile contract.** `docs/mobile-contract.md:8` the sync rule; the
 - docs/implemented-plans/resilient-voice-recording.md:900 (mention) — - `mobile-contract.md` gains a voice staging section. §5.2 is marked "legacy,
+- docs/implemented-plans/retire-memo.md:222 (mention) — `docs/mobile-contract.md:1396-1411` prose changes from "memo" to "doc"; no
 - docs/implemented-plans/router-transient-failure-resilience.md:774 (mention) — paired to a dev-router URL at all (`beebox/docs/mobile-contract.md:21-23`).
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
 - docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
@@ -1633,14 +1634,15 @@ Referenced by:
 - ../issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md:54 (mention) — ceiling). `docs/mobile-contract.md` carries the shared statement of the rule
 - ../issues/closed/bugs/2026-09-12-non-owner-cannot-see-or-revoke-their-own-paired-device.md:50 (mention) — `beebox/docs/mobile-contract.md` §1.2.
 - ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:14 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:27 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md:78 (mention) — (`docs/mobile-contract.md` §8 and the iOS mirror updated with it).
 - ../issues/closed/features/2026-08-03-ios-self-screenshot.md:66 (mention) — into the native bridge + `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:266 (mention) — where it matters most. See `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md:50 (mention) — rather than invent a second one; see `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:30 (link) — shape is in [mobile contract §5.11](../../../beebox/docs/mobile-contract.md).
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:31 (mention) — web (`docs/mobile-contract.md` §2).
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:24 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md:59 (mention) — `docs/mobile-contract.md:21-23` records the shape: *"A paired box's `baseURL`
+- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:40 (mention) — - `docs/mobile-contract.md`: the sentence on `migration-pending`.
 - ../issues/docs-and-chores/2026-08-03-mobile-contract-missing-capture-bulk-rows.md:10 (mention) — `docs/mobile-contract.md` presents itself as the canonical Contract Surface
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:13 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:104 (mention) — `ios-app/AGENTS.md`, `beebox/docs/mobile-contract.md`, and the linked
@@ -1798,7 +1800,7 @@ Title: "Procedures" | 267 lines | current reference
 
 Referenced by:
 - AGENTS.md:51 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
-- docs/glossary.md:58 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/pr
+- docs/glossary.md:61 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/pr
 - docs/guides.md:38 (link) — | Procedures: multi-step workflows as cards | [procedure-implementation](procedure-implementation.md) |
 - docs/implemented-plans/agent-applied-migrations.md:35 (mention) — general write-up landed in `docs/procedure-implementation.md` ("Checklists"
 - docs/implemented-plans/browser-task-card.md:496 (mention) — (`beebox/docs/procedure-implementation.md:214-222`), so a run that stops
@@ -1945,7 +1947,7 @@ Referenced by:
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:9 (link) — (`bbx tick`, see [`../scheduler.md`](../scheduler.md)), a connector pulls new
 - docs/design/processing.md:25 (link) — ([`../scheduler.md`](../scheduler.md)) and agent-set timers
-- docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
+- docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 - docs/guides.md:39 (link) — | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
 - docs/implemented-plans/chat-review.md:714 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
@@ -2641,7 +2643,7 @@ References:
 
 #### docs/cards/format.md
 
-Title: "Card format" | 158 lines | current reference
+Title: "Card format" | 160 lines | current reference
 
 Referenced by:
 - AGENTS.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -2710,6 +2712,7 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:47 (mention) — entries." `migrations.md:80-84`: "Never reorder, rename, or remove."
 - docs/implemented-plans/remove-cardworks-deletion.md:465 (mention) — `docs/cards/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:333 (mention) — it now means "from `src/cards/`"); retire `docs/cards/migrations.md` references to
+- docs/implemented-plans/retire-memo.md:291 (mention) — (`docs/cards/migrations.md:95-110`).
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
 - docs/implemented-plans/standard-card-fields.md:110 (mention) — (`docs/cards/migrations.md`, "Automatic convergence"), and a card the
 - docs/implemented-plans/vocab-glossary-sweep.md:59 (mention) — - `scripts/migrate/_harness.ts` (moved to `beebox/src/scripts/migrate/_harness.ts`) + `docs/cards/migrations.md` — migra
@@ -2790,7 +2793,7 @@ Title: "Card validation" | 101 lines | current reference
 Referenced by:
 - AGENTS.md:31 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
 - docs/cards.md:12 (link) — | [Validation](cards/validation.md) | How `bbx validate` reaches agents and commits: the hooks and the canonical ref rew
-- docs/cards/format.md:149 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
+- docs/cards/format.md:151 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/implemented-plans/doc-structure-cards.md:63 (mention) — | `card-validation.md` | `cards/validation.md` |
 - docs/implemented-plans/docs-reorg.md:321 (mention) — `docs/cards/validation.md`); findability quick wins (Guides rows,
 - docs/testing.md:52 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
@@ -2933,7 +2936,7 @@ Title: "Chat sessions" | 90 lines | current reference
 Referenced by:
 - docs/chat.md:9 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
 - docs/design/interaction-model.md:15 (link) — chat ([`../chat/sessions.md`](../chat/sessions.md)). The current design direction makes chat the
-- docs/glossary.md:72 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
+- docs/glossary.md:75 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
 - docs/implemented-plans/architectural-review-followups.md:272 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat/sessions.md`
 - docs/implemented-plans/architectural-review.md:713 (mention) — then a `docs/chat/sessions.md` protocol doc for the
 - docs/implemented-plans/doc-structure-chat.md:68 (mention) — | `chat-session-lifecycle.md` "Phases", "The contract", "Shared code" | `chat/sessions.md` | |
@@ -3139,7 +3142,7 @@ Title: "Processing — wakeup, the reactor, and the question loop" | 69 lines | 
 Referenced by:
 - docs/design/README.md:23 (link) — - [`processing.md`](processing.md) — what `bbx wakeup` and the reactor actually do (verified against code), what "proces
 - docs/design/interaction-model.md:12 (mention) — and load-bearing for the engine (see `processing.md`).
-- docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
+- docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 
 References:
 - → docs/scheduler.md (link)
@@ -3555,7 +3558,7 @@ References:
 Title: "Asset Manifests" | 333 lines | shipped history | implemented
 
 Referenced by:
-- docs/glossary.md:48 (mention) — **asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's
+- docs/glossary.md:51 (mention) — **asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's
 - docs/implemented-plans/annex-at-init.md:180 (mention) — the competing idiom, and `docs/implemented-plans/asset-manifests.md` opens with
 - docs/implemented-plans/attach-directories-superseded.md:15 (mention) — > `docs/asset-manifests.md` is historical rather than "the living doc". Attach
 - docs/implemented-plans/bulk-file-upload.md:12 (mention) — > `docs/asset-manifests.md` reference below all describe code that is gone. The
@@ -3744,7 +3747,7 @@ Title: "Box Retrospectives" | 442 lines | shipped history | implemented
 
 Referenced by:
 - docs/design/teaching.md:19 (mention) — cards (`../implemented-plans/box-retrospectives.md`).
-- docs/glossary.md:64 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what t
+- docs/glossary.md:67 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what t
 - docs/implemented-plans/chat-review.md:72 (mention) — (`docs/implemented-plans/box-retrospectives.md`, `src/core/retro/`). The same
 - docs/implemented-plans/questions-end-to-end.md:28 (mention) — belief (the evidence model of `docs/implemented-plans/box-retrospectives.md`:
 - docs/questions.md:34 (mention) — `docs/implemented-plans/box-retrospectives.md`: inferred beliefs cap at
@@ -5481,7 +5484,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1698 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1706 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -6218,7 +6221,7 @@ References:
 Title: "Remove the cardworks package" | 512 lines | shipped history | implemented
 
 Referenced by:
-- docs/glossary.md:62 (mention) — **cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing,
+- docs/glossary.md:65 (mention) — **cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing,
 - docs/implemented-plans/box-migration.subplan.md:10 (mention) — the gated box-local-XML removal (`remove-cardworks-package.md`, task #11) and
 - docs/implemented-plans/box-migration.subplan.md:14 (link) — Parent plan: [remove-cardworks-package.md](./remove-cardworks-package.md). Both
 - docs/implemented-plans/remove-cardworks-deletion.md:12 (mention) — The execution plan for the last phase of `remove-cardworks-package.md`: sever
@@ -6325,6 +6328,25 @@ References:
 - → docs/implemented-plans/slopo-codehealth-adoption.md (mention)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/retire-memo.md
+
+Title: "Retire the memo card type into doc" | 400 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:14 (mention) — **Closed:** Closed by the retire-memo branch. No memo `source` field remains; the glossary records `via` vs `origin`. Pl
+- ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md:14 (mention) — **Closed:** Closed by the retire-memo branch (merge of worktree-retire-memo). The memo card type is removed; migration `
+- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/retire-memo.md
+
+References:
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
+- → ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (link)
+- → docs/implemented-plans/standard-card-fields.md (link)
+- → docs/mobile-contract.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/cards/migrations.md (mention)
 
 #### docs/implemented-plans/retire-type-specific-core-tags.md
 
@@ -6719,12 +6741,13 @@ Title: "Standard card fields" | 635 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/chat-titles.md:80 (mention) — - **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
+- docs/implemented-plans/retire-memo.md:21 (link) — [standard card fields](../implemented-plans/standard-card-fields.md) plan
 - ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (link) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
 
 References:
 - → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (frontmatter)
 - → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (link)
-- → ../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
 - → ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md (link)
 - → ../issues/closed/features/2026-09-27-card-properties-design-session.md (link)
 - → docs/cards/schemas.md (mention)
@@ -7241,7 +7264,7 @@ Title: "Assets" | 239 lines | current reference
 
 Referenced by:
 - docs/cards.md:20 (link) — - Media that cards attach: [assets](media/assets.md).
-- docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
+- docs/glossary.md:48 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
 - docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
 - docs/implemented-plans/asset-manifests.md:19 (link) — > [`assets.md`](../media/assets.md).
 - docs/implemented-plans/attach-directories-superseded.md:17 (link) — > [`assets.md`](../media/assets.md).
@@ -7825,8 +7848,8 @@ Referenced by:
 - ../bin/AGENTS.md:102 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:179 (mention) — - **Lives in:** `bin/comments`, `bin/comments.ts`, `workstreams-app/src/server/comments-service.ts`, `workstreams-app/sr
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:42 (link) — [document-comments](../../../beebox/docs/plans/document-comments.md) plan
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:70 (link) — - [document-comments](../../../beebox/docs/plans/document-comments.md) — the
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:39 (link) — [document-comments](../../beebox/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:19 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:14 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) is
 - ../issues/features/2026-10-13-suggested-edits-tracked-changes.md:80 (link) — - [Document comments](../../beebox/docs/plans/document-comments.md) is the
@@ -8135,7 +8158,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1692 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1700 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -9678,7 +9701,7 @@ Title: "Connectors" | 26 lines
 
 Referenced by:
 - AGENTS.md:43 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
-- docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive) with the box filesystem. Impl
+- docs/glossary.md:59 (mention) — **connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive) with the box filesystem. Impl
 - docs/implemented-plans/chat-review.md:214 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/AGENTS.md:19`:
 - docs/implemented-plans/doc-structure-connectors.md:50 (mention) — | calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setu
 - docs/implemented-plans/docs-reorg.gap-analysis.md:26 (mention) — module's own comment — not in `src/connectors/AGENTS.md` or
@@ -9705,6 +9728,7 @@ Referenced by:
 - docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/implemented-plans/remove-telegram.md:152 (mention) — - **Agent-facing text:** `src/core/agent-guide/guide.md:309, 405`,
+- docs/implemented-plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
@@ -9753,7 +9777,7 @@ Title: "Reactor Design" | 103 lines
 Referenced by:
 - AGENTS.md:39 (link) — - Backend domain and orchestration: `src/core/`; reactor details: [reactor design](src/core/reactor/DESIGN.md).
 - docs/design/processing.md:30 (mention) — `runReactor` (`src/core/reactor/DESIGN.md`): sync (`bbx wakeup` as its step
-- docs/glossary.md:54 (mention) — **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent pr
+- docs/glossary.md:57 (mention) — **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent pr
 - docs/implemented-plans/design-reconciliation.md:134 (mention) — (src/core/reactor/DESIGN.md, "Two Processing Paths"), and the current design
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — hint today is `reactor/DESIGN.md:78`).
 - docs/implemented-plans/docs-reorg.md:205 (mention) — `DESIGN.md`/`IMPLEMENTATION.md` — never cross-referenced. Decide canonical
@@ -9870,7 +9894,7 @@ Title: "Services" | 104 lines
 Referenced by:
 - AGENTS.md:43 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
 - docs/connectors.md:113 (mention) — See `src/services/AGENTS.md` for the full service layer documentation.
-- docs/glossary.md:60 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
+- docs/glossary.md:63 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:42 (mention) — the services real/fake pattern (`src/services/AGENTS.md`).
 - docs/implemented-plans/capture-mode.md:624 (mention) — `src/services/AGENTS.md`). Scripted word timestamps + fixture image
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,

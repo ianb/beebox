@@ -2,8 +2,9 @@
  * Transcribe voice content pre-action.
  *
  * Looks for cards with audio attachments and transcribes them via OpenAI
- * Whisper. Works on memo and feedback cards (both frontmatter); the audio
- * attachment lives as a sibling file sharing the card's basename.
+ * Whisper. Works on feedback cards; the audio attachment lives as a sibling
+ * file sharing the card's basename. A quick-capture voice note is transcribed
+ * by the quick-capture worker (src/core/quick-capture/worker.ts).
  *
  * `audio` was historically handled here too; that path is dead now —
  * capture-session audio is transcribed by the capture preparation worker
@@ -70,7 +71,7 @@ export function transcriptionErrorFields(error: unknown, attemptedAt: string): T
 
 export const transcribePreAction: PreAction = {
   name: "transcribe-voice",
-  appliesTo: ["memo", "feedback"],
+  appliesTo: ["feedback"],
 
   async shouldRun(ctx: PreActionContext): Promise<boolean> {
     const audioFile = await findAudioAttachment(ctx.cardPath);

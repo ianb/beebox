@@ -28,7 +28,7 @@ A file with no card type gets the filename, cleaned up.
 
 ```ts
 resetLoaderRegistry();
-summarize({ path: "_content/inbox/Meeting_Notes.memo.card" }, NO_SCHEMAS).title
+summarize({ path: "_content/inbox/Meeting_Notes.doc.card" }, NO_SCHEMAS).title
 => Meeting Notes
 
 summarize({ path: "photo-001.jpg" }, NO_SCHEMAS).title

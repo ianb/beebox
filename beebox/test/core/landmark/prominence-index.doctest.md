@@ -27,10 +27,10 @@ function fmt(entries: { boxPath: string; level: string; kind: string }[]): strin
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Entry.memo.card", "---\nprominence: entry-point\n---\n");
-await box.write("_content/Primary1.memo.card", "---\nprominence: primary\n---\n");
-await box.write("_content/Primary2.memo.card", "---\nprominence: primary\n---\n");
-await box.write("_content/Ordinary.memo.card", "---\n---\n");
+await box.write("_content/Entry.doc.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Primary1.doc.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Primary2.doc.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Ordinary.doc.card", "---\n---\n");
 // A system-category card is background BY TYPE with no declared prominence.
 await box.write("_content/Job.contains-backfill-job.card", "---\ndescription: test\nitems: []\n---\n");
 
@@ -38,9 +38,9 @@ const { entries, nested, summary } = await prunedSubtree(box.root, "");
 fmt(entries)
 =>
 card:background /_content/Job.contains-backfill-job.card
-card:entry-point /_content/Entry.memo.card
-card:primary /_content/Primary1.memo.card
-card:primary /_content/Primary2.memo.card
+card:entry-point /_content/Entry.doc.card
+card:primary /_content/Primary1.doc.card
+card:primary /_content/Primary2.doc.card
 
 nested.length
 => 0
@@ -64,7 +64,7 @@ tier).
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
-await box.write("_content/Sub/SubPrimary.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Sub/SubPrimary.doc.card", "---\nprominence: primary\n---\n");
 
 const { entries, nested, summary } = await prunedSubtree(box.root, "");
 fmt(entries)
@@ -90,7 +90,7 @@ count toward the outer directory's summary.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/BG/BG.landmark.card", "---\nprominence: background\n---\n");
-await box.write("_content/BG/BGPrimary.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/BG/BGPrimary.doc.card", "---\nprominence: primary\n---\n");
 
 const { entries, nested, summary } = await prunedSubtree(box.root, "");
 fmt(entries)
@@ -116,8 +116,8 @@ the same fold and never surfaces it as its own entry.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Att.memo.card", "---\n---\n");
-await box.write("_content/Att.attach/AttPrimary.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Att.doc.card", "---\n---\n");
+await box.write("_content/Att.attach/AttPrimary.doc.card", "---\nprominence: primary\n---\n");
 
 const { entries, summary } = await prunedSubtree(box.root, "");
 fmt(entries)
@@ -132,9 +132,9 @@ An attach scope that holds ITS OWN landmark card is a nested landmark like
 any other, not skipped:
 
 ```ts continue
-await box.write("_content/Course.memo.card", "---\n---\n");
+await box.write("_content/Course.doc.card", "---\n---\n");
 await box.write("_content/Course.attach/Course.landmark.card", "---\nnavigation:\n  label: Course notes\n---\n");
-await box.write("_content/Course.attach/CoursePrimary.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Course.attach/CoursePrimary.doc.card", "---\nprominence: primary\n---\n");
 
 const after = await prunedSubtree(box.root, "");
 after.nested.map((n) => n.label).sort().join(",")
@@ -153,7 +153,7 @@ landmark — the cascade folds `Deeper` too.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/BG/BG.landmark.card", "---\nprominence: background\n---\n");
-await box.write("_content/BG/Deeper/DeeperPrimary.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/BG/Deeper/DeeperPrimary.doc.card", "---\nprominence: primary\n---\n");
 
 const { entries, summary } = await prunedSubtree(box.root, "_content/BG/Deeper");
 fmt(entries)
@@ -170,10 +170,10 @@ root's own walk and every descendant's still run.
 
 ```ts continue
 await box.write("_content/Box.landmark.card", "---\nprominence: background\nnavigation:\n  label: Box\n---\n");
-await box.write("_content/Top.memo.card", "---\nprominence: primary\n---\n");
+await box.write("_content/Top.doc.card", "---\nprominence: primary\n---\n");
 const root = await prunedSubtree(box.root, "");
 fmt(root.entries)
-=> card:primary /_content/Top.memo.card
+=> card:primary /_content/Top.doc.card
 
 root.summary.background
 => false
@@ -193,14 +193,14 @@ inside a nested place.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Groceries.memo.card", "---\n---\n");
+await box.write("_content/Groceries.doc.card", "---\n---\n");
 await box.write("_content/Box.briefing.card", "---\n---\nAbout this box.\n");
 await box.write("_content/chat/web/Hello.chat.card", "---\nsession: s1\n---\n");
 await box.write("_content/tmp-capture/Walk.capture-session.card", "---\n---\n");
 await box.write("_content/tmp-upload/Batch.upload-batch.card", "---\n---\n");
 await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
-await box.write("_content/Sub/Nested.memo.card", "---\n---\n");
-await utimes(box.path("_content/Groceries.memo.card"), 1_700_000_000, 1_700_000_000);
+await box.write("_content/Sub/Nested.doc.card", "---\n---\n");
+await utimes(box.path("_content/Groceries.doc.card"), 1_700_000_000, 1_700_000_000);
 await utimes(box.path("_content/Box.briefing.card"), 1_700_000_100, 1_700_000_100);
 
 const { ordinary, entries } = await prunedSubtree(box.root, "");
@@ -210,7 +210,7 @@ ordinary
   .join("\n")
 =>
 /_content/Box.briefing.card 1700000100000
-/_content/Groceries.memo.card 1700000000000
+/_content/Groceries.doc.card 1700000000000
 
 fmt(entries)
 =>
@@ -231,7 +231,7 @@ identity; only discovery (the `readdir` walk itself) repeats.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/Entry.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/Entry.doc.card", "---\nprominence: entry-point\n---\n");
 await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
 
 await prunedSubtree(box.root, "");
@@ -257,7 +257,7 @@ again.
 ```ts
 const box = await makeTmpBox();
 await Promise.all(
-  Array.from({ length: 4500 }, (_, i) => box.write(`_content/d${i % 30}/Card${i}.memo.card`, "---\n---\n")),
+  Array.from({ length: 4500 }, (_, i) => box.write(`_content/d${i % 30}/Card${i}.doc.card`, "---\n---\n")),
 );
 
 resetParseCount();

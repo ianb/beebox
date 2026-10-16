@@ -25,7 +25,6 @@ import { HistorySchema } from "./schemas/history.js";
 import { InventorySchema } from "./schemas/inventory.js";
 import { AdminSchema } from "./schemas/admin.js";
 import { SearchSchema } from "./schemas/search.js";
-import { MemoSchema } from "./schemas/memo.js";
 import { QuestionSchema } from "./schemas/question.js";
 import { FeedbackSchema } from "./schemas/feedback.js";
 import { ProcedureSchema } from "./schemas/procedure.js";
@@ -96,7 +95,6 @@ export const cardSchemas = defineRegistry<CardSchema>({
     // authored — everyday recording types first
     DocSchema,
     RecordSchema,
-    MemoSchema,
     PersonSchema,
     PlaceSchema,
     TodoViewSchema,

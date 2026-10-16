@@ -59,7 +59,7 @@ locatorsOf(body, 4)
 They are exactly the collector's locators for the same body:
 
 ```ts
-const collected = extractBodyTodos({ relPath: "Porch.memo.card", bodyText: body, lineOffset: 4 });
+const collected = extractBodyTodos({ relPath: "Porch.doc.card", bodyText: body, lineOffset: 4 });
 collected.ok ? collected.items.map((item) => JSON.stringify(item.locator)).join(" ") : collected.message
 => {"kind":"body","line":7} {"kind":"body","line":7,"nth":2} {"kind":"body","line":9}
 ```
@@ -95,7 +95,7 @@ which is what the card summary scrolls to and what a later tick reads.
 ```ts
 const ast = parse(body);
 stampLocators(assignLocators(ast, 4));
-const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath: "Porch.memo.card" });
+const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath: "Porch.doc.card" });
 const html = renderToStaticMarkup(React.createElement(React.Fragment, null,
   renderers.react(transform(ast, markdocConfig), React, { components: { TodoInline, TodoBlock } })));
 [...html.matchAll(/data-todo-locator="([^"]*)"/g)].map((m) => m[1]).join(" ")
@@ -115,13 +115,13 @@ const linked = [
   "{% todo %}Call the [roofer](https://example.com) back{% /todo %}",
   "",
   "{% todo %}",
-  "Pick a stain {% see-also ref=\"Stains.memo.card\" %}options{% /see-also %} colour",
+  "Pick a stain {% see-also ref=\"Stains.doc.card\" %}options{% /see-also %} colour",
   "{% /todo %}",
 ].join("\n");
 const linkedAst = parse(linked);
 stampLocators(assignLocators(linkedAst, 0));
 const rendered = todoTags(transform(linkedAst, markdocConfig)).map((tag) => tag.attributes["text"]);
-const extracted = extractBodyTodos({ relPath: "Porch.memo.card", bodyText: linked, lineOffset: 0 });
+const extracted = extractBodyTodos({ relPath: "Porch.doc.card", bodyText: linked, lineOffset: 0 });
 JSON.stringify([rendered, extracted.ok ? extracted.items.map((item) => item.text) : extracted.message])
 => [["Call the roofer back","Pick a stain colour"],["Call the roofer back","Pick a stain colour"]]
 

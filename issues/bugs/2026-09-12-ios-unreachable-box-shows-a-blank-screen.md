@@ -98,7 +98,7 @@ places by hand.
 ## Re-encounter 2026-10-16 (dev router, box in maintenance)
 
 The boxholder's phone opened a box while it was closed for a docs refresh
-(see [docs refresh re-hashes every annexed file](2026-10-16-docs-refresh-rehashes-every-annexed-file-while-box-is-closed.md)).
+(see [docs refresh re-hashes every annexed file](../closed/bugs/2026-10-16-docs-refresh-rehashes-every-annexed-file-while-box-is-closed.md)).
 The dev router's mobile-session bootstrap retries a transient failure twice,
 600 ms apart, then answers a plain-text 503 page
 (`workstreams-app/src/router/server/proxy.ts:262-267`: "Mobile session

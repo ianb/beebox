@@ -10,7 +10,7 @@ import { resolveRelativePath, type ViewTarget } from "./view-url";
 
 /**
  * Derive a short human label from a ref path:
- *   `/_content/inbox/Voice_2026-03-15.memo.card` → "Voice 2026-03-15"
+ *   `/_content/inbox/Voice_2026-03-15.doc.card` → "Voice 2026-03-15"
  *   `_content/people/dana.person.card`           → "dana"
  *   `_content/chat/Mar15.chat-thread.card#m12`   → "Mar15"
  *

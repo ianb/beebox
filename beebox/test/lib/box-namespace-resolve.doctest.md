@@ -28,8 +28,8 @@ function describe(result: BoxNamespaceResult): string {
 An ordinary in-namespace path resolves normally:
 
 ```ts
-JSON.stringify(resolveBoxNamespacePath("/box", "_content/inbox/x.memo.card"))
-=> {"ok":true,"resolved":"/box/_content/inbox/x.memo.card","relativePath":"_content/inbox/x.memo.card"}
+JSON.stringify(resolveBoxNamespacePath("/box", "_content/inbox/x.doc.card"))
+=> {"ok":true,"resolved":"/box/_content/inbox/x.doc.card","relativePath":"_content/inbox/x.doc.card"}
 ```
 
 A path outside every underscore area is rejected:
@@ -101,8 +101,8 @@ normalizing is still fine — only the resolved location matters, not whether
 the raw string contained dots:
 
 ```ts
-JSON.stringify(resolveBoxNamespacePath("/box", "_content/inbox/../drafts/x.memo.card"))
-=> {"ok":true,"resolved":"/box/_content/drafts/x.memo.card","relativePath":"_content/drafts/x.memo.card"}
+JSON.stringify(resolveBoxNamespacePath("/box", "_content/inbox/../drafts/x.doc.card"))
+=> {"ok":true,"resolved":"/box/_content/drafts/x.doc.card","relativePath":"_content/drafts/x.doc.card"}
 ```
 
 ## A boxholder DISPLAY-FORM path is a distinct rejection reason
@@ -158,15 +158,15 @@ under both modes:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/x.memo.card", "hello");
+await box.write("_content/inbox/x.doc.card", "hello");
 
-const ordinaryRead = await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/inbox/x.memo.card", mode: "read" });
+const ordinaryRead = await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/inbox/x.doc.card", mode: "read" });
 describe(ordinaryRead)
-=> _content/inbox/x.memo.card
+=> _content/inbox/x.doc.card
 
-const ordinaryWrite = await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/inbox/x.memo.card", mode: "write" });
+const ordinaryWrite = await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/inbox/x.doc.card", mode: "write" });
 describe(ordinaryWrite)
-=> _content/inbox/x.memo.card
+=> _content/inbox/x.doc.card
 ```
 
 ### The `_content/pkg` → package-root symlink escape (the adversarial probe)
@@ -213,13 +213,13 @@ describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_con
 
 ```ts continue
 await mkdir(box.path("elsewhere/_content"), { recursive: true });
-await box.write("elsewhere/_content/x.memo.card", "hi");
+await box.write("elsewhere/_content/x.doc.card", "hi");
 // `bbx init` scaffolds `_config/` as a real directory (migrations manifest,
 // transcription config) — remove it first so the symlink can take its place.
 await rm(box.path("_config"), { recursive: true, force: true });
 await symlink(box.path("elsewhere/_content"), box.path("_config"));
 
-describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_config/x.memo.card", mode: "read" }))
+describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_config/x.doc.card", mode: "read" }))
 => escaped
 ```
 
@@ -350,8 +350,8 @@ directly instead of re-resolving from a raw string:
 
 ```ts
 const directBox = await makeTmpBox();
-await directBox.write("_content/note.memo.card", "hi");
-const ns = resolveBoxNamespacePath(directBox.root, "_content/note.memo.card");
+await directBox.write("_content/note.doc.card", "hi");
+const ns = resolveBoxNamespacePath(directBox.root, "_content/note.doc.card");
 if (!ns.ok) throw new Error("expected an ok resolution");
 await verifyBoxNamespaceOnDisk({ boxRoot: directBox.root, ns, mode: "read" })
 => true

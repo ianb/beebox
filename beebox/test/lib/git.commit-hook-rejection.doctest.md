@@ -37,12 +37,12 @@ The commit throws, and HEAD is where it was:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("_content/inbox/Note.memo.card", "---\nstatus: new\n---\nfirst\n");
+await box.write("_content/inbox/Note.doc.card", "---\ntitle: Note\n---\nfirst\n");
 await box.commitAll("a real commit");
 const head = git(box, "rev-parse", "HEAD");
 
 await installRejectingHook(box);
-await box.write("_content/inbox/Rejected.memo.card", "---\nstatus: new\n---\nnope\n");
+await box.write("_content/inbox/Rejected.doc.card", "---\ntitle: Note\n---\nnope\n");
 await stageAll(box.root);
 
 JSON.stringify({
@@ -56,7 +56,7 @@ The changes are still in the tree — a rejected commit loses no work, it just
 must not be reported as done:
 
 ```ts continue
-git(box, "status", "--porcelain").includes("Rejected.memo.card")
+git(box, "status", "--porcelain").includes("Rejected.doc.card")
 => true
 ```
 

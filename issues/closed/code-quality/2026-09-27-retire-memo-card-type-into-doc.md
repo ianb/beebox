@@ -1,6 +1,6 @@
 ---
 title: "Retire the memo card type: move what it holds into doc cards and their attachments"
-workstream: unattached
+workstream: retire-memo
 priority: important
 needs: [design]
 area: beebox
@@ -8,7 +8,10 @@ labels: [cards, schema, migration]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+resolution: implemented
 ---
+
+**Closed:** Closed by the retire-memo branch (merge of worktree-retire-memo). The memo card type is removed; migration `retire-memo-2026-10` converts memos to doc cards, with voice recordings on `<base>.attach/recording.audio.card`. Plan: beebox/docs/implemented-plans/retire-memo.md. A legacy `source` guard remains as a deferred follow-up.
 
 The memo card type (`beebox/src/schemas/memo.ts`) is often misused. It is
 meant to be raw captured input, a text or voice note, but agents grow memos
@@ -75,6 +78,6 @@ remove it.
 
 ## Related
 
-- [Review the standard card fields](../closed/code-quality/2026-09-27-review-standard-card-fields.md):
+- [Review the standard card fields](2026-09-27-review-standard-card-fields.md):
   `created` and `status` are examples of fields that slip in.
-- [A card field for when a card stops mattering](../features/2026-09-27-universal-moot-after-card-field.md).
+- [A card field for when a card stops mattering](../../features/2026-09-27-universal-moot-after-card-field.md).

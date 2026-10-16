@@ -37,22 +37,22 @@ async function changes(box: TmpBox, options: Partial<ChangesOptions>, env: NodeJ
 ## Three commits add three cards; one of them is moved
 
 Before the window, the box holds an old email and a note. In the window: an
-email arrives, then a second email and a memo arrive and the note is edited,
+email arrives, then a second email and a doc arrive and the note is edited,
 then triage moves the first email (added in the window) and the old one
 (added before it) into a folder.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write("_content/inbox/old.email-message.card", card("Old"));
-await box.write("_content/notes/plan.memo.card", card("Plan"));
+await box.write("_content/notes/plan.doc.card", card("Plan"));
 box.commitAll("before the window");
 const since = execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
 
 await box.write("_content/inbox/trip.email-message.card", card("Field trip"));
 box.commitAll("Intake: trip email");
 await box.write("_content/inbox/receipt.email-message.card", card("Receipt"));
-await box.write("_content/notes/groceries.memo.card", card("Groceries"));
-await box.write("_content/notes/plan.memo.card", card("Plan, revised"));
+await box.write("_content/notes/groceries.doc.card", card("Groceries"));
+await box.write("_content/notes/plan.doc.card", card("Plan, revised"));
 box.commitAll("Intake: receipt; groceries note");
 execSync("mkdir -p _content/school && git mv _content/inbox/trip.email-message.card _content/school/ && git mv _content/inbox/old.email-message.card _content/school/ && git commit -qm 'Triage: file school mail'", { cwd: box.root });
 ```
@@ -63,7 +63,7 @@ once, at its final path; the old email, which only moved, does not.
 ```ts continue
 await changes(box, { since })
 => _content/inbox/receipt.email-message.card
-_content/notes/groceries.memo.card
+_content/notes/groceries.doc.card
 _content/school/trip.email-message.card
 exit 0
 ```
@@ -78,12 +78,12 @@ _content/school/trip.email-message.card
 exit 0
 
 await changes(box, { since, match: ["_content/notes/*", "_content/school/*"] })
-=> _content/notes/groceries.memo.card
+=> _content/notes/groceries.doc.card
 _content/school/trip.email-message.card
 exit 0
 
 await changes(box, { since, kind: "modified" })
-=> _content/notes/plan.memo.card
+=> _content/notes/plan.doc.card
 exit 0
 
 await changes(box, { since, kind: "any", match: ["_content/school/*"] })
@@ -142,7 +142,7 @@ missing `--since` exits 2 rather than guessing.
 
 ```ts continue
 await changes(box, { match: ["_content/notes/*"] }, { BBX_SINCE_COMMIT: since })
-=> _content/notes/groceries.memo.card
+=> _content/notes/groceries.doc.card
 exit 0
 
 await changes(box, {})
@@ -181,7 +181,7 @@ await changes(box, { since: "HEAD", match: ["_content/school/*"], cat: true, all
 => exit 75
 
 await changes(box, { since, match: ["_content/notes/*"], orSkip: true }, { BBX_DEFER_FILE: path.join(deferDir, "second.json") })
-=> _content/notes/groceries.memo.card
+=> _content/notes/groceries.doc.card
 exit 0
 
 await fs.access(path.join(deferDir, "second.json")).then(() => "written", () => "absent")

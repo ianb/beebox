@@ -14,7 +14,7 @@ import { CardFacts } from "../../../../../src/components/themes/ThemedFileCard/v
 globalThis.React = React;
 
 type Schema = NonNullable<FileData["schema"]>;
-const memoSchema: Schema = { hasBodyField: true, defaultProminence: "ordinary" };
+const docSchema: Schema = { hasBodyField: true, defaultProminence: "ordinary" };
 
 function textOf(html: string) {
   return html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
@@ -29,40 +29,40 @@ function render(data: FileData) {
   return renderToStaticMarkup(React.createElement(CardFacts, { data, boxSlug: "test", onNavigate: () => undefined }));
 }
 
-const memo = render({
-  path: "_content/projects/Porch.memo.card",
+const doc = render({
+  path: "_content/projects/Porch.doc.card",
   kind: "frontmatter",
-  type: "memo",
-  schema: memoSchema,
+  type: "doc",
+  schema: docSchema,
   frontmatter: {
     title: "Porch",
     contains: "Porch repair quotes",
     "contains-evidence": "Three quotes in the body",
     symbol: { glyph: "🏠", background: "#fde" },
     todos: [{ text: "Book the inspector" }],
-    status: "new",
-    created: "2026-07-01",
+    "share-id": "porch-quotes",
+    via: { channel: "email" },
   },
   body: "Three quotes so far.\n",
 });
 ```
 
-A memo with no declared `prominence` shows its type's default and says so.
-The memo has a body, so its type fields are here rather than on the front.
-The symbol row draws the mark and the group as written. The memo's own fields
+A doc with no declared `prominence` shows its type's default and says so.
+The doc has a body, so its type fields are here rather than on the front.
+The symbol row draws the mark and the group as written. The doc's own fields
 follow, in the shared fields table; the title, todos, and theme are shown
 elsewhere and are not repeated:
 
 ```ts
-rows(memo)
+rows(doc)
 => [
-  "Filed at = _content/projects/Porch.memo.card",
-  "Card type = memo",
+  "Filed at = _content/projects/Porch.doc.card",
+  "Card type = doc",
   "Contains = Porch repair quotes",
   "Prominence = ordinary, the type's default",
   "Symbol = 🏠 glyph: 🏠 · background: #fde",
-  "Status = new",
-  "Created = 2026-07-01",
+  "Share id = porch-quotes",
+  "Via = Channel email",
 ]
 ```
 
@@ -75,7 +75,7 @@ header:
 rows(render({
   path: "_content/lending/Camp_stove.record.card",
   type: "record",
-  schema: memoSchema,
+  schema: docSchema,
   frontmatter: { name: "Camp stove", location: { text: "With Idris" }, quantity: { value: "1 stove", note: "missing lid" } },
   body: "Borrowed for the lake trip.\n",
 }))
@@ -91,14 +91,14 @@ rows(render({
 The evidence for `contains` sits under a closed disclosure:
 
 ```ts
-memo.match(/<details[^>]*>.*?<\/details>/s)?.[0].replace(/ class="[^"]*"/g, "")
+doc.match(/<details[^>]*>.*?<\/details>/s)?.[0].replace(/ class="[^"]*"/g, "")
 => <details><summary>Contains evidence</summary><p>Three quotes in the body</p></details>
 ```
 
 A declared level shows as declared:
 
 ```ts
-rows(render({ path: "_content/Plan.doc.card", type: "doc", schema: memoSchema, frontmatter: { prominence: "primary" } }))
+rows(render({ path: "_content/Plan.doc.card", type: "doc", schema: docSchema, frontmatter: { prominence: "primary" } }))
 => ["Filed at = _content/Plan.doc.card", "Card type = doc", "Prominence = primary"]
 ```
 
@@ -108,12 +108,12 @@ written, or no Prominence row at all. Its type fields stay on the front
 (`splitCardFields`), so Properties has no fields table:
 
 ```ts
-const broken = { path: "_content/Broken.memo.card", type: "memo", schema: null };
+const broken = { path: "_content/Broken.doc.card", type: "doc", schema: null };
 rows(render({ ...broken, frontmatter: { prominence: "global", status: [1, 2] } }))
-=> ["Filed at = _content/Broken.memo.card", "Card type = memo", "Prominence = global"]
+=> ["Filed at = _content/Broken.doc.card", "Card type = doc", "Prominence = global"]
 
 rows(render({ ...broken, frontmatter: { status: [1, 2] } }))
-=> ["Filed at = _content/Broken.memo.card", "Card type = memo"]
+=> ["Filed at = _content/Broken.doc.card", "Card type = doc"]
 ```
 
 A landmark's body is the place summary, and most landmarks have none. With an
@@ -153,10 +153,10 @@ section and nothing shows twice. A body that only repeats the title counts as
 empty, the same test the front uses.
 
 ```ts
-const emptyMemo = (body: string | undefined) => render({
-  path: "_content/projects/Porch.memo.card", type: "memo", schema: memoSchema,
-  frontmatter: { title: "Porch", status: "new" }, body,
+const emptyDoc = (body: string | undefined) => render({
+  path: "_content/projects/Porch.doc.card", type: "doc", schema: docSchema,
+  frontmatter: { title: "Porch", "share-id": "porch-quotes" }, body,
 });
-[emptyMemo(undefined).includes('data-card-section="fields"'), emptyMemo("# Porch\n").includes('data-card-section="fields"'), emptyMemo("Quotes.\n").includes('data-card-section="fields"')]
+[emptyDoc(undefined).includes('data-card-section="fields"'), emptyDoc("# Porch\n").includes('data-card-section="fields"'), emptyDoc("Quotes.\n").includes('data-card-section="fields"')]
 => [false, false, true]
 ```

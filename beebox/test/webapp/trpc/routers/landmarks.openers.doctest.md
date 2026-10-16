@@ -77,7 +77,7 @@ await box.write("_content/swim/Swim.landmark.card", "---\nnavigation:\n  label: 
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/Box.landmark.card", ROOT);
-await box.write("_content/loose/Note.memo.card", "---\ntitle: note\n---\n");
+await box.write("_content/loose/Note.doc.card", "---\ntitle: note\n---\n");
 await openersFor(box.root, "_content/loose")
 => null
 ```

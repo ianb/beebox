@@ -3,7 +3,6 @@
 The schema system registers card types, provides template generators, and validates cards. Each card type has a type name, template generator, and optional instructions for agents.
 
 ```ts setup
-import { createMemoTemplate } from "../src/schemas/memo.js";
 import { createSelectQuestionTemplate } from "../src/schemas/question.js";
 import { getCardTypes } from "../src/schemas.js";
 import { getDefaultTemplate, getTemplate } from "../src/templates-registry.js";
@@ -21,7 +20,7 @@ import { createCardSchemaMap } from "../src/schemas.js";
 The registry tracks all known card types:
 
 ```ts
-["memo", "question", "intake-job", "webpage"].filter((type) => !getCardTypes().includes(type))
+["doc", "question", "intake-job", "webpage"].filter((type) => !getCardTypes().includes(type))
 => []
 ```
 
@@ -35,40 +34,11 @@ have every built-in registered — the store module loads the built-in groups
 itself:
 
 ```ts
-getTemplate("memo")?.name
-=> memo
+getTemplate("doc")?.name
+=> doc
 
 getDefaultTemplate("recipe")
 => undefined
-```
-
-## Memo
-
-A memo captures a piece of content, optionally with a source. The
-content lives in the markdown body; created/source/etc. are in the
-YAML frontmatter.
-
-```ts
-createMemoTemplate("Test content", "test-source")
-=>
----
-status: new
-created: «*»
-source: test-source
----
-Test content
-```
-
-Source is optional:
-
-```ts
-createMemoTemplate("Just content")
-=>
----
-status: new
-created: «*»
----
-Just content
 ```
 
 ## Question

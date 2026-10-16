@@ -1,14 +1,10 @@
 /**
- * Built-in template definitions (memo, guide, record, ...). A plain array;
+ * Built-in template definitions (guide, record, doc, ...). A plain array;
  * `../../templates.ts` registers each member into the shared registry.
  */
 
 import { z } from "zod";
 import { eraseTemplateArgs, type TemplateDefinition } from "../../templates-shape.js";
-import {
-  createMemoTemplate,
-  createVoiceMemoTemplate,
-} from "../../schemas/memo.js";
 import { createInitialGuideTemplate } from "../../schemas/guide/templates.js";
 import { createRecordTemplate } from "../../schemas/record.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script/schema.js";
@@ -23,27 +19,6 @@ import { createFigureTemplate, FigureRuntime } from "../../schemas/figure.js";
 import { figureStarterSketch } from "./starters.js";
 
 export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
-  eraseTemplateArgs({
-    name: "memo",
-    description: "A text memo card",
-    cardTypes: ["memo"],
-    defaultForTypes: ["memo"],
-    argsSchema: z.object({
-      content: z.string().describe("The memo content text"),
-      source: z.string().optional().describe("Source identifier (e.g., 'text', 'email')"),
-    }),
-    generate: (args) => createMemoTemplate(args.content, args.source),
-  }),
-
-  eraseTemplateArgs({
-    name: "voice-memo",
-    description: "A voice memo card (audio attached separately)",
-    cardTypes: ["voice-memo", "memo"],
-    defaultForTypes: ["voice-memo"],
-    argsSchema: z.object({}),
-    generate: () => createVoiceMemoTemplate(),
-  }),
-
   eraseTemplateArgs({
     name: "guide",
     description: "A generic guide card — triage rules, actions, experiments, reactions",

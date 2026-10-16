@@ -82,12 +82,14 @@ async function prepareVoice(ctx: CaptureWorkerContext, record: CaptureRecord): P
       filename: `recording${mimetypeToExtension(material.mimeType)}`,
     });
     if (result.text.trim() === "") throw new QuickCaptureError({ reason: "empty-transcript" });
+    // The record counts as transcribed only once the card holds the transcript, so a failed write is retried.
+    await writeSourceTranscription({ boxRoot: ctx.boxRoot, record, text: result.text, attemptedAt: record.transcriptionAttemptedAt });
     delete record.transcriptionTerminal;
     record.transcript = result.text;
     record.transcriptionLanguage = result.language;
-    await writeSourceTranscription({ boxRoot: ctx.boxRoot, sourceRef, text: result.text, language: result.language, attemptedAt: record.transcriptionAttemptedAt });
   } catch (error) {
-    await writeSourceTranscription({ boxRoot: ctx.boxRoot, sourceRef, attemptedAt: record.transcriptionAttemptedAt, error: errorMessage(error), permanent: error instanceof QuickCaptureError && error.reason === "empty-transcript" });
+    try { await writeSourceTranscription({ boxRoot: ctx.boxRoot, record, attemptedAt: record.transcriptionAttemptedAt, error: errorMessage(error), permanent: error instanceof QuickCaptureError && error.reason === "empty-transcript" }); }
+    catch (writeError) { console.warn(`[quick-capture] could not record the transcription failure for ${record.id}:`, errorMessage(writeError)); }
     throw error;
   }
 }

@@ -9,10 +9,10 @@ MAP.md-style count doesn't work here).
 import { computeTodoAmbientLine } from "../../../src/core/todo/ambient-summary.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
-const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
+const DOC_FM = "title: Kitchen\ncontains: Notes on the kitchen remodel.\n";
 
-function memo(body: string): string {
-  return `---\n${MEMO_FM}---\n${body}`;
+function doc(body: string): string {
+  return `---\n${DOC_FM}---\n${body}`;
 }
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
@@ -32,8 +32,8 @@ not an empty string, not a "0 todos" line.
 ```ts
 const box = await seedBox();
 await box.write(
-  "store/a.memo.card",
-  memo(
+  "store/a.doc.card",
+  doc(
     '{% todo id="quiet" start="2026-08-05" due="2026-08-10" %}Not yet{% /todo %}\n\n' +
     '{% todo id="done" status="done" %}Already finished{% /todo %}\n'
   )
@@ -47,8 +47,8 @@ await computeTodoAmbientLine(box.root)
 ```ts continue
 const box2 = await seedBox();
 await box2.write(
-  "store/b.memo.card",
-  memo('{% todo id="one" %}Solo undated todo{% /todo %}\n')
+  "store/b.doc.card",
+  doc('{% todo id="one" %}Solo undated todo{% /todo %}\n')
 );
 await computeTodoAmbientLine(box2.root)
 => 1 open todo on the plate — `bbx query todos`
@@ -60,8 +60,8 @@ plural once there's more than one:
 ```ts continue
 const box3 = await seedBox();
 await box3.write(
-  "store/c.memo.card",
-  memo(
+  "store/c.doc.card",
+  doc(
     '{% todo id="past-due" due="2026-07-01" %}Overdue{% /todo %}\n\n' +
     '{% todo id="on-plate" %}Also on the plate{% /todo %}\n'
   )

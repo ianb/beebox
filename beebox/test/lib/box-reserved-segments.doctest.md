@@ -41,7 +41,7 @@ legal — only the four area names are reserved words:
 JSON.stringify(findReservedNestedSegment("_content/scratch/_tmp/x.txt"))
 => null
 
-JSON.stringify(findReservedNestedSegment("_content/inbox/triaged/_unsure/y.memo.card"))
+JSON.stringify(findReservedNestedSegment("_content/inbox/triaged/_unsure/y.doc.card"))
 => null
 ```
 

@@ -22,7 +22,7 @@ import { CardLastChange } from "../../../../../src/components/themes/ThemedFileC
 
 globalThis.React = React;
 
-const cardPath = "_content/projects/Porch.memo.card";
+const cardPath = "_content/projects/Porch.doc.card";
 
 /**
  * Render a section at `/test1` (the box slug) inside a router and a tRPC

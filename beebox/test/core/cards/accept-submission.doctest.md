@@ -202,22 +202,22 @@ JSON.stringify({ ok: closed.ok, status: !closed.ok ? closed.status : null, messa
 
 ```ts continue
 await box.write(
-  "_content/notes/Note.memo.card",
-  "---\ntype: memo\nstatus: new\ncreated: 2026-09-12T00:00:00Z\n---\nA memo body.\n"
+  "_content/notes/Note.doc.card",
+  "---\ntitle: Note\n---\nA doc body.\n"
 );
-box.commitAll("seed memo");
+box.commitAll("seed doc");
 
-const memoTemp = await makeTempDir();
-const memoResult = await acceptSubmission({
+const docTemp = await makeTempDir();
+const docResult = await acceptSubmission({
   boxRoot: box.root,
-  cardRel: "_content/notes/Note.memo.card",
-  tempDir: memoTemp,
+  cardRel: "_content/notes/Note.doc.card",
+  tempDir: docTemp,
   fileNames: [],
   manifest: {},
   eventBus,
   now: () => new Date("2026-09-12T10:20:00.000Z"),
 });
-JSON.stringify({ ok: memoResult.ok, status: !memoResult.ok ? memoResult.status : null, message: !memoResult.ok ? memoResult.message : null })
+JSON.stringify({ ok: docResult.ok, status: !docResult.ok ? docResult.status : null, message: !docResult.ok ? docResult.message : null })
 => {"ok":false,"status":404,"message":"this card type does not accept submissions"}
 ```
 
