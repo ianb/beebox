@@ -34,6 +34,9 @@ detectKeyword("send now")?.action
 
 detectKeyword("it's a message")?.action
 => send
+
+detectKeyword("just a message")?.action
+=> send
 ```
 
 Bare "finished" does NOT trigger send — too easy to hit in normal speech. It needs "message" adjacent:

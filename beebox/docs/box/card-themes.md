@@ -23,8 +23,9 @@ theme:
 
 Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
-`manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), and `letter-set`
-(`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), and `ribbon` (`flow`). The system-only `spectrum` (`gradient`) and
+`manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), `letter-set`
+(`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), `ribbon` (`flow`), and
+`deck` (`panels`). The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
@@ -98,7 +99,7 @@ The **system theme** styles the toolbar, shared background, user-message slips,
 text selection, and floating controls such as the selection “+”. It is
 independent of card themes; a card theme may set its own selection color.
 Choose the box default in **Settings → System theme**. The system swatches preview
-these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Bloom, and Ribbon support the
+these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Bloom, Ribbon, and Deck support the
 system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
 (stored as `cream`, `manila`, and `blue` respectively). A saved system theme
 without chrome support, such as an unfamiliar name, falls back to Flat and is
@@ -189,3 +190,14 @@ dark green toolbar. The card material has a simple green top edge, plain tabs,
 and serif titles with a sans-serif body. Replies use translucent cream panels;
 user messages are dark green. Select `ribbon` with stock `flow` for either a
 system theme or an individual card. Explicit choices on other cards stay intact.
+
+
+## Deck
+
+Deck combines a charcoal workspace with oversized rounded turquoise panels,
+printed grain, and offset teal outlines. Dark cards and assistant reply panels
+keep pale text clear; aqua user messages have petrol text and a firm offset
+shadow. The toolbar and composer use rounded controls with bright turquoise
+accents. Select `deck` with stock `panels` for the system or an individual card.
+Its paired card choices are Deck, Paper, and Sticky note. Cards with an explicit
+choice keep their own material, including pale Paper on the dark workspace.
