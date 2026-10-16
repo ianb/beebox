@@ -110,6 +110,9 @@ And the recorded hash is **not** updated (so if the user copies the parked versi
 
 ```ts continue
 const hashBefore = (await readVersions(box))[REL]?.sha256;
+hashBefore?.length
+=> 64
+
 await install(box, "v2\n");
 (await readVersions(box))[REL]?.sha256 === hashBefore
 => true

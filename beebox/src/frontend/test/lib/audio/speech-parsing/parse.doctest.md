@@ -120,6 +120,9 @@ Invalid voices are silently ignored:
 
 ```ts
 const segments = parseAllSpeechTags('<speech voice="unknown">Hello</speech>');
+segments.length
+=> 1
+
 segments[0]?.voice
 => undefined
 ```
@@ -336,6 +339,9 @@ No `name` attribute leaves it undefined:
 
 ```ts
 const segs = parseAllSpeechTags("<speech>plain</speech>");
+segs.length
+=> 1
+
 segs[0]?.name
 => undefined
 ```

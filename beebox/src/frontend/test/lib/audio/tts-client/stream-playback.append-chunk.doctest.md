@@ -8,28 +8,16 @@ clip hung or failed late. These use an `EventTarget` stand-in that fires the
 spec's events in the spec's order.
 
 ```ts setup
-import assert from "node:assert/strict";
-import { appendChunk } from "../../../../src/lib/audio/tts-client/stream-playback.js";
-
-/**
- * appendChunk uses only appendBuffer and the EventTarget methods, and a full
- * SourceBuffer (track lists, TimeRanges) cannot be built headless, so this
- * guard vouches for the stand-in after checking the one method it needs.
- */
-function isSourceBuffer(target: EventTarget & { appendBuffer?: unknown }): target is SourceBuffer {
-  return typeof target.appendBuffer === "function";
-}
+import { appendChunk, type ChunkSink } from "../../../../src/lib/audio/tts-client/stream-playback.js";
 
 /** A SourceBuffer stand-in whose append fires `events`, in order, on the next tick. */
-function fakeSourceBuffer(events: string[]): SourceBuffer {
+function fakeSourceBuffer(events: string[]): ChunkSink {
   class FakeSourceBuffer extends EventTarget {
     appendBuffer() {
       setTimeout(() => { for (const name of events) this.dispatchEvent(new Event(name)); }, 0);
     }
   }
-  const fake = new FakeSourceBuffer();
-  assert.ok(isSourceBuffer(fake));
-  return fake;
+  return new FakeSourceBuffer();
 }
 ```
 
