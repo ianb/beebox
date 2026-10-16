@@ -275,7 +275,7 @@ const composerGallery = renderToStaticMarkup(React.createElement(React.Fragment,
 const composerSingleState = renderToStaticMarkup(composerCopy(true, true));
 const retryProps = {
   sessionId: "fake", recording: false, finalizing: false, hasContent: true,
-  pendingUploads: 0, photosFailed: 1, audioFailed: 0, filesFailed: 0,
+  pendingUploads: 0, sendable: 1, unreadable: 0, photosFailed: 1, audioFailed: 0, filesFailed: 0,
   retryFeedback: { phase: "idle" as const }, onDone: () => {}, onCancel: () => {},
   onToggleRecording: () => {}, onRetryFailed: () => {}, onSkipPending: () => {},
 };

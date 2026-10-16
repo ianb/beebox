@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { createFakeAgent } from "./fake-agent.js";
 import { createTestServer } from "../helpers/test-server.js";
-import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment } from "../../src/lib/box-maintenance.js";
+import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment } from "../../src/lib/box-maintenance/admission.js";
 import { captureMigrationSnapshot } from "../../src/core/migration-recovery.js";
 import { repairMigration, finishMigrationRepair } from "../../src/core/migration-repair.js";
 import { createTextQuestionTemplate } from "../../src/schemas/question.js";

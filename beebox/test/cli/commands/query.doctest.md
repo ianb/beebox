@@ -126,7 +126,7 @@ just repeat the command.
 ```ts continue
 await run({ here: PORCH, referring: false, group: "plate", status: ["open", "done"] })
 =>
-On the plate (2)
+On your plate (2)
 Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026-08-10
  § Demolition
   _content/projects/Porch/Plan.doc.card:8  Pull the permit  (context)

@@ -80,6 +80,7 @@ store.get().pendingImages
 => 0
 ```
 
+
 ## removeImage strips the token — including the bounding whitespace
 
 Only the matching id's token is removed; another image's token, and the
@@ -351,4 +352,23 @@ store.editor.uploadBatch() !== first
 store.editor.restoreUploadBatch("restored-batch-01");
 store.editor.uploadBatch()
 => restored-batch-01
+```
+
+## Images stay in pick order, whatever order their encodes finish
+
+Photos picked together encode at the same time and can finish in any order;
+a small photo picked second often finishes before a large one picked first.
+The list stays in id order, the order the person picked them and the order
+their tokens went into the text, so the thumbnails and the sent
+`<attachments>` block agree with "the first photo":
+
+```ts
+const store = createEmissionStore();
+const first = store.editor.nextImageId();
+const second = store.editor.nextImageId();
+store.editor.bumpPendingImages(2);
+store.editor.addImage({ id: second, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:small", byteLength: 1, original: { status: "uploading", progress: 0 } });
+store.editor.addImage({ id: first, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:large", byteLength: 1, original: { status: "uploading", progress: 0 } });
+store.get().images.map((image) => image.id)
+=> [1, 2]
 ```

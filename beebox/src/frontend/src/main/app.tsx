@@ -18,6 +18,7 @@ import "../themes/chat-material.css";
 import "../themes/interface.css";
 import "../themes/bloom.css";
 import "../themes/ribbon.css";
+import "../themes/deck.css";
 import { withBase } from "../api";
 import { invariant } from "@shared/invariant";
 import { installUiScanHook } from "../lib/ui-scan/window-hook";

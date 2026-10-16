@@ -6,13 +6,13 @@ release. A failed mutation leaves a record of unfinished maintenance, and the
 box reopens the moment its owner is gone: a closure cannot outlive its owner.
 
 ```ts setup
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
-import { readdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { acquireLock, forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
-import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance.js";
+import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance/admission.js";
 const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
 ```
 
@@ -201,6 +201,95 @@ await boxMaintenanceStatus(barrierBox.root)
 await releaseLock(admissionPath);
 await barrier.release();
 await barrierBox.cleanup();
+```
+
+## The owner names its current step
+
+A closed box once stayed closed for ten minutes with nothing saying what was
+running. An owner, or a delegate on its behalf, names its current step, and
+the status shows it with the time it began.
+
+```ts
+const stepBox = await makeTmpBox({ git: true });
+const stepDirectory = join(execFileSync("git", ["rev-parse", "--absolute-git-dir"], { cwd: stepBox.root, encoding: "utf8" }).trim(), "bbx-maintenance");
+const stepper = await acquireBoxMaintenance(stepBox.root, { reason: "docs refresh" });
+await stepper.beginChanges();
+await stepper.step("generating docs");
+(await boxMaintenanceStatus(stepBox.root))?.step
+=> { name: "generating docs", since: "«date»" }
+```
+
+The step is kept out of the phase record. Admission reads the phase record, so
+a step write racing a phase change can never restore a stale phase. A phase
+change ends the step.
+
+```ts continue
+Object.keys(JSON.parse(await readFile(join(stepDirectory, "phase.json"), "utf8"))).sort()
+=> ["id", "phase", "reason", "since"]
+
+await stepper.prepare();
+(await boxMaintenanceStatus(stepBox.root))?.step
+=> undefined
+```
+
+A delegate names steps for its controller. After release, neither handle's
+late step write replaces the step of the owner that comes next.
+
+```ts continue
+await stepper.beginChanges();
+const helper = await stepper.run(() => acquireBoxMaintenance(stepBox.root, { reason: "docs", join: true }));
+await helper.step("committing");
+(await boxMaintenanceStatus(stepBox.root))?.step?.name
+=> committing
+
+await helper.release();
+await stepper.release();
+const next = await acquireBoxMaintenance(stepBox.root, { reason: "next" });
+await next.beginChanges();
+await next.step("running");
+await stepper.step("stale");
+await helper.step("stale");
+(await boxMaintenanceStatus(stepBox.root))?.step?.name
+=> running
+```
+
+A step is diagnostic. When it cannot be written, the work it names goes on;
+when it cannot be read, the status still says why the box is closed.
+
+```ts continue
+const nextStep = join(stepDirectory, `step-${(await boxMaintenanceStatus(stepBox.root))?.id}.json`);
+await rm(nextStep, { force: true });
+await mkdir(nextStep);
+const warnings: unknown[] = [];
+const realWarn = console.warn;
+console.warn = (message) => { warnings.push(message); };
+let status: Awaited<ReturnType<typeof boxMaintenanceStatus>>;
+try {
+  await next.step("blocked");
+  status = await boxMaintenanceStatus(stepBox.root);
+} finally { console.warn = realWarn; }
+({ reason: status?.reason, step: status?.step ?? "none", warnings })
+=> { reason: "next", step: "none", warnings: ["[box-maintenance] step was not recorded:", "[box-maintenance] step could not be read:"] }
+```
+
+A step that cannot be cleared does not stop a phase change either.
+
+```ts continue
+const clearWarnings: unknown[] = [];
+console.warn = (message) => { clearWarnings.push(message); };
+let prepared: Awaited<ReturnType<typeof boxMaintenanceStatus>>;
+try {
+  await next.prepare();
+  prepared = await boxMaintenanceStatus(stepBox.root);
+} finally { console.warn = realWarn; }
+({ phase: prepared?.phase, clearWarnings })
+=> { phase: "ready", clearWarnings: ["[box-maintenance] step was not cleared:", "[box-maintenance] step could not be read:"] }
+```
+
+```ts cleanup
+await rm(nextStep, { recursive: true, force: true });
+await next.complete();
+await stepBox.cleanup();
 ```
 
 ## A failed delegate leaves its controller's record behind

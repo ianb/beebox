@@ -43,8 +43,8 @@ same question from the command line.
   project-local plate. The box-wide instance
   (\`_content/plate.todo-view.card\`) sets \`glob: "**"\` explicitly.
 - \`todo-status:\` — restrict to todos with specific statuses (\`open\`, \`done\`, \`dropped\`,
-  \`parked\`). **Omit** to see \`open\` + \`parked\` — every plate-state group
-  (escalated / on-plate / quiet / parked); \`done\`/\`dropped\` stay out of
+  \`parked\`). **Omit** to see \`open\` + \`parked\` — every group of the list's
+  "By status" tab (Overdue / On your plate / Later / Parked); \`done\`/\`dropped\` stay out of
   the default view. List them explicitly to include them.
 - \`assigned:\` — restrict to todos with a matching \`assigned\` attribute
   (exact match, e.g. \`"agent"\`).

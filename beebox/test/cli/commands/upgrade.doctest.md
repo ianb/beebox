@@ -18,7 +18,7 @@ import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError, type CommandRunner, type RunCommandArgs } from "../../../src/cli/commands/upgrade.js";
 import { BoxShapeError } from "../../../src/lib/box-shape.js";
-import { acquireBoxWork, boxMaintenanceStatus, boxWorkEnvironment, withoutBoxWork } from "../../../src/lib/box-maintenance.js";
+import { acquireBoxWork, boxMaintenanceStatus, boxWorkEnvironment, withoutBoxWork } from "../../../src/lib/box-maintenance/admission.js";
 import { getStatus, getHead, getLog } from "../../../src/lib/git/core/operations.js";
 
 async function waitForClosed(boxRoot: string) {

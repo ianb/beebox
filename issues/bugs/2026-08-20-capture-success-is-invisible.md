@@ -162,3 +162,23 @@ invent a bubble for it — the `capture-status` payload carries no media counts.
 2. Repeat, but leave the chat during preparation and come back. The capture
    message must be there; nothing should be stuck.
 3. Confirm you no longer feel the need to re-capture to check.
+## Note 2026-10-16 (worktree-capture-photo-flow)
+
+On the worktree's test1 clone, desktop browser, two captures into an idle
+chat: the bubble read `delivered` and left at about 6s and 16s after Done,
+but the capture message entered the transcript only at about 20s and 50s,
+when the agent's turn ended. For that gap the chat shows nothing of the
+capture, which is step 1's "the capture message stands in its place" not
+holding. The delivery event fires before the message is in the client's
+history; the cause of the late arrival is not traced. The gate is left in
+place because the delivered face itself works.
+
+Traced and fixed later the same day. The box announces the capture message
+(`chat-user-message`) as soon as its turn is dispatched, and the chat
+refreshes its history on that announcement. The agent writes the message to
+the transcript a moment later, so the refresh came back without it, and the
+next refresh came only when the reply ended. The chat now holds the announced
+message on screen until the transcript has it (`holdInjectedMessage` in
+`frontend/src/machines/chatMachine/chat-shared.ts`). Re-walked on the same
+clone: the capture message appeared 4s after Done, while the bubble still
+showed, and the reply at 18s did not duplicate it.

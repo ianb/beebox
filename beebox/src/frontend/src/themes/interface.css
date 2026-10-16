@@ -31,7 +31,7 @@
   /* The compact row must not lose label height to a horizontal scrollbar. */
   scrollbar-width: none;
   gap: 3px;
-  padding: 6px 3px 0;
+  padding: 6px calc(3px + var(--bbx-tab-trailing, 0px)) 0 3px;
 }
 
 .bbx-interface-tabstrip > [role="none"]::-webkit-scrollbar {
@@ -48,6 +48,17 @@
   background-color: color-mix(in srgb, var(--bbx-paper) 88%, #e8e3da);
   border-right: 1px solid color-mix(in srgb, var(--bbx-edge) 75%, #cbc4b9);
   border-bottom: 3px solid transparent;
+}
+
+/* A narrow unpinned tab gives its width to the label: pin and close show
+   again on hover or keyboard focus, and always on the active tab. */
+.bbx-interface-tab:not([data-pinned]) {
+  container-type: inline-size;
+}
+@container (max-width: 8rem) {
+  .bbx-interface-tab:not([data-active], [data-pinned], :hover, :focus-within) .bbx-interface-tab-action {
+    display: none;
+  }
 }
 
 .bbx-interface-tab[data-card-theme="paper"],
@@ -119,7 +130,7 @@
   padding: 0;
   /* Leave a sliver of breathing room after the final tab. Without it the
      scroller clips the tab's outer edge exactly where the controls begin. */
-  padding-right: 2px;
+  padding-right: calc(2px + var(--bbx-tab-trailing, 0px));
   background: transparent;
   border-right: 0;
   gap: 4px;

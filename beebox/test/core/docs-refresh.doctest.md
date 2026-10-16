@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
-import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { GENERATE_MARKER } from "../../src/core/docs-gen/generate/core.js";
 import { withDocId } from "../../src/core/docs-gen/shared.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";

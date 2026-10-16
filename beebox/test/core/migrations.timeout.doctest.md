@@ -17,7 +17,7 @@ import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 import { runMigrationProcess } from "../../src/core/migration-process.js";
-import { boxMaintenanceStatus, acquireBoxWork } from "../../src/lib/box-maintenance.js";
+import { boxMaintenanceStatus, acquireBoxWork } from "../../src/lib/box-maintenance/admission.js";
 const PROBE = "annex-config-2026-08";
 async function preparedBox() {
   const box = await makeTmpBox({ git: true });

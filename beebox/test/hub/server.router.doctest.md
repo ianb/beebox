@@ -20,6 +20,9 @@ import http from "node:http";
 import net from "node:net";
 import crypto from "node:crypto";
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { z } from "zod";
 import { createHubServer, type HubHealth } from "../../src/hub/server/core.js";
 import { staticEndpointProvider, type Endpoint, type EndpointProvider } from "../../src/hub/endpoints.js";
@@ -28,11 +31,15 @@ import type { BoxSpec } from "../../src/webapp/server-types.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
+// The default box has a real, empty content root, as a new box does. A missing
+// root is a broken box, and reading its name logs a warning.
+const defaultBoxRoot = await mkdtemp(join(tmpdir(), "bbx-router-"));
+await mkdir(join(defaultBoxRoot, "_content"));
 
 // Most of this file exercises hub-wide OPEN mode (the hub advertises
 // `x-bbx-hub-auth: off` to children). Auth is always-on by default now, so open
@@ -120,7 +127,7 @@ async function startHub(
     endpoints,
     getHealth: getHealth ?? (() => ({ status: "ok", boxes: [] })),
     hubSecret: HUB_SECRET,
-    boxes: boxes ?? [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
+    boxes: boxes ?? [{ slug: "test1", boxRoot: defaultBoxRoot }],
     baseUrl: "http://127.0.0.1",
     openAccess,
   });
@@ -679,6 +686,12 @@ const posted = await fetch(`${closedHub.base}/closed/chat`, { method: "POST", he
 JSON.stringify({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)").replace(/Retry in \d+ seconds/u, "Retry in <n> seconds") })
 => {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in <n> seconds.\n"}
 
+// Once the owner names a step, the sentence and the body say which one is running.
+await owner.step("finding changed files");
+const stepped = await (await fetch(`${closedHub.base}/closed/api/x`)).json() as { step: unknown; message: string };
+({ step: stepped.step, message: stepped.message.replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+=> { step: { name: "finding changed files", since: "«date»" }, message: "Box closed is closed for migration (pid <n>, since <time>); current step: finding changed files, since «date»; it reopens when that process finishes or exits" }
+
 Date.now = realNow;
 
 await owner.beginChanges();
@@ -716,4 +729,8 @@ retry gets a still sign; message text is escaped.
 const quick = renderUnavailablePage({ status: 503, retryAfter: 3, body: { error: "box_unavailable", message: "Box <b> is not running" } });
 JSON.stringify({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") })
 => {"refresh":"3","swings":false,"headline":"Not open","escaped":true}
+```
+
+```ts teardown
+await rm(defaultBoxRoot, { recursive: true, force: true });
 ```

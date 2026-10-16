@@ -56,11 +56,13 @@ function DirRow({
   const target = dirPath ? `${dirPath}/${dir.name}` : dir.name;
   const landmark = showLandmark ? dir.landmark : undefined;
   const label = dirPath === "" ? areaDisplayLabel(dir.name) : (landmark?.label ?? dir.name);
+  // The number counts every card below the folder, subfolders included, so it says so: the listing inside shows fewer.
+  const cardCount = `${String(dir.fileCount)} card${dir.fileCount === 1 ? "" : "s"}, including subfolders`;
   return (
     <button
       {...bbxSource("dir", target)}
       onClick={() => onNavigate(target, "directory")}
-      aria-label={dir.fileCount > 0 ? `${label} directory, ${dir.fileCount} item${dir.fileCount === 1 ? "" : "s"}` : `${label} directory`}
+      aria-label={dir.fileCount > 0 ? `${label} directory, ${cardCount}` : `${label} directory`}
       className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200 ${dimmed ? "opacity-60" : ""}`}
     >
       <span className="text-primary flex-shrink-0" aria-hidden="true">
@@ -73,7 +75,7 @@ function DirRow({
         )}
       </span>
       <span className="text-warm-900 font-medium text-sm flex-1">{label}/</span>
-      {dir.fileCount > 0 ? <span className="text-xs text-warm-400">{dir.fileCount}</span> : null}
+      {dir.fileCount > 0 ? <span className="text-xs text-warm-400" title={cardCount}>{dir.fileCount}</span> : null}
     </button>
   );
 }

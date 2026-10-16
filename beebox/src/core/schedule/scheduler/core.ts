@@ -5,7 +5,7 @@
  * land in `<boxRoot>/.beebox/scheduler.jsonl` (gitignored).
  */
 
-import { withBoxWork } from "../../../lib/box-maintenance.js";
+import { withBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

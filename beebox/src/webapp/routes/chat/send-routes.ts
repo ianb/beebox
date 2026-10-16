@@ -8,7 +8,7 @@
  * wire-session closure via {@link ChatRoutesContext}.
  */
 
-import { acquireBoxWork } from "../../../lib/box-maintenance.js";
+import { acquireBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import { summarizeWhatsChanged } from "../../../core/chat/whats-changed.js";
 import type { SessionUser } from "../../auth.js";

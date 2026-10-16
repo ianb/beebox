@@ -31,8 +31,11 @@ boxholder's todos are on the plate and in its counts. Never write `user`,
 `me`, `boxholder`, `you`, or `owner` for the boxholder: leave `assigned` off,
 or lint warns), `by` (absent = boxholder-authored; `"agent"` = you wrote it), `due`,
 and `start` (an absolute date or `-3d`/`-2w` relative to `due` — this is
-the *surfacing* trigger: a todo is quiet before `start`, on the plate from
-`start` on, regardless of `due`). **`created` is required whenever
+the *surfacing* trigger: a todo is *later* before `start` and on the plate
+from `start` on, regardless of `due`; the person sees "later · Oct 23" on it.
+Say "later", not "starts" or "quiet": `start` is not when the work begins.
+In `bbx query todos` JSON the state is `plateState: "quiet"`, and a past-due
+todo is `escalated`, which the person sees as "overdue"). **`created` is required whenever
 `by="agent"`** — you always know the date, and the review sweep's staleness
 math depends on it. Nest `{% see-also ref="..." %}...{% /see-also %}` inside
 a todo (or a frontmatter `see-also:` list) to point at supporting evidence —
@@ -59,7 +62,7 @@ and the `todo-review` sweep brings the stale ones back to you.
 
 `bbx query todos` is your query path. `--here <dir>` asks about one
 project: its own todos, plus todos elsewhere that link into it.
-`--group plate` is the date view, `--assigned agent` your own follow-ups;
+`--group plate` groups by status (overdue, on your plate, later, …), `--assigned agent` your own follow-ups;
 also `--status`, `--glob`, `--on-plate`, and `--json`. There is no
 mutation command: to change a todo, edit its `{% todo %}` tag or frontmatter
 entry directly, like any other card content — normal validation, git
@@ -73,7 +76,7 @@ in a todo makes it show up on the linked place as well as its own.
 ## Tending
 
 You may run a review pass yourself, and the daily `todo-review` procedure
-also hands you a brief of escalated / newly-on-plate / stale todos to look
+also hands you a brief of overdue / newly on your plate / stale todos to look
 at. Either way, the same rule: **you judge, the boxholder decides.**
 Suggest completion when you see evidence a todo is done; propose merging
 duplicates; flag a stale one for `parked`/`dropped`/a real date — but

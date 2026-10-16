@@ -182,7 +182,7 @@ list's order, with rows formed again inside each group.
 const byPlate = await run({ here: KITCHEN, includeReferring: false, group: "plate", params: params({ status: ["open", "parked", "done", "dropped"] }) });
 byPlate.groups.map((g) => `${g.key} "${g.label}" ${String(g.reduction.open + g.reduction.done + g.reduction.dropped + g.reduction.parked)}`).join("\n")
 =>
-on-plate "On the plate" 3
+on-plate "On your plate" 3
 parked "Parked" 1
 done "Done" 2
 dropped "Dropped" 1

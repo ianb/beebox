@@ -58,11 +58,11 @@ await box.write(
 ```ts
 await run()
 =>
-ESCALATED (1)
+OVERDUE (1)
   _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
-ON PLATE (1)
+ON YOUR PLATE (1)
   _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
-QUIET (1)
+LATER (1)
   _content/plate.memo.card:9  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)
 ```
 
@@ -89,9 +89,9 @@ PARKED (1)
 ```ts continue
 await run({ onPlate: true })
 =>
-ESCALATED (1)
+OVERDUE (1)
   _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
-ON PLATE (1)
+ON YOUR PLATE (1)
   _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
 ```
 
@@ -100,7 +100,7 @@ ON PLATE (1)
 ```ts continue
 await run({ assigned: "Dana" })
 =>
-ESCALATED (1)
+OVERDUE (1)
   _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ```
 

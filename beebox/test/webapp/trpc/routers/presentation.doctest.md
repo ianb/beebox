@@ -32,7 +32,7 @@ An absent config is ordinary and exposes the stable built-in catalog.
 const box = await makeTmpBox();
 const first = await caller(box.root).presentation.get({ boxKey: "test" });
 JSON.stringify([first.catalog.map((theme) => theme.name), first.presentation, first.chrome, first.configProblems])
-=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
+=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon","deck"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
 
 JSON.stringify([
   first.canEditCardThemes,
@@ -113,6 +113,29 @@ JSON.stringify([
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## Deck saves through the same backend validator as the picker
+
+A system theme offered by the frontend must also pass the backend mutation's
+chrome validation. Saving Deck without a stock persists the panels default;
+clearing it restores the engine theme.
+
+```ts
+const deckBox = await makeTmpBox({ git: true });
+await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "deck" } });
+clearBoxConfigCache(deckBox.root);
+(await caller(deckBox.root).presentation.get({ boxKey: "deck-saved" })).chrome
+=> { choice: { name: "deck", stock: "panels" }, origin: "box-chrome", problem: null }
+
+await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: null });
+clearBoxConfigCache(deckBox.root);
+(await caller(deckBox.root).presentation.get({ boxKey: "deck-reset" })).chrome
+=> { choice: { name: "plain", stock: "neutral" }, origin: "engine", problem: null }
+```
+
+```ts cleanup
+await deckBox.cleanup();
 ```
 
 ## A swatch choice writes only the theme field

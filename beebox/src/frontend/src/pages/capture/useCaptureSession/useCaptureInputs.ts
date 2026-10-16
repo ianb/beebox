@@ -10,7 +10,8 @@ import { toastError } from "../../../components/ui/toast-store";
 
 interface CaptureInputsOptions {
   sessionId: string | null;
-  photoTotal: number;
+  /** Claim `count` consecutive photo indices; returns the first. */
+  reservePhotos: (count: number) => number;
   fileTotal: number;
   setPhotoStates: React.Dispatch<React.SetStateAction<UploadState[]>>;
   setFileStates: React.Dispatch<React.SetStateAction<UploadState[]>>;
@@ -41,7 +42,7 @@ function noSession(): void {
 }
 
 export function useCaptureInputs(options: CaptureInputsOptions): CaptureInputs {
-  const { sessionId, photoTotal, fileTotal, setPhotoStates, setFileStates, uploadPhoto, uploadFile } = options;
+  const { sessionId, reservePhotos, fileTotal, setPhotoStates, setFileStates, uploadPhoto, uploadFile } = options;
   const galleryRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +54,7 @@ export function useCaptureInputs(options: CaptureInputsOptions): CaptureInputs {
       if (!e.target.files || e.target.files.length === 0) return; // a cancelled picker
       if (!sessionId) { noSession(); e.target.value = ""; return; }
       const files = Array.from(e.target.files);
-      const baseIndex = photoTotal;
+      const baseIndex = reservePhotos(files.length);
       const placeholders: UploadState[] = Array.from({ length: files.length }, (): UploadState => "uploading");
       setPhotoStates((prev) => [...prev, ...placeholders]);
       for (const [i, file] of files.entries()) {
@@ -62,7 +63,7 @@ export function useCaptureInputs(options: CaptureInputsOptions): CaptureInputs {
       }
       e.target.value = "";
     },
-    [sessionId, photoTotal, uploadPhoto, setPhotoStates]
+    [sessionId, reservePhotos, uploadPhoto, setPhotoStates]
   );
 
   const handleFileSelect = useCallback(

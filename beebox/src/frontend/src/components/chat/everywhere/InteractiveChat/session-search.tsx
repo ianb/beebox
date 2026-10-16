@@ -20,6 +20,7 @@ import {
 import { bbxSource } from "../../../../lib/source-tag";
 import { useDropdownClose } from "../../../ui/Dropdown";
 import { Highlight } from "../../../search/SearchResults";
+import { sessionIdHint } from "./session-list-grouping";
 
 /**
  * Format a date string as relative time (e.g., "2h ago", "3d ago").
@@ -140,10 +141,12 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
     if (live !== undefined && live !== "") return live;
     return hit.title !== "" ? hit.title : hit.sessionId.slice(0, 8);
   };
+  const labelled = state.results.map((hit) => ({ hit, sessionId: hit.sessionId, label: labelFor(hit) }));
   return (
     <div role="group" aria-label="Chat search results">
-      {state.results.map((hit) => {
+      {labelled.map(({ hit, label }) => {
         const isViewing = currentSessionId === hit.sessionId;
+        const idHint = sessionIdHint({ sessionId: hit.sessionId, label }, labelled);
         return (
           <Link
             key={hit.sessionId}
@@ -151,14 +154,15 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
             to={href(`/${boxSlug}/chat`)}
             search={toSearch({ session: hit.sessionId, m: hit.anchor })}
             onClick={close}
+            title={`Session ${hit.sessionId}`}
             {...bbxSource("session", hit.sessionId)}
             className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
           >
             <div className="flex items-baseline gap-2">
               <span className={`flex-1 truncate ${isViewing ? "font-medium text-warm-900" : "text-warm-800"}`}>
-                {labelFor(hit)}
+                {label}
               </span>
-              <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{hit.sessionId.slice(0, 8)}</span>
+              {idHint === null ? null : <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idHint}</span>}
             </div>
             <div className="mt-0.5 text-xs text-warm-500 line-clamp-2">
               <Highlight text={hit.snippet} query={query} />

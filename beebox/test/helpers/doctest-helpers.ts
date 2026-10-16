@@ -40,7 +40,7 @@ export interface TmpBox {
 
 /**
  * `git` — every box has a Git directory, because box admission
- * (`src/lib/box-maintenance.ts`) keeps its gate under `.git/`: a fixture
+ * (`src/lib/box-maintenance/admission.ts`) keeps its gate under `.git/`: a fixture
  * without one throws "Box maintenance requires a Git repository" the moment
  * anything acquires box work. So the default is a bare `git init` (~60 ms);
  * `true` adds the annex init and an initial commit that a committing test

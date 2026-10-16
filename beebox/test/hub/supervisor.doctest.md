@@ -24,7 +24,7 @@ import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 
 /** A fake `ChildProc`: just enough surface for `Supervisor.launch()` to use
  *  (`pid`, `on("exit", ...)`, `catch()`) plus a way for the test to fire the

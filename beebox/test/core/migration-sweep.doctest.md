@@ -14,7 +14,7 @@ import { strict as assert } from "node:assert";
 import { MIGRATIONS, MANIFEST_PATH, type Migration } from "../../src/core/migrations.js";
 import type { TmpBox } from "../helpers/doctest-helpers.js";
 import { createFakeAgent } from "./fake-agent.js";
-import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance/admission.js";
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
 import { sweepMigrations, type SweepResult } from "../../src/core/migration-sweep.js";
 

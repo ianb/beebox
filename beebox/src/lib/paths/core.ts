@@ -2,7 +2,7 @@
  * Path utilities for finding and working with Bee Box directories.
  */
 
-import { withBoxWork } from "../box-maintenance.js";
+import { withBoxWork } from "../box-maintenance/admission.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";

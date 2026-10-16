@@ -347,3 +347,20 @@ resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: 
 resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "ribbon", cardChoice: { name: "paper", stock: "blue" } }).choice
 => { name: "paper", stock: "blue" }
 ```
+
+Deck provides the panels stock as both chrome and inherited card material. Its
+paired set starts with Deck; an explicitly blue Paper card remains blue Paper.
+
+```ts
+validateSystemThemeChoice({ name: "deck" })
+=> { choice: { name: "deck", stock: "panels" }, problem: null }
+
+systemCardThemes("deck")
+=> ["deck", "paper", "post-it"]
+
+resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "deck" })
+=> { choice: { name: "deck", stock: "panels" }, problem: null, origin: { kind: "system", theme: "deck" } }
+
+resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "deck", cardChoice: { name: "paper", stock: "blue" } }).choice
+=> { name: "paper", stock: "blue" }
+```

@@ -26,7 +26,7 @@
  * (adds connector credentials, for spawning the box's own `bbx` tooling).
  */
 
-import { boxWorkEnvironment } from "../../lib/box-maintenance.js";
+import { boxWorkEnvironment } from "../../lib/box-maintenance/admission.js";
 import * as path from "node:path";
 import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";

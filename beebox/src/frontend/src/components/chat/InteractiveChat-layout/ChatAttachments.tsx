@@ -182,7 +182,7 @@ function FileChip({
         state.status === "failed" ? "bg-danger-muted border-danger" : "bg-warm-200 border-warm-300"
       }`}
       data-bbx-source={`file-attachment-${attachment.id}`}
-      data-bbx-upload-state={state.status}
+      data-bbx-upload-state={state.status === "failed" && state.unreadable === true ? "unreadable" : state.status}
       title={`file#${String(attachment.id)} · ${attachment.originalName} · ${statusLabel}`}
     >
       <span className="text-[10px] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
@@ -195,7 +195,10 @@ function FileChip({
         <span className="truncate text-xs font-medium text-warm-800">
           {attachment.originalName}
         </span>
-        {state.status === "failed" ? (
+        {state.status === "failed" && state.unreadable === true ? (
+          // Nothing to retry: the bytes are gone. The message says to pick it again.
+          <span className="text-[10px] text-danger" role="status">Can't read this file — remove it and pick it again</span>
+        ) : state.status === "failed" ? (
           <button
             type="button"
             onClick={onRetry}

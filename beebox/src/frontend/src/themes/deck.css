@@ -1,0 +1,305 @@
+/* Deck: charcoal panels, aqua messages and offset teal outlines. */
+.bbx-box-presentation[data-chrome-theme="deck"] {
+  --bbx-desk-background: #292e2c;
+  --bbx-desk-pattern: none;
+  --bbx-desk-edge: #44959a;
+  --bbx-bar-paper: #202b2c;
+  --bbx-bar-edge: #44959a;
+  --bbx-focus-ring: #83e7ec;
+  --bbx-selection: #78dedc;
+  --bbx-selection-ink: #242f30;
+  --bbx-selection-code: #78dedc;
+  --bbx-selection-code-ink: #173e42;
+  --bbx-chat-user-paper: #91e1db;
+  --bbx-chat-user-ink: #173d41;
+}
+.bbx-box-presentation[data-chrome-theme="deck"]:not(.bbx-system-theme-preview) {
+  position: relative;
+  isolation: isolate;
+}
+.bbx-box-presentation[data-chrome-theme="deck"]:not(.bbx-system-theme-preview)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url("./deck-panels.svg") center top / cover no-repeat;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] :is(
+  .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
+  .bbx-interface-card-desk[data-card-content="card"],
+  .bbx-interface-browse-panel[data-card-content="card"]
+) { background: transparent; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-interface-tabstrip > [role="none"]::before,
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-interface-tabstrip > [role="none"]::after {
+  background: transparent;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav {
+  background: var(--bbx-bar-paper);
+  color: #d8f4ef;
+  border-bottom: 4px solid #44959a;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav > div {
+  background: var(--bbx-bar-paper);
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav :is(
+#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
+  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat
+) {
+  background-color: #293e40;
+  color: #d8f4ef;
+  border: 1px solid #44959a;
+  border-radius: 10px 10px 5px 5px;
+  box-shadow: 0 3px 0 #087f8a;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav button:active { box-shadow: none; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav :is(button, a):focus-visible {
+  outline: 2px solid #d8f4ef;
+  outline-offset: 2px;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material {
+  background: #242f30;
+  color: #d8f4ef;
+  border: 1px solid #44959a;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 5px 6px 0 #087f8a;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material > section {
+  background: transparent;
+  border-top: 0;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r,
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material textarea {
+  background: #242f30;
+  color: #d8f4ef;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material textarea::placeholder { color: #a4cbc9; }
+/* Enabled sends and the idle mic only; preserve recording and disabled cues. */
+.bbx-box-presentation[data-chrome-theme="deck"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
+.bbx-box-presentation[data-chrome-theme="deck"] #bbx-composer-mic.bg-primary {
+  background-color: #78dedc;
+  color: #173e42;
+  border: 1px solid #44959a;
+  border-radius: 10px 10px 5px 5px;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] #bbx-composer-add {
+  background-color: #354748;
+  color: #d8f4ef;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled:hover,
+.bbx-box-presentation[data-chrome-theme="deck"] #bbx-composer-mic.bg-primary:hover {
+  background-color: #a1f0e9;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-user-paper {
+  --bbx-selection: #242f30;
+  --bbx-selection-ink: #d8f4ef;
+  background: var(--bbx-chat-user-paper);
+  color: var(--bbx-chat-user-ink);
+  border: 1px solid #44959a;
+  border-radius: 28px 28px 4px 28px;
+  box-shadow: 5px 6px 0 #087f8a;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-user-paper :is(
+  .bbx-chat-user-status, .bbx-chat-user-attachment-summary
+) { color: #173d41; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-user-paper :is(
+  .bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge
+) {
+  background: #ffffff45;
+  color: #242f30;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-user-unsure { text-decoration-color: #354748; }
+/* Explicit nested cards reset material variables and keep their own colors. */
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-reply-material {
+  --bbx-ink: #d8f4ef;
+  --bbx-ink-soft: #b2cbc5;
+  --bbx-pen: #83e7ec;
+  --bbx-edge: #44959a;
+  background: #242f30;
+  color: var(--bbx-ink);
+  border: 1px solid #44959a;
+  border-radius: 28px;
+  box-shadow: 5px 6px 0 #087f8a;
+}
+/* Tailwind typography declares its tokens on each prose node. Target the
+   transcript prose itself, while leaving explicit nested cards independent. */
+.bbx-box-presentation[data-chrome-theme="deck"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme .prose) {
+  --bbx-ink: #d8f4ef;
+  --bbx-ink-soft: #b2cbc5;
+  --bbx-pen: #83e7ec;
+  --tw-prose-body: #d8f4ef;
+  --tw-prose-headings: #d8f4ef;
+  --tw-prose-bold: #d8f4ef;
+  --tw-prose-links: #83e7ec;
+  --tw-prose-quotes: #d8f4ef;
+  --tw-prose-code: #d8f4ef;
+  --tw-prose-counters: #b2cbc5;
+  --tw-prose-captions: #b2cbc5;
+  --tw-prose-bullets: #83e7ec;
+  --tw-prose-quote-borders: #44959a;
+  --tw-prose-hr: #44959a;
+  --tw-prose-th-borders: #44959a;
+  --tw-prose-td-borders: #44959a;
+  --tw-prose-pre-bg: #10272d;
+  --tw-prose-pre-code: #d8f4ef;
+  color: #d8f4ef;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout {
+  background: #242f30;
+  color: #d8f4ef;
+  border: 1px solid #44959a;
+  border-radius: 28px;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout > .text-accent-dark { color: #d8f4ef; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-meta-material {
+  color: #b2cbc5;
+  background: #242f30;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-pending-material {
+  background: #242f30;
+  color: #d8f4ef;
+  border-radius: 12px;
+  padding: 6px 10px;
+}
+/* Activity captions need light ink; raw tool details keep light surfaces. */
+.bbx-box-presentation[data-chrome-theme="deck"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) {
+  color: #b2cbc5;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) {
+  color: #d8f4ef;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] #bbx-chat-load-older:enabled {
+  color: #83e7ec;
+  text-decoration: underline;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] #bbx-chat-load-older:enabled:hover {
+  color: #d8f4ef;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] #bbx-chat-load-older:disabled {
+  color: #a4cbc9;
+  opacity: .6;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-empty-label {
+  display: inline-block;
+  color: #b2cbc5;
+  background: #242f30;
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+.bbx-card-theme[data-card-theme="deck"] {
+  color-scheme: dark;
+  --bbx-sheet: #354748;
+  --bbx-tint: #304142;
+  --bbx-code-paper: #10272d;
+  --bbx-code-ink: #d8f4ef;
+  --bbx-paper: #242f30;
+  --bbx-ink: #d8f4ef;
+  --bbx-ink-soft: #a4cbc9;
+  --bbx-pen: #83e7ec;
+  --bbx-edge: #44959a;
+  --bbx-underlay: #122e35;
+  --bbx-font: ui-sans-serif, system-ui, sans-serif;
+  --bbx-sheet-radius: 28px;
+  --bbx-quote-paper: #354748;
+  --bbx-quote-layer-paper: #354748;
+  --bbx-quote-edge: 3px;
+  --bbx-blockquote-paper: #354748;
+  --bbx-blockquote-edge: 3px;
+  --bbx-blockquote-padding: 0.65em 1em;
+  --bbx-selection: #78dedc;
+  --bbx-selection-ink: #242f30;
+  --bbx-selection-code: #78dedc;
+  --bbx-selection-code-ink: #173e42;
+}
+.bbx-card-surface[data-card-theme="deck"] {
+  border-top: 6px solid #78dedc;
+  box-shadow: 6px 7px 0 #087f8a;
+}
+.bbx-card-surface[data-card-theme="deck"] > .bbx-card-properties {
+  border-radius: 0 28px 0 12px;
+}
+.bbx-interface-tab[data-card-theme="deck"] {
+  background: #354748;
+  border-top-color: #44959a;
+  border-left-color: #44959a;
+  border-right-color: #44959a;
+  border-radius: 16px 16px 0 0;
+}
+.bbx-interface-tab[data-card-theme="deck"][data-active="true"] { background: #242f30; }
+.bbx-interface-tab[data-card-theme="deck"]:not([data-active="true"]):hover { background: #3a5152; }
+.bbx-system-theme-preview[data-chrome-theme="deck"] {
+  background: url("./deck-panels.svg") center / cover, #292e2c;
+}
+.bbx-system-theme-preview[data-chrome-theme="deck"] .bbx-system-theme-toolbar {
+  background: #202b2c;
+  border-bottom: 3px solid #44959a;
+}
+.bbx-system-theme-preview[data-chrome-theme="deck"] .bbx-system-theme-toolbar i { background: #d8f4ef; }
+.bbx-system-theme-preview[data-chrome-theme="deck"] .bbx-system-theme-desk > span {
+  background: #242f30;
+  border-color: #44959a;
+  box-shadow: 3px 3px 0 #087f8a;
+}
+
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav .bbx-place-pill {
+  background: #78dedc;
+  color: #173e42;
+  border: 1px solid #44959a;
+  border-radius: 10px 10px 5px 5px;
+  box-shadow: 0 3px 0 #087f8a;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #173e42; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material {
+  color-scheme: dark;
+  border: 4px double #78dedc;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material :is(textarea, input) { border-color: #44959a; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material :is(button, textarea):focus-visible {
+  outline: 2px solid #78dedc;
+  outline-offset: 2px;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) {
+  color: #302f2d;
+}
+@media (max-width: 639px) {
+  .bbx-box-presentation[data-chrome-theme="deck"]:not(.bbx-system-theme-preview)::before {
+    background-size: auto 1000px;
+    background-position: left top;
+  }
+}
+
+
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-interface-card-desk[data-card-content="neutral"] {
+  background: #fbf5ee;
+}
+@media print {
+  .bbx-box-presentation[data-chrome-theme="deck"]::before { display: none; }
+  .bbx-box-presentation[data-chrome-theme="deck"],
+  .bbx-box-presentation[data-chrome-theme="deck"] :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material),
+  .bbx-card-surface[data-card-theme="deck"] {
+    background: transparent; color: #000; border: 0; box-shadow: none;
+  }
+  .bbx-card-theme[data-card-theme="deck"],
+  .bbx-box-presentation[data-chrome-theme="deck"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme .prose) {
+    color-scheme: light;
+    --bbx-paper: #fff; --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
+    --tw-prose-body: #000; --tw-prose-bold: #000; --tw-prose-headings: #000;
+    --tw-prose-quotes: #000; --tw-prose-counters: #333; --tw-prose-bullets: #333; --tw-prose-captions: #333;
+    color: #000;
+  }
+  .bbx-card-theme[data-card-theme="deck"] :is(.bbx-blockquote, .bbx-quote-block),
+  .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout > .text-accent-dark,
+  .bbx-box-presentation[data-chrome-theme="deck"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) {
+    color: #333; background: transparent; box-shadow: none;
+  }
+}
+.bbx-box-presentation[data-chrome-theme="deck"] [aria-label="Pane controls"] button {
+  color: #b2cbc5;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] [aria-label="Pane controls"] button:hover {
+  color: #173e42; background: #78dedc;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] :is(#bbx-composer-capture, #bbx-composer-keyboard) {
+  background: #354748; color: #d8f4ef;
+}

@@ -85,6 +85,17 @@ export const THEME_CATALOG = [
     systemOnly: false,
     cardThemes: ["ribbon", "paper", "post-it"],
   },
+  {
+    name: "deck",
+    label: "Deck",
+    stocks: ["panels"],
+    defaultStock: "panels",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["deck", "paper", "post-it"],
+  },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];
