@@ -16,7 +16,7 @@ import Fastify from "fastify";
 import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { acquireBoxWork, boxWorkEnvironment } from "../../../src/lib/box-maintenance.js";
+import { acquireBoxWork, boxWorkEnvironment } from "../../../src/lib/box-maintenance/admission.js";
 import { mock } from "node:test";
 
 function counting(opts) {

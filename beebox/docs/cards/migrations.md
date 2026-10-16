@@ -54,7 +54,7 @@ never establish that the conversion actually happened.
 ## Admission, snapshots, and failures
 
 Migration, generated-docs refresh, supervised reload, and deployment share the
-box admission gate in `src/lib/box-maintenance.ts`. Maintenance closes admission
+box admission gate in `src/lib/box-maintenance/admission.ts`. Maintenance closes admission
 before waiting up to ten minutes for already accepted work to finish. New
 requests, independent CLI actions, queued chat turns, and scheduled deliveries
 cannot extend that drain. Accepted agents and scripts retain a validated,

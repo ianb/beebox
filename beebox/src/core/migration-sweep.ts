@@ -5,7 +5,7 @@ import { repairMigration, runProcedureMigration, finishMigrationRepair, migratio
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
-import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-error.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { errorMessage } from "../shared/error-guards.js";

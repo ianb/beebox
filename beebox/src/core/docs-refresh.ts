@@ -3,7 +3,7 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { simpleGit } from "simple-git";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
-import { acquireBoxMaintenance, peekBoxWork } from "../lib/box-maintenance.js";
+import { acquireBoxMaintenance, peekBoxWork } from "../lib/box-maintenance/admission.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import {

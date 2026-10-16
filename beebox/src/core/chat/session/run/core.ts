@@ -1,4 +1,4 @@
-import { acquireBoxWork } from "../../../../lib/box-maintenance.js";
+import { acquireBoxWork } from "../../../../lib/box-maintenance/admission.js";
 /**
  * ChatSession — Manages a long-lived SDK chat run for interactive chat.
  *

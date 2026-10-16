@@ -6,7 +6,7 @@
  * atomic commit (see `question-transition.ts`).
  */
 
-import { withBoxWork } from "../../lib/box-maintenance.js";
+import { withBoxWork } from "../../lib/box-maintenance/admission.js";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";

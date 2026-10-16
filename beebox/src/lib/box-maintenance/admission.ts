@@ -4,12 +4,13 @@ import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { acquireLock, inspectLock, LockHeldError, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "./file-lock.js";
-import { resolveGitDir } from "./git-lock.js";
-import { writeFileAtomic } from "./atomic-write.js";
-import { errnoCode } from "../shared/error-guards.js";
-import { invariant } from "../shared/invariant.js";
-import { BoxMaintenanceError, type WorkHolder } from "./box-maintenance-error.js";
+import { acquireLock, inspectLock, LockHeldError, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "../file-lock.js";
+import { resolveGitDir } from "../git-lock.js";
+import { writeFileAtomic } from "../atomic-write.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { invariant } from "../../shared/invariant.js";
+import { BoxMaintenanceError, type WorkHolder } from "../box-maintenance-error.js";
+import { readMaintenanceStep, writeMaintenanceStep, type MaintenanceStep } from "./step.js";
 
 const phaseSchema = z.object({
   id: z.string().uuid(), reason: z.string(), phase: z.enum(["draining", "exclusive", "ready"]),
@@ -17,8 +18,6 @@ const phaseSchema = z.object({
   until: z.string().datetime().optional(),
   /** When the maintenance attempt that wrote this record began; carried across a retry. */
   since: z.string().datetime().optional(),
-  /** What the owner is doing now and when that began; any phase write clears it. */
-  step: z.string().optional(), stepSince: z.string().datetime().optional(),
 });
 type Phase = z.infer<typeof phaseSchema>;
 const permitSchema = z.object({ directory: z.string(), id: z.string().uuid(), maintenance: z.boolean() });
@@ -29,7 +28,7 @@ type Permit = z.infer<typeof permitSchema>;
  * nothing, so a crashed or failed owner can never leave a box unusable, and it
  * stays until the next attempt completes.
  */
-export interface MaintenanceStatus extends Phase { owner: WorkHolder | null }
+export interface MaintenanceStatus extends Phase { owner: WorkHolder | null; step: MaintenanceStep | undefined }
 const workHolderSchema = z.object({ reason: z.string(), since: z.string() });
 const workLeaseSchema = z.object({ holders: z.array(workHolderSchema).default([]) });
 const context = new AsyncLocalStorage<Permit | null>();
@@ -97,10 +96,6 @@ function leasePath(permit: Permit): string {
 async function readPhase(directory: string): Promise<Phase | null> {
   try { return phaseSchema.parse(JSON.parse(await readFile(join(directory, "phase.json"), "utf8"))); }
   catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
-}
-async function writeStep(directory: string, { id, step }: { id: string; step: string }): Promise<void> {
-  const phase = await readPhase(directory);
-  if (phase?.id === id) await writeFileAtomic(join(directory, "phase.json"), { content: JSON.stringify({ ...phase, step, stepSince: new Date().toISOString() }) });
 }
 function ownerHolder(holder: LockHolder): WorkHolder {
   const reason = typeof holder.metadata.reason === "string" ? holder.metadata.reason : "maintenance";
@@ -225,7 +220,7 @@ export function boxWorkEnvironment(): Record<string, string> {
 export async function boxMaintenanceStatus(boxRoot: string): Promise<MaintenanceStatus | null> {
   const directory = await directoryFor(boxRoot);
   const phase = await readPhase(directory);
-  return phase && { ...phase, owner: await ownerOf(directory) };
+  return phase && { ...phase, owner: await ownerOf(directory), step: await readMaintenanceStep(directory, phase.id) };
 }
 
 export interface BoxMaintenance extends BoxWork {
@@ -234,7 +229,7 @@ export interface BoxMaintenance extends BoxWork {
   drain(): Promise<void>;
   prepare(): Promise<void>;
   beginChanges(): Promise<void>;
-  /** Name the current step on the closure record; a handle that no longer holds the box writes nothing. */
+  /** Name the current step for status readers; a handle that no longer holds the box writes nothing. */
   step(name: string): Promise<void>;
   complete(): Promise<void>;
 }
@@ -270,7 +265,7 @@ export async function closeBoxMaintenance(
       if (error instanceof BoxMaintenanceError) return false;
       throw error;
     });
-    const step = async (name: string): Promise<void> => { if (await held()) await writeStep(directory, { id: parent.id, step: name }); };
+    const step = async (name: string): Promise<void> => { if (await held()) await writeMaintenanceStep(directory, { id: parent.id, name }); };
     return { run: (fn) => context.run(parent, fn), drain: noRelease, release: () => delegatedWork.release(), held,
       prepare: () => phase("ready"), complete: noRelease, beginChanges: () => phase("exclusive"), step };
   }
@@ -333,7 +328,7 @@ export async function closeBoxMaintenance(
       },
       async prepare() { await writePhase("ready"); changing = true; },
       async beginChanges() { await writePhase("exclusive"); changing = true; },
-      async step(name) { if (!released && await ownsLock()) await writeStep(directory, { id: permit.id, step: name }); },
+      async step(name) { if (!released && await ownsLock()) await writeMaintenanceStep(directory, { id: permit.id, name }); },
       async complete() {
         await withAdmission(directory, async () => {
           if (released || !(await ownsLock())) throw new BoxMaintenanceError({ reason: "expired" });

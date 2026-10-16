@@ -34,6 +34,13 @@ bug: nothing alerts while a holder keeps the box closed. The convergence
 schedule kills a box's run after 25 minutes (`schedules/box-convergence/run.ts`),
 and nothing reports the run before that.
 
+**2026-10-16, partly done:** the boxholder chose to show the current step and
+deferred a time budget with an alert. Docs refresh and the migration sweep now
+name their step (`maintenance.step(name)`, kept in `step.json` beside
+`phase.json`), and the closed page and 503 body show it with its start time.
+Still open from "Wanted": countable progress, a page that updates itself, and
+a signal for a step that has made no progress.
+
 ## Wanted
 
 A progress indicator while a box is closed for maintenance:
@@ -51,7 +58,7 @@ instead of requiring a reload.
 ## Notes
 
 - The maintenance owner already writes `phase.json` and lock metadata
-  (`beebox/src/lib/box-maintenance.ts`); a small progress record beside them,
+  (`beebox/src/lib/box-maintenance/admission.ts`); a small progress record beside them,
   written by the migration runner (`beebox/src/core/migration-run.ts`,
   `migration-sweep.ts`), is a natural source. Keep it cheap: progress writes
   must not slow the migration.

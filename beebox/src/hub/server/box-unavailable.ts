@@ -5,7 +5,7 @@
  * served now says so, with the reason and when it began.
  */
 import type { FastifyReply } from "fastify";
-import { boxMaintenanceStatus } from "../../lib/box-maintenance.js";
+import { boxMaintenanceStatus } from "../../lib/box-maintenance/admission.js";
 import { resolveGitDir } from "../../lib/git-lock.js";
 import type { EndpointProvider } from "../endpoints.js";
 import { CLOSED_SIGN_CSS, closedSignHtml } from "../../lib/closed-sign.js";
@@ -54,7 +54,7 @@ async function describeUnavailableBox(args: { slug: string; boxRoot: string | un
     const remainingMs = maintenance.until === undefined ? undefined : Math.max(0, Date.parse(maintenance.until) - Date.now());
     const retryAfter = remainingMs === undefined ? DEFAULT_RETRY_AFTER_S : Math.max(1, Math.ceil(remainingMs / 1000));
     const owner = { pid: maintenance.owner.pid, since: maintenance.owner.since };
-    const step = maintenance.step === undefined || maintenance.stepSince === undefined ? undefined : { name: maintenance.step, since: maintenance.stepSince };
+    const { step } = maintenance;
     return { status: 503, retryAfter, body: {
       error: "box_closed", reason: maintenance.reason, since: maintenance.since, owner, step,
       message: `Box ${args.slug} is closed for ${maintenance.reason} (pid ${String(owner.pid)}, since ${owner.since})${step ? `; current step: ${step.name}, since ${step.since}` : ""}; it reopens when that process finishes or exits`,

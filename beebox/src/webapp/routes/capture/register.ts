@@ -34,7 +34,7 @@ import {
 import { resumeStagingSessions } from "../../../core/capture/resume.js";
 import { sweepAbandonedCaptures } from "../../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
-import { withoutBoxWork } from "../../../lib/box-maintenance.js";
+import { withoutBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 import { handleCaptureUpload } from "./upload.js";
 import { handleCreateCaptureSession } from "./create.js";

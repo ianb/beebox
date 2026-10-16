@@ -6,13 +6,13 @@ release. A failed mutation leaves a record of unfinished maintenance, and the
 box reopens the moment its owner is gone: a closure cannot outlive its owner.
 
 ```ts setup
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
-import { readdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { acquireLock, forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
-import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance.js";
+import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance/admission.js";
 const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
 ```
 
@@ -206,31 +206,34 @@ await barrierBox.cleanup();
 ## The owner names its current step
 
 A closed box once stayed closed for ten minutes with nothing saying what was
-running. An owner, or a delegate on its behalf, names its current step on the
-record; the next phase change clears it.
+running. An owner, or a delegate on its behalf, names its current step, and
+the status shows it with the time it began.
 
 ```ts
 const stepBox = await makeTmpBox({ git: true });
+const stepDirectory = join(execFileSync("git", ["rev-parse", "--absolute-git-dir"], { cwd: stepBox.root, encoding: "utf8" }).trim(), "bbx-maintenance");
 const stepper = await acquireBoxMaintenance(stepBox.root, { reason: "docs refresh" });
 await stepper.beginChanges();
 await stepper.step("generating docs");
-const named = await boxMaintenanceStatus(stepBox.root);
-({ step: named.step, stepSince: named.stepSince })
-=> { step: "generating docs", stepSince: "«date»" }
-
-await stepper.prepare();
 (await boxMaintenanceStatus(stepBox.root)).step
-=> undefined
+=> { name: "generating docs", since: "«date»" }
 ```
 
-A delegate writes its step on the controller's record. After release, neither
-handle writes over the record of the owner that comes next.
+The step is kept out of the phase record. Admission reads the phase record, so
+a step write racing a phase change can never restore a stale phase.
 
 ```ts continue
-await stepper.beginChanges();
+Object.keys(JSON.parse(await readFile(join(stepDirectory, "phase.json"), "utf8"))).sort()
+=> ["id", "phase", "reason", "since"]
+```
+
+A delegate names steps for its controller. After release, neither handle's
+step shows on the record of the owner that comes next.
+
+```ts continue
 const helper = await stepper.run(() => acquireBoxMaintenance(stepBox.root, { reason: "docs", join: true }));
 await helper.step("committing");
-(await boxMaintenanceStatus(stepBox.root)).step
+(await boxMaintenanceStatus(stepBox.root)).step.name
 => committing
 
 await helper.release();
@@ -242,7 +245,21 @@ await helper.step("stale");
 => undefined
 ```
 
+A step is diagnostic: when it cannot be written, the work it names goes on.
+
+```ts continue
+await rm(join(stepDirectory, "step.json"), { force: true });
+await mkdir(join(stepDirectory, "step.json"));
+const warnings = [];
+const realWarn = console.warn;
+console.warn = (message) => { warnings.push(message); };
+try { await next.step("blocked"); } finally { console.warn = realWarn; }
+warnings
+=> ["[box-maintenance] step was not recorded:"]
+```
+
 ```ts cleanup
+await rm(join(stepDirectory, "step.json"), { recursive: true, force: true });
 await next.complete();
 await stepBox.cleanup();
 ```

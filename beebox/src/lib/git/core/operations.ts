@@ -24,7 +24,7 @@
  * need one.
  */
 
-import { boxWorkEnvironment } from "../../box-maintenance.js";
+import { boxWorkEnvironment } from "../../box-maintenance/admission.js";
 import { simpleGit, CleanOptions } from "simple-git";
 
 import {

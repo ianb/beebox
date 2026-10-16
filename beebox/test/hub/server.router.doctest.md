@@ -24,7 +24,7 @@ import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";

@@ -9,7 +9,7 @@
  * live with each of them.
  */
 
-import { boxWorkEnvironment } from "../lib/box-maintenance.js";
+import { boxWorkEnvironment } from "../lib/box-maintenance/admission.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "./migration-process.js";
