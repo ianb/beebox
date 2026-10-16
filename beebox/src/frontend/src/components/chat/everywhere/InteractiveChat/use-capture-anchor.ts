@@ -56,7 +56,7 @@ export function useCaptureAnchor(opts: {
     // The content wrapper's parent is the scroller (see the render below).
     const scroller = content?.parentElement;
     if (wait.current === null || !content || !scroller) return;
-    const now: CaptureAnchorView = { newestCapture, bubbleIds, scrollTop: scroller.scrollTop, viewportHeight: scroller.clientHeight };
+    const now: CaptureAnchorView = { newestCapture, bubbleIds, scrollTop: scroller.scrollTop };
     const { wait: next, step } = stepCaptureWait(wait.current, now);
     wait.current = next;
     if (step.anchor === "user") {

@@ -14,13 +14,15 @@
  * arrival, and a bubble still on screen from an earlier capture is not this
  * one. Only a capture message counts as the arrival; a message typed in
  * another tab meanwhile does not end the wait. A reader who scrolls up more
- * than half a screen from the anchored bubble during the wait is left where
+ * than {@link AWAY_PX} from the anchored bubble during the wait is left where
  * they are. Position, not the scroller's "at bottom": that measures to the end
  * of the content, above the blank space the anchor leaves below the bubble,
- * so a reader can scroll well up and still be "at bottom". Half a screen of
- * slack absorbs the content shrinking when the bubble leaves.
- * Pure, so the decisions are doctested; `messages.tsx` does the DOM part.
+ * so a reader can scroll well up and still be "at bottom".
+ * Pure, so the decisions are doctested; `use-capture-anchor.ts` does the DOM part.
  */
+
+/** Slack for the content shrinking when the bubble (about 110px) leaves; more than that is the reader's own scroll. */
+export const AWAY_PX = 160;
 
 /** The list as the wait sees it. */
 export interface CaptureAnchorView {
@@ -28,9 +30,8 @@ export interface CaptureAnchorView {
   newestCapture: string | null;
   /** The capture bubbles' ids, in render order. */
   bubbleIds: readonly string[];
-  /** The scroller's current scroll position, and its height. */
+  /** The scroller's current scroll position. */
   scrollTop: number;
-  viewportHeight: number;
 }
 
 export interface CaptureAnchorWait {
@@ -55,7 +56,7 @@ export function startCaptureWait(atDone: Pick<CaptureAnchorView, "newestCapture"
 export function stepCaptureWait(wait: CaptureAnchorWait, now: CaptureAnchorView): { wait: CaptureAnchorWait | null; step: CaptureAnchorStep } {
   if (now.newestCapture !== null && now.newestCapture !== wait.capture) {
     // Scrolled up from the bubble we put at the top: they chose to read elsewhere.
-    const away = wait.bubbleScrollTop !== null && now.scrollTop < wait.bubbleScrollTop - now.viewportHeight / 2;
+    const away = wait.bubbleScrollTop !== null && now.scrollTop < wait.bubbleScrollTop - AWAY_PX;
     if (away) return { wait: null, step: { anchor: "none" } };
     return { wait: null, step: { anchor: "user" } };
   }
