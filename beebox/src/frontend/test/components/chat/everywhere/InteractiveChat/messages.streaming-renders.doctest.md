@@ -122,3 +122,29 @@ u1 | a1 (playing) | u2
 u1 | a1 | u2 | live-t2 (playing)
 u1 | a1 | u2 | a2 (playing)
 ```
+
+## Finalizing keeps the reply's row mounted
+
+The streamed and finalized forms of a reply share one React key, so
+finalizing updates the row in place instead of remounting it (a remount
+flashes the reply and loses its scroll anchor). A voice message still waiting
+for its transcript sits below the reply in the list; it must not stop the key
+from passing to the finalized reply. The streaming row's DOM node is tagged,
+and after the turn finalizes into `a2` the row still carries the tag:
+
+```ts
+const pendingHq = [{ id: "v1", text: "one more thing", status: "Transcribing…" }];
+const { view, update } = await mountList({ ...streaming("Eggs added.\n\n"), pendingHq });
+const rowFor = (uuid: string): HTMLElement => {
+  const row = view.container.querySelector<HTMLElement>(`[data-entry-uuids='${uuid}']`);
+  if (row === null) throw new Error(`no row for ${uuid}`);
+  return row;
+};
+rowFor("live-t2").dataset.probe = "streamed row";
+const done = [...history, text("a2", "assistant", "Eggs added.")];
+await update((props) => ({ ...props, messages: done, groups: groupMessages(done), totalEntries: done.length, isStreaming: false, streamText: "", snapshot: { matches: (state) => state === "idle" } }));
+const row = rowFor("a2").dataset.probe;
+await view.unmount();
+row
+=> streamed row
+```
