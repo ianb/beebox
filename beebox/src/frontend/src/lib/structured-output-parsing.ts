@@ -188,6 +188,31 @@ export function parseCallouts(content: string): CalloutData[] {
   return out;
 }
 
+export type CalloutPart = { type: "text"; text: string } | { type: "callout"; callout: CalloutData };
+
+/**
+ * Split content into prose and callouts in the order they were written, so a
+ * sign-off after a callout renders after it. Text parts keep their raw tags
+ * (speech, acks) for the prose renderer; a callout `parseCallouts` would skip
+ * is dropped, as the prose strip drops it. Whitespace-only text is dropped.
+ */
+export function splitCalloutParts(content: string): CalloutPart[] {
+  const parts: CalloutPart[] = [];
+  const pushText = (text: string) => {
+    if (text.trim().length > 0) parts.push({ type: "text", text });
+  };
+  const re = /<callout\b[^>]*?>[\S\s]*?<\/callout\s*>/gi;
+  let cursor = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    pushText(content.slice(cursor, m.index));
+    for (const callout of parseCallouts(m[0])) parts.push({ type: "callout", callout });
+    cursor = m.index + m[0].length;
+  }
+  pushText(content.slice(cursor));
+  return parts;
+}
+
 /**
  * Strip `<ack>`, `<callout>`, and `<chat-app>` tags from the given
  * content so prose rendering (markdown) doesn't show the raw XML.
