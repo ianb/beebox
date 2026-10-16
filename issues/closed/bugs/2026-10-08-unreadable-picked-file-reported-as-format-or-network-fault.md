@@ -1,12 +1,15 @@
 ---
 title: "An unreadable picked image is reported as a format fault or a network fault"
-workstream: unattached
+workstream: capture-photo-flow
 area: beebox
 labels: [low]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — B-inventory journey walk (second walk), 2026-10-08
+resolution: implemented
 ---
+
+> Fixed in `e2d468d33`. Before upload, the first chunk of a picked file is read (`lib/file-readable.ts`). A file that can't be read gets its own state with no retry: a "can't read" tile and a line in capture, and "Can't read this file — remove it and pick it again" on the composer chip. It was reported as a network fault.
 
 The second B-inventory walk picked an image file that could not be decoded.
 The composer said, in effect, that the JPEG format was refused, and in the
@@ -22,12 +25,12 @@ In this walk the trigger was the harness: `bin/browse upload` passed a
 relative path, and the page received an empty file that failed on read (fixed
 in `ee5289dd1`). The first B-inventory walk the same day sent JPEGs damaged in
 the repository (see
-[rename-damaged binaries](../closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md)).
+[rename-damaged binaries](2026-10-08-rename-damaged-binaries-still-in-tree.md)).
 Real triggers are rarer, but the copy is wrong whenever one occurs.
 A decode failure of a format the app accepts needs its own message, such as
 "This image file looks damaged".
 
-Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 7).
+Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 7).
 
 ## Update 2026-10-08
 
