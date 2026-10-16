@@ -14,12 +14,12 @@
  * they can point two reads at different stores) keeps its own path.
  */
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { processTempDir } from "./process-temp-dir.js";
+
 if (process.env["BBX_SECRETS_FILE"] === undefined) {
-  process.env["BBX_SECRETS_FILE"] = join(mkdtempSync(join(tmpdir(), "bbx-test-secrets-")), "secrets.json");
+  process.env["BBX_SECRETS_FILE"] = join(processTempDir("bbx-test-secrets-"), "secrets.json");
 }
 
 /**
