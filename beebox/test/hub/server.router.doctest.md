@@ -19,6 +19,9 @@ injects its own hub-secret-gated identity header. `createHubServer` is
 import http from "node:http";
 import net from "node:net";
 import crypto from "node:crypto";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createHubServer } from "../../src/hub/server/core.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
@@ -29,6 +32,10 @@ import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
+// The default box has a real, empty content root, as a new box does. A missing
+// root is a broken box, and reading its name logs a warning.
+const defaultBoxRoot = await mkdtemp(join(tmpdir(), "bbx-router-"));
+await mkdir(join(defaultBoxRoot, "_content"));
 
 // Most of this file exercises hub-wide OPEN mode (the hub advertises
 // `x-bbx-hub-auth: off` to children). Auth is always-on by default now, so open
@@ -89,7 +96,7 @@ async function startHub(endpoints, { boxes, getHealth, openAccess = true } = {})
     endpoints,
     getHealth: getHealth ?? (() => ({ status: "ok", boxes: [] })),
     hubSecret: HUB_SECRET,
-    boxes: boxes ?? [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
+    boxes: boxes ?? [{ slug: "test1", boxRoot: defaultBoxRoot }],
     openAccess,
   });
   server.on("connection", (socket) => sockets.push(socket));
@@ -688,4 +695,8 @@ retry gets a still sign; message text is escaped.
 const quick = renderUnavailablePage({ status: 503, retryAfter: 3, body: { error: "box_unavailable", message: "Box <b> is not running" } });
 JSON.stringify({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") })
 => {"refresh":"3","swings":false,"headline":"Not open","escaped":true}
+```
+
+```ts teardown
+await rm(defaultBoxRoot, { recursive: true, force: true });
 ```
