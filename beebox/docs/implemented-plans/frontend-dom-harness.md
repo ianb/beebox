@@ -1,10 +1,10 @@
 ---
 title: "DOM doctests for frontend effects, events, and render counts"
-status: draft
+status: implemented
 workstream: frontend-dom-harness
 issues:
-  - ../../../issues/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md
-  - ../../../issues/code-quality/2026-10-08-chat-message-list-rerenders-per-token.md
+  - ../../../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md
+  - ../../../issues/closed/code-quality/2026-10-08-chat-message-list-rerenders-per-token.md
 ---
 # DOM doctests for frontend effects, events, and render counts
 

@@ -6,7 +6,10 @@ labels: [testing, frontend]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261010-224248
+resolution: implemented
 ---
+
+> **Closed:** Resolved by the DOM doctest harness (happy-dom plus React Compiler load hook in `beebox/.taprc`, docs, and one regression doctest for the place-pill bug), commit 4a31d999d. Divergence: the exhibit-recorder bug lives in workstreams-app and was deliberately not converted.
 
 Frontend React effects, event handlers, and browser-API wrappers have no
 doctest path. Fixes are verified by browser runs and source review only.
