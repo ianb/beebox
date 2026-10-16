@@ -99,8 +99,18 @@ interface TodoDateChip {
 }
 
 /**
+ * What goes before a `start` date: "later ·" while the todo waits for that
+ * day to join the plate (plate state `quiet`), "since" once it has. Plate
+ * state comes from the server; before it loads, the clock decides.
+ */
+export function startPrefix(plateState: TodoPlateState | null, epoch: number | null): "later ·" | "since" {
+  const later = plateState === null ? epoch === null || epoch > Date.now() : plateState === "quiet";
+  return later ? "later ·" : "since";
+}
+
+/**
  * The date chips a todo shows. A `start` relative to `due` ("-3d") is shown as
- * the day it resolves to. An escalated todo's due chip reads
+ * the day it resolves to, after `startPrefix`: "later · Oct 23". An escalated todo's due chip reads
  * "overdue · Sep 15"; plate state comes from the server (it depends on the
  * box timezone), so `plateState: null` — not loaded yet — never escalates.
  */
@@ -119,7 +129,7 @@ export function dateChips(
   if (start !== undefined && start !== "") {
     const epoch = resolveStartEpoch(start, due);
     const iso = epoch === null ? null : new Date(epoch).toISOString().slice(0, 10);
-    chips.push({ kind: "start", iso, text: `starts ${epoch === null ? start : dayLabel(epoch, format)}`, warning: false });
+    chips.push({ kind: "start", iso, text: `${startPrefix(plateState, epoch)} ${epoch === null ? start : dayLabel(epoch, format)}`, warning: false });
   }
   return chips;
 }

@@ -101,10 +101,28 @@ dateChips({ due: "2026-09-15", start: undefined, plateState: "on-plate" }, forma
 => due Sep 15 (plain)
 
 dateChips({ due: "2026-09-15", start: "-1w", plateState: "escalated" }, format).map((c) => `${c.text} (${c.warning ? "warning" : "plain"})`).join(", ")
-=> overdue · Sep 15 (warning), starts Sep 8 (plain)
+=> overdue · Sep 15 (warning), since Sep 8 (plain)
 
 dateChips({ due: "2027-01-04", start: undefined, plateState: null }, format)[0].text
 => due Jan 4, 2027
+```
+
+A `start` is the day the todo joins the plate. Until then the todo is
+"later", the plate headline's word for it; after, the date reads "since".
+Before the server answers, the clock decides.
+
+```ts continue
+dateChips({ due: undefined, start: "2026-10-23", plateState: "quiet" }, format)[0].text
+=> later · Oct 23
+
+dateChips({ due: undefined, start: "2026-10-23", plateState: "on-plate" }, format)[0].text
+=> since Oct 23
+
+dateChips({ due: undefined, start: "2099-10-23", plateState: null }, format)[0].text
+=> later · Oct 23, 2099
+
+dateChips({ due: undefined, start: "2020-10-23", plateState: null }, format)[0].text
+=> since Oct 23, 2020
 ```
 
 Rendered, the escalated chip takes the warning tone and keeps the machine

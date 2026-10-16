@@ -21,14 +21,18 @@ import { bbxSource } from "../../../lib/source-tag";
 import { ItemTree } from "./ItemTree";
 import { cardTarget, useOpenBeside } from "../../chat/workspace/use-open-beside/hook";
 import { buildRowSections, progressOf, type TodoReduction, type TodoRow } from "../../todo-view-card-logic";
+import { summaryParts } from "../../todo/summary";
 
-/** What a card amounts to: what is open, what is finished, and the next date it carries. */
+/** What a card amounts to, in the words of the card's own todo line, and the next date it carries. */
 function RowReduction({ reduction }: { reduction: TodoReduction }) {
+  const parts = summaryParts(reduction);
   return (
     <Row gap="xs" wrap align="baseline" className="flex-shrink-0">
-      <Text material size="xs" tone="muted">
-        {reduction.open} open · {reduction.done} done
-      </Text>
+      {parts === null ? null : (
+        <Text material size="xs" tone="muted">
+          {parts.map((part) => part.text).join(" · ")}
+        </Text>
+      )}
       {reduction.next === null ? null : (
         <Badge size="sm" tone="info" title="Next date on this card">next {reduction.next}</Badge>
       )}

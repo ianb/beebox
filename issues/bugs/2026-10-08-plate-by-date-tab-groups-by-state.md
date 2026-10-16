@@ -1,6 +1,6 @@
 ---
 title: "The plate's \"By date\" tab groups by plate state and shows no dates"
-workstream: unattached
+workstream: plate-wording
 area: beebox
 filed-by: agent
 discovered-by: agent
