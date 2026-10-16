@@ -10,7 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ConnectionEditor } from "../../../../src/components/admin/CloudflarePublishConnectionsSection/view.js";
 
 globalThis.React = React;
-function editor(saveError, saveStatus) {
+function editor(saveError: string | null, saveStatus: string | null): string {
   return renderToStaticMarkup(React.createElement(ConnectionEditor, {
     name: "studio",
     accountId: "0123456789abcdef0123456789abcdef",

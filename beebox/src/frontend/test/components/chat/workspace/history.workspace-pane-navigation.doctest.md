@@ -150,7 +150,7 @@ Reducer bookkeeping such as activation time does not create a new Back stop.
 Changing an explicit viewer remains a new visible target and pushes.
 
 ```ts
-const target = (viewer = null) => ({ path: "a", viewer, params: {}, viewState: null });
+const target = (viewer: string | null = null) => ({ path: "a", viewer, params: {}, viewState: null });
 const first = reduceWorkspace(createEmptyWorkspaceState(), {
   type: "openCard", target: target(), label: "a", at: 1, viewport: "desktop",
 }).state;

@@ -6,6 +6,7 @@ pending bubble to failed and, when nobody is present in the app, sends one
 sentence. See docs/implemented-plans/notifications.md (Track E).
 
 ```ts setup
+import assert from "node:assert/strict";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -17,14 +18,27 @@ import { addSubscription } from "../../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../../src/services/push.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 import { writePresence } from "../../../src/core/notification/presence.js";
+import type { EventBus } from "../../../src/core/event-bus/core.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-capture-notice-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
 for (const name of ["BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE"]) delete process.env[name];
 
 const SUB = { endpoint: "https://push.example/capture", keys: { p256dh: "p", auth: "a" } };
-const emitted = [];
-const eventBus = { emit: (name, data) => { emitted.push(`${name} ${data.status}`); return 0; } };
+const emitted: string[] = [];
+function statusOf(data: unknown): string {
+  return typeof data === "object" && data !== null && "status" in data ? String(data.status) : "";
+}
+// Only `emit` is observed; the rest of the bus is inert.
+const eventBus: EventBus = {
+  emit: (name: string, data: unknown) => { emitted.push(`${name} ${statusOf(data)}`); return 0; },
+  emitTransient: () => {},
+  readSince: () => [],
+  readRecent: () => [],
+  subscribe: () => ({ unsubscribe: () => {} }),
+  prune: () => 0,
+  close: () => {},
+};
 ```
 
 ## Nobody present: one `quiet` notice to the capture's chat
@@ -43,6 +57,7 @@ emitted.join("\n")
 => capture-status failed
 
 const [notice] = await readRecent(box.root, { days: 1 });
+assert.ok(notice);
 const { title, body, target, loudness, source } = notice.intent;
 JSON.stringify({ title, body, target, loudness, source }, null, 1)
 => {

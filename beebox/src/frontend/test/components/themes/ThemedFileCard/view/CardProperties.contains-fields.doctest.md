@@ -8,22 +8,24 @@ disclosure), then the type fields that `splitCardFields` sends to Properties.
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { FileData } from "../../../../../src/file-type-registry.js";
 import { CardFacts } from "../../../../../src/components/themes/ThemedFileCard/view/CardProperties.js";
 
 globalThis.React = React;
 
-const memoSchema = { hasBodyField: true, defaultProminence: "ordinary" };
+type Schema = NonNullable<FileData["schema"]>;
+const memoSchema: Schema = { hasBodyField: true, defaultProminence: "ordinary" };
 
-function textOf(html) {
+function textOf(html: string) {
   return html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
 }
 
 /** Each `<dt>`/`<dd>` pair as "label = value", in order. */
-function rows(html) {
-  return [...html.matchAll(/<dt[^>]*>(.*?)<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/gs)].map(([, label, value]) => `${textOf(label)} = ${textOf(value)}`);
+function rows(html: string) {
+  return [...html.matchAll(/<dt[^>]*>(.*?)<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/gs)].map(([, label, value]) => `${textOf(label ?? "")} = ${textOf(value ?? "")}`);
 }
 
-function render(data) {
+function render(data: FileData) {
   return renderToStaticMarkup(React.createElement(CardFacts, { data, boxSlug: "test", onNavigate: () => undefined }));
 }
 
@@ -122,8 +124,8 @@ would show only in Source (docs/implemented-plans/landmark-arrival.md, Track C;
 docs/implemented-plans/place-shows-cards.md, Track C).
 
 ```ts
-const landmarkSchema = { hasBodyField: true, defaultProminence: "background" };
-const landmark = (body) => render({
+const landmarkSchema: Schema = { hasBodyField: true, defaultProminence: "background" };
+const landmark = (body: string | undefined) => render({
   path: "_content/lending/Lending.landmark.card",
   type: "landmark",
   schema: landmarkSchema,
@@ -137,7 +139,7 @@ const landmark = (body) => render({
 Other body-less types keep their fields on the front.
 
 ```ts
-const bodiless = { hasBodyField: false, defaultProminence: null };
+const bodiless: Schema = { hasBodyField: false, defaultProminence: "ordinary" };
 const question = render({ path: "_content/Q.question.card", type: "question", schema: bodiless, frontmatter: { question: "Which?" } });
 question.includes('data-card-section="fields"')
 => false
@@ -151,7 +153,7 @@ section and nothing shows twice. A body that only repeats the title counts as
 empty, the same test the front uses.
 
 ```ts
-const emptyMemo = (body) => render({
+const emptyMemo = (body: string | undefined) => render({
   path: "_content/projects/Porch.memo.card", type: "memo", schema: memoSchema,
   frontmatter: { title: "Porch", status: "new" }, body,
 });

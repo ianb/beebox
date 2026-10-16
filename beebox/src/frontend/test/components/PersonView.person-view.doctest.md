@@ -11,11 +11,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { PersonView } from "../../src/components/PersonView/view.js";
 import { BoxSlugProvider } from "../../src/lib/box-slug.js";
+import type { RendererProps } from "../../src/file-type-registry.js";
+import type { CardSchemaFacts } from "@backend/trpc/routers/card.js";
 
 globalThis.React = React;
 
 /** Tags become " | " (after a closing tag) or a space; runs of separators collapse. */
-function visibleText(html) {
+function visibleText(html: string): string {
   return html
     .replace(/<\/(p|div|dd|span)>/g, "$&|")
     .replace(/<[^>]*(?:>|$)/g, " ")
@@ -26,10 +28,14 @@ function visibleText(html) {
 }
 
 /** Render a person card's front inside a router and a query client that never answers. */
-async function renderPerson(frontmatter, body, { mode = "page", schema = { hasBodyField: true, defaultProminence: null } } = {}) {
+async function renderPerson(
+  frontmatter: Record<string, unknown>,
+  body: string,
+  { mode = "page", schema = { hasBodyField: true, defaultProminence: "ordinary" } }: { mode?: RendererProps["mode"]; schema?: CardSchemaFacts | null } = {},
+) {
   const data = { path: "_content/people/Rosa_Quill.person.card", frontmatter, body, bodyLineOffset: 4, schema };
   const view = React.createElement(PersonView, { data, onNavigate: () => undefined, mode });
-  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: view });
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
@@ -118,7 +124,7 @@ beside it.
 
 ```ts
 const employer = await renderPerson({ name: "Rosa Quill", "day-job": { name: "Harbour Archive", role: "volunteer" } }, "Notes.\n", { schema: null });
-/data-card-section="frontmatter">(.*?)<\/dl>/s.exec(employer.html)?.[1].replace(/<[^>]+>/g, "|").replace(/\|+/g, "|")
+/data-card-section="frontmatter">(.*?)<\/dl>/s.exec(employer.html)?.[1]?.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|")
 => |Day job|Harbour Archive| (volunteer)|
 ```
 

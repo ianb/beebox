@@ -7,25 +7,44 @@ turns the user's choice into the emission to dispatch through the row's
 original destination. These examples use a fake box for `claim`/`fallBack`.
 
 ```ts setup
-import { resolveAwaitingHq } from "../../../../../src/components/chat/conversation/use-bound-emission/awaiting-hq.js";
+import assert from "node:assert/strict";
+import { resolveAwaitingHq, type AwaitingHqResolution } from "../../../../../src/components/chat/conversation/use-bound-emission/awaiting-hq.js";
+import type { PendingConversationSend } from "../../../../../src/components/chat/conversation/use-bound-emission/pending-sends.js";
+import type { HqWaitDeps, VoiceHqResult } from "../../../../../src/lib/audio/hq-wait.js";
+import type { Emission } from "../../../../../src/input/emission.js";
+import type { SendBinding } from "../../../../../../shared/chat-composer-binding.js";
 
-const READY = { text: "clean words", diarized: false, service: "mai", pieces: 1 };
-const inSession = { boxSlug: "test", target: { kind: "session", sessionId: "chat-1", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
+type Claim = Awaited<ReturnType<HqWaitDeps["claim"]>>;
+type FallBack = Awaited<ReturnType<HqWaitDeps["fallBack"]>>;
 
-function row(binding: unknown, text: string) {
+const READY: VoiceHqResult = { text: "clean words", diarized: false, service: "mai", pieces: 1 };
+const inSession: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "chat-1", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
+
+function row(binding: SendBinding, text: string): PendingConversationSend {
   return {
     emission: { id: "em-1", origin: "voice", text, images: [], files: [], selections: [], diarized: false, spokenStart: 0 },
     binding, status: "awaitingHq", recordingId: "rec-1",
   };
 }
 
-function fakeBox(replies: { claim?: unknown; fallBack?: unknown }) {
+/** The emission of a resolution that sends. */
+function sent(resolution: AwaitingHqResolution): Emission {
+  assert.ok(resolution.kind === "send");
+  return resolution.emission;
+}
+
+function reply<T>(value: T | undefined, name: string): T {
+  if (value === undefined) throw new Error(`fake box has no ${name} reply`);
+  return value;
+}
+
+function fakeBox(replies: { claim?: Claim; fallBack?: FallBack }) {
   const calls: string[] = [];
   return {
     calls,
     box: {
-      claim: async () => { calls.push("claim"); return replies.claim; },
-      fallBack: async () => { calls.push("fallBack"); return replies.fallBack; },
+      claim: async () => { calls.push("claim"); return reply(replies.claim, "claim"); },
+      fallBack: async () => { calls.push("fallBack"); return reply(replies.fallBack, "fallBack"); },
     },
   };
 }
@@ -40,7 +59,7 @@ reproduce it.
 ```ts
 const { box, calls } = fakeBox({ claim: { outcome: "claimed", result: READY } });
 const r = await resolveAwaitingHq({ row: row(inSession, "rough wordz <send-message phrase=\"send message\" />"), recordingId: "rec-1", choice: "hq", box });
-JSON.stringify({ kind: r.kind, text: r.emission.text, hqText: r.emission.hqText, id: r.emission.id, calls })
+JSON.stringify({ kind: r.kind, text: sent(r).text, hqText: sent(r).hqText, id: sent(r).id, calls })
 => {"kind":"send","text":"clean words <send-message phrase=\"send message\" heard=\"live\" />","hqText":true,"id":"em-1","calls":["claim"]}
 ```
 
@@ -60,10 +79,10 @@ assembler marks it `stt="live"`.
 ```ts
 const { box, calls } = fakeBox({ fallBack: { outcome: "fellBack" } });
 const r = await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box });
-JSON.stringify({ text: r.emission.text, hqText: r.emission.hqText ?? null, calls })
+JSON.stringify({ text: sent(r).text, hqText: sent(r).hqText ?? null, calls })
 => {"text":"rough words","hqText":null,"calls":["fallBack"]}
 
 const won = fakeBox({ fallBack: { outcome: "claimed", result: READY } });
-(await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box: won.box })).emission.text
+sent(await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box: won.box })).text
 => clean words
 ```

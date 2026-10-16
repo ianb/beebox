@@ -167,11 +167,11 @@ orphaned.activePath
 
 ```ts
 const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
-const values = new Map();
+const values = new Map<string, string>();
 Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: {
-  getItem: (key) => values.get(key) ?? null,
-  setItem: (key, value) => values.set(key, value),
-  removeItem: (key) => values.delete(key),
+  getItem: (key: string) => values.get(key) ?? null,
+  setItem: (key: string, value: string) => values.set(key, value),
+  removeItem: (key: string) => values.delete(key),
 } });
 const kitchen = { storageKey: "kitchen", logicalKey: "kitchen", panel: strip };
 const gardenStrip = { ...strip, activePath: "_content/Kept.card" };
@@ -190,6 +190,6 @@ JSON.stringify({ samePanel: assigned.panel === strip, oldRemoved: !values.has("s
 ```
 
 ```ts cleanup
-if (previousStorage === undefined) delete globalThis.sessionStorage;
+if (previousStorage === undefined) Reflect.deleteProperty(globalThis, "sessionStorage");
 else Object.defineProperty(globalThis, "sessionStorage", previousStorage);
 ```

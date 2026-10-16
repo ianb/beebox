@@ -6,6 +6,7 @@ stage as raw files; audio chunks group under their recording segment. The
 lifecycle is `open → sealed → …` and a cancel tears the directory down.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import {
   createStagingSession,
@@ -22,7 +23,11 @@ import { cleanupStagingSession } from "../../../src/core/capture/staging-teardow
 import { addFileStreamed } from "../../../src/core/capture/staging-stream.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
-async function streamOrThrow(boxRoot, opts) {
+function errorName(e: unknown): string {
+  return e instanceof Error ? e.name : String(e);
+}
+
+async function streamOrThrow(boxRoot: string, opts: { id: string; filename: string; itemId: string; bytes?: string }) {
   try {
     await addFileStreamed({
       boxRoot, id: opts.id, filename: opts.filename,
@@ -32,7 +37,7 @@ async function streamOrThrow(boxRoot, opts) {
     });
     return "ok";
   } catch (error) {
-    return error.name;
+    return errorName(error);
   }
 }
 ```
@@ -71,6 +76,7 @@ await addAudioChunk({
   filename: "audio-1-001.webm", buffer: Buffer.from("B0"),
 });
 const afterAudio = await readStagingSession({ boxRoot: box.root, id: session.id });
+assert.ok(afterAudio);
 JSON.stringify(afterAudio.segments.map((s) => ({ id: s.id, chunks: s.chunks })))
 => [{"id":"seg-a","chunks":["audio-0-001.webm","audio-0-002.webm"]},{"id":"seg-b","chunks":["audio-1-001.webm"]}]
 
@@ -93,6 +99,7 @@ await addFile({
   originalName: "report.pdf", mimeType: "application/pdf", buffer: Buffer.from("PDF"),
 });
 const staged = await readStagingSession({ boxRoot: box.root, id: session.id });
+assert.ok(staged);
 JSON.stringify(staged.photos)
 => [{"filename":"photo-001.jpg","capturedAt":"2026-07-09T14:01:00.000Z","source":"camera-environment"}]
 
@@ -110,7 +117,7 @@ await box.read(`_tmp/capture-staging/${session.id}/audio-0-001.webm`)
 => A0
 
 await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
-(await readStagingSession({ boxRoot: box.root, id: session.id })).state
+(await readStagingSession({ boxRoot: box.root, id: session.id }))?.state
 => sealed
 ```
 
@@ -155,9 +162,10 @@ try {
     audioFormat: "m4a-aac",
   });
 } catch (error) {
-  message = error.message;
+  message = error instanceof Error ? error.message : String(error);
 }
 const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+assert.ok(after);
 const files = await box.list(`_tmp/capture-staging/${session.id}`);
 JSON.stringify({ message, segment: after.segments[0], firstExists: files.includes(`_tmp/capture-staging/${session.id}/ios-audio-a.m4a`), rejectedExists: files.includes(`_tmp/capture-staging/${session.id}/ios-audio-b.m4a`) })
 => {"message":"M4A segment must contain exactly one complete file","segment":{"id":"native-audio","startedAt":"2026-07-09T14:00:00.000Z","format":"m4a-aac","chunks":["ios-audio-a.m4a"]},"firstExists":true,"rejectedExists":false}
@@ -185,10 +193,11 @@ await Promise.all(
   ),
 );
 const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+assert.ok(after);
 after.segments.length
 => 1
 
-after.segments[0].chunks.length
+after.segments[0]?.chunks.length
 => 10
 ```
 
@@ -214,7 +223,7 @@ const [a, b] = await Promise.all([
 [a.alreadySealed, b.alreadySealed].filter(Boolean).length
 => 1
 
-(await readStagingSession({ boxRoot: box.root, id: session.id })).state
+(await readStagingSession({ boxRoot: box.root, id: session.id }))?.state
 => sealed
 ```
 
@@ -242,6 +251,7 @@ const withFailed = await createStagingSession({
 });
 await sealStagingSession({ boxRoot: box.root, id: withFailed.id, failedItems: [{ id: "a", name: "a.bin", reason: "timed out" }] });
 const sealedWithFailed = await readStagingSession({ boxRoot: box.root, id: withFailed.id });
+assert.ok(sealedWithFailed);
 JSON.stringify({ state: sealedWithFailed.state, failed: sealedWithFailed.failedItems })
 => {"state":"sealed","failed":[{"id":"a","name":"a.bin","reason":"timed out"}]}
 ```
@@ -269,6 +279,7 @@ const session = await createStagingSession({
 await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
 const sealedResult = await streamOrThrow(box.root, { id: session.id, filename: "s-a.bin", itemId: "a" });
 const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+assert.ok(after);
 const dirFiles = await box.list(`_tmp/capture-staging/${session.id}`);
 const landed = dirFiles.includes(`_tmp/capture-staging/${session.id}/s-a.bin`);
 const tmpLeak = dirFiles.includes(".upload-tmp-");
@@ -297,7 +308,7 @@ let registerResult = "ok";
 try {
   await registerBulkItems({ boxRoot: box.root, id: session.id, items: [{ id: "late", name: "late.bin" }] });
 } catch (error) {
-  registerResult = error.name;
+  registerResult = errorName(error);
 }
 const registerOutcome = registerResult;
 registerOutcome
@@ -368,7 +379,7 @@ result
 errors.length
 => 1
 
-errors[0].includes(session.id)
+errors[0]?.includes(session.id)
 => true
 
 const fileLines = (await box.list(`_tmp/capture-staging/${session.id}`)).split("\n");
@@ -436,8 +447,8 @@ await sealStagingSession({ boxRoot: box.root, id: session.id });
 ```
 
 ```ts continue
-async function addOrFail(fn) {
-  try { await fn(); return "accepted"; } catch (error) { return error.name; }
+async function addOrFail(fn: () => Promise<void>) {
+  try { await fn(); return "accepted"; } catch (error) { return errorName(error); }
 }
 
 const photo = await addOrFail(() => addPhoto({
@@ -464,6 +475,7 @@ that landed while the session was open, and no stray bytes were written:
 
 ```ts continue
 const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+assert.ok(after);
 [after.photos.length, after.segments.length, after.files.length].join("/")
 => 1/0/0
 ```
@@ -480,7 +492,7 @@ specific to *media*, so preparation can keep moving the state forward:
 ```ts continue
 await setStagingState({ boxRoot: box.root, id: session.id, state: "delivered" });
 const delivered = await readStagingSession({ boxRoot: box.root, id: session.id });
-delivered.state
+delivered?.state
 => delivered
 ```
 

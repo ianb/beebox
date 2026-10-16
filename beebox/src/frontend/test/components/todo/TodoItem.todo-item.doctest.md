@@ -14,7 +14,8 @@ import { dateChips, hiddenInReading, recheckChip } from "../../../src/components
 
 globalThis.React = React;
 
-function render(props) {
+type TodoItemProps = React.ComponentProps<typeof TodoItem>;
+function render(props: Partial<TodoItemProps> & Pick<TodoItemProps, "status">) {
   return renderToStaticMarkup(React.createElement(TodoItem, {
     assigned: undefined,
     due: undefined,
@@ -25,12 +26,13 @@ function render(props) {
     cardPath: null,
     text: null,
     muted: false,
+    children: null,
     ...props,
   }, "Call the roofer"));
 }
 
 /** The checkbox's state and name, and the class on the todo's own words. */
-function summary(html) {
+function summary(html: string) {
   const box = /<input[^>]*>/.exec(html)?.[0] ?? "";
   const words = /<span class="([^"]*)">Call the roofer<\/span>/.exec(html)?.[1] ?? "(none)";
   return [
@@ -71,7 +73,7 @@ done; a parked or dropped todo, which a checkbox cannot express, leads with its
 status.
 
 ```ts
-["open", "done", "parked", "dropped"].map((status) => summary(render({ status, text: "Call the roofer" })).split(" | ")[2]).join(" / ")
+(["open", "done", "parked", "dropped"] as const).map((status) => summary(render({ status, text: "Call the roofer" })).split(" | ")[2]).join(" / ")
 => Call the roofer / Call the roofer / Parked: Call the roofer / Dropped: Call the roofer
 ```
 
@@ -103,7 +105,7 @@ dateChips({ due: "2026-09-15", start: undefined, plateState: "on-plate" }, forma
 dateChips({ due: "2026-09-15", start: "-1w", plateState: "escalated" }, format).map((c) => `${c.text} (${c.warning ? "warning" : "plain"})`).join(", ")
 => overdue · Sep 15 (warning), starts Sep 8 (plain)
 
-dateChips({ due: "2027-01-04", start: undefined, plateState: null }, format)[0].text
+dateChips({ due: "2027-01-04", start: undefined, plateState: null }, format)[0]?.text
 => due Jan 4, 2027
 ```
 

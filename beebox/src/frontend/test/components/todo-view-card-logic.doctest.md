@@ -23,14 +23,25 @@ import {
   statusFilterWithFinished,
   todoKey,
 } from "../../src/components/todo-view-card-logic.js";
+import type {
+  TodoNode,
+  TodoReduction,
+  TodoResult,
+  TodoRow,
+  TodoRowItem,
+} from "../../src/components/todo-view-card-logic.js";
 
 /** A row item, with only the fields this module reads. */
-function item(line, text, extra) {
+function item(line: number, text: string, extra?: Partial<TodoRowItem>): TodoRowItem {
   return {
     path: "_content/projects/Porch/Plan.doc.card",
     locator: { kind: "body", line },
     text,
     status: "open",
+    plateState: "quiet",
+    stirring: false,
+    seeAlso: [],
+    refs: [],
     sectionPath: [],
     parent: null,
     annotation: "",
@@ -39,16 +50,16 @@ function item(line, text, extra) {
   };
 }
 
-function at(line) {
+function at(line: number): TodoRowItem["locator"] {
   return { kind: "body", line };
 }
 
-function reduction(extra) {
+function reduction(extra?: Partial<TodoReduction>): TodoReduction {
   return { open: 0, done: 0, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null, ...(extra ?? {}) };
 }
 
 /** Nested `text > child, child` for a forest. */
-function shape(nodes) {
+function shape(nodes: TodoNode[]): string {
   return nodes
     .map((node) => (node.children.length === 0 ? node.item.text : `${node.item.text} > (${shape(node.children)})`))
     .join(", ");
@@ -179,7 +190,7 @@ whatever heading the parent sat beneath — so a child written after a later
 heading does not jump out of its own tree.
 
 ```ts
-const row = {
+const row: TodoRow = {
   card: { path: "_content/projects/Porch/Plan.doc.card", title: "Porch plan" },
   via: "scope",
   reduction: reduction({ open: 3, done: 1 }),
@@ -235,7 +246,7 @@ The agent count is read off `matching`, not the reduction: an `all`-scope,
 (boxholder items included), so only the matching subset is the agent's own.
 
 ```ts continue
-const agentResult = {
+const agentResult: TodoResult = {
   query: { here: "", glob: "**/*.card", includeReferring: false, group: "place" },
   reduction: reduction({ open: 9 }),
   issues: [],
@@ -272,7 +283,7 @@ Every open matching item that carries a date, across every row, in date order.
 records which one it is showing.
 
 ```ts
-const result = {
+const result: TodoResult = {
   query: { here: "", glob: "**/*.card", includeReferring: false, group: "place" },
   reduction: reduction(),
   issues: [],

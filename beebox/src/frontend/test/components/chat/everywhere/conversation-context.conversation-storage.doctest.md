@@ -10,6 +10,11 @@ import { storageScopeFor } from "../../../../src/lib/storage-scope.js";
 import { readConversation, saveConversation } from "../../../../src/components/chat/everywhere/conversation-context/conversation-state.js";
 import { readTrackedSessions, writeTrackedSessions } from "../../../../src/components/chat/ambient/tracked-sessions.js";
 import { readActiveSessions, writeActiveSessions } from "../../../../src/components/chat/ambient/AmbientReplies/active-sessions.js";
+
+// Only a ready selection is ever stored or restored, so only it has a label.
+function labelOf(selection: ReturnType<typeof readConversation>): string | undefined {
+  return selection?.kind === "ready" ? selection.label : undefined;
+}
 ```
 
 ```ts
@@ -35,7 +40,7 @@ readTrackedSessions(second)
 readActiveSessions(second)
 => []
 
-readConversation(first)?.label
+labelOf(readConversation(first))
 => First clone
 
 JSON.stringify(readTrackedSessions(first).map((session) => session.sessionId))
@@ -44,7 +49,7 @@ JSON.stringify(readTrackedSessions(first).map((session) => session.sessionId))
 JSON.stringify(readActiveSessions(first))
 => ["first-chat"]
 
-readConversation(production)?.label
+labelOf(readConversation(production))
 => Old selection
 
 values.has("bbx-conversation:test1")

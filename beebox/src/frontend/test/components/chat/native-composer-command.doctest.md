@@ -142,13 +142,14 @@ cannot act on one, so the dump must print it without a link rather than hand out
 a pointer that would break on click.
 
 ```ts continue
-JSON.stringify(nativeCommandResultFromDetail({
+const scanned = nativeCommandResultFromDetail({
   version: 2,
   id: "c-2",
   kind: "scan-controls",
   ok: true,
   controls: [{ id: "bbx-composer-mic", role: "button", label: "Start dictation", container: "Composer", disabled: false }],
-})?.controls?.[0].actions)
+});
+JSON.stringify(scanned !== null && "controls" in scanned ? scanned.controls[0]?.actions : undefined)
 => []
 ```
 

@@ -10,6 +10,7 @@ cookie, so a "scope" field on one shared store could not be contained (see
 cross-resolution.
 
 ```ts setup
+import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -90,12 +91,14 @@ from an abandoned credential.
 
 ```ts continue
 const listed = listScanTokens(box.root);
+const [listedFirst] = listed;
+assert.ok(listedFirst);
 JSON.stringify({
   count: listed.length,
-  name: listed[0].name,
-  revoked: listed[0].revoked,
-  usedRecently: typeof listed[0].lastUsedAt === "string",
-  fields: Object.keys(listed[0]).sort().join(","),
+  name: listedFirst.name,
+  revoked: listedFirst.revoked,
+  usedRecently: typeof listedFirst.lastUsedAt === "string",
+  fields: Object.keys(listedFirst).sort().join(","),
 })
 => {"count":1,"name":"laptop-scansnap","revoked":false,"usedRecently":true,"fields":"createdAt,createdBy,lastClient,lastUsedAt,name,revoked"}
 ```
@@ -131,7 +134,11 @@ charset is conservative.
 
 ```ts continue
 await createScanToken(box.root, { name: "desk-scanner", createdBy: null });
-const nameError = (name) => createScanToken(box.root, { name, createdBy: null }).then(() => "no error", (e) => e.name);
+const nameError = (name: string) =>
+  createScanToken(box.root, { name, createdBy: null }).then(
+    () => "no error",
+    (e: unknown) => (e instanceof Error ? e.name : String(e)),
+  );
 
 await nameError("desk-scanner")
 => DuplicateScanTokenNameError
@@ -152,6 +159,7 @@ check rejects it, but because each resolver reads a different file.
 ```ts continue
 const ticket = createMobilePairingTicket(box.root, { createdBy: "owner@example.com" });
 const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "phone" });
+assert.ok(device);
 const scan = await createScanToken(box.root, { name: "uploader", createdBy: null });
 
 // A mobile device token is worthless against the scan store...
@@ -211,7 +219,7 @@ await resolveScanRequestAuth(idBox.root, {
   "x-scan-client-build": "16e177c0",
   "x-scan-client-built-at": "2026-09-14T18:46:01.243Z",
 });
-JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
+JSON.stringify(listScanTokens(idBox.root)[0]?.lastClient)
 => {"contract":"1","build":"16e177c0","builtAt":"2026-09-14T18:46:01.243Z"}
 ```
 
@@ -224,7 +232,7 @@ await resolveScanRequestAuth(idBox.root, {
   "x-scan-contract": "1",
   "x-scan-client-build": "source",
 });
-JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
+JSON.stringify(listScanTokens(idBox.root)[0]?.lastClient)
 => {"contract":"1","build":"source","builtAt":null}
 ```
 
@@ -237,7 +245,7 @@ request an older uploader made.
 
 ```ts continue
 await resolveScanRequestAuth(idBox.root, { authorization: `Bearer ${idToken.token}` });
-JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
+JSON.stringify(listScanTokens(idBox.root)[0]?.lastClient)
 => null
 ```
 
@@ -250,7 +258,7 @@ would otherwise call every pre-existing uploader stale.
 const oldBox = await makeTmpBox();
 const oldToken = await createScanToken(oldBox.root, { name: "older-uploader", createdBy: null });
 await resolveScanRequestAuth(oldBox.root, { authorization: `Bearer ${oldToken.token}` });
-JSON.stringify(listScanTokens(oldBox.root)[0].lastClient)
+JSON.stringify(listScanTokens(oldBox.root)[0]?.lastClient)
 => null
 ```
 
@@ -262,7 +270,7 @@ await resolveScanRequestAuth(oldBox.root, {
   authorization: `Bearer ${oldToken.token}`,
   "x-scan-client-build": "x".repeat(5000),
 });
-listScanTokens(oldBox.root)[0].lastClient?.build?.length
+listScanTokens(oldBox.root)[0]?.lastClient?.build?.length
 => 100
 ```
 

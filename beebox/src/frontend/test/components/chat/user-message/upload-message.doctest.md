@@ -12,6 +12,7 @@ mattered more than the usual raw-markup annoyance because their own introduction
 rides *inside* the body, so their words were wrapped in angle brackets too.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { parseUploadWrapper } from "../../../../src/components/chat/user-message/upload-message.js";
 ```
 
@@ -25,6 +26,7 @@ Shop exterior
 
 16 files uploaded (135 MB).
 </upload>`);
+assert.ok(model);
 JSON.stringify({ files: model.files, bytes: model.bytes, note: model.note, summary: model.summary, failed: model.failed })
 => {"files":16,"bytes":"135 MB","note":"Shop exterior","summary":"16 files uploaded (135 MB).","failed":0}
 ```
@@ -38,6 +40,7 @@ is the summary alone.
 const model = parseUploadWrapper(`<upload doc="tmp-upload/b/Batch.upload-batch.card" files="3" bytes="2 KB">
 3 files uploaded (2 KB).
 </upload>`);
+assert.ok(model);
 JSON.stringify({ note: model.note, summary: model.summary })
 => {"note":"","summary":"3 files uploaded (2 KB)."}
 ```
@@ -55,6 +58,7 @@ File them under 2026 travel.
 
 2 files uploaded (1 KB).
 </upload>`);
+assert.ok(model);
 JSON.stringify({ note: model.note, summary: model.summary })
 => {"note":"Receipts from the Tokyo trip.\n\nFile them under 2026 travel.","summary":"2 files uploaded (1 KB)."}
 ```
@@ -65,6 +69,7 @@ JSON.stringify({ note: model.note, summary: model.summary })
 const model = parseUploadWrapper(`<upload doc="tmp-upload/d/Batch.upload-batch.card" files="31" bytes="4.2 KB" failed="3">
 31 files uploaded (4.2 KB); 3 failed.
 </upload>`);
+assert.ok(model);
 JSON.stringify({ files: model.files, failed: model.failed })
 => {"files":31,"failed":3}
 ```

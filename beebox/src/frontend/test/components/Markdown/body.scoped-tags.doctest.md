@@ -18,9 +18,12 @@ import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
 
 globalThis.React = React;
 
-const render = (text: string, extra: Record<string, unknown> = {}): string =>
+const render = (text: string, extra: Pick<React.ComponentProps<typeof Markdown>, "tags" | "components"> = {}): string =>
   renderToStaticMarkup(
-    React.createElement(BoxSlugProvider, { boxSlug: "test" }, React.createElement(Markdown, { onNavigate: () => undefined, ...extra }, text)),
+    React.createElement(BoxSlugProvider, {
+      boxSlug: "test",
+      children: React.createElement(Markdown, { onNavigate: () => undefined, ...extra, children: text }),
+    }),
   );
 
 const garnish: Schema = {
