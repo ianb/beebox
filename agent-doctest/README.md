@@ -376,6 +376,11 @@ the next full run stays warm. On beebox (about 1,000 doctests) a warm full run
 takes about 9s against 34s cold, and one doctest about 2.5s. `--no-cache`
 checks everything and writes nothing.
 
+`--only <file>...`, last on the line, narrows a run to the listed doctests,
+each under the `--project` group whose patterns match it; a listed file no
+group matches is an error. A hook passes a commit's staged doctests this way,
+so the package's script stays the one place that maps doctests to tsconfigs.
+
 The check builds its module with one difference from the run: type-only
 imports in example blocks, which the run erases, are moved to module scope.
 Two blocks that import different types under one name then collide

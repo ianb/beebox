@@ -122,7 +122,8 @@ fi
 # (bin/doctest-typecheck-staged.ts). Before the docs-only exit: a doctest is a
 # `.md` file. Only the staged doctests are checked, about 2.5s per tsconfig;
 # `pnpm test:changed` and the hourly full suite catch a source change that
-# breaks a doctest left unstaged.
+# breaks a doctest left unstaged. Like the typecheck below, it reads the
+# working tree, so a partially staged doctest is checked as it is on disk.
 if echo "$staged" | grep -q '\.doctest\.md$'; then
   echo "[pre-commit] .: doctest typecheck (staged doctests)"
   (cd "$REPO_DIR" && node --import tsx bin/doctest-typecheck-staged.ts)

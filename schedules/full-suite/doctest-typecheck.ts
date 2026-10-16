@@ -45,11 +45,9 @@ async function packagesWithScript(dir: string): Promise<string[]> {
 }
 
 export async function typecheckDoctests(dir: string): Promise<DoctestTypecheck> {
-  // beebox's test/exports.doctest.md typechecks the built package surface,
-  // whose declarations only build:cli writes; the checkout's pretest builds
-  // the CLI bundle alone.
-  const build = await execa("pnpm", ["--dir", path.join(dir, "beebox"), "run", "build:cli"], { reject: false, all: true });
-  if (build.exitCode !== 0) return { ok: false, output: `## beebox build:cli failed\n${build.all ?? ""}` };
+  // Each package's script prepares what its doctests need (beebox builds its
+  // export declarations first), so a failure here is the code's, not the
+  // checkout's: it stays open until a landing fixes it.
   const failures: string[] = [];
   for (const pkg of await packagesWithScript(dir)) {
     const result = await execa("pnpm", ["--silent", "typecheck:doctest"], { cwd: path.join(dir, pkg), reject: false, all: true });

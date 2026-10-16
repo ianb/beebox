@@ -53,7 +53,10 @@ function parseArgs(argv: string[]): Args {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? "";
     if (arg === "--only") {
-      only = new Set(argv.slice(i + 1).map((file) => resolve(file)));
+      const files = argv.slice(i + 1);
+      // An empty list would check nothing and pass; a caller with no files should not call.
+      if (files.length === 0) usage("--only needs at least one doctest");
+      only = new Set(files.map((file) => resolve(file)));
       break;
     } else if (arg === "--project") {
       const tsconfig = argv[++i];
