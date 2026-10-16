@@ -119,3 +119,27 @@ Top codes in beebox `test/`: TS7006 implicit-any parameter (1,184),
 TS2532/18047/18048/2531 possibly undefined or null (about 1,200), TS2345
 argument type (463), TS18046 unknown (425), TS2339 missing property (334),
 TS2554 argument count (315). No error fell on generated code.
+
+### State after the fix phase (2026-10-16)
+
+`typecheck:doctest` reports 0 errors in every package except one:
+`beebox/test/exports.doctest.md` imports `beebox/server`, which ships
+untyped (`tsconfig.declarations.json` leaves `src/exports/server.ts` out for
+TS2742 on the tRPC routers). The same doctest's `beebox/cards` and
+`beebox/schema` imports resolve to `dist/exports/*.d.ts`, which exist only
+after `build:cli`; a fresh checkout reports two more errors there until it
+has built. The full beebox suite passes (12,468 points).
+
+About 70 test bugs surfaced and were fixed in the tests: stale fake shapes,
+options that functions silently ignored (`created`, `recover`), missing
+required arguments (`baseUrl`, `scope`, `consumer`, `mode`), wrong context
+objects passed. No source behavior changed. Type-only source changes:
+`FakeChatBackend.hasWarm()` is declared, and `appendChunk` takes a
+`ChunkSink`. The remaining commented casts are listed with their source-side
+remedies in
+[narrower types would remove doctest casts](2026-10-16-narrow-types-to-remove-doctest-casts.md).
+Reviews: codex gpt-6-sol on the checker (two rounds) and on the final
+state; findings fixed or recorded in the commits.
+
+Not yet wired into `typecheck`, `test:changed`, or pre-commit; that waits
+for the boxholder.
