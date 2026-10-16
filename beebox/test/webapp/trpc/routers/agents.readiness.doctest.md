@@ -20,25 +20,19 @@ import { CONFIG_RELATIVE_PATH } from "../../../../src/webapp/box-config-write.js
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import type { EventBus } from "../../../../src/core/event-bus/core.js";
 import type { Services } from "../../../../src/services/container.js";
 import type { AgentReadiness } from "../../../../src/core/agent/readiness.js";
 
-const eventBus: EventBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-
 function ctxFor(boxRoot: string, services: Services, isOwner: boolean): TrpcContext {
-  return {
+  return trpcContext({
     boxRoot,
-    boxSlug: "test",
-    eventBus,
     services,
-    authed: true,
     user: isOwner ? { email: "owner@example.com", name: "Owner" } : { email: "member@example.com", name: "Member" },
     isOwner,
     isAuthenticatedOwner: isOwner,
-    actor: "user",
-  };
+  });
 }
 
 function callers(boxRoot: string, services: Services) {

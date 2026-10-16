@@ -14,21 +14,21 @@ empty `settingSources`. Every other run loads the box's project settings
 from the host user's `~/.claude`.
 
 ```ts setup
-import { buildQueryOptions } from "../../../../src/core/agent/invoke/run.js";
+import { buildQueryOptions, type RunAgentOptions } from "../../../../src/core/agent/invoke/run.js";
 import { invariant } from "../../../../src/shared/invariant.js";
 
 const CONTEXT = { env: {}, maxTurns: 4, binaryPath: null, appendedSystem: "" };
 const RUN = { boxRoot: "/box", systemPrompt: "", prompt: "hi" };
 
-function optionsFor(extra: Record<string, unknown>): Record<string, unknown> {
+function optionsFor(extra: Partial<RunAgentOptions>) {
   return buildQueryOptions({ ...RUN, ...extra }, CONTEXT);
 }
 
-/** The `settings` object of the built options. */
-function settingsFor(extra: Record<string, unknown>): Record<string, unknown> {
-  const settings = optionsFor(extra).settings;
-  invariant(typeof settings === "object" && settings !== null, "settings is an object");
-  return Object.fromEntries(Object.entries(settings));
+/** The `settings` object of the built options (the SDK also accepts a settings file path). */
+function settingsFor(extra: Partial<RunAgentOptions>) {
+  const { settings } = optionsFor(extra);
+  invariant(typeof settings === "object", "settings is an object");
+  return settings;
 }
 ```
 

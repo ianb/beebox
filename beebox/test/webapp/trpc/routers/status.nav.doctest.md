@@ -10,6 +10,7 @@ payload) keeps its fuller shape.
 ```ts setup
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { runTodoQuery } from "../../../../src/core/todo/query.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
@@ -24,17 +25,7 @@ async function collectTodos(boxRoot: string) {
 }
 
 function caller(box: TmpBox) {
-  const ctx: TrpcContext = {
-    boxRoot: box.root,
-    boxSlug: "t",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: true,
-    isAuthenticatedOwner: false,
-    actor: "none",
-  };
+  const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", actor: "none" });
   return statusRouter.createCaller(ctx);
 }
 

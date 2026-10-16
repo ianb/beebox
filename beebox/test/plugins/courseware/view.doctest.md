@@ -21,7 +21,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import type { ViewProps } from "../../../src/core/views/types.js";
+import { buildProps } from "../../../src/cli/commands/view/command.js";
 import { loadViewCards } from "../../../src/core/views/cards.js";
 import { parseConcepts } from "../../../src/plugins/courseware/view/concept-data.js";
 import { buildGraph } from "../../../src/plugins/courseware/view/graph/model.js";
@@ -50,15 +50,7 @@ async function activateCourseware(box: TmpBox) {
 // card loader, render inside the node view host.
 async function renderConceptMap(box: TmpBox, params: Record<string, string>) {
   const { cards, files } = await loadViewCards(box.root, ["**/*.concept-map.card"]);
-  const unavailable = (helper: string) => (): never => { throw new Error(`${helper}() is not available while rendering`); };
-  const props: ViewProps = {
-    cards, files, params, boxSlug: "test", navigate: () => {}, reportActivity: () => {},
-    viewHistory: { state: {}, canPush: false, pushState: () => "replaced", replaceState: () => {} },
-    fileUrl: (path) => `/api/files/${path}`,
-    imageUrl: (path) => `/api/images/${path}`,
-    readFile: unavailable("readFile"), writeFile: unavailable("writeFile"), appendFile: unavailable("appendFile"),
-    commitFile: unavailable("commitFile"), adapterFetch: unavailable("adapterFetch"),
-  };
+  const props = buildProps({ cards, files, params, boxSlug: "test" });
   return renderToString(createElement(NodeViewHostProvider, { boxSlug: "test", children: createElement(view.default, props) }));
 }
 

@@ -28,7 +28,6 @@ import { createFakeChatBackend } from "../../../../src/services/claude-chat/core
 import { createInFlightSends } from "../../../../src/webapp/routes/chat/send-dedup.js";
 import type { ChatBackend } from "../../../../src/services/claude-chat-types.js";
 import { createEventBus, type BusEvent } from "../../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 import { createServer } from "../../../../src/webapp/server/app.js";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 
@@ -108,7 +107,7 @@ async function restartOver(boxRoot: string, chatBackend: ChatBackend): Promise<R
   });
   const recorded: string[] = [];
   eventBus.subscribe({
-    listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+    listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
   return {
     server,
@@ -141,7 +140,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 const gate = openSendGate();
@@ -209,7 +208,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
 });
 
 backend.failNextStart = new Error("spawn EBADF");

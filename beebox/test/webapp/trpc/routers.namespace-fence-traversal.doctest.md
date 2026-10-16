@@ -22,6 +22,7 @@ import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
 import { cardRouter } from "../../../src/webapp/trpc/routers/card.js";
 import { statusRouter } from "../../../src/webapp/trpc/routers/status.js";
 import { historyRouter } from "../../../src/webapp/trpc/routers/history.js";
@@ -40,11 +41,7 @@ async function trpcDisplayFormMessage(fn: () => Promise<unknown>): Promise<strin
 
 /** An owner context for the box at `boxRoot`; the fence under test reads only the path. */
 function ownerCtx(boxRoot: string): TrpcContext {
-  return {
-    boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true,
-    isAuthenticatedOwner: true, actor: "user", services: {},
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-  };
+  return trpcContext({ boxRoot, boxSlug: "t", isAuthenticatedOwner: true });
 }
 
 /** The `error` string of a JSON error body. */

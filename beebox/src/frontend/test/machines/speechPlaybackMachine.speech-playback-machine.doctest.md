@@ -8,20 +8,8 @@ the UI does not make a rapid series of playback failures look successful.
 
 ```ts setup
 import { createActor } from "xstate";
-import { speechPlaybackMachine } from "../../src/machines/speechPlaybackMachine.js";
-import type { getTTSClient } from "../../src/lib/audio/tts-client/client.js";
+import { speechPlaybackMachine, type SpeechClient } from "../../src/machines/speechPlaybackMachine.js";
 import type { SpeechSegment } from "../../src/lib/audio/speech-parsing/parse.js";
-
-type TTSClient = ReturnType<typeof getTTSClient>;
-
-/**
- * TTSClient has private members, so no object literal can satisfy it. The
- * machine calls only speak, prefetch, and stop; a fake of those three is
- * vouched for here, once.
- */
-function fakeTtsClient(fake: Pick<TTSClient, "speak" | "prefetch" | "stop">): TTSClient {
-  return fake as TTSClient;
-}
 
 Object.defineProperty(globalThis, "navigator", {
   value: { userAgent: "iPhone" },
@@ -49,7 +37,7 @@ the queue finishes, with the error's message kept as the reason the chunk
 shows.
 
 ```ts
-const ttsClient = fakeTtsClient({
+const ttsClient: SpeechClient = {
   async speak(text, options) {
     options?.onPlaybackStarted?.();
     if (text === "broken") throw new Error("media playback rejected");
@@ -58,7 +46,7 @@ const ttsClient = fakeTtsClient({
     throw new Error("prefetch is disabled for the iPhone test user agent");
   },
   stop() {},
-});
+};
 const playbackErrors: unknown[][] = [];
 const originalConsoleError = console.error;
 console.error = (...args) => playbackErrors.push(args);
@@ -91,7 +79,7 @@ element's playback callback fires, then change to `playing`.
 ```ts
 let playbackStarted: (() => void) | undefined;
 let finishPlayback = () => {};
-const ttsClient = fakeTtsClient({
+const ttsClient: SpeechClient = {
   speak(_text, options) {
     playbackStarted = options?.onPlaybackStarted;
     return new Promise<void>((resolve) => {
@@ -102,7 +90,7 @@ const ttsClient = fakeTtsClient({
     throw new Error("prefetch is disabled for the iPhone test user agent");
   },
   stop() {},
-});
+};
 const actor = createActor(speechPlaybackMachine, { input: {} });
 actor.start();
 actor.send({

@@ -28,6 +28,8 @@ node-arg:
   # chat, and the plugin installer behind it re-points the GLOBAL `beebox`
   # marketplace at whichever checkout is running. See the module.
   - --import=./test/helpers/isolate-codex-home.ts
+  # Chat-session logs are a server's record; in tests they are noise. See the module.
+  - --import=./test/helpers/quiet-chat-session-log.ts
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md

@@ -16,13 +16,13 @@ import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 const events: string[] = [];
 
 function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean }) {
-  const ctx: TrpcContext = {
+  const ctx: TrpcContext = trpcContext({
     boxRoot,
-    boxSlug: "test",
     eventBus: {
       emit: () => 0,
       emitTransient: (name, data) => { events.push(`${name} ${"path" in data ? data.path : undefined}`); },
@@ -32,13 +32,10 @@ function caller(boxRoot: string, options?: { authed?: boolean; isOwner?: boolean
       prune: () => 0,
       close: () => {},
     },
-    services: {},
-    user: null,
     authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
     isAuthenticatedOwner: options?.isOwner !== false,
-    actor: "user",
-  };
+  });
   return appRouter.createCaller(ctx);
 }
 

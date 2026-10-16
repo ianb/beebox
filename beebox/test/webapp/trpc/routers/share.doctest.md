@@ -7,23 +7,14 @@ card type and fallback body as Clerk.
 ```ts setup
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import assert from "node:assert/strict";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { shareDestinationsOutput } from "../../../../src/webapp/trpc/routers/share/contract.js";
 
 function caller(boxRoot: string) {
-  return appRouter.createCaller({
-    boxRoot,
-    boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
-    services: {},
-    user: null,
-    authed: true,
-    isOwner: false,
-    isAuthenticatedOwner: false,
-    actor: "none",
-  });
+  return appRouter.createCaller(trpcContext({ boxRoot, isOwner: false, actor: "none" }));
 }
 ```
 

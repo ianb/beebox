@@ -12,6 +12,12 @@ import { isMobileDeviceActive, type MobileBearerIdentity } from "../core/mobile/
 import type { MobileRequestAuth } from "../core/mobile/request-auth.js";
 import { getPublicUrl } from "../lib/public-url.js";
 
+/** The reply methods these helpers call. A FastifyReply is one. */
+export interface CookieReply {
+  setCookie: (...args: Parameters<FastifyReply["setCookie"]>) => unknown;
+  clearCookie: (...args: Parameters<FastifyReply["clearCookie"]>) => unknown;
+}
+
 /**
  * Attach a freshly-minted `bbx_mobile` to a reply.
  *
@@ -25,7 +31,7 @@ import { getPublicUrl } from "../lib/public-url.js";
  * holding cookies for several boxes never offers one box's cookie to another.
  */
 export function setMobileSessionCookie(
-  reply: FastifyReply,
+  reply: CookieReply,
   opts: { boxRoot: string; boxSlug: string; identity: MobileBearerIdentity },
 ): void {
   const value = signMobileSession(opts.boxRoot, {
@@ -60,7 +66,7 @@ export function setMobileSessionCookie(
  * the remainder of its TTL.
  */
 export function renewMobileSessionCookie(
-  reply: FastifyReply,
+  reply: CookieReply,
   opts: { boxRoot: string; boxSlug: string; auth: MobileRequestAuth },
 ): void {
   const { boxRoot, boxSlug, auth } = opts;

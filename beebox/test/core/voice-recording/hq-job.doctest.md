@@ -12,7 +12,6 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import type { EventBus } from "../../../src/core/event-bus/core.js";
-import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 import type { EventMap } from "../../../src/core/event-bus/schemas.js";
 import type { StagingSession } from "../../../src/core/capture/staging-schema.js";
 import type { HqTranscriptionService } from "../../../src/shared/transcription-services.js";
@@ -91,7 +90,7 @@ async function requestHq(box: TmpBox, session: StagingSession, opts?: { requeste
 type VoiceStatusEvent = EventMap["voice-recording-status"];
 function collectBusEvents(eventBus: EventBus) {
   const events: VoiceStatusEvent[] = [];
-  eventBus.subscribe({ listener: (e) => { if (e.event === "voice-recording-status") events.push(eventSchemas["voice-recording-status"].parse(e.data)); } });
+  eventBus.subscribe({ listener: (e) => { if (e.event === "voice-recording-status") events.push(e.data); } });
   return events;
 }
 

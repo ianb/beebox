@@ -17,13 +17,13 @@ import { execFileSync } from "node:child_process";
 import { TRPCError } from "@trpc/server";
 import type { z } from "zod";
 import type { sendInput } from "../../../../src/webapp/trpc/clerk-contract.js";
-import type { EventBus } from "../../../../src/core/event-bus/core.js";
 import type { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import assert from "node:assert/strict";
 import type { ReserveResult } from "../../../../src/core/chat/session/reserve.js";
 import type { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import type { FakeJevService, JevService } from "../../../../src/services/jev.js";
 import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { ChatRuntime, SendOutcome, SendTargetArgs, SendTargetResult, UserMessageSendArgs } from "../../../../src/webapp/chat-runtime.js";
 import { setChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
@@ -32,10 +32,13 @@ import { executeMove } from "../../../../src/core/commands/move/command.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-const EVENT_BUS: EventBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
 function caller(boxRoot: string, jev: JevService | undefined) {
-  return appRouter.createCaller({ boxRoot, boxSlug: "test", authed: true, isOwner: true, isAuthenticatedOwner: true, actor: "user", services: jev === undefined ? {} : { jev },
-    user: { email: "ari@example.com", name: "Ari" }, eventBus: EVENT_BUS });
+  return appRouter.createCaller(trpcContext({
+    boxRoot,
+    isAuthenticatedOwner: true,
+    services: jev === undefined ? {} : { jev },
+    user: { email: "ari@example.com", name: "Ari" },
+  }));
 }
 
 /** A chat runtime that records each send and answers a repeated message id as a duplicate. */

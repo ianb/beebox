@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { clearOpenRouterCatalogCache } from "../../../../src/core/openrouter-catalog.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
@@ -28,17 +29,12 @@ async function openrouterFetch(url: string) {
 }
 
 function caller(server: TestServer, opts?: { isOwner?: boolean }) {
-  return appRouter.createCaller({
+  return appRouter.createCaller(trpcContext({
     boxRoot: server.boxRoot,
-    boxSlug: "test",
     eventBus: server.eventBus,
     services: { openrouterFetch },
-    user: null,
-    authed: true,
     isOwner: opts?.isOwner !== false,
-    isAuthenticatedOwner: false,
-    actor: "user",
-  });
+  }));
 }
 
 async function message(run: () => Promise<unknown>): Promise<string> {

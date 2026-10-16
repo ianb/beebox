@@ -91,17 +91,6 @@ export interface TestServerOptions {
   scanPromoteRun?: ((boxRoot: string) => Promise<void>) | undefined;
 }
 
-// Filter chat-history backfill noise: every makeTestServer() boots a fresh
-// box, which triggers the one-time "Scanning JSONLs / Done — added N
-// session(s)" log pair from chat-session-history.ts. Production-useful but
-// pure noise across hundreds of route tests.
-const _origLog = console.log;
-console.log = (...args: unknown[]) => {
-  const first = args[0];
-  if (typeof first === "string" && first.startsWith("[chat-history:")) return;
-  _origLog(...args);
-};
-
 // A fully-initialized box (directories + git repo + initial commit) is
 // expensive to stamp out: `initBox` plus two `git` subprocess spawns. Route
 // doctests boot a server many times per file, and those serialized git spawns
