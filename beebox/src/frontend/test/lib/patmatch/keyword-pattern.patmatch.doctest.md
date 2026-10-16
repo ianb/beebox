@@ -4,7 +4,7 @@
 
 ```ts setup
 import { KeywordPattern, TESTING_EXPORTS } from "../../../src/lib/patmatch/keyword-pattern.js";
-const { normalizeWord, tokenizeInput } = TESTING_EXPORTS;
+const { normalizeWord } = TESTING_EXPORTS;
 ```
 
 ## Word normalization

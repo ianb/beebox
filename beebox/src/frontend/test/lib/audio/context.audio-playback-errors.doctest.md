@@ -31,7 +31,7 @@ class RejectingAudio {
   }
 }
 
-globalThis.Audio = RejectingAudio;
+Object.defineProperty(globalThis, "Audio", { value: RejectingAudio, configurable: true });
 ```
 
 ## A rejected play is a failed segment

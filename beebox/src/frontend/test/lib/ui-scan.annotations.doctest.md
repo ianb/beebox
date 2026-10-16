@@ -55,8 +55,8 @@ function planWebIds(plan: string): string[] {
     const cells = row.split("|").slice(1);
     // A cell that opens with an em dash is "no counterpart on this platform",
     // with or without a parenthetical saying why.
-    if (cells[1].trim().startsWith("\u2014")) return [];
-    return [...cells[0].matchAll(/`(bbx-[\w-]+)`/g)].map((m) => m[1]);
+    if (cells[1]?.trim().startsWith("\u2014")) return [];
+    return [...(cells[0] ?? "").matchAll(/`(bbx-[\w-]+)`/g)].flatMap((m) => (m[1] === undefined ? [] : [m[1]]));
   });
 }
 

@@ -100,7 +100,7 @@ JSON.stringify(store.get().images.map((i) => i.id))
 const store = createEmissionStore();
 store.editor.setText("see [file#1] please");
 const fid = store.editor.nextFileId();
-store.editor.addFile({ id: fid, path: "_tmp/report.pdf", originalName: "report.pdf", size: 10, mimetype: "application/pdf" });
+store.editor.addFile({ id: fid, originalName: "report.pdf", size: 10, mimetype: "application/pdf", state: { status: "uploaded", path: "_tmp/report.pdf" } });
 store.get().files.length
 => 1
 
@@ -145,7 +145,7 @@ store.editor.addImage({ id: a, mimeType: "image/png", dataBase64: "x", objectUrl
 const b = store.editor.nextImageId();
 store.editor.addImage({ id: b, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:b", byteLength: 1, original: { status: "uploading", progress: 0 } });
 const f = store.editor.nextFileId();
-store.editor.addFile({ id: f, path: "_tmp/x.txt", originalName: "x.txt", size: 1, mimetype: "text/plain" });
+store.editor.addFile({ id: f, originalName: "x.txt", size: 1, mimetype: "text/plain", state: { status: "uploaded", path: "_tmp/x.txt" } });
 
 const result = store.editor.reset("attachments");
 JSON.stringify(result.removedImageObjectUrls)
@@ -221,7 +221,7 @@ is how the store is told those ids are taken, so a later mint can't collide:
 
 ```ts
 const store = createEmissionStore();
-store.editor.addImage({ id: 5, mimeType: "image/png", dataBase64: "x", objectUrl: "data:x", byteLength: 1 });
+store.editor.addImage({ id: 5, mimeType: "image/png", dataBase64: "x", objectUrl: "data:x", byteLength: 1, original: { status: "uploading", progress: 0 } });
 store.editor.reserveIds({ image: 5 });
 store.editor.nextImageId()
 => 6
