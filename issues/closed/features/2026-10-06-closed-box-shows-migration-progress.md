@@ -3,10 +3,20 @@ title: "A box closed for migration shows only \"closed\"; it should show what is
 workstream: unattached
 area: beebox
 labels: [migrations]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — a local box closed by the hourly migration sweep
 ---
+
+**Closed 2026-10-16:** partly implemented in merge `2a6776e92` (the closed
+page and 503 body show the current step and when it began). The boxholder
+declined the rest of "Wanted" as overhead and breakage surface out of
+proportion to a page seen for minutes: countable progress needs writes inside
+every migration loop, a self-updating page touches the iOS contract, and a
+no-progress signal depends on the counters. A stuck run is already reported
+from outside: the convergence schedule's 25-minute kill raises a "Timed out;
+migration remains incomplete" alert (`schedules/box-convergence/run.ts`).
 
 On 2026-10-06 the boxholder found a local box "seemingly closed for
 migration" with no sign of what was happening or when it would end. The
@@ -31,8 +41,8 @@ file was re-hashed. That is fixed
 ([closed bug](../closed/bugs/2026-10-16-docs-refresh-rehashes-every-annexed-file-while-box-is-closed.md)),
 and it is very likely what made the 2026-10-06 run slow. Still open from that
 bug: nothing alerts while a holder keeps the box closed. The convergence
-schedule kills a box's run after 25 minutes (`schedules/box-convergence/run.ts`),
-and nothing reports the run before that.
+schedule kills a box's run after 25 minutes and alerts then
+(`schedules/box-convergence/run.ts`); nothing reports the run before that.
 
 **2026-10-16, partly done:** the boxholder chose to show the current step and
 deferred a time budget with an alert. Docs refresh and the migration sweep now
