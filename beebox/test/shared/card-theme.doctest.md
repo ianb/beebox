@@ -312,3 +312,37 @@ JSON.stringify([
 ```ts cleanup
 await lintBox.cleanup();
 ```
+
+Bloom is both a system and card material. Choosing it supplies the approved
+cutouts stock to unthemed cards; an explicit Paper card keeps its own material.
+
+```ts
+validateSystemThemeChoice({ name: "bloom" })
+=> { choice: { name: "bloom", stock: "cutouts" }, problem: null }
+
+systemCardThemes("bloom")
+=> ["bloom", "letter-set", "post-it"]
+
+resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "bloom" })
+=> { choice: { name: "bloom", stock: "cutouts" }, problem: null, origin: { kind: "system", theme: "bloom" } }
+
+resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "bloom", cardChoice: { name: "paper", stock: "blue" } }).choice
+=> { name: "paper", stock: "blue" }
+```
+
+Ribbon supplies the flow stock to unthemed cards while retaining explicit choices.
+Its paired card list puts its own material first.
+
+```ts
+validateSystemThemeChoice({ name: "ribbon" })
+=> { choice: { name: "ribbon", stock: "flow" }, problem: null }
+
+systemCardThemes("ribbon")
+=> ["ribbon", "paper", "post-it"]
+
+resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "ribbon" })
+=> { choice: { name: "ribbon", stock: "flow" }, problem: null, origin: { kind: "system", theme: "ribbon" } }
+
+resolveCardTheme({ path: "_content/Seed.memo.card", type: "memo", presentation: { status: "absent" }, systemTheme: "ribbon", cardChoice: { name: "paper", stock: "blue" } }).choice
+=> { name: "paper", stock: "blue" }
+```

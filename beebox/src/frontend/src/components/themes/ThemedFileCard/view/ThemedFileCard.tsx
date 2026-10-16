@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
-import { withBase } from "../../../api";
-import { ExternalIconLink } from "../../ui/ExternalIconLink";
+import { withBase } from "../../../../api";
+import { ExternalIconLink } from "../../../ui/ExternalIconLink";
 import { resolveCardTheme } from "@shared/card-theme/core";
-import { CardThemeSurface } from "./CardThemeSurface";
+import { CardThemeSurface } from "../CardThemeSurface";
 import { ThemedFileCardProperties } from "./PropertiesFace";
-import { useBoxPresentation } from "../BoxPresentationProvider";
-import type { FileData, FileRenderer } from "../../../file-type-registry";
-import type { FileViewMode } from "../../file-view-types";
-import { cardTitle } from "../../../lib/card-title";
-import { Button } from "../../ui/Button";
-import { CardActions } from "../../card-actions/CardActions";
-import { OpenInPanelButton } from "../../ui/OpenInPanelButton";
-import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
-import { isCardPath } from "../../file-view-data";
+import { useBoxPresentation } from "../../BoxPresentationProvider";
+import type { FileData, FileRenderer } from "../../../../file-type-registry";
+import type { FileViewMode } from "../../../file-view-types";
+import { cardTitle } from "../../../../lib/card-title";
+import { Button } from "../../../ui/Button";
+import { CardActions } from "../../../card-actions/CardActions";
+import { OpenInPanelButton } from "../../../ui/OpenInPanelButton";
+import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
+import { isCardPath } from "../../../file-view-data";
 import { readCardSymbol } from "@shared/card-symbol";
 
 interface ThemedFileCardProps {

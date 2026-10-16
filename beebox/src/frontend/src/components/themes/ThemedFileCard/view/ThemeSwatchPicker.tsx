@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { THEME_CATALOG, systemCardThemes, type ResolvedThemeChoice, type ThemeChoice, type ThemeDescriptor } from "@shared/card-theme/core";
-import { trpc } from "../../../lib/trpc/client";
-import { themeLabel } from "../../../themes/registry";
-import { useBoxPresentation } from "../BoxPresentationProvider";
-import { Button } from "../../ui/Button";
+import { trpc } from "../../../../lib/trpc/client";
+import { themeLabel } from "../../../../themes/registry";
+import { useBoxPresentation } from "../../BoxPresentationProvider";
+import { Button } from "../../../ui/Button";
 
 const CARD_THEMES: readonly ThemeDescriptor[] = THEME_CATALOG.filter((theme) => !theme.systemOnly);
 

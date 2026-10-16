@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-16T03:47:33Z
-Total documents: 530
+Generated: 2026-10-16T06:47:47Z
+Total documents: 534
 
 ## Issues
 
@@ -12,6 +12,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/acknowledgements-backfill.md** — "Acknowledgements backfill: credit adopted external ideas" (319 lines) · shipped history · implemented
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines) · implementation review
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
+- **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
@@ -58,10 +59,12 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/resilient-voice-recording.review.md** — "Cross-model review — resilient-voice-recording (round 1)" (139 lines) · implementation review
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (412 lines) · shipped history · implemented
 - **docs/implemented-plans/retire-type-specific-core-tags.review.md** — "Plan Engineering Review — retire-type-specific-core-tags" (66 lines) · implementation review
+- **docs/implemented-plans/ribbon-theme.md** — "Ribbon system and card theme" (214 lines) · shipped history · implemented
 - **docs/implemented-plans/scan-uploader-version-drift.md** — "The scan uploader learns when it has drifted from the box" (587 lines) · shipped history · implemented
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (382 lines) · shipped history · implemented
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
+- **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines) · plan review
@@ -638,7 +641,7 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 234 lines
+Title: "Frontend Conventions" | 237 lines
 
 Referenced by:
 - AGENTS.md:42 (link) — - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source
@@ -658,6 +661,7 @@ Referenced by:
 - docs/implemented-plans/responsive-figures.md:43 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:112 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
 - docs/implemented-plans/stack-and-text-roles.md:39 (mention) — | Docs (`beebox/frontend.md`) | ~30, reported separately |
+- docs/implemented-plans/theme-authoring-studio.md:128 (mention) — and a pointer in frontend.md, so no context or skill audit is needed.
 - docs/implemented-plans/top-nav-ia.md:120 (mention) — palette. Read frontend.md before writing UI"; components own their
 - docs/implemented-plans/user-location.md:72 (mention) — - `beebox/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/agent-docs.md:398 (mention) — (`beebox/AGENTS.md`, `code-style.md`, `frontend.md`), which are the most
@@ -667,6 +671,7 @@ Referenced by:
 - docs/plans/narration-mode.md:197 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - docs/plans/operator-member-password-reset.md:101 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
 - docs/plans/publish-sites-admin.md:163 (mention) — **Direction:** The starter is a conventional site-local React/Tailwind project with pinned own dependencies and its own
+- docs/theme-authoring.md:56 (link) — fixed theme-tour cards using the instructions in [frontend.md](../frontend.md)
 - frontend.md:219 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../dev/devprocess-talk/inventory.md:821 (mention) — | Craft skills bbx-debug, bbx-frontend, bbx-guide-testing | 2026-06-20 | 2026-10-07 19e261eb9 | "Current models debug an
 - ../dev/devprocess-talk/reports/sweep-instructions.md:25 (mention) — - **Appeared:** 2026-03-06 bedf968cf "Rewrite CLAUDE.md for clarity and add self-improvement meta-instruction" (body: "A
@@ -693,6 +698,7 @@ References:
 - → docs/client-debug-log.md (link)
 - → docs/testing/tours.md (link)
 - → frontend.md (mention)
+- → docs/theme-authoring.md (link)
 
 #### README.md
 
@@ -2238,6 +2244,17 @@ References:
 - → docs/client-debug-log.md (link)
 - → docs/box-work.md (link)
 
+#### docs/theme-authoring.md
+
+Title: "Authoring themes" | 60 lines | current reference
+
+Referenced by:
+- frontend.md:222 (link) — [theme authoring studio](docs/theme-authoring.md).
+
+References:
+- → docs/box/card-themes.md (link)
+- → frontend.md (link)
+
 #### docs/todo-security.md
 
 Title: "Security TODOs (dissolved)" | 31 lines | current reference
@@ -2418,11 +2435,12 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 176 lines | current reference
+Title: "Card themes" | 192 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
-- docs/implemented-plans/card-reading-properties.md:408 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
+- docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
+- docs/theme-authoring.md:55 (link) — Follow [card themes](box/card-themes.md) for the product contract. Then install the
 - frontend.md:13 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 
 #### docs/box/history.md
@@ -2736,7 +2754,7 @@ Referenced by:
 - docs/implemented-plans/box-schema-reload.md:253 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:54 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/card-prominence.md:102 (mention) — `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
-- docs/implemented-plans/card-reading-properties.md:408 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
+- docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
 - docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/cards/schemas.md:72` and the
 - docs/implemented-plans/chat-titles.md:484 (mention) — Codex-revision note); `docs/cards/schemas.md` and the
 - docs/implemented-plans/docs-reorg.gap-analysis.md:50 (mention) — prime retrieval field. `docs/cards/schemas.md` never mentions it and
@@ -3611,6 +3629,12 @@ References:
 - → docs/implemented-plans/agent-field-tests.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 
+#### docs/implemented-plans/bloom-theme.md **[ORPHAN]**
+
+Title: "Bloom system and card theme" | 213 lines | shipped history | implemented
+
+No references in or out.
+
 #### docs/implemented-plans/box-agents-md.md
 
 Title: "Boxes author AGENTS.md instead of CLAUDE.md" | 582 lines | shipped history | implemented
@@ -3924,7 +3948,7 @@ References:
 
 #### docs/implemented-plans/card-reading-properties.md
 
-Title: "Card fronts show the content; Properties shows the card" | 425 lines | shipped history | implemented
+Title: "Card fronts show the content; Properties shows the card" | 426 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:13 (link) — **Closed:** implemented by the card-reading-properties plan (commits 31cebfecd to 4481c0246, merged to main): card front
@@ -6317,6 +6341,13 @@ References:
 - → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 
+#### docs/implemented-plans/ribbon-theme.md **[ORPHAN]**
+
+Title: "Ribbon system and card theme" | 214 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md (frontmatter)
+
 #### docs/implemented-plans/router-state-formalization.md
 
 Title: "Router Phase 2 — WorktreeState Formalization" | 262 lines | shipped history | implemented
@@ -6720,6 +6751,14 @@ References:
 - → docs/plans/installation-story.md (mention)
 - → docs/server/health-checks.md (mention)
 - → docs/install/agent.md (mention)
+
+#### docs/implemented-plans/theme-authoring-studio.md **[ORPHAN]**
+
+Title: "Theme authoring studio" | 171 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md (frontmatter)
+- → frontend.md (mention)
 
 #### docs/implemented-plans/todo-annotation.md
 

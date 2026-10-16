@@ -63,6 +63,28 @@ export const THEME_CATALOG = [
     chrome: false,
     systemOnly: false,
   },
+  {
+    name: "bloom",
+    label: "Bloom",
+    stocks: ["cutouts"],
+    defaultStock: "cutouts",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["bloom", "letter-set", "post-it"],
+  },
+  {
+    name: "ribbon",
+    label: "Ribbon",
+    stocks: ["flow"],
+    defaultStock: "flow",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["ribbon", "paper", "post-it"],
+  },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];

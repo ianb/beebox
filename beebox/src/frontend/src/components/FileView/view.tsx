@@ -19,7 +19,7 @@
  *                     provides its own header).
  */
 
-import { ThemedFileCard } from "../themes/ThemedFileCard/view";
+import { ThemedFileCard } from "../themes/ThemedFileCard/view/ThemedFileCard";
 import { useVisibleCardSelectionSink, selectionReceiver } from "../chat/everywhere/card-context/context";
 import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";

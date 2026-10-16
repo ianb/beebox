@@ -96,8 +96,8 @@ shouldAcknowledgeAdminArrival({ arrival, visible: true, loading: false })
 Dev fixtures are the only box paths classified outside product runtime.
 
 ```ts
-JSON.stringify([boxRouteSurface("/dev/speech"), boxRouteSurface("/dev/capture-mode"), boxRouteSurface("/views/_config/interface/admin.card"), boxRouteSurface("/unknown")])
-=> ["dev-harness","dev-harness","product","product"]
+JSON.stringify([boxRouteSurface("/dev/speech"), boxRouteSurface("/dev/capture-mode"), boxRouteSurface("/dev/theme-studio"), boxRouteSurface("/views/_config/interface/admin.card"), boxRouteSurface("/unknown")])
+=> ["dev-harness","dev-harness","dev-harness","product","product"]
 ```
 
 A later capture request reopens a retained chat runtime; absence of a request

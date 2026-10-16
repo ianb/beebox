@@ -18,7 +18,7 @@ The reader scrolls.
   linking to its section.
 - Placement idea from the boxholder: a floating panel at the top right, or
   similar. It must not overlap the card's Properties
-  (`beebox/src/frontend/src/components/themes/ThemedFileCard/CardProperties.tsx`).
+  (`beebox/src/frontend/src/components/themes/ThemedFileCard/view/CardProperties.tsx`).
 
 ## What exists
 

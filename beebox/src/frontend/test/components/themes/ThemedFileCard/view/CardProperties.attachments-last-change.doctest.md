@@ -14,9 +14,9 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Router
 import { createTRPCClient } from "@trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { observable } from "@trpc/server/observable";
-import { trpc } from "../../../../src/lib/trpc/client.js";
-import { CardAttachments, attachmentEntries } from "../../../../src/components/themes/ThemedFileCard/CardAttachments.js";
-import { CardLastChange } from "../../../../src/components/themes/ThemedFileCard/CardLastChange.js";
+import { trpc } from "../../../../../src/lib/trpc/client.js";
+import { CardAttachments, attachmentEntries } from "../../../../../src/components/themes/ThemedFileCard/view/CardAttachments.js";
+import { CardLastChange } from "../../../../../src/components/themes/ThemedFileCard/view/CardLastChange.js";
 
 globalThis.React = React;
 

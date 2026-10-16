@@ -1,0 +1,43 @@
+/* Starter only. Keep every selector scoped to the studio AND a draft theme:
+   lazy-loaded styles remain loaded after navigating away from the studio. */
+.bbx-theme-studio .bbx-box-presentation[data-chrome-theme="draft"] {
+  --bbx-desk-background: #e9ede5;
+  --bbx-bar-paper: #335b52;
+  --bbx-bar-edge: #28483f;
+  --bbx-chat-user-paper: #335b52;
+  --bbx-chat-user-ink: #fff;
+  --bbx-selection: #f0c77a;
+  --bbx-selection-ink: #253d35;
+}
+.bbx-theme-studio [data-chrome-theme="draft"] .bbx-app-nav {
+  background: var(--bbx-bar-paper);
+  color: #fff;
+  border-bottom: 3px solid #d5aa62;
+}
+.bbx-theme-studio [data-chrome-theme="draft"] .bbx-chat-user-paper {
+  background: var(--bbx-chat-user-paper);
+  color: var(--bbx-chat-user-ink);
+}
+.bbx-theme-studio [data-chrome-theme="draft"] .bbx-composer-material,
+.bbx-theme-studio [data-chrome-theme="draft"] .bbx-chat-callout {
+  background: #f7f5ed;
+  color: #253d35;
+  border: 1px solid #9cae9d;
+  border-radius: 12px;
+}
+.bbx-theme-studio [data-chrome-theme="draft"] .bbx-composer-material > section {
+  background: transparent;
+}
+.bbx-theme-studio .bbx-card-theme[data-card-theme="draft"] {
+  --bbx-paper: #fffaf0;
+  --bbx-ink: #283d35;
+  --bbx-ink-soft: #52675b;
+  --bbx-pen: #38685b;
+  --bbx-edge: #a6b49c;
+  --bbx-underlay: #e5e7d5;
+  --bbx-sheet-radius: 12px;
+  --bbx-quote-paper: #e5e7d5;
+  --bbx-quote-edge: 3px;
+  --bbx-selection: #efd392;
+  --bbx-selection-ink: #283d35;
+}
