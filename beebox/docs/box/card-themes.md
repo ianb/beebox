@@ -25,7 +25,8 @@ Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
 `manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), `letter-set`
 (`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), `ribbon` (`flow`),
-`deck` (`panels`), and `night-atlas` (`lights`). The system-only `spectrum` (`gradient`) and
+`deck` (`panels`), `night-atlas` (`lights`), `rose-trellis` (`textile`), and
+`gold-thread` (`textile`). The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
@@ -99,8 +100,8 @@ The **system theme** styles the toolbar, shared background, user-message slips,
 text selection, and floating controls such as the selection “+”. It is
 independent of card themes; a card theme may set its own selection color.
 Choose the box default in **Settings → System theme**. The system swatches preview
-these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Bloom, Ribbon, and Deck support the
-system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
+these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Bloom, Ribbon, Deck, Night Atlas,
+Rose Trellis, and Gold Thread support the system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
 (stored as `cream`, `manila`, and `blue` respectively). A saved system theme
 without chrome support, such as an unfamiliar name, falls back to Flat and is
 reported as a presentation problem.
@@ -217,3 +218,21 @@ keep their own material.
 Night Atlas’s background follows a four-minute orbit through field-like terrain,
 dense city lights, and open harbor water. Only the decorative background moves;
 reduced-motion preferences keep it static.
+
+
+## Rose Trellis and Gold Thread
+
+Rose Trellis combines a woven botanical background with coral and raspberry
+color, warm cream reading surfaces, and olive-gold stems. Its patterned raspberry
+toolbar and sweeping leaf-shaped controls carry that motion into the interface.
+It has no rectangular background grid.
+
+Gold Thread is a patterned dark theme: ink-blue cloth, loose flax-colored waves,
+and matte blue controls with simple rounded corners. Its reading surfaces remain
+quiet and dark, with warm ivory text. The texture supplies the energy; controls
+have no metallic shine.
+
+Choose `rose-trellis` or `gold-thread`, both with stock `textile`, for the system
+or an individual card. Each pairs with its own card material, Paper, and Sticky
+note. Explicit card choices retain their own material. Both backgrounds are
+static, and print uses plain light surfaces.
