@@ -20,14 +20,25 @@ would receive is visible.
 ```ts setup
 import { createTtsService } from "../../src/services/tts.js";
 import { InteractionStreamError } from "../../src/core/tts/interaction-stream.js";
+import assert from "node:assert/strict";
+import { z } from "zod";
+
+/** The parts of a recorded Interactions request the checks below read. */
+const InteractionRequest = z.object({
+  model: z.string(),
+  stream: z.boolean(),
+  store: z.boolean(),
+  input: z.array(z.object({ content: z.array(z.unknown()) })),
+  generation_config: z.object({ speech_config: z.array(z.object({ voice: z.string() })) }),
+});
 
 /** An MP3-looking buffer of `bytes` bytes: a frame header, padded. */
-const mp3Head = (bytes) => Buffer.concat([Buffer.from([0xff, 0xf3, 0x84, 0xc4]), Buffer.alloc(bytes - 4)]);
+const mp3Head = (bytes: number) => Buffer.concat([Buffer.from([0xff, 0xf3, 0x84, 0xc4]), Buffer.alloc(bytes - 4)]);
 
 /** A `fetch` that records each request and answers with `respond()`. */
-function recordingFetch(respond) {
-  const calls = [];
-  const fetch = async (input) => {
+function recordingFetch(respond: () => Response) {
+  const calls: Array<{ url: string; headers: Record<string, string>; body: unknown }> = [];
+  const fetch = async (input: string | URL | Request) => {
     const req = input instanceof Request ? input : new Request(input);
     calls.push({ url: req.url, headers: Object.fromEntries(req.headers), body: await req.json() });
     return respond();
@@ -38,10 +49,10 @@ function recordingFetch(respond) {
 // Half a second of 24 kHz 16-bit silence: enough MP3 to pass the head check.
 const pcm = Buffer.alloc(24000);
 
-const delta = (part) => `event: step.delta\ndata: ${JSON.stringify({ event_type: "step.delta", delta: { type: "audio", data: part.toString("base64") } })}\n\n`;
+const delta = (part: Buffer) => `event: step.delta\ndata: ${JSON.stringify({ event_type: "step.delta", delta: { type: "audio", data: part.toString("base64") } })}\n\n`;
 
 /** A streamed Interactions answer carrying `audio` as two SSE delta events. */
-function interactionStream(audio) {
+function interactionStream(audio: Buffer) {
   const half = audio.length / 2;
   return new Response(delta(audio.subarray(0, half)) + delta(audio.subarray(half)) + "event: done\ndata: [DONE]\n\n", {
     headers: { "Content-Type": "text/event-stream" },
@@ -53,10 +64,10 @@ function interactionStream(audio) {
  * `release(last)` (or `fail()`) before it sends the rest. Records whether the
  * consumer cancelled it.
  */
-function heldBody(first) {
+function heldBody(first: string | Uint8Array) {
   const encoder = new TextEncoder();
   const state = { cancelled: false };
-  let controllerRef;
+  let controllerRef: ReadableStreamDefaultController<Uint8Array> | undefined;
   const body = new ReadableStream({
     start(controller) {
       controllerRef = controller;
@@ -67,7 +78,8 @@ function heldBody(first) {
   return {
     body,
     state,
-    release(last) {
+    release(last: string | Uint8Array) {
+      assert.ok(controllerRef, "the stream has started");
       controllerRef.enqueue(typeof last === "string" ? encoder.encode(last) : last);
       controllerRef.close();
     },
@@ -86,18 +98,19 @@ const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: di
 const audio = await tts.streamSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
 const out = await collectAudio(audio);
 const call = direct.calls[0];
+const requestBody = InteractionRequest.parse(call?.body);
 ({
-  url: call.url,
-  key: call.headers["x-goog-api-key"],
-  authorization: call.headers.authorization ?? "(none)",
-  model: call.body.model,
-  stream: call.body.stream,
-  store: call.body.store,
-  content: call.body.input[0].content[0],
-  voice: call.body.generation_config.speech_config[0].voice,
+  url: call?.url,
+  key: call?.headers["x-goog-api-key"],
+  authorization: call?.headers.authorization ?? "(none)",
+  model: requestBody.model,
+  stream: requestBody.stream,
+  store: requestBody.store,
+  content: requestBody.input[0]?.content[0],
+  voice: requestBody.generation_config.speech_config[0]?.voice,
   stylable: tts.stylable,
   contentType: audio.contentType,
-  frameSync: out[0] === 0xff && (out[1] & 0xe0) === 0xe0,
+  frameSync: out[0] === 0xff && ((out[1] ?? 0) & 0xe0) === 0xe0,
 })
 => {
   url: "https://generativelanguage.googleapis.com/v1beta/interactions",

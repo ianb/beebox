@@ -10,6 +10,8 @@ in `screenshot-request-handler.ts`, which can't run under the Node tier):
 4. how the FIFO popup queue + ephemeral indicators fold.
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { ScreenshotRequest, ScreenshotState } from "../../../../../src/components/chat/everywhere/InteractiveChat/screenshot-request-logic.js";
 import {
   matchesRequestSession,
   isRequestExpired,
@@ -18,7 +20,7 @@ import {
   screenshotReducer,
 } from "../../../../../src/components/chat/everywhere/InteractiveChat/screenshot-request-logic.js";
 
-const req = (requestId, extra) => ({ requestId, session: "s1", expiresAt: "2999-01-01T00:00:00Z", ...extra });
+const req = (requestId: string, extra?: Partial<ScreenshotRequest>): ScreenshotRequest => ({ requestId, session: "s1", expiresAt: "2999-01-01T00:00:00Z", ...extra });
 ```
 
 ## Session match is EXACT, never a null wildcard
@@ -64,6 +66,7 @@ its own message. Every degraded path is named — never a silent blank.
 
 ```ts
 const image = captureOutcomeToAnswer({ kind: "image", blob: new Blob([]), viewport: { cssWidth: 800, cssHeight: 600, dpr: 2 } });
+assert.ok(image.kind === "upload");
 JSON.stringify({ kind: image.kind, viewport: image.viewport })
 => {"kind":"upload","viewport":{"cssWidth":800,"cssHeight":600,"dpr":2}}
 
@@ -115,7 +118,7 @@ Two requests enqueue in order; the head is the active popup. Resolving the head
 pops it so the next promotes — never two popups stacked.
 
 ```ts
-let state = { queue: [], indicators: [] };
+let state: ScreenshotState = { queue: [], indicators: [] };
 state = screenshotReducer(state, { type: "enqueue", request: req("a") });
 state = screenshotReducer(state, { type: "enqueue", request: req("b") });
 state.queue.map((r) => r.requestId).join(",")
@@ -141,7 +144,7 @@ the agent" row; the relay path adds one without ever queuing a popup; dismiss
 ages it out.
 
 ```ts
-let s = { queue: [req("x")], indicators: [] };
+let s: ScreenshotState = { queue: [req("x")], indicators: [] };
 s = screenshotReducer(s, { type: "resolveHead", indicator: { requestId: "x", thumbnailUrl: "blob:x" } });
 JSON.stringify({ queue: s.queue.length, indicators: s.indicators.map((i) => i.requestId) })
 => {"queue":0,"indicators":["x"]}

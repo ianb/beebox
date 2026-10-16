@@ -17,13 +17,14 @@ analysis because a package was missing.
 
 ```ts setup
 import { probePdf, renderPdfPages, PdfRenderError } from "../../../src/core/pdf/probe.js";
+import type { PdfProbe } from "../../../src/core/pdf/probe.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execa } from "execa";
 
-async function haveTool(name) {
+async function haveTool(name: string) {
   const result = await execa(name, ["-v"], { reject: false }).catch(() => null);
   return result !== null;
 }
@@ -31,14 +32,14 @@ const havePdftotext = await haveTool("pdftotext");
 const havePdftoppm = await haveTool("pdftoppm");
 
 const dir = await mkdtemp(join(tmpdir(), "pdf-probe-"));
-async function fixture(name, bytes) {
+async function fixture(name: string, bytes: Buffer) {
   const p = join(dir, name);
   await writeFile(p, bytes);
   return p;
 }
 
 // "probed:<answer>" where poppler exists; "assumed:true" where it does not.
-function verdict(probe) {
+function verdict(probe: PdfProbe) {
   return `${probe.textLayerSource}:${String(probe.hasTextLayer)}`;
 }
 ```
@@ -104,7 +105,7 @@ The textless branch renders with `pdftoppm` at 150 DPI, in page order.
 const rendered = havePdftoppm
   ? await renderPdfPages(await fixture("render.pdf", textlessPdf()), { outDir: join(dir, "out") })
   : ["stand-in/page-1.jpg"];
-`${String(rendered.length)} page(s), first ends ${rendered[0].split("/").pop()}`
+`${String(rendered.length)} page(s), first ends ${rendered[0]?.split("/").pop()}`
 => 1 page(s), first ends page-1.jpg
 ```
 

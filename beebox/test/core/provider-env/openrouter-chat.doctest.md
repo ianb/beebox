@@ -6,6 +6,9 @@ box config), and every spawn checks both that list and the key
 (`docs/plans/openrouter-chat-models.md`). These tests are the gate.
 
 ```ts setup
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import type { SDKResultSuccess } from "@anthropic-ai/claude-agent-sdk";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -292,12 +295,23 @@ result carries no `total_cost_usd`. First-party runs keep theirs.
 
 ```ts
 const { adaptBackendMessage } = await import("../../../src/core/chat/session/messages.js");
-const result = {
+const result: SDKResultSuccess = {
   type: "result", subtype: "success", is_error: false, result: "", duration_ms: 1, duration_api_ms: 1,
-  num_turns: 1, stop_reason: "end_turn", total_cost_usd: 0.25, usage: {}, modelUsage: {},
-  permission_denials: [], session_id: "s", uuid: "u",
+  num_turns: 1, stop_reason: "end_turn", total_cost_usd: 0.25, modelUsage: {},
+  usage: {
+    input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0,
+    cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 },
+    server_tool_use: { web_search_requests: 0, web_fetch_requests: 0 },
+    service_tier: "standard", inference_geo: "us", iterations: [], speed: "standard",
+  },
+  permission_denials: [], session_id: "s", uuid: randomUUID(),
 };
-JSON.stringify([kimi.id, glm, opus].map((model) => adaptBackendMessage(result, { model })?.total_cost_usd ?? "none"))
+const costOf = (model: string) => {
+  const adapted = adaptBackendMessage(result, { model });
+  assert.ok(adapted?.type === "result");
+  return adapted.total_cost_usd ?? "none";
+};
+JSON.stringify([kimi.id, glm, opus].map(costOf))
 => ["none","none",0.25]
 ```
 

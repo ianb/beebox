@@ -13,15 +13,15 @@ import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { getChatRuntime, setChatRuntime } from "../../src/webapp/chat-runtime.js";
 import { ChatSessionRegistry } from "../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../helpers/doctest-server.js";
 import { plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
 
 const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 } as const;
 const ID = "11111111-1111-4111-8111-111111111111";
 let restartedRegistry: ChatSessionRegistry | null = null;
-function caller(server) {
+function caller(server: TestServer) {
   return appRouter.createCaller({ boxRoot: server.boxRoot, boxSlug: "test",
-    eventBus: server.eventBus, services: {}, user: null, authed: true, isOwner: true });
+    eventBus: server.eventBus, services: {}, user: null, authed: true, isOwner: true, isAuthenticatedOwner: false, actor: "none" });
 }
 ```
 

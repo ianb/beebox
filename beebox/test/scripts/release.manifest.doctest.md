@@ -16,7 +16,13 @@ import * as path from "node:path";
 
 const PACKAGE_ROOT = path.join(import.meta.dirname, "../..");
 
-async function loadPackageJson() {
+interface PackageJson {
+  files: string[];
+  exports: Record<string, unknown>;
+  bin: Record<string, string>;
+}
+
+async function loadPackageJson(): Promise<PackageJson> {
   const raw = await readFile(path.join(PACKAGE_ROOT, "package.json"), "utf-8");
   return JSON.parse(raw);
 }
@@ -24,9 +30,9 @@ async function loadPackageJson() {
 /** Whether `files` (package.json's allowlist) covers `target` — either a
  *  directory entry that's a path-segment prefix of `target`, or an exact
  *  file match. */
-function coveredByFiles(target, files) {
+function coveredByFiles(target: string, files: string[]) {
   const normalizedTarget = target.replace(/^\.\//, "");
-  return files.some((entry) => {
+  return files.some((entry: string) => {
     if (entry === normalizedTarget) return true;
     return normalizedTarget.startsWith(`${entry}/`);
   });
@@ -34,13 +40,13 @@ function coveredByFiles(target, files) {
 
 /** Every path an `exports` map value points at, whether the value is a bare
  *  string or a conditional object ({ types, default, ... }). */
-function exportTargets(exportsMap) {
-  const targets = [];
+function exportTargets(exportsMap: Record<string, unknown>) {
+  const targets: string[] = [];
   for (const value of Object.values(exportsMap)) {
     if (typeof value === "string") {
       targets.push(value);
     } else if (value && typeof value === "object") {
-      targets.push(...Object.values(value));
+      targets.push(...Object.values(value).filter((v): v is string => typeof v === "string"));
     }
   }
   return targets;
@@ -49,11 +55,12 @@ function exportTargets(exportsMap) {
 /** Entries of `entries` that match nothing under `PACKAGE_ROOT`. A glob
  *  entry (npm `files` accepts them) counts as present when it matches at
  *  least one path. */
-async function findMissing(entries) {
-  const missing = [];
+async function findMissing(entries: string[]) {
+  const missing: string[] = [];
   for (const entry of entries) {
     if (entry.includes("*")) {
-      const matches = await Array.fromAsync(glob(entry, { cwd: PACKAGE_ROOT }));
+      const matches: string[] = [];
+      for await (const match of glob(entry, { cwd: PACKAGE_ROOT })) matches.push(match);
       if (matches.length === 0) missing.push(entry);
       continue;
     }

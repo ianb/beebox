@@ -7,6 +7,7 @@ It runs at the filesystem tier — the reconciliation `firePreparation` and the
 decisions are inspected directly, without a chat runtime.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -20,13 +21,17 @@ import {
 } from "../../../src/core/capture/staging-store/core.js";
 import { resolveBulkBatchPaths } from "../../../src/core/bulk-upload/prepare.js";
 import { createUploadBatchTemplate } from "../../../src/schemas/upload-batch.js";
-import { sweepBulkBatches } from "../../../src/core/bulk-upload/sweep.js";
+import { sweepBulkBatches, type StrandedBatch, type UnfiledBatch } from "../../../src/core/bulk-upload/sweep.js";
+import type { StagingSessionState } from "../../../src/core/capture/staging-schema.js";
 import { getBoxTime } from "../../../src/lib/time.js";
 
 const OLD = "2020-01-01T00:00:00.000Z";
 
 // Create a bulk session in a given state, optionally aged + with a file.
-async function makeBulk(boxRoot, opts) {
+async function makeBulk(
+  boxRoot: string,
+  opts: { state: StagingSessionState; target?: string; contextDir?: string; withFile?: boolean; aged?: boolean },
+) {
   const staged = await createStagingSession({
     boxRoot, targetSessionId: opts.target ?? null, createdBy: null, kind: "bulk",
     contextDir: opts.contextDir ?? "", expectedItems: [{ id: "a", name: "a.pdf" }],
@@ -40,13 +45,14 @@ async function makeBulk(boxRoot, opts) {
   await setStagingState({ boxRoot, id: staged.id, state: opts.state });
   if (opts.aged) {
     const s = await readStagingSession({ boxRoot, id: staged.id });
+    assert.ok(s);
     s.lastActivityAt = OLD;
     await writeStagingSession({ boxRoot, session: s });
   }
   return staged;
 }
 
-async function seedTranscript(boxRoot, sessionId, text) {
+async function seedTranscript(boxRoot: string, sessionId: string, text: string) {
   await appendHistory(boxRoot, { sessionId });
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
   await mkdir(dirname(logPath), { recursive: true });
@@ -76,7 +82,7 @@ await seedTranscript(box.root, landedTarget, JSON.stringify({ type: "user", text
 const delivering2 = await makeBulk(box.root, { state: "delivering", target: "s-lost" });
 await seedTranscript(box.root, "s-lost", "");
 
-const fired = [];
+const fired: string[] = [];
 const result = await sweepBulkBatches({ boxRoot: box.root, firePreparation: (id) => fired.push(id) });
 JSON.stringify({
   refired: fired.slice().sort(),
@@ -180,7 +186,7 @@ dir's history); a recent one is not.
 ```ts
 const box = await makeTmpBox({ git: true });
 
-async function writeBatchCard(relDir, startedAt) {
+async function writeBatchCard(relDir: string, startedAt: string) {
   const card = createUploadBatchTemplate({
     batchId: "upload-x", targetSessionId: "s-target", startedAt, registered: 1, totalBytes: 6,
     received: [{ name: "a.pdf", size: 6 }], missing: [], failed: [], summary: "1 file uploaded (6 B).",
@@ -195,7 +201,7 @@ await writeBatchCard("store/x/tmp-upload/upload-old", OLD);
 const RECENT = new Date(getBoxTime(box.root).getTime() - 24 * 60 * 60 * 1000).toISOString();
 await writeBatchCard("store/x/tmp-upload/upload-new", RECENT);
 
-const notified = [];
+const notified: UnfiledBatch[] = [];
 const result = await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified.push(b) });
 JSON.stringify({
   count: notified.length,
@@ -252,6 +258,7 @@ const noted = await createStagingSession({
   boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
 });
 const session = await readStagingSession({ boxRoot: box.root, id: noted.id });
+assert.ok(session);
 session.note = "these are the receipts";
 session.lastActivityAt = OLD;
 await writeStagingSession({ boxRoot: box.root, session });
@@ -269,6 +276,7 @@ const empty = await createStagingSession({
   boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
 });
 const emptySession = await readStagingSession({ boxRoot: box.root, id: empty.id });
+assert.ok(emptySession);
 emptySession.lastActivityAt = OLD;
 await writeStagingSession({ boxRoot: box.root, session: emptySession });
 
@@ -285,6 +293,7 @@ const sealed = await createStagingSession({
   boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
 });
 const sealedSession = await readStagingSession({ boxRoot: box.root, id: sealed.id });
+assert.ok(sealedSession);
 sealedSession.lastActivityAt = OLD;
 await writeStagingSession({ boxRoot: box.root, session: sealedSession });
 await setStagingState({ boxRoot: box.root, id: sealed.id, state: "sealed" });
@@ -316,17 +325,18 @@ const stranded = await createStagingSession({
   expectedItems: [{ id: "a", name: "IMG_0001.jpg" }],
 });
 const session = await readStagingSession({ boxRoot: box.root, id: stranded.id });
+assert.ok(session);
 session.note = "Receipts from the Tokyo trip";
 await writeStagingSession({ boxRoot: box.root, session });
 await setStagingState({ boxRoot: box.root, id: stranded.id, state: "failed:deliver" });
 
-const seen = [];
+const seen: StrandedBatch[] = [];
 const result = await sweepBulkBatches({ boxRoot: box.root, notifyStranded: (b) => seen.push(b) });
 JSON.stringify({
   surfaced: result.stranded.includes(stranded.id),
-  target: seen[0].targetSessionId,
-  note: seen[0].note,
-  registered: seen[0].registeredCount,
+  target: seen[0]?.targetSessionId,
+  note: seen[0]?.note,
+  registered: seen[0]?.registeredCount,
 })
 => {"surfaced":true,"target":"chat-1","note":"Receipts from the Tokyo trip","registered":1}
 ```
@@ -363,6 +373,7 @@ const box = await makeTmpBox();
 const revived = await makeBulk(box.root, { state: "open", aged: true });
 // Simulate the user returning: the batch is no longer idle when the lock is taken.
 const fresh = await readStagingSession({ boxRoot: box.root, id: revived.id });
+assert.ok(fresh);
 fresh.lastActivityAt = new Date().toISOString();
 await writeStagingSession({ boxRoot: box.root, session: fresh });
 

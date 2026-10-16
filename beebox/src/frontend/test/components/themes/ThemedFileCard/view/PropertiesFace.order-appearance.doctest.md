@@ -16,6 +16,8 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Router
 import { createTRPCClient } from "@trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { observable } from "@trpc/server/observable";
+import type { AppRouter } from "@backend/trpc/routers.js";
+import type { FileData, FileRenderer } from "../../../../../src/file-type-registry.js";
 import { trpc } from "../../../../../src/lib/trpc/client.js";
 import { resolveCardTheme } from "@shared/card-theme/core";
 import { BoxPresentationProvider } from "../../../../../src/components/themes/BoxPresentationProvider.js";
@@ -25,7 +27,9 @@ import { ThemedFileCardProperties } from "../../../../../src/components/themes/T
 globalThis.React = React;
 
 const noop = () => undefined;
-const renderers = [{ name: "Card" }, { name: "Source" }];
+const noView = () => null;
+const cardView: FileRenderer = { name: "Card", Component: noView, priority: 10 };
+const renderers: FileRenderer[] = [cardView, { name: "Source", Component: noView, priority: 0 }];
 
 /**
  * Render the Properties face for `data` at `/test1` inside a router, a tRPC
@@ -33,17 +37,19 @@ const renderers = [{ name: "Card" }, { name: "Source" }];
  * button stands in for the actions menu, which needs the app workspace. `canEdit`
  * seeds the presentation answer that lets the viewer change appearance.
  */
-async function render(data, { canEdit }) {
+async function render(data: FileData, { canEdit }: { canEdit: boolean }): Promise<string> {
   const theme = resolveCardTheme({
     path: data.path, type: data.type ?? "", cardChoice: data.frontmatter?.theme,
     typeDefault: undefined, presentation: { status: "absent" },
   });
-  const element = React.createElement(BoxPresentationProvider, { boxSlug: "test1" },
-    React.createElement(ShowFrontContext.Provider, { value: noop }, React.createElement(ThemedFileCardProperties, {
-      data, theme, boxSlug: "test1", renderers, active: renderers[0],
+  const element = React.createElement(BoxPresentationProvider, {
+    boxSlug: "test1",
+    children: React.createElement(ShowFrontContext.Provider, { value: noop }, React.createElement(ThemedFileCardProperties, {
+      data, theme, boxSlug: "test1", renderers, active: cardView,
       hasExplicitView: false, onSelect: noop, onNavigate: noop,
       actions: data.path.endsWith(".card") ? React.createElement("button", { type: "button" }, "Card actions") : null,
-    })));
+    })),
+  });
   const root = createRootRoute({ staticData: { title: null } });
   const box = createRoute({ getParentRoute: () => root, path: "$boxSlug", staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root.addChildren([box]), history: createMemoryHistory({ initialEntries: ["/test1"] }) });
@@ -51,22 +57,24 @@ async function render(data, { canEdit }) {
   const queryClient = new QueryClient();
   queryClient.setQueryData(getQueryKey(trpc.presentation.get, { boxKey: "test1", contextDir: undefined }, "query"),
     { canEditCardThemes: canEdit, typeDefaults: {}, presentation: { status: "absent" }, chrome: { choice: { name: "plain", stock: "neutral" } } });
-  const client = createTRPCClient({ links: [() => () => observable(() => () => {})] });
-  return renderToString(React.createElement(trpc.Provider, { client, queryClient },
-    React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(RouterProvider, { router }))));
+  const client = createTRPCClient<AppRouter>({ links: [() => () => observable(() => () => {})] });
+  return renderToString(React.createElement(trpc.Provider, {
+    client, queryClient,
+    children: React.createElement(QueryClientProvider, { client: queryClient, children: React.createElement(RouterProvider, { router }) }),
+  }));
 }
 
-function textOf(html) {
+function textOf(html: string): string {
   return html.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
 }
 
 /** The section headings in document order. */
-function headings(html) {
-  return [...html.matchAll(/<h([23])[^>]*>(.*?)<\/h\1>/gs)].map(([, level, text]) => `h${level} ${textOf(text)}`);
+function headings(html: string): string[] {
+  return [...html.matchAll(/<h([23])[^>]*>(.*?)<\/h\1>/gs)].map(([, level, text = ""]) => `h${level} ${textOf(text)}`);
 }
 
 /** The Appearance section's markup. */
-function appearance(html) {
+function appearance(html: string): string {
   return /<section[^>]*data-card-section="appearance"[^>]*>.*?<\/section>(?=<section[^>]*data-card-section="view")/s.exec(html)?.[0] ?? "";
 }
 

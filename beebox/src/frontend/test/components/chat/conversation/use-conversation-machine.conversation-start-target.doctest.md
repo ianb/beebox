@@ -40,7 +40,8 @@ JSON.stringify(conversationTargetFor(
 ## An unknown engine falls back to claude, and a resumed session ignores both
 
 ```ts
-conversationTargetFor({ sessionInput: "new", contextDir: "" }, "fresh-id").engine
+const fallback = conversationTargetFor({ sessionInput: "new", contextDir: "" }, "fresh-id");
+fallback.kind === "start" ? fallback.engine : fallback.kind
 => claude
 
 JSON.stringify(conversationTargetFor(

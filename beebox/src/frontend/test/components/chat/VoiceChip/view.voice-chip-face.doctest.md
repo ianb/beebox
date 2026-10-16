@@ -33,12 +33,12 @@ much as what you do, and no single-participant picture shows a relationship
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { VoiceChipFace, voiceChipDiarizationEnabled } from "../../../../src/components/chat/VoiceChip/view.js";
+import { VoiceChipFace, voiceChipDiarizationEnabled, type VoiceChipFaceState } from "../../../../src/components/chat/VoiceChip/view.js";
 import { voiceChipLabel } from "../../../../src/components/chat/VoiceChip/voice-chip-label.js";
 
 globalThis.React = React;
 
-function renderFace(state) {
+function renderFace(state: VoiceChipFaceState) {
   return renderToStaticMarkup(React.createElement(VoiceChipFace, state));
 }
 
@@ -134,7 +134,8 @@ Every dictated message gets the HQ pass (docs/plans/hq-always.md), so the
 chip shows speaker labels exactly when the box's HQ service diarizes.
 
 ```ts
-JSON.stringify(["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null].map(voiceChipDiarizationEnabled))
+const services: Parameters<typeof voiceChipDiarizationEnabled>[0][] = ["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null];
+JSON.stringify(services.map(voiceChipDiarizationEnabled))
 => [true,true,false,false,false,false,false,false]
 ```
 

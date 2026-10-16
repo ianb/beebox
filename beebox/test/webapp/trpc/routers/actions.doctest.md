@@ -7,29 +7,33 @@ refresh. A command failure surfaces as a `BAD_REQUEST` TRPCError.
 
 ```ts setup
 import { actionsRouter } from "../../../../src/webapp/trpc/routers/actions.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { EventBus } from "../../../../src/core/event-bus/core.js";
+import { TRPCError } from "@trpc/server";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
 // Minimal tRPC context — the actions procedures read only boxRoot + eventBus.
 // The eventBus stub records what was emitted so we can assert on it.
-function contextFor(box) {
-  const events = [];
-  const eventBus = {
+function contextFor(box: { root: string }) {
+  const events: { event: string; data: unknown }[] = [];
+  const eventBus: EventBus = {
     emit: (event, data) => { events.push({ event, data }); return 0; },
     emitTransient: () => {},
     readSince: () => [],
+    readRecent: () => [],
     subscribe: () => ({ unsubscribe: () => {} }),
     prune: () => 0,
     close: () => {},
   };
-  const ctx = { boxRoot: box.root, boxSlug: "t", eventBus, services: {}, user: null, authed: true, isOwner: true };
+  const ctx: TrpcContext = { boxRoot: box.root, boxSlug: "t", eventBus, services: {}, user: null, authed: true, isOwner: true, isAuthenticatedOwner: false, actor: "user" };
   return { caller: actionsRouter.createCaller(ctx), events };
 }
 
-async function attempt(fn) {
+async function attempt(fn: () => Promise<unknown>) {
   try {
     return await fn();
   } catch (e) {
-    return `THREW:${e.code}:${e.message}`;
+    return e instanceof TRPCError ? `THREW:${e.code}:${e.message}` : `THREW:${String(e)}`;
   }
 }
 
@@ -80,7 +84,7 @@ const box = await makeTmpBox({ git: true });
 const { caller } = contextFor(box);
 
 const out = await attempt(() => caller.answer({ questionPath: "_bookkeeping/questions/Nope.question.card", answer: "Red" }));
-out.startsWith("THREW:BAD_REQUEST:")
+String(out).startsWith("THREW:BAD_REQUEST:")
 => true
 ```
 
@@ -128,7 +132,7 @@ await box.write(
 const { caller } = contextFor(box);
 
 const out = await attempt(() => caller.dismiss({ questionPath: "_bookkeeping/questions/Color.question.card" }));
-out.startsWith("THREW:BAD_REQUEST:")
+String(out).startsWith("THREW:BAD_REQUEST:")
 => true
 ```
 
@@ -151,11 +155,11 @@ const { caller } = contextFor(box);
 const absPath = `${box.root}/_bookkeeping/questions/Color.question.card`;
 
 const ans = await attempt(() => caller.answer({ questionPath: absPath, answer: "Red" }));
-ans.startsWith("THREW:BAD_REQUEST:")
+String(ans).startsWith("THREW:BAD_REQUEST:")
 => true
 
 const dis = await attempt(() => caller.dismiss({ questionPath: absPath }));
-dis.startsWith("THREW:BAD_REQUEST:")
+String(dis).startsWith("THREW:BAD_REQUEST:")
 => true
 
 (await box.read("_bookkeeping/questions/Color.question.card")).includes("-at:")

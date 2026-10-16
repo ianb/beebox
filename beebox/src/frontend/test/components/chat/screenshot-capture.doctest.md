@@ -17,7 +17,7 @@ import {
 
 // getDisplayMedia rejects with a DOMException-shaped error; the classifier keys
 // on `error.name`, so a plain Error with the name set stands in for it.
-function named(name, message) {
+function named(name: string, message: string) {
   const e = new Error(message);
   e.name = name;
   return e;
@@ -67,7 +67,7 @@ needs `readyState >= HAVE_CURRENT_DATA` **and** real dimensions — an undecoded
 zero-sized first frame is not ready, so we never draw a blank PNG.
 
 ```ts
-const frame = (readyState, videoWidth, videoHeight) => ({ readyState, videoWidth, videoHeight, HAVE_CURRENT_DATA: 2 });
+const frame = (readyState: number, videoWidth: number, videoHeight: number) => ({ readyState, videoWidth, videoHeight, HAVE_CURRENT_DATA: 2 as const });
 
 isFrameDecoded(frame(2, 1920, 1080))
 => true

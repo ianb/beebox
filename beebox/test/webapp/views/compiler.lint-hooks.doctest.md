@@ -17,6 +17,7 @@ import { spawn } from "node:child_process";
 import { isViewFile, isViewSourceFile } from "../../../src/lib/paths/core.js";
 import { lintViewFile } from "../../../src/webapp/views/compiler/compile.js";
 import { cardValidatorHook } from "../../../src/core/sdk-hooks.js";
+import type { HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
 
 const GOOD_VIEW = `
 export const name = "Good";
@@ -45,16 +46,39 @@ async function makeViews() {
   return viewsDir;
 }
 
+// Fire the in-process hook with a PostToolUse payload for an edit of `filePath`.
+async function runHook(filePath: string, cwd: string): Promise<HookJSONOutput> {
+  const hook = cardValidatorHook().hooks[0];
+  if (hook === undefined) throw new Error("cardValidatorHook registered no hook");
+  return hook(
+    {
+      hook_event_name: "PostToolUse", session_id: "doctest", transcript_path: "", cwd,
+      tool_name: "Write", tool_input: { file_path: filePath }, tool_response: null, tool_use_id: "doctest-tool-use",
+    },
+    undefined,
+    { signal: new AbortController().signal },
+  );
+}
+
+// The nudge text a hook result carries, if any.
+function contextOf(out: HookJSONOutput): string | undefined {
+  if (!("hookSpecificOutput" in out)) return undefined;
+  const specific = out.hookSpecificOutput;
+  return specific !== undefined && "additionalContext" in specific ? specific.additionalContext : undefined;
+}
+
 // Run the real CLI (prebuilt by pretest) in hook mode with a PostToolUse
 // payload on stdin; resolve its exit code and output channels.
-function runShellHook(filePath, sessionId) {
-  return new Promise((resolve) => {
+interface ShellHookResult { code: number | null; stdout: string; stderr: string }
+
+function runShellHook(filePath: string, sessionId?: string) {
+  return new Promise<ShellHookResult>((resolve) => {
     const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "validate", "--hook"], { cwd: dirname(filePath) });
     let stdout = "";
     let stderr = "";
-    child.stdout.on("data", (d) => { stdout += String(d); });
-    child.stderr.on("data", (d) => { stderr += String(d); });
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
+    child.stdout.on("data", (d: Buffer) => { stdout += String(d); });
+    child.stderr.on("data", (d: Buffer) => { stderr += String(d); });
+    child.on("close", (code: number | null) => resolve({ code, stdout, stderr }));
     child.stdin.end(JSON.stringify({ session_id: sessionId, tool_input: { file_path: filePath } }));
   });
 }
@@ -117,47 +141,29 @@ The hook agent sessions actually run surfaces a broken view's compile error as
 
 ```ts
 const viewsDir = await makeViews();
-const hook = cardValidatorHook().hooks[0];
-
-const brokenOut = await hook({
-  hook_event_name: "PostToolUse",
-  tool_input: { file_path: join(viewsDir, "broken.tsx") },
-  cwd: viewsDir,
-});
-brokenOut.hookSpecificOutput.additionalContext.startsWith("View compile error")
+const brokenOut = await runHook(join(viewsDir, "broken.tsx"), viewsDir);
+contextOf(brokenOut)?.startsWith("View compile error")
 => true
 ```
 
 A view that compiles but renders a body as raw text gets the Markdown rule:
 
 ```ts continue
-const rawOut = await hook({
-  hook_event_name: "PostToolUse",
-  tool_input: { file_path: join(viewsDir, "raw.tsx") },
-  cwd: viewsDir,
-});
-rawOut.hookSpecificOutput.additionalContext.includes("Render card text with `Markdown` from `beebox/view-widgets`")
+const rawOut = await runHook(join(viewsDir, "raw.tsx"), viewsDir);
+contextOf(rawOut)?.includes("Render card text with `Markdown` from `beebox/view-widgets`")
 => true
 ```
 
 Editing a helper under `views/` gets the same rule, naming the helper:
 
 ```ts continue
-const helperOut = await hook({
-  hook_event_name: "PostToolUse",
-  tool_input: { file_path: join(viewsDir, "lib", "prose.tsx") },
-  cwd: viewsDir,
-});
-helperOut.hookSpecificOutput.additionalContext.includes("line 1: reads `card.body` outside `<Markdown>`")
+const helperOut = await runHook(join(viewsDir, "lib", "prose.tsx"), viewsDir);
+contextOf(helperOut)?.includes("line 1: reads `card.body` outside `<Markdown>`")
 => true
 ```
 
 ```ts continue
-const goodOut = await hook({
-  hook_event_name: "PostToolUse",
-  tool_input: { file_path: join(viewsDir, "good.tsx") },
-  cwd: viewsDir,
-});
+const goodOut = await runHook(join(viewsDir, "good.tsx"), viewsDir);
 JSON.stringify(goodOut)
 => {}
 ```

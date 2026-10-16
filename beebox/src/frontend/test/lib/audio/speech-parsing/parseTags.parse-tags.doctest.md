@@ -21,10 +21,10 @@ tags.length
 ```
 
 ```ts continue
-tags[0].type
+tags[0]?.type
 => greeting
 
-tags[0].content
+tags[0]?.content
 => Hello world
 ```
 
@@ -34,10 +34,10 @@ Attributes are extracted as key-value pairs:
 
 ```ts
 const tags = parseTags('<task status="open" priority="high">Do thing</task>');
-tags[0].attrs.status
+tags[0]?.attrs.status
 => open
 
-tags[0].attrs.priority
+tags[0]?.attrs.priority
 => high
 ```
 
@@ -45,13 +45,13 @@ tags[0].attrs.priority
 
 ```ts
 const tags = parseTags('<item ref="test.card" />');
-tags[0].type
+tags[0]?.type
 => item
 
-tags[0].attrs.ref
+tags[0]?.attrs.ref
 => test.card
 
-tags[0].content
+tags[0]?.content
 =>
 ```
 
@@ -61,15 +61,15 @@ Inner tags appear as subTags:
 
 ```ts
 const tags = parseTags('<outer><inner>nested</inner></outer>');
-tags[0].type
+tags[0]?.type
 => outer
 ```
 
 ```ts continue
-tags[0].subTags[0].type
+tags[0]?.subTags?.[0]?.type
 => inner
 
-tags[0].subTags[0].content
+tags[0]?.subTags?.[0]?.content
 => nested
 ```
 
@@ -82,7 +82,7 @@ const tags = parseTags('<speech>Hello <b>world</b></speech>', ["speech"]);
 tags.length
 => 1
 
-tags[0].type
+tags[0]?.type
 => speech
 ```
 
@@ -100,10 +100,10 @@ Backticks wrapping the input are removed (common in LLM output):
 
 ```ts
 const tags = parseTags('`<tag>content</tag>`');
-tags[0].type
+tags[0]?.type
 => tag
 
-tags[0].content
+tags[0]?.content
 => content
 ```
 

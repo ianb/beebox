@@ -24,6 +24,8 @@ import { createFakeDocling } from "../../../../src/services/docling/core.js";
 import { runPdfMode } from "../../../../src/core/commands/scan-import/pdf.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { isRecord } from "../../../../src/shared/is-record.js";
 import { textPdf, textlessPdf } from "../../../helpers/pdf-fixtures.js";
 
 // Annex-converted boxes only: scan-import stages raw asset bytes, which a
@@ -35,13 +37,14 @@ const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then(
   () => false,
 );
 
-async function importPdf(box, bytes) {
+async function importPdf(box: TmpBox, bytes: Parameters<typeof writeFile>[1]) {
   const pdfPath = join(box.root, "incoming.pdf");
   await writeFile(pdfPath, bytes);
   const docling = createFakeDocling({ markdown: "# Scan\n", pageCount: 1, figureCount: 0 });
   const { ctx } = createCollectorContext(box.root);
-  const result = await runPdfMode(ctx, { pdfPath, docling });
-  return { result, docling };
+  const outcome = await runPdfMode(ctx, { pdfPath, docling });
+  // `data` is `unknown` on a CommandResult; the checks below read named fields off it.
+  return { result: { ...outcome, data: isRecord(outcome.data) ? outcome.data : {} }, docling };
 }
 ```
 
@@ -53,12 +56,12 @@ over the layout's regions, because there was no text layer to read.
 ```ts
 const box = await makeTmpBox({ git: true });
 const { result, docling } = await importPdf(box, textlessPdf());
-[result.success, result.data.mode].join(" ")
+[result.success, result.data["mode"]].join(" ")
 => true pdf
 ```
 
 ```ts continue
-havePdftotext ? docling.calls[0].ocr : "regions"
+havePdftotext ? docling.calls[0]?.ocr : "regions"
 => regions
 ```
 
@@ -74,12 +77,12 @@ but junk is a third case — see `pdf-probe.doctest.md`.)
 ```ts
 const box = await makeTmpBox({ git: true });
 const { result, docling } = await importPdf(box, textPdf());
-[result.success, result.data.mode].join(" ")
+[result.success, result.data["mode"]].join(" ")
 => true pdf
 ```
 
 ```ts continue
-havePdftotext ? docling.calls[0].ocr : "off"
+havePdftotext ? docling.calls[0]?.ocr : "off"
 => off
 ```
 
@@ -95,7 +98,7 @@ only options are photo, back-of-photo, or trash, with delete as the fallback.
 ```ts
 const box = await makeTmpBox({ git: true });
 const { result } = await importPdf(box, textlessPdf());
-result.data.questions === undefined || result.data.questions.length === 0
+result.data["questions"] === undefined || (Array.isArray(result.data["questions"]) && result.data["questions"].length === 0)
 => true
 ```
 

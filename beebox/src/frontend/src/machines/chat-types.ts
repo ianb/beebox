@@ -35,6 +35,7 @@ export type ChatEvent =
   | { type: "REFRESH" }
   | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
   | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }
+  | { type: "INJECTED_USER_MESSAGE"; message: string; timestamp: string }
   | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] }
   | { type: "SET_SEED_FEATURE"; feature: string; value: string }
   | { type: "SESSION_ASSIGNED"; sessionId: string };

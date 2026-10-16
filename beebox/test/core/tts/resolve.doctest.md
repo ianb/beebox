@@ -17,7 +17,7 @@ import { boxSlug } from "../../../src/lib/box-slug.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 /** A fresh secret store and a box set to speak with Gemini, holding `grants`. */
-async function geminiBox(grants) {
+async function geminiBox(grants: Array<"gemini" | "openrouter">) {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
   const box = await makeTmpBox();

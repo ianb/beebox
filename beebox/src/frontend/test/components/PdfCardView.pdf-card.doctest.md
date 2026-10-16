@@ -31,7 +31,7 @@ const schemas = new Map([[EXTRACTED_CARD_TYPE, PdfSchema]]);
 const CARD_PATH = `inbox/Handbook.${EXTRACTED_CARD_TYPE}.card`;
 
 /** Parse a card the way the backend does, then read it the way the view does. */
-function readCard(text) {
+function readCard(text: string) {
   const fields = parseCardText(text, { source: CARD_PATH, schemas }).fields;
   return readExtractedFields(isRecord(fields) ? fields : {});
 }
@@ -61,7 +61,7 @@ Onboarding starts on your first Monday.
 `;
 
 /** Render a component, wrapping it in the lightbox context thumbnails need. */
-function render(element) {
+function render(element: React.ReactElement) {
   return renderToStaticMarkup(React.createElement(LightboxProvider, null, element));
 }
 ```
@@ -134,10 +134,10 @@ const pages = pageRendersFrom(listing.files, (p) => `/test/api/image/${p}`);
 pages.map((p) => p.page).join(",")
 => 1,2,10,1000
 
-pages[0].src
+pages[0]?.src
 => /test/api/image/inbox/Handbook.attach/page-001.avif
 
-pages[1].src
+pages[1]?.src
 => /test/api/image/inbox/Handbook.attach/page-002.webp
 
 pageRendersFrom([
@@ -274,7 +274,8 @@ extraction's banner. An extracted card with an empty body is a real answer
 warning banner. A normal extracted card with text gets no notice.
 
 ```ts
-function notice(props) {
+type NoticeProps = React.ComponentProps<typeof PdfStatusNotice>;
+function notice(props: Omit<NoticeProps, "error" | "unusable" | "cardPath"> & Partial<Pick<NoticeProps, "error" | "unusable">>) {
   return renderToStaticMarkup(React.createElement(PdfStatusNotice, { error: null, unusable: false, cardPath: CARD_PATH, ...props }));
 }
 

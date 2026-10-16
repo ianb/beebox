@@ -21,9 +21,11 @@ a real 2xx.
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { TRPCError } from "@trpc/server";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "mobile-contract", "fixtures", "debug-log-submit");
 
@@ -35,8 +37,8 @@ function loadSubmitFixtures() {
 }
 
 // POST every fixture's `expected` body exactly as the phone would send it.
-async function postSubmitFixtures(server, fixtures) {
-  const lines = [];
+async function postSubmitFixtures(server: TestServer, fixtures: ReturnType<typeof loadSubmitFixtures>) {
+  const lines: string[] = [];
   for (const { file, fixture } of fixtures) {
     const res = await server.request({
       method: "POST",
@@ -48,21 +50,31 @@ async function postSubmitFixtures(server, fixtures) {
   return lines.join("\n");
 }
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }
 
-async function code(p) {
-  return p.then(() => "none", (e) => e.code);
+async function code(p: Promise<unknown>) {
+  return p.then(() => "none", (e: unknown) => (e instanceof TRPCError ? e.code : String(e)));
+}
+
+type Caller = ReturnType<typeof caller>;
+
+// Deliberately malformed batches: the route's zod schema is what rejects (or
+// strips) them, so this one helper steps around the static input type.
+function submitRaw(c: Caller, input: unknown) {
+  return c.debugLog.submit(input as Parameters<Caller["debugLog"]["submit"]>[0]);
 }
 
 const LOG_PATH = ".beebox/client-debug.log";
@@ -137,10 +149,10 @@ tag baked in -- `debugLog.get` stays a flat `{ts,level,message}` shape.
 
 ```ts continue
 const got = await c.debugLog.get();
-got.entries[0].message
+got.entries[0]?.message
 => [ios] capture: upload failed
 
-got.entries[1].message.startsWith("[ios@")
+got.entries[1]?.message.startsWith("[ios@")
 => true
 ```
 
@@ -159,11 +171,11 @@ await code(c.debugLog.submit({ entries: [{ level: "error", message: "x".repeat(4
 => BAD_REQUEST
 
 // Level outside the closed enum.
-await code(c.debugLog.submit({ entries: [{ level: "debug", message: "hi" }] }))
+await code(submitRaw(c, { entries: [{ level: "debug", message: "hi" }] }))
 => BAD_REQUEST
 
 // More than 100 entries in a batch.
-const tooMany = Array.from({ length: 101 }, () => ({ level: "log", message: "x" }));
+const tooMany = Array.from({ length: 101 }, () => ({ level: "log" as const, message: "x" }));
 await code(c.debugLog.submit({ entries: tooMany }))
 => BAD_REQUEST
 
@@ -193,7 +205,7 @@ instead of rejecting the whole batch.
 const box = await makeTmpBox({ git: true });
 const c = caller(box.root);
 
-await c.debugLog.submit({
+await submitRaw(c, {
   source: "ios",
   futureTopLevelField: "ignored",
   entries: [{ level: "error", message: "still lands", at: new Date().toISOString(), futureEntryField: 123 }],

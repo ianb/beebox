@@ -12,11 +12,27 @@ import {
   boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry,
   followUpFor, restoreBoxScreen, rowFace, storedBoxScreen, submission, submitUnsent, unsentStatus,
 } from "../../../src/pages/box-screen/state.js";
+import assert from "node:assert/strict";
+import type { BoxScreenAction, BoxScreenState, QuickChatView } from "../../../src/pages/box-screen/state.js";
+import { quickChatViewSchema } from "../../../../core/chat/routing/quick-chat-record.js";
+import { quickChatHomeSchema } from "../../../../webapp/trpc/routers/quick-chat.js";
 
 const fixtures = new URL("../../../../../test/mobile-contract/fixtures/quick-chat/", import.meta.url);
-const fixture = (name) => JSON.parse(readFileSync(new URL(`${name}.json`, fixtures), "utf8")).result.data;
+const fixtureData = (name: string): unknown => JSON.parse(readFileSync(new URL(`${name}.json`, fixtures), "utf8")).result.data;
+const fixture = (name: string) => quickChatViewSchema.parse(fixtureData(name));
+const homeFixture = () => quickChatHomeSchema.parse(fixtureData("home"));
+type Home = NonNullable<Parameters<typeof boxScreenRows>[0]>;
+/** The row face's headline, for the faces that have one. */
+const title = (view: QuickChatView) => { const face = rowFace(view); return "title" in face ? face.title : undefined; };
+/** Where the row face links, for the faces that link. */
+const link = (view: QuickChatView) => { const face = rowFace(view); return "link" in face ? face.link : undefined; };
 const fresh = () => restoreBoxScreen({ draft: "", unsent: null });
-const run = (state, actions) => actions.reduce(boxScreenReducer, state);
+const run = (state: BoxScreenState, actions: BoxScreenAction[]) => actions.reduce(boxScreenReducer, state);
+/** A value the example needs to exist; fails the example when it is null. */
+function present<T>(value: T | null): T {
+  assert.ok(value !== null, "expected a value");
+  return value;
+}
 const ID = "11111111-2222-4333-8444-555555555555";
 const OTHER_ID = "99999999-8888-4777-8666-555555555555";
 ```
@@ -30,7 +46,7 @@ puts nothing in the chat's composer.
 rowFace(fixture("view-sent"))
 => { kind: "sent", title: "Sent to Trip planning", link: { kind: "chat", sessionId: "0b7d4c1e-6a2f-4e8b-9c3d-2f1a5e7b9d40" } }
 
-rowFace(fixture("view-sent-queued")).title
+title(fixture("view-sent-queued"))
 => Queued in Trip planning
 ```
 
@@ -38,7 +54,7 @@ A new chat on an engine that assigns its id later has no session to open, so
 the row offers the chat list:
 
 ```ts
-rowFace(fixture("view-sent-no-session")).link
+link(fixture("view-sent-no-session"))
 => { kind: "all-chats" }
 ```
 
@@ -57,10 +73,10 @@ rowFace(fixture("view-needs-choice-uncertain"))
   ],
 }
 
-rowFace(fixture("view-needs-choice-routing-unavailable")).title
+title(fixture("view-needs-choice-routing-unavailable"))
 => Could not sort this
 
-rowFace(fixture("view-needs-choice-destination-gone")).title
+title(fixture("view-needs-choice-destination-gone"))
 => That chat is gone
 ```
 
@@ -89,7 +105,7 @@ clears on the answer, and the answer becomes a row.
 
 ```ts
 let state = run(fresh(), [{ type: "edit", text: "  Call the plumber  " }]);
-const unsent = submission(state, ID);
+const unsent = present(submission(state, ID));
 unsent
 => { id: "11111111-2222-4333-8444-555555555555", message: "Call the plumber" }
 
@@ -97,12 +113,12 @@ state = run(state, [{ type: "submit-started", unsent, origin: "send" }]);
 [unsentStatus(state), storedBoxScreen(state)]
 => ["Sending…", { draft: "  Call the plumber  ", unsent: { id: "11111111-2222-4333-8444-555555555555", message: "Call the plumber" } }]
 
-const answer = { id: ID, message: "Call the plumber", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "routing-unavailable", choices: [{ candidateId: "general", label: "New general chat" }] };
+const answer: QuickChatView = { id: ID, message: "Call the plumber", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "routing-unavailable", choices: [{ candidateId: "general", label: "New general chat" }] };
 state = run(state, [{ type: "submit-answered", view: answer }]);
 [state.draft, state.unsent, unsentStatus(state)]
 => ["", null, null]
 
-boxScreenRows(undefined, state).needsYou.map((view) => rowFace(view).title)
+boxScreenRows(undefined, state).needsYou.map((view) => title(view))
 => ["Could not sort this"]
 ```
 
@@ -111,11 +127,11 @@ edited text is a new thought.
 
 ```ts
 let state = run(fresh(), [{ type: "edit", text: "Call the plumber" }]);
-state = run(state, [{ type: "submit-started", unsent: submission(state, ID), origin: "send" }, { type: "submit-failed", error: "Failed to fetch" }]);
+state = run(state, [{ type: "submit-started", unsent: present(submission(state, ID)), origin: "send" }, { type: "submit-failed", error: "Failed to fetch" }]);
 unsentStatus(state)
 => Not sent: Failed to fetch
 
-submission(state, OTHER_ID).id
+submission(state, OTHER_ID)?.id
 => 11111111-2222-4333-8444-555555555555
 
 submission(run(state, [{ type: "edit", text: "Call the electrician" }]), OTHER_ID)
@@ -132,9 +148,9 @@ from a React effect) leaves a window where a reload sends the text under a
 new id.
 
 ```ts
-const calls = [];
+const calls: unknown[][] = [];
 const unsent = { id: ID, message: "Book the vet" };
-const answer = { id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] };
+const answer: QuickChatView = { id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] };
 await submitUnsent({ unsent, origin: "send" }, {
   store: (stored) => calls.push(["store", stored]),
   request: async (input) => { calls.push(["request", input.id]); return answer; },
@@ -153,15 +169,15 @@ What the store call wrote is what a reload restores, and a failed request
 leaves that record in place for the retry:
 
 ```ts continue
-const reloaded = restoreBoxScreen(parseStoredBoxScreen(JSON.stringify(calls[0][1])));
+const reloaded = restoreBoxScreen(parseStoredBoxScreen(JSON.stringify(calls[0]?.[1])));
 pendingRetry(reloaded)
 => { id: "11111111-2222-4333-8444-555555555555", message: "Book the vet" }
 
-const failed = [];
+const failed: unknown[][] = [];
 const originalConsoleError = console.error;
 console.error = (message) => failed.push(["logged", message]);
 await submitUnsent({ unsent, origin: "send" }, {
-  store: (stored) => failed.push(["store", stored.unsent.id]),
+  store: (stored) => failed.push(["store", stored.unsent?.id]),
   request: async () => { failed.push(["request"]); throw new Error("Failed to fetch"); },
   dispatch: (action) => failed.push(["dispatch", action.type]),
 });
@@ -188,7 +204,7 @@ const state = restoreBoxScreen(parseStoredBoxScreen(raw));
 [state.draft, unsentStatus(state), pendingRetry(state)]
 => ["Book the vet", "Waiting to send", { id: "11111111-2222-4333-8444-555555555555", message: "Book the vet" }]
 
-pendingRetry(run(state, [{ type: "submit-started", unsent: pendingRetry(state), origin: "reload" }]))
+pendingRetry(run(state, [{ type: "submit-started", unsent: present(pendingRetry(state)), origin: "reload" }]))
 => null
 ```
 
@@ -196,7 +212,7 @@ If `home` already lists that record (the answer was lost, not the request), the
 row stays out of "Needs you" until the retry answers, so the thought shows once:
 
 ```ts continue
-const home = { open: [{ id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] }], recentlySent: [] };
+const home: Home = { open: [{ id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] }], recentlySent: [] };
 boxScreenRows(home, state).needsYou.length
 => 0
 ```
@@ -218,15 +234,16 @@ An answer replaces `home`'s copy of the same record. A discarded record leaves
 the screen, and a chosen one moves from "Needs you" to sent.
 
 ```ts
-const home = fixture("home");
+const home = homeFixture();
 const [uncertain, notDelivered] = home.open;
+assert.ok(uncertain && notDelivered, "home lists two open records");
 let state = run(fresh(), [
   { type: "row-started", id: uncertain.id, request: "choose" },
   { type: "row-answered", view: { ...uncertain, state: "sent", reason: undefined, choices: undefined, destination: { label: "Trip planning" } } },
   { type: "row-answered", view: { ...notDelivered, state: "discarded", destination: undefined, lastError: undefined } },
 ]);
 const rows = boxScreenRows(home, state);
-[rows.needsYou.length, rows.sent.map((view) => rowFace(view).title), state.busy]
+[rows.needsYou.length, rows.sent.map((view) => title(view)), state.busy]
 => [0, ["Sent to Trip planning", "Queued in Household"], []]
 ```
 
@@ -246,7 +263,7 @@ The fixtures share one record id, so the sent answer is the same thought.
 
 ```ts
 const sent = fixture("view-sent");
-const sendIt = (view) => run(fresh(), [
+const sendIt = (view: QuickChatView) => run(fresh(), [
   { type: "edit", text: view.message },
   { type: "submit-started", unsent: { id: view.id, message: view.message }, origin: "send" },
   { type: "submit-answered", view },
@@ -313,7 +330,7 @@ the answer is `sent` with a chat:
 ```ts continue
 const reloaded = restoreBoxScreen({ draft: "", unsent: { id: sent.id, message: sent.message } });
 state = run(reloaded, [
-  { type: "submit-started", unsent: pendingRetry(reloaded), origin: "reload" },
+  { type: "submit-started", unsent: present(pendingRetry(reloaded)), origin: "reload" },
   { type: "submit-answered", view: sent },
 ]);
 [state.followUp, boxScreenRows(undefined, state).sent.length]

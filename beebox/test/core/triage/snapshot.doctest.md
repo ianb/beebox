@@ -12,12 +12,14 @@ import { judgeItem } from "../../../src/core/triage/judge.js";
 import { serializeTriageRequest } from "../../../src/core/triage/request.js";
 import { JEV_MAX_REQUEST_CHARS } from "../../../src/services/jev-wire.js";
 import { createFakeJev } from "../../../src/services/jev.js";
+import type { Evidence } from "../../../src/core/triage/evidence/core.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { fixedAnswer } from "../../../src/core/judgment/service.js";
 ```
 
 ```ts
 const box = await makeTmpBox();
-const landmark = (rule) => `---\nsymbol:\n  glyph: 📁\nnavigation:\n  label: Records\ndestinations:\n  - for: [triage]\n    rules: ${rule}\n---\n`;
+const landmark = (rule: string) => `---\nsymbol:\n  glyph: 📁\nnavigation:\n  label: Records\ndestinations:\n  - for: [triage]\n    rules: ${rule}\n---\n`;
 await box.write("_content/a/records/Records.landmark.card", landmark("Bank statements."));
 await box.write("_content/b/records/Records.landmark.card", landmark("Repair invoices."));
 const initial = await compileInstructionSnapshot(box.root);
@@ -60,16 +62,18 @@ const trial = await compileInstructionSnapshot(box.root, { guideOverlay: overlay
 trial.trial && trial.policy.includes("trial hypothesis") && trial.policy.includes("Trial financial")
 => true
 
+const firstDestination = normal.destinations[0];
+invariant(firstDestination, "fixture compiles destinations");
 const candidate = path.join(box.root, "candidate.landmark.card");
 await fs.writeFile(candidate, landmark("All maintenance invoices."));
-const changed = await compileInstructionSnapshot(box.root, { landmarkOverlays: { [normal.destinations[0].ref]: candidate } });
-changed.destinations[0].optionId === normal.destinations[0].optionId
+const changed = await compileInstructionSnapshot(box.root, { landmarkOverlays: { [firstDestination.ref]: candidate } });
+changed.destinations[0]?.optionId === firstDestination.optionId
 => true
 
-changed.destinations[0].rules
+changed.destinations[0]?.rules
 => All maintenance invoices.
 
-(await compileInstructionSnapshot(box.root)).destinations[0].rules
+(await compileInstructionSnapshot(box.root)).destinations[0]?.rules
 => Bank statements.
 
 await box.write("_content/a/records/Records.landmark.card", "broken landmark");
@@ -85,7 +89,7 @@ await compileInstructionSnapshot(box.root)
 ## Pure judgment, ties and reserved outcomes
 
 ```ts continue
-const evidence = { version: 1, source: { ref: "/_content/inbox/staged/input.txt", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/input.txt", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Bank statement", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
+const evidence: Evidence = { version: 1, source: { ref: "/_content/inbox/staged/input.txt", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/input.txt", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Bank statement", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
 const uncertain = createFakeJev();
 const tied = await judgeItem(box.root, { evidence, instructions: normal, jev: uncertain });
 tied.outcome
@@ -94,7 +98,7 @@ tied.outcome
 tied.reason.kind === "summary" && tied.reason.text.includes("tied leading options")
 => true
 
-tied.requestHash.length
+tied.requestHash?.length
 => 64
 
 uncertain.judgeCalls.length
@@ -102,7 +106,7 @@ uncertain.judgeCalls.length
 
 const decisive = createFakeJev({ answers: (_name, { question }) => fixedAnswer(question, { yes: true }) });
 const selected = await judgeItem(box.root, { evidence, instructions: normal, jev: decisive });
-selected.destinationRef === normal.destinations[0].ref
+selected.destinationRef === firstDestination.ref
 => true
 
 selected.outcome
@@ -118,7 +122,7 @@ await judgeItem(box.root, { evidence: { ...evidence, status: "unavailable" }, in
 decisive.judgeCalls.length
 => 1
 
-const budget = JSON.parse(await fs.readFile(path.join(box.root, ".beebox/jev-budget.json"), "utf8"));
+const budget: { calls: number } = JSON.parse(await fs.readFile(path.join(box.root, ".beebox/jev-budget.json"), "utf8"));
 budget.calls
 => 3
 

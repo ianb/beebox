@@ -7,12 +7,13 @@ it is nonzero, so a reader never sees a live count go stale.
 
 ```ts setup
 import { createPresenceTracker } from "../../../../src/core/notification/presence-registry/tracker.js";
+import type { PresenceTracker } from "../../../../src/core/notification/presence-registry/tracker.js";
 
 const T0 = Date.parse("2026-09-26T12:00:00Z");
-const at = (seconds) => new Date(T0 + seconds * 1000);
+const at = (seconds: number) => new Date(T0 + seconds * 1000);
 
 // Take whatever write is due and record it, as the server does.
-function flush(tracker, seconds) {
+function flush(tracker: PresenceTracker, seconds: number) {
   const due = tracker.due(at(seconds));
   if (due !== null) tracker.written({ activeWeb: due, now: at(seconds) });
   return due === null ? "no write" : `write ${due}`;

@@ -9,7 +9,7 @@ files feedback.
 ```ts setup
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { codexSdkConfig } from "../../../src/services/codex-sdk-session/core.js";
+import { codexSdkConfig, type CodexSdkSessionOptions } from "../../../src/services/codex-sdk-session/core.js";
 import { codexCliArgs } from "../../../src/services/codex-binary.js";
 import { clearBoxConfigCache } from "../../../src/core/box/config.js";
 import * as auth from "../../../src/core/agent/auth-preflight.js";
@@ -57,7 +57,7 @@ const { runCodexAgent } = await t.mockImport("../../../src/core/agent/codex-run/
 const seen: boolean[] = [];
 for (const value of [undefined, "off", "maybe", "on"]) {
   await setTelemetry(box.root, value);
-  await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "" }, (options) => {
+  await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "" }, (options: CodexSdkSessionOptions) => {
     seen.push(options.analytics);
     return { id: null, run: async () => fakeTurn };
   });
@@ -82,7 +82,7 @@ for (const value of [undefined, "on"]) {
   await setTelemetry(box.root, value);
   let created!: () => void;
   const ready = new Promise<void>((resolve) => { created = resolve; });
-  const backend = createCodexChatBackend((options) => {
+  const backend = createCodexChatBackend((options: CodexSdkSessionOptions) => {
     seen.push(options.analytics);
     created();
     return { id: null, run: async () => fakeTurn };

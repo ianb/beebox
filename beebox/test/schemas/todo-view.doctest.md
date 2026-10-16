@@ -23,7 +23,7 @@ const schemas = await createCardSchemaMap();
 getCardTypes().includes("todo-view")
 => true
 
-getDefaultTemplate("todo-view").name
+getDefaultTemplate("todo-view")?.name
 => todo-view
 ```
 

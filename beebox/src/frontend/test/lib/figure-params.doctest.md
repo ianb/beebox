@@ -9,6 +9,7 @@ import {
   parseDeclaredParams,
   coerceFigureParams,
 } from "../../src/lib/figure-params.js";
+import type { FigureParamDecl } from "../../src/lib/figure-params.js";
 ```
 
 ## parseDeclaredParams
@@ -19,7 +20,7 @@ the offender) rather than vanishing silently, so we capture `console.warn` to
 keep the assertions — and the test output — clean:
 
 ```ts
-const warnings = [];
+const warnings: string[] = [];
 const origWarn = console.warn;
 console.warn = (...args) => { warnings.push(args.map(String).join(" ")); };
 const parsed = parseDeclaredParams([
@@ -58,7 +59,7 @@ JSON.stringify(parseDeclaredParams(undefined))
 Supplied values are coerced to the declared type:
 
 ```ts
-const declared = [
+const declared: FigureParamDecl[] = [
   { name: "label", type: "string" },
   { name: "size", type: "number" },
   { name: "wireframe", type: "boolean" },
@@ -77,7 +78,7 @@ JSON.stringify(coerceFigureParams(declared, { wireframe: "0" }))
 A declared default fills in when the embed omits the value:
 
 ```ts
-const declared = [{ name: "size", type: "number", default: 300 }];
+const declared: FigureParamDecl[] = [{ name: "size", type: "number", default: 300 }];
 JSON.stringify(coerceFigureParams(declared, {}))
 => {"size":300}
 ```
@@ -86,7 +87,7 @@ A param with neither a supplied value nor a default is omitted entirely, so the
 sketch's own fallback runs (`figure.params.x` is `undefined`):
 
 ```ts
-const declared = [{ name: "size", type: "number" }];
+const declared: FigureParamDecl[] = [{ name: "size", type: "number" }];
 JSON.stringify(coerceFigureParams(declared, {}))
 => {}
 ```

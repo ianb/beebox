@@ -11,6 +11,9 @@ node-arg:
   - --import=./test/helpers/isolate-user-home.ts
   - --import=agent-doctest/tap
   - --import=agent-doctest/loader
+  # Compile frontend modules with the React Compiler, as the Vite build does
+  # (src/frontend/test/helpers/react-compiler-hooks.ts).
+  - --import=./src/frontend/test/helpers/react-compiler-register.ts
   # Point BBX_SECRETS_FILE at a throwaway path in every test process, so nothing
   # a test resolves or writes can reach the developer's real
   # ~/.config/bbx/secrets.json. See the module for why this is process-level.

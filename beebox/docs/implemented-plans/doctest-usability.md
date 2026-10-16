@@ -21,7 +21,7 @@ are implemented. The text below keeps the original proposal and its reasoning.
 Related, not closed by this plan:
 [convert `*.test.ts` to doctests](../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md)
 (this plan supplies its fit guidance, see Track F), and
-[beebox `test/` is never type-checked](../../../issues/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md)
+[beebox `test/` is never type-checked](../../../issues/closed/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md)
 (doctest code blocks are also never type-checked; see NOT in scope).
 
 ## Evidence

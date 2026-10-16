@@ -1,7 +1,7 @@
 # Publication links use the approved hostname and tier route
 
 ```ts setup
-import { publicationUrl, samePublicationAudience } from "../../src/shared/publication-url.js";
+import { publicationUrl, samePublicationAudience, type PublicationUrlScope } from "../../src/shared/publication-url.js";
 const pubId = "abcdefghijklmnopqrstuvwxyz";
 ```
 
@@ -36,7 +36,7 @@ Shared-host routes put the public slug at the host root and keep secret URLs
 under the unguessable PubId path. They take precedence over legacy custom hosts.
 
 ```ts
-const sharedPublic = { tier: "public", slug: "hello", sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/hello/" } };
+const sharedPublic: PublicationUrlScope & { sharedHost: NonNullable<PublicationUrlScope["sharedHost"]> } = { tier: "public", slug: "hello", sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/hello/" } };
 publicationUrl({ workersHostname: null, pubId, scope: sharedPublic })
 => https://publish.example.org/hello/
 

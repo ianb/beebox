@@ -10,7 +10,7 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { prepareItem } from "../../../../src/core/triage/evidence/core.js";
 import { runJevTriage } from "../../../../src/core/triage/auto/core.js";
 import { TriageBudgetError } from "../../../../src/core/triage/judge.js";
-import { InvariantError } from "../../../../src/shared/invariant.js";
+import { InvariantError, invariant } from "../../../../src/shared/invariant.js";
 import type { TriageJudgment } from "../../../../src/core/triage/judge.js";
 import type { Evidence } from "../../../../src/core/triage/evidence/core.js";
 import type { InstructionSnapshot } from "../../../../src/core/triage/snapshot.js";
@@ -31,6 +31,7 @@ async function withoutConsoleError<T>(action: () => Promise<T>): Promise<T> {
 }
 function destinationJudgment(evidence: Evidence, instructions: InstructionSnapshot, outcome: "destination" | "unclear" = "destination"): TriageJudgment {
   const destination = instructions.destinations[0];
+  invariant(destination, "fixture box has a destination");
   const probabilities = Object.fromEntries([...instructions.destinations.map((item) => [item.optionId, outcome === "destination" && item === destination ? 0.9 : 0]), ["no-match", outcome === "unclear" ? 0.05 : 0.05], ["unclear", outcome === "unclear" ? 0.9 : 0.05]]);
   return { outcome, destinationRef: outcome === "destination" ? destination.ref : null, requestHash: "a".repeat(64), requestedModel: "jev-test", returnedModel: "jev-test",
     answer: { type: "choice", choice: outcome === "destination" ? destination.optionId : "unclear", confidence: outcome === "destination" ? 0.9 : 0.9, probabilities },
@@ -67,7 +68,7 @@ let researchCalls = 0;
 const result = await runJevTriage({ boxRoot: box.root,
   prepare: prepareItem,
   judge: async (_root, input) => {
-    judged.push({ text: input.evidence.parts[0].text, rules: input.instructions.destinations[0].rules });
+    judged.push({ text: input.evidence.parts[0]?.text ?? "", rules: input.instructions.destinations[0]?.rules ?? "" });
     return destinationJudgment(input.evidence, input.instructions, judged.length === 1 ? "unclear" : "destination");
   },
   research: async () => {

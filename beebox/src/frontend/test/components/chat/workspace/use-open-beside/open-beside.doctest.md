@@ -6,11 +6,12 @@ and "N open" on a directory's todo line, open their card through
 `useOpenBeside`, which asks `listLinkRoute` where it goes.
 
 ```ts setup
+import type { ViewTarget } from "../../../../../src/lib/view-url.js";
 import { listLinkRoute } from "../../../../../src/components/chat/workspace/use-open-beside/open-beside.js";
 import { createEmptyWorkspaceState, paneForPath } from "../../../../../src/components/chat/workspace/state-model.js";
 import { reduceWorkspace } from "../../../../../src/components/chat/workspace/state-reducer.js";
 
-const card = (path) => ({ path, viewer: null, params: {}, viewState: null });
+const card = (path: string): ViewTarget => ({ path, viewer: null, params: {}, viewState: null });
 ```
 
 ## The route

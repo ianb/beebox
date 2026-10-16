@@ -5,8 +5,8 @@ enables development surfaces. A stray `mock: true` request otherwise fails
 before any provider lookup or paid call.
 
 ```ts setup
-import { makeTestServer } from "../../../helpers/doctest-server.js";
-import { createFakeTts, createTtsService } from "../../../../src/services/tts.js";
+import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
+import { createFakeTts, createTtsService, type TtsService } from "../../../../src/services/tts.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 
 /** Runs `fn` with `console[method]` collecting lines instead of printing. */
@@ -21,17 +21,17 @@ async function capture<T>(method: "error" | "warn", fn: () => Promise<T>): Promi
   }
 }
 
-const postTts = (ctx, text: string) =>
+const postTts = (ctx: TestServer, text: string) =>
   ctx.request({ method: "POST", url: "/api/chat/tts", payload: { text } });
 
 /** Starts the test server on a real socket (`inject` cannot show a broken download). */
-async function listen(ctx): Promise<number> {
+async function listen(ctx: TestServer): Promise<number> {
   await ctx.server.listen({ port: 0, host: "127.0.0.1" });
   const addr = ctx.server.server.address();
   return typeof addr === "object" && addr !== null ? addr.port : 0;
 }
 
-function fetchClip(ctx, port: number, signal?: AbortSignal) {
+function fetchClip(ctx: TestServer, port: number, signal?: AbortSignal) {
   return fetch(`http://127.0.0.1:${port}/test/api/chat/tts`, {
     method: "POST",
     headers: { authorization: `Bearer ${getOrCreateAgentToken(ctx.boxRoot)}`, "content-type": "application/json" },
@@ -135,7 +135,7 @@ with a status. In every case the reason reaches the boxholder; a bare 500
 
 ```ts
 const { TimeoutError } = await import("ky");
-const cases = [
+const cases: [string, TtsService, string | undefined][] = [
   ["too-short body", createFakeTts({ backend: "gemini", emptyResponse: true }), undefined],
   ["unreachable", {
     backend: "openai" as const,
@@ -229,6 +229,7 @@ const slowCtx = await makeTestServer({ services: { openaiAudio: slow } });
 const slowPort = await listen(slowCtx);
 const leaving = new AbortController();
 const res = await fetchClip(slowCtx, slowPort, leaving.signal);
+if (res.body === null) throw new Error("the clip response has no body");
 const reader = res.body.getReader();
 const firstRead = await reader.read();
 leaving.abort();

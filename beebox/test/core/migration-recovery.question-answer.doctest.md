@@ -6,10 +6,12 @@ ordinary HTTP and CLI paths; the answer's follow-up job and the next bounded
 repair both read it. While an owner holds the box, answers are refused.
 
 ```ts setup
+import { strict as assert } from "node:assert";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
+import { createFakeAgent } from "./fake-agent.js";
 import { createTestServer } from "../helpers/test-server.js";
 import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment } from "../../src/lib/box-maintenance/admission.js";
 import { captureMigrationSnapshot } from "../../src/core/migration-recovery.js";
@@ -28,11 +30,12 @@ const snapshot = await captureMigrationSnapshot(boxRoot, "attachments");
 let agentPrompt = "";
 let invocations = 0;
 const repairOptions = { boxRoot, name: "attachments", recoveryRef: snapshot.ref, failure: "collision", code: 1,
-  retry: async () => 1, agent: { invokeStructured: async (_schema, args) => {
-    invocations += 1; agentPrompt = args.prompt;
-    return { success: true, data: { status: "needs-human", reason: "Which version?" } };
-  } } };
+  retry: async () => 1, agent: createFakeAgent({ name: "repair", act: async () => ({}), structuredResult: ({ prompt }) => {
+    invocations += 1; agentPrompt = prompt;
+    return { status: "needs-human", reason: "Which version?" };
+  } }) };
 const question = (await repairMigration(repairOptions)).question;
+assert.ok(question);
 await finishMigrationRepair(boxRoot, "attachments");
 const held = await acquireBoxMaintenance(boxRoot, { reason: "failed migration" });
 await held.beginChanges();
@@ -46,7 +49,7 @@ response.statusCode
 => 200
 
 const record = await boxMaintenanceStatus(boxRoot);
-JSON.stringify({ answered: (await readFile(join(boxRoot, question), "utf8")).includes("Keep both versions"), phase: record.phase, owner: record.owner, agents: invocations, jobs: (await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")).length })
+JSON.stringify({ answered: (await readFile(join(boxRoot, question), "utf8")).includes("Keep both versions"), phase: record?.phase, owner: record?.owner, agents: invocations, jobs: (await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")).length })
 => {"answered":true,"phase":"exclusive","owner":null,"agents":1,"jobs":1}
 
 const owner = await acquireBoxMaintenance(boxRoot, { reason: "retry" });

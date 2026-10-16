@@ -82,17 +82,17 @@ JSON.stringify(result)
 
 ```continue
 const [sent] = server2.putRequests;
-sent.authorization
+sent?.authorization
 => Bearer secret-123
 ```
 
 ```continue
-sent.filename
+sent?.filename
 => page1.pdf
 ```
 
 ```continue
-sent.body.toString("utf-8")
+sent?.body.toString("utf-8")
 => scan bytes
 ```
 

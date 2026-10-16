@@ -20,7 +20,7 @@ const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
 const box = await makeTmpBox({ git: true });
 const child = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), box.root], { stdio: ["pipe", "pipe", "inherit"] });
 const [data] = await once(child.stdout, "data");
-const env = JSON.parse(String(data));
+const env: { BBX_BOX_WORK: string } = JSON.parse(String(data));
 let entered = false;
 const pending = acquireBoxMaintenance(box.root, { reason: "fixture" }).then((value) => { entered = true; return value; });
 while ((await boxMaintenanceStatus(box.root)) === null) await delay();
@@ -41,7 +41,7 @@ const maintenance = await pending;
 await maintenance.beginChanges();
 await maintenance.release();
 const record = await boxMaintenanceStatus(box.root);
-`${record.phase} owner=${String(record.owner)} since=${typeof record.since}`
+`${record?.phase} owner=${String(record?.owner)} since=${typeof record?.since}`
 => exclusive owner=null since=string
 
 // Unfinished maintenance refuses nothing once its owner is gone.
@@ -52,7 +52,7 @@ await reopened.release();
 // clears the record when it completes.
 const recovery = await acquireBoxMaintenance(box.root, { reason: "recover" });
 const retried = await boxMaintenanceStatus(box.root);
-`${retried.reason} owner=${retried.owner.reason} carried=${String(retried.since === record.since)}`
+`${retried?.reason} owner=${retried?.owner?.reason} carried=${String(retried?.since === record?.since)}`
 => recover owner=recover carried=true
 
 await acquireBoxWork(box.root, { reason: "test" })
@@ -119,7 +119,7 @@ const joined = await resumed.run(() => acquireBoxMaintenance(box.root, { reason:
 await joined.prepare();
 await joined.release();
 await joined.release();
-(await boxMaintenanceStatus(box.root)).phase
+(await boxMaintenanceStatus(box.root))?.phase
 => ready
 
 await resumed.run(() => withoutBoxWork(() => acquireBoxWork(box.root, { reason: "test" })))
@@ -159,12 +159,12 @@ await sleeper.beginChanges()
 await sleeper.complete()
 => throws BoxMaintenanceError
 
-(await boxMaintenanceStatus(stolenBox.root)).owner.reason
+(await boxMaintenanceStatus(stolenBox.root))?.owner?.reason
 => thief
 
 // Releasing the old handle leaves the record for the live owner to finish.
 await sleeper.release();
-(await boxMaintenanceStatus(stolenBox.root)).phase
+(await boxMaintenanceStatus(stolenBox.root))?.phase
 => exclusive
 ```
 
@@ -215,7 +215,7 @@ const stepDirectory = join(execFileSync("git", ["rev-parse", "--absolute-git-dir
 const stepper = await acquireBoxMaintenance(stepBox.root, { reason: "docs refresh" });
 await stepper.beginChanges();
 await stepper.step("generating docs");
-(await boxMaintenanceStatus(stepBox.root)).step
+(await boxMaintenanceStatus(stepBox.root))?.step
 => { name: "generating docs", since: "«date»" }
 ```
 
@@ -228,7 +228,7 @@ Object.keys(JSON.parse(await readFile(join(stepDirectory, "phase.json"), "utf8")
 => ["id", "phase", "reason", "since"]
 
 await stepper.prepare();
-(await boxMaintenanceStatus(stepBox.root)).step
+(await boxMaintenanceStatus(stepBox.root))?.step
 => undefined
 ```
 
@@ -239,7 +239,7 @@ late step write replaces the step of the owner that comes next.
 await stepper.beginChanges();
 const helper = await stepper.run(() => acquireBoxMaintenance(stepBox.root, { reason: "docs", join: true }));
 await helper.step("committing");
-(await boxMaintenanceStatus(stepBox.root)).step.name
+(await boxMaintenanceStatus(stepBox.root))?.step?.name
 => committing
 
 await helper.release();
@@ -249,7 +249,7 @@ await next.beginChanges();
 await next.step("running");
 await stepper.step("stale");
 await helper.step("stale");
-(await boxMaintenanceStatus(stepBox.root)).step.name
+(await boxMaintenanceStatus(stepBox.root))?.step?.name
 => running
 ```
 
@@ -257,32 +257,32 @@ A step is diagnostic. When it cannot be written, the work it names goes on;
 when it cannot be read, the status still says why the box is closed.
 
 ```ts continue
-const nextStep = join(stepDirectory, `step-${(await boxMaintenanceStatus(stepBox.root)).id}.json`);
+const nextStep = join(stepDirectory, `step-${(await boxMaintenanceStatus(stepBox.root))?.id}.json`);
 await rm(nextStep, { force: true });
 await mkdir(nextStep);
-const warnings = [];
+const warnings: unknown[] = [];
 const realWarn = console.warn;
 console.warn = (message) => { warnings.push(message); };
-let status;
+let status: Awaited<ReturnType<typeof boxMaintenanceStatus>>;
 try {
   await next.step("blocked");
   status = await boxMaintenanceStatus(stepBox.root);
 } finally { console.warn = realWarn; }
-({ reason: status.reason, step: status.step ?? "none", warnings })
+({ reason: status?.reason, step: status?.step ?? "none", warnings })
 => { reason: "next", step: "none", warnings: ["[box-maintenance] step was not recorded:", "[box-maintenance] step could not be read:"] }
 ```
 
 A step that cannot be cleared does not stop a phase change either.
 
 ```ts continue
-const clearWarnings = [];
+const clearWarnings: unknown[] = [];
 console.warn = (message) => { clearWarnings.push(message); };
-let prepared;
+let prepared: Awaited<ReturnType<typeof boxMaintenanceStatus>>;
 try {
   await next.prepare();
   prepared = await boxMaintenanceStatus(stepBox.root);
 } finally { console.warn = realWarn; }
-({ phase: prepared.phase, clearWarnings })
+({ phase: prepared?.phase, clearWarnings })
 => { phase: "ready", clearWarnings: ["[box-maintenance] step was not cleared:", "[box-maintenance] step could not be read:"] }
 ```
 
@@ -305,7 +305,7 @@ const delegate = await controller.run(() => acquireBoxMaintenance(delegatedBox.r
 await delegate.beginChanges();
 await delegate.release();
 await controller.release();
-(await boxMaintenanceStatus(delegatedBox.root)).phase
+(await boxMaintenanceStatus(delegatedBox.root))?.phase
 => exclusive
 
 const admitted = await acquireBoxWork(delegatedBox.root, { reason: "test", inherited: null });
@@ -357,7 +357,7 @@ await oldOwner.prepare()
 
 await oldOwner.release();
 const currentPhase = await boxMaintenanceStatus(orphanBox.root);
-JSON.stringify({ reason: currentPhase.reason, phase: currentPhase.phase })
+JSON.stringify({ reason: currentPhase?.reason, phase: currentPhase?.phase })
 => {"reason":"new owner","phase":"ready"}
 
 await newOwner.complete();
@@ -383,7 +383,9 @@ const namedBox = await makeTmpBox({ git: true });
 const workDir = join(namedBox.root, ".git/bbx-maintenance/work");
 const sidecarHolders = async () => {
   const [name] = (await readdir(workDir)).filter((entry) => entry.endsWith(".lock"));
-  return JSON.parse(await readFile(join(workDir, name), "utf8")).metadata.holders.map((holder) => holder.reason).join(", ");
+  if (name === undefined) throw new Error("no lease sidecar");
+  const lease: { metadata: { holders: { reason: string }[] } } = JSON.parse(await readFile(join(workDir, name), "utf8"));
+  return lease.metadata.holders.map((holder) => holder.reason).join(", ");
 };
 const first = await acquireBoxWork(namedBox.root, { reason: "chat run one" });
 await sidecarHolders()

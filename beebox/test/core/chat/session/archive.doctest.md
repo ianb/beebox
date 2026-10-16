@@ -13,7 +13,7 @@ can still open.
 ```ts setup
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { archiveChatSession } from "../../../../src/core/chat/session/archive.js";
 import { loadDeadHusks, listSessionEntries } from "../../../../src/core/chat/session/list/core.js";
 import { listChatHusks, listChatHusksUnder } from "../../../../src/core/chat/husk-read.js";
@@ -23,7 +23,7 @@ import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 
 /** Archiving asks the registry whether the chat is still open, so every call needs one. */
-function idleRegistry(box) {
+function idleRegistry(box: TmpBox) {
   return new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
 }
 

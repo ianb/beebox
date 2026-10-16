@@ -19,11 +19,12 @@ process.env.BBX_AUTH_SCRYPT_N = "1024";
 process.env.BBX_SESSION_SECRET = "password-reset-route-test-secret";
 delete process.env.BBX_HUB_SECRET;
 
-function resetForm(fields) {
+function resetForm(fields: Record<string, string>) {
+  const headers: Record<string, string> = { "content-type": "application/x-www-form-urlencoded" };
   return {
-    method: "POST",
+    method: "POST" as const,
     url: "/auth/reset-password",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers,
     payload: new URLSearchParams(fields).toString(),
   };
 }
@@ -54,8 +55,8 @@ const oldCookie = String(login.headers["set-cookie"]).split(";", 1)[0];
 login.statusCode
 => 204
 
-let page;
-for (let index = 0; index < 12; index += 1) {
+let page = await ctx.server.inject({ method: "GET", url: `/auth/reset-password?token=${reset.token}` });
+for (let index = 1; index < 12; index += 1) {
   page = await ctx.server.inject({ method: "GET", url: `/auth/reset-password?token=${reset.token}` });
 }
 const pageResult = {
@@ -119,7 +120,7 @@ JSON.stringify({ status: atCapacity.statusCode, retained: atCapacity.payload.inc
 ```
 
 ```ts continue
-const beforeGen = getLocalUser("member@example.com").gen;
+const beforeGen = getLocalUser("member@example.com")?.gen;
 const acceptedRequest = resetForm({ token: reset.token, password: "new-password", confirmPassword: "new-password" });
 acceptedRequest.headers["x-bbx-base-prefix"] = "/worktree";
 const accepted = await ctx.server.inject(acceptedRequest);
@@ -127,7 +128,7 @@ const acceptedResult = {
   status: accepted.statusCode,
   location: accepted.headers.location,
   cookie: accepted.headers["set-cookie"] ?? null,
-  gen: `${beforeGen}->${getLocalUser("member@example.com").gen}`,
+  gen: `${beforeGen}->${getLocalUser("member@example.com")?.gen}`,
 };
 JSON.stringify(acceptedResult)
 => {"status":302,"location":"/worktree/auth/login?returnTo=%2Fworktree%2Ftest%2F&passwordReset=1","cookie":null,"gen":"1->2"}

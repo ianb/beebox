@@ -11,6 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import Sharp from "sharp";
+import { z } from "zod";
 import { analyzeScanBatchWithGemini } from "../../../src/core/describe-images/gemini.js";
 ```
 
@@ -26,9 +27,10 @@ await fs.writeFile(heifPath, heifBytes);
 const avifPath = path.join(dir, "real.avif");
 await Sharp(Buffer.from('<svg width="257" height="113" xmlns="http://www.w3.org/2000/svg"><rect width="257" height="113" fill="white"/></svg>')).avif().toFile(avifPath);
 
-let requestBody;
+const GeminiRequest = z.object({ contents: z.array(z.object({ parts: z.array(z.object({ inlineData: z.object({ data: z.string(), mimeType: z.string() }).optional() })) })) });
+const requestBodies: Array<z.infer<typeof GeminiRequest>> = [];
 globalThis.fetch = async (_input, init) => {
-  requestBody = JSON.parse(String(init?.body));
+  requestBodies.push(GeminiRequest.parse(JSON.parse(String(init?.body))));
   return Response.json({
     candidates: [{ content: { parts: [{ text: JSON.stringify([
         { index: 0, kind: "back", paired_with_index: null, description: "", title: "", rotation: 0, subject_bbox: null, has_text: false, text_blocks: [], date_hint: null, flag_for_review: false, flag_reason: null },
@@ -40,10 +42,10 @@ globalThis.fetch = async (_input, init) => {
 };
 
 const result = await analyzeScanBatchWithGemini("fake-key", { imagePaths: [heicPath, heifPath, avifPath], boxholderContext: null });
-const parts = requestBody.contents[0].parts.filter((part) => part.inlineData !== undefined).map((part) => part.inlineData);
-const heicRoundTrip = Buffer.from(parts[0].data, "base64").equals(heicBytes);
-const heifRoundTrip = Buffer.from(parts[1].data, "base64").equals(heifBytes);
-const avifBytes = Buffer.from(parts[2].data, "base64");
+const parts = (requestBodies[0]?.contents[0]?.parts ?? []).flatMap((part) => part.inlineData ?? []);
+const heicRoundTrip = Buffer.from(parts[0]?.data ?? "", "base64").equals(heicBytes);
+const heifRoundTrip = Buffer.from(parts[1]?.data ?? "", "base64").equals(heifBytes);
+const avifBytes = Buffer.from(parts[2]?.data ?? "", "base64");
 const avifMetadata = await Sharp(avifBytes).metadata();
 JSON.stringify([parts.map((part) => part.mimeType), heicRoundTrip, heifRoundTrip, avifMetadata.format, avifMetadata.width, avifMetadata.height, result.analyses.length, result.analyses[2]?.index])
 => [["image/heic","image/heif","image/jpeg"],true,true,"jpeg",257,113,3,2]

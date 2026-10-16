@@ -11,9 +11,9 @@ than silently forwarding a photo the model will see sideways.
 import { warnOnUnnormalizedImageOrientation } from "../../../../src/webapp/routes/chat/helpers.js";
 
 // Minimal JPEG carrying a single EXIF Orientation tag (little-endian TIFF).
-function exifJpegBase64(orientation) {
-  const u16 = (v) => [v & 0xff, (v >> 8) & 0xff];
-  const u32 = (v) => [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff];
+function exifJpegBase64(orientation: number) {
+  const u16 = (v: number) => [v & 0xff, (v >> 8) & 0xff];
+  const u32 = (v: number) => [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff];
   const tiff = [0x49, 0x49, ...u16(0x2a), ...u32(8), ...u16(1), ...u16(0x0112), ...u16(3), ...u32(1), ...u16(orientation), 0x00, 0x00, ...u32(0)];
   const exif = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00, ...tiff];
   const app1Len = exif.length + 2;
@@ -22,10 +22,10 @@ function exifJpegBase64(orientation) {
 }
 
 // Capture console.warn for the duration of a call.
-function warnings(fn) {
+function warnings(fn: () => void) {
   const original = console.warn;
-  const captured = [];
-  console.warn = (...args) => captured.push(args.join(" "));
+  const captured: string[] = [];
+  console.warn = (...args: unknown[]) => captured.push(args.join(" "));
   try {
     fn();
   } finally {

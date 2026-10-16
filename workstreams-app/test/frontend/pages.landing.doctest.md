@@ -12,7 +12,7 @@ Object.assign(globalThis, { React });
 
 import { RecentView, recentRowTarget } from "../../src/frontend/pages/RecentPage.js";
 import { WorkstreamsHeader } from "../../src/frontend/pages/WorkstreamsPage.js";
-import type { Quota, RecentFeed } from "../../src/frontend/types.js";
+import type { Quota, RecentFeed, RecentFile } from "../../src/frontend/types.js";
 
 const feed: RecentFeed = {
   now: 1_780_000_000,
@@ -61,7 +61,7 @@ case worth clicking on most. A file under `issues/` that is not an issue (no
 category directory) keeps the browser.
 
 ```ts
-const recentFile = (relPath, workstream) => ({
+const recentFile = (relPath: string, workstream: string | null): RecentFile => ({
   relPath,
   kind: "markdown",
   at: 1_779_999_000,

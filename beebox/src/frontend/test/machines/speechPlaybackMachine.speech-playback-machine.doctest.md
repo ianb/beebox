@@ -9,17 +9,30 @@ the UI does not make a rapid series of playback failures look successful.
 ```ts setup
 import { createActor } from "xstate";
 import { speechPlaybackMachine } from "../../src/machines/speechPlaybackMachine.js";
+import type { getTTSClient } from "../../src/lib/audio/tts-client/client.js";
+import type { SpeechSegment } from "../../src/lib/audio/speech-parsing/parse.js";
+
+type TTSClient = ReturnType<typeof getTTSClient>;
+
+/**
+ * TTSClient has private members, so no object literal can satisfy it. The
+ * machine calls only speak, prefetch, and stop; a fake of those three is
+ * vouched for here, once.
+ */
+function fakeTtsClient(fake: Pick<TTSClient, "speak" | "prefetch" | "stop">): TTSClient {
+  return fake as TTSClient;
+}
 
 Object.defineProperty(globalThis, "navigator", {
   value: { userAgent: "iPhone" },
   configurable: true,
 });
 
-function segment(text) {
+function segment(text: string): SpeechSegment {
   return { text, displayText: text, hasTextBefore: false };
 }
 
-async function waitUntilIdle(actor) {
+async function waitUntilIdle(actor: { getSnapshot(): { matches(state: "idle"): boolean } }) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     if (actor.getSnapshot().matches("idle")) return;
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -36,17 +49,17 @@ the queue finishes, with the error's message kept as the reason the chunk
 shows.
 
 ```ts
-const ttsClient = {
+const ttsClient = fakeTtsClient({
   async speak(text, options) {
-    options.onPlaybackStarted();
+    options?.onPlaybackStarted?.();
     if (text === "broken") throw new Error("media playback rejected");
   },
   prefetch() {
     throw new Error("prefetch is disabled for the iPhone test user agent");
   },
   stop() {},
-};
-const playbackErrors = [];
+});
+const playbackErrors: unknown[][] = [];
 const originalConsoleError = console.error;
 console.error = (...args) => playbackErrors.push(args);
 const actor = createActor(speechPlaybackMachine, { input: {} });
@@ -76,12 +89,12 @@ Generation can take time. The border must stay in `waiting` until the media
 element's playback callback fires, then change to `playing`.
 
 ```ts
-let playbackStarted;
-let finishPlayback;
-const ttsClient = {
+let playbackStarted: (() => void) | undefined;
+let finishPlayback = () => {};
+const ttsClient = fakeTtsClient({
   speak(_text, options) {
-    playbackStarted = options.onPlaybackStarted;
-    return new Promise((resolve) => {
+    playbackStarted = options?.onPlaybackStarted;
+    return new Promise<void>((resolve) => {
       finishPlayback = resolve;
     });
   },
@@ -89,7 +102,7 @@ const ttsClient = {
     throw new Error("prefetch is disabled for the iPhone test user agent");
   },
   stop() {},
-};
+});
 const actor = createActor(speechPlaybackMachine, { input: {} });
 actor.start();
 actor.send({
@@ -103,7 +116,7 @@ await Promise.resolve();
 actor.getSnapshot().context.segmentStates[0]
 => waiting
 
-playbackStarted();
+playbackStarted?.();
 actor.getSnapshot().context.segmentStates[0]
 => playing
 

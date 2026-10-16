@@ -11,6 +11,7 @@ it is reachable here without a backend.
 
 ```ts setup
 import {
+  type CaptureBubbleModel,
   captureBubblePhase,
   captureBubbleCaption,
   captureBubbleAgeMs,
@@ -18,17 +19,17 @@ import {
 } from "../../../src/components/chat/capture-bubble.js";
 
 const NOW = Date.parse("2026-08-21T12:00:00Z");
-const agesAgo = (ms) => new Date(NOW - ms).toISOString();
+const agesAgo = (ms: number) => new Date(NOW - ms).toISOString();
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
 
 // One bubble, `ms` old, in whatever state the caller names. `startedAt` and
 // `lastActivityAt` coincide unless a test says otherwise.
-const bubble = (state, ms, extra) => ({
+const bubble = (state: string, ms: number, extra: Partial<CaptureBubbleModel> = {}): CaptureBubbleModel => ({
   id: "b", state, counts: COUNTS, startedAt: agesAgo(ms), lastActivityAt: agesAgo(ms), ...extra,
 });
-const faceOf = (model) => {
+const faceOf = (model: CaptureBubbleModel) => {
   const age = captureBubbleAgeMs(model, NOW);
   return `${captureBubblePhase(model, age)}: ${captureBubbleCaption(model, age)}`;
 };

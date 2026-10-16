@@ -20,15 +20,34 @@ import { quickChatViewSchema } from "../../../../src/core/chat/routing/quick-cha
 import {
   quickChatChooseInput, quickChatDiscardInput, quickChatHomeSchema, quickChatRetryInput, quickChatSubmitInput,
 } from "../../../../src/webapp/trpc/routers/quick-chat.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { z } from "zod";
+import { makeTestServer, type InjectResult } from "../../../helpers/doctest-server.js";
 
 const DIR = "test/mobile-contract/fixtures/quick-chat";
-async function fixture(name) {
-  return JSON.parse(await readFile(join(DIR, name), "utf-8"));
+async function fixture(name: string): Promise<object> {
+  const parsed: unknown = JSON.parse(await readFile(join(DIR, name), "utf-8"));
+  if (typeof parsed !== "object" || parsed === null) throw new Error(`${name} is not a JSON object`);
+  return parsed;
+}
+
+const envelopeSchema = z.object({ result: z.object({ data: z.unknown() }) });
+const errorEnvelopeSchema = z.object({ error: z.object({ message: z.string() }) });
+/** The `data` of a tRPC success envelope (a fixture body or an HTTP response body). */
+function dataOf(body: unknown): unknown {
+  return envelopeSchema.parse(body).result.data;
+}
+function viewOf(body: unknown) {
+  return quickChatViewSchema.parse(dataOf(body));
+}
+function homeOf(body: unknown) {
+  return quickChatHomeSchema.parse(dataOf(body));
+}
+function errorMessage(res: InjectResult): string {
+  return errorEnvelopeSchema.parse(res.body).error.message;
 }
 
 /** Parse with the server's schema; a field the schema would drop is a mismatch too. */
-function check(schema, value) {
+function check(schema: z.ZodType, value: unknown): string {
   const parsed = schema.safeParse(value);
   if (!parsed.success) return `invalid: ${parsed.error.issues[0]?.message}`;
   return isDeepStrictEqual(parsed.data, value) ? "ok" : "has fields the server does not send";
@@ -52,15 +71,15 @@ the schema the router uses, field for field.
 
 ```ts
 const names = (await readdir(DIR)).toSorted();
-const results = {};
+const results: Record<string, string> = {};
 for (const name of names) {
   const body = await fixture(name);
   if (name.endsWith("request.json") && name.startsWith("submit-")) results[name] = check(quickChatSubmitInput, body);
   else if (name === "choose-request.json") results[name] = check(quickChatChooseInput, body);
   else if (name === "discard-request.json") results[name] = check(quickChatDiscardInput, body);
   else if (name === "retry-request.json") results[name] = check(quickChatRetryInput, body);
-  else if (name === "home.json") results[name] = check(quickChatHomeSchema, body.result.data);
-  else if (name.startsWith("view-")) results[name] = check(quickChatViewSchema, body.result.data);
+  else if (name === "home.json") results[name] = check(quickChatHomeSchema, dataOf(body));
+  else if (name.startsWith("view-")) results[name] = check(quickChatViewSchema, dataOf(body));
   else results[name] = "unknown fixture kind";
 }
 results
@@ -88,9 +107,9 @@ The view fixtures cover each state and reason the box screen distinguishes, and
 a page sent from the Clerk with no note: an empty message beside `page`.
 
 ```ts
-const faces = [];
+const faces: (string | boolean | null)[][] = [];
 for (const name of (await readdir(DIR)).filter((file) => file.startsWith("view-")).toSorted()) {
-  const { state, reason, lastError, expired, queued, destination, page, message } = (await fixture(name)).result.data;
+  const { state, reason, lastError, expired, queued, destination, page, message } = viewOf(await fixture(name));
   faces.push([state, reason ?? null, lastError === undefined ? null : "lastError", expired ?? null, queued ?? null, destination?.sessionId === undefined ? null : "session",
     page === undefined ? null : `page${message === "" ? ", no note" : ""}`]);
 }
@@ -118,19 +137,19 @@ fixture ends it. `home` answers an envelope that parses as the home schema.
 ```ts
 const server = await makeTestServer();
 const submit = await server.request({ method: "POST", url: "/api/trpc/quickChat.submit", payload: await fixture("submit-request.json") });
-[submit.statusCode, check(quickChatViewSchema, submit.body.result.data), submit.body.result.data.state, submit.body.result.data.reason]
+[submit.statusCode, check(quickChatViewSchema, dataOf(submit.body)), viewOf(submit.body).state, viewOf(submit.body).reason]
 => [200, "ok", "needs-choice", "routing-unavailable"]
 
 const home = await server.request({ method: "GET", url: "/api/trpc/quickChat.home" });
-[home.statusCode, check(quickChatHomeSchema, home.body.result.data), home.body.result.data.open.length]
+[home.statusCode, check(quickChatHomeSchema, dataOf(home.body)), homeOf(home.body).open.length]
 => [200, "ok", 1]
 
 const retry = await server.request({ method: "POST", url: "/api/trpc/quickChat.retry", payload: await fixture("retry-request.json") });
-[retry.statusCode, check(quickChatViewSchema, retry.body.result.data), retry.body.result.data.state]
+[retry.statusCode, check(quickChatViewSchema, dataOf(retry.body)), viewOf(retry.body).state]
 => [200, "ok", "needs-choice"]
 
 const discard = await server.request({ method: "POST", url: "/api/trpc/quickChat.discard", payload: await fixture("discard-request.json") });
-[discard.statusCode, discard.body.result.data.state]
+[discard.statusCode, viewOf(discard.body).state]
 => [200, "discarded"]
 ```
 
@@ -145,12 +164,13 @@ the log is captured and shown.
 const logged: string[] = [];
 const { error: logError } = console;
 console.error = (...args: unknown[]) => { logged.push(args.map(String).join(" ")); };
-let unknown, missing;
+let unknown: InjectResult = { statusCode: 0, body: null };
+let missing: InjectResult = { statusCode: 0, body: null };
 try {
   unknown = await server.request({ method: "POST", url: "/api/trpc/quickChat.noSuchProcedure", payload: await fixture("retry-request.json") });
   missing = await server.request({ method: "POST", url: "/api/trpc/quickChat.retry", payload: { id: "00000000-0000-4000-8000-000000000000", channel: "ios-native" } });
 } finally { console.error = logError; }
-({ unknown: [unknown.statusCode, unknown.body.error.message], missing: [missing.statusCode, missing.body.error.message], logged })
+({ unknown: [unknown.statusCode, errorMessage(unknown)], missing: [missing.statusCode, errorMessage(missing)], logged })
 => {
   unknown: [404, "No procedure found on path \"quickChat.noSuchProcedure\""],
   missing: [404, "This message is no longer stored."],

@@ -6,7 +6,7 @@ inputs, and refuses empty/unknown versions or file-bearing follow-up.
 ```ts setup
 import { readFile } from "node:fs/promises";
 import { quickCaptureDeclarationSchema, quickCaptureReceiptSchema } from "../../src/shared/quick-capture.js";
-async function fixture(name) {
+async function fixture(name: string): Promise<unknown> {
   return JSON.parse(await readFile(new URL(`./fixtures/quick-capture/${name}.json`, import.meta.url), "utf8"));
 }
 ```

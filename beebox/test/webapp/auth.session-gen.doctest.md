@@ -38,7 +38,7 @@ const AUTH_FILE = path.join(authDir, "auth.json");
 process.env.BBX_AUTH_FILE = AUTH_FILE;
 
 // A minimal request carrying just the session cookie (the shape the resolver reads).
-function reqWithCookie(cookieValue) {
+function reqWithCookie(cookieValue: string | undefined) {
   return { headers: {}, cookies: cookieValue ? { [COOKIE_NAME]: cookieValue } : {} };
 }
 ```

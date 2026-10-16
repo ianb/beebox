@@ -23,7 +23,7 @@ async function makeClaudeTmpRoot() {
 
 /** Write a task output file at the exact shape the route expects, returning
  *  its absolute path. */
-async function writeTaskOutput({ tmpRoot, cwd, session, file, content }) {
+async function writeTaskOutput({ tmpRoot, cwd, session, file, content }: { tmpRoot: string; cwd: string; session?: string; file?: string; content?: string }) {
   const dir = path.join(tmpRoot, encodeProjectDir(cwd), session ?? "sess-1", "tasks");
   await fs.mkdir(dir, { recursive: true });
   const filePath = path.join(dir, file ?? "t1.output");

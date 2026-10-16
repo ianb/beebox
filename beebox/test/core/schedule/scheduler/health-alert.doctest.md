@@ -11,8 +11,12 @@ relapse is a new episode.
 
 ```ts setup
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { StoredEngineUnavailability } from "../../../../src/core/agent/engine-availability-store.js";
+import { invariant } from "../../../../src/shared/invariant.js";
 import { recordScheduleEpisodes } from "../../../../src/core/schedule/scheduler/health-alert.js";
 import { loadScheduleHealth } from "../../../../src/core/schedule/health-box.js";
+import type { BoxScheduleHealth } from "../../../../src/core/schedule/health-box.js";
 import { engineQuotaChecks, scheduledTasksCheck } from "../../../../src/webapp/trpc/routers/health/checks/schedules.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import {
@@ -23,7 +27,7 @@ import {
 
 const NOW = new Date("2026-06-09T12:00:00Z");
 
-async function seedFailingTask(box) {
+async function seedFailingTask(box: TmpBox) {
   await box.seed("_config/schedules/sync-notes.scheduled-script.card", `---
 cron: "0 * * * *"
 runs: bbx wakeup --connector notes
@@ -106,7 +110,7 @@ The daemon ran here and stopped: no task can fail or run late in a way the
 check would see, so the heartbeat itself is the finding.
 
 ```ts
-const health = {
+const health: BoxScheduleHealth = {
   tasks: [],
   scheduler: { status: "stale", lastTickAt: "2026-06-09T09:00:00.000Z", ageMs: 3 * 3_600_000 },
   engineWait: null,
@@ -134,11 +138,12 @@ An engine out of usage quota used to notify; it is now the `engine-quota`
 check, present only while the episode is live.
 
 ```ts
-const live = {
+const live: StoredEngineUnavailability = {
   provider: "claude", reason: "quota-exhausted", retryAt: "2026-06-09T18:00:00Z", retryAtSource: "parsed",
   detectedAt: "2026-06-09T10:00:00Z", message: "limit", episodeStartedAt: "2026-06-09T09:00:00Z",
 };
 const [quota] = engineQuotaChecks(live, NOW);
+invariant(quota, "a live episode yields the engine-quota check");
 `${quota.name} | ${quota.ok} | ${quota.message.includes("(for 3h so far)")}`
 => engine-quota | false | true
 

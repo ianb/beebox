@@ -12,6 +12,8 @@ in place produces a box where no asset is annexed and nothing reports it.
 import { spawnSync } from "node:child_process";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { runUnignore } from "../../src/core/attachments-gitignore.js";
+import type { CommandContext } from "../../src/core/command-runner.js";
+import { isRecord } from "../../src/shared/is-record.js";
 import { assetGitignorePatterns } from "../../src/lib/asset-extensions.js";
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -31,10 +33,10 @@ async function installLegacyAssetBlock(boxRoot: string): Promise<void> {
   );
 }
 
-/** Minimal CommandContext: the two fields these subcommands touch. */
-function ctxFor(root: string): { boxRoot: string; writeLine: (s: string) => void; lines: string[] } {
+/** A CommandContext that collects what the subcommands write. */
+function ctxFor(root: string): CommandContext & { lines: string[] } {
   const lines: string[] = [];
-  return { boxRoot: root, writeLine: (s: string) => lines.push(s), lines };
+  return { boxRoot: root, write: (s: string) => { lines.push(s); }, writeLine: (s: string) => { lines.push(s); }, lines };
 }
 
 function checkIgnore(boxRoot: string, boxRelativePath: string): { ignored: boolean; rule: string } {
@@ -183,7 +185,7 @@ await stale.write(
 );
 const c = ctxFor(stale.root);
 const refreshed = await runUnignore(c);
-refreshed.data?.["changed"]
+isRecord(refreshed.data) ? refreshed.data["changed"] : undefined
 => true
 
 c.lines.join("")

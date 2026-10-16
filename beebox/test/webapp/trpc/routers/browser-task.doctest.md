@@ -14,11 +14,13 @@ function caller(boxRoot: string, options?: { isOwner?: boolean }) {
   return appRouter.createCaller({
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: options?.isOwner !== false,
+    isAuthenticatedOwner: false,
+    actor: "user",
   });
 }
 

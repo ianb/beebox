@@ -19,12 +19,12 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runTest } from "../../../src/dev/lib/test-runner/runner/run-test.js";
 
 // Run the guard, returning the thrown error's class name, or "ok".
-async function guard(p) {
+async function guard(p: string): Promise<string> {
   try {
     await assertStandaloneBox(p);
     return "ok";
   } catch (e) {
-    return e.constructor.name;
+    return e instanceof Error ? e.constructor.name : String(e);
   }
 }
 ```
@@ -107,7 +107,7 @@ const cli = spawnSync(process.execPath, ["--import", "tsx", cliPath, "run", "--b
   encoding: "utf-8",
 });
 const directRunnerRefused = await runTest({
-  test: { id: "guard-test", prompt: "test", expected_level: "knows_directly" },
+  test: { id: "guard-test", prompt: "test", expected_level: "knows_directly", watch_for: "refusal" },
   boxRoot: dirtyRoot,
 }).then(() => false, (error: Error) => error.name === "AuditBoxDirtyError");
 JSON.stringify({

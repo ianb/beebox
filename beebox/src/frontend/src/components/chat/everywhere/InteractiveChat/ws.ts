@@ -281,7 +281,9 @@ export function useChatWs(opts: {
           // neither until they reloaded the page.
           //
           // REFRESH is ignored while streaming, so this can't disturb a turn this
-          // client is already following.
+          // client is already following. The refresh can also beat the
+          // transcript write, so the message is held on screen until it lands.
+          send({ type: "INJECTED_USER_MESSAGE", message: userMessage.message, timestamp: userMessage.timestamp });
           send({ type: "REFRESH" });
         } else if (currentUser && userMessage.user.email !== currentUser.email) {
           send({

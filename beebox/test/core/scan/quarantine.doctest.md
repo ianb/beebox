@@ -21,12 +21,13 @@ import {
   readQuarantineEntry,
   recordQuarantineEntry,
   updateQuarantineState,
+  type ScanQuarantineEntry,
 } from "../../../src/core/scan/quarantine.js";
 
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
 
-function entry(sha256, overrides) {
+function entry(sha256: string, overrides?: Partial<ScanQuarantineEntry>): ScanQuarantineEntry {
   return {
     sha256,
     state: "pending",
@@ -48,7 +49,7 @@ quarantineDir(box.root) === path.join(box.root, "_tmp", "scan-quarantine")
 
 await recordQuarantineEntry(box.root, entry(HASH_A));
 const read = await readQuarantineEntry(box.root, HASH_A);
-JSON.stringify({ state: read.state, name: read.originalFilename, token: read.tokenName })
+JSON.stringify({ state: read?.state, name: read?.originalFilename, token: read?.tokenName })
 => {"state":"pending","name":"Invoice_001.pdf","token":"laptop-scansnap"}
 ```
 
@@ -77,7 +78,7 @@ await recordQuarantineEntry(box.root, entry(HASH_B, { state: "rejected", reason:
 
 const promoting = await updateQuarantineState(box.root, { sha256: HASH_A, state: "promoting" });
 const flagged = await updateQuarantineState(box.root, { sha256: HASH_B, state: "rejected", questionRef: "questions/Bad_Scan.question.card" });
-JSON.stringify({ a: promoting.state, b: [flagged.state, flagged.questionRef, flagged.reason] })
+JSON.stringify({ a: promoting?.state, b: [flagged?.state, flagged?.questionRef, flagged?.reason] })
 => {"a":"promoting","b":["rejected","questions/Bad_Scan.question.card","magic bytes say image/png but the extension is .pdf"]}
 ```
 

@@ -8,7 +8,7 @@ manifest at the root, so before this every installed box was called
 ```ts setup
 import { boxManifest } from "../../../src/webapp/routes/box-identity-assets.js";
 
-const identity = { slug: "kitchen", name: "Kitchen", symbol: "🍳", symbolSrc: null };
+const identity = { slug: "kitchen", name: "Kitchen", symbol: null };
 ```
 
 ## An installed app is named after the box, and opens into it

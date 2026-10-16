@@ -5,17 +5,38 @@ baseline with its change since the prior run, so a trim shows up as a number
 rather than a YAML diff you go find.
 
 ```ts setup
+import type { ContextHistoryEntry } from "../../../src/dev/lib/context-history.js";
 import { formatBaselineDelta, renderContextSummary } from "../../../src/dev/lib/report.js";
+import type { TestResult } from "../../../src/dev/lib/test-runner/runner/run-test.js";
 
-// Minimal duck-typed result — renderContextSummary reads only test.id and
-// behavior.context. A null context means the audit measured no usage.
-const res = (id, initialTokens) => ({
-  test: { id },
+// A result with everything empty except what renderContextSummary reads:
+// test.id and behavior.context. A null context means the audit measured no usage.
+const res = (id: string, initialTokens: number | null): TestResult => ({
+  test: { id, prompt: id, expected_level: "knows_about", watch_for: id },
+  engine: "claude",
+  sessionId: "session",
   behavior: {
+    filesRead: [],
+    searches: [],
+    bashCommands: [],
+    bashRawCommands: [],
+    responseText: "",
+    responseLength: 0,
     context: initialTokens === null ? null : { initialTokens, peakTokens: initialTokens, addedTokens: 0, turnCount: 1 },
   },
+  checks: {
+    containsChecks: [],
+    matchesChecks: [],
+    notContainsChecks: [],
+    notMatchesChecks: [],
+    cardsContainChecks: [],
+    cardsNotUnderChecks: [],
+    shouldReadChecks: [],
+    shouldNotReadChecks: [],
+    bashContainsChecks: [],
+  },
 });
-const prior = (initial) => [{ date: "d", boxCommit: "b", repoCommit: "r", initial, peak: initial, added: 0, turns: 1 }];
+const prior = (initial: number): ContextHistoryEntry[] => [{ date: "d", boxCommit: "b", repoCommit: "r", initial, peak: initial, added: 0, turns: 1 }];
 ```
 
 ## The delta clause compares a baseline to the prior run

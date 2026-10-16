@@ -51,7 +51,7 @@ applied. Retired migrations stay registered and run the shared no-op
 `src/scripts/migrate/retired.ts` rather than disappearing.
 
 ```ts
-MIGRATIONS[0].name
+MIGRATIONS[0]?.name
 => attachments
 ```
 

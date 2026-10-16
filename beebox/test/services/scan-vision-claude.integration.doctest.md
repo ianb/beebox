@@ -37,7 +37,7 @@ if (skipReason) console.warn(`[skipped] scan-vision-claude-integration: ${skipRe
 
 // A legible synthetic page: white background, large black caption text —
 // enough for the model to classify and transcribe something deterministic-ish.
-async function makeTestPage(dir) {
+async function makeTestPage(dir: string) {
   const svg = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="600" fill="white"/><text x="60" y="300" font-size="48" font-family="sans-serif" fill="black">May 1985</text></svg>`;
   const p = join(dir, "page-0.jpg");
   await Sharp(Buffer.from(svg)).jpeg().toFile(p);
@@ -53,7 +53,7 @@ photo flow depends on, exercised against the real SDK.
 
 ```ts
 const dir = skipReason ? null : await mkdtemp(join(tmpdir(), "scan-vision-int-"));
-const result = skipReason
+const result = dir === null
   ? { analyses: [{ index: 0, subject_bbox: null }], usage: { prompt: 1 }, costUsd: 0 }
   : await createClaudeScanVision({ boxRoot: dir }).analyzeBatch({ imagePaths: [await makeTestPage(dir)], boxholderContext: null });
 skipReason ? "SKIPPED" : "RAN";

@@ -17,11 +17,12 @@ import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeec
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { useChatScroll, SEND_SPACER_MIN_HEIGHT } from "../../chat-scroll/scroll";
 import {
-  buildDataItems,
+  buildSettledItems,
+  buildTailItems,
   dataItemKey,
   renderDataItem,
+  useRenderItemContext,
   type DataItem,
-  type RenderItemContext,
   type SpeechPlaybackState,
 } from "./message-items";
 import { MAX_RETAINED_MESSAGES } from "../../../../machines/chat-types";
@@ -38,7 +39,7 @@ interface LiveTurnState { turnId: string | null; uuid: string | null }
  * The uuid of the group that should carry the live-turn key, given the previous
  * render's state. While streaming it's the provisional group's synthetic uuid;
  * at the moment streaming ends we bind to the *finalized* group's real uuid (the
- * last non-marker item, when it's an assistant) and hold it until the next turn.
+ * last group, when it's an assistant) and hold it until the next turn.
  *
  * Binding to a specific group — not "whichever assistant is newest" — is what
  * stops a background/queued turn that appends later from stealing the key (which
@@ -52,11 +53,12 @@ function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveT
   if (streamingShown) return provisionalUuid;
   if (prev.turnId !== liveTurnId) return null;
   // First non-streaming render after the turn streamed: bind to the finalized
-  // group (skip trailing markers; null if the turn produced no assistant group).
+  // group (null if the turn produced no assistant group). Skip what can follow
+  // the last group: markers, and pending voice and capture bubbles.
   if (provisionalUuid && prev.uuid === provisionalUuid) {
     for (const d of data.toReversed()) {
-      if (d.kind === "marker") continue;
-      return d.kind === "group" && d.group.type === "assistant" ? (d.group.entries[0]?.uuid ?? null) : null;
+      if (d.kind !== "group") continue;
+      return d.group.type === "assistant" ? (d.group.entries[0]?.uuid ?? null) : null;
     }
     return null;
   }
@@ -199,9 +201,15 @@ function MessageListInner({
   const streamingShown = snapshot.matches("streaming")
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
+  // Settled and tail items are built apart, so a streamed token leaves the
+  // settled items (and the rows memoized on them) unchanged.
+  const settled = useMemo<DataItem[]>(
+    () => buildSettledItems({ groups, modelMarkers, debugView, proseEnabled }),
+    [groups, modelMarkers, debugView, proseEnabled],
+  );
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled],
+    () => [...settled, ...buildTailItems({ groupCount: groups.length, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled })],
+    [settled, groups.length, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled],
   );
 
   const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen } = useChatScroll();
@@ -266,12 +274,7 @@ function MessageListInner({
   // group share `live-${liveTurnId}` so React reconciles them in place.
   const { liveKey, liveTargetUuid } = useLiveTurnKey({ data, liveTurnId, streamingShown });
 
-  // Newest assistant group's index, for the now-playing speech-highlight match.
-  const lastAssistantGroupIndex = lastAssistantGroupIndexIn(data);
-
-  const renderCtx = useMemo<RenderItemContext>(() => ({
-    streamText,
-    streamTools,
+  const renderCtx = useRenderItemContext({
     debugView,
     currentUserEmail,
     currentUserName,
@@ -281,10 +284,9 @@ function MessageListInner({
     handleReplaySpeech,
     onZoomView,
     proseEnabled,
-    lastAssistantGroupIndex,
     captureVerbs,
     audioOverlayStore, onHqSendLive,
-  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, captureVerbs, audioOverlayStore, onHqSendLive]);
+  });
 
   // A first capture into an empty chat still shows its pending bubble.
   if (messages.length === 0 && !isStreaming && captureBubbles.length === 0) {
@@ -295,6 +297,9 @@ function MessageListInner({
       </div>
     );
   }
+
+  // Newest assistant group's index, for the now-playing speech-highlight match.
+  const lastAssistantGroupIndex = lastAssistantGroupIndexIn(data);
 
   return (
     <div className="relative flex-1 min-h-0 w-full min-w-0 flex flex-col overflow-x-hidden">
@@ -337,7 +342,7 @@ function MessageListInner({
                   style={{ minHeight: spacer }}
                 >
                   <div ref={spacer === undefined ? undefined : liveContentRef} data-chat-live-turn-content={spacer === undefined ? undefined : ""}>
-                    {renderDataItem(item, renderCtx)}
+                    {renderDataItem(item, { ctx: renderCtx, lastAssistantGroupIndex })}
                   </div>
                 </div>
               );

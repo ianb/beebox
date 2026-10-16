@@ -61,7 +61,7 @@ state.sessions["s1"] = {
 await saveReviewState(box.root, state);
 
 const reloaded = await loadReviewState(box.root);
-JSON.stringify(reloaded.sessions["s1"].applied.metadata.endUuid)
+JSON.stringify(reloaded.sessions["s1"]?.applied.metadata?.endUuid)
 => "u-9"
 ```
 

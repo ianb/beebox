@@ -19,7 +19,7 @@ import * as path from "node:path";
 const tokensFile = path.join(os.tmpdir(), `oauth-bbx-tokens-${process.pid}-${Date.now()}.json`);
 process.env.BBX_GOOGLE_TOKENS_FILE = tokensFile;
 
-function bbx(query: string): { method: string; url: string } {
+function bbx(query: string): { method: "GET"; url: string } {
   return { method: "GET", url: `/auth/google-services/callback?${query}` };
 }
 ```

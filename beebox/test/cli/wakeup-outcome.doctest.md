@@ -17,7 +17,8 @@ import {
 } from "../../src/cli/wakeup-outcome.js";
 import { wakeupSatisfiedScanPromote } from "../../src/core/scan/promote/wakeup.js";
 
-const line = (report) => WAKEUP_OUTCOME_PREFIX + JSON.stringify(report);
+// Takes unknown: several examples below feed it deliberately malformed reports.
+const line = (report: unknown) => WAKEUP_OUTCOME_PREFIX + JSON.stringify(report);
 const healthy = { connectorErrors: 0, connectors: [], reactorOk: true, reactorSkipped: false, jobsProcessed: 1, jobsRemaining: 0 };
 ```
 
@@ -35,7 +36,7 @@ that just finished:
 ```ts
 const first = line({ ...healthy, jobsProcessed: 9 });
 const second = line(healthy);
-parseWakeupOutcome([first, second].join("\n")).jobsProcessed
+parseWakeupOutcome([first, second].join("\n"))?.jobsProcessed
 => 1
 ```
 
@@ -63,7 +64,7 @@ const scoped = {
   ],
 };
 const back = parseWakeupOutcome(line(scoped));
-JSON.stringify(back.connectors.map((c) => [c.name, c.created, c.skipped?.reason ?? c.error ?? "ok"]))
+JSON.stringify(back?.connectors.map((c) => [c.name, c.created, c.skipped?.reason ?? c.error ?? "ok"]))
 => [["google-drive",3,"ok"],["gmail",0,"not-configured"],["nope",0,"Connector not found: nope"]]
 ```
 
@@ -72,8 +73,8 @@ synced. Reading the flag alone is what makes a service the box never contacted
 look up to date.
 
 ```ts continue
-const entry = parseWakeupOutcome(line(scoped)).connectors[1];
-[entry.success, entry.skipped.detail].join(" | ")
+const entry = parseWakeupOutcome(line(scoped))?.connectors[1];
+[entry?.success, entry?.skipped?.detail].join(" | ")
 => true | No Google credential this process can read
 ```
 

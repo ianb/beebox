@@ -6,7 +6,7 @@ inject the set of paths that resolve.
 ```ts setup
 import { frontmatterProblems } from "../../../src/dev/doc-check/frontmatter.js";
 const files = new Set(["issues/features/x.md", "beebox/docs/plans/next.md"]);
-const check = (rel, source) => frontmatterProblems({ rel, source, exists: (target) => files.has(target) });
+const check = (rel: string, source: string) => frontmatterProblems({ rel, source, exists: (target) => files.has(target) });
 ```
 
 ## A complete plan validates

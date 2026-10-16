@@ -8,9 +8,11 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { prepareItem, verifyEvidence } from "../../../src/core/triage/evidence/core.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
+import type { InstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { serializeTriageRequest } from "../../../src/core/triage/request.js";
 import { JEV_MAX_REQUEST_CHARS } from "../../../src/services/jev-wire.js";
 import { createFakeDocling } from "../../../src/services/docling/core.js";
+import type { DoclingService } from "../../../src/services/docling/core.js";
 import { createFakeScanVision } from "../../../src/services/scan-vision.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 const fixture = path.resolve("test/fixtures/triage-evaluation/documents/raw");
@@ -31,7 +33,7 @@ JSON.stringify(prepared.parts.map((part) => [path.basename(part.ref), part.statu
 prepared.status
 => partial
 
-prepared.parts[2].text
+prepared.parts[2]?.text
 => Notice
 Boundary hearing
 Case details (https://example.invalid/case)
@@ -132,15 +134,15 @@ modes. All extraction workspaces are deleted on success and failure.
 const box = await makeTmpBox();
 await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(box.root, "_content/inbox/staged/native.pdf"));
 const native = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/native.pdf" });
-native.parts[0].method
+native.parts[0]?.method
 => pdf-native-text
 
-native.parts[0].text.includes("property")
+native.parts[0]?.text.includes("property")
 => true
 
 const fake = createFakeDocling({ markdown: "Recovered household statement" });
 const workspaces: string[] = [];
-const docling = { extract: async (source, opts) => { workspaces.push(opts.workDir); return fake.extract(source, opts); } };
+const docling: DoclingService = { extract: async (source, opts) => { workspaces.push(opts.workDir); return fake.extract(source, opts); } };
 await fs.copyFile(path.join(fixture, "junk-layer-legal.pdf"), path.join(box.root, "_content/inbox/staged/junk.pdf"));
 await fs.copyFile(path.join(fixture, "scan-financial.pdf"), path.join(box.root, "_content/inbox/staged/scan.pdf"));
 const junk = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/junk.pdf", docling });
@@ -158,7 +160,7 @@ const reused = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbo
 fake.calls.length
 => 2
 
-reused.parts[0].text
+reused.parts[0]?.text
 => Recovered household statement
 
 const failing = createFakeDocling({ failWith: "OCR unavailable" });
@@ -167,7 +169,7 @@ const failure = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inb
 failure.status
 => unavailable
 
-failure.parts[0].omissions.includes("OCR unavailable")
+failure.parts[0]?.omissions.includes("OCR unavailable")
 => true
 
 JSON.stringify(await Promise.all(failureDirs.map(async (dir) => fs.access(dir).then(() => true, () => false))))
@@ -186,22 +188,22 @@ const box = await makeTmpBox();
 await box.write("_content/inbox/staged/photo.png", "fake image bytes");
 const vision = createFakeScanVision();
 const image = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/photo.png", vision });
-JSON.stringify([image.status, image.parts[0].method, image.parts[0].text, vision.calls.length])
+JSON.stringify([image.status, image.parts[0]?.method, image.parts[0]?.text, vision.calls.length])
 => ["ready","scan-vision","Fake photo 0",1]
 
-const blankVision = createFakeScanVision({ analyze: () => [{ index: 0, paired_with_index: null, description: "", title: "", rotation: 0, subject_bbox: null, has_text: false, text_blocks: [], date_hint: null, flag_for_review: false, flag_reason: null }] });
+const blankVision = createFakeScanVision({ analyze: () => [{ index: 0, kind: "photo", paired_with_index: null, description: "", title: "", rotation: 0, subject_bbox: null, has_text: false, text_blocks: [], date_hint: null, flag_for_review: false, flag_reason: null }] });
 const emptyImage = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/photo.png", vision: blankVision });
-JSON.stringify([emptyImage.status, emptyImage.parts[0].omissions.includes("Vision returned no semantic description or text")])
+JSON.stringify([emptyImage.status, emptyImage.parts[0]?.omissions.includes("Vision returned no semantic description or text")])
 => ["unavailable",true]
 
 await box.write("_content/inbox/staged/mail.eml", "From: =?UTF-8?Q?Jos=C3=A9?= <jose@example.invalid>\r\nContent-Type: multipart/alternative; boundary=abc\r\n\r\n--abc\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\nHello=2C household notice\r\n--abc\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<p>Hello household notice</p>\r\n--abc\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"bill.pdf\"\r\n\r\nnot decoded\r\n--abc--\r\n");
 const mail = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/mail.eml" });
-JSON.stringify([mail.parts[0].method, mail.parts[0].text, mail.status, mail.parts[0].omissions.some((item) => item.includes("Raw MIME is not decoded"))])
+JSON.stringify([mail.parts[0]?.method, mail.parts[0]?.text, mail.status, mail.parts[0]?.omissions.some((item) => item.includes("Raw MIME is not decoded"))])
 => ["mime-unparsed","","unavailable",true]
 
 await box.write("_content/inbox/staged/long.txt", "Early irrelevant information. Later important qualification.");
 const bounded = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/long.txt", maxTextChars: 10 });
-JSON.stringify([bounded.status, bounded.parts[0].text, bounded.parts[0].omissions[0].startsWith("Text budget excluded all")])
+JSON.stringify([bounded.status, bounded.parts[0]?.text, bounded.parts[0]?.omissions[0]?.startsWith("Text budget excluded all")])
 => ["unavailable","",true]
 
 // Capture-session scan scope: admit the structured PDF card before its raw
@@ -220,7 +222,7 @@ const structured = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/
 JSON.stringify(structured.parts.map((part) => [path.basename(part.ref), part.method]))
 => [["capture-session.card","utf8"],["source.pdf.card","utf8"],["text-layer.txt","representation-selected"],["docling.json.gz","provenance-only"],["page-001.png","scan-vision"],["source.pdf","representation-selected"]]
 
-JSON.stringify([structured.status, structured.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.text.length > 48_000, structured.parts.filter((part) => part.method === "representation-selected").map((part) => part.duplicateOf)])
+JSON.stringify([structured.status, (structured.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.text.length ?? 0) > 48_000, structured.parts.filter((part) => part.method === "representation-selected").map((part) => part.duplicateOf)])
 => ["ready",true,["/_content/inbox/staged/capture-session.attach/source.pdf.card","/_content/inbox/staged/capture-session.attach/source.pdf.card"]]
 
 const serializedTriageRequest = serializeTriageRequest({ evidence: structured, instructions: structuredInstructions });
@@ -282,7 +284,7 @@ JSON.stringify([docling.calls.length, extractedFallback.parts.find((part) => par
 => [1,"docling-regions","Should not re-extract analyzed card"]
 
 await box.write("_content/inbox/staged/budget.txt", "Readable content");
-const escapedInstructions = { version: 1, compilerVersion: 1, policy: '"'.repeat(40_000), trial: true, sources: [], destinations: [] };
+const escapedInstructions: InstructionSnapshot = { version: 1, compilerVersion: 1, policy: '"'.repeat(40_000), trial: true, sources: [], destinations: [] };
 let requestBudgetError = "";
 await (async () => { try { await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/budget.txt", instructions: escapedInstructions }); } catch (error) { requestBudgetError = String(error); } })();
 requestBudgetError.includes("Serialized Jev request exceeds request budget")
@@ -293,7 +295,7 @@ const missing = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inb
 missing.status
 => partial
 
-missing.parts[0].omissions.includes("Missing referenced attachment: attach/missing.pdf")
+missing.parts[0]?.omissions.includes("Missing referenced attachment: attach/missing.pdf")
 => true
 
 await box.write("_content/inbox/staged/Lost.doc.card", "Body");

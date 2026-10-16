@@ -10,7 +10,7 @@ binary-skip case, and the stable-id contract.
 import { scanBundle } from "../../src/publish/leak-scan.js";
 
 // Convenience: scan a single text file with no owner/allowlist context.
-function scanOne(text) {
+function scanOne(text: string) {
   return scanBundle(new Map([["index.html", text]]), { ownerEmail: null, allowedEmails: [] });
 }
 
@@ -31,10 +31,10 @@ const home = scanOne("Saved to " + REAL_HOME + "secrets/notes.md and /Users/me/o
 home.findings.length
 => 1
 
-home.findings[0].kind
+home.findings[0]?.kind
 => home-path
 
-home.findings[0].match === REAL_HOME
+home.findings[0]?.match === REAL_HOME
 => true
 ```
 
@@ -57,22 +57,22 @@ One fixture per shape in the named credential table. Strings are built by
 construction so each matches exactly its intended pattern.
 
 ```ts
-scanOne("key=" + "AIza" + "a".repeat(35)).findings[0].detail
+scanOne("key=" + "AIza" + "a".repeat(35)).findings[0]?.detail
 => Google API key
 
-scanOne("token " + "sk-" + "a".repeat(24)).findings[0].detail
+scanOne("token " + "sk-" + "a".repeat(24)).findings[0]?.detail
 => OpenAI API key
 
-scanOne("auth " + "ghp_" + "a".repeat(36)).findings[0].detail
+scanOne("auth " + "ghp_" + "a".repeat(36)).findings[0]?.detail
 => GitHub token
 
-scanOne("slack " + "xoxb-" + "a".repeat(20)).findings[0].detail
+scanOne("slack " + "xoxb-" + "a".repeat(20)).findings[0]?.detail
 => Slack token
 
-scanOne("jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r").findings[0].detail
+scanOne("jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r").findings[0]?.detail
 => JWT
 
-scanOne("blob " + "a".repeat(48)).findings[0].detail
+scanOne("blob " + "a".repeat(48)).findings[0]?.detail
 => long base64/hex run
 ```
 
@@ -80,10 +80,10 @@ scanOne("blob " + "a".repeat(48)).findings[0].detail
 
 ```ts
 const url = scanOne('See <a href="https://evil.example.com/x">here</a>.');
-url.findings[0].kind
+url.findings[0]?.kind
 => external-url
 
-url.findings[0].match
+url.findings[0]?.match
 => https://evil.example.com/x
 ```
 
@@ -117,7 +117,7 @@ bytes are not regexed. The bytes below spell an API-key shape, yet produce no
 finding — but the file IS listed as an unscanned binary so the preview can warn.
 
 ```ts
-const bundle = new Map([
+const bundle = new Map<string, string | Uint8Array>([
   ["index.html", "<p>All good.</p>"],
   ["assets/shot.png", new TextEncoder().encode("AIza" + "a".repeat(35))],
 ]);
@@ -143,9 +143,9 @@ judged when the same content is prepared again.
 const a = scanOne("home " + REAL_HOME + "x/");
 const b = scanOne("home " + REAL_HOME + "x/");
 
-/^[\da-f]{12}$/.test(a.findings[0].id)
+/^[\da-f]{12}$/.test(a.findings[0]?.id ?? "")
 => true
 
-a.findings[0].id === b.findings[0].id
+a.findings[0]?.id === b.findings[0]?.id
 => true
 ```

@@ -11,7 +11,7 @@ import { execSync } from "node:child_process";
 import { chmod, readFile, readdir, writeFile } from "node:fs/promises";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleCalendar } from "../../src/services/google-calendar/core.js";
 import type { CalendarEvent, GoogleCalendarService } from "../../src/services/google-calendar/core.js";
@@ -65,7 +65,7 @@ const lunch = () => evt("evt-lunch", "Lunch",
   { updated: "2026-06-01T10:00:00Z" });
 
 const primaryCalendar = (events: CalendarEvent[] = []) => createFakeGoogleCalendar({ calendars: [PRIMARY], events });
-const connect = (box, calendar: GoogleCalendarService, now: () => Date = NOW) => createGoogleCalendarConnector(box.root, { calendar, now });
+const connect = (box: TmpBox, calendar: GoogleCalendarService, now: () => Date = NOW) => createGoogleCalendarConnector(box.root, { calendar, now });
 
 // An `.ics` as a boxholder would drop it into the calendar directory.
 const localIcs = (uid: string, summary: string, { date, extra }: { date?: string; extra?: string } = {}) =>
@@ -73,17 +73,17 @@ const localIcs = (uid: string, summary: string, { date, extra }: { date?: string
   `UID:${uid}\r\nSUMMARY:${summary}\r\nDTSTART;VALUE=DATE:${date ?? "20260601"}\r\nDTEND;VALUE=DATE:${date ? String(Number(date) + 1) : "20260602"}\r\n` +
   `${extra ?? ""}END:VEVENT\r\nEND:VCALENDAR\r\n`;
 
-const icsNames = async (box) => (await readdir(join(box.root, CAL_DIR))).filter((f) => f.endsWith(".ics"));
-const readIcs = async (box, file: string) => readFile(join(box.root, CAL_DIR, file), "utf-8");
+const icsNames = async (box: TmpBox) => (await readdir(join(box.root, CAL_DIR))).filter((f) => f.endsWith(".ics"));
+const readIcs = async (box: TmpBox, file: string) => readFile(join(box.root, CAL_DIR, file), "utf-8");
 // The first synced `.ics`: edit `from` to `to` in place (and return its name).
-async function editFirst(box, from: string, to: string): Promise<string> {
+async function editFirst(box: TmpBox, from: string, to: string): Promise<string> {
   const file = (await icsNames(box))[0] ?? "";
   await writeFile(join(box.root, CAL_DIR, file), (await readIcs(box, file)).replace(from, to));
   return file;
 }
-const lastCommit = (box) => execSync("git log -1 --pretty=%B", { cwd: box.root, encoding: "utf-8" });
-const committedFiles = (box) => execSync("git show --name-only --pretty=format: HEAD", { cwd: box.root, encoding: "utf-8" });
-const pendingSince = async (box, key: string) => {
+const lastCommit = (box: TmpBox) => execSync("git log -1 --pretty=%B", { cwd: box.root, encoding: "utf-8" });
+const committedFiles = (box: TmpBox) => execSync("git show --name-only --pretty=format: HEAD", { cwd: box.root, encoding: "utf-8" });
+const pendingSince = async (box: TmpBox, key: string) => {
   const entry = (await loadCalendarState(box.root)).eventFiles[key];
   return typeof entry === "string" ? null : entry?.pendingSince ?? null;
 };
@@ -142,7 +142,7 @@ const calendar = primaryCalendar([
 ]);
 const result = await connect(box, calendar).sync();
 const files = await icsNames(box);
-const comp = new ICAL.Component(ICAL.parse(await readIcs(box, files[0])));
+const comp = new ICAL.Component(ICAL.parse(await readIcs(box, files[0] ?? "")));
 const vtz = comp.getFirstSubcomponent("vtimezone");
 const vevent = comp.getFirstSubcomponent("vevent");
 ({

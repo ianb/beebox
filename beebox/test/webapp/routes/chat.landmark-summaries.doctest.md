@@ -69,7 +69,7 @@ await box.write(
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);
-summaries[0].symbol?.src
+summaries[0]?.symbol?.src
 => _content/archive/people/marlowe/images/priya-portrait.webp
 ```
 

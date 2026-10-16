@@ -10,7 +10,7 @@ import { createCloudflarePublishTokenVerifier } from "../../src/services/cloudfl
 An account token is verified against the chosen account.
 
 ```ts
-const requests = [];
+const requests: Array<{ url: string; authorization: string | null }> = [];
 const verifier = createCloudflarePublishTokenVerifier({
   fetch: async (url, init) => {
     requests.push({ url, authorization: new Headers(init?.headers).get("authorization") });
@@ -26,7 +26,7 @@ A user token follows the user-verification endpoint, then a read-only R2 list
 confirms its access to the selected account.
 
 ```ts continue
-const userRequests = [];
+const userRequests: Array<{ url: string; method: string | undefined }> = [];
 const userVerifier = createCloudflarePublishTokenVerifier({
   fetch: async (url, init) => {
     userRequests.push({ url, method: init?.method });

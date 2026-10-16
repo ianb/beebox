@@ -25,3 +25,7 @@ running and triage. The rules that matter most:
   setup created.
 - **Waiting:** `eventually(fn, { label })`, never a fixed sleep.
 - Prose goes between fences, never inside one.
+- **Types are checked.** Pre-commit typechecks staged doctests and
+  `pnpm test:changed` the selected ones; `pnpm typecheck:doctest` checks all.
+  Type the code under test, not around it: no `any`, and on a checked line
+  use `?.` only where a missing value would still show differently.

@@ -5,8 +5,9 @@ same human-message paths as typed and spoken input. Otherwise retention and
 chat-history discovery can treat a person's thought as system plumbing.
 
 ```ts setup
+import type { SessionEntry } from "../../../src/cli/lib/session-entry.js";
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
-function entry(text, type = "user") {
+function entry(text: string, type: SessionEntry["type"] = "user"): SessionEntry {
   return { uuid: "u1", type, timestamp: "2026-10-09T12:00:00Z", content: [{ type: "text", text }] };
 }
 ```

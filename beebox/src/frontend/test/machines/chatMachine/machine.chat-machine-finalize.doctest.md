@@ -26,10 +26,23 @@ transcript.
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../src/machines/chatMachine/machine.js";
 import { applyStreamError, promoteLastToPending } from "../../../src/machines/chatMachine/chat-actions.js";
+import type { PendingSessionEntry, SessionEntry } from "../../../src/api-chat.js";
+import type { SessionInput } from "../../../src/machines/chat-types.js";
+
+interface Loaded {
+  entries: SessionEntry[];
+  total: number;
+  sessionId: string | null;
+  running: boolean;
+  busy: boolean;
+  pending: PendingSessionEntry[];
+}
 
 // `pending` is the box's record of messages it accepted but has not yet
 // written into the transcript (`chat.bootstrap`); a stubbed fetch has none.
-const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false, pending: [] };
+type History = Omit<Loaded, "pending">;
+
+const EMPTY: Loaded = { entries: [], total: 0, sessionId: "s1", running: false, busy: false, pending: [] };
 
 // A started machine in `idle`. By default `fetchHistory` never settles, so a
 // state under test stays observable; `historyCalls` counts invocations (a
@@ -41,9 +54,9 @@ async function startMachine({ initial, history }: { initial?: typeof EMPTY; hist
     chatMachine.provide({
       actors: {
         fetchInitial: fromPromise(async () => initial ?? EMPTY),
-        fetchHistory: fromPromise(() => {
+        fetchHistory: fromPromise<History, SessionInput>(() => {
           historyCalls.push(1);
-          return history ? Promise.resolve(history) : new Promise(() => {});
+          return history ? Promise.resolve(history) : new Promise<History>(() => {});
         }),
         stream: fromCallback(() => {}),
       },

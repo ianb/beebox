@@ -8,11 +8,11 @@ injected `ClaudeCli` service, which reads whichever credential store the
 platform uses. Tests inject a fake so no subprocess spawns.
 
 ```ts setup
-import { runHealthChecks } from "../../../../../../src/webapp/trpc/routers/health/router.js";
+import { runHealthChecks, type HealthCheck } from "../../../../../../src/webapp/trpc/routers/health/router.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../../../../src/services/claude-cli.js";
 import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
 
-const claudeCheck = (checks) => checks.find((c) => c.name === "claude-credentials");
+const claudeCheck = (checks: HealthCheck[]) => checks.find((c) => c.name === "claude-credentials");
 ```
 
 ## Logged in → the check passes
@@ -56,11 +56,12 @@ const claudeCli = {
   authStatus: async () => ({ [AUTH_PROBE_INCONCLUSIVE]: true, raw: "" }),
   authLogin: async () => ({ authUrl: null }),
   authLogout: async () => ({ success: true }),
+  authSubmitCode: async () => ({ accepted: false }),
 };
 const checks = await runHealthChecks(box.root, { claudeCli });
 const c = claudeCheck(checks);
-print(`${c.severity} / ok=${c.ok}`);
-print(c.message);
+print(`${c?.severity} / ok=${c?.ok}`);
+print(c?.message);
 =>
 warning / ok=false
 Claude Code auth could not be determined — `claude auth status` returned no usable answer. Agent operations may still work; re-run this check before acting on it

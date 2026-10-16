@@ -189,3 +189,73 @@ export function rewriteImports(expression: string): string {
   }
   return lines.join("\n");
 }
+
+/** One name a type-only import binds, in an example block. */
+export interface TypeImport {
+  /** 0-based line within the code of the name this import binds. */
+  offset: number;
+  /** The module-scope statement that binds just this name, on one line. */
+  statement: string;
+  /**
+   * Characters to subtract from a column in `statement` to get the column in
+   * the author's line: the bound name sits at the same column in both.
+   */
+  shift: number;
+}
+
+/** `A`, `A as B`, `default as B`: one `import type` specifier per name. */
+function typeSpecifiers(named: string): string[] {
+  return named
+    .split(",")
+    .map((p) => p.trim().replace(/\s+/g, " "))
+    .filter((p) => p.length > 0);
+}
+
+/**
+ * The type-only imports that {@link rewriteImports} erases: `import type …`
+ * statements, and the `type X` specifiers of a mixed import. Runtime does not
+ * need them, but a typecheck does, and an import declaration cannot sit
+ * inside the test function, so the typecheck build hoists these to module
+ * scope, one statement per bound name.
+ */
+export function typeOnlyImports(code: string): TypeImport[] {
+  if (!/^\s*import[\s"'*{]/m.test(code)) return [];
+  const lines = code.split("\n");
+  const out: TypeImport[] = [];
+  let inTemplate = false;
+  for (let i = 0; i < lines.length; i++) {
+    const startsInTemplate = inTemplate;
+    inTemplate = nextTemplateState(inTemplate, lines[i] ?? "");
+    if (startsInTemplate || !/^\s*import[\s"'*{]/.test(lines[i] ?? "")) continue;
+    let end = i;
+    while (end < lines.length - 1 && !importEnds(lines[end] ?? "")) end++;
+    const full = IMPORT_RE.exec(lines.slice(i, end + 1).join("\n"));
+    for (let j = i + 1; j <= end; j++) inTemplate = nextTemplateState(inTemplate, lines[j] ?? "");
+    const first = i;
+    i = end;
+    if (!full) continue;
+    const clause = (full[3] ?? "").trim().replace(/\s+/g, " ");
+    // One spelling of the module, so `"m"` and `'m'` dedupe as one import.
+    const source = JSON.stringify((full[4] ?? "").slice(1, -1));
+    const brace = /{(.*)}/.exec(clause);
+    const outside = clause.replace(/,?\s*{.*}/, "").trim();
+    const specifiers = typeSpecifiers(brace?.[1] ?? "");
+    const named = full[2] ? specifiers : specifiers.filter((p) => p.startsWith("type ")).map((p) => p.slice("type ".length));
+    // Each name keeps its own line and column, so an error on it lands there.
+    const place = (spec: string, statement: string): TypeImport => {
+      const name = spec.split(" ")[0] ?? spec;
+      const pattern = new RegExp(String.raw`(?<=^|[\s,{])${name.replaceAll("$", String.raw`\$`)}\b`);
+      for (let k = first; k <= i; k++) {
+        const column = (lines[k] ?? "").search(pattern);
+        if (column !== -1 && (k > first || /{/.test((lines[k] ?? "").slice(0, column)))) {
+          return { offset: k, statement, shift: statement.indexOf(` ${name}`) + 1 - column };
+        }
+      }
+      return { offset: first, statement, shift: 0 };
+    };
+    for (const spec of named) out.push(place(spec, `import type { ${spec} } from ${source};`));
+    // `import type D from` and `import type * as NS from`; a value import's default is not a type import.
+    if (full[2] && outside) out.push({ offset: first, statement: `import type ${outside} from ${source};`, shift: 0 });
+  }
+  return out;
+}

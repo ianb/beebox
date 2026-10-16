@@ -274,7 +274,7 @@ the input's newest-first order within a depth; root-bound sessions are
 never peers of a subdirectory.
 
 ```ts
-const mk = (id, contextDir) => ({ id, contextDir });
+const mk = (id: string, contextDir: string) => ({ id, contextDir });
 const input = [
   mk("root-new", ""),
   mk("anc", "_content"),

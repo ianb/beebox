@@ -21,6 +21,14 @@ import {
   PERSIST_BYTE_BUDGET,
   type KeyValueStorage,
 } from "../../src/input/emission-persist.js";
+import type { EmissionDraft, FileTransferState } from "../../src/input/emission-store.js";
+
+type PersistableDraft = Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">;
+
+/** The message of a failed transfer; undefined for any other state. */
+function failureMessage(state: FileTransferState): string | undefined {
+  return state.status === "failed" ? state.message : undefined;
+}
 
 function fakeStorage(): KeyValueStorage & { dump(): Record<string, string> } {
   const m = new Map<string, string>();
@@ -34,11 +42,12 @@ function fakeStorage(): KeyValueStorage & { dump(): Record<string, string> } {
   };
 }
 
-const draft = {
+const draft: PersistableDraft = {
   text: "half a thought [file1]",
   images: [],
   files: [{ id: 1, originalName: "report.pdf", size: 100, mimetype: "application/pdf", state: { status: "uploaded", path: "_tmp/2026-07-04_report.pdf" } }],
   selections: [],
+  uploadBatch: null,
 };
 ```
 
@@ -117,7 +126,7 @@ draft survived and was offered back as "unsent".
 
 ```ts
 const s = fakeStorage();
-const empty = { text: "", images: [], files: [], selections: [] };
+const empty: PersistableDraft = { text: "", images: [], files: [], selections: [], uploadBatch: null };
 
 // Dictating persists a draft…
 commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft: { ...draft, text: "send this please" }, updatedAt: 1000 });
@@ -142,7 +151,7 @@ loadPersistedEmission(s, { boxSlug: "test1", scope: "" })?.text
 ## Oversized images are dropped from persistence, not from memory
 
 ```ts
-const big = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET, original: { status: "uploading", progress: 0 } }] };
+const big: PersistableDraft = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET, original: { status: "uploading", progress: 0 } }] };
 const { payload, imagesDropped } = serializePersistedEmission(big, { updatedAt: 1 });
 imagesDropped
 => true
@@ -200,7 +209,7 @@ what strips the token on the way back in.
 
 ```ts
 const uploading = { id: 2, originalName: "big.pdf", size: 9, mimetype: "application/pdf", state: { status: "uploading", progress: 0.4 } } as const;
-const midUpload = { ...draft, text: "half a thought [file#1] [file#2]", files: [...draft.files, uploading] };
+const midUpload: PersistableDraft = { ...draft, text: "half a thought [file#1] [file#2]", files: [...draft.files, uploading] };
 const s2 = fakeStorage();
 savePersistedEmission(s2, { boxSlug: "test1", scope: "", draft: midUpload, updatedAt: 2000 });
 JSON.stringify(loadPersistedEmission(s2, { boxSlug: "test1", scope: "" })?.files.map((f) => [f.id, f.state.status]))
@@ -241,7 +250,7 @@ const present = new Set(["_tmp/a.png"]);
 JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/a.png" }, { existingPaths: present }))
 => {"status":"uploaded","path":"_tmp/a.png"}
 
-restoredImageOriginal({ status: "uploaded", path: "_tmp/swept.png" }, { existingPaths: present }).message === RESTORED_ORIGINAL_SWEPT
+failureMessage(restoredImageOriginal({ status: "uploaded", path: "_tmp/swept.png" }, { existingPaths: present })) === RESTORED_ORIGINAL_SWEPT
 => true
 
 // A same-tab restore (a rejected send handed back) skips the check.
@@ -251,7 +260,7 @@ JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/just-now.
 JSON.stringify([
   restoredImageOriginal({ status: "failed", message: "413" }, { existingPaths: present }).status,
   restoredImageOriginal({ status: "uploading", progress: 0.7 }, { existingPaths: present }).status,
-  restoredImageOriginal(undefined, { existingPaths: present }).message === RESTORED_ORIGINAL_LOST,
+  failureMessage(restoredImageOriginal(undefined, { existingPaths: present })) === RESTORED_ORIGINAL_LOST,
 ])
 => ["failed","failed",true]
 ```
@@ -260,7 +269,7 @@ The state itself rides through persistence with the image, so a landed path
 is still there after a reload.
 
 ```ts
-const withOriginal = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 3, original: { status: "uploaded", path: "_tmp/a.png" } }] };
+const withOriginal: PersistableDraft = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 3, original: { status: "uploaded", path: "_tmp/a.png" } }] };
 const { payload } = serializePersistedEmission(withOriginal, { updatedAt: 1 });
 JSON.stringify(parsePersistedEmission(payload)?.images[0]?.original)
 => {"status":"uploaded","path":"_tmp/a.png"}
@@ -271,7 +280,7 @@ reload join the same `_tmp/chat/<batch>/` directory; a draft saved before
 batches existed simply has none.
 
 ```ts
-const batched = { ...draft, uploadBatch: "m1abcd-x9y8z7w6" };
+const batched: PersistableDraft = { ...draft, uploadBatch: "m1abcd-x9y8z7w6" };
 parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload)?.uploadBatch
 => m1abcd-x9y8z7w6
 

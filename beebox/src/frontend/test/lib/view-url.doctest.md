@@ -158,8 +158,8 @@ relative path resolves *inside* it, not its parent:
 
 ```ts
 JSON.stringify([
-  resolveContentTarget("_content/foo/x.md", "bar.card").path,
-  resolveContentTarget("_content/foo/", "bar.card").path,
+  resolveContentTarget("_content/foo/x.md", "bar.card")?.path,
+  resolveContentTarget("_content/foo/", "bar.card")?.path,
 ])
 => ["_content/foo/bar.card","_content/foo/bar.card"]
 ```
@@ -177,9 +177,9 @@ tier):
 
 ```ts
 JSON.stringify([
-  resolveContentTarget(undefined, "_content/sibling.card").path,
-  resolveContentTarget(undefined, "/_content/sibling.card").path,
-  resolveContentTarget(undefined, "_content/Foo.doc.card").path,
+  resolveContentTarget(undefined, "_content/sibling.card")?.path,
+  resolveContentTarget(undefined, "/_content/sibling.card")?.path,
+  resolveContentTarget(undefined, "_content/Foo.doc.card")?.path,
 ])
 => ["_content/sibling.card","_content/sibling.card","_content/Foo.doc.card"]
 ```
@@ -265,7 +265,7 @@ external URL goes to markdown-it's own encoder (stood in for here by
 `encodeURI`). A malformed escape is kept as written:
 
 ```ts
-const encode = (url) => encodeURI(url);
+const encode = (url: string) => encodeURI(url);
 [
   normalizeMarkdownLink("/_content/Beach%20walk.attach/p.jpg", encode),
   normalizeMarkdownLink("Beach%20walk.doc.card?k=%2526", encode),

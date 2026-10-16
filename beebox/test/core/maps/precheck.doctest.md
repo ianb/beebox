@@ -5,9 +5,11 @@ identifies which `MAP.md` files need to be created or updated.
 
 ```ts setup
 import { precheck } from "../../../src/core/maps/precheck.js";
+import type { MapTask } from "../../../src/core/maps/precheck.js";
 import { saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { DEFAULT_IGNORE_PATTERNS, SKELETON_HIDDEN_PATHS } from "../../../src/core/maps/precheck-ignore.js";
@@ -26,7 +28,7 @@ import { DEFAULT_IGNORE_PATTERNS, SKELETON_HIDDEN_PATHS } from "../../../src/cor
  * `saveMapState` again later can spread them back in (`saveMapState`
  * replaces the whole file, it doesn't merge).
  */
-async function seedSkeletonMaps(box) {
+async function seedSkeletonMaps(box: TmpBox) {
   for (const dir of ["_bookkeeping", "_config", "_content", "src"]) {
     await box.write(`${dir}/MAP.md`, "");
   }
@@ -61,7 +63,7 @@ async function cleanStoreBox() {
   return box;
 }
 
-function taskLine(t) {
+function taskLine(t: MapTask) {
   return `${t.dir || "<root>"}:${t.action} added=[${t.added.join(",")}] deleted=[${t.deleted.join(",")}]`;
 }
 ```
@@ -188,12 +190,12 @@ change to a directory's *listing* dirties its map:
 Each case starts from a fresh `store/` whose state matches HEAD:
 
 ```ts
-const cases: Array<[string, null | ((box) => Promise<void>)]> = [
+const cases: Array<[string, null | ((box: TmpBox) => Promise<void>)]> = [
   ["no change", null],
-  ["add file", async (box) => { await box.write("store/README.md", "top-level note"); }],
-  ["modify file", async (box) => { await box.write("store/notes/a.md", "updated"); }],
-  ["new leaf dir", async (box) => { await box.write("store/triage/a.card", "<card/>"); }],
-  ["new container dir", async (box) => {
+  ["add file", async (box: TmpBox) => { await box.write("store/README.md", "top-level note"); }],
+  ["modify file", async (box: TmpBox) => { await box.write("store/notes/a.md", "updated"); }],
+  ["new leaf dir", async (box: TmpBox) => { await box.write("store/triage/a.card", "<card/>"); }],
+  ["new container dir", async (box: TmpBox) => {
     await box.write("store/projects/proj-a/notes.md", "x");
     await box.write("store/projects/README.md", "y");
   }],

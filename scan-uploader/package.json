@@ -10,6 +10,7 @@
   "scripts": {
     "build": "node --import tsx build.ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:doctest": "doctest-typecheck --project tsconfig.json 'test/**/*.doctest.md'",
     "lint": "eslint .",
     "test": "tap"
   },

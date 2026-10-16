@@ -21,7 +21,7 @@ import {
   UploadResponseError,
 } from "../../src/lib/binary-upload.js";
 
-const status = (code) => new UploadResponseError({ status: code, detail: "nope" });
+const status = (code: number) => new UploadResponseError({ status: code, detail: "nope" });
 ```
 
 ## A cancel is not a failure

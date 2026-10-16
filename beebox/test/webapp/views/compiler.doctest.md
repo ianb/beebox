@@ -323,6 +323,6 @@ export default function Broken() {
 
 const withBroken = await listViews(tmp3);
 const broken = withBroken.find(v => v.slug === "broken");
-JSON.stringify([broken.name, broken.rendersCardTypes, broken.description])
+JSON.stringify([broken?.name, broken?.rendersCardTypes, broken?.description])
 => ["broken",[],"Failed to compile"]
 ```

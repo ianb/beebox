@@ -10,18 +10,18 @@ import { AudioCache, cacheKey } from "../../../../src/lib/audio/tts-client/cache
 
 ## Cache keys
 
-A key is derived from voice + instructions + text (joined with a NUL separator
+A key is derived from backend + voice + instructions + text (joined with a NUL separator
 that can't appear in any input, so distinct triples can't collide). It is
 deterministic and contains each part:
 
 ```ts
-const k = cacheKey({ text: "hello", voice: "marin", instructions: "calm" });
+const k = cacheKey({ text: "hello", voice: "marin", instructions: "calm", backend: "openai" });
 [k.includes("marin"), k.includes("calm"), k.includes("hello")].join(",")
 => true,true,true
 ```
 
 ```ts continue
-cacheKey({ text: "hi", voice: "marin", instructions: "x" }) === cacheKey({ text: "hi", voice: "marin", instructions: "x" })
+cacheKey({ text: "hi", voice: "marin", instructions: "x", backend: "openai" }) === cacheKey({ text: "hi", voice: "marin", instructions: "x", backend: "openai" })
 => true
 ```
 
@@ -29,8 +29,8 @@ Distinct inputs produce distinct keys (so a re-voiced generation is its own
 entry):
 
 ```ts
-const a = cacheKey({ text: "hi", voice: "marin", instructions: "calm" });
-const b = cacheKey({ text: "hi", voice: "coral", instructions: "calm" });
+const a = cacheKey({ text: "hi", voice: "marin", instructions: "calm", backend: "openai" });
+const b = cacheKey({ text: "hi", voice: "coral", instructions: "calm", backend: "openai" });
 a === b
 => false
 ```

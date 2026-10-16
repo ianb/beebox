@@ -13,6 +13,7 @@ import {
   VoiceStager,
   startStagedRecording,
 } from "../../../src/lib/audio/voice-stager.js";
+import type { VoiceStagingSink } from "../../../src/lib/audio/voice-stager.js";
 
 const FRAME_BYTES = 9_600; // one 300 ms worklet frame
 
@@ -24,16 +25,16 @@ function frame(fill: number): ArrayBuffer {
 function recordingSink() {
   const ops: string[] = [];
   const chunks: Uint8Array[] = [];
-  const sink = {
-    enqueueCreate: (id: string, opts: { targetSessionId: string | null }) =>
+  const sink: VoiceStagingSink = {
+    enqueueCreate: (id, opts) =>
       ops.push(`create ${id} target=${String(opts.targetSessionId)}`),
-    enqueueChunk: (id: string, bytes: ArrayBuffer) => {
+    enqueueChunk: (id, bytes) => {
       chunks.push(new Uint8Array(bytes));
       ops.push(`chunk ${id} ${String(bytes.byteLength)}`);
     },
-    enqueueFinalize: (id: string, opts: { emissionId: string | null; hq: { emissionId: string; sessionId: string } | null }) =>
+    enqueueFinalize: (id, opts) =>
       ops.push(`finalize ${id} emission=${String(opts.emissionId)} hq=${opts.hq === null ? "null" : opts.hq.emissionId}`),
-    enqueueDiscard: (id: string) => ops.push(`discard ${id}`),
+    enqueueDiscard: (id) => ops.push(`discard ${id}`),
   };
   return { sink, ops, chunks };
 }

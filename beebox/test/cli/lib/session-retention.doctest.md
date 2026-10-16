@@ -144,7 +144,7 @@ const result = await parseSessionLog({
   logPath: box.path("log.jsonl"),
   slice: { mode: "tail", tail: 2 },
 });
-print(`entries: ${result.entries.map((e) => e.content[0].text).join(", ")}`);
+print(`entries: ${result.entries.map((e) => e.content[0]?.text).join(", ")}`);
 print(`total: ${result.total}`);
 print(`hasMore: ${result.hasMore}`);
 =>
@@ -224,7 +224,7 @@ const result = await parseSessionLog({
   slice: { mode: "tail", tail: 200 },
 });
 print(`entries: ${result.entries.length}`);
-print(`grafted: ${result.entries[0].content[0].resultSummary}`);
+print(`grafted: ${result.entries[0]?.content[0]?.resultSummary}`);
 =>
 entries: 1
 grafted: file body
@@ -274,8 +274,8 @@ const result = await parseSessionLog({
   slice: { mode: "tail", tail: 400 },
 });
 print(`entries: ${result.entries.length}`);
-print(`oldest grafted: ${result.entries[0].content[0].resultSummary}`);
-print(`newest grafted: ${result.entries[299].content[0].resultSummary}`);
+print(`oldest grafted: ${result.entries[0]?.content[0]?.resultSummary}`);
+print(`newest grafted: ${result.entries[299]?.content[0]?.resultSummary}`);
 =>
 entries: 300
 oldest grafted: undefined

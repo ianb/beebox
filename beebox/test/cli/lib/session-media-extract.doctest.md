@@ -16,15 +16,17 @@ someone looks at it.
 import { encodeSessionMediaRef, parseSessionMediaRef } from "../../../src/shared/session-media.js";
 import { findTranscriptLineByUuid } from "../../../src/cli/lib/session-line-scan.js";
 import { extractSessionMedia } from "../../../src/cli/lib/session-media-extract.js";
+import type { ExtractResult, ExtractedMedia } from "../../../src/cli/lib/session-media-extract.js";
+import assert from "node:assert/strict";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 // A payload big enough to trip the strip threshold, whose plaintext we can
 // check on the way back out.
-function photo(text) {
+function photo(text: string) {
   return Buffer.from(text.repeat(200_000)).toString("base64");
 }
 
-function turnLine({ uuid, images, text }) {
+function turnLine({ uuid, images, text }: { uuid: string; images: readonly object[]; text: string }) {
   return JSON.stringify({
     parentUuid: null,
     type: "user",
@@ -40,8 +42,21 @@ function turnLine({ uuid, images, text }) {
   });
 }
 
-function inlineImage({ mediaType, data }) {
+function inlineImage({ mediaType, data }: { mediaType: string; data: string }) {
   return { type: "image", source: { type: "base64", media_type: mediaType, data } };
+}
+
+/** The line a lookup found; a lookup that finds nothing fails the example. */
+async function lineOf(logPath: string, uuid: string): Promise<string> {
+  const result = await findTranscriptLineByUuid({ logPath, uuid });
+  assert.ok(result.found);
+  return result.line;
+}
+
+/** The media of a successful extraction; a failed one fails the example. */
+function mediaOf(result: ExtractResult): ExtractedMedia {
+  assert.ok(result.ok);
+  return result.media;
 }
 ```
 
@@ -101,6 +116,7 @@ await box.write("chat.jsonl", [
 
 const found = await findTranscriptLineByUuid({ logPath, uuid: "u-2" });
 print(`found: ${found.found}`);
+assert.ok(found.found);
 print(`is the right line: ${found.line.includes("second")}`);
 print(`did not return a neighbour: ${!found.line.includes("first") && !found.line.includes("third")}`);
 =>
@@ -119,8 +135,8 @@ await box.write("parented.jsonl", [
   JSON.stringify({ type: "user", uuid: "bbb", parentUuid: "aaa", message: { role: "user", content: [{ type: "text", text: "the child" }] } }),
 ].join("\n"));
 
-const parented = await findTranscriptLineByUuid({ logPath: box.path("parented.jsonl"), uuid: "aaa" });
-parented.line.includes("the target")
+const parented = await lineOf(box.path("parented.jsonl"), "aaa");
+parented.includes("the target")
 => true
 ```
 
@@ -157,13 +173,13 @@ await box.write("two.jsonl", turnLine({
     inlineImage({ mediaType: "image/jpeg", data: photo("right") }),
   ],
 }));
-const line = (await findTranscriptLineByUuid({ logPath: box.path("two.jsonl"), uuid: "u-two" })).line;
+const line = await lineOf(box.path("two.jsonl"), "u-two");
 
 const first = extractSessionMedia({ line, index: 0 });
 const second = extractSessionMedia({ line, index: 1 });
-print(`first: ${first.media.mediaType} starting ${first.media.bytes.toString("utf8").slice(0, 4)}`);
-print(`second: ${second.media.mediaType} starting ${second.media.bytes.toString("utf8").slice(0, 5)}`);
-print(`whole photo recovered: ${first.media.bytes.length === 200_000 * 4}`);
+print(`first: ${mediaOf(first).mediaType} starting ${mediaOf(first).bytes.toString("utf8").slice(0, 4)}`);
+print(`second: ${mediaOf(second).mediaType} starting ${mediaOf(second).bytes.toString("utf8").slice(0, 5)}`);
+print(`whole photo recovered: ${mediaOf(first).bytes.length === 200_000 * 4}`);
 =>
 first: image/png starting left
 second: image/jpeg starting right
@@ -182,7 +198,7 @@ await box.write("empty.jsonl", turnLine({
   text: "this one did not upload",
   images: [inlineImage({ mediaType: "image/png", data: "" })],
 }));
-const emptyLine = (await findTranscriptLineByUuid({ logPath: box.path("empty.jsonl"), uuid: "u-empty" })).line;
+const emptyLine = await lineOf(box.path("empty.jsonl"), "u-empty");
 const empty = extractSessionMedia({ line: emptyLine, index: 0 });
 JSON.stringify([past, empty])
 => [{"ok":false,"reason":"no-such-image"},{"ok":false,"reason":"no-payload"}]
@@ -198,8 +214,8 @@ await box.write("html.jsonl", turnLine({
   text: "nice try",
   images: [inlineImage({ mediaType: "text/html", data: photo("x") })],
 }));
-const htmlLine = (await findTranscriptLineByUuid({ logPath: box.path("html.jsonl"), uuid: "u-html" })).line;
-extractSessionMedia({ line: htmlLine, index: 0 }).media.mediaType
+const htmlLine = await lineOf(box.path("html.jsonl"), "u-html");
+mediaOf(extractSessionMedia({ line: htmlLine, index: 0 })).mediaType
 => application/octet-stream
 ```
 

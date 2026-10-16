@@ -6,9 +6,10 @@ lead under its name, and everything else follows under "Other chats". Nothing is
 filtered out — a chat in another landmark is always still reachable.
 
 ```ts setup
-import { layoutSessionList, sessionIdHint } from "../../../../../src/components/chat/everywhere/InteractiveChat/session-list-grouping.js";
+import type { ChatSessionInfo } from "../../../../../src/api.js";
+import { layoutSessionList, sessionIdHint, type SessionListLayout } from "../../../../../src/components/chat/everywhere/InteractiveChat/session-list-grouping.js";
 
-function session(sessionId: string, contextDir: string, landmarkLabel: string, done = false) {
+function session(sessionId: string, contextDir: string, landmarkLabel: string, done = false): ChatSessionInfo {
   return {
     sessionId,
     source: "chat",
@@ -29,8 +30,8 @@ const SESSIONS = [
 ];
 
 // Compact rendering of a layout, so the expectations read like the menu does.
-function show(layout) {
-  const done = layout.done.length === 0 ? [] : [`Done: ${layout.done.map((s) => s.sessionId).join(" ")}`];
+function show(layout: SessionListLayout): string {
+  const done = layout.done.length === 0 ? [] : [`Done: ${layout.done.map((s: ChatSessionInfo) => s.sessionId).join(" ")}`];
   if (layout.kind === "flat") {
     return [`flat${layout.showLandmark ? " (tagged)" : ""}: ${layout.sessions.map((s) => s.sessionId).join(" ")}`, ...done].join("\n");
   }

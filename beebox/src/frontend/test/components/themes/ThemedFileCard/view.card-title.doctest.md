@@ -17,11 +17,12 @@ import { CardThemeSurface } from "../../../../src/components/themes/ThemedFileCa
 
 globalThis.React = React;
 const theme = resolveCardTheme({ path: "_content/Solder.record.card", type: "record", cardChoice: undefined, typeDefault: undefined, presentation: { status: "absent" } });
-const header = (detail) => {
+const header = (detail: string | undefined) => {
   const html = renderToStaticMarkup(React.createElement(CardThemeSurface, {
-    theme, title: "Solder", detail, symbol: null, boxSlug: "test1", mode: "page", properties: null,
-  }, React.createElement("p", null, "Front")));
-  return /<header[^>]*>(.*?)<\/header>/s.exec(html)?.[1].replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
+    theme, title: "Solder", detail, symbol: null, boxSlug: "test1", mode: "companion", properties: null,
+    children: React.createElement("p", null, "Front"),
+  }));
+  return /<header[^>]*>(.*?)<\/header>/s.exec(html)?.[1]?.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
 };
 [header("Tray 3 · 2 spools"), header(undefined)]
 => ["|Solder|Tray 3 · 2 spools|", "|Solder|"]

@@ -8,12 +8,13 @@ screen-reader description prevents color from being the only signal.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SpeechChunk } from "../../../src/components/chat/SpeechChunk.js";
+import type { SpeechSegmentState } from "../../../src/machines/speech-segment-states.js";
 
 globalThis.React = React;
 
-function render(state) {
+function render(state: SpeechSegmentState): string {
   return renderToStaticMarkup(
-    React.createElement(SpeechChunk, { state }, "Spoken words"),
+    React.createElement(SpeechChunk, { state, children: "Spoken words" }),
   );
 }
 ```
@@ -69,11 +70,11 @@ chunk is failed.
 
 ```ts
 const why = "TTS backend answered 429 Too Many Requests: Rate limit exceeded (limit: 10 requests per day on Free Tier)";
-const explained = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "failed", failureReason: why }, "Spoken words"));
+const explained = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "failed", failureReason: why, children: "Spoken words" }));
 explained.includes(`Speech failed: ${why}`)
 => true
 
-const recovered = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "playing", failureReason: why }, "Spoken words"));
+const recovered = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "playing", failureReason: why, children: "Spoken words" }));
 recovered.includes("Speech failed")
 => false
 ```

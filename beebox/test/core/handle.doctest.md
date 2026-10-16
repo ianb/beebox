@@ -14,10 +14,12 @@ import {
   handleVerdict,
   describeHandleFailures,
   readHandlingResults,
+  type CategoryHandling,
+  type RunProcedureOutput,
 } from "../../src/core/handle.js";
 import { formatHandleInconclusiveLine } from "../../src/shared/inconclusive.js";
 import { createCollectorContext } from "../../src/core/command-runner.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 
 // A landmark card for `_content/<dir>/` whose triage destination has the given
 // extra YAML lines (a `procedure:` block, or nothing).
@@ -34,7 +36,7 @@ ${destination}---
 const procedureRef = (ref: string) => `    procedure:\n      ref: ${ref}\n`;
 
 // Run the pass with a procedure runner that records each call.
-async function handle(box, outcome = { outcome: "completed" }) {
+async function handle(box: TmpBox, outcome: RunProcedureOutput = { outcome: "completed" }) {
   const { ctx } = createCollectorContext(box.root);
   const calls: { procedurePath: string; triageItems: string[] }[] = [];
   const results = await runHandle({
@@ -128,7 +130,7 @@ distinction exists to prevent.
 ```ts
 const box = await recipesBox();
 const { results } = await handle(box, { outcome: "inconclusive", detail: "review of step archive reached max turns (8)" });
-({ buckets: results.map((r) => ({ outcome: r.outcome, detail: r.detail })), report: formatHandlingLines(results[0]) })
+({ buckets: results.map((r) => ({ outcome: r.outcome, detail: r.detail })), report: results.flatMap(formatHandlingLines) })
 =>
 {
   buckets: [{ outcome: "procedure-inconclusive", detail: "review of step archive reached max turns (8)" }],
@@ -143,7 +145,7 @@ A failed handler run still reports its error:
 
 ```ts continue
 const failed = await handle(box, { outcome: "failed", detail: "step archive failed" });
-formatHandlingLines(failed.results[0])
+failed.results.flatMap(formatHandlingLines)
 =>
 [
   "  procedure-failed\trecipes (1 item) [_content/recipes/archive.procedure.card]",
@@ -162,7 +164,7 @@ did neither — a wakeup script gating on it saw a green run in all three cases.
 The verdict is the worst outcome present, in that order.
 
 ```ts
-const bucket = (category, outcome, detail) => ({ category, items: ["x"], outcome, ...(detail && { detail }) });
+const bucket = (category: string, outcome: CategoryHandling["outcome"], detail?: string): CategoryHandling => ({ category, items: ["x"], outcome, ...(detail !== undefined ? { detail } : {}) });
 const clean = [bucket("recipes", "ran"), bucket("receipts", "no-items")];
 const unjudged = [bucket("recipes", "ran"), bucket("receipts", "procedure-inconclusive", "review of step file reached max turns (8)")];
 const broken = [...unjudged, bucket("notes", "procedure-failed", "step archive failed")];
@@ -177,7 +179,7 @@ The stderr line an unjudged bucket prints is the scheduler's vocabulary, same
 prefix and closing clause as a procedure run's:
 
 ```ts continue
-print(formatHandleInconclusiveLine({ category: "receipts", detail: unjudged[1].detail }));
+print(formatHandleInconclusiveLine({ category: "receipts", detail: unjudged[1]?.detail ?? "" }));
 => Inconclusive: handle receipts — review of step file reached max turns (8); work completed
 ```
 

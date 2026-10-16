@@ -131,7 +131,7 @@ const trashOnMac = await writeConfig({
   targets: [{ folder: "/scans", serverUrl: "https://beebox.run", box: "family", tokenPath: "/t", disposition: "trash" }],
 });
 const macConfig = await loadConfig(trashOnMac, { platform: "darwin" });
-macConfig.targets[0].disposition
+macConfig.targets[0]?.disposition
 => trash
 ```
 

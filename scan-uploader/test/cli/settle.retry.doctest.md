@@ -31,6 +31,7 @@ const summary = (over: Partial<RunSummary>): RunSummary => ({
   skippedUnsettled: 0,
   skippedIdentityChanged: 0,
   errors: 0,
+  contractVersion: undefined,
   ...over,
 });
 
@@ -84,7 +85,7 @@ The wait covers the whole settle window rather than landing exactly on its
 boundary:
 
 ```continue
-one.waits[0] >= 10_000
+(one.waits[0] ?? 0) >= 10_000
 => true
 ```
 

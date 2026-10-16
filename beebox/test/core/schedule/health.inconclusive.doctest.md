@@ -35,7 +35,7 @@ const NOW = new Date();
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "inconclusive-"));
 process.env.BBX_ENGINE_AVAILABILITY_FILE = path.join(dir, "empty.json");
 
-function commandFailure({ exitCode, stderr, stdout = "All MAP.md files current." }) {
+function commandFailure({ exitCode, stderr, stdout = "All MAP.md files current." }: { exitCode: number; stderr?: string; stdout?: string }) {
   const parts = [`Command failed with exit code ${exitCode}`];
   if (stderr) parts.push(`stderr:\n${stderr}`);
   if (stdout) parts.push(`stdout:\n${stdout}`);

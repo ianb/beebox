@@ -23,12 +23,17 @@ import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
 const CODEX_CHAT = "33333333-3333-4333-8333-333333333333";
 const RECORD = ".beebox/codex-repair-attempted.json";
 
-function caller(boxRoot) {
+function caller(boxRoot: string) {
   const ctx = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
+    user: null,
+    authed: false,
+    isOwner: false,
+    isAuthenticatedOwner: false,
+    actor: "none" as const,
   };
   return appRouter.createCaller(ctx);
 }

@@ -9,7 +9,7 @@ the server (`docs/plans/tts-streamed-playback.md`).
 import { pcmToMp3, Mp3EncoderError } from "../../../src/core/tts/mp3-encoder.js";
 
 /** `seconds` of a 440 Hz tone as 16-bit little-endian mono 24 kHz PCM. */
-function tone(seconds) {
+function tone(seconds: number) {
   const samples = Math.round(24000 * seconds);
   const pcm = Buffer.alloc(samples * 2);
   for (let i = 0; i < samples; i++) pcm.writeInt16LE(Math.round(8000 * Math.sin((2 * Math.PI * 440 * i) / 24000)), i * 2);
@@ -17,14 +17,14 @@ function tone(seconds) {
 }
 
 /** A gate a PCM source can wait on until the test opens it. */
-function gate() {
-  let open;
-  const opened = new Promise((resolve) => { open = resolve; });
+function gate(): { opened: Promise<void>; open: () => void } {
+  let open = () => {};
+  const opened = new Promise<void>((resolve) => { open = resolve; });
   return { opened, open };
 }
 
-async function collect(chunks) {
-  const out = [];
+async function collect(chunks: AsyncIterable<Buffer>) {
+  const out: Buffer[] = [];
   for await (const chunk of chunks) out.push(chunk);
   return Buffer.concat(out);
 }

@@ -13,7 +13,7 @@ import { livePresence } from "../../../src/core/notification/presence.js";
 
 const T0 = Date.parse("2026-09-26T12:00:00Z");
 let clock = T0;
-const at = (seconds) => new Date(T0 + seconds * 1000);
+const at = (seconds: number) => new Date(T0 + seconds * 1000);
 // A long interval: the doctest runs the sweeps itself.
 const registry = createPresenceRegistry({ sweepMs: 3_600_000, now: () => new Date(clock) });
 ```

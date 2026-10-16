@@ -12,6 +12,8 @@ unauthenticated API/WS gets a bare 401, an authenticated cookie becomes an
 ```ts setup
 import http from "node:http";
 import net from "node:net";
+import assert from "node:assert/strict";
+import { z } from "zod";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -39,8 +41,29 @@ const authDir = await mkdtemp(path.join(os.tmpdir(), "bbx-hub-auth-"));
 process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");
 process.env.BBX_AUTH_SCRYPT_N = "1024";
 
+/** What the fake box echoes back: the request URL and the identity headers it received. */
+const BoxEcho = z.object({
+  url: z.string(),
+  xBbxAuthenticatedEmail: z.string().nullable(),
+  xBbxHubSecret: z.string().nullable(),
+});
+
+function portOf(server: http.Server): number {
+  const address = server.address();
+  assert.ok(address && typeof address === "object", "server is listening on a TCP port");
+  return address.port;
+}
+
+function listen(server: http.Server): Promise<void> {
+  return new Promise<void>((resolve) => { server.listen(0, "127.0.0.1", resolve); });
+}
+
+function close(server: http.Server): Promise<void> {
+  return new Promise<void>((resolve) => { server.close(() => { resolve(); }); });
+}
+
 async function startFakeBox() {
-  const sockets = [];
+  const sockets: net.Socket[] = [];
   const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({
@@ -50,8 +73,8 @@ async function startFakeBox() {
     }));
   });
   server.on("connection", (socket) => sockets.push(socket));
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address();
+  await listen(server);
+  const port = portOf(server);
   return { server, sockets, port, origin: `http://127.0.0.1:${port}` };
 }
 
@@ -70,11 +93,12 @@ const hubServer = await createHubServer({
   getHealth: () => ({ status: "ok", boxes: [] }),
   hubSecret: HUB_SECRET,
   boxes: [{ slug: "test1", boxRoot: mobileBox.root }],
+  baseUrl: "http://127.0.0.1",
 });
-const hubSockets = [];
+const hubSockets: net.Socket[] = [];
 hubServer.on("connection", (socket) => hubSockets.push(socket));
-await new Promise((resolve) => hubServer.listen(0, "127.0.0.1", resolve));
-const hubBase = `http://127.0.0.1:${hubServer.address().port}`;
+await listen(hubServer);
+const hubBase = `http://127.0.0.1:${portOf(hubServer)}`;
 ```
 
 ## Unauthenticated HTML navigation redirects to `/auth/login`
@@ -94,7 +118,7 @@ navResponse.headers.get("location")
 const mobileResponse = await fetch(`${hubBase}/test1/chat?nativeComposer=1`, {
   headers: { authorization: `Bearer ${mobileToken}` },
 });
-const mobileBody = await mobileResponse.json();
+const mobileBody = BoxEcho.parse(await mobileResponse.json());
 JSON.stringify({
   status: mobileResponse.status,
   url: mobileBody.url,
@@ -123,7 +147,7 @@ the guess.
 
 ```ts continue
 const trpcPath = "/api/trpc/health.check";
-const refused = [
+const refused: Array<[string, string, Record<string, string>]> = [
   ["no credential, real slug", "test1", {}],
   ["bogus bearer, real slug", "test1", { authorization: "Bearer not-a-real-device-token" }],
   ["bogus bbx_mobile cookie, real slug", "test1", { cookie: "bbx_mobile=forged.deadbeef" }],
@@ -188,7 +212,7 @@ const pairingResponse = await fetch(`${hubBase}/test1/api/pairing/redeem`, {
   headers: { "content-type": "application/json" },
   body: JSON.stringify({ pairingToken: "test-token", deviceLabel: "test device" }),
 });
-const pairingBody = await pairingResponse.json();
+const pairingBody = BoxEcho.parse(await pairingResponse.json());
 JSON.stringify({
   status: pairingResponse.status,
   url: pairingBody.url,
@@ -208,7 +232,7 @@ const authedResponse = await fetch(`${hubBase}/test1/browse/some-card`, {
 authedResponse.status
 => 200
 
-const authedBody = await authedResponse.json();
+const authedBody = BoxEcho.parse(await authedResponse.json());
 JSON.stringify({ email: authedBody.xBbxAuthenticatedEmail, secret: authedBody.xBbxHubSecret })
 => {"email":"person@example.com","secret":"test-hub-secret-for-auth-doctest"}
 ```
@@ -239,7 +263,7 @@ delete process.env.BBX_DIAG_API_KEY;
 
 ```ts continue
 const webhookResponse = await fetch(`${hubBase}/webhook/test1/incoming`);
-const webhookBody = await webhookResponse.json();
+const webhookBody = BoxEcho.parse(await webhookResponse.json());
 webhookResponse.status
 => 200
 
@@ -250,8 +274,8 @@ JSON.stringify({ email: webhookBody.xBbxAuthenticatedEmail, secret: webhookBody.
 ## An unauthenticated WebSocket upgrade is rejected with a raw 401 (no cookie fallback either)
 
 ```ts continue
-function rawUpgradeRequest({ port, path, headers = {} }) {
-  return new Promise((resolve, reject) => {
+function rawUpgradeRequest({ port, path, headers = {} }: { port: number; path: string; headers?: Record<string, string> }): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
     const socket = net.connect(port, "127.0.0.1", () => {
       const headerLines = Object.entries(headers).map(([k, v]) => `${k}: ${v}\r\n`).join("");
       socket.write(
@@ -277,7 +301,7 @@ function rawUpgradeRequest({ port, path, headers = {} }) {
   });
 }
 
-const unauthedUpgrade = await rawUpgradeRequest({ port: hubServer.address().port, path: "/test1/ws" });
+const unauthedUpgrade = await rawUpgradeRequest({ port: portOf(hubServer), path: "/test1/ws" });
 unauthedUpgrade.startsWith("HTTP/1.1 401")
 => true
 ```
@@ -322,6 +346,6 @@ await rm(authDir, { recursive: true, force: true });
 await mobileBox.cleanup();
 for (const socket of hubSockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
-await new Promise((resolve) => hubServer.close(resolve));
-await new Promise((resolve) => box.server.close(resolve));
+await close(hubServer);
+await close(box.server);
 ```

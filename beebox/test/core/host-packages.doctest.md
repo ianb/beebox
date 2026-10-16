@@ -17,18 +17,24 @@ import {
   recordHostPackages,
 } from "../../src/core/host-packages.js";
 import { wrapperBoxLabel } from "../../src/core/host-packages-system.js";
-import { runHostInstall, runHostSync } from "../../src/cli/commands/host.js";
+import { runHostInstall, runHostSync, type HostSystem } from "../../src/cli/commands/host.js";
 import { hostPackagesCheck } from "../../src/webapp/trpc/routers/health/checks/host-packages.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 
 /** A fake host: which packages are installed, and what the wrapper answers. */
-function fakeHost({ installed = [], supports = true, sudo = true, dpkg = true, answer = () => 0 } = {}) {
-  const calls = [];
-  const system = {
+function fakeHost({ installed = [], supports = true, sudo = true, dpkg = true, answer = () => 0 }: {
+  installed?: string[];
+  supports?: boolean;
+  sudo?: boolean;
+  dpkg?: boolean;
+  answer?: (names: readonly string[]) => number;
+} = {}) {
+  const calls: string[] = [];
+  const system: HostSystem = {
     supportsInstalls: async () => supports,
     sudoAllows: async () => (sudo ? { ok: true } : { ok: false, output: "sudo: a password is required" }),
     queryInstalled: async () => (dpkg ? { supported: true, installed: new Set(installed) } : { supported: false }),
-    install: async ({ box, names }) => {
+    install: async ({ box, names }: { box: string; names: readonly string[] }) => {
       calls.push(`${box}: ${names.join(" ")}`);
       return answer(names);
     },
@@ -37,8 +43,8 @@ function fakeHost({ installed = [], supports = true, sudo = true, dpkg = true, a
 }
 
 /** Run with console output captured. */
-async function captured(fn) {
-  const lines = [];
+async function captured(fn: () => Promise<number>) {
+  const lines: string[] = [];
   const origLog = console.log;
   const origError = console.error;
   console.log = (...args) => { lines.push(args.join(" ")); };
@@ -52,7 +58,7 @@ async function captured(fn) {
   }
 }
 
-async function manifest(box) {
+async function manifest(box: TmpBox) {
   return fs.readFile(path.join(box.root, "_config/host-packages.json"), "utf-8");
 }
 ```
@@ -243,9 +249,9 @@ const none = await hostPackagesCheck(box.root, { queryInstalled: fakeHost().syst
 print(`nothing recorded: ${none}`);
 await recordHostPackages(box.root, { names: ["glabels", "file"], why: "x", added: "2026-09-17" });
 const missing = await hostPackagesCheck(box.root, { queryInstalled: fakeHost({ installed: ["file"] }).system.queryInstalled });
-print(`${missing.ok} ${missing.severity}: ${missing.message}`);
+print(`${missing?.ok} ${missing?.severity}: ${missing?.message}`);
 const mac = await hostPackagesCheck(box.root, { queryInstalled: fakeHost({ dpkg: false }).system.queryInstalled });
-`${mac.ok}: ${mac.message}`
+`${mac?.ok}: ${mac?.message}`
 =>
 nothing recorded: null
 false warning: Recorded host packages not installed: glabels. `bbx host sync` installs them; one the host's policy refuses needs the boxholder.

@@ -10,6 +10,7 @@ and an OpenRouter key with at least one added model.
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { TRPCError } from "@trpc/server";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeClaudeCli } from "../../../../src/services/claude-cli.js";
 import { resetAgentReadinessCache } from "../../../../src/core/agent/readiness.js";
@@ -19,14 +20,40 @@ import { CONFIG_RELATIVE_PATH } from "../../../../src/webapp/box-config-write.js
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { EventBus } from "../../../../src/core/event-bus/core.js";
+import type { Services } from "../../../../src/services/container.js";
+import type { AgentReadiness } from "../../../../src/core/agent/readiness.js";
 
-const eventBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
+const eventBus: EventBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
 
-function callers(boxRoot: string, services: object) {
-  const base = { boxRoot, boxSlug: "test", eventBus, services, authed: true };
+function ctxFor(boxRoot: string, services: Services, isOwner: boolean): TrpcContext {
   return {
-    owner: appRouter.createCaller({ ...base, user: { email: "owner@example.com", name: "Owner" }, isOwner: true }).agents,
-    member: appRouter.createCaller({ ...base, user: { email: "member@example.com", name: "Member" }, isOwner: false }).agents,
+    boxRoot,
+    boxSlug: "test",
+    eventBus,
+    services,
+    authed: true,
+    user: isOwner ? { email: "owner@example.com", name: "Owner" } : { email: "member@example.com", name: "Member" },
+    isOwner,
+    isAuthenticatedOwner: isOwner,
+    actor: "user",
+  };
+}
+
+function callers(boxRoot: string, services: Services) {
+  const ownerAgents = appRouter.createCaller(ctxFor(boxRoot, services, true)).agents;
+  return {
+    owner: {
+      reconcileDefault: ownerAgents.reconcileDefault,
+      // The owner's answer carries the full per-provider detail; members get only `anyReady`.
+      readiness: async (): Promise<AgentReadiness> => {
+        const r = await ownerAgents.readiness();
+        if (!("claude" in r)) throw new Error("owner readiness lacks provider detail");
+        return r;
+      },
+    },
+    member: appRouter.createCaller(ctxFor(boxRoot, services, false)).agents,
   };
 }
 
@@ -203,7 +230,7 @@ codexCli.status = { kind: "logged-out" };
 (await owner.readiness()).codex
 => ready
 
-const adminCaller = appRouter.createCaller({ boxRoot: box.root, boxSlug: "test", eventBus, services: { claudeCli, codexCli }, authed: true, user: { email: "owner@example.com", name: "Owner" }, isOwner: true }).admin;
+const adminCaller = appRouter.createCaller(ctxFor(box.root, { claudeCli, codexCli }, true)).admin;
 await adminCaller.codexStatus();
 (await owner.readiness()).codex
 => not-ready
@@ -212,7 +239,7 @@ await adminCaller.codexStatus();
 ## Only the owner can move the default
 
 ```ts continue
-await member.reconcileDefault().then(() => "ok", (error) => error.code)
+await member.reconcileDefault().then(() => "ok", (error: unknown) => (error instanceof TRPCError ? error.code : String(error)))
 => FORBIDDEN
 ```
 

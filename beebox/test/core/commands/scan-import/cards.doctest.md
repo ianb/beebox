@@ -8,6 +8,7 @@ and unsure questions deliberately carry none (one-off page dispositions; see
 `docs/plans/scan-guide-card.md`).
 
 ```ts setup
+import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -15,8 +16,9 @@ import { parse as parseYaml } from "yaml";
 import { emitPhotoBundle, emitOrphanBackQuestion } from "../../../../src/core/commands/scan-import/cards.js";
 import { splitCardContent } from "../../../../src/exports/cards.js";
 import { createCardSchemaMap } from "../../../../src/schemas.js";
+import type { ScanPageAnalysis } from "../../../../src/core/describe-images/gemini.js";
 
-function analysis(index, overrides) {
+function analysis(index: number, overrides: Partial<ScanPageAnalysis> = {}): ScanPageAnalysis {
   return {
     index,
     kind: "photo",
@@ -41,7 +43,7 @@ async function makeSession() {
   await fs.mkdir(sessionAttachAbsDir, { recursive: true });
   const pageDir = path.join(boxRoot, "tmp", "pages");
   await fs.mkdir(pageDir, { recursive: true });
-  const archivePages = [];
+  const archivePages: string[] = [];
   for (let i = 0; i < 2; i++) {
     const p = path.join(pageDir, `page-${i}.jpg`);
     await fs.writeFile(p, "jpeg-bytes");
@@ -50,7 +52,8 @@ async function makeSession() {
   return { boxRoot, sessionAttachRelDir, sessionAttachAbsDir, archivePages };
 }
 
-async function readQuestionFields(boxRoot, questionRelPath) {
+async function readQuestionFields(boxRoot: string, questionRelPath: string | undefined) {
+  assert.ok(questionRelPath !== undefined);
   const raw = await fs.readFile(path.join(boxRoot, questionRelPath), "utf-8");
   return parseYaml(splitCardContent(raw).frontmatterText);
 }
@@ -60,9 +63,9 @@ async function readQuestionFields(boxRoot, questionRelPath) {
 
 ```ts
 const session = await makeSession();
-const filesToStage = [];
-const imageRefs = [];
-const questionPaths = [];
+const filesToStage: string[] = [];
+const imageRefs: string[] = [];
+const questionPaths: string[] = [];
 await emitPhotoBundle({
   cardSchemas: await createCardSchemaMap(),
   index: 0,
@@ -100,8 +103,8 @@ await fs.rm(session.boxRoot, { recursive: true, force: true });
 
 ```ts
 const session = await makeSession();
-const filesToStage = [];
-const questionPaths = [];
+const filesToStage: string[] = [];
+const questionPaths: string[] = [];
 await emitOrphanBackQuestion(
   { index: 1, analysis: analysis(1, { kind: "back", text_blocks: [{ source: "back", text: "May 72" }] }) },
   {

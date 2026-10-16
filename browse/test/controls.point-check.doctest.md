@@ -20,7 +20,7 @@ that order.
 ```ts setup
 import assert from "node:assert/strict";
 import vm from "node:vm";
-import { checkScript, type Box } from "../src/controls.js";
+import { checkScript, parseCheckResult, type Box, type CheckResult } from "../src/controls.js";
 
 class StubNode { static TEXT_NODE = 3; }
 
@@ -85,7 +85,7 @@ const el = (tag: string, spec: Spec): StubElement => new StubElement(tag, spec);
 const input = (spec: Spec): StubInput => new StubInput("input", spec);
 
 /** Runs the check with `paint` as the stacking order, topmost first. */
-function check(paint: StubElement[], { box, expectName }: { box: Box; expectName: string | null }): unknown {
+function check(paint: StubElement[], { box, expectName }: { box: Box; expectName: string | null }): CheckResult {
   const inside = (e: StubElement, x: number, y: number): boolean =>
     x >= e.box.x && x < e.box.x + e.box.width && y >= e.box.y && y < e.box.y + e.box.height;
   const document = {
@@ -102,7 +102,13 @@ function check(paint: StubElement[], { box, expectName }: { box: Box; expectName
   const y = box.y + box.height / 2;
   const printed: unknown = vm.runInContext(checkScript({ kind: "point", x, y, box, expectName }), context);
   assert.equal(typeof printed, "string");
-  return JSON.parse(String(printed));
+  return parseCheckResult(String(printed));
+}
+
+/** Why the check refused; fails the example when it did not refuse. */
+function refusal(result: CheckResult): string {
+  assert.ok(!result.ok, "the check passed");
+  return result.reason;
 }
 
 const CHECKBOX_BOX = { x: 40, y: 520, width: 16, height: 16 };
@@ -196,7 +202,7 @@ const other = el("label", { box: DESK_BOX, text: "Return the drill" });
 const box = input({ box: CHECKBOX_BOX, attrs: { type: "checkbox" } });
 box.labels = [];
 
-check([other, box], { box: CHECKBOX_BOX, expectName: "Return the drill" }).reason
+refusal(check([other, box], { box: CHECKBOX_BOX, expectName: "Return the drill" }))
 => covered
 ```
 
@@ -213,6 +219,6 @@ label.append(hidden);
 check([hidden, label], { box: CHECKBOX_BOX, expectName: "Return the drill" })
 => { ok: true, scrolled: false }
 
-check([hidden, label], { box: CHECKBOX_BOX, expectName: "Buy milk" }).reason
+refusal(check([hidden, label], { box: CHECKBOX_BOX, expectName: "Buy milk" }))
 => covered
 ```

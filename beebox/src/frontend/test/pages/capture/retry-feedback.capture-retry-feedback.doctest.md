@@ -8,11 +8,12 @@ the batch ended.
 
 ```ts setup
 import { nextRetryFeedback } from "../../../src/pages/capture/retry-feedback.js";
+import type { RetryFeedback, RetryFeedbackEvent } from "../../../src/pages/capture/retry-feedback.js";
 
-const idle = { phase: "idle" };
+const idle: RetryFeedback = { phase: "idle" };
 // Fold a sequence of events, showing the phase after each.
-const trace = (events) => {
-  let state = idle;
+const trace = (events: RetryFeedbackEvent[]) => {
+  let state: RetryFeedback = idle;
   return events.map((e) => (state = nextRetryFeedback(state, e))).map((s) => s.phase).join(" → ");
 };
 ```

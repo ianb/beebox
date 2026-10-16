@@ -8,7 +8,7 @@ box-scoped subprocess spawn site runs to get `BBX_BOX_NAME` and
 import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, prependBbxBinToPath, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env/core.js";
 import { serveEndpointPath, writeServeEndpoint } from "../../src/core/serve-endpoint.js";
 import { spawnProfile } from "../../src/lib/spawn-profile.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -59,28 +59,28 @@ needs them will fail cleanly rather than using a default. Malformed disk state
 endpoint.
 
 ```ts
-async function writeBoxJson(box, publicUrl: string) {
+async function writeBoxJson(box: TmpBox, publicUrl: string) {
   await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
   await fs.writeFile(path.join(box.root, "_config", "box.json"), JSON.stringify({ publicUrl }));
 }
-const cases: Array<[string, (box) => Promise<Record<string, string | undefined>>]> = [
-  ["box.json publicUrl", async (box) => {
+const cases: Array<[string, (box: TmpBox) => Promise<Record<string, string | undefined>>]> = [
+  ["box.json publicUrl", async (box: TmpBox) => {
     await writeBoxJson(box, "https://bbx.example.org/my-box");
     return buildScriptEnv(box.root);
   }],
-  ["ambient registration beats box.json", async (box) => {
+  ["ambient registration beats box.json", async (box: TmpBox) => {
     await writeBoxJson(box, "https://stale.example.org/wrong-name");
     registerBoxPublicUrl(box.root, "http://localhost:3210/live-name");
     try { return await buildScriptEnv(box.root); }
     finally { unregisterBoxPublicUrl(box.root); }
   }],
-  ["nothing configured", async (box) => {
+  ["nothing configured", async (box: TmpBox) => {
     const saved = process.env.PUBLIC_URL;
     delete process.env.PUBLIC_URL;
     try { return await buildScriptEnv(box.root); }
     finally { if (saved !== undefined) process.env.PUBLIC_URL = saved; }
   }],
-  ["malformed serve endpoint file", async (box) => {
+  ["malformed serve endpoint file", async (box: TmpBox) => {
     await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
     await fs.writeFile(serveEndpointPath(box.root), "not-json");
     return buildScriptEnv(box.root);

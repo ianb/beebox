@@ -15,10 +15,11 @@ import {
   getSessionLogPath,
   containedSessionCwd,
 } from "../../../src/core/chat/session/transcript-paths.js";
+import type { SessionLogSlice } from "../../../src/cli/lib/session-retention.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 // "Everything, bounded": the first page at the hard retention ceiling. Every
 // parseSessionLog call names a slice — there is no unbounded shape.
-const ALL = { mode: "page", offset: 0, limit: 5000 };
+const ALL = { mode: "page", offset: 0, limit: 5000 } satisfies SessionLogSlice;
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -114,10 +115,10 @@ const lines = [
 await box.write("log.jsonl", lines);
 const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
 print(`total: ${result.total}`);
-print(`e0 type: ${result.entries[0].type}`);
-print(`e0 text: ${result.entries[0].content[0].text}`);
-print(`e1 type: ${result.entries[1].type}`);
-print(`e1 text: ${result.entries[1].content[0].text}`);
+print(`e0 type: ${result.entries[0]?.type}`);
+print(`e0 text: ${result.entries[0]?.content[0]?.text}`);
+print(`e1 type: ${result.entries[1]?.type}`);
+print(`e1 text: ${result.entries[1]?.content[0]?.text}`);
 =>
 total: 2
 e0 type: user
@@ -155,7 +156,7 @@ const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: AL
 result.total
 => 1
 
-result.entries[0].content[0].text
+result.entries[0]?.content[0]?.text
 => Real message
 ```
 
@@ -207,7 +208,7 @@ const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: { 
 print(`entries: ${result.entries.length}`);
 print(`total: ${result.total}`);
 print(`hasMore: ${result.hasMore}`);
-print(`first: ${result.entries[0].content[0].text}`);
+print(`first: ${result.entries[0]?.content[0]?.text}`);
 =>
 entries: 2
 total: 5
@@ -225,8 +226,8 @@ await box.cleanup();
 
 ```ts
 const result = transformContent([{ type: "text", text: "hello world" }]);
-print(`type: ${result[0].type}`);
-print(`text: ${result[0].text}`);
+print(`type: ${result[0]?.type}`);
+print(`text: ${result[0]?.text}`);
 =>
 type: text
 text: hello world
@@ -236,8 +237,8 @@ text: hello world
 
 ```ts
 const result = transformContent("plain string");
-print(`type: ${result[0].type}`);
-print(`text: ${result[0].text}`);
+print(`type: ${result[0]?.type}`);
+print(`text: ${result[0]?.text}`);
 =>
 type: text
 text: plain string
@@ -252,10 +253,10 @@ const result = transformContent([{
   id: "tool_1",
   input: { file_path: "/tmp/test.ts" },
 }]);
-print(`type: ${result[0].type}`);
-print(`toolName: ${result[0].toolName}`);
-print(`toolId: ${result[0].toolId}`);
-print(`inputSummary: ${result[0].inputSummary}`);
+print(`type: ${result[0]?.type}`);
+print(`toolName: ${result[0]?.toolName}`);
+print(`toolId: ${result[0]?.toolId}`);
+print(`inputSummary: ${result[0]?.inputSummary}`);
 =>
 type: tool_use
 toolName: Read
@@ -271,9 +272,9 @@ const result = transformContent([{
   tool_use_id: "tool_1",
   content: "file contents here",
 }]);
-print(`type: ${result[0].type}`);
-print(`toolUseId: ${result[0].toolUseId}`);
-print(`resultSummary: ${result[0].resultSummary}`);
+print(`type: ${result[0]?.type}`);
+print(`toolUseId: ${result[0]?.toolUseId}`);
+print(`resultSummary: ${result[0]?.resultSummary}`);
 =>
 type: tool_result
 toolUseId: tool_1
@@ -284,8 +285,8 @@ resultSummary: file contents here
 
 ```ts
 const result = transformContent([{ type: "thinking", thinking: "Let me consider..." }]);
-print(`type: ${result[0].type}`);
-print(`text: ${result[0].text}`);
+print(`type: ${result[0]?.type}`);
+print(`text: ${result[0]?.text}`);
 =>
 type: thinking
 text: Let me consider...
@@ -295,8 +296,8 @@ text: Let me consider...
 
 ```ts
 const result = transformContent([{ type: "redacted_thinking" }]);
-print(`type: ${result[0].type}`);
-print(`text: ${result[0].text}`);
+print(`type: ${result[0]?.type}`);
+print(`text: ${result[0]?.text}`);
 =>
 type: thinking
 text: [redacted]
@@ -363,8 +364,8 @@ const lines = [
 await writeFile(logPath, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
 const result = await parseSessionLog({ logPath, slice: ALL });
 print(`entries: ${result.entries.length}`);
-print(`uuid: ${result.entries[0].uuid}`);
-print(`blocks: ${result.entries[0].content.map((b) => b.type).join(",")}`);
+print(`uuid: ${result.entries[0]?.uuid}`);
+print(`blocks: ${result.entries[0]?.content.map((b) => b.type).join(",")}`);
 =>
 entries: 1
 uuid: u2

@@ -9,23 +9,25 @@ no stub are both visible (`docs/plugins.md`, "Health").
 ```ts setup
 import { pluginHealthChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/core.js";
 import { withDocId } from "../../../../../../../src/core/docs-gen/shared.js";
+import type { HealthCheck, PluginDefinition } from "../../../../../../../src/cards/plugin-definition.js";
 import { makeTmpBox } from "../../../../../../helpers/doctest-helpers.js";
 
 /** Only the failing rows, as `{ name, severity, message }`. */
-function failing(checks) {
+function failing(checks: HealthCheck[]) {
   return checks.filter((c) => !c.ok).map(({ name, severity, message }) => ({ name, severity, message }));
 }
 
-async function boxWithPlugins(plugins) {
+async function boxWithPlugins(plugins: unknown) {
   const box = await makeTmpBox();
   await box.write("_config/box.json", JSON.stringify({ plugins }));
   return box;
 }
 
-const fixturePlugin = (healthChecks) => ({
+const fixturePlugin = (healthChecks: NonNullable<PluginDefinition["healthChecks"]>): PluginDefinition => ({
   name: "courseware",
   description: "Fixture standing in for courseware",
   docs: "src/plugins/courseware/README.md",
+  schemas: undefined,
   healthChecks,
 });
 ```

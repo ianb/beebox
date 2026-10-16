@@ -11,39 +11,47 @@ a `todo-view` card passes its own **directory**, and the scope glob follows
 from that.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import type { z } from "zod";
+import type { TodoParamsSchema } from "../../../../src/core/todo/collection.js";
+import type { TodoQueryResult } from "../../../../src/core/todo/query.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
-function memo(body) {
+function memo(body: string) {
   return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
 }
 
 /** Every item the result carries, matching or context, as `text` strings. */
-function texts(res) {
+function texts(res: TodoQueryResult) {
   return res.groups.flatMap((g) => g.rows.flatMap((r) => r.items.map((i) => i.text))).sort();
 }
 
 /** `path (via)` per row, across every group. */
-function rows(res) {
+function rows(res: TodoQueryResult) {
   return res.groups.flatMap((g) => g.rows.map((r) => `${r.card.path} (${r.via})`)).sort();
 }
 
-const OPEN = { status: ["open"] };
+const OPEN: z.input<typeof TodoParamsSchema> = { status: ["open"] };
+type QueryInput = Parameters<ReturnType<typeof caller>["collections"]["query"]>[0]["query"];
 ```
 
 ## `here` resolution: a subdirectory's view sees only its own subtree
@@ -300,12 +308,12 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 const c = caller(box.root);
 
-async function refused(query) {
+async function refused(query: QueryInput) {
   try {
     await c.collections.query({ collection: "todos", query });
     return "SUCCEEDED";
   } catch (e) {
-    return e.code ?? e.name;
+    return e instanceof TRPCError ? e.code : e instanceof Error ? e.name : String(e);
   }
 }
 
@@ -323,12 +331,14 @@ An unknown collection name is refused the same way — it never reaches a
 server-side lookup.
 
 ```ts continue
-async function refusedCollection(collection) {
+async function refusedCollection(collection: string) {
   try {
-    await c.collections.query({ collection, query: { here: "", params: OPEN } });
+    // A name outside the declared collections, as an untrusted client could send it; the server must refuse it.
+    const request: Parameters<typeof c.collections.query>[0] = JSON.parse(JSON.stringify({ collection, query: { here: "", params: OPEN } }));
+    await c.collections.query(request);
     return "SUCCEEDED";
   } catch (e) {
-    return e.code ?? e.name;
+    return e instanceof TRPCError ? e.code : e instanceof Error ? e.name : String(e);
   }
 }
 
@@ -363,7 +373,7 @@ JSON.stringify(texts(res))
 res.issues.length > 0
 => true
 
-res.issues[0].path
+res.issues[0]?.path
 => _content/bad.memo.card
 ```
 

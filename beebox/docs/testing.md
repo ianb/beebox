@@ -58,8 +58,9 @@ Prefer the lowest instrument that catches the bug: a template generating bad
 XML is a doctest; an agent not knowing about a command is a knowledge audit;
 an agent not using a tag it was told to use is a field test. Within doctests,
 the change picks the form: pure logic is a plain doctest, an HTTP surface a
-route doctest (`makeTestServer()`), and anything that touches box files a
-filesystem doctest (`makeTmpBox()`). A change that fits no instrument cleanly
+route doctest (`makeTestServer()`), anything that touches box files a
+filesystem doctest (`makeTmpBox()`), and a React effect, event handler, or
+re-render a [DOM doctest](testing/doctests.md#dom-doctests) (`mount()`). A change that fits no instrument cleanly
 usually needs splitting, not a new harness.
 
 Coverage follows the change's risk, not a percentage. Cover the substantial
@@ -82,9 +83,10 @@ the agent or the user finding it through the real UI.
 Build a loop that goes red on this bug before changing code. Pick the fastest
 loop that reaches the bug:
 
-- **A doctest**: logic, routes, and box-file operations. Write it first; keep
-  it as the regression example only when the bug is a logic class that can
-  recur (see above), and delete it once the fix is green otherwise.
+- **A doctest**: logic, routes, box-file operations, and React effects and
+  re-renders (a DOM doctest). Write it first; keep it as the regression
+  example only when the bug is a logic class that can recur (see above), and
+  delete it once the fix is green otherwise.
 - **The dev router**: `curl http://localhost:3210/<worktree>/<box>/api/...`
   hits a backend route in the running app.
 - **`bin/browse`**: a headless browser on the running app for frontend bugs

@@ -28,7 +28,8 @@ assertNever("c" as never)
 It throws in every environment (no dev/prod split):
 
 ```ts
-invariant(1 === 2, "one is not two")
+const one: number = 1;
+invariant(one === 2, "one is not two")
 => throws InvariantError: one is not two
 ```
 

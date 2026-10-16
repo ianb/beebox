@@ -12,14 +12,16 @@ that one, instead of going silent for the whole TTL.
 running the real checks.
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { HealthReport } from "../../../../../../src/webapp/trpc/routers/health/checks/snapshot.js";
 import { getHealthSnapshot, HEALTH_SNAPSHOT_TTL_MS } from "../../../../../../src/webapp/trpc/routers/health/checks/snapshot.js";
 
 const version = { deployedAt: null, commits: {}, processStartedAt: "2026-08-01T00:00:00Z", uptimeSec: 1 };
 
 /** A compute that counts its runs and reports whatever `status` is set to. */
 function makeProbe() {
-  const probe = { runs: 0, status: "healthy" };
-  const compute = async () => {
+  const probe: { runs: number; status: HealthReport["status"] } = { runs: 0, status: "healthy" };
+  const compute = async (): Promise<HealthReport> => {
     probe.runs += 1;
     return { status: probe.status, checks: [], version };
   };
@@ -28,21 +30,26 @@ function makeProbe() {
 
 /** A compute whose every call hangs until the test resolves it by index. */
 function makeGatedProbe() {
-  const calls = [];
-  const compute = () => new Promise((resolve, reject) => { calls.push({ resolve, reject }); });
-  return { calls, compute };
+  const calls: { resolve: (report: HealthReport) => void; reject: (error: Error) => void }[] = [];
+  const compute = () => new Promise<HealthReport>((resolve, reject) => { calls.push({ resolve, reject }); });
+  function call(index: number) {
+    const gated = calls[index];
+    assert.ok(gated, `compute call ${String(index)} was made`);
+    return gated;
+  }
+  return { calls, call, compute };
 }
 
-const report = (status) => ({ status, checks: [], version });
+const report = (status: HealthReport["status"]): HealthReport => ({ status, checks: [], version });
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /** `t.checkThrows` is sync-only, so async rejections are captured by hand. */
-async function caught(fn) {
+async function caught(fn: () => Promise<unknown>) {
   try {
     await fn();
     return "(no error thrown)";
   } catch (e) {
-    return `${e.name}: ${e.message}`;
+    return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
   }
 }
 
@@ -165,7 +172,7 @@ const compute = gated.compute;
 const box = "/tmp/box-race";
 
 const cold = getHealthSnapshot(box, { compute, now });
-gated.calls[0].resolve(report("healthy"));
+gated.call(0).resolve(report("healthy"));
 (await cold).status
 => healthy
 ```
@@ -183,7 +190,7 @@ A `fresh` call now starts its own computation and finishes first:
 
 ```ts continue
 const freshPromise = getHealthSnapshot(box, { compute, now, fresh: true });
-gated.calls[2].resolve(report("degraded"));
+gated.call(2).resolve(report("degraded"));
 (await freshPromise).status
 => degraded
 ```
@@ -192,7 +199,7 @@ Now the older background refresh finally lands with a *different* verdict. It
 must not win:
 
 ```ts continue
-gated.calls[1].resolve(report("unhealthy"));
+gated.call(1).resolve(report("unhealthy"));
 await tick();
 const after = await getHealthSnapshot(box, { compute, now });
 `${after.status} computes=${String(gated.calls.length)}`
@@ -210,8 +217,8 @@ the error.
 ```ts
 const clock = { t: 30_000_000 };
 const now = () => clock.t;
-const mode = { status: "healthy", fail: false, runs: 0 };
-const compute = async () => {
+const mode: { status: HealthReport["status"]; fail: boolean; runs: number } = { status: "healthy", fail: false, runs: 0 };
+const compute = async (): Promise<HealthReport> => {
   mode.runs += 1;
   if (mode.fail) throw new ProbeExplodedError();
   return report(mode.status);

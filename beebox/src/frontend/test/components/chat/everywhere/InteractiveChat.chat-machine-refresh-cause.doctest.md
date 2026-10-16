@@ -14,19 +14,25 @@ Agent working" bug.
 ```ts setup
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../../src/machines/chatMachine/machine.js";
+import type { ChatController } from "../../../../src/components/chat/conversation/controller-pool/pool.js";
+import type { SessionEntry, PendingSessionEntry } from "../../../../src/api.js";
+import type { ChatEvent } from "../../../../src/machines/chat-types.js";
 
 // `pending` is the box's record of messages it accepted but has not yet
 // written into the transcript (`chat.bootstrap`); a stubbed fetch has none.
-const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false, pending: [] };
+interface Loaded { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean; pending: PendingSessionEntry[] }
+const EMPTY: Loaded = { entries: [], total: 0, sessionId: "s1", running: false, busy: false, pending: [] };
+// `fetchHistory` carries no `pending` list.
+const HISTORY = { entries: EMPTY.entries, total: 0, sessionId: EMPTY.sessionId, running: false, busy: false };
 
 // A started machine whose history fetch never settles, so `refreshing` stays
 // observable.
-async function idleActor() {
+async function idleActor(): Promise<ChatController> {
   const actor = createActor(
     chatMachine.provide({
       actors: {
         fetchInitial: fromPromise(async () => EMPTY),
-        fetchHistory: fromPromise(() => new Promise(() => {})),
+        fetchHistory: fromPromise(() => new Promise<typeof HISTORY>(() => {})),
         stream: fromCallback(() => {}),
       },
     }),
@@ -36,7 +42,7 @@ async function idleActor() {
   await Promise.resolve();
   return actor;
 }
-const where = (actor) => `${actor.getSnapshot().value}/${actor.getSnapshot().context.refreshCause}`;
+const where = (actor: ChatController) => `${actor.getSnapshot().value}/${actor.getSnapshot().context.refreshCause}`;
 ```
 
 ## The strip's phase follows the cause
@@ -68,8 +74,8 @@ result is fresher than any event the REFRESH could be covering for.
 const actor = createActor(
   chatMachine.provide({
     actors: {
-      fetchInitial: fromPromise(() => new Promise(() => {})),
-      fetchHistory: fromPromise(async () => EMPTY),
+      fetchInitial: fromPromise(() => new Promise<Loaded>(() => {})),
+      fetchHistory: fromPromise(async () => HISTORY),
       stream: fromCallback(() => {}),
     },
   }),
@@ -96,7 +102,7 @@ where(actor)
 ## Every edge out of `streaming` is a turn refresh
 
 ```ts setup
-async function afterTurn(terminal) {
+async function afterTurn(terminal: ChatEvent) {
   const actor = await idleActor();
   actor.send({ type: "SEND", message: "hi", messageId: "m1" });
   actor.send(terminal);

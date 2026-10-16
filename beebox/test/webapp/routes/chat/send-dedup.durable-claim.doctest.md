@@ -23,10 +23,12 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { makeTestServer, TEST_SLUG } from "../../../helpers/doctest-server.js";
+import { bodyField } from "../../../helpers/doctest-helpers.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { createInFlightSends } from "../../../../src/webapp/routes/chat/send-dedup.js";
 import type { ChatBackend } from "../../../../src/services/claude-chat-types.js";
 import { createEventBus, type BusEvent } from "../../../../src/core/event-bus/core.js";
+import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 import { createServer } from "../../../../src/webapp/server/app.js";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 
@@ -88,7 +90,7 @@ interface RestartedBox {
   server: FastifyInstance;
   /** `chat-user-message` payloads this instance recorded. */
   recorded: string[];
-  post: (payload: unknown) => Promise<{ statusCode: number; body: Record<string, unknown> }>;
+  post: (payload: object) => Promise<{ statusCode: number; body: Record<string, unknown> }>;
   close: () => Promise<void>;
 }
 
@@ -106,12 +108,12 @@ async function restartOver(boxRoot: string, chatBackend: ChatBackend): Promise<R
   });
   const recorded: string[] = [];
   eventBus.subscribe({
-    listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+    listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
   });
   return {
     server,
     recorded,
-    async post(payload: unknown) {
+    async post(payload: object) {
       const res = await server.inject({ method: "POST", url: `/${TEST_SLUG}/api/chat/send`, payload });
       return { statusCode: res.statusCode, body: res.json<Record<string, unknown>>() };
     },
@@ -139,7 +141,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
 });
 
 const gate = openSendGate();
@@ -156,7 +158,7 @@ await delay(50);
 gate.release();
 const [a, b] = await Promise.all([first, second]);
 
-`${a.statusCode} | ${b.statusCode} | turn=${typeof a.body.turnId} | shared=${b.body.turnId === a.body.turnId} | recorded=${recorded.length}`
+`${a.statusCode} | ${b.statusCode} | turn=${typeof bodyField(a.body, "turnId")} | shared=${bodyField(b.body, "turnId") === bodyField(a.body, "turnId")} | recorded=${recorded.length}`
 => 200 | 200 | turn=string | shared=true | recorded=1
 ```
 
@@ -207,7 +209,7 @@ const ctx = await makeTestServer({ chatBackend: backend });
 
 const recorded: string[] = [];
 ctx.eventBus.subscribe({
-  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(e.data.message)); },
+  listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(eventSchemas["chat-user-message"].parse(e.data).message)); },
 });
 
 backend.failNextStart = new Error("spawn EBADF");
@@ -232,7 +234,7 @@ const retry = await ctx.request({
   payload: { session: "new", message: "water the plants", messageId: "dup-2" },
 });
 
-`${a.statusCode} | turn=${typeof a.body.turnId} | shared=${b.body.turnId === a.body.turnId} | retry=${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${recorded.length}`
+`${a.statusCode} | turn=${typeof bodyField(a.body, "turnId")} | shared=${bodyField(b.body, "turnId") === bodyField(a.body, "turnId")} | retry=${retry.statusCode} | dedup=${bodyField(retry.body, "deduplicated")} | recorded=${recorded.length}`
 => 200 | turn=string | shared=true | retry=200 | dedup=true | recorded=1
 ```
 
@@ -277,7 +279,7 @@ await crashed.server.close();
 const restarted = await restartOver(crashed.boxRoot, createFakeChatBackend());
 const retry = await restarted.post({ session: "new", message: "buy milk", messageId: "restart-1" });
 
-`${failed.statusCode} | turn=${typeof failed.body.turnId} | persisted=${persisted.includes("restart-1")} | retry=${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${restarted.recorded.length}`
+`${failed.statusCode} | turn=${typeof bodyField(failed.body, "turnId")} | persisted=${persisted.includes("restart-1")} | retry=${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${restarted.recorded.length}`
 => 200 | turn=string | persisted=true | retry=200 | dedup=true | recorded=0
 ```
 

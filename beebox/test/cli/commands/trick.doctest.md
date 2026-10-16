@@ -10,10 +10,16 @@ import { mkdir, writeFile, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 
 // Run the prebuilt CLI with the given cwd (requireBoxRoot walks up from there).
-function runTrickCli(cwd, args) {
+interface TrickCliResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+function runTrickCli(cwd: string, args: string[]): Promise<TrickCliResult> {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "trick", ...args], { cwd });
     let stdout = "";
@@ -33,13 +39,13 @@ console.log("boxRoot:" + process.env.BBX_BOX_ROOT);
 console.log("trickName:" + process.env.BBX_TRICK_NAME);
 `;
 
-async function writeTrick(box, name, content) {
+async function writeTrick(box: TmpBox, name: string, content: string) {
   const dir = box.path(join("src", "tricks", "scripts", name));
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, "index.ts"), content);
 }
 
-async function writeTrickSecrets(box, name, declarations) {
+async function writeTrickSecrets(box: TmpBox, name: string, declarations: unknown) {
   const dir = box.path(join("src", "tricks", "scripts", name));
   await writeFile(join(dir, "secrets.json"), JSON.stringify(declarations));
 }
@@ -125,12 +131,12 @@ committed.
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
-function git(box, args) {
+function git(box: TmpBox, args: string[]) {
   return execFileSync("git", args, { cwd: box.root, encoding: "utf8" });
 }
 
 // The files the HEAD commit touched, and its subject and Run-By trailer.
-function headCommit(box) {
+function headCommit(box: TmpBox) {
   return {
     subject: git(box, ["log", "-1", "--format=%s"]).trim(),
     runBy: git(box, ["log", "-1", "--format=%(trailers:key=Run-By,valueonly)"]).trim(),
@@ -138,7 +144,7 @@ function headCommit(box) {
   };
 }
 
-function dirty(box) {
+function dirty(box: TmpBox) {
   return git(box, ["status", "--porcelain", "--untracked-files=all"]).trim().split("\n").filter(Boolean);
 }
 
@@ -156,7 +162,7 @@ for (const rel of args.filter((a) => a !== "fail")) {
 process.exit(args.includes("fail") ? 3 : 0);
 `;
 
-async function writeBoxFile(box, rel, content) {
+async function writeBoxFile(box: TmpBox, rel: string, content: string) {
   await mkdir(join(box.root, rel, ".."), { recursive: true });
   await writeFile(box.path(rel), content);
 }

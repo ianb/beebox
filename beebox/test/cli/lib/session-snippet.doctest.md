@@ -16,6 +16,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFirstUserSnippet } from "../../../src/cli/lib/session-snippet.js";
 import { getSessionMetadata } from "../../../src/cli/lib/session.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 function user(text: string, extra?: Record<string, unknown>) {
@@ -36,7 +37,7 @@ function assistant(text: string) {
 }
 
 /** Write a transcript from raw JSONL lines and return its path. */
-async function transcript(box, lines: string[]): Promise<string> {
+async function transcript(box: TmpBox, lines: string[]): Promise<string> {
   const logPath = box.path("log.jsonl");
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, lines.join("\n") + "\n");

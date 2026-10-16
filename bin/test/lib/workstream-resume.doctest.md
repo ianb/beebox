@@ -12,6 +12,21 @@ import { resolve } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+
+interface Failure { code: number; stdout: string; stderr: string }
+function isFailure(value: unknown): value is Failure {
+  return typeof value === "object" && value !== null && "code" in value && "stdout" in value && "stderr" in value;
+}
+/** Await a command that must exit non-zero and return its exit code and output. */
+async function expectFailure(attempt: Promise<unknown>): Promise<Failure> {
+  try {
+    await attempt;
+  } catch (error) {
+    if (isFailure(error)) return error;
+    throw error;
+  }
+  throw new Error("expected the command to fail");
+}
 const resumeLib = resolve(process.cwd(), "../bin/lib/workstream-resume.sh");
 const routingLib = resolve(process.cwd(), "../bin/lib/workstream-routing.sh");
 const briefingLib = resolve(process.cwd(), "../bin/lib/workstream-briefing.sh");
@@ -165,11 +180,11 @@ const promptRoot = await execFileAsync("bash", ["-c", '. "$1"; workstream_read_b
 JSON.stringify({ wrapped: promptRoot.stdout.includes("<agent-continuation>"), text: promptRoot.stdout.includes("hello world") })
 => {"wrapped":true,"text":true}
 
-const emptyPrompt = await execFileAsync("bash", ["-c", '. "$1"; workstream_read_briefing test-command ""', "briefing-test", briefingLib]).catch((error: unknown) => error as { code: number; stderr: string });
+const emptyPrompt = await expectFailure(execFileAsync("bash", ["-c", '. "$1"; workstream_read_briefing test-command ""', "briefing-test", briefingLib]));
 JSON.stringify({ code: emptyPrompt.code, message: emptyPrompt.stderr.trim() })
 => {"code":1,"message":"test-command: supplied briefing is empty"}
 
-const invalidDescription = await execFileAsync("bash", ["-c", '. "$1"; workstream_validate_description "$2"', "briefing-test", briefingLib, "first\nsecond"]).catch((error: unknown) => error as { code: number; stderr: string });
+const invalidDescription = await expectFailure(execFileAsync("bash", ["-c", '. "$1"; workstream_validate_description "$2"', "briefing-test", briefingLib, "first\nsecond"]));
 JSON.stringify({ code: invalidDescription.code, oneLine: invalidDescription.stderr.includes("must be one line") })
 => {"code":1,"oneLine":true}
 
@@ -187,8 +202,8 @@ const commandWorktrees = `${commandRoot}/worktrees`;
 await mkdir(`${commandState}/workstreams`, { recursive: true });
 await mkdir(commandWorktrees, { recursive: true });
 const commandEnv = { ...process.env, BBX_STATE_DIR: commandState, BBX_WORKTREE_ROOT: commandWorktrees, BBX_BOX_ROOT: `${commandRoot}/boxes` };
-const noBriefing = await execFileAsync(workstreams, ["resume", "ghost"], { env: commandEnv }).catch((error: unknown) => error as { code: number; stderr: string });
-const dashBriefing = await execFileAsync(workstreams, ["resume", "ghost", "--", "-context"], { env: commandEnv }).catch((error: unknown) => error as { code: number; stderr: string });
+const noBriefing = await expectFailure(execFileAsync(workstreams, ["resume", "ghost"], { env: commandEnv }));
+const dashBriefing = await expectFailure(execFileAsync(workstreams, ["resume", "ghost", "--", "-context"], { env: commandEnv }));
 JSON.stringify({ noBriefing: noBriefing.stderr.includes("unknown workstream 'ghost'"), dashBriefing: dashBriefing.stderr.includes("unknown workstream 'ghost'") })
 => {"noBriefing":true,"dashBriefing":true}
 ```

@@ -10,17 +10,27 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, InjectOptions } from "fastify";
 import type { EventBus } from "../../src/core/event-bus/core.js";
 import { createTestServer, TEST_SLUG, type TestServerOptions } from "./test-server.js";
 
 export { TEST_SLUG } from "./test-server.js";
 
 interface InjectOpts {
-  method: string;
+  method: NonNullable<InjectOptions["method"]>;
   url: string;
-  payload?: unknown;
+  payload?: InjectOptions["payload"];
   headers?: Record<string, string>;
+}
+
+/** Fastify inject options for a request at `url`, leaving unset fields absent. */
+function injectOptions(opts: InjectOpts, url: string): InjectOptions {
+  return {
+    method: opts.method,
+    url,
+    ...(opts.payload === undefined ? {} : { payload: opts.payload }),
+    ...(opts.headers === undefined ? {} : { headers: opts.headers }),
+  };
 }
 
 export interface InjectResult {
@@ -76,7 +86,7 @@ export async function makeTestServer(options?: TestServerOptions): Promise<TestS
   const ctx = await createTestServer(options);
   const BASE = `/${TEST_SLUG}`;
 
-  return {
+  const server: TestServer = {
     boxRoot: ctx.boxRoot,
     server: ctx.server,
     eventBus: ctx.eventBus,
@@ -85,41 +95,11 @@ export async function makeTestServer(options?: TestServerOptions): Promise<TestS
       return `${res.statusCode}\n${JSON.stringify(res.body, null, 2)}`;
     },
     async request(opts: InjectOpts) {
-      const reqOpts: {
-        method: string;
-        url: string;
-        payload?: unknown;
-        headers?: Record<string, string>;
-      } = {
-        method: opts.method,
-        url: `${BASE}${opts.url}`,
-      };
-      if (opts.payload !== undefined) {
-        reqOpts.payload = opts.payload;
-      }
-      if (opts.headers !== undefined) {
-        reqOpts.headers = opts.headers;
-      }
-      const res = await ctx.server.inject(reqOpts);
+      const res = await ctx.server.inject(injectOptions(opts, `${BASE}${opts.url}`));
       return { statusCode: res.statusCode, body: res.json() };
     },
     async rawRequest(opts: InjectOpts) {
-      const reqOpts: {
-        method: string;
-        url: string;
-        payload?: unknown;
-        headers?: Record<string, string>;
-      } = {
-        method: opts.method,
-        url: `${BASE}${opts.url}`,
-      };
-      if (opts.payload !== undefined) {
-        reqOpts.payload = opts.payload;
-      }
-      if (opts.headers !== undefined) {
-        reqOpts.headers = opts.headers;
-      }
-      const res = await ctx.server.inject(reqOpts);
+      const res = await ctx.server.inject(injectOptions(opts, `${BASE}${opts.url}`));
       const headers: Record<string, string> = {};
       for (const [key, value] of Object.entries(res.headers)) {
         if (value === undefined) continue;
@@ -132,22 +112,7 @@ export async function makeTestServer(options?: TestServerOptions): Promise<TestS
       };
     },
     async rootRequest(opts: InjectOpts) {
-      const reqOpts: {
-        method: string;
-        url: string;
-        payload?: unknown;
-        headers?: Record<string, string>;
-      } = {
-        method: opts.method,
-        url: opts.url,
-      };
-      if (opts.payload !== undefined) {
-        reqOpts.payload = opts.payload;
-      }
-      if (opts.headers !== undefined) {
-        reqOpts.headers = opts.headers;
-      }
-      const res = await ctx.server.inject(reqOpts);
+      const res = await ctx.server.inject(injectOptions(opts, opts.url));
       return { statusCode: res.statusCode, body: res.json() };
     },
     async seed(relativePath: string, content: string) {
@@ -173,4 +138,5 @@ export async function makeTestServer(options?: TestServerOptions): Promise<TestS
       await ctx.cleanup();
     },
   };
+  return server;
 }

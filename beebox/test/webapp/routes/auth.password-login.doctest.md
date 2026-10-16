@@ -30,14 +30,14 @@ const server = await makeTestServer({ openAccess: false });
 
 // Root-level POST helper (JSON body). Returns the raw inject response so a 204
 // (no body) is observable without trying to parse JSON.
-function postAuth(url, body) {
+function postAuth(url: string, body: object) {
   return server.server.inject({ method: "POST", url, payload: body });
 }
 
 // The bare login/setup pages submit an `application/x-www-form-urlencoded` form
 // instead of JSON — the handler detects the content-type and answers with a 302
 // redirect rather than a JSON body.
-function postForm(url, fields) {
+function postForm(url: string, fields: Record<string, string>) {
   return server.server.inject({
     method: "POST",
     url,
@@ -263,7 +263,7 @@ const mm = await postForm("/auth/setup", {
   token: mismatchToken,
 });
 print(`status: ${mm.statusCode}`);
-print(`error=mismatch: ${mm.headers.location.includes("error=mismatch")}`);
+print(`error=mismatch: ${mm.headers.location?.includes("error=mismatch")}`);
 print(`no cookie: ${mm.cookies.length === 0}`);
 print(`no owner created: ${getLocalOwnerEmail() === null}`);
 "done"
