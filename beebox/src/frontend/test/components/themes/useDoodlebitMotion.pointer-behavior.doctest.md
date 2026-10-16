@@ -21,7 +21,10 @@ setMotionAllowed(true);
 function Surface({ active = true }: { active?: boolean }) {
   const ref = useDoodlebitMotion(active);
   return h("div", { ref, id: "surface" },
-    h("div", { id: "desk" }, h("span", { id: "open" }, "Open desk")),
+    h("div", { id: "desk", className: "bbx-conversation-desk" },
+      h("span", { id: "open" }, "Open desk"),
+      h("span", { className: "bbx-chat-empty-label", id: "empty" }, "Empty label"),
+    ),
     h("div", { className: "bbx-card-theme" }, h("span", { id: "card" }, "Card")),
     h("button", { id: "control" }, "Control"),
   );
@@ -43,15 +46,18 @@ const view = await mount(h(Surface));
 const surface = view.container.querySelector<HTMLElement>("#surface")!;
 await view.act(() => pointerMove(view.container.querySelector("#open")!, 10, 8));
 const shifted = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
-await view.act(() => pointerMove(view.container.querySelector("#card")!, 10, 8));
-const overCard = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
-await view.act(() => pointerMove(view.container.querySelector("#control")!, 10, 8));
-const overControl = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
 await new Promise((resolve) => setTimeout(resolve, 180));
 const settled = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
+await view.act(() => pointerMove(view.container.querySelector("#card")!, 10, 8));
+const overCard = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
+await view.act(() => pointerMove(view.container.querySelector("#open")!, 10, 8));
+await view.act(() => pointerMove(view.container.querySelector("#empty")!, 10, 8));
+const overLabel = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
+await view.act(() => pointerMove(view.container.querySelector("#control")!, 10, 8));
+const overControl = [surface.style.getPropertyValue("--doodlebit-x"), surface.style.getPropertyValue("--doodlebit-y")];
 await view.unmount();
-({ shifted, overCard, overControl, settled })
-=> { shifted: ["6px", "4px"], overCard: ["", ""], overControl: ["", ""], settled: ["", ""] }
+({ shifted, overCard, overControl, overLabel, settled })
+=> { shifted: ["6px", "4px"], overCard: ["", ""], overControl: ["", ""], overLabel: ["", ""], settled: ["", ""] }
 ```
 
 Reduced motion and touch-style environments do not shift the desk.

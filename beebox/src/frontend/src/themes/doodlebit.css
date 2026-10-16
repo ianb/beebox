@@ -46,8 +46,7 @@
   border-image: url("./pixel-frame.svg") 6 / 6px / 0 stretch;
   border-radius: 0;
   background-clip: padding-box;
-  box-shadow: none;
-  filter: drop-shadow(2px 3px 0 #202020);
+  box-shadow: 2px 3px 0 #202020;
 }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper { background: #242424; color: #fff; filter: none; }
 [data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -97,6 +96,7 @@
   position: static; display: inline; opacity: 1; transform: none; transition: none;
   height: auto; color: #202020; font: 11px system-ui, sans-serif;
 }
+.bbx-card-theme[data-card-theme="doodlebit"] .bbx-card-properties { transform: none; }
 [data-chrome-theme="doodlebit"] :is(button, textarea, input):focus-visible:not(.bbx-card-theme *),
 .bbx-card-theme[data-card-theme="doodlebit"] :is(button, textarea, input):focus-visible { outline: 3px solid #6451cc; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {

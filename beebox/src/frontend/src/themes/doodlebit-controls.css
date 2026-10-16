@@ -27,22 +27,3 @@
 [data-chrome-theme="doodlebit"] #bbx-composer-keyboard {
   --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1 3h14v1h1v8h-1v1H1v-1H0V4h1zm1 2v6h12V5zm1 1h2v1H3zm4 0h2v1H7zm4 0h2v1h-2zM4 9h8v1H4z'/%3E%3C/svg%3E");
 }
-
-@keyframes doodlebit-control-wiggle {
-  0%, 100% { transform: translateY(-2px); }
-  30% { transform: translateY(-2px) rotate(-3deg); }
-  65% { transform: translateY(-2px) rotate(2deg); }
-}
-@media (prefers-reduced-motion: no-preference) and (hover: hover) {
-  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary, #bbx-composer-capture, #bbx-composer-keyboard):enabled:hover {
-    animation: doodlebit-control-wiggle 280ms steps(2, end) 1;
-    transform: translateY(-2px);
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary, #bbx-composer-capture, #bbx-composer-keyboard):enabled:active {
-    animation: none;
-    transform: translate(2px, 2px) scaleY(.94);
-    box-shadow: none;
-  }
-}
