@@ -31,8 +31,11 @@ boxholder's todos are on the plate and in its counts. Never write `user`,
 `me`, `boxholder`, `you`, or `owner` for the boxholder: leave `assigned` off,
 or lint warns), `by` (absent = boxholder-authored; `"agent"` = you wrote it), `due`,
 and `start` (an absolute date or `-3d`/`-2w` relative to `due` — this is
-the *surfacing* trigger: a todo is quiet before `start`, on the plate from
-`start` on, regardless of `due`). **`created` is required whenever
+the *surfacing* trigger: a todo is *later* before `start` and on the plate
+from `start` on, regardless of `due`; the person sees "later · Oct 23" on it.
+Say "later", not "starts" or "quiet": `start` is not when the work begins.
+In `bbx query todos` JSON the state is `plateState: "quiet"`, and a past-due
+todo is `escalated`, which the person sees as "overdue"). **`created` is required whenever
 `by="agent"`** — you always know the date, and the review sweep's staleness
 math depends on it. Nest `{% see-also ref="..." %}...{% /see-also %}` inside
 a todo (or a frontmatter `see-also:` list) to point at supporting evidence —
