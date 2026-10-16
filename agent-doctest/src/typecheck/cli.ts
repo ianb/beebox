@@ -9,10 +9,16 @@
  * that tsconfig. Arguments are files or globs, relative to the working
  * directory. `--by-dir N` adds a count of errors per directory, N path
  * segments deep. Exits 1 when any error is found.
+ *
+ * Runs are incremental: each tsconfig keeps TypeScript build info in
+ * `node_modules/.cache/doctest-typecheck/` beside it, and a doctest is
+ * re-checked only when it or something it imports changed. `--no-cache`
+ * checks everything and writes nothing.
  */
 
+import { createHash } from "node:crypto";
 import { globSync } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { typecheckDoctests, type DoctestDiagnostic } from "./check.ts";
 
 interface Group {
@@ -23,16 +29,18 @@ interface Group {
 interface Args {
   groups: Group[];
   byDir: number | null;
+  cache: boolean;
 }
 
 function usage(problem: string): never {
-  process.stderr.write(`doctest-typecheck: ${problem}\nusage: doctest-typecheck [--by-dir N] --project <tsconfig> <doctest file or glob>... [--project …]\n`);
+  process.stderr.write(`doctest-typecheck: ${problem}\nusage: doctest-typecheck [--by-dir N] [--no-cache] --project <tsconfig> <doctest file or glob>... [--project …]\n`);
   process.exit(2);
 }
 
 function parseArgs(argv: string[]): Args {
   const groups: Group[] = [];
   let byDir: number | null = null;
+  let cache = true;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? "";
     if (arg === "--project") {
@@ -42,6 +50,8 @@ function parseArgs(argv: string[]): Args {
     } else if (arg === "--by-dir") {
       byDir = Number.parseInt(argv[++i] ?? "", 10);
       if (!Number.isInteger(byDir) || byDir < 1) usage("--by-dir needs a positive depth");
+    } else if (arg === "--no-cache") {
+      cache = false;
     } else if (arg.startsWith("-")) {
       usage(`unknown option ${arg}`);
     } else {
@@ -51,7 +61,7 @@ function parseArgs(argv: string[]): Args {
     }
   }
   if (groups.length === 0) usage("no --project given");
-  return { groups, byDir };
+  return { groups, byDir, cache };
 }
 
 function expand(patterns: string[]): string[] {
@@ -62,6 +72,13 @@ function expand(patterns: string[]): string[] {
     for (const match of matches) files.add(resolve(match));
   }
   return [...files].toSorted();
+}
+
+/** One build-info file per tsconfig, beside it, named so two tsconfigs in one directory do not share. */
+function cacheFileFor(tsconfig: string): string {
+  const absolute = resolve(tsconfig);
+  const tag = createHash("sha256").update(absolute).digest("hex").slice(0, 8);
+  return join(dirname(absolute), "node_modules", ".cache", "doctest-typecheck", `${basename(absolute, ".json")}-${tag}.tsbuildinfo`);
 }
 
 function format(d: DoctestDiagnostic): string {
@@ -81,14 +98,14 @@ function byDirectory(diagnostics: DoctestDiagnostic[], depth: number): string[] 
 }
 
 function main(): void {
-  const { groups, byDir } = parseArgs(process.argv.slice(2));
+  const { groups, byDir, cache } = parseArgs(process.argv.slice(2));
   const all: DoctestDiagnostic[] = [];
   let checked = 0;
   for (const { tsconfig, patterns } of groups) {
     if (patterns.length === 0) usage(`--project ${tsconfig} names no doctests`);
     const files = expand(patterns);
     checked += files.length;
-    all.push(...typecheckDoctests({ tsconfig, files }));
+    all.push(...typecheckDoctests({ tsconfig, files, ...(cache ? { cacheFile: cacheFileFor(tsconfig) } : {}) }));
   }
   for (const d of all) process.stdout.write(`${format(d)}\n`);
   if (byDir !== null && all.length > 0) process.stdout.write(`\nerrors by directory:\n${byDirectory(all, byDir).join("\n")}\n`);

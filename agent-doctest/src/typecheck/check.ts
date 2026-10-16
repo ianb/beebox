@@ -11,7 +11,7 @@
  * paths or aliases (the same rule as resolve-rules.ts).
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -35,6 +35,12 @@ export interface TypecheckOptions {
   tsconfig: string;
   /** Absolute `.doctest.md` paths. */
   files: string[];
+  /**
+   * A `.tsbuildinfo` path. With it, the check is incremental: a doctest is
+   * re-checked only when its generated module, or a file it depends on, has
+   * changed since the last run that wrote this file.
+   */
+  cacheFile?: string;
 }
 
 /**
@@ -51,7 +57,7 @@ function virtualPath(mdPath: string): string {
   return `${mdPath}.ts`;
 }
 
-function readCompilerOptions(tsconfig: string): { options: ts.CompilerOptions; packageFiles: string[] } {
+function readCompilerOptions(tsconfig: string, cacheFile: string | undefined): { options: ts.CompilerOptions; packageFiles: string[] } {
   const config = ts.readConfigFile(tsconfig, (p) => ts.sys.readFile(p));
   if (config.error) throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, "\n"));
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, dirname(tsconfig), undefined, tsconfig);
@@ -67,13 +73,36 @@ function readCompilerOptions(tsconfig: string): { options: ts.CompilerOptions; p
     declaration: false,
     declarationMap: false,
     composite: false,
-    incremental: false,
     sourceMap: false,
+    ...(cacheFile === undefined ? { incremental: false } : { incremental: true, tsBuildInfoFile: cacheFile }),
   };
   // The package's whole program, not just what the doctests import: a
   // `declare module` augmentation or ambient `.d.ts` changes types only when
   // its file is in the program. Only the doctests' own diagnostics are read.
   return { options, packageFiles: parsed.fileNames };
+}
+
+/**
+ * Whether this run may replace the build info: it checked every doctest the
+ * old build info covered that still exists. A run over a few files (a
+ * commit's staged doctests) reads a full run's cache but leaves it in place.
+ */
+function coversCache(cacheFile: string, generated: ReadonlyMap<string, unknown>): boolean {
+  let text: string;
+  try {
+    text = readFileSync(cacheFile, "utf8");
+  } catch {
+    return true; // no cache yet
+  }
+  const info: unknown = JSON.parse(text);
+  const names = typeof info === "object" && info !== null && "fileNames" in info && Array.isArray(info.fileNames) ? info.fileNames : [];
+  // On a case-insensitive file system, build info stores lowercased paths.
+  const canonical = (path: string): string => (ts.sys.useCaseSensitiveFileNames ? path : path.toLowerCase());
+  const checked = new Set([...generated.keys()].map(canonical));
+  return names
+    .filter((name): name is string => typeof name === "string" && name.endsWith(".doctest.md.ts"))
+    .map((name) => resolve(dirname(cacheFile), name))
+    .every((path) => checked.has(canonical(path)) || !existsSync(path.slice(0, -".ts".length)));
 }
 
 interface Generated {
@@ -96,8 +125,8 @@ function mapPosition(mod: GeneratedModule, at: ts.LineAndCharacter): { line: num
 }
 
 /** Typecheck doctests under one tsconfig; diagnostics are on markdown lines, sorted. */
-export function typecheckDoctests({ tsconfig, files }: TypecheckOptions): DoctestDiagnostic[] {
-  const { options, packageFiles } = readCompilerOptions(resolve(tsconfig));
+export function typecheckDoctests({ tsconfig, files, cacheFile }: TypecheckOptions): DoctestDiagnostic[] {
+  const { options, packageFiles } = readCompilerOptions(resolve(tsconfig), cacheFile);
   const diagnostics: DoctestDiagnostic[] = [];
   const generated = new Map<string, Generated>();
   for (const md of files) {
@@ -111,24 +140,37 @@ export function typecheckDoctests({ tsconfig, files }: TypecheckOptions): Doctes
     }
   }
 
-  const host = ts.createCompilerHost(options, true);
-  const { getSourceFile, fileExists, readFile } = host;
-  host.fileExists = (p) => generated.has(p) || fileExists.call(host, p);
-  host.readFile = (p) => generated.get(p)?.mod.source ?? readFile.call(host, p);
-  host.getSourceFile = (...args: Parameters<typeof getSourceFile>) => {
-    const [p, languageVersion] = args;
-    const virtual = generated.get(p);
-    if (virtual) return ts.createSourceFile(p, virtual.mod.source, languageVersion, true);
-    return getSourceFile.apply(host, args);
+  // The generated modules are served through the system the host reads
+  // from, so the incremental host versions them by content like real files.
+  const system: ts.System = {
+    ...ts.sys,
+    fileExists: (p) => generated.has(p) || ts.sys.fileExists(p),
+    readFile: (p, encoding) => generated.get(p)?.mod.source ?? ts.sys.readFile(p, encoding),
+    // Only the build info is written. Write it whole, then rename, so a
+    // concurrent run never reads half a file.
+    writeFile: (p, data) => {
+      mkdirSync(dirname(p), { recursive: true });
+      const temp = `${p}.${process.pid}.tmp`;
+      writeFileSync(temp, data);
+      renameSync(temp, p);
+    },
   };
-
-  const program = ts.createProgram({
+  const host = ts.createIncrementalCompilerHost(options, system);
+  const program = ts.createIncrementalProgram({
     rootNames: [...generated.keys(), ...packageFiles, TAP_AUGMENTATION],
     options,
     host,
   });
   for (const optionDiagnostic of program.getOptionsDiagnostics()) {
     throw new Error(`${tsconfig}: ${ts.flattenDiagnosticMessageText(optionDiagnostic.messageText, "\n")}`);
+  }
+
+  // Walk the builder's affected files so it records what it checked; asking
+  // per file below would leave every file "changed" in the build info and
+  // the next run would re-check everything. The package's own sources are
+  // skipped: only the doctests' diagnostics are reported.
+  while (program.getSemanticDiagnosticsOfNextAffectedFile(undefined, (sf) => !generated.has(sf.fileName)) !== undefined) {
+    // Each step checks one affected file; the results are read below.
   }
 
   for (const [path, { md, mod }] of generated) {
@@ -149,5 +191,6 @@ export function typecheckDoctests({ tsconfig, files }: TypecheckOptions): Doctes
     }
   }
 
+  if (cacheFile !== undefined && coversCache(cacheFile, generated)) program.emit();
   return diagnostics.toSorted((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column);
 }

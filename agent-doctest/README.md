@@ -368,6 +368,14 @@ keeps every checking option and drops only emit settings (`rootDir`,
 `--by-dir N` adds an error count per directory. The command exits 1 when it
 finds an error.
 
+Runs are incremental. Each tsconfig keeps TypeScript build info in
+`node_modules/.cache/doctest-typecheck/` beside it, and a doctest is
+re-checked only when it, or a file it imports, changed. A run over a few
+doctests (a commit's staged files) reads that cache without replacing it, so
+the next full run stays warm. On beebox (about 1,000 doctests) a warm full run
+takes about 9s against 34s cold, and one doctest about 2.5s. `--no-cache`
+checks everything and writes nothing.
+
 The check builds its module with one difference from the run: type-only
 imports in example blocks, which the run erases, are moved to module scope.
 Two blocks that import different types under one name then collide

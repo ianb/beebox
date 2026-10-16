@@ -11,17 +11,23 @@ the `node_modules` that holds `tap` and `@types/node` for this checkout, so
 they resolve as they do in a real consumer.
 
 ```ts setup
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
-import { typecheckDoctests } from "../src/typecheck/check.ts";
+import { typecheckDoctests, type DoctestDiagnostic } from "../src/typecheck/check.ts";
 
 const nodeModules = dirname(dirname(dirname(createRequire(import.meta.url).resolve("@types/node/package.json"))));
 const roots: string[] = [];
 
-/** A package with `src/math.ts` and the given doctests; returns the summary of checking them. */
-function check(doctests: Record<string, string>, compilerOptions: Record<string, unknown> = {}): string[] {
+interface Package {
+  root: string;
+  tsconfig: string;
+  files: string[];
+}
+
+/** A package with `src/math.ts` and the given doctests. */
+function makePackage(doctests: Record<string, string>, compilerOptions: Record<string, unknown> = {}): Package {
   const root = mkdtempSync(join(tmpdir(), "doctest-typecheck-"));
   roots.push(root);
   symlinkSync(nodeModules, join(root, "node_modules"));
@@ -44,8 +50,22 @@ function check(doctests: Record<string, string>, compilerOptions: Record<string,
     writeFileSync(file, text);
     return file;
   });
-  return typecheckDoctests({ tsconfig: join(root, "tsconfig.json"), files })
-    .map((d) => `${basename(d.file)}:${d.line}:${d.column} ${d.code} ${d.message.split("\n")[0] ?? ""}`);
+  return { root, tsconfig: join(root, "tsconfig.json"), files };
+}
+
+function summary(diagnostics: DoctestDiagnostic[]): string[] {
+  return diagnostics.map((d) => `${basename(d.file)}:${d.line}:${d.column} ${d.code} ${d.message.split("\n")[0] ?? ""}`);
+}
+
+/** Check the given doctests in a fresh package; returns one line per error. */
+function check(doctests: Record<string, string>, compilerOptions: Record<string, unknown> = {}): string[] {
+  const { tsconfig, files } = makePackage(doctests, compilerOptions);
+  return summary(typecheckDoctests({ tsconfig, files }));
+}
+
+/** A doctest that adds two numbers with the package's `add`. */
+function adds(name: string): string {
+  return [`# ${name}`, "", `${fence}ts setup`, 'import { add } from "../src/math.js";', fence, "", `${fence}ts`, "add(1, 2)", "=> 3", fence].join("\n");
 }
 
 const fence = "```";
@@ -179,4 +199,47 @@ check({
   ].join("\n"),
 })
 => ["broken.doctest.md:1:1 doctest a ```ts continue block has no open test to continue — it would silently become a new test. Make the first example block a plain ```ts block."]
+```
+
+## The cache
+
+With a `cacheFile`, the check is incremental (TypeScript build info): a
+doctest is re-checked when it, or a file it imports, changes. A change to
+the imported module reaches a doctest that did not change.
+
+```ts
+const pkg = makePackage({ "a.doctest.md": adds("a"), "b.doctest.md": adds("b") });
+const cacheFile = join(pkg.root, "cache", "doctests.tsbuildinfo");
+summary(typecheckDoctests({ ...pkg, cacheFile }))
+=> []
+
+writeFileSync(join(pkg.root, "src/math.ts"), "export function add(a: string, b: string): string { return a + b; }");
+summary(typecheckDoctests({ ...pkg, cacheFile }))
+=> [
+  "a.doctest.md:8:5 TS2345 Argument of type 'number' is not assignable to parameter of type 'string'.",
+  "b.doctest.md:8:5 TS2345 Argument of type 'number' is not assignable to parameter of type 'string'."
+]
+```
+
+A run over fewer doctests than the cache covers (a commit's staged files)
+reads the cache and leaves it in place, so the next full run stays fast. A
+run that covers everything the cache did, and found something changed,
+replaces it.
+
+```ts continue
+const written = statSync(cacheFile).mtimeMs;
+summary(typecheckDoctests({ ...pkg, files: pkg.files.slice(0, 1), cacheFile }))
+=> [
+  "a.doctest.md:8:5 TS2345 Argument of type 'number' is not assignable to parameter of type 'string'."
+]
+
+statSync(cacheFile).mtimeMs === written
+=> true
+
+writeFileSync(join(pkg.root, "src/math.ts"), "export function add(a: number, b: number): number { return a + b; }");
+summary(typecheckDoctests({ ...pkg, cacheFile }))
+=> []
+
+existsSync(cacheFile) && statSync(cacheFile).mtimeMs > written
+=> true
 ```
