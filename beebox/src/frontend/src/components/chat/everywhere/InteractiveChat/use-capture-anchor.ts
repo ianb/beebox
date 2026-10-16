@@ -4,11 +4,11 @@
  * to keep that file within its line budget.
  */
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { parseDeliveredUserMessageParts } from "@shared/delivered-user-message";
 import type { MessageGroup } from "../../ChatMessages/view";
 import type { CaptureBubbleModel } from "../../capture-bubble";
-import { noteBubbleScrollTop, startCaptureWait, stepCaptureWait, type CaptureAnchorView, type CaptureAnchorWait } from "./capture-anchor";
+import { startCaptureWait, stepCaptureWait, type CaptureAnchorView, type CaptureAnchorWait } from "./capture-anchor";
 
 /** The newest delivered capture message's identity, to tell a new arrival from the last one. */
 function lastCaptureUuid(groups: MessageGroup[]): string | null {
@@ -39,6 +39,7 @@ export function useCaptureAnchor(opts: {
   const seen = useRef<Pick<CaptureAnchorView, "newestCapture" | "bubbleIds">>({ newestCapture, bubbleIds: [] });
   const lastCaptureSignal = useRef(captureSignal);
   const lastSendSignal = useRef(sendSignal);
+  const { readScrolled, resetScrolled } = useReaderScrolled(contentElRef);
 
   useLayoutEffect(() => {
     const bubbleIds = captureBubbles.map((b) => b.id);
@@ -53,10 +54,8 @@ export function useCaptureAnchor(opts: {
     }
     seen.current = { newestCapture, bubbleIds };
     const content = contentElRef.current;
-    // The content wrapper's parent is the scroller (see the render below).
-    const scroller = content?.parentElement;
-    if (wait.current === null || !content || !scroller) return;
-    const now: CaptureAnchorView = { newestCapture, bubbleIds, scrollTop: scroller.scrollTop };
+    if (wait.current === null || !content) return;
+    const now: CaptureAnchorView = { newestCapture, bubbleIds, readerScrolled: readScrolled() };
     const { wait: next, step } = stepCaptureWait(wait.current, now);
     wait.current = next;
     if (step.anchor === "user") {
@@ -64,12 +63,33 @@ export function useCaptureAnchor(opts: {
       anchorToTop(users[users.length - 1] ?? null);
     } else if (step.anchor === "bubble") {
       // Bubbles render in model order after the transcript, so the DOM index matches.
-      const bubble = content.querySelectorAll("[data-role=\"captureBubble\"]")[step.index];
-      if (bubble === undefined || next === null) return;
-      // Where the anchor will settle: the bubble's top at the scroller's top.
-      const target = scroller.scrollTop + bubble.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-      wait.current = noteBubbleScrollTop(next, target);
-      anchorToTop(bubble);
+      resetScrolled();
+      anchorToTop(content.querySelectorAll("[data-role=\"captureBubble\"]")[step.index] ?? null);
     }
-  }, [captureSignal, sendSignal, newestCapture, captureBubbles, contentElRef, anchorToTop]);
+  }, [captureSignal, sendSignal, newestCapture, captureBubbles, contentElRef, anchorToTop, readScrolled, resetScrolled]);
+}
+
+const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
+
+/** Whether the reader has scrolled the chat by hand since the last reset. */
+function useReaderScrolled(contentElRef: React.RefObject<HTMLDivElement | null>): { readScrolled: () => boolean; resetScrolled: () => void } {
+  const scrolled = useRef(false);
+  const readScrolled = useCallback(() => scrolled.current, []);
+  const resetScrolled = useCallback(() => { scrolled.current = false; }, []);
+  useEffect(() => {
+    // On the window, not the scroller: a chat that opens empty has no
+    // scroller yet when this mounts.
+    const inChat = (e: Event) => e.target instanceof Node && contentElRef.current?.parentElement?.contains(e.target) === true;
+    const mark = (e: Event) => { if (inChat(e)) scrolled.current = true; };
+    const onKey = (e: KeyboardEvent) => { if (SCROLL_KEYS.has(e.key)) mark(e); };
+    window.addEventListener("wheel", mark, { passive: true });
+    window.addEventListener("touchmove", mark, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("wheel", mark);
+      window.removeEventListener("touchmove", mark);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [contentElRef]);
+  return { readScrolled, resetScrolled };
 }

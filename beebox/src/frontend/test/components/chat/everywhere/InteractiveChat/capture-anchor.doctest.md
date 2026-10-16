@@ -14,19 +14,19 @@ is anchored, and ends the wait:
 
 ```ts
 let wait = startCaptureWait({ newestCapture: "u-earlier-capture", bubbleIds: [] });
-let r = stepCaptureWait(wait, { newestCapture: "u-earlier-capture", bubbleIds: [], scrollTop: 0 });
+let r = stepCaptureWait(wait, { newestCapture: "u-earlier-capture", bubbleIds: [], readerScrolled: false });
 r.step
 => { anchor: 'none' }
 
-r = stepCaptureWait(r.wait!, { newestCapture: "u-earlier-capture", bubbleIds: ["cap-1"], scrollTop: 0 });
+r = stepCaptureWait(r.wait!, { newestCapture: "u-earlier-capture", bubbleIds: ["cap-1"], readerScrolled: false });
 r.step
 => { anchor: 'bubble', index: 0 }
 
-r = stepCaptureWait(r.wait!, { newestCapture: "u-earlier-capture", bubbleIds: ["cap-1"], scrollTop: 0 });
+r = stepCaptureWait(r.wait!, { newestCapture: "u-earlier-capture", bubbleIds: ["cap-1"], readerScrolled: false });
 r.step
 => { anchor: 'none' }
 
-r = stepCaptureWait(r.wait!, { newestCapture: "u-capture", bubbleIds: [], scrollTop: 0 });
+r = stepCaptureWait(r.wait!, { newestCapture: "u-capture", bubbleIds: [], readerScrolled: false });
 [r.step, r.wait]
 => [ { anchor: 'user' }, null ]
 ```
@@ -36,7 +36,7 @@ the new one is found by id at its own index:
 
 ```ts
 const wait = startCaptureWait({ newestCapture: "u-1", bubbleIds: ["cap-old"] });
-stepCaptureWait(wait, { newestCapture: "u-1", bubbleIds: ["cap-old", "cap-new"], scrollTop: 0 }).step
+stepCaptureWait(wait, { newestCapture: "u-1", bubbleIds: ["cap-old", "cap-new"], readerScrolled: false }).step
 => { anchor: 'bubble', index: 1 }
 ```
 
@@ -47,7 +47,7 @@ the newest capture message is unchanged:
 
 ```ts
 const wait = startCaptureWait({ newestCapture: "u-5", bubbleIds: [] });
-const r = stepCaptureWait(wait, { newestCapture: "u-5", bubbleIds: [], scrollTop: 0 });
+const r = stepCaptureWait(wait, { newestCapture: "u-5", bubbleIds: [], readerScrolled: false });
 [r.step, r.wait === wait]
 => [ { anchor: 'none' }, true ]
 ```
@@ -56,26 +56,18 @@ A chat with no user message yet still recognizes the first one:
 
 ```ts
 const wait = startCaptureWait({ newestCapture: null, bubbleIds: [] });
-stepCaptureWait(wait, { newestCapture: "u-capture", bubbleIds: [], scrollTop: 0 }).step
+stepCaptureWait(wait, { newestCapture: "u-capture", bubbleIds: [], readerScrolled: false }).step
 => { anchor: 'user' }
 ```
 
-A reader who scrolled up more than 160px from where the bubble anchor put
-them stays where they are when the message arrives, and the wait ends. A
-smaller drift, such as the content shrinking when the bubble leaves, still
-anchors:
-
-```ts setup
-import { noteBubbleScrollTop } from "../../../../../src/components/chat/everywhere/InteractiveChat/capture-anchor.js";
-```
+A reader who scrolled the chat themselves after the bubble was anchored stays
+where they are when the message arrives, and the wait ends. Scrolling before
+the bubble anchor does not count; the anchor moved them anyway:
 
 ```ts
-const anchored = () => {
-  const r = stepCaptureWait(startCaptureWait({ newestCapture: null, bubbleIds: [] }), { newestCapture: null, bubbleIds: ["cap-1"], scrollTop: 0 });
-  return noteBubbleScrollTop(r.wait!, 2000);
-};
-const scrolledUp = stepCaptureWait(anchored(), { newestCapture: "u-capture", bubbleIds: [], scrollTop: 1700 });
-const drifted = stepCaptureWait(anchored(), { newestCapture: "u-capture", bubbleIds: [], scrollTop: 1890 });
-[scrolledUp.step, scrolledUp.wait, drifted.step]
+const anchored = stepCaptureWait(startCaptureWait({ newestCapture: null, bubbleIds: [] }), { newestCapture: null, bubbleIds: ["cap-1"], readerScrolled: false }).wait!;
+const scrolled = stepCaptureWait(anchored, { newestCapture: "u-capture", bubbleIds: [], readerScrolled: true });
+const unanchored = stepCaptureWait(startCaptureWait({ newestCapture: null, bubbleIds: [] }), { newestCapture: "u-capture", bubbleIds: [], readerScrolled: true });
+[scrolled.step, scrolled.wait, unanchored.step]
 => [ { anchor: 'none' }, null, { anchor: 'user' } ]
 ```

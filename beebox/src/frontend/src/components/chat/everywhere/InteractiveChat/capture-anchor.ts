@@ -13,16 +13,15 @@
  * loading older history adds user messages above, and must not look like the
  * arrival, and a bubble still on screen from an earlier capture is not this
  * one. Only a capture message counts as the arrival; a message typed in
- * another tab meanwhile does not end the wait. A reader who scrolls up more
- * than {@link AWAY_PX} from the anchored bubble during the wait is left where
- * they are. Position, not the scroller's "at bottom": that measures to the end
- * of the content, above the blank space the anchor leaves below the bubble,
- * so a reader can scroll well up and still be "at bottom".
+ * another tab meanwhile does not end the wait. A reader who scrolls the chat
+ * themselves after the bubble is anchored is left where they are. That is
+ * read from their input (wheel, touch, scroll keys), not from the scroll
+ * position: the position also moves when the bubble leaves and the blank
+ * space under it passes to the message above, and the scroller's "at bottom"
+ * measures above that blank space, so neither tells a reader's scroll apart.
  * Pure, so the decisions are doctested; `use-capture-anchor.ts` does the DOM part.
  */
 
-/** Slack for the content shrinking when the bubble (about 110px) leaves; more than that is the reader's own scroll. */
-export const AWAY_PX = 160;
 
 /** The list as the wait sees it. */
 export interface CaptureAnchorView {
@@ -30,8 +29,8 @@ export interface CaptureAnchorView {
   newestCapture: string | null;
   /** The capture bubbles' ids, in render order. */
   bubbleIds: readonly string[];
-  /** The scroller's current scroll position. */
-  scrollTop: number;
+  /** The reader has scrolled the chat themselves since the bubble was anchored. */
+  readerScrolled: boolean;
 }
 
 export interface CaptureAnchorWait {
@@ -40,8 +39,6 @@ export interface CaptureAnchorWait {
   /** Bubbles already on screen at Done. */
   bubbles: ReadonlySet<string>;
   bubbleAnchored: boolean;
-  /** The scroll position the bubble anchor put the reader at, once known. */
-  bubbleScrollTop: number | null;
 }
 
 /** `bubble` carries the new bubble's index among the rendered bubbles. */
@@ -49,24 +46,18 @@ export type CaptureAnchorStep = { anchor: "none" } | { anchor: "user" } | { anch
 
 /** Begin waiting, given the list as it was when Done sealed. */
 export function startCaptureWait(atDone: Pick<CaptureAnchorView, "newestCapture" | "bubbleIds">): CaptureAnchorWait {
-  return { capture: atDone.newestCapture, bubbles: new Set(atDone.bubbleIds), bubbleAnchored: false, bubbleScrollTop: null };
+  return { capture: atDone.newestCapture, bubbles: new Set(atDone.bubbleIds), bubbleAnchored: false };
 }
 
 /** Decide what to anchor for the list as it is now; `wait` is null once the wait is over. */
 export function stepCaptureWait(wait: CaptureAnchorWait, now: CaptureAnchorView): { wait: CaptureAnchorWait | null; step: CaptureAnchorStep } {
   if (now.newestCapture !== null && now.newestCapture !== wait.capture) {
-    // Scrolled up from the bubble we put at the top: they chose to read elsewhere.
-    const away = wait.bubbleScrollTop !== null && now.scrollTop < wait.bubbleScrollTop - AWAY_PX;
-    if (away) return { wait: null, step: { anchor: "none" } };
+    // They moved off the bubble we put at the top: they chose to read elsewhere.
+    if (wait.bubbleAnchored && now.readerScrolled) return { wait: null, step: { anchor: "none" } };
     return { wait: null, step: { anchor: "user" } };
   }
   if (wait.bubbleAnchored) return { wait, step: { anchor: "none" } };
   const index = now.bubbleIds.findIndex((id) => !wait.bubbles.has(id));
   if (index === -1) return { wait, step: { anchor: "none" } };
   return { wait: { ...wait, bubbleAnchored: true }, step: { anchor: "bubble", index } };
-}
-
-/** Record where the bubble anchor put the reader, to tell later whether they scrolled away. */
-export function noteBubbleScrollTop(wait: CaptureAnchorWait, scrollTop: number): CaptureAnchorWait {
-  return { ...wait, bubbleScrollTop: scrollTop };
 }
