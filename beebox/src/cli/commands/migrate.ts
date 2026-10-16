@@ -8,7 +8,7 @@
  * Manual and unattended application share the recovery-backed core runner.
  */
 
-import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance.js";
+import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance/admission.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "../../core/migration-process.js";

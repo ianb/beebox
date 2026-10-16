@@ -6,7 +6,7 @@
  * message; this module owns what happens to the turn once it has.
  */
 
-import type { BoxWork } from "../../../lib/box-maintenance.js";
+import type { BoxWork } from "../../../lib/box-maintenance/admission.js";
 import { startAwakeTimeout } from "../../../shared/awake-timeout.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import type { ChatMessage, ChatSendInput, ChatSession } from "../../../core/chat/session/run/core.js";

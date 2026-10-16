@@ -24,7 +24,7 @@ import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -644,6 +644,12 @@ JSON.stringify({ status: page.status, type: page.headers.get("content-type"), re
 const posted = await fetch(`${closedHub.base}/closed/chat`, { method: "POST", headers: { accept: "text/html" } });
 JSON.stringify({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)").replace(/Retry in \d+ seconds/u, "Retry in <n> seconds") })
 => {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in <n> seconds.\n"}
+
+// Once the owner names a step, the sentence and the body say which one is running.
+await owner.step("finding changed files");
+const stepped = await (await fetch(`${closedHub.base}/closed/api/x`)).json();
+({ step: stepped.step, message: stepped.message.replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+=> { step: { name: "finding changed files", since: "«date»" }, message: "Box closed is closed for migration (pid <n>, since <time>); current step: finding changed files, since «date»; it reopens when that process finishes or exits" }
 
 Date.now = realNow;
 

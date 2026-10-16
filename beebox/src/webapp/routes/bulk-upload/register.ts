@@ -52,7 +52,7 @@ import {
   resolveCaptureRequestOwner,
 } from "../capture-request-owner.js";
 import { getDirectoryForSession } from "../../../core/chat/session/history.js";
-import { withoutBoxWork } from "../../../lib/box-maintenance.js";
+import { withoutBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { startBulkUploadLifecycle } from "./lifecycle.js";
 import { beginStream, endStream } from "./stream-gate.js";

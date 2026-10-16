@@ -11,7 +11,7 @@ import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
-import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance/admission.js";
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 
