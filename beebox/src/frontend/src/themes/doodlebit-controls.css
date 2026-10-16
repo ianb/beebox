@@ -1,0 +1,51 @@
+/* Pixel icons keep normal compact control labels and live recording cues. */
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-add,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic.bg-primary) svg { opacity: 0; }
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-add,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic.bg-primary)::after {
+  content: ""; position: absolute; inset: 50% auto auto 50%; width: 24px; height: 24px; transform: translate(-50%,-50%); background: currentColor;
+  mask: var(--pixel-icon) center / contain no-repeat;
+}
+[data-chrome-theme="doodlebit"] #bbx-composer-add {
+  --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M7 1h2v6h6v2H9v6H7V9H1V7h6z'/%3E%3C/svg%3E");
+}
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-send,#bbx-composer-send-mobile) {
+  --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M7 1h2v2h2v2h2v2h2v2h-2V7h-2V5H9v10H7V5H5v2H3v2H1V7h2V5h2V3h2z'/%3E%3C/svg%3E");
+}
+[data-chrome-theme="doodlebit"] #bbx-composer-mic.bg-primary {
+  --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 0h4v2h2v6h-2v2H6V8H4V2h2zM1 6h2v4h2v2h6v-2h2V6h2v4h-2v2h-2v2H9v1h3v1H4v-1h3v-1H5v-2H3v-2H1z'/%3E%3C/svg%3E");
+}
+[data-chrome-theme="doodlebit"] .bbx-composer-material textarea { border-radius: 0; border-color: transparent; box-shadow: none; }
+[data-chrome-theme="doodlebit"] .bbx-composer-material textarea:focus { border-color: #202020; box-shadow: none; outline: 2px solid #b9ef38; outline-offset: 1px; }
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-capture,#bbx-composer-keyboard) { position: relative; }
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-capture,#bbx-composer-keyboard) svg { opacity: 0; }
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-capture,#bbx-composer-keyboard)::after {
+  content: ""; position: absolute; inset: 50% auto auto 50%; width: 24px; height: 24px; transform: translate(-50%,-50%); background: currentColor;
+  mask: var(--pixel-icon) center / contain no-repeat;
+}
+[data-chrome-theme="doodlebit"] #bbx-composer-capture {
+  --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M5 1h6v2h4v2h1v9H0V5h1V3h4zm0 4H2v7h12V5h-3V3H5zm2 1h3v1h1v3h-1v1H7v-1H6V7h1zm1 2v1h1V8z'/%3E%3C/svg%3E");
+}
+[data-chrome-theme="doodlebit"] #bbx-composer-keyboard {
+  --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1 3h14v1h1v8h-1v1H1v-1H0V4h1zm1 2v6h12V5zm1 1h2v1H3zm4 0h2v1H7zm4 0h2v1h-2zM4 9h8v1H4z'/%3E%3C/svg%3E");
+}
+[data-chrome-theme="doodlebit"] #bbx-composer-keyboard {
+  --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1 3h14v1h1v8h-1v1H1v-1H0V4h1zm1 2v6h12V5zm1 1h2v1H3zm4 0h2v1H7zm4 0h2v1h-2zM4 9h8v1H4z'/%3E%3C/svg%3E");
+}
+
+@keyframes doodlebit-control-wiggle {
+  0%, 100% { transform: translateY(-2px); }
+  30% { transform: translateY(-2px) rotate(-3deg); }
+  65% { transform: translateY(-2px) rotate(2deg); }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary, #bbx-composer-capture, #bbx-composer-keyboard):enabled:hover {
+    animation: doodlebit-control-wiggle 280ms steps(2, end) 1;
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary, #bbx-composer-capture, #bbx-composer-keyboard):enabled:active {
+    animation: none;
+    transform: translate(2px, 2px) scaleY(.94);
+    box-shadow: none;
+  }
+}

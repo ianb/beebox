@@ -6,6 +6,8 @@ import { Button } from "../../../components/ui/Button";
 import { CalloutStack } from "../../../components/chat/CalloutBlock";
 import { ComposerSpecimen } from "./ComposerStatesHarness";
 
+import { useDoodlebitMotion } from "../../../components/themes/useDoodlebitMotion";
+
 const ROUTE = "/$boxSlug/dev-harness/dev/theme-studio";
 const SAMPLE = `A small collection of ideas for a neighborhood seed exchange. **Bring something simple**, and leave room for surprises.
 
@@ -46,6 +48,7 @@ const FIELDS = [
 
 export function ThemeStudioHarness() {
   const search = useSearch({ from: ROUTE });
+  const surface = useDoodlebitMotion(search.system === "doodlebit");
   const navigate = useNavigate({ from: "/$boxSlug/dev/theme-studio" });
   const system = THEME_CATALOG.find((theme) => theme.name === search.system);
   const card = THEME_CATALOG.find((theme) => theme.name === search.card);
@@ -79,7 +82,7 @@ export function ThemeStudioHarness() {
       <datalist id="bbx-studio-system-stocks">{(system?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
       <datalist id="bbx-studio-card-stocks">{(card?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
     </section>
-    <div className="bbx-box-presentation min-h-screen" data-chrome-theme={search.system} data-chrome-stock={search.systemStock}>
+    <div ref={surface} className="bbx-box-presentation min-h-screen" data-chrome-theme={search.system} data-chrome-stock={search.systemStock}>
       <NavigationSample />
       <div className="grid lg:grid-cols-2 gap-4 p-3 sm:p-5 items-start">
         <ConversationSample />

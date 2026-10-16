@@ -129,6 +129,28 @@ export const THEME_CATALOG = [
     systemOnly: false,
     cardThemes: ["gold-thread", "paper", "post-it"],
   },
+  {
+    name: "goldfish",
+    label: "Goldfish",
+    stocks: ["water"],
+    defaultStock: "water",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["goldfish", "paper", "post-it"],
+  },
+  {
+    name: "doodlebit",
+    label: "Doodlebit",
+    stocks: ["ink"],
+    defaultStock: "ink",
+    quoteTreatment: "inset",
+    blockquoteTreatment: "inset",
+    chrome: true,
+    systemOnly: false,
+    cardThemes: ["doodlebit", "paper", "post-it"],
+  },
 ] as const;
 
 export type ThemeDescriptor = (typeof THEME_CATALOG)[number];

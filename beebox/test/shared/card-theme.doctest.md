@@ -375,4 +375,16 @@ validateSystemThemeChoice({ name: "gold-thread" })
 
 systemCardThemes("gold-thread")
 => ["gold-thread", "paper", "post-it"]
+
+validateSystemThemeChoice({ name: "goldfish" })
+=> { choice: { name: "goldfish", stock: "water" }, problem: null }
+
+systemCardThemes("goldfish")
+=> ["goldfish", "paper", "post-it"]
+
+validateSystemThemeChoice({ name: "doodlebit" })
+=> { choice: { name: "doodlebit", stock: "ink" }, problem: null }
+
+systemCardThemes("doodlebit")
+=> ["doodlebit", "paper", "post-it"]
 ```
