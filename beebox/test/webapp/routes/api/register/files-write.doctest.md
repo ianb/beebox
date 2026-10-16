@@ -7,8 +7,21 @@ attachments — nothing else. Writes never auto-commit (interactive views
 are chatty); git state rides on view metadata instead.
 
 ```ts setup
-import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { z } from "zod";
+import { makeTestServer, type InjectResult } from "../../../../helpers/doctest-server.js";
+import { bodyField } from "../../../../helpers/doctest-helpers.js";
 import { getStatus } from "../../../../../src/lib/git/core/operations.js";
+
+// The `/api/views/:id/cards` response: each file with its git status.
+const ViewCards = z.object({ files: z.array(z.looseObject({ path: z.string(), gitStatus: z.unknown().optional() })) });
+
+// The `paths` a commit response lists.
+const CommitBody = z.object({ paths: z.array(z.string()) });
+
+// The etag of the file a write response describes.
+function etagOf(res: InjectResult): string {
+  return z.object({ file: z.object({ etag: z.string() }) }).parse(res.body).file.etag;
+}
 ```
 
 ## PUT creates (with parent dirs) and returns the file's identity
@@ -23,10 +36,10 @@ const res = await ctx.request({
 res.statusCode
 => 201
 
-res.body.file.path
+bodyField(res.body, "file", "path")
 => _content/playground/Playground.attach/sessions/history.jsonl
 
-res.body.file.size
+bodyField(res.body, "file", "size")
 => 20
 ```
 
@@ -41,10 +54,10 @@ const appended = await ctx.request({
 appended.statusCode
 => 200
 
-appended.body.file.size
+bodyField(appended.body, "file", "size")
 => 41
 
-appended.body.file.etag !== res.body.file.etag
+bodyField(appended.body, "file", "etag") !== bodyField(res.body, "file", "etag")
 => true
 ```
 
@@ -55,22 +68,22 @@ const stale = await ctx.request({
   method: "PUT",
   url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
   payload: { content: "clobber" },
-  headers: { "if-match": res.body.file.etag },
+  headers: { "if-match": etagOf(res) },
 });
 stale.statusCode
 => 412
 
-stale.body.error
+bodyField(stale.body, "error")
 => File changed since it was read
 
-stale.body.current.etag === appended.body.file.etag
+bodyField(stale.body, "current", "etag") === bodyField(appended.body, "file", "etag")
 => true
 
 const fresh = await ctx.request({
   method: "PUT",
   url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
   payload: { content: "rewritten\n" },
-  headers: { "if-match": appended.body.file.etag },
+  headers: { "if-match": etagOf(appended) },
 });
 fresh.statusCode
 => 200
@@ -88,7 +101,7 @@ const createOnly = await ctx.request({
 createOnly.statusCode
 => 412
 
-createOnly.body.error
+bodyField(createOnly.body, "error")
 => File already exists
 ```
 
@@ -127,10 +140,10 @@ const commit = await ctx.request({
 commit.statusCode
 => 200
 
-commit.body.committed
+bodyField(commit.body, "committed")
 => true
 
-commit.body.paths.join(", ")
+CommitBody.parse(commit.body).paths.join(", ")
 => _content/playground/Playground.doc.card, _content/playground/Playground.attach
 
 const status = await getStatus(ctx.boxRoot);
@@ -149,7 +162,7 @@ const again = await ctx.request({
   url: "/api/files-commit",
   payload: { path: "_content/playground/Playground.attach/sessions/history.jsonl", message: "noop" },
 });
-again.body.committed
+bodyField(again.body, "committed")
 => false
 ```
 
@@ -164,7 +177,7 @@ export const modes = ["page"];
 export default function PG() { return null; }
 `);
 const data = await ctx.request({ method: "GET", url: "/api/views/pg/cards" });
-const byPath = Object.fromEntries(data.body.files.map((f) => [f.path, f.gitStatus]));
+const byPath = Object.fromEntries(ViewCards.parse(data.body).files.map((f) => [f.path, f.gitStatus]));
 byPath["_content/notes/unrelated.md"]
 => untracked
 

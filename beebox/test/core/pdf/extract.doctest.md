@@ -16,11 +16,16 @@ exercised by `pdf-extract-integration.doctest.md`.
 import { runPdfMode } from "../../../src/core/commands/scan-import/pdf.js";
 import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
 import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling/core.js";
+import type { DoclingService } from "../../../src/services/docling/core.js";
+import type { CommandResult } from "../../../src/core/command-types.js";
+import { invariant } from "../../../src/shared/invariant.js";
+import { z } from "zod";
 import { extractPdf, clearExtractionAssets } from "../../../src/core/pdf/extract.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { writeFile, readdir, readFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -35,8 +40,26 @@ const schemas = await createCardSchemaMap();
 // availability-appropriate, like `pdf-probe.doctest.md`.
 const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then((r) => r.exitCode === 0, () => false);
 
+// The fields these examples read from a parsed pdf card, validated rather than assumed.
+const PdfCardView = z.object({
+  format: z.string(),
+  filename: z.object({ ref: z.string(), "mime-type": z.string().optional(), via: z.object({ channel: z.string() }) }),
+  docling: z.object({ ref: z.string() }).optional(),
+  metadata: z.object({ pages: z.number().optional() }).optional(),
+  error: z.string().optional(),
+  description: z.string().optional(),
+});
+function parsePdfCard(content: string, source: string) {
+  const card = parseCardText(content, { source, schemas });
+  return { fields: PdfCardView.parse(card.fields), rawBody: card.rawBody };
+}
+
+// What `runPdfMode` reports in `data`.
+const PdfImportData = z.object({ extracted: z.boolean(), sessionCardPath: z.string(), intakeJobPath: z.string().nullable() });
+const importData = (result: CommandResult) => PdfImportData.parse(result.data);
+
 // Seed a box with a text-layer PDF sitting outside it, and run pdf mode.
-async function importPdf(box, docling, source) {
+async function importPdf(box: TmpBox, docling: DoclingService, source?: string) {
   const pdfPath = join(box.root, "incoming.pdf");
   await writeFile(pdfPath, textPdf());
   const { ctx } = createCollectorContext(box.root);
@@ -44,21 +67,23 @@ async function importPdf(box, docling, source) {
 }
 
 // The session attach dir of the one session this box has.
-async function sessionDir(box) {
+async function sessionDir(box: TmpBox): Promise<string> {
   const entries = await readdir(join(box.root, "_content/inbox"));
-  return entries.find((e) => e.endsWith(".attach"));
+  const dir = entries.find((e) => e.endsWith(".attach"));
+  invariant(dir, "the import left one session attach dir");
+  return dir;
 }
 
 // Everything in the pdf card's attach scope, sorted. `text-layer.txt` is
 // left out because its presence depends on whether poppler exists here; it has
 // its own section below.
-async function attachContents(box) {
+async function attachContents(box: TmpBox) {
   const dir = await sessionDir(box);
   const names = await readdir(join(box.root, "_content/inbox", dir, "source.attach"));
   return names.filter((n) => n !== "text-layer.txt").sort().join("\n");
 }
 
-async function readPdfCard(box) {
+async function readPdfCard(box: TmpBox) {
   const dir = await sessionDir(box);
   const rel = `_content/inbox/${dir}/source.pdf.card`;
   return { rel, content: await box.read(rel) };
@@ -78,7 +103,7 @@ const result = await importPdf(box, docling);
 result.success
 => true
 
-result.data.extracted
+importData(result).extracted
 => true
 ```
 
@@ -122,11 +147,11 @@ scratch directory:
 
 ```ts continue
 const { rel, content } = await readPdfCard(box);
-const card = parseCardText(content, { source: rel, schemas });
+const card = parsePdfCard(content, rel);
 JSON.stringify([card.fields.format, card.fields.filename.ref, card.fields.filename["mime-type"]])
 => ["pdf","attach/source.pdf","application/pdf"]
 
-card.fields.docling.ref
+card.fields.docling?.ref
 => attach/docling.json.gz
 
 card.fields.error
@@ -143,14 +168,14 @@ card.rawBody.trim()
 extraction's page count on a host without poppler — either way it is a number:
 
 ```ts continue
-typeof card.fields.metadata.pages
+typeof card.fields.metadata?.pages
 => number
 ```
 
 The session card points at the pdf card:
 
 ```ts continue
-const sessionCard = await box.read(result.data.sessionCardPath);
+const sessionCard = await box.read(importData(result).sessionCardPath);
 sessionCard.includes("- attach/source.pdf.card")
 => true
 ```
@@ -179,7 +204,9 @@ const originalExtract = baseDocling.extract.bind(baseDocling);
 baseDocling.extract = async (path, options) => {
   const extraction = await originalExtract(path, options);
   if (extraction.ok) {
-    const pagePath = extraction.value.pageImages[0].filePath;
+    const page = extraction.value.pageImages[0];
+    invariant(page, "the fake renders one page");
+    const pagePath = page.filePath;
     await Sharp({ create: { width: 2, height: 17000, channels: 3, background: { r: 20, g: 80, b: 120 } } })
       .png().toFile(pagePath);
   }
@@ -264,7 +291,7 @@ const result = await extractPdf({
   ocr: "off",
   languages: null,
 });
-JSON.stringify([result.ok, result.value.assetNames.includes("text-layer.txt"), (await readdir(attachAbsDir)).includes("text-layer.txt")])
+JSON.stringify([result.ok, result.ok && result.value.assetNames.includes("text-layer.txt"), (await readdir(attachAbsDir)).includes("text-layer.txt")])
 => [true,false,false]
 ```
 
@@ -284,11 +311,11 @@ identifies the device that produced it.
 const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "billed", pageCount: 1 }), "scan-upload/laptop-scansnap");
 const { rel, content } = await readPdfCard(box);
-const card = parseCardText(content, { source: rel, schemas });
+const card = parsePdfCard(content, rel);
 card.fields.filename.via.channel
 => scan-upload/laptop-scansnap
 
-const sessionCard = await box.read(result.data.sessionCardPath);
+const sessionCard = await box.read(importData(result).sessionCardPath);
 sessionCard.includes("uploader: scan-upload/laptop-scansnap")
 => true
 ```
@@ -302,8 +329,8 @@ const plain = await makeTmpBox({ git: true });
 const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed", pageCount: 1 }));
 const plainDoc = await readPdfCard(plain);
 JSON.stringify([
-  parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.via.channel,
-  (await plain.read(plainResult.data.sessionCardPath)).includes("uploader:"),
+  parsePdfCard(plainDoc.content, plainDoc.rel).fields.filename.via.channel,
+  (await plain.read(importData(plainResult).sessionCardPath)).includes("uploader:"),
 ])
 => ["scan-import",false]
 
@@ -326,14 +353,14 @@ const result = await importPdf(box, docling);
 result.success
 => true
 
-result.data.extracted
+importData(result).extracted
 => false
 
 await attachContents(box)
 => source.pdf
 
 const { rel, content } = await readPdfCard(box);
-const card = parseCardText(content, { source: rel, schemas });
+const card = parsePdfCard(content, rel);
 card.fields.error
 => Docling exited 1: killed by the OOM killer
 
@@ -347,7 +374,7 @@ JSON.stringify(card.rawBody.trim())
 Intake still completed — a Docling problem is not an intake problem:
 
 ```ts continue
-result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
+importData(result).intakeJobPath?.startsWith("_bookkeeping/jobs/")
 => true
 ```
 
@@ -364,12 +391,12 @@ there to look at.
 ```ts
 const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "", pageCount: 1 }));
-result.data.extracted
+importData(result).extracted
 => true
 
 const { rel, content } = await readPdfCard(box);
-const card = parseCardText(content, { source: rel, schemas });
-JSON.stringify([card.fields.docling.ref, card.rawBody.trim(), card.fields.error])
+const card = parsePdfCard(content, rel);
+JSON.stringify([card.fields.docling?.ref, card.rawBody.trim(), card.fields.error])
 => ["attach/docling.json.gz","",null]
 
 await attachContents(box)
@@ -419,8 +446,8 @@ docling fake (succeeds), 1 call(s)
 The body and page count are the new run's; the description is the old card's:
 
 ```ts continue
-const card = parseCardText(await box.read(cardRel), { source: cardRel, schemas });
-JSON.stringify([card.fields.description, card.rawBody.trim(), card.fields.metadata.pages])
+const card = parsePdfCard(await box.read(cardRel), cardRel);
+JSON.stringify([card.fields.description, card.rawBody.trim(), card.fields.metadata?.pages])
 => ["A utility bill","second pass",1]
 ```
 
@@ -525,7 +552,7 @@ const tooMany = await extractPdf({
   ocr: "off",
   languages: null,
 });
-JSON.stringify([tooMany.ok, tooMany.error])
+JSON.stringify([tooMany.ok, tooMany.ok ? null : tooMany.error])
 => [false,"Docling produced 501 page/figure artifacts, over the limit of 500"]
 ```
 
@@ -548,7 +575,7 @@ const atCap = await extractPdf({
   ocr: "off",
   languages: null,
 });
-JSON.stringify([atCap.ok, atCap.value.assetNames.length])
+JSON.stringify([atCap.ok, atCap.ok && atCap.value.assetNames.length])
 => [true,6]
 ```
 

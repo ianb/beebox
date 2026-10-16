@@ -5,6 +5,7 @@ when the receipt is rejected or slow, or a transport anomaly occurs. Its public
 event API accepts enumerated metadata, not message content.
 
 ```ts setup
+import assert from "node:assert/strict";
 import {
   beginChatSendDiagnostic,
   chatSendReasonKind,
@@ -15,6 +16,19 @@ import {
   recordChatSendEnvironmentEvent,
   resetChatSendDiagnostics,
 } from "../../src/lib/chat-send-diagnostics.js";
+
+/** The JSON a diagnostic warning carries after its prefix. */
+interface DiagnosticPayload {
+  trigger: string;
+  emissionId: string;
+  events: { event: string; detail: Record<string, unknown> }[];
+}
+
+/** Parse one captured warning line; a missing line fails the example. */
+function parseWarning(line: string | undefined): DiagnosticPayload {
+  assert.ok(line, "expected a captured warning");
+  return JSON.parse(line.replace("[chat-send-diagnostic] ", ""));
+}
 
 resetChatSendDiagnostics();
 const warnings: string[] = [];
@@ -62,8 +76,8 @@ observeChatSendReceipt({ emissionId: "msg-timeout", disposition: "rejected", rea
 warnings.length
 => 1
 
-const payload = JSON.parse(warnings[0].replace("[chat-send-diagnostic] ", ""));
-[payload.trigger, payload.emissionId, payload.events[0].detail.textLength].join("|")
+const payload = parseWarning(warnings[0]);
+[payload.trigger, payload.emissionId, payload.events[0]?.detail.textLength].join("|")
 => receipt-rejected|msg-timeout|321
 
 JSON.stringify(payload).includes("diagnostic transport test")
@@ -93,11 +107,11 @@ recordChatSendEvent("msg-stream", { event: "turn-stream-error", detail: { errorL
 warnings.length
 => 2
 
-const streamPayload = JSON.parse(warnings[1].replace("[chat-send-diagnostic] ", ""));
-[streamPayload.trigger, streamPayload.events.find((entry) => entry.event === "turn-stream-progress").detail.frameCount].join("|")
+const streamPayload = parseWarning(warnings[1]);
+[streamPayload.trigger, streamPayload.events.find((entry) => entry.event === "turn-stream-progress")?.detail.frameCount].join("|")
 => turn-stream-error|100
 
-warnings[1].length < 4000
+(warnings[1]?.length ?? Infinity) < 4000
 => true
 ```
 
@@ -116,10 +130,10 @@ recordChatSendEvent("msg-retry", { event: "post-retry-scheduled", detail: { reas
 for (let i = 0; i < 30; i++) recordChatSendEnvironmentEvent("bus-ws-connect");
 recordChatSendEvent("msg-retry", { event: "post-error", detail: { reasonKind: "network" } });
 
-warnings.slice(2).map((warning) => JSON.parse(warning.replace("[chat-send-diagnostic] ", "")).trigger).join(",")
+warnings.slice(2).map((warning) => parseWarning(warning).trigger).join(",")
 => post-retry-scheduled,post-error
 
-inspectChatSendDiagnostic("msg-retry")[0].event
+inspectChatSendDiagnostic("msg-retry")[0]?.event
 => dispatch
 
 console.warn = originalWarn;

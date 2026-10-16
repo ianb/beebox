@@ -61,7 +61,7 @@ With a journal pointing at `u-b`, the span is everything after it.
 
 ```ts
 const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([a, b]), applied: null }), now: NOW });
-applied.endUuid
+applied?.endUuid
 => u-b
 
 const next = await resolveSpan({ readPage: pagesOf([a, b, c, d]), applied });

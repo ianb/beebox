@@ -8,15 +8,22 @@ identity from resolution"). `forDir` keeps the full payload, now including
 Track B's derived children spliced into `links`.
 
 ```ts setup
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import assert from "node:assert/strict";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
+    user: null,
+    authed: true,
+    isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }
@@ -59,6 +66,7 @@ await box2.write("_content/recipes/Bread.doc.card", "---\ntitle: Bread\nprominen
 await box2.write("_content/recipes/Notes.doc.card", "---\ntitle: Notes\n---\n");
 
 const { landmark } = await caller(box2.root).landmarks.forDir({ dir: "_content/recipes" });
+assert.ok(landmark);
 JSON.stringify(landmark.links.map((l) => ({ ref: l.ref, source: l.source, prominence: l.prominence ?? null })))
 => [{"ref":"_content/recipes/Index.doc.card","source":"derived","prominence":"entry-point"},{"ref":"_content/recipes/Bread.doc.card","source":"derived","prominence":"primary"}]
 ```
@@ -69,6 +77,7 @@ box, in `links`.
 ```ts continue
 const { landmarks } = await caller(box2.root).landmarks.list();
 const recipes = landmarks.find((l) => l.dir === "_content/recipes");
+assert.ok(recipes);
 recipes.links.map((l) => l.source).join(",")
 => derived,derived
 ```

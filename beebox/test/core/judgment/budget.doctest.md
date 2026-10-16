@@ -17,7 +17,7 @@ import { createFakeJev } from "../../../src/services/jev.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 const NOON = new Date("2026-09-26T12:00:00Z");
-const hours = (h) => new Date(NOON.getTime() + h * 60 * 60 * 1000);
+const hours = (h: number) => new Date(NOON.getTime() + h * 60 * 60 * 1000);
 ```
 
 ## Reservations count up to the cap, all or none
@@ -82,7 +82,7 @@ for (let i = 0; i < 5; i++) await reserveJevCalls(box.root, { calls: 100, now: n
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-budget-"));
 const BBX_DEFER_FILE = path.join(dir, "defer.json");
 const jev = createFakeJev();
-const errors = [];
+const errors: string[] = [];
 const origErr = console.error;
 console.error = (...args) => { errors.push(args.join(" ")); };
 const code = await runJudge({ boxRoot: box.root, cardPath: "_config/judgments/any.judgment.card", options: { min: [], choice: [] }, stdin: "x".repeat(400), env: { BBX_DEFER_FILE }, jev });

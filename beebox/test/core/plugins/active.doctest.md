@@ -11,7 +11,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { activePluginNames } from "../../../src/core/box/config.js";
 import { activePlugins, describeInvalidPluginEntries, listPlugins } from "../../../src/core/plugins/active.js";
 
-async function boxWithPlugins(value) {
+async function boxWithPlugins(value: unknown) {
   const box = await makeTmpBox();
   await box.write("_config/box.json", JSON.stringify({ plugins: value }));
   return box;
@@ -79,7 +79,7 @@ const box = await boxWithPlugins(["courseware", "nope"]);
 await box.write("src/schemas/course.ts", "// stub\n");
 await box.write("src/views/concept-map.tsx", "// stub\n");
 const { plugins, problems } = await listPlugins(box.root);
-({ stubs: plugins[0].stubs.map((s) => `${s.kind} ${s.name} ${s.path} ${s.present ? "present" : "missing"}`), problems })
+({ stubs: plugins[0]?.stubs.map((s) => `${s.kind} ${s.name} ${s.path} ${s.present ? "present" : "missing"}`), problems })
 => {
   stubs: [
     "schema course src/schemas/course.ts present",

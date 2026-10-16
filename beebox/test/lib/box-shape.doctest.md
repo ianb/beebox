@@ -21,19 +21,19 @@ import { getBoxShape, getBoxShapeIfPresent, resolveBoxRoot, requireBoxRoot, BoxS
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 /** What `getBoxShape(root)` rejects with: "BoxShapeError mentioning [phrases]" when every phrase is in the message. */
-const rejection = async (boxRoot, phrases) => {
+const rejection = async (boxRoot: string, phrases: string[]) => {
   try { await getBoxShape(boxRoot); return "did not throw"; }
   catch (e) {
     if (!(e instanceof BoxShapeError)) return `not a BoxShapeError: ${e}`;
-    const missing = phrases.filter((p) => !e.message.includes(p));
+    const missing = phrases.filter((p: string) => !e.message.includes(p));
     return missing.length ? `BoxShapeError missing [${missing.join(", ")}]: ${e.message}` : `BoxShapeError mentioning [${phrases.join(", ")}]`;
   }
 };
 
 /** "threw" / "threw: <label>" / "did-not-throw" for a promise, where `label` classifies the error. */
-const outcome = (promise, label) =>
-  promise.then(() => "did-not-throw", (e) => (label ? `threw-${label(e)}` : "threw"));
-const noConversion = (e) => (e.message.includes("conversion has been removed") ? "no-conversion" : "other");
+const outcome = (promise: Promise<unknown>, label?: (e: Error) => string) =>
+  promise.then(() => "did-not-throw", (e: Error) => (label ? `threw-${label(e)}` : "threw"));
+const noConversion = (e: Error) => (e.message.includes("conversion has been removed") ? "no-conversion" : "other");
 
 // A v2 fixture: package root with the marker one level down at `content/`.
 const makeV2PackageRoot = async () => {
@@ -45,7 +45,7 @@ const makeV2PackageRoot = async () => {
 };
 
 /** A throwaway box whose marker holds `marker`, a string written verbatim. */
-const boxWithMarker = async (marker) => {
+const boxWithMarker = async (marker: string) => {
   const box = await makeTmpBox();
   await box.write(".beebox/box.json", marker);
   return box;

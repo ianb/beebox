@@ -12,19 +12,25 @@ through the same functions the checkbox calls (`tickInput`, `runTick`,
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import assert from "node:assert/strict";
 import { TodoItem } from "../../../src/components/todo/TodoItem.js";
 import {
   runTick,
   tickInput,
   todoSelection,
   TodoActionsContext,
+  type SetTodoStatusInput,
+  type TodoActions,
+  type TodoAddress,
 } from "../../../src/components/todo/actions.js";
 
 globalThis.React = React;
 
-const address = { path: "_content/Porch.doc.card", locator: { kind: "body", line: 12 }, text: "Order lumber" };
+const address: TodoAddress = { path: "_content/Porch.doc.card", locator: { kind: "body", line: 12 }, text: "Order lumber" };
 
-function render(props, actions) {
+type ItemProps = Omit<React.ComponentProps<typeof TodoItem>, "children">;
+
+function render(props: Pick<ItemProps, "status"> & Partial<ItemProps>, actions: TodoActions | undefined) {
   const item = React.createElement(TodoItem, {
     assigned: undefined,
     due: undefined,
@@ -36,20 +42,22 @@ function render(props, actions) {
     text: address.text,
     muted: false,
     ...props,
-  }, "Order lumber");
+    children: "Order lumber",
+  });
   return renderToStaticMarkup(actions === undefined ? item : React.createElement(TodoActionsContext.Provider, { value: actions }, item));
 }
 
 /** Whether the checkbox is live, and whether a "+" is offered. */
-function controls(html) {
+function controls(html: string) {
   const box = /<input[^>]*>/.exec(html)?.[0] ?? "";
   return `${box.includes("disabled") ? "read-only" : "live"}, ${html.includes('aria-label="Add to chat"') ? "+" : "no +"}`;
 }
 
-const calls = [];
-const actions = {
+const calls: SetTodoStatusInput[] = [];
+const chatCalls: TodoAddress[] = [];
+const actions: TodoActions = {
   setStatus: async (input) => { calls.push(input); },
-  addToChat: (todo) => { calls.push(todo); },
+  addToChat: (todo) => { chatCalls.push(todo); },
 };
 ```
 
@@ -113,13 +121,15 @@ and shows why.
 
 ```ts
 function recorder() {
-  const log = [];
-  return { log, view: { show: (s) => log.push(`show ${String(s)}`), fail: (m) => log.push(`fail ${String(m)}`) } };
+  const log: string[] = [];
+  return { log, view: { show: (s: "open" | "done" | null) => log.push(`show ${String(s)}`), fail: (m: string | null) => log.push(`fail ${String(m)}`) } };
 }
 
 calls.length = 0;
 const ok = recorder();
-await runTick(actions, { input: tickInput(address, "open"), view: ok.view });
+const okInput = tickInput(address, "open");
+assert.ok(okInput);
+await runTick(actions, { input: okInput, view: ok.view });
 JSON.stringify([ok.log, calls.map((c) => `${c.expectedStatus}->${c.status}`)])
 => [["fail null","show done"],["open->done"]]
 ```
@@ -129,7 +139,9 @@ const failing = { ...actions, setStatus: async () => { throw new Error("This car
 const bad = recorder();
 const originalWarn = console.warn;
 console.warn = () => {};
-await runTick(failing, { input: tickInput(address, "open"), view: bad.view });
+const badInput = tickInput(address, "open");
+assert.ok(badInput);
+await runTick(failing, { input: badInput, view: bad.view });
 console.warn = originalWarn;
 JSON.stringify(bad.log)
 => ["fail null","show done","show null","fail This card changed since it was shown — it has been reloaded"]

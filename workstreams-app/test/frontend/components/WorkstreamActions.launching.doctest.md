@@ -65,7 +65,7 @@ const live = structuredClone(dormant);
 live.agent = { state: "live", reason: "signal=cwd" };
 live.routing = { state: "live", action: "manual-forward", lastActivityAt: null };
 const removed = structuredClone(dormant);
-removed.session.removed = { at: "2026-08-23T00:00:00Z", merged: false, finalSha: dormant.git.tip };
+removed.session.removed = { at: "2026-08-23T00:00:00Z", merged: false, finalSha: dormant.git.tip ?? undefined };
 JSON.stringify({
   dormant: workstreamActionVerbs(dormant),
   dormantSection: workstreamStateFor(dormant).section,

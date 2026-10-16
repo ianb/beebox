@@ -18,9 +18,17 @@ import { join } from "node:path";
 import { runCopyGrants, runMigrateSecrets } from "../../../src/cli/commands/secrets/migrate.js";
 import { listSecrets, setAndGrantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { loadSecretStore } from "../../../src/core/secrets/store.js";
+import { invariant } from "../../../src/shared/invariant.js";
+
+/** The machine store, which must load. */
+async function secretStore() {
+  const loaded = await loadSecretStore();
+  invariant(loaded.ok, "the secret store loads");
+  return loaded.value;
+}
 
 /** A minimal shapeVersion-3 box whose slug is its (one) root directory name. */
-async function makeBox(root, slug, files) {
+async function makeBox(root: string, slug: string, files: Record<string, string>) {
   const boxRoot = join(root, slug);
   await mkdir(join(boxRoot, "_config", "connectors"), { recursive: true });
   await mkdir(join(boxRoot, ".beebox"), { recursive: true });
@@ -32,16 +40,16 @@ async function makeBox(root, slug, files) {
 }
 
 /** Run a `run*` action with console output captured and `process.exit` trapped. */
-async function runCaptured(fn) {
-  const logs = [];
-  const errors = [];
+async function runCaptured(fn: () => Promise<unknown>) {
+  const logs: string[] = [];
+  const errors: string[] = [];
   const origLog = console.log;
   const origError = console.error;
   const origExit = process.exit;
-  let exitCode;
+  let exitCode: number | string | undefined;
   console.log = (...args) => { logs.push(args.join(" ")); };
   console.error = (...args) => { errors.push(args.join(" ")); };
-  process.exit = (code) => { exitCode = code ?? 0; throw new Error("__doctest_process_exit__"); };
+  process.exit = (code?: number | string | null) => { exitCode = code ?? 0; throw new Error("__doctest_process_exit__"); };
   try {
     await fn();
   } catch (e) {
@@ -110,7 +118,9 @@ is reported rather than imported under a guessed name: an entry no reader ever
 asks for would be a credential moved for nothing.
 
 ```ts continue
-print(`store file exists: ${existsSync(process.env.BBX_SECRETS_FILE)}`);
+const secretsFile = process.env.BBX_SECRETS_FILE;
+invariant(secretsFile, "makeMachine points BBX_SECRETS_FILE at a temp store");
+print(`store file exists: ${existsSync(secretsFile)}`);
 => store file exists: false
 ```
 
@@ -135,10 +145,10 @@ Check each box with `bbx secrets status <box>`, then delete the files in a separ
 ```
 
 ```ts continue
-const after = await loadSecretStore();
-print(JSON.stringify(after.value.grants, null, 2));
-print(`deepgram value: ${after.value.secrets["deepgram"]?.value}`);
-print(`single-box flags: ${after.value.secrets["mistral/gamma"]?.shareable} ${after.value.secrets["mistral"]?.shareable}`);
+const after = await secretStore();
+print(JSON.stringify(after.grants, null, 2));
+print(`deepgram value: ${after.secrets["deepgram"]?.value}`);
+print(`single-box flags: ${after.secrets["mistral/gamma"]?.shareable} ${after.secrets["mistral"]?.shareable}`);
 =>
 {
   "beta": {
@@ -186,7 +196,7 @@ run, because the new box needs its own token, not alpha's.
 await setAndGrantSecret({ name: "bucket-token/alpha", value: "placeholder-bucket-token", slug: "alpha", access: "server", owningBox: "alpha", shareable: false });
 const copied = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "alpha", toBoxOrRoot: "delta", agentConfirmed: true }));
 print(copied.logs.join("\n"));
-print(`delta now: ${JSON.stringify((await loadSecretStore()).value.grants["delta"])}`);
+print(`delta now: ${JSON.stringify((await secretStore()).grants["delta"])}`);
 =>
 Granted "mistral" to "delta" with server access (from "alpha").
 Skipped "bucket-token/alpha" — single-box secret (belongs to "alpha") — set this box up with its own.
@@ -259,7 +269,7 @@ Applying it grants nobody the rotated key they do not have:
 ```ts continue
 const applied = await runCaptured(() => runMigrateSecrets({ root: machine.boxes, agentConfirmed: true }));
 print(applied.logs.slice(-4).join("\n"));
-const grants = (await loadSecretStore()).value.grants;
+const grants = (await secretStore()).grants;
 print(`alpha: ${JSON.stringify(grants["alpha"])}`);
 =>
 Created 3 entries, wrote 4 grants, left 1 existing entry untouched.

@@ -11,9 +11,38 @@ import {
   claudeScanWireSchema,
   parseClaudeScanBatch,
 } from "../../src/services/scan-vision-claude.js";
+import { ScanVisionBatchError } from "../../src/services/scan-vision.js";
+import { z } from "zod";
+
+/** The parts of the generated JSON Schema the checks below read. */
+const WireSchema = z.object({
+  properties: z.object({
+    pages: z.object({
+      items: z.object({
+        properties: z.object({
+          index: z.unknown(),
+          subject_bbox: z.unknown(),
+          rotation: z.object({ anyOf: z.array(z.object({ const: z.number() })) }),
+        }),
+        required: z.array(z.string()),
+      }),
+    }),
+  }),
+});
+
+/** Run a parse that must throw a batch error; null when it did not throw. */
+function caught(run: () => unknown): ScanVisionBatchError | null {
+  try {
+    run();
+    return null;
+  } catch (e) {
+    if (e instanceof ScanVisionBatchError) return e;
+    throw e;
+  }
+}
 
 /** A well-formed Claude-shaped page with overridable fields. */
-function page(index, overrides = {}) {
+function page(index: number, overrides: Record<string, unknown> = {}) {
   return {
     index,
     kind: "back",
@@ -43,7 +72,7 @@ stripped, rotation is a four-value enum, and `subject_bbox` only admits null.
 
 ```ts
 const schema = claudeScanWireSchema();
-const pages = schema.properties.pages;
+const pages = WireSchema.parse(schema).properties.pages;
 JSON.stringify(pages.items.properties.index)
 => {"type":"integer"}
 
@@ -104,24 +133,24 @@ misaligned batch can never misattach cards. Every error carries the failed
 attempt's usage/cost for the runner's accounting.
 
 ```ts
-const badBbox = (() => { try { parseClaudeScanBatch({ pages: [page(0, { subject_bbox: [1, 2, 3, 4] })] }, meta); return null; } catch (e) { return e; } })();
-`${badBbox.name}: retry=${badBbox.retry}`
+const badBbox = caught(() => parseClaudeScanBatch({ pages: [page(0, { subject_bbox: [1, 2, 3, 4] })] }, meta));
+`${badBbox?.name}: retry=${badBbox?.retry}`
 => ClaudeScanSchemaError: retry=split
 
-const badSlots = (() => { try { parseClaudeScanBatch({ pages: [page(0, { slot_count: 2 })] }, meta); return null; } catch (e) { return e; } })();
-`${badSlots.name}: retry=${badSlots.retry} usage=${badSlots.usage?.prompt}`
+const badSlots = caught(() => parseClaudeScanBatch({ pages: [page(0, { slot_count: 2 })] }, meta));
+`${badSlots?.name}: retry=${badSlots?.retry} usage=${badSlots?.usage?.prompt}`
 => ScanSlotInvariantError: retry=split usage=1000
 
-const badNumbering = (() => { try { parseClaudeScanBatch({ pages: [page(0, { slot_count: 2, slots: [{ slot: 1, label: "a", text: "x", legibility: "clear" }, { slot: 3, label: "b", text: "y", legibility: "clear" }] })] }, meta); return null; } catch (e) { return e; } })();
-badNumbering.name
+const badNumbering = caught(() => parseClaudeScanBatch({ pages: [page(0, { slot_count: 2, slots: [{ slot: 1, label: "a", text: "x", legibility: "clear" }, { slot: 3, label: "b", text: "y", legibility: "clear" }] })] }, meta));
+badNumbering?.name
 => ScanSlotInvariantError
 
-const misaligned = (() => { try { parseClaudeScanBatch({ pages: [page(1)] }, meta); return null; } catch (e) { return e; } })();
-`${misaligned.name}: retry=${misaligned.retry}`
+const misaligned = caught(() => parseClaudeScanBatch({ pages: [page(1)] }, meta));
+`${misaligned?.name}: retry=${misaligned?.retry}`
 => ScanVisionBatchError: retry=split
 
-const wrongCount = (() => { try { parseClaudeScanBatch({ pages: [page(0), page(1)] }, meta); return null; } catch (e) { return e; } })();
-wrongCount.retry
+const wrongCount = caught(() => parseClaudeScanBatch({ pages: [page(0), page(1)] }, meta));
+wrongCount?.retry
 => split
 ```
 
@@ -129,7 +158,7 @@ A rotation outside 0/90/180/270 is a schema failure, not a card-corrupting
 value (the image card schema only accepts those four).
 
 ```ts
-const badRotation = (() => { try { parseClaudeScanBatch({ pages: [page(0, { rotation: 45 })] }, meta); return null; } catch (e) { return e; } })();
-badRotation.name
+const badRotation = caught(() => parseClaudeScanBatch({ pages: [page(0, { rotation: 45 })] }, meta));
+badRotation?.name
 => ClaudeScanSchemaError
 ```

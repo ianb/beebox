@@ -10,7 +10,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import type { ImportEdge, LayoutFile } from "../../../../../src/dev/layout/model.js";
 import { scanPackage } from "../../../../../src/dev/layout/scan/package/scan.js";
+
+// Only modules and tests carry import edges.
+function importsOf(file: LayoutFile | undefined): ImportEdge[] {
+  return file?.kind === "module" || file?.kind === "test" ? file.imports : [];
+}
 
 const execFileAsync = promisify(execFile);
 const repoRoot = await mkdtemp(join(tmpdir(), "layout-scan-"));
@@ -69,7 +75,7 @@ layout.files.get("pkg/public/sw.js")?.kind
 
 ```ts
 const a = layout.files.get("pkg/src/a.ts");
-JSON.stringify(a?.imports.find((i) => i.specifier === "./b.js"))
+JSON.stringify(importsOf(a).find((i) => i.specifier === "./b.js"))
 => {"specifier":"./b.js","target":"pkg/src/b.ts","external":false,"typeOnly":false,"names":["b"],"dynamic":false}
 
 JSON.stringify(a?.kind === "module" ? a.registries[0] : null)
@@ -87,7 +93,7 @@ JSON.stringify(layout.scanFindings)
 
 ```ts
 const doctestFile = layout.files.get("pkg/test/x.doctest.md");
-doctestFile?.imports.find((i) => i.specifier === "../src/a.js")?.target
+importsOf(doctestFile).find((i) => i.specifier === "../src/a.js")?.target
 => pkg/src/a.ts
 ```
 

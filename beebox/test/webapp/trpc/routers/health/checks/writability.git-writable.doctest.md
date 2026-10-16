@@ -10,9 +10,10 @@ import { join } from "node:path";
 import { runHealthChecks } from "../../../../../../src/webapp/trpc/routers/health/router.js";
 import { failedWritability } from "../../../../../../src/webapp/trpc/routers/health/checks/writability.js";
 import { createFakeClaudeCli } from "../../../../../../src/services/claude-cli.js";
+import type { HealthCheck } from "../../../../../../src/shared/health-check.js";
 import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
 
-const gitWritableCheck = (checks) => checks.find((c) => c.name === "git-writable");
+const gitWritableCheck = (checks: HealthCheck[]) => checks.find((c: HealthCheck) => c.name === "git-writable");
 // Inject a fake so the claude-auth check never shells out to real `claude`.
 const claudeCli = createFakeClaudeCli({ loggedIn: true });
 ```

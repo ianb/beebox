@@ -196,7 +196,6 @@ const registryCtx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),
 };
 const content = createIntakeJobTemplate({
-  created: "2026-06-09T00:00:00Z",
   connector: "gmail",
   description: "Triage 1 inbox item",
   items: ["_content/inbox/a.doc.card"],

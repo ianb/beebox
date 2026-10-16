@@ -9,10 +9,11 @@ registry with a mock chat session stands in for the Claude subprocess so the
 whole worker runs deterministically.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, writeFile, appendFile, mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
@@ -22,34 +23,41 @@ import {
   setStagingState,
   readStagingSession,
 } from "../../../src/core/capture/staging-store/core.js";
+import type { ChatSendInput, ChatSession } from "../../../src/core/chat/session/run/core.js";
+import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
+import { plainTestPrompt } from "../../helpers/chat-session-spawner-helpers.js";
 import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../../src/core/bulk-upload/worker/core.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 import { writePresence } from "../../../src/core/notification/presence.js";
 
 /** The box's logged notifications, reduced to what the person sees. */
-async function notices(boxRoot) {
+async function notices(boxRoot: string) {
   return (await readRecent(boxRoot, { days: 1 })).map(({ intent }) => {
     const { title, body, target, loudness, source } = intent;
     return { title, body, target, loudness, source };
   });
 }
 
-async function pathExists(p) {
+async function pathExists(p: string) {
   try { await access(p); return true; } catch { return false; }
 }
 
-function uploadCommitCount(boxRoot) {
+function uploadCommitCount(boxRoot: string) {
   return execFileSync("git", ["log", "--format=%s"], { cwd: boxRoot })
     .toString().split("\n").filter((l) => l.startsWith("Upload batch:")).length;
 }
 
-async function batchCardRel(box) {
+async function batchCardRel(box: TmpBox) {
   const dirs = await readdir(box.path("_content/tmp-upload"));
   return `_content/tmp-upload/${dirs[0]}/${dirs[0]}.upload-batch.card`;
 }
 
 // Stage a sealed bulk session bound to `target`, with one uploaded file.
-async function stageSealedBulk(boxRoot, opts) {
+async function stageSealedBulk(
+  boxRoot: string,
+  opts: { target: string; failedItems?: { id: string; name: string; reason: string }[] },
+) {
   const staged = await createStagingSession({
     boxRoot, targetSessionId: opts.target, createdBy: null, kind: "bulk",
     contextDir: "", expectedItems: [{ id: "a", name: "report.pdf" }],
@@ -63,15 +71,28 @@ async function stageSealedBulk(boxRoot, opts) {
   return staged.id;
 }
 
-// A mock registry whose one session records every send.
-function mockRegistry(session) {
-  return {
-    getOrCreate: () => session, createNew: () => session, get: () => session,
-    enforceLiveCap: () => {}, touch: () => {}, markMostActive: async () => {},
-    // No chat here was coined and reserved (chat/session/reserve.ts).
-    getReservation: () => null,
+/** A real chat registry over the fake backend plus an event bus; `close()` releases both. */
+function chatFor(box: TmpBox) {
+  const registry = new ChatSessionRegistry(box.root, {
+    backend: createFakeChatBackend(),
+    buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+  });
+  const eventBus = createEventBus(box.root);
+  return { registry, eventBus, close: () => { registry.shutdown(); eventBus.close(); } };
+}
+
+/** The session behavior each test scripts; the rest of the session is the real one. */
+type SessionScript = Partial<Pick<ChatSession, "isBusy" | "enqueue" | "send">>;
+
+/** A `wireSession` hook that applies `script` to the session each time delivery resolves it. */
+function wiring(script: SessionScript) {
+  return (session: ChatSession) => {
+    Object.assign(session, script);
   };
 }
+
+/** The text of a chat input, whichever form it arrives in. */
+const textOf = (input: string | ChatSendInput) => (typeof input === "string" ? input : input.text);
 ```
 
 ## Happy path: prepare, deliver the `<upload>` message, clean up staging
@@ -84,13 +105,13 @@ const box = await makeTmpBox({ git: true });
 await appendHistory(box.root, { sessionId: "s-known" });
 const id = await stageSealedBulk(box.root, { target: "s-known" });
 
-const sent = [];
-const session = {
-  isBusy: () => false, enqueue: () => {}, getSessionId: () => "s-known",
-  send: async (input) => { sent.push(input.text); return true; },
-};
-const eventBus = createEventBus(box.root);
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+const sent: string[] = [];
+const { registry, eventBus, close } = chatFor(box);
+const wireSession = wiring({
+  isBusy: () => false, enqueue: () => {},
+  send: async (input) => { sent.push(textOf(input)); return true; },
+});
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
 const cardRel = await batchCardRel(box);
 JSON.stringify({
@@ -103,7 +124,7 @@ JSON.stringify({
 ```
 
 ```ts cleanup
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -118,13 +139,13 @@ const box = await makeTmpBox({ git: true });
 // Target "s-missing" is deliberately NOT in history.
 const id = await stageSealedBulk(box.root, { target: "s-missing" });
 
-const sent = [];
-const session = { isBusy: () => false, enqueue: () => {}, getSessionId: () => "x", send: async (i) => { sent.push(i.text); return true; } };
-const eventBus = createEventBus(box.root);
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+const sent: string[] = [];
+const { registry, eventBus, close } = chatFor(box);
+const wireSession = wiring({ isBusy: () => false, enqueue: () => {}, send: async (i) => { sent.push(textOf(i)); return true; } });
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
 JSON.stringify({
-  state: (await readStagingSession({ boxRoot: box.root, id })).state,
+  state: (await readStagingSession({ boxRoot: box.root, id }))?.state,
   sent: sent.length,
   noBatchDir: !(await pathExists(box.path("_content/tmp-upload"))),
 })
@@ -149,7 +170,7 @@ await notices(box.root)
 ```
 
 ```ts cleanup
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -168,7 +189,8 @@ await writePresence(box.root, { activeWeb: 1, now: new Date() });
 
 await markBulkPreparationFailed({ boxRoot: box.root, id });
 const [notice] = await notices(box.root);
-({ state: (await readStagingSession({ boxRoot: box.root, id })).state, body: notice.body })
+assert.ok(notice);
+({ state: (await readStagingSession({ boxRoot: box.root, id }))?.state, body: notice.body })
 => { state: "failed:prepare", body: "1 file reached the box but could not be added to the chat. Saving them to the box failed. They are kept on the box, and the assistant will be asked to recover them." }
 ```
 
@@ -191,16 +213,16 @@ const id = await stageSealedBulk(box.root, {
 });
 
 let failNext = true;
-const session = {
-  isBusy: () => false, enqueue: () => {}, getSessionId: () => "s-known",
+const { registry, eventBus, close } = chatFor(box);
+const wireSession = wiring({
+  isBusy: () => false, enqueue: () => {},
   send: async () => { if (failNext) { failNext = false; return false; } return true; },
-};
-const eventBus = createEventBus(box.root);
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+});
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
 const cardRel = await batchCardRel(box);
 JSON.stringify({
-  state: (await readStagingSession({ boxRoot: box.root, id })).state,
+  state: (await readStagingSession({ boxRoot: box.root, id }))?.state,
   failedNamed: (await box.read(cardRel)).includes("broke.mov"),
   commits: uploadCommitCount(box.root),
 })
@@ -211,7 +233,7 @@ Re-running delivers (send succeeds now), cleans up staging, and adds no new
 `Upload batch:` commit:
 
 ```ts continue
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 JSON.stringify({
   stagingGone: (await readStagingSession({ boxRoot: box.root, id })) === null,
   delivered: (await box.read(cardRel)).includes("delivered: true"),
@@ -221,7 +243,7 @@ JSON.stringify({
 ```
 
 ```ts cleanup
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -246,17 +268,17 @@ await writeFile(logPath, "");
 // stays `delivering`, staging retained.
 let busy = true;
 let enqueued = 0;
-const session = {
+const script: SessionScript = {
   isBusy: () => busy,
-  enqueue: async (input) => { enqueued += 1; await appendFile(logPath, JSON.stringify({ type: "user", text: input.text }) + "\n"); },
-  getSessionId: () => "s-known",
+  enqueue: async (input) => { enqueued += 1; await appendFile(logPath, JSON.stringify({ type: "user", text: textOf(input) }) + "\n"); },
   send: async () => { throw new Error("send should not be called while busy"); },
 };
-const eventBus = createEventBus(box.root);
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+const { registry, eventBus, close } = chatFor(box);
+const wireSession = wiring(script);
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 JSON.stringify({
   enqueued,
-  state: (await readStagingSession({ boxRoot: box.root, id })).state,
+  state: (await readStagingSession({ boxRoot: box.root, id }))?.state,
 })
 => {"enqueued":1,"state":"delivering"}
 ```
@@ -267,8 +289,8 @@ transcript, so no second enqueue/send, and staging is finally cleaned up:
 ```ts continue
 busy = false;
 let sends = 0;
-session.send = async () => { sends += 1; return true; };
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+script.send = async () => { sends += 1; return true; };
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
 const cardRel = await batchCardRel(box);
 JSON.stringify({
@@ -282,7 +304,7 @@ JSON.stringify({
 ```
 
 ```ts cleanup
-eventBus.close();
+close();
 await box.cleanup();
 ```
 
@@ -306,15 +328,15 @@ await writeFile(logPath, "");
 // First run: busy agent enqueues (message drains into the transcript); staging
 // stays retained in `delivering`.
 let busy = true;
-const session = {
+const script: SessionScript = {
   isBusy: () => busy,
-  enqueue: async (input) => { await appendFile(logPath, JSON.stringify({ type: "user", text: input.text }) + "\n"); },
-  getSessionId: () => "s-known",
+  enqueue: async (input) => { await appendFile(logPath, JSON.stringify({ type: "user", text: textOf(input) }) + "\n"); },
   send: async () => { throw new Error("send should not be called"); },
 };
-const eventBus = createEventBus(box.root);
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
-(await readStagingSession({ boxRoot: box.root, id })).state
+const { registry, eventBus, close } = chatFor(box);
+const wireSession = wiring(script);
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
+(await readStagingSession({ boxRoot: box.root, id }))?.state
 => delivering
 ```
 
@@ -326,8 +348,8 @@ already in the transcript, so no send happens and the batch finishes:
 await setStagingState({ boxRoot: box.root, id, state: "preparing" });
 busy = false;
 let sends = 0;
-session.send = async () => { sends += 1; return true; };
-await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+script.send = async () => { sends += 1; return true; };
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
 const cardRel = await batchCardRel(box);
 JSON.stringify({
@@ -340,6 +362,6 @@ JSON.stringify({
 ```
 
 ```ts cleanup
-eventBus.close();
+close();
 await box.cleanup();
 ```

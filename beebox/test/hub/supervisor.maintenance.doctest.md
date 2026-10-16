@@ -16,7 +16,7 @@ import { statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
-import { defaultSpawnChild } from "../../src/hub/supervisor/child-spawn.js";
+import { defaultSpawnChild, type ChildProc } from "../../src/hub/supervisor/child-spawn.js";
 import { waitForHttp } from "../../src/hub/child-process-utils.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -27,11 +27,11 @@ const delay = () => new Promise((resolve) => setTimeout(resolve, 25));
 const box = await makeTmpBox({ git: true, deps: true });
 const identityFile = box.path(".beebox/fixture-bundle");
 await writeFile(identityFile, "generation one");
-const children = [];
-const readiness = [];
-let accepted;
+const children: ChildProc[] = [];
+const readiness: Array<{ phase: string | null; code: number | null }> = [];
+let accepted: Awaited<ReturnType<typeof acquireBoxWork>> | undefined;
 const supervisor = new Supervisor({
-  config: { boxes: { fixture: { path: box.root } }, configPath: box.path("hub.json"), port: undefined, host: undefined },
+  config: { boxes: { fixture: { path: box.root } }, configPath: box.path("hub.json"), port: undefined, host: undefined, lazy: false, idleMs: 300_000, keepRecent: 0 },
   hubSecret: "disposable-fixture-hub-secret",
   async checkReady(params) {
     await waitForHttp({ port: params.port, reqPath: "/api/build-info", timeoutMs: 120_000, label: params.label });
@@ -43,7 +43,7 @@ const supervisor = new Supervisor({
     const info = statSync(identityFile, { bigint: true });
     const child = defaultSpawnChild({
       bbxBinary: process.execPath,
-      args: ["--import", "tsx", join(import.meta.dirname, "../helpers/maintenance-server-child.ts"), box.root, params.args.at(-1)],
+      args: ["--import", "tsx", join(import.meta.dirname, "../helpers/maintenance-server-child.ts"), box.root, ...params.args.slice(-1)],
       cwd: join(import.meta.dirname, "../.."),
       env: { ...params.env, BBX_DEV_BUNDLE_PATH: identityFile, BBX_DEV_BUNDLE_ID: `${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}` },
     });
@@ -52,7 +52,7 @@ const supervisor = new Supervisor({
   },
 });
 await supervisor.startAll();
-supervisor.getStatuses()[0].status
+supervisor.getStatuses()[0]?.status
 => running
 
 const first = supervisor.getStatuses()[0];
@@ -60,22 +60,22 @@ accepted = await acquireBoxWork(box.root, { reason: "test" });
 await writeFile(identityFile, "generation two is different");
 const deadline = Date.now() + 120_000;
 while ((await boxMaintenanceStatus(box.root)) === null && Date.now() < deadline) await delay();
-(await boxMaintenanceStatus(box.root)).phase
+(await boxMaintenanceStatus(box.root))?.phase
 => draining
 
 children.length
 => 1
 
-(await fetch(`http://127.0.0.1:${first.port}/fixture/not-a-route`, { method: "POST" })).status
+(await fetch(`http://127.0.0.1:${first?.port}/fixture/not-a-route`, { method: "POST" })).status
 => 503
 
 await accepted.release();
-while ((children.length < 2 || supervisor.getStatuses()[0].status !== "running" || (await boxMaintenanceStatus(box.root)) !== null) && Date.now() < deadline) await delay();
+while ((children.length < 2 || supervisor.getStatuses()[0]?.status !== "running" || (await boxMaintenanceStatus(box.root)) !== null) && Date.now() < deadline) await delay();
 const next = supervisor.getStatuses()[0];
-next.status === "running" && next.pid !== first.pid
+next?.status === "running" && next.pid !== first?.pid
 => true
 
-children[0].exitCode
+children[0]?.exitCode
 => 75
 
 JSON.stringify(readiness)
@@ -85,7 +85,7 @@ JSON.stringify(readiness)
 await boxMaintenanceStatus(box.root)
 => null
 
-(await fetch(`http://127.0.0.1:${next.port}/api/build-info`)).status
+(await fetch(`http://127.0.0.1:${next?.port}/api/build-info`)).status
 => 200
 ```
 

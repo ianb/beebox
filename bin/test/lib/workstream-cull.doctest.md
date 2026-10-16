@@ -12,6 +12,21 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+
+interface Failure { code: number; stdout: string; stderr: string }
+function isFailure(value: unknown): value is Failure {
+  return typeof value === "object" && value !== null && "code" in value && "stdout" in value && "stderr" in value;
+}
+/** Await a command that must exit non-zero and return its exit code and output. */
+async function expectFailure(attempt: Promise<unknown>): Promise<Failure> {
+  try {
+    await attempt;
+  } catch (error) {
+    if (isFailure(error)) return error;
+    throw error;
+  }
+  throw new Error("expected the command to fail");
+}
 const repoRoot = resolve(process.cwd(), "..");
 const teardownLib = join(repoRoot, "bin/lib/worktree-teardown.sh");
 
@@ -201,8 +216,8 @@ const failureScript = [
   'git() { if { [ "$1" = worktree ] && [ "$2" = prune ]; } || { [ "$1" = branch ] && [ "$2" = -D ]; }; then printf "%s %s\n" "$1" "$2" >> "$GIT_CALLS"; fi; command git "$@"; }',
   'wt_remove_now "$7" worktree-failure-fixture',
 ].join("; ");
-const failure = await execFileAsync("bash", ["-c", failureScript, "failure-test", teardownLib, failureMono, join(failureRoot, "worktrees"), join(failureRoot, "boxes"), failureState, failureRoot, failureWorktree])
-  .catch((error: unknown) => error as { code: number; stderr: string });
+const failure = await expectFailure(execFileAsync("bash", ["-c", failureScript, "failure-test", teardownLib, failureMono, join(failureRoot, "worktrees"), join(failureRoot, "boxes"), failureState, failureRoot, failureWorktree])
+  );
 const registered = (await git(failureMono, "worktree", "list", "--porcelain")).stdout.includes("branch refs/heads/worktree-failure-fixture");
 const branchExists = await git(failureMono, "show-ref", "--verify", "refs/heads/worktree-failure-fixture")
   .then(() => true, () => false);

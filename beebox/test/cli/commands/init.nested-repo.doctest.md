@@ -35,7 +35,7 @@ await isRepo(outer)
 await isRepo(inside)
 => false
 
-path.relative(dir, await repoRootOf(inside))
+path.relative(dir, (await repoRootOf(inside)) ?? "")
 => outer
 ```
 

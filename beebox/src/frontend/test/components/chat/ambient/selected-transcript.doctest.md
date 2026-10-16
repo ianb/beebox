@@ -10,20 +10,22 @@ and only to the ambient reply for that same session.
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { SessionEntry } from "../../../../src/api.js";
 import { SelectedTranscriptRegion, useSelectedTranscript } from "../../../../src/components/chat/ambient/selected-transcript.js";
 
 globalThis.React = React;
 
-function Probe({ sessionId }) {
+function Probe({ sessionId }: { sessionId: string }) {
   const transcript = useSelectedTranscript(sessionId);
   return React.createElement("span", null, transcript === null ? "none" : `${transcript.total}:${transcript.busy}`);
 }
 
-function render({ loaded, probeFor }) {
-  const entries = [{ type: "user", uuid: "u1", content: [{ type: "text", text: "Hello" }] }];
-  return renderToStaticMarkup(React.createElement(SelectedTranscriptRegion,
-    { sessionId: "chat-a", loaded, entries, total: 1, busy: false },
-    React.createElement(Probe, { sessionId: probeFor })));
+function render({ loaded, probeFor }: { loaded: boolean; probeFor: string }) {
+  const entries: SessionEntry[] = [{ type: "user", uuid: "u1", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "Hello" }] }];
+  return renderToStaticMarkup(React.createElement(SelectedTranscriptRegion, {
+    sessionId: "chat-a", loaded, entries, total: 1, busy: false,
+    children: React.createElement(Probe, { sessionId: probeFor }),
+  }));
 }
 ```
 

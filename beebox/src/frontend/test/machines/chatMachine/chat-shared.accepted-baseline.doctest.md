@@ -23,6 +23,7 @@ import { readAcceptedMessages } from "../../../../core/chat/session/accepted-mes
 import { reconcilePending } from "../../../src/machines/chatMachine/chat-shared.js";
 import { createEventBus } from "../../../../core/event-bus/core.js";
 import { makeTmpBox } from "../../../../../test/helpers/doctest-helpers.js";
+import type { SessionContentBlock } from "../../../src/api-chat.js";
 
 const SESSION = "11111111-1111-4111-8111-111111111111";
 const NOW = new Date("2026-08-26T13:00:00.000Z");
@@ -32,12 +33,12 @@ function entry(uuid: string, timestamp: string, text: string) {
   return { uuid, type: "user" as const, timestamp, content: [{ type: "text" as const, text }] };
 }
 
-function accept(bus, at: string, message: string) {
+function accept(bus: ReturnType<typeof createEventBus>, at: string, message: string) {
   bus.emit("chat-user-message", { sessionId: SESSION, timestamp: at, message, user: null });
 }
 
-function textOf(e) {
-  return e.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+function textOf(e: { content: SessionContentBlock[] } | undefined) {
+  return (e?.content ?? []).filter((b) => b.type === "text").map((b) => b.text).join("");
 }
 ```
 
@@ -64,7 +65,7 @@ const [pending] = readAcceptedMessages(bus, {
 });
 
 // The old entry cannot answer for this message; the echo can.
-JSON.stringify(pending.reconcileKnownUuids)
+JSON.stringify(pending?.reconcileKnownUuids)
 => ["item-100"]
 ```
 
@@ -72,7 +73,7 @@ So the client retires it, and the conversation is the two entries it actually
 contains — not three with the last one repeated.
 
 ```ts continue
-const merged = reconcilePending({ serverMessages: history, pendingMessages: [pending] });
+const merged = reconcilePending({ serverMessages: history, pendingMessages: pending ? [pending] : [] });
 JSON.stringify({ messages: merged.messages.map((e) => e.uuid), stillPending: merged.pendingMessages.length })
 => {"messages":["item-100","item-255"],"stillPending":0}
 ```
@@ -91,8 +92,8 @@ const [stillWaiting] = readAcceptedMessages(bus, {
   history: [{ uuid: "item-100", timestamp: "2026-08-26T11:00:00.000Z" }],
 });
 const notYet = reconcilePending({
-  serverMessages: [history[0]],
-  pendingMessages: [stillWaiting],
+  serverMessages: history.slice(0, 1),
+  pendingMessages: stillWaiting ? [stillWaiting] : [],
 });
 
 JSON.stringify({ messages: notYet.messages.map(textOf), stillPending: notYet.pendingMessages.length })
@@ -113,7 +114,7 @@ const [undated] = readAcceptedMessages(bus, {
   history: [{ uuid: "item-100", timestamp: "" }],
 });
 
-JSON.stringify(undated.reconcileKnownUuids)
+JSON.stringify(undated?.reconcileKnownUuids)
 => ["item-100"]
 ```
 

@@ -18,6 +18,12 @@ const validDefinition = {
   title: "Example site",
   tier: "secret",
 };
+
+/** The parsed reader emails; only the accounts tier carries them. */
+function parsedEmails(input: object): string[] | undefined {
+  const parsed = publicationDefinitionSchema.parse(input);
+  return parsed.tier === "accounts" ? parsed.emails : undefined;
+}
 ```
 
 ## The schema accepts a valid definition and refuses unknown keys
@@ -45,10 +51,10 @@ publicationDefinitionSchema.safeParse({ ...validDefinition, tier: "public", slug
 publicationDefinitionSchema.safeParse({ ...validDefinition, tier: "accounts", emails: ["reader@example.test"] }).success
 => true
 
-JSON.stringify(publicationDefinitionSchema.parse({ ...validDefinition, tier: "accounts", emails: ["Reader@Example.test", "reader@example.test"] }).emails)
+JSON.stringify(parsedEmails({ ...validDefinition, tier: "accounts", emails: ["Reader@Example.test", "reader@example.test"] }))
 => ["reader@example.test"]
 
-JSON.stringify(publicationDefinitionSchema.parse({ ...validDefinition, tier: "accounts", emails: ["z@example.test", "a@example.test"] }).emails)
+JSON.stringify(parsedEmails({ ...validDefinition, tier: "accounts", emails: ["z@example.test", "a@example.test"] }))
 => ["a@example.test","z@example.test"]
 
 publicationDefinitionSchema.safeParse({ ...validDefinition, tier: "accounts" }).success
@@ -104,7 +110,7 @@ loaded.includes("tier")
 ## Card paths cannot become arbitrary paths
 
 ```ts
-const refused = (card) => { try { resolvePublicationCardPath(card); return "ok"; } catch (error) { return error.message; } };
+const refused = (card: string) => { try { resolvePublicationCardPath(card); return "ok"; } catch (error) { return error instanceof Error ? error.message : String(error); } };
 
 resolvePublicationCardPath("_content/Example.publication.card")
 => _content/Example.publication.card

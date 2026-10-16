@@ -43,10 +43,10 @@ tags.length
 ```
 
 ```ts continue
-tags[0].alarm
+tags[0]?.alarm
 => true
 
-tags[0].announce
+tags[0]?.announce
 => check rice
 ```
 
@@ -54,13 +54,13 @@ tags[0].announce
 
 ```ts
 const tags = parseScheduleTags('<schedule in="5m" label="break">Take a break</schedule>');
-tags[0].alarm
+tags[0]?.alarm
 => false
 
-JSON.stringify(tags[0].announce)
+JSON.stringify(tags[0]?.announce)
 => null
 
-tags[0].durationMs
+tags[0]?.durationMs
 => 300000
 ```
 
@@ -72,10 +72,10 @@ const tags = parseScheduleTags(text);
 tags.length
 => 2
 
-tags[0].label
+tags[0]?.label
 => first
 
-tags[1].label
+tags[1]?.label
 => second
 ```
 
@@ -99,20 +99,20 @@ tags.length
 
 ```ts
 const tags = parseScheduleTags('<schedule in="1m">stuff</schedule>');
-tags[0].label
+tags[0]?.label
 => timer
 ```
 
 ## Duration units
 
 ```ts
-parseScheduleTags('<schedule in="30s" label="t">x</schedule>')[0].durationMs
+parseScheduleTags('<schedule in="30s" label="t">x</schedule>')[0]?.durationMs
 => 30000
 
-parseScheduleTags('<schedule in="2h" label="t">x</schedule>')[0].durationMs
+parseScheduleTags('<schedule in="2h" label="t">x</schedule>')[0]?.durationMs
 => 7200000
 
-parseScheduleTags('<schedule in="1d" label="t">x</schedule>')[0].durationMs
+parseScheduleTags('<schedule in="1d" label="t">x</schedule>')[0]?.durationMs
 => 86400000
 ```
 
@@ -160,10 +160,10 @@ const tags = parseScheduleTags(text);
 tags.length
 => 1
 
-tags[0].label
+tags[0]?.label
 => pasta
 
-tags[0].content
+tags[0]?.content
 => Check the pasta on the stove
 ```
 
@@ -173,10 +173,10 @@ The `schedulesFile` option lets per-thread schedule managers use separate files:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const fired = [];
+const fired: string[] = [];
 const manager = new ChatScheduleManager(box.root, {
   schedulesFile: ".beebox/thread-schedules/test-thread.json",
-  onFire: ({ schedule }) => fired.push(schedule.label),
+  onFire: ({ schedule }) => { fired.push(schedule.label); },
 });
 const schedule = manager.addSchedule({ label: "test", alarm: false, announce: null, content: "hello", durationMs: 100 });
 schedule.label

@@ -24,10 +24,11 @@ function invalidSchemaThrows() {
   try {
     // A malformed choice — a bare string where the field wants
     // `{ name, stock? }`. An unfamiliar NAME is fine; a wrong shape is not.
-    cardSchema("bad-theme-example", {
+    // `theme` is typed `{ name, stock? }`; Reflect.apply passes the malformed value to reach the runtime check.
+    Reflect.apply(cardSchema, undefined, ["bad-theme-example", {
       fields: { title: z.string() },
       theme: "velvet",
-    });
+    }]);
     return false;
   } catch (error) {
     return String(error).includes("must be an object");

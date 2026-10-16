@@ -7,9 +7,13 @@ These tests use synthetic data and never contact OpenRouter.
 ```ts setup
 import { parseJevResponse, createJevService, serializeJevRequest } from "../../src/services/jev.js";
 import { JevError } from "../../src/services/jev-wire.js";
-import { parseJudgeResponse, serializeJudgeRequest } from "../../src/services/jev-judge.js";
+import { parseJudgeResponse, serializeJudgeRequest, type JudgeQuestion } from "../../src/services/jev-judge.js";
 import { boundRoutingContexts } from "../../src/core/chat/routing/quick-chat-submit/catalog.js";
+import type { RoutingCandidate } from "../../src/core/chat/routing/policy.js";
 const keys = ["garden", "weekend", "new"];
+function sessionIdOf(candidate: RoutingCandidate | undefined): string | undefined {
+  return candidate?.target.kind === "existing-session" ? candidate.target.sessionId : undefined;
+}
 function response(probabilities: unknown, confidence: unknown = 0.8) {
   return { model: "typesafe/jev-1.13-test", answers: { destination: { type: "choice", probabilities, confidence } } };
 }
@@ -70,8 +74,8 @@ maximum-length captured message containing backslashes and newlines.
 
 ```ts
 const escapedMessage = "garden\\\n".repeat(1500);
-function budgetedRequest(count) {
-  const candidates = Array.from({ length: count }, (_, index) => ({
+function budgetedRequest(count: number) {
+  const candidates: RoutingCandidate[] = Array.from({ length: count }, (_, index) => ({
     id: `c${index}`, label: `Chat ${index}`,
     target: { kind: "existing-session", sessionId: `session-${index}`, contextDir: "" },
     recentContext: "user: garden plans\n".repeat(110),
@@ -86,8 +90,8 @@ const largeRequests = [budgetedRequest(120), budgetedRequest(200)];
 JSON.stringify(largeRequests.map(result => ({
   fits: result.request.length <= 80000,
   count: result.bounded.length,
-  identitiesPreserved: result.bounded.every((candidate, index) => candidate.id === result.candidates[index].id && candidate.target.sessionId === result.candidates[index].target.sessionId),
-  shortened: result.bounded.every(candidate => candidate.contextTruncated && candidate.recentContext.length < 2000),
+  identitiesPreserved: result.bounded.every((candidate, index) => candidate.id === result.candidates[index]?.id && sessionIdOf(candidate) === sessionIdOf(result.candidates[index])),
+  shortened: result.bounded.every(candidate => candidate.contextTruncated && candidate.recentContext !== undefined && candidate.recentContext.length < 2000),
 })))
 => [{"fits":true,"count":120,"identitiesPreserved":true,"shortened":true},{"fits":true,"count":200,"identitiesPreserved":true,"shortened":true}]
 
@@ -106,7 +110,7 @@ const questions = {
   trip: { type: "noul", instructions: "Only school mail counts.", criteria: { true: "The school wrote about the field trip.", false: "It did not." } },
   kind: { type: "choice", instructions: ["Pick the sender type."], criteria: { school: "The school", shop: "A shop" } },
   urgency: { type: "score", instructions: "How soon must the boxholder act?", criteria: ["No action", "This month", "This week"] },
-};
+} satisfies Record<string, JudgeQuestion>;
 const request = JSON.parse(serializeJudgeRequest({
   situation: "This box belongs to a family of four.",
   instructions: "Judge only what the emails say.",

@@ -11,11 +11,21 @@ import {
   projectWorkspace,
 } from "../../../src/components/chat/workspace/state-model.js";
 import { reduceWorkspace } from "../../../src/components/chat/workspace/state-reducer.js";
+import type { PaneId, Viewport, WorkspaceState } from "../../../src/components/chat/workspace/state-types.js";
+import type { SidecarTab } from "../../../src/components/chat/sidecar-tabs.js";
+import type { ViewTarget } from "../../../src/lib/view-url.js";
+import assert from "node:assert/strict";
 
-const target = (path, viewer = null) => ({ path, viewer, params: {}, viewState: null });
-const open = (state, path, at, viewport = "desktop", originatingPane, destinationPane) =>
+const target = (path: string, viewer: string | null = null): ViewTarget => ({ path, viewer, params: {}, viewState: null });
+const open = (state: WorkspaceState, path: string, at: number, viewport: Viewport = "desktop", originatingPane?: PaneId, destinationPane?: PaneId) =>
   reduceWorkspace(state, { type: "openCard", target: target(path), label: path, at, viewport, originatingPane, destinationPane }).state;
-const panes = (state) => `${state.panes.left.paths.join(",")}|${state.panes.right.paths.join(",")}`;
+function tab(state: WorkspaceState, path: string): SidecarTab {
+  const found = state.tabs[path];
+  assert.ok(found);
+  return found;
+}
+const returnPath = (state: WorkspaceState) => (state.mobileView.kind === "chat" ? state.mobileView.returnPath : "card");
+const panes = (state: WorkspaceState) => `${state.panes.left.paths.join(",")}|${state.panes.right.paths.join(",")}`;
 ```
 
 ## The first card opens opposite the chat anchor
@@ -56,7 +66,7 @@ state = reduceWorkspace(state, {
 panes(state)
 => b|a
 
-[Object.keys(state.tabs).length, state.tabs.a.target.viewer, state.panes.right.activePath].join("|")
+[Object.keys(state.tabs).length, tab(state, "a").target.viewer, state.panes.right.activePath].join("|")
 => 2|markdown|a
 ```
 
@@ -172,7 +182,7 @@ state = reduceWorkspace(state, { type: "restoreCards", pane: "left", viewport: "
 state = reduceWorkspace(state, { type: "setViewport", viewport: "mobile" }).state;
 state = reduceWorkspace(state, { type: "selectTab", path: "right", at: 3, viewport: "mobile" }).state;
 state = reduceWorkspace(state, { type: "showChat", pane: "right", viewport: "mobile" }).state;
-[state.chatAnchor, state.mobileView.returnPath, projectWorkspace(state, "mobile").restorePane].join("|")
+[state.chatAnchor, returnPath(state), projectWorkspace(state, "mobile").restorePane].join("|")
 => left|right|right
 
 state = reduceWorkspace(state, { type: "restoreCards", viewport: "mobile" }).state;
@@ -210,7 +220,7 @@ state = reduceWorkspace(state, { type: "closeTab", path: "a", viewport: "mobile"
 [state.layout.kind, state.mobileView.kind, state.panes.left.activePath].join("|")
 => split|chat|
 
-state.mobileView.returnPath
+returnPath(state)
 => null
 ```
 
@@ -244,7 +254,7 @@ let state = reduceWorkspace(createEmptyWorkspaceState(), {
   label: "authored a", at: 1, viewport: "desktop",
 }).state;
 state = open(state, "a", 2);
-JSON.stringify(state.tabs.a.target)
+JSON.stringify(tab(state, "a").target)
 => {"path":"a","viewer":"canvas","params":{"mode":"detail"},"viewState":{"frame":4}}
 ```
 
@@ -262,13 +272,13 @@ let state = reduceWorkspace(createEmptyWorkspaceState(), {
 const retargeted = reduceWorkspace(state, {
   type: "retargetCard",
   fromPath: "old",
-  target: { ...state.tabs.old.target, path: "archive/new" },
+  target: { ...tab(state, "old").target, path: "archive/new" },
 });
 state = retargeted.state;
 JSON.stringify({
   paths: Object.keys(state.tabs),
   pane: state.panes.left,
-  target: state.tabs["archive/new"].target,
+  target: tab(state, "archive/new").target,
   interaction: state.lastInteraction,
   effect: retargeted.effect,
 })
@@ -282,9 +292,9 @@ let pathLabeled = reduceWorkspace(createEmptyWorkspaceState(), {
 pathLabeled = reduceWorkspace(pathLabeled, {
   type: "retargetCard",
   fromPath: "old",
-  target: { ...pathLabeled.tabs.old.target, path: "archive/new" },
+  target: { ...tab(pathLabeled, "old").target, path: "archive/new" },
 }).state;
-pathLabeled.tabs["archive/new"].label
+tab(pathLabeled, "archive/new").label
 => archive/new
 ```
 
@@ -306,7 +316,7 @@ converging = reduceWorkspace(converging, {
 const converged = reduceWorkspace(converging, {
   type: "retargetCard",
   fromPath: "old",
-  target: { ...converging.tabs.old.target, path: "archive/new" },
+  target: { ...tab(converging, "old").target, path: "archive/new" },
 });
 JSON.stringify({
   paths: Object.keys(converged.state.tabs),

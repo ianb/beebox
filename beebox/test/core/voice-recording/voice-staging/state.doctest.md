@@ -8,19 +8,28 @@ refusal for an event that doesn't apply from the current state.
 
 ```ts setup
 import { nextVoiceState } from "../../../../src/core/voice-recording/voice-staging/state.js";
+import type { VoiceEvent } from "../../../../src/core/voice-recording/voice-staging/state.js";
+import type { StagingVoice } from "../../../../src/core/capture/staging-schema.js";
+import { invariant } from "../../../../src/shared/invariant.js";
 
-const NONE_OPEN = { targetSessionId: "chat-1", startedAt: "2026-09-10T18:00:00.000Z", hq: { state: "none" }, handoff: { mode: "open" } };
+const NONE_OPEN: StagingVoice = { targetSessionId: "chat-1", startedAt: "2026-09-10T18:00:00.000Z", hq: { state: "none" }, handoff: { mode: "open" } };
 
-function apply(voice, event) {
+function apply(voice: StagingVoice, event: VoiceEvent) {
   const result = nextVoiceState(voice, event);
   return result.ok ? result.value : { refused: result.error.code };
+}
+/** The next voice for an event that must apply. */
+function applied(voice: StagingVoice, event: VoiceEvent): StagingVoice {
+  const result = nextVoiceState(voice, event);
+  invariant(result.ok, "event applies from this state");
+  return result.value;
 }
 ```
 
 ## `requested`: none → queued, writes `hqRequest`
 
 ```ts
-const requested = apply(NONE_OPEN, {
+const requested = applied(NONE_OPEN, {
   type: "requested", requestedAt: "2026-09-10T18:05:00.000Z", service: "mai-diarized",
   emissionId: "emission-1", sessionId: "chat-1",
 });
@@ -52,7 +61,7 @@ JSON.stringify(apply(requested, {
 ## Job progress: pieceStarted, pieceFailed, allPiecesDone
 
 ```ts continue
-const started = apply(requested, { type: "pieceStarted", piece: 1, pieces: 2, attempt: 1, pieceSeconds: 300 });
+const started = applied(requested, { type: "pieceStarted", piece: 1, pieces: 2, attempt: 1, pieceSeconds: 300 });
 JSON.stringify(started.hq)
 => {"state":"transcribing","piece":1,"pieces":2,"attempt":1,"pieceSeconds":300}
 ```
@@ -60,7 +69,7 @@ JSON.stringify(started.hq)
 A transient failure moves to `retrying`, keeping the piece length:
 
 ```ts continue
-const transientFail = apply(started, {
+const transientFail = applied(started, {
   type: "pieceFailed", classification: "transient", pieceSeconds: 300, attempt: 1,
   nextAttemptAt: "2026-09-10T18:10:00.000Z",
   failure: { code: "http_502", message: "Bad Gateway" },
@@ -73,7 +82,7 @@ JSON.stringify(transientFail.hq)
 piece length:
 
 ```ts continue
-const halved = apply(started, {
+const halved = applied(started, {
   type: "pieceFailed", classification: "piece-too-long", pieceSeconds: 150, attempt: 1,
   nextAttemptAt: "2026-09-10T18:10:00.000Z",
   failure: { code: "http_408", message: "Timeout" },
@@ -85,7 +94,7 @@ JSON.stringify(halved.hq)
 A permanent failure is terminal:
 
 ```ts continue
-const permFail = apply(started, {
+const permFail = applied(started, {
   type: "pieceFailed", classification: "permanent", pieceSeconds: 300, attempt: 1,
   nextAttemptAt: "2026-09-10T18:10:00.000Z",
   failure: { code: "missing_openrouter_key", message: "no key" },
@@ -97,7 +106,7 @@ JSON.stringify(permFail.hq)
 Every piece done → `ready`:
 
 ```ts continue
-const ready = apply(started, {
+const ready = applied(started, {
   type: "allPiecesDone", result: { text: "hello world", diarized: true, service: "mai-diarized", pieces: 2 },
 });
 JSON.stringify(ready.hq)
@@ -117,7 +126,7 @@ JSON.stringify(apply(NONE_OPEN, { type: "pieceStarted", piece: 1, pieces: 1, att
 Expiring a `retrying` state preserves the failure's code/message but marks it exhausted:
 
 ```ts continue
-const expired = apply(transientFail, { type: "expired" });
+const expired = applied(transientFail, { type: "expired" });
 JSON.stringify(expired.hq)
 => {"state":"failed","failure":{"code":"http_502","message":"Bad Gateway","kind":"exhausted"}}
 ```
@@ -125,7 +134,7 @@ JSON.stringify(expired.hq)
 Expiring from `queued` (no prior failure recorded yet) still terminates, with a generic message:
 
 ```ts continue
-const expiredFromQueued = apply(requested, { type: "expired" });
+const expiredFromQueued = applied(requested, { type: "expired" });
 JSON.stringify(expiredFromQueued.hq)
 => {"state":"failed","failure":{"kind":"exhausted","code":"hq_retry_exhausted","message":"HQ transcription retry window elapsed"}}
 ```
@@ -156,7 +165,7 @@ JSON.stringify({ ok: notYet.ok, unchanged: notYet.ok && notYet.value === started
 Claiming once ready transitions the handoff to `claimed`:
 
 ```ts continue
-const claimed = apply(ready, { type: "claimRequested", emissionId: "emission-1" });
+const claimed = applied(ready, { type: "claimRequested", emissionId: "emission-1" });
 JSON.stringify(claimed.handoff)
 => {"mode":"claimed","emissionId":"emission-1"}
 ```
@@ -190,7 +199,7 @@ Falling back before HQ is ready moves to `fellBack`, which is terminal — a
 later HQ result stays on the box and is never delivered as a message:
 
 ```ts continue
-const fellBack = apply(started, { type: "fallBackRequested", emissionId: "emission-1" });
+const fellBack = applied(started, { type: "fallBackRequested", emissionId: "emission-1" });
 JSON.stringify(fellBack.handoff)
 => {"mode":"fellBack","emissionId":"emission-1"}
 ```
@@ -203,7 +212,8 @@ const fellBackAgain = nextVoiceState(fellBack, { type: "fallBackRequested", emis
 JSON.stringify({ ok: fellBackAgain.ok, unchanged: fellBackAgain.ok && fellBackAgain.value === fellBack })
 => {"ok":true,"unchanged":true}
 
-JSON.stringify(apply(fellBack, { type: "allPiecesDone", result: ready.hq.result }).handoff)
+invariant(ready.hq.state === "ready", "ready recording carries its result");
+JSON.stringify(applied(fellBack, { type: "allPiecesDone", result: ready.hq.result }).handoff)
 => {"mode":"fellBack","emissionId":"emission-1"}
 ```
 
@@ -212,7 +222,7 @@ call lands, fallback answers `claimed` with the result instead — the client
 sends HQ text after all:
 
 ```ts continue
-const wonByHq = apply(ready, { type: "fallBackRequested", emissionId: "emission-1" });
+const wonByHq = applied(ready, { type: "fallBackRequested", emissionId: "emission-1" });
 JSON.stringify({ handoff: wonByHq.handoff, hq: wonByHq.hq })
 => {"handoff":{"mode":"claimed","emissionId":"emission-1"},"hq":{"state":"ready","result":{"text":"hello world","diarized":true,"service":"mai-diarized","pieces":2}}}
 ```

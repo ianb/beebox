@@ -34,16 +34,16 @@ const findings = findDuplication([
 findings.length
 => 1
 
-findings[0].a
+findings[0]?.a
 => frag-a
 
-findings[0].b
+findings[0]?.b
 => frag-b
 
-findings[0].words
+findings[0]?.words
 => 16
 
-findings[0].text
+findings[0]?.text
 => the quick brown fox jumps over the lazy dog and then runs away very fast indeed
 ```
 
@@ -78,7 +78,7 @@ const contiguous = findDuplication([
 contiguous.length
 => 1
 
-contiguous[0].words
+contiguous[0]?.words
 => 12
 
 // (b) b contains each of a's five shingles, but as isolated passages separated

@@ -13,6 +13,7 @@ did. The child itself is substituted here — spawning a real CLI is the one par
 of this path with nothing to verify.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { forceWakeup, forceWakeupLines } from "../../../src/cli/commands/force-wakeup.js";
@@ -125,6 +126,8 @@ const box = await boxWith({
   outcome: report({ connectors: [DRIVE_SYNCED], jobsProcessed: 2 }),
 });
 const forced = await forceWakeup({ connector: "google-drive" });
+assert.ok(forced.ok);
+assert.ok(forced.value.outcome);
 JSON.stringify({ calls: box.calls, ok: forced.ok && forced.value.ok })
 => {"calls":[{"triggeredBy":"force-wakeup","connector":"google-drive"}],"ok":true}
 
@@ -156,6 +159,7 @@ const box = await boxWith({
   outcome: report({ connectors: [DRIVE_SYNCED, GMAIL_SKIPPED], jobsProcessed: 2 }),
 });
 const forced = await forceWakeup({});
+assert.ok(forced.ok);
 JSON.stringify(forceWakeupLines(forced.value))
 => ["  google-drive: 3 created, 1 updated, 2 jobs","  gmail: skipped (not-configured): Google is not authorized for this box","reactor: ok, 2 jobs processed, 0 remaining"]
 ```
@@ -186,6 +190,8 @@ const box = await boxWith({
   outcome: report({ skipped: "wakeup-running" }),
 });
 const forced = await forceWakeup({});
+assert.ok(forced.ok);
+assert.ok(forced.value.outcome);
 const summary = { ok: forced.value.ok, skipped: forced.value.outcome.skipped, lines: forceWakeupLines(forced.value), detail: forced.value.detail.split(",")[0] };
 JSON.stringify(summary)
 => {"ok":true,"skipped":"wakeup-running","lines":["wakeup skipped: already running"],"detail":"Another wakeup cycle was already running on this box"}
@@ -203,7 +209,8 @@ Saying so is the whole point: a caller must not take silence for success.
 ```ts
 const box = await boxWith({ ok: true, detail: "", output: "", outcome: null });
 const forced = await forceWakeup({});
-forceWakeupLines(forced.value)[0].split("—")[0].trim()
+assert.ok(forced.ok);
+forceWakeupLines(forced.value)[0]?.split("—")[0]?.trim()
 => The wakeup finished, but produced no outcome line
 ```
 
@@ -224,6 +231,7 @@ const box = await boxWith({
   }),
 });
 const forced = await forceWakeup({ connector: "nope" });
+assert.ok(forced.ok);
 const failed = { ok: forced.value.ok, lines: forceWakeupLines(forced.value) };
 JSON.stringify(failed)
 => {"ok":false,"lines":["  nope: error: Connector not found: nope","reactor: ok, 0 jobs processed, 0 remaining","bbx wakeup exited with code 1"]}

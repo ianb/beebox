@@ -104,10 +104,10 @@ await box.write(
   )
 );
 const result2 = await collectTodos(box.root, { glob: "store/b.doc.card" });
-JSON.stringify(result2.todos[0].seeAlso)
+JSON.stringify(result2.todos[0]?.seeAlso)
 => [{"ref":"store/a.doc.card","note":"he offered to help"}]
 
-result2.todos[0].text
+result2.todos[0]?.text
 => Ping Marcus about the quote.
 ```
 
@@ -163,7 +163,7 @@ badStatusResult.todos.length
 JSON.stringify(badStatusResult.issues.map((i) => i.kind))
 => ["validate"]
 
-badStatusResult.issues[0].message
+badStatusResult.issues[0]?.message
 => line 1: Attribute 'status' must match one of ["open","done","dropped","parked"]. Got 'Done' instead.
 ```
 
@@ -202,10 +202,10 @@ const unknownTypeResult = await collectTodos(box.root, { glob: "store/unknown-ty
 unknownTypeResult.todos.length
 => 0
 
-unknownTypeResult.issues[0].kind
+unknownTypeResult.issues[0]?.kind
 => unknown-type
 
-unknownTypeResult.issues[0].message
+unknownTypeResult.issues[0]?.message
 => no registered schema for card type "memmo"
 ```
 
@@ -220,7 +220,7 @@ const badLoadResult = await collectTodos(box.root, { glob: "store/bad-frontmatte
 badLoadResult.todos.length
 => 0
 
-badLoadResult.issues[0].kind
+badLoadResult.issues[0]?.kind
 => load
 ```
 
@@ -236,10 +236,10 @@ dupResult.todos.map((t) => t.text).join(", ")
 dupResult.issues.length
 => 1
 
-dupResult.issues[0].kind
+dupResult.issues[0]?.kind
 => duplicate-id
 
-dupResult.issues[0].message
+dupResult.issues[0]?.message
 => duplicate todo id "shared" used at: store/dup1.doc.card:5, store/dup2.doc.card:5
 ```
 

@@ -15,12 +15,14 @@ import { BoxPageMenuItems } from "../../../src/components/AppNav/BoxPageMenuItem
 globalThis.React = React;
 
 /** Render the rows at `path`, each as `id: text → href`, with `(active)` on the highlighted row. */
-async function rows(path) {
+async function rows(path: string) {
   const root = createRootRoute({ staticData: { title: null }, component: () => React.createElement(BoxPageMenuItems, { boxSlug: "test1" }) });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: [path] }) });
   await router.load();
   const html = renderToString(React.createElement(RouterProvider, { router }));
-  return [...html.matchAll(/<a\b([^>]*)>(.*?)<\/a>/g)].map(([, attrs, body]) => {
+  return [...html.matchAll(/<a\b([^>]*)>(.*?)<\/a>/g)].map((match) => {
+    const attrs = match[1] ?? "";
+    const body = match[2] ?? "";
     const id = /\bid="([^"]*)"/.exec(attrs)?.[1];
     const href = /\bhref="([^"]*)"/.exec(attrs)?.[1];
     const active = /\bfont-medium\b/.test(attrs) ? " (active)" : "";

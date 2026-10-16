@@ -29,8 +29,8 @@ async function useTempStore() {
 }
 
 /** Run `fn` with console.warn captured; returns [result, warnings]. */
-async function withWarnings(fn) {
-  const warnings = [];
+async function withWarnings<T>(fn: () => Promise<T>): Promise<[T, string[]]> {
+  const warnings: string[] = [];
   const original = console.warn;
   console.warn = (...args) => { warnings.push(args.join(" ")); };
   try {

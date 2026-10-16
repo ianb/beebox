@@ -9,7 +9,7 @@ or a recording it cannot place, names the memo, writes nothing, and exits 1.
 ```ts setup
 import { execFileSync } from "node:child_process";
 import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
-import { planRetireMemo } from "../../../src/scripts/migrate/retire-memo/plan.js";
+import { planRetireMemo, type PlannedWrite } from "../../../src/scripts/migrate/retire-memo/plan.js";
 import { runRetireMemo } from "../../../src/scripts/migrate/retire-memo/run.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
@@ -17,10 +17,15 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 function plan(texts: Record<string, string>, files: string[] = []) {
   return planRetireMemo({ texts: new Map(Object.entries(texts)), files: new Set([...Object.keys(texts), ...files]) });
 }
+/** The text a plan writes to the first path that matches; a missing write is an error. */
+function after(p: ReturnType<typeof plan>, match: (w: PlannedWrite) => boolean): string {
+  const write = p.writes.find(match);
+  if (write === undefined) throw new Error(p.failures.length > 0 ? p.failures.join("; ") : "no such write");
+  return write.after;
+}
 /** The text the plan writes to one path. */
-function written(texts: Record<string, string>, target: string, files: string[] = []) {
-  const p = plan(texts, files);
-  return p.failures.length > 0 ? p.failures : p.writes.find((w) => w.path === target)?.after;
+function written(texts: Record<string, string>, target: string, files: string[] = []): string {
+  return after(plan(texts, files), (w) => w.path === target);
 }
 const memo = (front: string, body = "") => `---\n${front}---\n${body}`;
 /** A quick-capture voice memo whose recording sits in its attach scope. */
@@ -126,7 +131,7 @@ const p = plan(voice, ["c/X.attach/recording.m4a"]);
 [p.moves, p.writes.map((w) => `${w.kind} ${w.path}`)]
 => [[{from:"c/X.attach/recording.m4a",to:"c/X.attach/recording.attach/recording.m4a"}],["audio c/X.attach/recording.audio.card","doc c/X.doc.card"]]
 
-p.writes[0].after
+after(p, (w) => w.kind === "audio")
 =>
 ---
 filename:
@@ -140,7 +145,7 @@ transcription-error:
   message: stale
 ---
 
-p.writes[1].after
+after(p, (w) => w.kind === "doc")
 =>
 ---
 title: Voice note
@@ -156,7 +161,7 @@ link to it because the memo had none.
 
 ```ts
 const sib = plan({ "n/Note.memo.card": memo("status: new\ncreated: 2026-05-01T08:00:00-05:00\nsource: telegram\n") }, ["n/Note.m4a"]);
-[sib.moves, sib.writes.find((w) => w.kind === "doc").after]
+[sib.moves, after(sib, (w) => w.kind === "doc")]
 => [[{from:"n/Note.m4a",to:"n/Note.attach/Note.attach/Note.m4a"}],"---\ntitle: Note\nvia:\n  channel: telegram\n---\n[Recorded audio](attach/Note.audio.card)\n"]
 ```
 
@@ -183,7 +188,7 @@ const refs = plan({
   ...voice,
   "c/Index.doc.card": "---\ntitle: Index\nrefs: [{ref: X.memo.card}]\n---\nSee [it](/c/X.memo.card), `X.memo.card`, and [audio](X.attach/recording.m4a). Not `**/*.memo.card`.\n",
 }, ["c/X.attach/recording.m4a"]);
-refs.writes.find((w) => w.path === "c/Index.doc.card").after
+after(refs, (w) => w.path === "c/Index.doc.card")
 =>
 ---
 title: Index
@@ -219,7 +224,7 @@ again and accepts the pieces already in place. Here the audio card and the
 move landed before the interruption.
 
 ```ts
-const audioCard = plan(voice, ["c/X.attach/recording.m4a"]).writes[0].after;
+const audioCard = after(plan(voice, ["c/X.attach/recording.m4a"]), (w) => w.kind === "audio");
 const moved = plan({ ...voice, "c/X.attach/recording.audio.card": audioCard }, ["c/X.attach/recording.attach/recording.m4a"]);
 [moved.failures, moved.moves, moved.writes.map((w) => `${w.kind} ${w.path}`), moved.deletes]
 => [[],[],["doc c/X.doc.card"],["c/X.memo.card"]]

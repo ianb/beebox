@@ -11,19 +11,19 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import { runChanges } from "../../../src/cli/commands/changes.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { runChanges, type ChangesOptions } from "../../../src/cli/commands/changes.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 
-const card = (title) => `---\ntitle: ${title}\n---\n${title} body\n`;
+const card = (title: string) => `---\ntitle: ${title}\n---\n${title} body\n`;
 
 /** Run with output captured; returns stdout, stderr lines, and the exit code. */
-async function changes(box, options, env = {}) {
-  const out = [];
+async function changes(box: TmpBox, options: Partial<ChangesOptions>, env: NodeJS.ProcessEnv = {}) {
+  const out: string[] = [];
   const origLog = console.log;
   const origErr = console.error;
   console.log = (...args) => { out.push(args.join(" ")); };
   console.error = (...args) => { out.push(`stderr: ${args.join(" ")}`); };
-  let code;
+  let code: number | undefined;
   try {
     code = await runChanges(box.root, { options: { match: [], ...options }, env });
   } finally {
@@ -203,7 +203,7 @@ note.
 ```ts
 const mail = await makeTmpBox({ git: true });
 const thread = "_content/inbox/email/Field-trip.email-thread.attach";
-const message = (n) => `---\ntype: email-message\nemail:\n  subject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
+const message = (n: number) => `---\ntype: email-message\nemail:\n  subject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
 const start = execSync("git rev-parse HEAD", { cwd: mail.root }).toString().trim();
 await mail.write(`${thread}/msg-001.email-message.card`, message(1));
 await mail.write(`${thread}/msg-001.attach/msg-001.body.txt`, "Sign the permission form by Friday.\n");

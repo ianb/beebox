@@ -7,6 +7,7 @@ the raw `/api/actions/answer` duplicate was removed.)
 
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import { bodyField } from "../../helpers/doctest-helpers.js";
 ```
 
 ## Creating a card
@@ -29,10 +30,10 @@ res.statusCode
 ```
 
 ```ts continue
-res.body.success
+bodyField(res.body, "success")
 => true
 
-res.body.path
+bodyField(res.body, "path")
 => _content/inbox/new.doc.card
 ```
 

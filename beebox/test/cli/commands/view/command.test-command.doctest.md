@@ -5,7 +5,7 @@ server — and prints the output, or on failure the error with a source-mapped
 stack. It loads the same cards the running app would pass the view.
 
 ```ts setup
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -26,14 +26,20 @@ async function makeViewBox() {
 }
 
 // Views live at `<boxRoot>/src/views`.
-async function writeView(box, rel, content) {
+async function writeView(box: TmpBox, rel: string, content: string) {
   const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);
 }
 
 // Run the prebuilt CLI with the box as cwd (requireBoxRoot walks up from there).
-function runViewTest(boxRoot, args) {
+interface ViewTestResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+function runViewTest(boxRoot: string, args: string[]): Promise<ViewTestResult> {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [join(PKG, "dist/cli.mjs"), "view", "test", ...args], { cwd: boxRoot });
     let stdout = "";

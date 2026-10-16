@@ -61,7 +61,7 @@ Appends a run record to the state and prunes old entries. Mutates the state obje
 
 ```ts setup
 function freshState() {
-  return { lastRun: null, lastResult: null, lastError: null, lastDurationMs: null, runCount: 0 };
+  return normalizeScriptState({});
 }
 ```
 
@@ -78,7 +78,7 @@ recordRun(state2, {
 state2.recentRuns.length
 => 1
 
-state2.recentRuns[0].ts
+state2.recentRuns[0]?.ts
 => 2026-03-01T12:00:00Z
 ```
 
@@ -116,7 +116,7 @@ recordOutcome(st, {
 print(`consecutiveFailures: ${st.consecutiveFailures}`);
 print(`lastSuccess: ${st.lastSuccess}`);
 print(`latch: ${st.alertedAt}, ${st.alertedFor}`);
-print(`runCount: ${st.runCount}, recentRuns: ${st.recentRuns.length}`);
+print(`runCount: ${st.runCount}, recentRuns: ${st.recentRuns?.length}`);
 =>
 consecutiveFailures: 0
 lastSuccess: 2026-03-01T14:00:00.000Z
@@ -169,21 +169,21 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-const saved = {
+const saved = normalizeScriptState({
   lastRun: "2025-01-15T06:00:00Z",
   lastResult: "success",
   lastError: null,
   lastDurationMs: 8300,
   runCount: 3,
   recentRuns: [{ ts: "2025-01-15T06:00:00Z", durationMs: 8300 }],
-};
+});
 await saveScriptState({ boxRoot: box.root, scriptName: "test-script", state: saved });
 const loaded = await loadScriptState(box.root, "test-script");
 print(`lastRun: ${loaded.lastRun}`);
 print(`lastResult: ${loaded.lastResult}`);
 print(`lastDurationMs: ${loaded.lastDurationMs}`);
 print(`runCount: ${loaded.runCount}`);
-print(`recentRuns: ${loaded.recentRuns.length}`);
+print(`recentRuns: ${loaded.recentRuns?.length}`);
 =>
 lastRun: 2025-01-15T06:00:00Z
 lastResult: success
@@ -207,7 +207,7 @@ const running = await loadRunningScripts(box.root);
 print(`running: ${running.size}`);
 print(`has my-script: ${running.has("my-script")}`);
 const lock = running.get("my-script");
-print(`triggeredBy: ${lock.triggeredBy}`);
+print(`triggeredBy: ${lock?.triggeredBy}`);
 =>
 running: 1
 has my-script: true
@@ -241,7 +241,7 @@ const box = await makeTmpBox();
 await acquireScriptLock({ boxRoot: box.root, scriptName: "grouped", triggeredBy: "schedule", lockGroup: "agents" });
 const running = await loadRunningScripts(box.root);
 const lock = running.get("grouped");
-print(`lockGroup: ${lock.lockGroup}`);
+print(`lockGroup: ${lock?.lockGroup}`);
 =>
 lockGroup: agents
 ```

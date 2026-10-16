@@ -10,7 +10,7 @@ import { installTemplateFile, listParkedTemplateUpdates } from "../../src/core/i
 import { readTemplateUpdate, resolveTemplateUpdate, recordAutomatedTemplateRewrite } from "../../src/core/template-update.js";
 import { templateCommand } from "../../src/cli/commands/template.js";
 
-const boxes = [];
+const boxes: string[] = [];
 async function box() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-template-resolution-"));
   boxes.push(root);
@@ -18,8 +18,8 @@ async function box() {
 }
 const rel = "_config/example.guide.card";
 const v1 = "heading\nlocal line\nseparator\nupstream line\nfooter\n";
-async function seed(root) { await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v1 }); }
-async function write(root, content) { await fs.writeFile(path.join(root, rel), content); }
+async function seed(root: string) { await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v1 }); }
+async function write(root: string, content: string) { await fs.writeFile(path.join(root, rel), content); }
 ```
 
 A clean merge records the new stock hash and does not re-park on the next install:
@@ -128,7 +128,7 @@ let aliasError = "";
 try {
   await resolveTemplateUpdate({ boxRoot: root, relPath: `./${rel}`, accept: false });
 } catch (error) {
-  aliasError = error.name;
+  aliasError = error instanceof Error ? error.name : String(error);
 }
 aliasError
 => InvalidTemplatePathError
@@ -190,10 +190,10 @@ await write(root, v1.replace("local line", "box edit"));
 await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v1.replace("local line", "upstream edit") });
 const cwd = process.cwd();
 const originalLog = console.log;
-const lines = [];
+const lines: string[] = [];
 try {
   process.chdir(root);
-  console.log = (line) => lines.push(line);
+  console.log = (line: string) => lines.push(line);
   await templateCommand.parseAsync(["diff", rel], { from: "user" });
   await templateCommand.parseAsync(["accept", rel], { from: "user" });
 } finally {

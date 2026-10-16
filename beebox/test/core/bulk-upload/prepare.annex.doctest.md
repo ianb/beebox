@@ -15,6 +15,7 @@ and no test in either tier could see it. Where git-annex is not installed the
 assertions degrade to a recorded skip rather than a false pass.
 
 ```ts setup
+import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -104,6 +105,7 @@ annexed `.gitattributes` would be a pointer where git expects rules.
 const { repo, box } = await makeAnnexBox();
 const id = await stageMixedBatch(box);
 const batch = await prepareBulkBatch({ boxRoot: box, id, contextDir: "" });
+assert.ok(batch);
 ANNEX ? classify(repo, batch.attachRelDir) : "skipped: git-annex not installed"
 =>
 .gitattributes in-git

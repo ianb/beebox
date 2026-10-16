@@ -10,6 +10,14 @@ output of `buildCaptureWrapper`.
 ```ts setup
 import { parseCaptureWrapper, captureChipLabel } from "../../../src/components/chat/capture-message.js";
 import { buildCaptureWrapper } from "../../../../core/capture/prepare/deliver.js";
+import assert from "node:assert/strict";
+
+/** Parse a wrapper that must be a capture. */
+function chipOf(wrapper: string) {
+  const model = parseCaptureWrapper(wrapper);
+  assert.ok(model);
+  return model;
+}
 ```
 
 ## The exact wrapper from `buildCaptureWrapper` round-trips into the chip model
@@ -28,7 +36,7 @@ JSON.stringify(parseCaptureWrapper(wrapper))
 The chip label reads the counts:
 
 ```ts continue
-captureChipLabel(parseCaptureWrapper(wrapper))
+captureChipLabel(chipOf(wrapper))
 => Capture — 3 photos, 4:10 audio
 ```
 
@@ -43,7 +51,7 @@ const wrapper = buildCaptureWrapper({
   partial: true,
   transcriptionFailed: true,
 });
-const model = parseCaptureWrapper(wrapper);
+const model = chipOf(wrapper);
 JSON.stringify([model.partial, model.transcriptionFailed, model.images, model.audio])
 => [true,true,1,"0:05"]
 
@@ -60,7 +68,7 @@ const wrapper = buildCaptureWrapper({
   audioSeconds: 0,
   summary: "2 photos",
 });
-const model = parseCaptureWrapper(wrapper);
+const model = chipOf(wrapper);
 JSON.stringify([model.audio, captureChipLabel(model)])
 => ["0:00","Capture — 2 photos"]
 ```

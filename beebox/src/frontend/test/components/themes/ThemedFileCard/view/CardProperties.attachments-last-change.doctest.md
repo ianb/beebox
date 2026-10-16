@@ -15,6 +15,8 @@ import { createTRPCClient } from "@trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { observable } from "@trpc/server/observable";
 import { trpc } from "../../../../../src/lib/trpc/client.js";
+import type { RouterOutput } from "../../../../../src/lib/trpc/client.js";
+import type { AppRouter } from "@backend/trpc/routers.js";
 import { CardAttachments, attachmentEntries } from "../../../../../src/components/themes/ThemedFileCard/view/CardAttachments.js";
 import { CardLastChange } from "../../../../../src/components/themes/ThemedFileCard/view/CardLastChange.js";
 
@@ -26,29 +28,32 @@ const cardPath = "_content/projects/Porch.doc.card";
  * Render a section at `/test1` (the box slug) inside a router and a tRPC
  * client that never answers, with the query cache seeded by `seed(queryClient)`.
  */
-async function render(element, seed = () => undefined) {
+async function render(element: React.ReactElement, seed: (queryClient: QueryClient) => void = () => undefined): Promise<string> {
   const root = createRootRoute({ staticData: { title: null } });
   const box = createRoute({ getParentRoute: () => root, path: "$boxSlug", staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root.addChildren([box]), history: createMemoryHistory({ initialEntries: ["/test1"] }) });
   await router.load();
   const queryClient = new QueryClient();
   seed(queryClient);
-  const client = createTRPCClient({ links: [() => () => observable(() => () => {})] });
-  return renderToString(React.createElement(trpc.Provider, { client, queryClient },
-    React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(RouterProvider, { router }))));
+  const client = createTRPCClient<AppRouter>({ links: [() => () => observable(() => () => {})] });
+  return renderToString(React.createElement(trpc.Provider, {
+    client,
+    queryClient,
+    children: React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(RouterProvider, { router })),
+  }));
 }
 
-function textOf(html) {
+function textOf(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/<!-- -->/g, "").replace(/\s+/g, " ").trim();
 }
 
 const noop = () => undefined;
 const scope = "_content/projects/Porch.attach";
-const emptyListing = { path: scope, dirs: [], cards: [], files: [], background: false };
+const emptyListing: RouterOutput["status"]["browse"] = { path: scope, dirs: [], cards: [], files: [], background: false };
 
 /** Seed the attach scope's `status.browse` answer. */
-function listing(answer) {
-  return (queryClient) => { queryClient.setQueryData(getQueryKey(trpc.status.browse, { path: scope }, "query"), answer); };
+function listing(answer: RouterOutput["status"]["browse"]) {
+  return (queryClient: QueryClient) => { queryClient.setQueryData(getQueryKey(trpc.status.browse, { path: scope }, "query"), answer); };
 }
 ```
 
@@ -59,8 +64,8 @@ other files, each labelled by its path inside the scope.
 
 ```ts
 attachmentEntries("_content/projects/Porch.attach", {
-  dirs: [{ name: "scans", fileCount: 2 }],
-  cards: [{ relativePath: "_content/projects/Porch.attach/Quote.doc.card", name: "Quote", type: "doc" }],
+  dirs: [{ name: "scans", fileCount: 2, summary: { background: false, hasEntryPoint: false, primaryCount: 0 } }],
+  cards: [{ relativePath: "_content/projects/Porch.attach/Quote.doc.card", name: "Quote", type: "doc", prominence: "ordinary" }],
   files: [{ relativePath: "_content/projects/Porch.attach/photo.jpg", name: "photo.jpg" }],
 })
 => [
@@ -102,7 +107,7 @@ textOf(await render(React.createElement(CardAttachments, { path: cardPath, onNav
 A card with no commits yet says so, and offers no History link:
 
 ```ts
-const changed = await render(React.createElement(CardLastChange, { path: cardPath, onNavigate: noop }), (queryClient) => {
+const changed = await render(React.createElement(CardLastChange, { path: cardPath, onNavigate: noop }), (queryClient: QueryClient) => {
   queryClient.setQueryData(getQueryKey(trpc.history.list, { filter: { path: cardPath }, count: 1 }, "query"), { commits: [], nextCursor: undefined });
 });
 [textOf(changed), changed.includes("<a")]
@@ -113,7 +118,7 @@ With a commit, the line carries the full date as its tooltip, and "History"
 links to the History card filtered to this card's path:
 
 ```ts
-const committed = await render(React.createElement(CardLastChange, { path: cardPath, onNavigate: noop }), (queryClient) => {
+const committed = await render(React.createElement(CardLastChange, { path: cardPath, onNavigate: noop }), (queryClient: QueryClient) => {
   queryClient.setQueryData(getQueryKey(trpc.history.list, { filter: { path: cardPath }, count: 1 }, "query"),
     { commits: [{ hash: "abc123", date: "2026-10-03T09:30:00Z", subject: "Add porch quotes" }], nextCursor: undefined });
 });

@@ -13,17 +13,22 @@ import {
   decideOnStatus,
   hqStatusLine,
 } from "../../../src/lib/audio/hq-wait.js";
+import type { HqWaitDeps, VoiceHqResult, VoiceHqState } from "../../../src/lib/audio/hq-wait.js";
 
-const READY = { text: "clean words", diarized: false, service: "mai", pieces: 1 };
+type ClaimReply = Awaited<ReturnType<HqWaitDeps["claim"]>>;
+type FallBackReply = Awaited<ReturnType<HqWaitDeps["fallBack"]>>;
+type StatusHandlers = Parameters<HqWaitDeps["subscribe"]>[0];
+
+const READY: VoiceHqResult = { text: "clean words", diarized: false, service: "mai", pieces: 1 };
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 
-function fakeBox(opts?: { claim?: unknown; fallBack?: unknown; fallBackFails?: number }) {
+function fakeBox(opts?: { claim?: ClaimReply; fallBack?: FallBackReply; fallBackFails?: number }) {
   const calls: string[] = [];
-  let hq: unknown = { state: "queued" };
-  let handlers: { onStatus: (e: unknown) => void; onConnect: () => void } | null = null;
+  let hq: VoiceHqState = { state: "queued" };
+  let handlers: StatusHandlers | null = null;
   let expire = () => {};
   let fallBackFailures = opts?.fallBackFails ?? 0;
-  const deps = {
+  const deps: HqWaitDeps = {
     status: async (recordingId: string) => {
       calls.push("status");
       return { recordingId, hq, handoff: { mode: "open" }, sealed: true, service: "mai" };
@@ -37,11 +42,11 @@ function fakeBox(opts?: { claim?: unknown; fallBack?: unknown; fallBackFails?: n
       if (fallBackFailures > 0) { fallBackFailures -= 1; throw new Error("502"); }
       return opts?.fallBack ?? { outcome: "fellBack" };
     },
-    subscribe: (h: { onStatus: (e: unknown) => void; onConnect: () => void }) => {
+    subscribe: (h) => {
       handlers = h;
       return () => { calls.push("unsubscribe"); };
     },
-    startBudget: (b: { onExpire: () => void }) => {
+    startBudget: (b) => {
       expire = b.onExpire;
       return { stop: () => { calls.push("budget stopped"); } };
     },
@@ -50,14 +55,14 @@ function fakeBox(opts?: { claim?: unknown; fallBack?: unknown; fallBackFails?: n
   return {
     deps,
     calls,
-    setHq: (next: unknown) => { hq = next; },
-    event: (next: unknown) => handlers?.onStatus({ recordingId: "rec", hq: next }),
+    setHq: (next: VoiceHqState) => { hq = next; },
+    event: (next: VoiceHqState) => handlers?.onStatus({ recordingId: "rec", hq: next }),
     reconnect: () => handlers?.onConnect(),
     expire: () => expire(),
   };
 }
 
-function request(box: ReturnType<typeof fakeBox>, opts?: { sendLive?: Promise<void> }) {
+function request(opts?: { sendLive?: Promise<void> }) {
   const progress: string[] = [];
   return {
     progress,
@@ -75,7 +80,13 @@ function request(box: ReturnType<typeof fakeBox>, opts?: { sendLive?: Promise<vo
 ## The decision a status implies
 
 ```ts
-["none", "queued", "transcribing", "retrying", "ready"].map((state) => decideOnStatus({ state }).kind).join(",")
+([
+  { state: "none" },
+  { state: "queued" },
+  { state: "transcribing", piece: 1, pieces: 1, attempt: 1, pieceSeconds: 300 },
+  { state: "retrying", attempt: 1, pieceSeconds: 300, nextAttemptAt: "2026-09-10T18:00:40.000Z", failure: { kind: "transient", code: "http_408", message: "provider timed out" } },
+  { state: "ready", result: READY },
+] satisfies VoiceHqState[]).map((hq) => decideOnStatus(hq).kind).join(",")
 => wait,wait,wait,wait,claim
 
 JSON.stringify(decideOnStatus({ state: "failed", failure: { kind: "permanent", code: "http_401", message: "missing key" } }))
@@ -103,7 +114,7 @@ own recording only.
 
 ```ts
 const box = fakeBox();
-const { req, progress } = request(box);
+const { req, progress } = request();
 const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 box.calls.join(",")
@@ -128,7 +139,7 @@ When the stream reconnects, the re-query sees `ready`:
 
 ```ts
 const box = fakeBox();
-const { req } = request(box);
+const { req } = request();
 const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 box.setHq({ state: "ready", result: READY });
@@ -144,7 +155,7 @@ box.calls.filter((c) => c === "status").length
 
 ```ts
 const box = fakeBox();
-const { req } = request(box);
+const { req } = request();
 const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 box.expire();
@@ -160,7 +171,7 @@ result and the HQ text is sent after all:
 
 ```ts
 const box = fakeBox({ fallBack: { outcome: "claimed", result: READY } });
-const { req } = request(box);
+const { req } = request();
 const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 box.expire();
@@ -174,7 +185,7 @@ box.expire();
 let tap = () => {};
 const sendLive = new Promise<void>((resolve) => { tap = resolve; });
 const box = fakeBox();
-const { req } = request(box, { sendLive });
+const { req } = request({ sendLive });
 const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 tap();
@@ -191,7 +202,7 @@ sealed recording is GC'd from the box on its own schedule regardless:
 
 ```ts continue
 const unreachable = fakeBox({ fallBackFails: 1 });
-const { req: req2 } = request(unreachable);
+const { req: req2 } = request();
 const outcome2 = createHqWaiter(unreachable.deps).wait(req2);
 await flush();
 unreachable.expire();
@@ -203,7 +214,7 @@ JSON.stringify(await outcome2)
 
 ```ts
 const box = fakeBox();
-const { req } = request(box);
+const { req } = request();
 const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 box.event({ state: "failed", failure: { kind: "permanent", code: "missing_openrouter_key", message: "No OpenRouter key is configured" } });

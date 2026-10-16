@@ -12,9 +12,9 @@ each gets essentially the whole pipe and stays done.
 import { UploadQueue } from "../../src/lib/upload-queue.js";
 
 /** A task that resolves only when told to, recording its start order. */
-function makeTask(label, log) {
-  let release;
-  const gate = new Promise((resolve) => { release = resolve; });
+function makeTask(label: string, log: string[]) {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => { release = resolve; });
   return {
     release,
     run: () => { log.push(`start:${label}`); return gate.then(() => { log.push(`end:${label}`); }); },
@@ -31,7 +31,7 @@ Three tasks are accepted immediately, but only the first runs. The second does
 not start until the first has finished:
 
 ```ts
-const log = [];
+const log: string[] = [];
 const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
 const a = makeTask("a", log), b = makeTask("b", log), c = makeTask("c", log);
 
@@ -72,7 +72,7 @@ behind a 10 MB photo would still sit out the whole photo, which on the link that
 motivated this is minutes. Its own slot is what actually keeps audio near-live:
 
 ```ts
-const log = [];
+const log: string[] = [];
 const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
 const photo = makeTask("photo", log);
 const audio = makeTask("audio", log);
@@ -113,7 +113,7 @@ on different capacity. Here three audio chunks queue up in their own lane while
 the photo proceeds untouched:
 
 ```ts
-const log = [];
+const log: string[] = [];
 const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
 const photo = makeTask("photo", log);
 const chunks = [makeTask("audio-1", log), makeTask("audio-2", log), makeTask("audio-3", log)];
@@ -146,7 +146,7 @@ Within the small lane, chunks keep their arrival order — audio must land in th
 sequence it was recorded:
 
 ```ts
-const log = [];
+const log: string[] = [];
 const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
 const first = makeTask("audio-1", log), second = makeTask("audio-2", log), third = makeTask("audio-3", log);
 
@@ -170,7 +170,7 @@ A rejection is the task's own outcome — `run` rejects with it, and the queue
 keeps moving. (An upload that gave up must not wedge every upload behind it.)
 
 ```ts
-const log = [];
+const log: string[] = [];
 const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
 const failing = q.run(() => Promise.reject(new Error("boom")), { priority: false });
 const after = q.run(() => { log.push("ran-after"); return Promise.resolve("ok"); }, { priority: false });
@@ -190,7 +190,7 @@ const caught = await failing.then(() => "resolved", (e) => `rejected:${e.message
 The bulk lane is not hard-wired to 1 — a concurrency of 2 admits exactly two:
 
 ```ts
-const log = [];
+const log: string[] = [];
 const q = new UploadQueue({ concurrency: 2, priorityConcurrency: 1 });
 const a = makeTask("a", log), b = makeTask("b", log), c = makeTask("c", log);
 const all = Promise.all([

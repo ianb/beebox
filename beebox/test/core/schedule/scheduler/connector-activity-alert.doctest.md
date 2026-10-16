@@ -15,6 +15,8 @@ import { syncConnector, addDays, loadConnectorActivity } from "../../../../src/c
 import { updateConnectorEpisodes } from "../../../../src/core/schedule/scheduler/connector-activity-alert.js";
 import { connectorActivityHealthChecks } from "../../../../src/webapp/trpc/routers/health/checks/connectors.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import type { SyncResult } from "../../../../src/connectors.js";
+import { invariant } from "../../../../src/shared/invariant.js";
 
 async function seedBox() {
   const box = await makeTmpBox({ git: true });
@@ -24,22 +26,22 @@ async function seedBox() {
 }
 
 const FIRST_DAY = "2026-08-15";
-const at = (day) => new Date(`${day}T15:00:00Z`);
+const at = (day: string) => new Date(`${day}T15:00:00Z`);
 
 /** One sync per day: `P` brings in a new thread, `Z` succeeds with nothing new, `E` fails. */
-async function runDays(boxRoot, { start, pattern }) {
+async function runDays(boxRoot: string, { start, pattern }: { start: string; pattern: string }) {
   let day = start;
   for (const char of pattern) {
-    const result = char === "P" ? { success: true, created: [`_content/inbox/email/${day}.email-thread.card`], updated: [] }
+    const result: SyncResult = char === "P" ? { success: true, created: [`_content/inbox/email/${day}.email-thread.card`], updated: [] }
       : char === "Z" ? { success: true, created: [], updated: ["_content/inbox/email/old.email-thread.card"] }
       : { success: true, created: [], updated: [], error: "invalid_grant" };
-    await syncConnector({ name: "gmail", produces: [], inboxPaths: [], sync: async () => result }, { boxRoot, now: at(day) });
+    await syncConnector({ name: "gmail", inboxPaths: [], sync: async () => result }, { boxRoot, now: at(day) });
     day = addDays(day, 1);
   }
   return addDays(day, -1);
 }
 
-function caller(boxRoot, isOwner) {
+function caller(boxRoot: string, isOwner: boolean) {
   return appRouter.createCaller({
     boxRoot,
     boxSlug: "test",
@@ -47,6 +49,7 @@ function caller(boxRoot, isOwner) {
       emit: () => 0,
       emitTransient: () => {},
       readSince: () => [],
+      readRecent: () => [],
       subscribe: () => ({ unsubscribe: () => {} }),
       prune: () => 0,
       close: () => {},
@@ -55,6 +58,8 @@ function caller(boxRoot, isOwner) {
     user: { email: "owner@example.com", name: "Owner" },
     authed: true,
     isOwner,
+    isAuthenticatedOwner: isOwner,
+    actor: isOwner ? "user" : "none",
   });
 }
 ```
@@ -75,7 +80,7 @@ JSON.stringify(await updateConnectorEpisodes(box.root, { now: at(day3) }))
 => {"connectors":["gmail"]}
 
 const [warning] = await connectorActivityHealthChecks(box.root, { now: at(day3) });
-warning.message
+warning?.message
 => gmail has brought in nothing new on its last 3 days of syncing since 2026-09-14 (more than 2 days without something new is unusual for it). Syncs are still succeeding, so check whether a filter, permission or upstream change stopped it.
 
 (await readRecent(box.root, { days: 1, now: at(day3) })).length
@@ -98,6 +103,7 @@ await updateConnectorEpisodes(box.root, { now: at(day4) })
 
 ```ts continue
 const [check] = await connectorActivityHealthChecks(box.root, { now: at(day4) });
+invariant(check, "the quiet connector raises a warning");
 `${check.name} | ${check.ok} | ${check.actions}`
 => connector-activity:gmail | false | dismiss-connector-episode
 
@@ -125,14 +131,14 @@ const recovered = await runDays(box.root, { start: addDays(day4, 1), pattern: "P
 await updateConnectorEpisodes(box.root, { now: at(recovered) })
 => null
 
-(await loadConnectorActivity(box.root)).connectors.gmail.episode
+(await loadConnectorActivity(box.root)).connectors.gmail?.episode
 => null
 
 const failing = await runDays(box.root, { start: addDays(recovered, 1), pattern: "EE" });
 JSON.stringify(await updateConnectorEpisodes(box.root, { now: at(failing) }))
 => {"connectors":["gmail"]}
 
-(await connectorActivityHealthChecks(box.root, { now: at(failing) }))[0].message.includes("gmail has failed every sync on its last 2 days of running")
+(await connectorActivityHealthChecks(box.root, { now: at(failing) }))[0]?.message.includes("gmail has failed every sync on its last 2 days of running")
 => true
 ```
 
@@ -146,6 +152,7 @@ await box.cleanup();
 const box = await seedBox();
 await box.seed("_bookkeeping/connectors/connector-activity.state.json", "{\"version\":2}");
 const [check] = await connectorActivityHealthChecks(box.root, { now: at(FIRST_DAY) });
+invariant(check, "a damaged record raises a warning");
 `${check.name} | ${check.ok} | ${check.message.includes("is invalid")}`
 => connector-activity | false | true
 ```

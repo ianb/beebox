@@ -8,12 +8,14 @@ naming the plugin, the card, and the error, and linting continues. The
 
 ```ts setup
 import { pluginLintIssues } from "../../../../src/core/card-lint/core/plugin-lint.js";
+import type { PluginDefinition } from "../../../../src/cards/plugin-definition.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-const fixturePlugin = (lintCards) => ({
+const fixturePlugin = (lintCards: NonNullable<PluginDefinition["lintCards"]>): PluginDefinition => ({
   name: "courseware",
   description: "Fixture standing in for courseware",
   docs: "src/plugins/courseware/README.md",
+  schemas: undefined,
   lintCards,
 });
 

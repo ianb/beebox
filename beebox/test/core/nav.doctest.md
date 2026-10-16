@@ -159,7 +159,7 @@ const missing = await resolveNav(box.root);
 JSON.stringify(missing.status === "ok" ? missing.problems : null)
 => ["ref \"/_content/gone/Missing.doc.card\" does not point at an existing file"]
 
-JSON.stringify(missing.status === "ok" ? missing.entries[0].target : null)
+JSON.stringify(missing.status === "ok" ? missing.entries[0]?.target : null)
 => "_content/gone/Missing.doc.card"
 ```
 

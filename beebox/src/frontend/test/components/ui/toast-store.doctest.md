@@ -13,16 +13,17 @@ a real 10s wait — the same seam the React viewport never touches (it uses the
 default `setTimeout`).
 
 ```ts setup
+import assert from "node:assert/strict";
 import { createToastStore } from "../../../src/components/ui/toast-store.js";
 
 // A controllable stand-in for setTimeout: records each armed expiry so the
 // test fires it by hand. Returns a cancel that removes it (what a repeat /
 // dismiss calls before re-arming), so `pending()` reflects live timers.
 function makeFakeSchedule() {
-  const timers = new Map();
+  const timers = new Map<number, () => void>();
   let seq = 0;
   return {
-    schedule: (bbx) => {
+    schedule: (bbx: () => void) => {
       const key = ++seq;
       timers.set(key, bbx);
       return () => timers.delete(key);
@@ -50,7 +51,7 @@ store.error("Failed to load earlier messages");
 store.getSnapshot().length
 => 2
 
-store.getSnapshot()[1].detail
+store.getSnapshot()[1]?.detail
 => undefined
 ```
 
@@ -169,7 +170,7 @@ destination is a URL and an anchor gets middle-click and keyboard activation
 for free:
 
 ```ts continue
-JSON.stringify(store.getSnapshot()[0].action)
+JSON.stringify(store.getSnapshot()[0]?.action)
 => {"label":"Sign in","href":"/auth/login?returnTo=%2Fchat"}
 ```
 
@@ -188,14 +189,16 @@ in. The second 401 is more of the same condition, not evidence it is ending:
 
 ```ts continue
 store.error("Your session has ended, so the box stopped answering.", { persist: true });
-JSON.stringify({ pending: clock.pending(), count: store.getSnapshot()[0].count })
+JSON.stringify({ pending: clock.pending(), count: store.getSnapshot()[0]?.count })
 => {"pending":0,"count":2}
 ```
 
 Dismissing still works — the person can put it away once they have read it:
 
 ```ts continue
-store.dismiss(store.getSnapshot()[0].id);
+const [persistent] = store.getSnapshot();
+assert.ok(persistent);
+store.dismiss(persistent.id);
 store.getSnapshot().length
 => 0
 ```

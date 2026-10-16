@@ -121,7 +121,7 @@ await box.write(
 const content = await box.read("box/jobs/x.intake.job.card");
 
 const desc = await buildJobDescription(
-  { card: { file: "x.intake.job.card", priority: "normal" }, relPath: "box/jobs/x.intake.job.card", content },
+  { card: { file: "x.intake.job.card", priority: "normal", createdAt: null }, relPath: "box/jobs/x.intake.job.card", content },
   box.root,
 );
 
@@ -151,7 +151,7 @@ await box.write(
 const content = await box.read("box/jobs/z.intake.job.card");
 
 const desc = await buildJobDescription(
-  { card: { file: "z.intake.job.card", priority: "low" }, relPath: "box/jobs/z.intake.job.card", content },
+  { card: { file: "z.intake.job.card", priority: "low", createdAt: null }, relPath: "box/jobs/z.intake.job.card", content },
   box.root,
 );
 
@@ -187,7 +187,7 @@ await box.write(
 const content = await box.read("box/jobs/y.intake.job.card");
 
 const desc = await buildJobDescription(
-  { card: { file: "y.intake.job.card", priority: "normal" }, relPath: "box/jobs/y.intake.job.card", content },
+  { card: { file: "y.intake.job.card", priority: "normal", createdAt: null }, relPath: "box/jobs/y.intake.job.card", content },
   box.root,
 );
 

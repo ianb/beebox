@@ -38,19 +38,19 @@ const docs = await docsFor(
 docs.length
 => 1
 
-docs[0].id
+docs[0]?.id
 => _content/inbox/Dentist_Call.doc.card#
 
-docs[0].kind
+docs[0]?.kind
 => doc
 
-docs[0].title
+docs[0]?.title
 => Dentist call
 
-docs[0].contains
+docs[0]?.contains
 => Dentist moved to June 17; confirmation in this email.
 
-docs[0].content
+docs[0]?.content
 => The dentist called — appointment moved to June 17.
 ```
 
@@ -61,10 +61,10 @@ const docs = await docsFor(
   "_content/inbox/email/t.attach/msg-001.email-message.card",
   "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: alice@example.com\n  to: bob@example.com\n  received: 2026-05-14T19:00:00Z\n  subject: Weekend plans\n  snippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
 );
-docs[0].title
+docs[0]?.title
 => Weekend plans
 
-docs[0].content
+docs[0]?.content
 => Weekend plans
 alice@example.com
 bob@example.com
@@ -81,10 +81,10 @@ const docs = await docsFor(
   "_content/inbox/email/thread-x.email-thread.card",
   "---\nemail:\n  thread-id: t1\n  subject: Usage-based pricing demo\n  participants:\n    - hello@metricly.example\n  date-range:\n    start: 2026-05-14T19:00:00Z\n    end: 2026-05-14T19:00:00Z\n  labels:\n    - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
 );
-docs[0].title
+docs[0]?.title
 => Usage-based pricing demo
 
-docs[0].content
+docs[0]?.content
 => Usage-based pricing demo
 hello@metricly.example
 promotions
@@ -101,10 +101,10 @@ JSON.stringify(declareInputFiles({ path, card }))
 
 const inputContents = new Map([["_content/drive/Project_Notes.attach/Project_Notes.md", "Quarterly planning notes for the project."]]);
 const docs = extractCardDocs({ path, card, contentHash: "h1", inputContents });
-docs[0].title
+docs[0]?.title
 => Project Notes
 
-docs[0].content
+docs[0]?.content
 => Quarterly planning notes for the project.
 ```
 
@@ -119,7 +119,7 @@ const docs = await docsFor(
   "_content/garden/briefing.briefing.card",
   "---\ntype: briefing\npurpose: Plans and records for the vegetable garden.\n---\n"
 );
-docs[0].content.includes("vegetable garden")
+docs[0]?.content.includes("vegetable garden")
 => true
 ```
 
@@ -130,13 +130,13 @@ const docs = await docsFor(
   "_bookkeeping/archive/photo.image.card",
   "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
 );
-docs[0].contains
+docs[0]?.contains
 => The boiler's serial-number plate (K-44210)
 
-docs[0].title
+docs[0]?.title
 => The boiler's serial-number plate (K-44210)
 
-docs[0].content.includes("Model HX-200 240V")
+docs[0]?.content.includes("Model HX-200 240V")
 => true
 ```
 
@@ -152,10 +152,10 @@ const docs = await docsFor(
 JSON.stringify(docs.map((d) => d.fragment))
 => ["","/Mill","/Mill/Gears","/Store"]
 
-docs[0].content
+docs[0]?.content
 => Intro before any heading.
 
-docs[1].id
+docs[1]?.id
 => box/examples/Engine.doc.card#/Mill
 
 docs.every((d) => d.kind === "doc" && d.title === "The Analytical Engine")
@@ -184,6 +184,6 @@ const docs = await docsFor(
   "_content/drive/Budget.gsheet.card",
   "---\ndrive:\n  id: d2\n  link: https://docs.google.com/spreadsheets/d/d2/edit\n  owner: o@example.com\n  modified: 2026-05-01\ntitle: Family Budget\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
 );
-docs[0].content
+docs[0]?.content
 => Monthly Spending
 ```

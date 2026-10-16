@@ -13,9 +13,9 @@ import { pluginTypeCoverage } from "../../../src/core/plugins/coverage.js";
 
 const courseware = { name: "courseware", schemaTypes: ["course", "concept-map"], viewNames: ["concept-map"] };
 const BUILTINS = new Set(["note", "todo"]);
-const NO_STUBS = { schemaTypes: new Set(), viewNames: new Set() };
+const NO_STUBS = { schemaTypes: new Set<string>(), viewNames: new Set<string>() };
 
-function coverage(overrides) {
+function coverage(overrides: Partial<Parameters<typeof pluginTypeCoverage>[0]>) {
   return pluginTypeCoverage({
     typesOnDisk: new Map(),
     effectiveSchemaTypes: BUILTINS,

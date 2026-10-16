@@ -21,6 +21,8 @@ import {
   installTemplateFile,
   pruneStaleTemplateUpdates,
   listParkedTemplateUpdates,
+  readVersions,
+  type InstallTemplateOptions,
 } from "../../src/core/install-template-file.js";
 
 const REL = "_config/x.card";
@@ -30,22 +32,17 @@ async function makeBox() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-install-tpl-"));
 }
 
-async function readVersions(box) {
-  const text = await fs.readFile(path.join(box, "_config/template-versions.json"), "utf-8");
-  return JSON.parse(text);
-}
-
 // Write a file under the box, creating its directory.
-async function put(box, rel, content) {
+async function put(box: string, rel: string, content: string) {
   await fs.mkdir(path.dirname(path.join(box, rel)), { recursive: true });
   await fs.writeFile(path.join(box, rel), content);
 }
-const get = (box, rel) => fs.readFile(path.join(box, rel), "utf-8");
-const exists = (target) => fs.access(target).then(() => true).catch(() => false);
-const sha = (text) => createHash("sha256").update(text).digest("hex");
+const get = (box: string, rel: string) => fs.readFile(path.join(box, rel), "utf-8");
+const exists = (target: string) => fs.access(target).then(() => true).catch(() => false);
+const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
 // Install `templateContent` at `rel` (default `_config/x.card`).
-const install = (box, templateContent, extra = {}) =>
+const install = (box: string, templateContent: string, extra: Partial<Omit<InstallTemplateOptions, "boxRoot" | "templateContent">> = {}) =>
   installTemplateFile({ boxRoot: box, relPath: extra.relPath ?? REL, templateContent, ...extra });
 
 // A box whose x.card was installed as v1, edited by the user, then offered v2
@@ -59,7 +56,7 @@ async function parkedBox() {
 }
 
 // Park a stale (40-day-old) mirror of `rel`; `target` also creates the on-disk copy it mirrors.
-async function mirror(box, rel, { ageDays, target }) {
+async function mirror(box: string, rel: string, { ageDays, target }: { ageDays: number; target: boolean }) {
   const file = path.join(box, "_config/_template-updates", rel);
   await put(box, path.relative(box, file), "parked\n");
   if (target) await put(box, rel, "local\n");
@@ -105,16 +102,19 @@ const box = await makeBox();
 await install(box, "v1\n");
 await put(box, REL, "user edit\n");
 const result = await install(box, "v2\n");
-({ outcome: result.outcome, local: await get(box, REL), writtenAt: result.writtenAt, parked: await get(box, result.writtenAt) })
+({ outcome: result.outcome, local: await get(box, REL), writtenAt: result.writtenAt, parked: await get(box, result.writtenAt ?? "") })
 => { outcome: "parked", local: "user edit\n", writtenAt: "_config/_template-updates/_config/x.card", parked: "v2\n" }
 ```
 
 And the recorded hash is **not** updated (so if the user copies the parked version into place later, the next install can recognise it and overwrite cleanly):
 
 ```ts continue
-const hashBefore = (await readVersions(box))[REL].sha256;
+const hashBefore = (await readVersions(box))[REL]?.sha256;
+hashBefore?.length
+=> 64
+
 await install(box, "v2\n");
-(await readVersions(box))[REL].sha256 === hashBefore
+(await readVersions(box))[REL]?.sha256 === hashBefore
 => true
 ```
 
@@ -143,7 +143,7 @@ A box that was installed before the version tracker existed has files but no `te
 const box = await makeBox();
 await put(box, REL, "v1\n");
 const matching = await install(box, "v1\n");
-const adopted = (await readVersions(box))[REL].sha256.length;
+const adopted = (await readVersions(box))[REL]?.sha256?.length;
 
 const other = await makeBox();
 await put(other, REL, "mystery content\n");
@@ -159,7 +159,7 @@ hash that isn't listed still parks: the mechanism widens what counts as
 recognised stock, it doesn't stop protecting edited files.
 
 ```ts
-const run = async (local) => {
+const run = async (local: string) => {
   const box = await makeBox();
   await put(box, REL, local);
   const result = await install(box, "v2\n", { priorStockHashes: [sha("old stock\n")] });
@@ -198,7 +198,7 @@ Guide templates regenerate their `created-at` timestamps every install. With a `
 
 ```ts
 const box = await makeBox();
-const normalize = (s) => s.replace(/ts="[^"]*"/g, "");
+const normalize = (s: string) => s.replace(/ts="[^"]*"/g, "");
 await install(box, `<guide ts="2026-01-01"/>\n`, { relPath: "_config/g.card", normalize });
 const result = await install(box, `<guide ts="2026-05-24"/>\n`, { relPath: "_config/g.card", normalize });
 result.outcome
@@ -215,8 +215,8 @@ Some card templates have fields the box owns as per-box *state* rather than defi
 
 ```ts
 const rel = "_config/schedules/s.scheduled-script.card";
-const card = (runs, description, extra = "") => `---\nruns: ${runs}\ndescription: ${description}\n${extra}---\n`;
-const scenario = async ({ local, template }) => {
+const card = (runs: string, description: string, extra = "") => `---\nruns: ${runs}\ndescription: ${description}\n${extra}---\n`;
+const scenario = async ({ local, template }: { local: string; template: string }) => {
   const box = await makeBox();
   await install(box, card("bbx sync", "v1"), { relPath: rel });
   await put(box, rel, local);

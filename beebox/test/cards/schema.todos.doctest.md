@@ -21,7 +21,7 @@ const memoSchema: CardSchema = cardSchema("memo-fixture", {
 
 const schemas = new Map<string, CardSchema>([["memo-fixture", memoSchema]]);
 
-function load(frontmatter: string): unknown {
+function load(frontmatter: string): Record<string, unknown> {
   const text = `---\n${frontmatter}\n---\nBody.\n`;
   return parseCardText(text, { source: "x.memo-fixture.card", schemas }).fields;
 }

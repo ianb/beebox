@@ -15,6 +15,7 @@ unconfigured box gets, plus the ordering of the shared reader the Whisper path
 now calls.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,7 +41,7 @@ const dir = await useTempStore();
 const box = await makeTmpBox();
 delete process.env.THINKING_OPENAI_API_KEY;
 
-let failure;
+let failure: unknown;
 try {
   await transcribeAudioHq(
     { audioBuffer: Buffer.from("not really audio"), filename: "memo.webm", boxRoot: box.root },
@@ -49,6 +50,7 @@ try {
 } catch (e) {
   failure = e;
 }
+assert.ok(failure instanceof Error && "permanent" in failure && "code" in failure);
 print(`${failure.name} permanent=${failure.permanent} code=${failure.code}`);
 print(failure.message);
 =>

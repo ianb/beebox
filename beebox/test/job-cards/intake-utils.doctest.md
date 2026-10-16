@@ -3,6 +3,7 @@
 `createOrAppendIntakeJob` manages intake job files in a box. It creates new job cards or appends items to the pending one with the same batching key, `(connector, priority)`.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createOrAppendIntakeJob } from "../../src/job-cards/intake-utils.js";
 ```
@@ -100,7 +101,9 @@ JSON.stringify(created.map((p) => p.replace(/^.*T\d\d-\d\d-\d\d-/, "")))
 ```
 
 ```ts continue
-await box.read(created[3])
+const lowJob = created[3];
+assert.ok(lowJob !== undefined);
+await box.read(lowJob)
 =>
 ---
 priority: low
@@ -134,7 +137,9 @@ const paths = await Promise.all(
     })
   )
 );
-const card = await box.read(paths[0]);
+const firstPath = paths[0];
+assert.ok(firstPath !== undefined);
+const card = await box.read(firstPath);
 JSON.stringify({
   jobs: new Set(paths).size,
   items: card.split("\n").filter((line) => line.startsWith("  - ref:")).length,

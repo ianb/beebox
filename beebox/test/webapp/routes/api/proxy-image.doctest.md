@@ -9,7 +9,7 @@ check on top, not exercised here).
 ```ts setup
 import { isBlockedAddress, assertPublicHttpUrl, UnsafeProxyUrlError } from "../../../../src/webapp/routes/api/proxy-image.js";
 
-async function guard(url) {
+async function guard(url: string) {
   try {
     await assertPublicHttpUrl(url);
     return "ok";

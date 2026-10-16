@@ -35,7 +35,7 @@ export type { EventMap, BusEventName } from "../../../core/event-bus/core.js";
 const MAX_BUS_QUEUE = 1000;
 
 /** Wire shape delivered to subscribers — matches the old SSEEvent `{event,data}`. */
-interface BusPayload {
+export interface BusPayload {
   event: string;
   data: unknown;
 }

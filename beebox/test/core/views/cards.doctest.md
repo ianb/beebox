@@ -33,16 +33,16 @@ const result = await loadViewCards(box.root, ["_content/**/*.card", "_content/**
 result.cards.length
 => 1
 
-result.cards[0].type
+result.cards[0]?.type
 => doc
 
-result.cards[0].path
+result.cards[0]?.path
 => _content/inbox/Test.doc.card
 
-result.cards[0].frontmatter.title
+result.cards[0]?.frontmatter?.title
 => Test
 
-result.cards[0].body
+result.cards[0]?.body
 => Test doc content
 ```
 
@@ -51,7 +51,7 @@ the todo collector uses, so a todo a view renders through `Markdown` gets the
 collector's locator. The doc's frontmatter block is three lines:
 
 ```ts continue
-result.cards[0].bodyLineOffset
+result.cards[0]?.bodyLineOffset
 => 3
 
 result.files.map((f) => f.path).join(", ")
@@ -99,7 +99,7 @@ result.cards.map((c) => c.path).join(", ")
 result.skipped.map((s) => s.path).join(", ")
 => _content/inbox/Bad.bogus.card
 
-result.skipped[0].error.length > 0
+(result.skipped[0]?.error.length ?? 0) > 0
 => true
 ```
 

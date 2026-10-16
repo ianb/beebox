@@ -5,7 +5,9 @@ registry (`createLastAudioPending`) and the two HTTP routes that connect a
 CLI long-poll to the browser tab holding the recording.
 
 ```ts setup
-import { createLastAudioPending } from "../../src/core/last-audio-pending.js";
+import { createLastAudioPending, type LastAudioFulfillment, type LastAudioOutcome } from "../../src/core/last-audio-pending.js";
+import { eventSchemas } from "../../src/core/event-bus/schemas.js";
+import { isRecord } from "../../src/shared/is-record.js";
 import { AUDIO_QUESTION_MODEL, buildAudioQuestionPrompt } from "../../src/core/audio-question.js";
 import { audioMimeType, missingMessageIdError } from "../../src/cli/commands/chat/audio.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
@@ -14,9 +16,10 @@ import { sealVoiceSession } from "../../src/core/voice-recording/voice-staging/c
 
 // A sealed web voice recording with two PCM chunks ("AAAA" then "BBBB",
 // ASCII so the injected response's string payload stays comparable).
-async function stageSealedRecording(boxRoot, { emissionId, sessionId }) {
+async function stageSealedRecording(boxRoot: string, { emissionId, sessionId }: { emissionId: string; sessionId: string }) {
   const session = await createStagingSession({ boxRoot, targetSessionId: sessionId, createdBy: null, kind: "voice" });
-  for (const [filename, text] of [["pcm-000001.raw", "AAAA"], ["pcm-000002.raw", "BBBB"]]) {
+  const chunks: Array<[filename: string, text: string]> = [["pcm-000001.raw", "AAAA"], ["pcm-000002.raw", "BBBB"]];
+  for (const [filename, text] of chunks) {
     await addAudioChunk({
       boxRoot, id: session.id, segmentId: session.id, segmentStartedAt: "2026-09-10T18:00:00.000Z",
       filename, buffer: Buffer.from(text), audioFormat: "pcm-s16le-16k",
@@ -27,6 +30,22 @@ async function stageSealedRecording(boxRoot, { emissionId, sessionId }) {
     hq: { emissionId, sessionId, service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
   });
   return session;
+}
+
+/** The fulfillment of an outcome that must be audio. */
+function fulfilled(outcome: LastAudioOutcome): LastAudioFulfillment {
+  if (outcome.status !== "audio") throw new Error(`expected an audio outcome, got ${outcome.status}`);
+  return outcome.fulfillment;
+}
+
+/** The `error` field of a JSON error body. */
+function errorOf(body: unknown): unknown {
+  return isRecord(body) ? body.error : undefined;
+}
+
+/** The id a `chat-last-audio-request` bus event carries. */
+function requestIdOf(data: unknown): string {
+  return eventSchemas["chat-last-audio-request"].parse(data).requestId;
 }
 ```
 
@@ -48,8 +67,8 @@ print(`fulfill: ${reg.fulfill(requestId, {
 })}`);
 const result = await outcome;
 print(`status: ${result.status}`);
-print(`audio: ${result.fulfillment.audio.toString()}`);
-print(`recordedAt: ${result.fulfillment.recordedAt}`);
+print(`audio: ${fulfilled(result).audio.toString()}`);
+print(`recordedAt: ${fulfilled(result).recordedAt}`);
 print(`pending left: ${reg.size()}`);
 =>
 fulfill: delivered
@@ -118,7 +137,7 @@ await new Promise((r) => setTimeout(r, 150)); // 150ms in: past the old fixed gr
 reg.fulfill(requestId, { audio: Buffer.from("late-but-in-window"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-slow", sessionId: null });
 const result = await outcome;
 print(`status: ${result.status}`);
-print(`audio: ${result.status === "audio" ? result.fulfillment.audio.toString() : "?"}`);
+print(`audio: ${result.status === "audio" ? fulfilled(result).audio.toString() : "?"}`);
 =>
 status: audio
 audio: late-but-in-window
@@ -151,7 +170,7 @@ print(`still pending: ${reg.size()}`);
 print(`correct: ${reg.fulfill(requestId, { audio: Buffer.from("right"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-target", sessionId: null })}`);
 const result = await outcome;
 print(`status: ${result.status}`);
-print(`audio: ${result.fulfillment.audio.toString()}`);
+print(`audio: ${fulfilled(result).audio.toString()}`);
 =>
 mismatched: ignored
 no-id (stale tab): ignored
@@ -171,7 +190,7 @@ const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-a" 
 print(`first: ${reg.fulfill(requestId, { audio: Buffer.from("a"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-a", sessionId: null })}`);
 print(`second: ${reg.fulfill(requestId, { audio: Buffer.from("b"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-a", sessionId: null })}`);
 const result = await outcome;
-print(`winner: ${result.fulfillment.audio.toString()}`);
+print(`winner: ${fulfilled(result).audio.toString()}`);
 =>
 unknown fulfill: unknown
 unknown none: false
@@ -193,7 +212,7 @@ const res = await ctx.request({
   payload: { none: true },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${errorOf(res.body)}`);
 =>
 status: 404
 error: unknown-request
@@ -232,7 +251,7 @@ const res = await ctx.request({
   payload: { timeoutMs: 1, messageId: "msg-nobody" },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${errorOf(res.body)}`);
 =>
 status: 504
 error: no-client
@@ -262,8 +281,8 @@ print(`status: ${res.statusCode}`);
 print(`content-type: ${res.headers["content-type"]}`);
 print(`riff: ${res.payload.startsWith("RIFF")}`);
 print(`pcm in order: ${res.payload.endsWith("AAAABBBB")}`);
-print(`message-id: ${decodeURIComponent(res.headers["x-message-id"])}`);
-print(`session-id: ${decodeURIComponent(res.headers["x-session-id"])}`);
+print(`message-id: ${decodeURIComponent(res.headers["x-message-id"] ?? "")}`);
+print(`session-id: ${decodeURIComponent(res.headers["x-session-id"] ?? "")}`);
 print(`relayed: ${relayed}`);
 =>
 status: 200
@@ -279,9 +298,9 @@ A message id no staging session names falls through to the tab relay (here
 nobody answers, so the short wait ends in the relay's 504):
 
 ```ts continue
-const gotRelay = new Promise((resolve) => {
+const gotRelay = new Promise<string>((resolve) => {
   ctx.eventBus.subscribe({ listener: (e) => {
-    if (e.event === "chat-last-audio-request") resolve(e.data.messageId);
+    if (e.event === "chat-last-audio-request") resolve(eventSchemas["chat-last-audio-request"].parse(e.data).messageId);
   }});
 });
 const miss = await ctx.request({
@@ -362,9 +381,9 @@ metadata headers.
 
 ```ts
 const ctx = await makeTestServer();
-const gotId = new Promise((resolve) => {
+const gotId = new Promise<string>((resolve) => {
   ctx.eventBus.subscribe({ listener: (e) => {
-    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+    if (e.event === "chat-last-audio-request") resolve(requestIdOf(e.data));
   }});
 });
 const longPoll = ctx.rawRequest({
@@ -411,9 +430,9 @@ const res = await longPoll;
 print(`status: ${res.statusCode}`);
 print(`content-type: ${res.headers["content-type"]}`);
 print(`recorded-at: ${res.headers["x-recorded-at"]}`);
-print(`text: ${decodeURIComponent(res.headers["x-message-text"])}`);
-print(`message-id: ${decodeURIComponent(res.headers["x-message-id"])}`);
-print(`session-id: ${decodeURIComponent(res.headers["x-session-id"])}`);
+print(`text: ${decodeURIComponent(res.headers["x-message-text"] ?? "")}`);
+print(`message-id: ${decodeURIComponent(res.headers["x-message-id"] ?? "")}`);
+print(`session-id: ${decodeURIComponent(res.headers["x-session-id"] ?? "")}`);
 print(`audio: ${res.payload}`);
 =>
 answer ok: {"ok":true}
@@ -439,9 +458,9 @@ long-poll keeps waiting, and a subsequent correctly-targeted answer delivers.
 
 ```ts
 const ctx = await makeTestServer();
-const gotId = new Promise((resolve) => {
+const gotId = new Promise<string>((resolve) => {
   ctx.eventBus.subscribe({ listener: (e) => {
-    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+    if (e.event === "chat-last-audio-request") resolve(requestIdOf(e.data));
   }});
 });
 const longPoll = ctx.rawRequest({
@@ -461,7 +480,7 @@ function multipartUpload(boundary: string, fields: Record<string, string>): stri
     'Content-Disposition: form-data; name="file"; filename="last-message.wav"',
     "Content-Type: audio/wav",
     "",
-    fields.file,
+    fields.file ?? "",
     `--${boundary}--`,
     ""
   );
@@ -495,7 +514,7 @@ const rightAnswer = await ctx.request({
 print(`right answer: ${JSON.stringify(rightAnswer.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`message-id: ${decodeURIComponent(res.headers["x-message-id"])}`);
+print(`message-id: ${decodeURIComponent(res.headers["x-message-id"] ?? "")}`);
 print(`audio: ${res.payload}`);
 =>
 stale answer: {"ok":false,"ignored":true,"message":"messageId did not match the pending request's target"}
@@ -518,9 +537,9 @@ instead, which on a loaded host expired before the mismatched answer arrived:
 
 ```ts
 const ctx = await makeTestServer();
-const gotId = new Promise((resolve) => {
+const gotId = new Promise<string>((resolve) => {
   ctx.eventBus.subscribe({ listener: (e) => {
-    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+    if (e.event === "chat-last-audio-request") resolve(requestIdOf(e.data));
   }});
 });
 const longPoll = ctx.rawRequest({
@@ -530,7 +549,7 @@ const longPoll = ctx.rawRequest({
 });
 const requestId = await gotId;
 const boundary = "----cbtestmismatch";
-const uploadFor = (messageId, bytes) => [
+const uploadFor = (messageId: string, bytes: string) => [
   `--${boundary}`,
   'Content-Disposition: form-data; name="messageId"',
   "",
@@ -543,7 +562,7 @@ const uploadFor = (messageId, bytes) => [
   `--${boundary}--`,
   "",
 ].join("\r\n");
-const answerWith = (messageId, bytes) => ctx.request({
+const answerWith = (messageId: string, bytes: string) => ctx.request({
   method: "POST",
   url: `/api/chat/last-audio/${requestId}`,
   payload: uploadFor(messageId, bytes),
@@ -575,9 +594,9 @@ never wrong audio.
 
 ```ts
 const ctx = await makeTestServer();
-const gotId = new Promise((resolve) => {
+const gotId = new Promise<string>((resolve) => {
   ctx.eventBus.subscribe({ listener: (e) => {
-    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+    if (e.event === "chat-last-audio-request") resolve(requestIdOf(e.data));
   }});
 });
 const longPoll = ctx.rawRequest({
@@ -594,7 +613,7 @@ const answer = await ctx.request({
 print(`answer: ${JSON.stringify(answer.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`error: ${JSON.parse(res.payload).error}`);
+print(`error: ${errorOf(JSON.parse(res.payload))}`);
 =>
 answer: {"ok":true}
 status: 404

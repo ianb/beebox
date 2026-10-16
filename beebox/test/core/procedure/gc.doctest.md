@@ -17,7 +17,7 @@ import { utimes } from "node:fs/promises";
 // Builds a frontmatter run card from the legacy `key="value"` attr string
 // the test cases use — values are JSON-quoted so ISO timestamps stay strings.
 function runCard(attrs: string): string {
-  const lines = [];
+  const lines: string[] = [];
   for (const m of attrs.matchAll(/([\w-]+)="([^"]*)"/g)) {
     lines.push(`${m[1]}: ${JSON.stringify(m[2])}`);
   }
@@ -50,8 +50,8 @@ await box.write("_bookkeeping/procedure/runs/gamma_2099-01-01T0000/run.procedure
 
 box.commitAll("Seed run history");
 
-const output = [];
-const ctx = { boxRoot: box.root, writeLine: (s) => output.push(s), write: () => {} };
+const output: string[] = [];
+const ctx = { boxRoot: box.root, writeLine: (s: string) => output.push(s), write: () => {} };
 const result = await gcProcedureRuns(ctx);
 if (!result.ok) throw new Error(result.error.message);
 print(`success: ${result.ok}`);
@@ -63,7 +63,7 @@ print(`kept: ${dirs.join(", ")}`);
 
 // The deletions were committed in one sweep
 const log = await getLog(box.root, 1);
-print(`commit: ${log[0].subject}`);
+print(`commit: ${log[0]?.subject}`);
 =>
 success: true
 removed: alpha_2025-01-01T0000, gamma_2025-01-01T0000

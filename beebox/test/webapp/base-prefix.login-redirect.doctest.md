@@ -15,6 +15,7 @@ requests by the hub.
 import { validateBasePrefix, readBasePrefix } from "../../src/webapp/base-prefix.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import http from "node:http";
+import type { Socket } from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -25,6 +26,13 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 // The box-scope redirect only fires OUTSIDE hub mode; keep this process
 // non-hub for the standalone-box section below.
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
+
+// The TCP port a listening server bound.
+function portOf(server: http.Server): number {
+  const address = server.address();
+  if (address === null || typeof address === "string") throw new Error("server is not listening on a TCP port");
+  return address.port;
+}
 delete process.env.BBX_HUB_SECRET;
 process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-redirect-doctest";
 ```
@@ -146,20 +154,21 @@ const child = http.createServer((_req, res) => {
   res.writeHead(200, { "content-type": "application/json" });
   res.end("{}");
 });
-await new Promise((resolve) => child.listen(0, "127.0.0.1", resolve));
-const childSockets = [];
+await new Promise<void>((resolve) => child.listen(0, "127.0.0.1", () => resolve()));
+const childSockets: Socket[] = [];
 child.on("connection", (s) => childSockets.push(s));
-const endpoints = staticEndpointProvider([{ slug: "test1", origin: `http://127.0.0.1:${child.address().port}` }]);
+const endpoints = staticEndpointProvider([{ slug: "test1", origin: `http://127.0.0.1:${portOf(child)}` }]);
 const hub = await createHubServer({
   endpoints,
   getHealth: () => ({ status: "ok", boxes: [] }),
   hubSecret: "test-hub-secret-for-login-redirect-doctest",
+  baseUrl: "http://127.0.0.1",
   boxes: [{ slug: "test1", boxRoot: childBox.root }],
 });
-const hubSockets = [];
+const hubSockets: Socket[] = [];
 hub.on("connection", (s) => hubSockets.push(s));
-await new Promise((resolve) => hub.listen(0, "127.0.0.1", resolve));
-const hubBase = `http://127.0.0.1:${hub.address().port}`;
+await new Promise<void>((resolve) => hub.listen(0, "127.0.0.1", () => resolve()));
+const hubBase = `http://127.0.0.1:${portOf(hub)}`;
 
 // Unauthenticated navigation: bare redirect, returnTo already carries /test1.
 const nav = await fetch(`${hubBase}/test1/browse/some-card`, { redirect: "manual" });

@@ -14,6 +14,7 @@ installed version, so it never contributes a mismatch:
 
 ```ts setup
 import { makeTestServer } from "../helpers/doctest-server.js";
+import { bodyField } from "../helpers/doctest-helpers.js";
 
 process.env.BBX_DIAG_API_KEY = "test-diag-key";
 ```
@@ -22,7 +23,7 @@ process.env.BBX_DIAG_API_KEY = "test-diag-key";
 const server = await makeTestServer();
 const headers = { authorization: "Bearer test-diag-key" };
 const response = await server.rootRequest({ method: "GET", url: "/healthz", headers });
-JSON.stringify(response.body.engineVersionMismatch)
+JSON.stringify(bodyField(response.body, "engineVersionMismatch"))
 => {"total":0,"byBox":{}}
 ```
 

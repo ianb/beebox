@@ -75,7 +75,9 @@ excluded (`issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.m
 
 ```ts
 const landmark = buildQueryOptions({ cwd: "/tmp/box/_content/course", boxRoot: "/tmp/box", systemPrompt: "system", env: {} });
-const excluded = landmark.queryOptions.settings.claudeMdExcludes;
+const settings = landmark.queryOptions.settings;
+if (typeof settings !== "object" || !settings.claudeMdExcludes) throw new Error("landmark chat has no claudeMdExcludes");
+const excluded = settings.claudeMdExcludes;
 JSON.stringify({ cwd: landmark.queryOptions.cwd, rootExcluded: excluded.includes("/tmp/box/AGENTS.md"), rulesExcluded: excluded.includes("/tmp/box/.claude/rules/**"), aboveExcluded: excluded.includes("/tmp/AGENTS.md") })
 => {"cwd":"/tmp/box/_content/course","rootExcluded":false,"rulesExcluded":false,"aboveExcluded":true}
 ```

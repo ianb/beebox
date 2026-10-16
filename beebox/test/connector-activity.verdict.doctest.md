@@ -16,12 +16,14 @@ ending on `today`:
 ```ts setup
 import { connectorVerdict, nextEpisode, describeVerdict } from "../src/connector-activity/verdict.js";
 import { addDays } from "../src/connector-activity/core.js";
+import type { ConnectorDay, ConnectorEpisode } from "../src/connector-activity/core.js";
+import assert from "node:assert/strict";
 
 const today = "2026-09-18";
 
 /** Days ending on `end` (default `today`). */
 function history(pattern: string, end = today) {
-  const days = {};
+  const days: Record<string, ConnectorDay> = {};
   const chars = [...pattern];
   chars.forEach((char, i) => {
     const day = addDays(end, i - (chars.length - 1));
@@ -34,7 +36,7 @@ function history(pattern: string, end = today) {
   return days;
 }
 
-function verdict(pattern: string, openEpisode = null) {
+function verdict(pattern: string, openEpisode: ConnectorEpisode | null = null) {
   const v = connectorVerdict({ days: history(pattern), today, openEpisode });
   return v.kind === "quiet" ? `quiet since ${v.since}: ${v.quietDays} of ${v.allowedDays}`
     : v.kind === "failing" ? `failing since ${v.since}: ${v.failingDays} days`
@@ -146,10 +148,10 @@ const longQuiet = "Z".repeat(60);
 verdict(longQuiet)
 => unwatched
 
-verdict(longQuiet, { kind: "quiet", since: "2026-06-01" })
+verdict(longQuiet, { kind: "quiet", since: "2026-06-01", notifiedAt: null, dismissedAt: null })
 => quiet since 2026-06-01: 60 of null
 
-verdict(longQuiet + "P", { kind: "quiet", since: "2026-06-01" })
+verdict(longQuiet + "P", { kind: "quiet", since: "2026-06-01", notifiedAt: null, dismissedAt: null })
 => healthy
 ```
 
@@ -162,6 +164,7 @@ drops it, and the next episode starts fresh.
 ```ts
 const quiet = connectorVerdict({ days: history(daily + "ZZZ"), today, openEpisode: null });
 const first = nextEpisode(null, quiet);
+assert.ok(first);
 JSON.stringify(first)
 => {"kind":"quiet","since":"2026-09-16","notifiedAt":null,"dismissedAt":null}
 

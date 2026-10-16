@@ -9,10 +9,10 @@ render as the empty string. Each formatted line is `<relative-path>\t<rendered>`
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { executeCommandStreaming } from "../../../src/webapp/routes/commands.js";
+import { executeCommandStreaming, type OutputLine } from "../../../src/webapp/routes/commands.js";
 
-async function lsLines(boxRoot, args) {
-  const out = [];
+async function lsLines(boxRoot: string, args: Record<string, unknown>) {
+  const out: (string | undefined)[] = [];
   await executeCommandStreaming({
     command: "ls",
     args,

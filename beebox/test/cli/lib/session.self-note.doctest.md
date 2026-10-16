@@ -7,7 +7,10 @@ input validation.
 ```ts setup
 import { parseSelfNote, parseSelfNotes, entrySelfNotes, parseSessionLog, getSessionMetadata } from "../../../src/cli/lib/session.js";
 // "Everything, bounded": the first page at the hard retention ceiling.
-const ALL = { mode: "page", offset: 0, limit: 5000 };
+const ALL = { mode: "page", offset: 0, limit: 5000 } satisfies SessionLogSlice;
+import type { SessionLogSlice } from "../../../src/cli/lib/session-retention.js";
+import assert from "node:assert/strict";
+import { isRecord } from "../../../src/shared/is-record.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 
@@ -119,7 +122,7 @@ await box.write("log.jsonl", [
   userLine("u2", "2026-04-17T00:00:30Z", '<self-note ref="daily.card">did stuff</self-note>'),
 ].join("\n"));
 const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
-result.entries.map((entry) => entry.content[0].text)
+result.entries.map((entry) => entry.content[0]?.text)
 => ["<typed>hello</typed>", "<self-note ref=\"daily.card\">did stuff</self-note>"]
 ```
 
@@ -163,7 +166,9 @@ A missing or blank body is a 400. Specifying a session that isn't live is a
 const ctx = await makeTestServer();
 const post = async (payload: Record<string, unknown>) => {
   const res = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload });
-  return { status: res.statusCode, error: res.body.error };
+  const body: unknown = res.body;
+  assert.ok(isRecord(body) && typeof body.error === "string");
+  return { status: res.statusCode, error: body.error };
 };
 const missing = await post({});
 const blank = await post({ body: "   " });

@@ -11,6 +11,7 @@ The seam is deliberately narrow: the reactor asks for the policy, rather than
 
 ```ts setup
 import { processBatchJobs } from "../../../../src/core/reactor/engine/batch-jobs.js";
+import type { JobWithContent } from "../../../../src/core/reactor/types.js";
 import { createFakeAgent } from "../../fake-agent.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
@@ -18,7 +19,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { resolveProcedureModel } from "../../../../src/shared/agent-models.js";
 
-const job = { card: { file: "j.job.card", priority: "normal", createdAt: null }, relPath: "jobs/j.job.card", content: "do a thing" };
+const job: JobWithContent = { card: { file: "j.job.card", priority: "normal", createdAt: null }, relPath: "jobs/j.job.card", content: "do a thing" };
 
 /** Model ids rotate; name a model by engine and tier instead. */
 const tierId = (engine: "claude" | "codex", model: "efficient" | "balanced" | "strong") => resolveProcedureModel({ engine, model });

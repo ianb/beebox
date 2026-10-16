@@ -13,7 +13,7 @@ downstream. Re-OCRing the same pages recovered 2056 usable words against 112.
 import { assessTextLayer } from "../../../src/core/pdf/probe.js";
 import { ocrIntentFor } from "../../../src/core/commands/scan-import/pdf.js";
 
-const spaced = (s) => s.split("").join(" ");
+const spaced = (s: string) => s.split("").join(" ");
 const prose =
   "Long ago there was a wizard, who was extremely powerful and ruled most of " +
   "the world. But even a wizard cannot live forever, so when he was soon to " +

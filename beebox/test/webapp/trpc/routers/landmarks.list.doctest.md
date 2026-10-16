@@ -13,15 +13,23 @@ read.
 
 ```ts setup
 import { mkdir, symlink } from "node:fs/promises";
+import assert from "node:assert/strict";
+import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
+    user: null,
+    authed: true,
+    isOwner: true,
+    isAuthenticatedOwner: true,
+    actor: "user",
   };
   return appRouter.createCaller(ctx);
 }
@@ -117,7 +125,10 @@ await box.write("_content/Shed/Shed.landmark.card", "---\nnavigation:\n  label: 
 await box.write("_content/Shed/Tools.doc.card", "---\ntitle: Tools\n---\n");
 
 const { landmarks } = await caller(box.root).landmarks.list();
-const view = (l) => ({ label: l.label, depth: l.depth, arrival: l.arrival, links: l.links.map((k) => `${k.source} ${k.ref}`) });
+const view = (l: (typeof landmarks)[number] | undefined) => {
+  assert.ok(l);
+  return { label: l.label, depth: l.depth, arrival: l.arrival, links: l.links.map((k) => `${k.source} ${k.ref}`) };
+};
 ```
 
 Home lists its one entry point, then a row per nested place. Garden's row
@@ -200,12 +211,12 @@ const box = await makeTmpBox({ git: true });
 await mkdir(box.path("src/templates"), { recursive: true });
 await box.write("src/templates/Private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
 
-async function throwsBadRequest(fn) {
+async function throwsBadRequest(fn: () => Promise<unknown>): Promise<boolean> {
   try {
     await fn();
     return false;
   } catch (e) {
-    return e?.code === "BAD_REQUEST" || `${e}`.includes("BAD_REQUEST");
+    return (e instanceof TRPCError && e.code === "BAD_REQUEST") || `${e}`.includes("BAD_REQUEST");
   }
 }
 

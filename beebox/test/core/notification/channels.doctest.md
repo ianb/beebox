@@ -6,20 +6,23 @@ to log as skipped. It is pure: the caller supplies who each channel can reach
 
 ```ts setup
 import { channelsToTry } from "../../../src/core/notification/channels.js";
+import type { Audience } from "../../../src/core/notification/channels.js";
+import type { Loudness } from "../../../src/core/notification/intent.js";
 
-const ALL = { apns: true, "web-push": true };
-const NONE = { apns: false, "web-push": false };
+const ALL: Audience = { apns: true, "web-push": true };
+const NONE: Audience = { apns: false, "web-push": false };
 // The audience a box can have before any phone pairs: no APNs, a subscribed browser.
-const NO_APNS = { apns: false, "web-push": true };
+const NO_APNS: Audience = { apns: false, "web-push": true };
 
-function row(loudness, audience, activeWeb) {
+function row(loudness: Loudness, audience: Audience, activeWeb: number) {
   const plan = channelsToTry({ intent: { loudness }, audience, presence: { activeWeb } });
   const skipped = plan.skipped.map((d) => `${d.channel}:${d.detail}`).join(" ");
   return `${loudness.padEnd(5)} present=${activeWeb}  try [${plan.channels.join(" ")}]  skip [${skipped}]`;
 }
 
-function matrix(audience) {
-  return ["loud", "quiet", "dot"].flatMap((loudness) => [0, 1].map((activeWeb) => row(loudness, audience, activeWeb))).join("\n");
+const LOUDNESSES: Loudness[] = ["loud", "quiet", "dot"];
+function matrix(audience: Audience) {
+  return LOUDNESSES.flatMap((loudness) => [0, 1].map((activeWeb) => row(loudness, audience, activeWeb))).join("\n");
 }
 ```
 
@@ -80,12 +83,12 @@ web session is present) passes `onScreen`: a `quiet` or `loud` intent is
 `present` on every channel, and a `dot` still badges the phone.
 
 ```ts
-function onScreenRow(loudness) {
+function onScreenRow(loudness: Loudness) {
   const plan = channelsToTry({ intent: { loudness }, audience: ALL, presence: { activeWeb: 1 }, onScreen: true });
   return `${loudness.padEnd(5)} try [${plan.channels.join(" ")}]  skip [${plan.skipped.map((d) => `${d.channel}:${d.detail}`).join(" ")}]`;
 }
 
-["loud", "quiet", "dot"].map(onScreenRow).join("\n")
+LOUDNESSES.map(onScreenRow).join("\n")
 =>
 loud  try []  skip [apns:present web-push:present]
 quiet try []  skip [apns:present web-push:present]

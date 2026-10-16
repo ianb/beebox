@@ -2,6 +2,7 @@
 
 ```ts setup
 import { once } from "node:events";
+import assert from "node:assert/strict";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { acquireBoxWork, closeBoxMaintenance } from "../../../../src/lib/box-maintenance/admission.js";
@@ -15,6 +16,7 @@ const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, skipBootstrap: true, systemPrompt: async () => "test" });
 await session.send("first");
 const run = backend.lastRun();
+assert.ok(run);
 const done = once(session, "done");
 run.emitResult();
 await done;
@@ -39,7 +41,7 @@ run.sent.length
 await maintenance.complete();
 session.resumeAfterMaintenance();
 await waitForRuns(backend, { count: 2, timeoutMs: 3000 });
-backend.lastRun().sent[0].some((block) => block.type === "text" && block.text.includes("third queued before closure"))
+backend.lastRun()?.sent[0]?.some((block) => block.type === "text" && block.text.includes("third queued before closure"))
 => true
 ```
 

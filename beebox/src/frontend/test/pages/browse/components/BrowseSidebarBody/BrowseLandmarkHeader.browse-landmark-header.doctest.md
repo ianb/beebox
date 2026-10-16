@@ -10,20 +10,24 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BrowseLandmarkHeader } from "../../../../../src/pages/browse/components/BrowseSidebarBody/BrowseLandmarkHeader.js";
 import { BrowseSidebarList } from "../../../../../src/pages/browse/components/BrowseSidebarBody/BrowseSidebarList.js";
 
+import type { LandmarkPayload } from "../../../../../../webapp/trpc/routers/landmarks/payload.js";
+
 globalThis.React = React;
 
-const landmark = {
+const landmark: LandmarkPayload = {
   path: "Box.landmark.card",
   dir: "",
   label: "Box",
-  symbol: "📦",
-  symbolSrc: null,
+  symbol: { glyph: "📦" },
+  prominence: null,
   depth: 0,
   features: {},
+  openers: [],
+  arrival: "Box.landmark.card",
   links: [
-    { ref: "_content/Welcome.doc.card", label: "Welcome", title: "Welcome", exists: true },
-    { ref: "https://example.com/guide", label: "Guide", title: "Guide", exists: false },
-    { ref: "_content/Missing.doc.card", label: null, title: "Missing", exists: false },
+    { ref: "_content/Welcome.doc.card", label: "Welcome", title: "Welcome", exists: true, source: "listed" },
+    { ref: "https://example.com/guide", label: "Guide", title: "Guide", exists: false, source: "listed" },
+    { ref: "_content/Missing.doc.card", label: null, title: "Missing", exists: false, source: "listed" },
   ],
   groups: [],
 };
@@ -83,6 +87,7 @@ represents it. Other cards and files remain present.
 ```ts
 const listing = renderToStaticMarkup(React.createElement(BrowseSidebarList, {
   data: {
+    path: "",
     background: false,
     dirs: [],
     cards: [

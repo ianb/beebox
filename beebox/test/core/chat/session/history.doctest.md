@@ -7,6 +7,7 @@ Claude entries.
 
 ```ts setup
 import { readFile, mkdir, writeFile, rm } from "node:fs/promises";
+import assert from "node:assert/strict";
 import { dirname, join } from "node:path";
 import {
   loadHistory,
@@ -354,7 +355,8 @@ not the box root's:
 
 ```ts continue
 const [bound, unbound] = entries;
-sessionLogPathFor(box.root, bound) === sessionLogPathFor(box.root, { ...bound, contextDir: undefined })
+assert.ok(bound && unbound);
+sessionLogPathFor(box.root, bound) === sessionLogPathFor(box.root, { id: bound.id, engine: bound.engine })
 => false
 
 sessionLogPathFor(box.root, unbound) === getSessionLogPath(box.root, "unbound")

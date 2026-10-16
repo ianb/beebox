@@ -5,7 +5,7 @@ discriminated result, `bin/browse screenshot --help` took a screenshot and
 wrote a file named `--help.json`.
 
 ```ts
-import { parseScreenshotArgs } from "../src/cli.ts";
+import { parseScreenshotArgs } from "../src/cli.js";
 
 parseScreenshotArgs(["--help"]).kind
 => help

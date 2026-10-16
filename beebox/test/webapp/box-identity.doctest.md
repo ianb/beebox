@@ -50,7 +50,7 @@ const withKey = { headers: { authorization: `Bearer ${KEY}` } };
 const noKey = { headers: {} };
 
 /** Write the box's opt-in field (any value, so a bad one can be tested too). */
-async function setAgentBrowsing(box, value) {
+async function setAgentBrowsing(box: { root: string }, value: unknown) {
   await mkdir(path.join(box.root, "_config"), { recursive: true });
   await writeFile(path.join(box.root, "_config", "box.json"), JSON.stringify({ agentBrowsing: value }));
 }
@@ -100,15 +100,15 @@ names the box and the value, and fires once however many requests arrive.
 ```ts continue
 const badBox = await makeTmpBox();
 await setAgentBrowsing(badBox, "yes");
-const warnings = [];
+const warnings: string[] = [];
 const originalWarn = console.warn;
-console.warn = (...args) => { warnings.push(args.map(String).join(" ")); };
+console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); };
 const first = await resolveBoxIdentity({ boxRoot: badBox.root, request: withKey, openAccess: false });
 await resolveBoxIdentity({ boxRoot: badBox.root, request: withKey, openAccess: false });
 console.warn = originalWarn;
 
 print(JSON.stringify(first));
-print(`warned ${warnings.length}x, names the box and the value: ${warnings[0].includes(badBox.root) && warnings[0].includes('"yes"')}`);
+print(`warned ${warnings.length}x, names the box and the value: ${warnings[0]?.includes(badBox.root) && warnings[0]?.includes('"yes"')}`);
 =>
 {"email":null,"name":null,"source":null}
 warned 1x, names the box and the value: true
@@ -126,9 +126,9 @@ await setAgentBrowsing(ownerless, "owner");
 delete process.env.BBX_OWNER_EMAIL;
 process.env.BBX_AUTH_FILE = path.join(authDir, "no-such-auth.json");
 resetLocalUserCache();
-const noOwnerWarnings = [];
+const noOwnerWarnings: string[] = [];
 const warnBefore = console.warn;
-console.warn = (...args) => { noOwnerWarnings.push(args.map(String).join(" ")); };
+console.warn = (...args: unknown[]) => { noOwnerWarnings.push(args.map(String).join(" ")); };
 const ownerlessIdentity = await resolveBoxIdentity({ boxRoot: ownerless.root, request: withKey, openAccess: false });
 console.warn = warnBefore;
 process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -136,7 +136,7 @@ process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");
 resetLocalUserCache();
 
 print(JSON.stringify(ownerlessIdentity));
-print(`warned about the box: ${noOwnerWarnings.length === 1 && noOwnerWarnings[0].includes(ownerless.root)}`);
+print(`warned about the box: ${noOwnerWarnings.length === 1 && noOwnerWarnings[0]?.includes(ownerless.root)}`);
 =>
 {"email":null,"name":null,"source":null}
 warned about the box: true
@@ -183,14 +183,14 @@ await writeFile(path.join(authDir, "auth.json"), "{not json at all");
 resetLocalUserCache();
 // The resolver logs the outage loudly (once per process) — captured here so the
 // deliberate diagnostic doesn't read as test-run noise.
-const errors = [];
+const errors: string[] = [];
 const originalError = console.error;
-console.error = (...args) => { errors.push(args.map(String).join(" ")); };
+console.error = (...args: unknown[]) => { errors.push(args.map(String).join(" ")); };
 const corrupt = await resolveBoxIdentity({ boxRoot: optedIn.root, request: both, openAccess: false });
 console.error = originalError;
 
 print(JSON.stringify(corrupt));
-print(`logged the outage: ${errors.length === 1 && errors[0].includes("auth store unavailable")}`);
+print(`logged the outage: ${errors.length === 1 && errors[0]?.includes("auth store unavailable")}`);
 =>
 {"email":null,"name":null,"source":"unavailable"}
 logged the outage: true

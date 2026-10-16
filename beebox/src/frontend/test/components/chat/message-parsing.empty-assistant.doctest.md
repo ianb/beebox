@@ -56,7 +56,7 @@ items([], true, "Ready.\n\n").length
 Real activity still renders, including a tool following empty thinking and a progress update with text.
 
 ```ts
-hasRenderableAssistantContent([assistant([{ type: "thinking", text: "" }, { type: "tool_use", name: "Read", id: "tool-1", input: {} }])])
+hasRenderableAssistantContent([assistant([{ type: "thinking", text: "" }, { type: "tool_use", toolName: "Read", toolId: "tool-1", input: {} }])])
 => true
 
 hasRenderableAssistantContent([assistant([{ type: "thinking", text: "Checking", progressUpdate: true }])])
@@ -66,7 +66,7 @@ hasRenderableAssistantContent([assistant([{ type: "thinking", text: "Checking", 
 Narration mode hides prose and tool activity, so only a speech control or a callout makes an assistant message visible.
 
 ```ts
-items([assistant([{ type: "tool_use", name: "Read", id: "tool-1", input: {} }, { type: "text", text: "Done." }])], false, "", [], false).length
+items([assistant([{ type: "tool_use", toolName: "Read", toolId: "tool-1", input: {} }, { type: "text", text: "Done." }])], false, "", [], false).length
 => 0
 
 items([assistant([{ type: "text", text: '<callout context="Result">Done.</callout>' }])], false, "", [], false).length

@@ -9,7 +9,7 @@ import { loadedContextTokens, summarizeContextUsage } from "../../../src/dev/lib
 
 // The loaded context of a turn sums all three input components — never just
 // input_tokens, which prompt caching leaves tiny.
-const turn = (inputTokens, cacheCreationInputTokens, cacheReadInputTokens) => ({
+const turn = (inputTokens: number, cacheCreationInputTokens: number, cacheReadInputTokens: number) => ({
   inputTokens, cacheCreationInputTokens, cacheReadInputTokens,
 });
 ```

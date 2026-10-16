@@ -7,20 +7,20 @@ type names the shape it needs. See docs/implemented-plans/notifications.md (Trac
 
 ```ts setup
 import { JudgmentSchema, judgmentQuestions } from "../../src/schemas/judgment/schema.js";
-import { parseCardText } from "../../src/core/card-io.js";
+import { cardFields, parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";
 
-const issues = (fields) => {
+const issues = (fields: Record<string, unknown>) => {
   const parsed = JudgmentSchema.frontmatterSchema.safeParse({ type: "judgment", ...fields });
   return parsed.success ? "valid" : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
 };
 
-function parseError(text, schemas) {
+function parseError(text: string, schemas: Awaited<ReturnType<typeof createCardSchemaMap>>) {
   try {
     parseCardText(text, { source: "empty.judgment.card", schemas });
     return "parsed";
   } catch (e) {
-    return e.message;
+    return e instanceof Error ? e.message : String(e);
   }
 }
 ```
@@ -78,10 +78,11 @@ situation:
 ---
 You are looking at the email cards that arrived since the last check.
 `, { source: "field-trip.judgment.card", schemas });
-JSON.stringify(judgmentQuestions(card.fields))
+const fields = cardFields(card, JudgmentSchema);
+JSON.stringify(judgmentQuestions(fields))
 => {"trip":{"type":"noul","instructions":[],"criteria":{"true":"At least one email is from the school about the spring field trip.","false":"None is; a newsletter that mentions the school does not count."}}}
 
-card.fields.situation.ref
+fields.situation?.ref
 => /_content/about/family.doc.card
 
 parseError("---\nquestions:\n  trip:\n    type: noul\n    criteria: { true: a, false: b }\n---\n\n", schemas)

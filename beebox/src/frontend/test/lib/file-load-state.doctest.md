@@ -104,7 +104,7 @@ network failure reports that nothing answered at all.
 JSON.stringify(describeQueryFailure(new BoxUnreachableError({ status: null, cause: new TypeError("Failed to fetch") })))
 => {"headline":"The box did not answer — it may be restarting.","detail":"Failed to fetch"}
 
-describeQueryFailure({ message: "wrapped by the link", cause: new BoxUnreachableError({ status: 503 }) }).detail
+describeQueryFailure(new Error("wrapped by the link", { cause: new BoxUnreachableError({ status: 503 }) })).detail
 => HTTP 503 from the gateway
 ```
 

@@ -5,6 +5,15 @@ Browse owns its directory and structured detail independently of route splats.
 ```ts setup
 import { parseBrowseState, browseCardTarget, normalizeBrowseTarget, legacyBrowseTarget } from "../../src/lib/browse-card-state.js";
 import { serializeViewUrl, parseViewUrl } from "../../src/lib/view-url.js";
+import type { ViewTarget } from "../../src/lib/view-url.js";
+
+/** The path of the detail target a Browse target keeps in its view state. */
+function detailPath(target: ViewTarget): string | undefined {
+  const detail = target.viewState?.detail;
+  if (typeof detail !== "object" || detail === null || Array.isArray(detail)) return undefined;
+  const path = detail.path;
+  return typeof path === "string" ? path : undefined;
+}
 ```
 
 Root and explicit state take precedence over a directory seed. Invalid paths
@@ -151,7 +160,7 @@ location exists:
 
 ```ts
 const legacy = { path: "projects/Plan.doc.card", viewer: null, params: {}, viewState: null };
-const attempted = [];
+const attempted: string[] = [];
 const redirected = await legacyBrowseTarget(legacy, { lookupKind: async (path) => { attempted.push(path); return "file"; }, missingKind: "file" });
 JSON.stringify({ attempted, state: redirected.viewState })
 => {"attempted":["_content/projects/Plan.doc.card"],"state":{"directory":"_content/projects","detail":{"path":"_content/projects/Plan.doc.card","viewer":null,"params":{},"viewState":null}}}
@@ -163,6 +172,6 @@ missing detail as the normal Browse behavior does:
 ```ts
 const legacy = { path: "projects/Plan.doc.card", viewer: null, params: {}, viewState: null };
 const missing = await legacyBrowseTarget(legacy, { lookupKind: async () => "missing", missingKind: "file" });
-missing.viewState.detail.path
+detailPath(missing)
 => _content/projects/Plan.doc.card
 ```

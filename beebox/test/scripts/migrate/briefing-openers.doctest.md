@@ -49,7 +49,7 @@ function plan(input: { path?: string; text: string; landmark?: { path: string; t
     landmark: input.landmark === undefined ? null : input.landmark }] });
   return { writes: Object.fromEntries(result.writes.map((w) => [w.path, w.after])), outcomes: result.outcomes.map((o) => o.outcome), failures: result.failures };
 }
-const openersOf = (text: string) => parseLandmarkFields(text)?.navigation?.openers;
+const openersOf = (text: string | undefined) => (text === undefined ? undefined : parseLandmarkFields(text)?.navigation?.openers);
 ```
 
 ## Stock seeds are recognized by hash

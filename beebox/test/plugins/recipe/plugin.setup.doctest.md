@@ -85,7 +85,7 @@ const created = await bbx(box, ["create", "_content/recipes/Dinner.recipe.card",
 
 ```ts
 const box = await stubbedBox();
-const listed = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).stdout);
+const listed: { plugins: { name: string; active: boolean; stubs: { kind: string; name: string; present: boolean; effective: boolean }[] }[] } = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).stdout);
 listed.plugins.filter((p) => p.name === "recipe").map((p) => ({ active: p.active, stubs: p.stubs.map((s) => ({ kind: s.kind, name: s.name, present: s.present, effective: s.effective })) }))
 => [{
   active: true,

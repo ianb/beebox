@@ -10,18 +10,22 @@ this is that doctest.
 
 ```ts setup
 import { makeTestServer } from "../../../helpers/doctest-server.js";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 
-interface TestCtx {
-  boxRoot: string;
-  boxSlug: string;
-  user: null;
-  authed: boolean;
-  isOwner: boolean;
-}
-
-function ctxFor(boxRoot: string): TestCtx {
-  return { boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+// `browse` reads only boxRoot; the rest is the minimum a TrpcContext requires.
+function ctxFor(boxRoot: string): TrpcContext {
+  return {
+    boxRoot,
+    boxSlug: "t",
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    services: {},
+    user: null,
+    authed: true,
+    isOwner: true,
+    isAuthenticatedOwner: false,
+    actor: "user",
+  };
 }
 ```
 

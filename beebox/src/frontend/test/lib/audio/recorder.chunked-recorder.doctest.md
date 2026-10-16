@@ -10,16 +10,15 @@ path (Done / cancel / mode exit) proceeds. A bare `stop()` would drop that tail.
 // Minimal fake MediaRecorder: records the timeslice passed to start(), and emits
 // a final `dataavailable` asynchronously on stop() (as the real API does).
 class FakeMediaRecorder {
+  static last: FakeMediaRecorder | null = null;
   static isTypeSupported() { return true; }
-  constructor(stream, opts) {
-    this.stream = stream;
-    this.opts = opts;
-    this.state = "inactive";
-    this.ondataavailable = null;
-    this.timeslice = null;
+  state = "inactive";
+  ondataavailable: ((event: { data: { size: number; type: string } }) => void) | null = null;
+  timeslice: number | null = null;
+  constructor(public stream: MediaStream, public opts: MediaRecorderOptions) {
     FakeMediaRecorder.last = this;
   }
-  start(timeslice) {
+  start(timeslice: number) {
     this.state = "recording";
     this.timeslice = timeslice;
   }
@@ -32,14 +31,15 @@ class FakeMediaRecorder {
   }
 }
 
-globalThis.MediaRecorder = FakeMediaRecorder;
-if (!globalThis.navigator) globalThis.navigator = {};
-Object.defineProperty(globalThis.navigator, "mediaDevices", {
+Object.defineProperty(globalThis, "MediaRecorder", { value: FakeMediaRecorder, configurable: true, writable: true });
+Object.defineProperty(globalThis, "navigator", {
   configurable: true,
   writable: true,
   value: {
-    getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }),
-    enumerateDevices: async () => [],
+    mediaDevices: {
+      getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }),
+      enumerateDevices: async () => [],
+    },
   },
 });
 
@@ -52,7 +52,7 @@ const { ChunkedRecorder } = await import("../../../src/lib/audio/recorder.js");
 const chunks = [];
 const rec = new ChunkedRecorder({ onChunk: (c) => chunks.push(c), timesliceMs: 5000 });
 await rec.start();
-FakeMediaRecorder.last.timeslice
+FakeMediaRecorder.last?.timeslice
 => 5000
 ```
 

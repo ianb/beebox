@@ -10,7 +10,8 @@ left untouched — the scan is exhaustive over `kind` so a future fourth kind
 fails to compile here until this decides how it resumes.
 
 ```ts setup
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
@@ -27,7 +28,7 @@ import { sealVoiceSession } from "../../../src/core/voice-recording/voice-stagin
 
 const GITIGNORE = ["_tmp/", ".beebox/", "**/*.attach/**/*.jpg"].join("\n") + "\n";
 
-async function configureBox(box) {
+async function configureBox(box: TmpBox) {
   await box.write(".gitignore", GITIGNORE);
   await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
   await box.write("_config/fake-transcription.json", "{}");
@@ -37,7 +38,7 @@ async function configureBox(box) {
 // resumeStagingSessions fires prepareCaptureSession fire-and-forget, so
 // completion isn't observable from a fixed number of microtask ticks — poll
 // until the capture session is cleaned up (delivered) or the timeout lapses.
-async function waitForGone(boxRoot, id, timeoutMs = 5000) {
+async function waitForGone(boxRoot: string, id: string, timeoutMs = 5000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const session = await readStagingSession({ boxRoot, id });
@@ -92,6 +93,7 @@ means HQ was never requested, so there's no job to resume.
 
 ```ts continue
 const voiceAfter = await readStagingSession({ boxRoot: box.root, id: voice.id });
+assert.ok(voiceAfter?.voice);
 JSON.stringify({ state: voiceAfter.state, hq: voiceAfter.voice.hq, handoff: voiceAfter.voice.handoff })
 => {"state":"sealed","hq":{"state":"none"},"handoff":{"mode":"open"}}
 ```
@@ -135,17 +137,18 @@ is the observable proof resume actually fired it rather than leaving it
 `queued` forever:
 
 ```ts continue
-async function waitForHqSettled(boxRoot, id, timeoutMs = 2000) {
+async function waitForHqSettled(boxRoot: string, id: string, timeoutMs = 2000) {
   const start = Date.now();
   for (;;) {
     const session = await readStagingSession({ boxRoot, id });
+    assert.ok(session?.voice);
     if (session.voice.hq.state !== "queued") return session;
     if (Date.now() - start > timeoutMs) return session;
     await new Promise((r) => setTimeout(r, 20));
   }
 }
 const settled = await waitForHqSettled(box.root, voice.id);
-settled.voice.hq.state
+settled.voice?.hq.state
 => failed
 ```
 

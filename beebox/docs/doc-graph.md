@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-16T17:33:43Z
-Total documents: 536
+Generated: 2026-10-16T17:39:40Z
+Total documents: 537
 
 ## Issues
 
@@ -36,6 +36,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (116 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.check.subplan.md** — "Layout check: the script that enforces the file-layout rules" (184 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.moves.subplan.md** — "Layout moves: bring the tree to zero layout-check findings" (149 lines) · shipped history · implemented
+- **docs/implemented-plans/frontend-dom-harness.md** — "DOM doctests for frontend effects, events, and render counts" (383 lines) · shipped history · implemented
 - **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines) · implementation review
 - **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines) · implementation review
 - **docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md** — "Plan Engineering Review — Markdoc Tags Design" (138 lines) · shipped history · implemented
@@ -189,6 +190,7 @@ Referenced by:
 - docs/implemented-plans/file-layout.check.subplan.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/file-layout.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/first-run-openers.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
 - docs/implemented-plans/ios-audio-session-routing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/ios-per-box-device-lock.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/link-validation-fix.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -342,6 +344,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-17-bbx-init-prints-a-screenful-on-every-run.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-09-26-generated-guidance-families-without-pruning.md:2 (mention) — title: "Two generated guidance families still leave orphans: guides-for-<type> rules and dangling AGENTS.md symlinks"
+- ../issues/closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:65 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
 - ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -373,7 +376,6 @@ Referenced by:
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
 - ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:11 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:47 (mention) — needs the boxholder's approval (root `AGENTS.md`).
-- ../issues/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:57 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in AGENTS.md/docs here. Not needed.
 - ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:14 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:30 (mention) — - **Decide which directories get their own AGENTS.md.** Candidates that
@@ -1015,7 +1017,7 @@ Referenced by:
 - AGENTS.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
 - docs/guides.md:35 (link) — | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
 - docs/implemented-plans/remove-telegram.md:95 (mention) — - **Keep data, drop code** (`docs/box-work.md`, and the boxholder's standing
-- docs/testing.md:102 (link) — each lives and what not to touch: [box work](box-work.md).
+- docs/testing.md:104 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:121 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
 - ../AGENTS.md:20 (link) — Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/
@@ -1088,7 +1090,7 @@ Referenced by:
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server/operations.md:176 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
-- docs/testing.md:93 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
+- docs/testing.md:95 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:135 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:152 (mention) — - **Lives in:** `.claude/skills/field-probe/SKILL.md`; house pattern `beebox/src/frontend/src/lib/scroll-diagnostics/dia
@@ -2142,7 +2144,7 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 119 lines | current reference
+Title: "Testing" | 121 lines | current reference
 
 Referenced by:
 - AGENTS.md:19 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
@@ -2172,6 +2174,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:59 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/implemented-plans/docs-reorg.md:91 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/implemented-plans/figure-card-type.md:87 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
+- docs/implemented-plans/frontend-dom-harness.md:40 (mention) — | A. DOM harness + compiler load hook | ~170 (3 helper files, `.taprc`, `package.json`) | — | ~60 (`docs/testing/doctest
 - docs/implemented-plans/hub-healthz-box-aggregation.md:430 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design tool.
 - docs/implemented-plans/input-extraction.md:36 (mention) — - `docs/testing.md` via the bbx-plan template: tests first as a design tool;
 - docs/implemented-plans/ios-per-box-device-lock.md:36 (mention) — - `docs/testing.md` says tests first force useful decomposition, then document
@@ -4837,7 +4840,7 @@ References:
 - → AGENTS.md (mention)
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
 - → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
-- → ../issues/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
+- → ../issues/closed/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
 - → ../issues/closed/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
 - → ../issues/closed/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
 - → ../issues/closed/bugs/2026-09-29-bin-test-doctests-not-run.md (link)
@@ -5046,6 +5049,17 @@ Referenced by:
 
 References:
 - → ../issues/features/2026-07-20-first-run-experience.md (frontmatter)
+- → AGENTS.md (mention)
+
+#### docs/implemented-plans/frontend-dom-harness.md **[ORPHAN]**
+
+Title: "DOM doctests for frontend effects, events, and render counts" | 383 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-08-chat-message-list-rerenders-per-token.md (frontmatter)
+- → docs/testing/doctests.md (mention)
+- → docs/testing.md (mention)
 - → AGENTS.md (mention)
 
 #### docs/implemented-plans/gmail-explicit-action.md
@@ -9216,11 +9230,12 @@ References:
 
 #### docs/testing/doctests.md
 
-Title: "Doctests" | 140 lines | current reference
+Title: "Doctests" | 195 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:295 (mention) — doctests.md            does this function, route, or box operation behave?
 - docs/implemented-plans/file-layout.md:130 (mention) — - `docs/testing/doctests.md:20`: *"Create `test/<area>/<name>.doctest.md`
+- docs/implemented-plans/frontend-dom-harness.md:40 (mention) — | A. DOM harness + compiler load hook | ~170 (3 helper files, `.taprc`, `package.json`) | — | ~60 (`docs/testing/doctest
 - docs/testing.md:43 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
 - docs/testing/tours.md:35 (link) — [doctests](doctests.md); "does the app boot at all" is the
 - ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, `.claude/skills/doctest/SKILL.md`, `beebox/docs/testing/doctests.md`.
@@ -9808,7 +9823,7 @@ No references in or out.
 
 #### src/frontend/src/components/chat/AGENTS.md
 
-Title: "Chat UI" | 171 lines
+Title: "Chat UI" | 170 lines
 
 Referenced by:
 - docs/chat.md:21 (mention) — - The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend

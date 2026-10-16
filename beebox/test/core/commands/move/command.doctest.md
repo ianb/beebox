@@ -15,20 +15,21 @@ import { executeMove } from "../../../../src/core/commands/move/command.js";
 import { extractBodyLinks } from "../../../../src/core/body-refs.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 
-async function mv(box, args) {
+async function mv(box: TmpBox, args: Record<string, unknown>) {
   const { ctx } = createCollectorContext(box.root);
   return executeMove(ctx, args);
 }
 
 /** A directory listing without scaffolding: `.gitkeep` files and the empty directories that hold only one. */
-async function listWithoutScaffolding(box, dir) {
+async function listWithoutScaffolding(box: TmpBox, dir: string) {
   const lines = (await box.list(dir)).split("\n");
   return lines.filter((l) => !l.endsWith("/.gitkeep") && !lines.includes(`${l}/.gitkeep`)).join("\n");
 }
 
 /** Build a throwaway box from a path -> content map and pass it to `fn`. */
-async function withBox(files, fn) {
+async function withBox<T>(files: Record<string, string>, fn: (box: TmpBox) => Promise<T>): Promise<T> {
   const box = await makeTmpBox();
   try {
     for (const [file, content] of Object.entries(files)) await box.write(file, content);
@@ -43,8 +44,8 @@ async function withBox(files, fn) {
  * `error: <message>`, followed by each of `paths` -- a path ending in `/` is listed
  * (`>> ls <dir>`), any other path is read (`>> <path>` and its contents).
  */
-async function moved(files, args, paths) {
-  return withBox(files, async (box) => {
+async function moved(files: Record<string, string>, args: Record<string, unknown>, paths?: string[]) {
+  return withBox(files, async (box: TmpBox) => {
     const result = await mv(box, args);
     const out = [result.success ? "success" : `error: ${result.error}`];
     for (const p of paths ?? []) {
@@ -56,13 +57,13 @@ async function moved(files, args, paths) {
 }
 
 /** The `success`/`error` of a move that is expected to be rejected. */
-const rejected = (files, args) => withBox(files, async (box) => {
+const rejected = (files: Record<string, string>, args: Record<string, unknown>) => withBox(files, async (box: TmpBox) => {
   const { success, error } = await mv(box, args);
   return { success, error };
 });
 
 /** Fixture files for an index card holding `body` (frontmatter: type doc, title Index). */
-const indexCard = (body) => `---\ntype: doc\ntitle: Index\n---\n${body}\n`;
+const indexCard = (body: string) => `---\ntype: doc\ntitle: Index\n---\n${body}\n`;
 ```
 
 ## Phase-2 card: file + attach dir move, inbound refs rewritten (relative + absolute, into attachments too)
@@ -401,7 +402,7 @@ const links = await withBox(
     "_content/cap/Beach.image.card": "---\ntitle: Beach\n---\n",
     "_content/notes/trip.doc.card": "---\ntitle: Trip\n---\n![b](/_content/cap/Beach.image.card)\n",
   },
-  async (box) => {
+  async (box: TmpBox) => {
     await mv(box, { from: "_content/cap/Beach.image.card", to: "_content/cap/Beach walk.image.card" });
     const trip = await box.read("_content/notes/trip.doc.card");
     const spaced = trip.includes("![b](</_content/cap/Beach walk.image.card>)");
@@ -475,7 +476,7 @@ const text = await moved(
   { from: "_content/store/notes/Plan.doc.card", to: "_bookkeeping/archive/Plan.doc.card" },
   ["_content/store/notes/Index.doc.card"],
 );
-text.split("\n").filter((line) => line.includes("Plan.doc.card")).join("\n")
+text.split("\n").filter((line: string) => line.includes("Plan.doc.card")).join("\n")
 =>
 ref: ../../../_bookkeeping/archive/Plan.doc.card  # the plan
   - ref: ../../../_bookkeeping/archive/Plan.doc.card # also
@@ -619,7 +620,7 @@ const result = await withBox(
     "_content/index.doc.card": "---\ntitle: Index\n---\n[S](/_content/notes/saoirse.md)\n",
     "_content/other.md": "[S](notes/saoirse.md)\n",
   },
-  async (box) => {
+  async (box: TmpBox) => {
     const first = await mv(box, { from: "_content/notes/saoirse.md", to: "_content/dossiers/" });
     const firstMove = {
       success: first.success,

@@ -55,7 +55,7 @@ stamped.includes("gmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-fa
 The MIME we uploaded has the headers and body:
 
 ```ts continue
-const raw = gmail.drafts[0].raw;
+const raw = gmail.drafts[0]?.raw ?? "";
 const decoded = Buffer.from(raw.replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf-8");
 decoded.includes("To: alice@example.com")
 => true
@@ -99,14 +99,14 @@ gmail.drafts.length
 => 1
 
 // Reply uses the source thread-id
-gmail.drafts[0].draft.message.threadId
+gmail.drafts[0]?.draft.message.threadId
 => thread-abc12345
 ```
 
 The MIME has the threading headers:
 
 ```ts continue
-const raw = gmail.drafts[0].raw;
+const raw = gmail.drafts[0]?.raw ?? "";
 const decoded = Buffer.from(raw.replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf-8");
 decoded.includes("In-Reply-To: orig-msg-id-123")
 => true
@@ -145,7 +145,7 @@ await connector.sync();
 gmail.drafts.length
 => 1
 
-gmail.drafts[0].draft.message.threadId
+gmail.drafts[0]?.draft.message.threadId
 => thread-zzz99999
 ```
 
@@ -202,7 +202,7 @@ const again = await connector.sync();
 => undefined | 0
 
 const [check] = await strandedDraftsHealthChecks(box.root);
-`${check.name} | ${check.message.startsWith("1 Gmail draft could not be uploaded and is no longer retried: _content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card")}`
+`${check?.name} | ${check?.message.startsWith("1 Gmail draft could not be uploaded and is no longer retried: _content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card")}`
 => gmail-drafts | true
 
 // Fixing the card: point the ref at nothing (a new thread) and drop the error line.
@@ -268,7 +268,7 @@ const gaveUp = await readFile(otherPath, "utf-8");
 `${gaveUp.includes("gmail-draft-error: \"Upload kept failing for 7 days")} | ${gaveUp.includes("gmail-draft-failing-since")}`
 => true | false
 
-(await strandedDraftsHealthChecks(box.root))[0].message.includes("draft-2026-04-28-b")
+(await strandedDraftsHealthChecks(box.root))[0]?.message.includes("draft-2026-04-28-b")
 => true
 ```
 

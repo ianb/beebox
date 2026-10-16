@@ -11,10 +11,29 @@ parseable), and an `invocation-failure` (the harness never produced an
 assistant response at all).
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
+import type { Result } from "../../../src/shared/result.js";
+import type { InstructionEvaluation } from "../../../src/core/procedure/engine-validate-model.js";
 import { evaluateInstructions } from "../../../src/core/procedure/engine-validate-model.js";
 import { createFakeAgent } from "../fake-agent.js";
+import type { FakeAgent } from "../fake-agent.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { modelTier, providerOf } from "../../../src/shared/agent-models.js";
+
+/** Narrows an evaluation to one outcome so its fields can be read. */
+function isOutcome<K extends InstructionEvaluation["outcome"]>(
+  evaluation: InstructionEvaluation,
+  outcome: K,
+): evaluation is Extract<InstructionEvaluation, { outcome: K }> {
+  return evaluation.outcome === outcome;
+}
+
+/** The value of a successful result; fails the test on an error. */
+function valueOf<T, E>(result: Result<T, E>): T {
+  assert.ok(result.ok);
+  return result.value;
+}
 ```
 
 ## A passing verdict
@@ -23,12 +42,12 @@ The model judges the diff satisfies the instruction → `passed: true`, and the
 reasoning is surfaced as the `review` string.
 
 ```ts
-let captured;
-const createAgent = (opts) => createFakeAgent({
+let captured = "";
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => ({ success: true }),
   structuredResult: ({ systemPrompt }) => {
-    captured = systemPrompt;
+    captured = systemPrompt ?? "";
     return { passed: true, reasoning: "The diff adds the transcription block." };
   },
 });
@@ -42,6 +61,7 @@ const result = await evaluateInstructions({
   name: "judge",
 });
 print(`outcome: ${result.outcome}`);
+assert.ok(isOutcome(result, "verdict"));
 print(`passed: ${result.passed}`);
 print(`review: ${result.review}`);
 
@@ -61,7 +81,7 @@ prompt has diff: true
 ## A failing verdict
 
 ```ts
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => ({ success: true }),
   structuredResult: () => ({ passed: false, reasoning: "No transcription block in the diff." }),
@@ -76,6 +96,7 @@ const result = await evaluateInstructions({
   name: "judge",
 });
 print(`outcome: ${result.outcome}`);
+assert.ok(isOutcome(result, "verdict"));
 print(`passed: ${result.passed}`);
 print(`review: ${result.review}`);
 =>
@@ -96,8 +117,8 @@ one would inherit whatever wandering ate the first budget). The *work* agent is
 never retried — its work is already done and committed.
 
 ```ts
-const turnCaps = [];
-const createAgent = (opts) => createFakeAgent({
+const turnCaps: number[] = [];
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => ({ success: true }),
   structuredResult: () => null,
@@ -113,7 +134,7 @@ const result = await evaluateInstructions({
     const agent = createAgent(opts);
     const invokeStructured = agent.invokeStructured;
     agent.invokeStructured = (schema, options) => {
-      turnCaps.push(options.maxTurns);
+      if (options.maxTurns !== undefined) turnCaps.push(options.maxTurns);
       return invokeStructured(schema, options);
     };
     return agent;
@@ -121,6 +142,7 @@ const result = await evaluateInstructions({
   name: "judge",
 });
 print(`outcome: ${result.outcome}`);
+assert.ok(isOutcome(result, "inconclusive"));
 print(`reason: ${result.reason}`);
 print(`detail: ${result.detail}`);
 print(`review: ${result.review}`);
@@ -138,7 +160,7 @@ problem (the model answered, just not in the shape asked for) with a different
 fix:
 
 ```ts
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => ({ success: true }),
   structuredResult: () => null,
@@ -156,6 +178,7 @@ const result = await evaluateInstructions({
   name: "judge",
 });
 print(`outcome: ${result.outcome}`);
+assert.ok(isOutcome(result, "inconclusive"));
 print(`reason: ${result.reason}`);
 print(`detail: ${result.detail}`);
 =>
@@ -172,7 +195,7 @@ not retried.
 
 ```ts
 let attempts = 0;
-const createAgent = (opts) => {
+const createAgent: AgentFactory = (opts) => {
   attempts++;
   return createFakeAgent({
     name: opts.name,
@@ -191,6 +214,7 @@ const result = await evaluateInstructions({
   name: "judge",
 });
 print(`outcome: ${result.outcome}`);
+assert.ok(isOutcome(result, "invocation-failure"));
 print(`error: ${result.error}`);
 print(`judge attempts: ${attempts}`);
 =>
@@ -209,14 +233,15 @@ const box = await makeTmpBox({ git: true });
 await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
 box.commitAll("Configure Codex");
 
-let fakeAgent;
-const createAgent = (opts) => {
-  fakeAgent = createFakeAgent({
+const fakeAgents: FakeAgent[] = [];
+const createAgent: AgentFactory = (opts) => {
+  const agent = createFakeAgent({
     name: opts.name,
     act: async () => ({ success: true }),
     structuredResult: () => ({ passed: true, reasoning: "Looks good." }),
   });
-  return fakeAgent;
+  fakeAgents.push(agent);
+  return agent;
 };
 
 await evaluateInstructions({
@@ -227,7 +252,10 @@ await evaluateInstructions({
   createAgent,
   name: "judge",
 });
-const judgeModel = fakeAgent.invocations[0].options.model;
+const fakeAgent = fakeAgents[0];
+assert.ok(fakeAgent);
+const judgeModel = fakeAgent.invocations[0]?.options.model;
+assert.ok(judgeModel !== undefined);
 [providerOf(judgeModel), modelTier(judgeModel)]
 => ["openai", "balanced"]
 ```

@@ -89,13 +89,13 @@ cards.length
 => 3
 
 // Normal priority comes first
-cards[0].priority
+cards[0]?.priority
 => normal
 
-cards[1].priority
+cards[1]?.priority
 => low
 
-cards[2].priority
+cards[2]?.priority
 => low
 
 await box.cleanup();
@@ -148,7 +148,7 @@ const digestOnly = await findJobCards(jobsDir, { typeFilter: "digest" });
 digestOnly.length
 => 1
 
-digestOnly[0].file
+digestOnly[0]?.file
 => msg1.digest.job.card
 
 const all = await findJobCards(jobsDir);
@@ -203,7 +203,7 @@ const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
 => ["y1.intake.job.card"]
 
-gmailOnly[0].priority
+gmailOnly[0]?.priority
 => low
 
 await box.cleanup();
@@ -236,7 +236,7 @@ cards.length
 ```ts
 const desc = await buildJobDescription(
   {
-    card: { file: "task.intake.job.card", priority: "low" },
+    card: { file: "task.intake.job.card", priority: "low", createdAt: null },
     relPath: "_bookkeeping/jobs/task.intake.job.card",
     content: createIntakeJobTemplate({
       connector: "rss",
@@ -270,7 +270,7 @@ await box.write("store/inbox/item1.card", `---\nstatus: new\n---\nHello from ite
 
 const desc = await buildJobDescription(
   {
-    card: { file: "x.intake.job.card", priority: "normal" },
+    card: { file: "x.intake.job.card", priority: "normal", createdAt: null },
     relPath: "_bookkeeping/jobs/x.intake.job.card",
     content: createIntakeJobTemplate({
       connector: "rss",
@@ -300,7 +300,7 @@ await box.cleanup();
 ```ts
 const desc = await buildJobDescription(
   {
-    card: { file: "task.intake.job.card", priority: "normal" },
+    card: { file: "task.intake.job.card", priority: "normal", createdAt: null },
     relPath: "_bookkeeping/jobs/task.intake.job.card",
     content: createIntakeJobTemplate({
       connector: "rss",
@@ -327,7 +327,7 @@ surfaced with its raw content and a warning rather than crashing the batch.
 ```ts
 const desc = await buildJobDescription(
   {
-    card: { file: "legacy.job.card", priority: "normal" },
+    card: { file: "legacy.job.card", priority: "normal", createdAt: null },
     relPath: "_bookkeeping/jobs/legacy.job.card",
     content: `<job><description>Old XML job</description></job>`,
   },

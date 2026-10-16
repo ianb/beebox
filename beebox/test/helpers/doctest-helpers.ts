@@ -6,6 +6,7 @@
  */
 
 
+import type { Dirent } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
@@ -95,7 +96,7 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
       const dir = subdir ? join(root, subdir) : root;
       const entries: string[] = [];
       async function walk(d: string) {
-        let items: Awaited<ReturnType<typeof readdir>>;
+        let items: Dirent[];
         try {
           items = await readdir(d, { withFileTypes: true });
         } catch (_e) {
@@ -147,4 +148,14 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
   };
 
   return box;
+}
+
+/** A (nested) field of a JSON response body, or undefined when any step of the path is absent. */
+export function bodyField(body: unknown, ...path: Array<string | number>): unknown {
+  let value: unknown = body;
+  for (const key of path) {
+    if (typeof value !== "object" || value === null) return undefined;
+    value = Reflect.get(value, key);
+  }
+  return value;
 }

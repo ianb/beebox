@@ -36,7 +36,7 @@ await box.write("store/notes/Dentist.doc.card", DOC("Appointment moved to June 1
 await box.write("store/notes/Bare.doc.card", DOC("No contains here yet."));
 await openSearchIndex(box.root);
 const state = await loadContainsState(box.root);
-state.cards["store/notes/Dentist.doc.card"].containsText
+state.cards["store/notes/Dentist.doc.card"]?.containsText
 => Dentist moved to June 17.
 
 JSON.stringify(listStale(state))

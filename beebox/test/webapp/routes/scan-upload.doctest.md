@@ -17,7 +17,8 @@ on both.
 ```ts setup
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/doctest-server.js";
+import { bodyField } from "../../helpers/doctest-helpers.js";
 import type { TestServerOptions } from "../../helpers/test-server.js";
 import { textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { resetScanRateLimits, SCAN_RATE_LIMIT } from "../../../src/webapp/routes/scan-upload/rate-limit.js";
@@ -28,7 +29,7 @@ import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../s
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
 const ORIGINAL_OWNER_EMAIL = process.env.BBX_OWNER_EMAIL;
 
-function sha256(bytes) {
+function sha256(bytes: Uint8Array | string) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
@@ -67,7 +68,7 @@ function avifBytes() {
     .avif().toBuffer();
 }
 
-async function put(ctx, opts) {
+async function put(ctx: TestServer, opts: { bytes: Buffer; hash?: string; filename: string | null; headers?: Record<string, string> }) {
   return ctx.request({
     method: "PUT",
     url: `/api/scan/files/${opts.hash ?? sha256(opts.bytes)}`,
@@ -80,7 +81,7 @@ async function put(ctx, opts) {
   });
 }
 
-async function check(ctx, hashes) {
+async function check(ctx: TestServer, hashes: string[]) {
   return ctx.request({ method: "POST", url: "/api/scan/check", payload: { hashes } });
 }
 
@@ -89,14 +90,14 @@ async function check(ctx, hashes) {
  * With qpdf the route returns a real verdict; without it the route must refuse
  * with a retryable 503 rather than accept unvalidated bytes or blame the file.
  */
-function pdfOutcome(opts) {
+function pdfOutcome(opts: { hasQpdf: boolean; res: InjectResult; status: number; body: string }) {
   const { hasQpdf, res, status, body } = opts;
   if (!hasQpdf) {
-    return res.statusCode === 503 && res.body.status === "server-error"
+    return res.statusCode === 503 && bodyField(res.body, "status") === "server-error"
       ? "ok"
       : `unexpected without qpdf: ${res.statusCode} ${JSON.stringify(res.body)}`;
   }
-  return res.statusCode === status && res.body.status === body
+  return res.statusCode === status && bodyField(res.body, "status") === body
     ? "ok"
     : `unexpected with qpdf: ${res.statusCode} ${JSON.stringify(res.body)}`;
 }
@@ -116,7 +117,7 @@ const png = await pngBytes();
 const hash = sha256(png);
 
 const first = await check(ctx, [hash]);
-JSON.stringify({ status: first.statusCode, states: first.body.states })
+JSON.stringify({ status: first.statusCode, states: bodyField(first.body, "states") })
 => {"status":200,"states":{"«*»":{"state":"unknown"}}}
 ```
 
@@ -126,7 +127,7 @@ uploader bundle notices it has fallen behind this box. It is a sibling of
 before — see the contract doc's "Client identity".
 
 ```ts continue
-typeof first.body.contractVersion
+typeof bodyField(first.body, "contractVersion")
 => number
 ```
 
@@ -164,8 +165,8 @@ and a re-PUT of the same hash is a `duplicate` no-op rather than a re-store:
 const second = await check(ctx, [hash]);
 const duplicate = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
 JSON.stringify({
-  state: second.body.states[hash].state,
-  duplicate: [duplicate.statusCode, duplicate.body.status],
+  state: bodyField(second.body, "states", hash, "state"),
+  duplicate: [duplicate.statusCode, bodyField(duplicate.body, "status")],
 })
 => {"state":"pending","duplicate":[200,"duplicate"]}
 ```
@@ -214,10 +215,10 @@ const validAvif = await put(ctx, { bytes: avif, filename: "Receipts_002.avif" })
 const wrongExtension = await put(ctx, { bytes: wrongWebp, filename: "Receipts_003.avif" });
 const truncated = await put(ctx, { bytes: avif.subarray(0, avif.length - 12), filename: "Receipts_004.avif" });
 JSON.stringify([
-  [validWebp.statusCode, validWebp.body.status],
-  [validAvif.statusCode, validAvif.body.status],
-  [wrongExtension.statusCode, wrongExtension.body.reason],
-  [truncated.statusCode, truncated.body.status, truncated.body.reason.startsWith("the image could not be decoded")],
+  [validWebp.statusCode, bodyField(validWebp.body, "status")],
+  [validAvif.statusCode, bodyField(validAvif.body, "status")],
+  [wrongExtension.statusCode, bodyField(wrongExtension.body, "reason")],
+  [truncated.statusCode, bodyField(truncated.body, "status"), String(bodyField(truncated.body, "reason")).startsWith("the image could not be decoded")],
 ])
 => [[200,"accepted"],[200,"accepted"],[422,"magic bytes say image/webp but the extension is .avif"],[422,"rejected",true]]
 ```
@@ -229,7 +230,7 @@ same valid AV1 image remains accepted through full pixel decode.
 const mif1 = Buffer.from(avif);
 mif1.write("mif1", 8);
 const branded = await put(ctx, { bytes: mif1, filename: "Receipts_005.avif" });
-JSON.stringify([branded.statusCode, branded.body.status, branded.body.reason])
+JSON.stringify([branded.statusCode, bodyField(branded.body, "status"), bodyField(branded.body, "reason")])
 => [200,"accepted",null]
 ```
 
@@ -260,7 +261,7 @@ await ctx.seed(".beebox/uploads.json", JSON.stringify({
 
 const states = await check(ctx, [hash]);
 const reput = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
-JSON.stringify({ state: states.body.states[hash].state, reput: [reput.statusCode, reput.body.status] })
+JSON.stringify({ state: bodyField(states.body, "states", hash, "state"), reput: [reput.statusCode, bodyField(reput.body, "status")] })
 => {"state":"imported","reput":[200,"duplicate"]}
 ```
 
@@ -288,7 +289,7 @@ Neither the claimed hash nor the real one is now known to the box:
 
 ```ts continue
 const after = await check(ctx, [wrongHash, sha256(png)]);
-JSON.stringify([after.body.states[wrongHash].state, after.body.states[sha256(png)].state])
+JSON.stringify([bodyField(after.body, "states", wrongHash, "state"), bodyField(after.body, "states", sha256(png), "state")])
 => ["unknown","unknown"]
 ```
 
@@ -320,7 +321,7 @@ defeat the whole gate:
 ```ts continue
 const html = Buffer.from("<!DOCTYPE html>\n<html><body>Not found</body></html>\n");
 const htmlRes = await put(ctx, { bytes: html, filename: "Statement.pdf" });
-JSON.stringify({ status: htmlRes.statusCode, reason: htmlRes.body.reason })
+JSON.stringify({ status: htmlRes.statusCode, reason: bodyField(htmlRes.body, "reason") })
 => {"status":422,"reason":"the magic bytes match no known file type, but the filename claims .pdf"}
 ```
 
@@ -329,7 +330,7 @@ An extension outside the accepted set never gets as far as a sniff:
 ```ts continue
 const otherBytes = Buffer.concat([png, Buffer.from("tail")]);
 const zip = await put(ctx, { bytes: otherBytes, filename: "Scans.zip" });
-JSON.stringify({ status: zip.statusCode, reason: zip.body.reason })
+JSON.stringify({ status: zip.statusCode, reason: bodyField(zip.body, "reason") })
 => {"status":422,"reason":"extension .zip is not accepted (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)"}
 ```
 
@@ -341,7 +342,7 @@ it:
 const states = await check(ctx, [hash]);
 const sidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${hash}.json`));
 const heldAsPdf = sidecar.storedFilename === `${hash}.pdf`;
-JSON.stringify({ check: states.body.states[hash], stored: heldAsPdf })
+JSON.stringify({ check: bodyField(states.body, "states", hash), stored: heldAsPdf })
 => {"check":{"state":"rejected","reason":"magic bytes say image/png but the extension is .pdf"},"stored":true}
 ```
 
@@ -352,7 +353,7 @@ client corrects the filename instead:
 ```ts continue
 const retry = await put(ctx, { bytes: png, filename: "Statement.png" });
 const recheck = await check(ctx, [hash]);
-JSON.stringify({ retry: [retry.statusCode, retry.body.status], state: recheck.body.states[hash].state })
+JSON.stringify({ retry: [retry.statusCode, bodyField(retry.body, "status")], state: bodyField(recheck.body, "states", hash, "state") })
 => {"retry":[200,"accepted"],"state":"pending"}
 ```
 
@@ -394,7 +395,7 @@ verdict on its file.
 ```ts continue
 const states = await check(ctx, [sha256(pdf), sha256(corrupt)]);
 const expected = hasQpdf ? ["pending", "rejected"] : ["unknown", "unknown"];
-JSON.stringify([states.body.states[sha256(pdf)].state, states.body.states[sha256(corrupt)].state]) === JSON.stringify(expected)
+JSON.stringify([bodyField(states.body, "states", sha256(pdf), "state"), bodyField(states.body, "states", sha256(corrupt), "state")]) === JSON.stringify(expected)
 => true
 ```
 
@@ -439,7 +440,7 @@ No partial file survives either refusal — quarantine holds nothing:
 
 ```ts continue
 const states = await check(ctx, [sha256(oversize)]);
-JSON.stringify(states.body.states[sha256(oversize)])
+JSON.stringify(bodyField(states.body, "states", sha256(oversize)))
 => {"state":"unknown"}
 ```
 
@@ -489,9 +490,9 @@ const missing = await put(ctx, { bytes: png, filename: null });
 const blank = await put(ctx, { bytes: png, filename: "   " });
 const traversal = await put(ctx, { bytes: png, filename: "../../etc/passwd" });
 JSON.stringify({
-  missing: [missing.statusCode, missing.body.error],
+  missing: [missing.statusCode, bodyField(missing.body, "error")],
   blank: blank.statusCode,
-  traversal: [traversal.statusCode, traversal.body.reason],
+  traversal: [traversal.statusCode, bodyField(traversal.body, "reason")],
 })
 => {"missing":[400,"X-Upload-Filename header required"],"blank":400,"traversal":[422,"the file has no extension (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)"]}
 ```
@@ -511,7 +512,7 @@ An empty batch is legal — a folder with nothing new in it is a normal run:
 
 ```ts continue
 const empty = await check(ctx, []);
-JSON.stringify({ status: empty.statusCode, states: empty.body.states })
+JSON.stringify({ status: empty.statusCode, states: bodyField(empty.body, "states") })
 => {"status":200,"states":{}}
 ```
 
@@ -528,8 +529,8 @@ scanner cadence.
 resetScanRateLimits();
 const ctx = await makeScanTestServer();
 
-let last = null;
-for (let i = 0; i < SCAN_RATE_LIMIT + 1; i++) last = await check(ctx, []);
+let last = await check(ctx, []);
+for (let i = 1; i < SCAN_RATE_LIMIT + 1; i++) last = await check(ctx, []);
 last.statusCode
 => 429
 ```
@@ -617,11 +618,11 @@ const asPhone = await ctx.request({
   method: "POST",
   url: "/api/scan/check",
   payload: { hashes: [sha256(png)] },
-  headers: { authorization: `Bearer ${device.deviceToken}` },
+  headers: { authorization: `Bearer ${device?.deviceToken}` },
 });
 JSON.stringify({
   anonymous: asOwner.statusCode,
-  owner: [asOwnerHub.statusCode, asOwnerHub.body.states[sha256(png)].state],
+  owner: [asOwnerHub.statusCode, bodyField(asOwnerHub.body, "states", sha256(png), "state")],
   phone: asPhone.statusCode,
 })
 => {"anonymous":401,"owner":[200,"pending"],"phone":401}

@@ -8,6 +8,7 @@ The schema is upstream and versioned, so the reader's contract is: **never throw
 on shape**. It renders what it recognizes and counts what it doesn't.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { gzipSync } from "node:zlib";
 import {
   gunzipToText,
@@ -16,6 +17,18 @@ import {
   parseDoclingJson,
   readDoclingDocument,
 } from "../../../src/lib/docling/parse.js";
+import type { DoclingItem } from "../../../src/lib/docling/parse.js";
+
+/** The item as a table; fails the example when it is anything else. */
+function tableOf(item: DoclingItem | undefined) {
+  assert.ok(item?.kind === "table", "expected a table item");
+  return item;
+}
+
+/** The item's text, or undefined for a table, picture, or missing item. */
+function textOf(item: DoclingItem | undefined): string | undefined {
+  return item?.kind === "text" ? item.text : undefined;
+}
 
 /** A small but realistic DoclingDocument: two pages, a table, a picture. */
 const HANDBOOK = {
@@ -123,11 +136,11 @@ Docling records cells with half-open row/column offsets; the reader places each
 cell at its start offset and carries spans as `colSpan`/`rowSpan`.
 
 ```ts
-const table = readDoclingDocument(HANDBOOK).items.find((item) => item.kind === "table");
+const table = tableOf(readDoclingDocument(HANDBOOK).items.find((item) => item.kind === "table"));
 table.rows.map((row) => row.map((cell) => cell.text).join("|")).join(" / ")
 => Plan|Cost / Standard|$0
 
-table.rows[0].every((cell) => cell.header)
+table.rows[0]?.every((cell) => cell.header)
 => true
 ```
 
@@ -135,7 +148,7 @@ A table docling recorded no cell data for yields no rows — the view says so
 rather than drawing an empty grid:
 
 ```ts
-readDoclingDocument({ tables: [{ label: "table", data: {} }] }).items[0].rows.length
+tableOf(readDoclingDocument({ tables: [{ label: "table", data: {} }] }).items[0]).rows.length
 => 0
 ```
 
@@ -171,7 +184,7 @@ flat, which loses interleaving but keeps every item.
 const flat = readDoclingDocument({
   texts: [{ label: "paragraph", text: "Only item", prov: [{ page_no: 4 }] }],
 });
-`${flat.items.length} ${flat.items[0].text} p${flat.pageNumbers.join("")}`
+`${flat.items.length} ${textOf(flat.items[0])} p${flat.pageNumbers.join("")}`
 => 1 Only item p4
 ```
 
@@ -182,7 +195,7 @@ readDoclingDocument({
   body: { children: [{ $ref: "#/groups/0" }] },
   groups: [{ children: [{ $ref: "#/groups/0" }, { $ref: "#/texts/0" }] }],
   texts: [{ label: "paragraph", text: "reached", prov: [{ page_no: 1 }] }],
-}).items.map((i) => i.text).join("")
+}).items.map((i) => textOf(i)).join("")
 => reached
 ```
 

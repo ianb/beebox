@@ -32,7 +32,7 @@ async function configureGoogle() {
 }
 
 const NOW = new Date("2026-07-28T12:00:00Z");
-const describe = (checks) =>
+const describe = (checks: Awaited<ReturnType<typeof googleAuthHealthChecks>>) =>
   JSON.stringify(checks.map((c) => ({ name: c.name, ok: c.ok, severity: c.severity })));
 ```
 
@@ -61,7 +61,7 @@ const live = await googleAuthHealthChecks(tmp, { now: NOW });
 describe(live)
 => [{"name":"google-auth","ok":true,"severity":"warning"}]
 
-live[0].message
+live[0]?.message
 => Google authorization is live (last verified «*» ago)
 ```
 
@@ -77,7 +77,7 @@ const dead = await googleAuthHealthChecks(tmp, { now: NOW });
 describe(dead)
 => [{"name":"google-auth","ok":false,"severity":"warning"}]
 
-dead[0].message
+dead[0]?.message
 => Google authorization expired or was revoked «*» ago (Token has been expired or revoked.) — Gmail, Calendar and Drive sync are paused. Reconnect at /«*»/admin?reconnect=google
 ```
 

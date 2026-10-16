@@ -10,13 +10,14 @@ last, one line each; `bbx status` prints the same lines.
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import type { PluginListing } from "../../../src/core/plugins/active.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 
 const exec = promisify(execFile);
 
 /** `bbx <args>` run in the box through tsx; stdout as lines. */
-async function bbx(box, args) {
+async function bbx(box: TmpBox, args: string[]) {
   const argv = ["--import", import.meta.resolve("tsx"), join(PACKAGE_ROOT, "src/cli/entry/run.ts"), ...args];
   const { stdout } = await exec(process.execPath, argv, { cwd: box.root });
   return stdout.split("\n").filter((line) => line !== "");
@@ -76,8 +77,8 @@ await box.write("src/schemas/progress.ts", 'import { cardSchema } from "beebox/c
 ```
 
 ```ts continue
-const json = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).join("\n"));
-json.plugins[0].stubs.filter((s) => s.name === "progress").map((s) => `${s.present}/${s.effective}`)
+const json: { plugins: PluginListing[]; problems: string[] } = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).join("\n"));
+json.plugins[0]?.stubs.filter((s) => s.name === "progress").map((s) => `${s.present}/${s.effective}`)
 => ["true/false"]
 ```
 
@@ -94,7 +95,7 @@ await box.write("_config/box.json", JSON.stringify({ plugins: ["coursware"] }));
 ```
 
 ```ts continue
-const json = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).join("\n"));
+const json: { plugins: PluginListing[]; problems: string[] } = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).join("\n"));
 ({ names: json.plugins.map((p) => `${p.name}:${p.active}`), problems: json.problems })
 => { names: ["courseware:false", "recipe:false"], problems: ["box.json names an unknown plugin: coursware"] }
 ```

@@ -16,6 +16,7 @@ import {
   createTextQuestionTemplate,
   createConfirmQuestionTemplate,
 } from "../../src/schemas/question.js";
+import { isRecord } from "../../src/shared/is-record.js";
 
 const ASKED_AT = "2026-07-10T09:00:00-07:00";
 
@@ -89,7 +90,7 @@ const parsedWithAnsweredBy = QuestionSchema.frontmatterSchema.safeParse(
 parsedWithAnsweredBy.success
 => true
 
-"answered-by" in parsedWithAnsweredBy.data
+isRecord(parsedWithAnsweredBy.data) && "answered-by" in parsedWithAnsweredBy.data
 => false
 ```
 
@@ -283,7 +284,7 @@ import { getTemplate } from "../../src/templates-registry.js";
 
 // Parse raw args through the template's own schema, then generate — exercising
 // both the argsSchema (accepts the contract fields) and the passthrough.
-function renderTemplate(name, rawArgs) {
+function renderTemplate(name: string, rawArgs: unknown) {
   const def = getTemplate(name);
   if (def === undefined) throw new Error(`no template ${name}`);
   return def.generate(def.argsSchema.parse(rawArgs));

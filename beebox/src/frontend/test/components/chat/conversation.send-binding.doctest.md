@@ -8,6 +8,15 @@ controller handle; its destination is chosen at capture, not at receipt time.
 import { submitTypedDraft } from "../../../src/components/chat/conversation/typed-submit.js";
 import { createEmissionStore } from "../../../src/input/emission-store.js";
 import { boundTurnFields } from "../../../src/machines/chatMachine/chat-bound-turn.js";
+import type { EmissionDispatch } from "../../../src/components/chat/conversation/use-bound-emission/hook.js";
+import type { Emission } from "../../../src/input/emission.js";
+import type { Receipt } from "../../../src/input/targets/receipts.js";
+import type { AttentionSnapshot } from "../../../../shared/chat-composer-binding.js";
+
+/** A complete dispatch handle around `send`; only `release` is observable here. */
+function dispatchOf(send: (emission: Emission) => Promise<Receipt>, release: () => void = () => {}): EmissionDispatch {
+  return Object.assign(send, { stage() {}, release, currentSessionId: () => null, assignedSessionId: async () => "session" });
+}
 ```
 
 ## Navigate while uploading, then type a new draft before the late receipt
@@ -21,16 +30,16 @@ const uploads = new Promise<void>((resolve) => { releaseUpload = resolve; });
 let destination = "";
 let committedText = "";
 let releaseReceipt = () => {};
-const receipt = new Promise((resolve) => { releaseReceipt = () => resolve({ disposition: "sent", emissionId: "m", deduplicated: false }); });
+const receipt = new Promise<Receipt>((resolve) => { releaseReceipt = () => resolve({ disposition: "sent", emissionId: "m", deduplicated: false }); });
 const work = submitTypedDraft({
   emissionStore: store,
   capture: () => {
     const captured = selected;
-    return Object.assign((emission) => {
+    return dispatchOf((emission) => {
       destination = captured;
       committedText = emission.text;
       return receipt;
-    }, { stage() {}, release() {} });
+    });
   },
   awaitUploads: () => uploads,
   onCommitted: () => store.editor.setText(""),
@@ -56,9 +65,7 @@ let released = false;
 let cleared = false;
 const reason = await submitTypedDraft({
     emissionStore: store,
-    capture: () => Object.assign(() => { throw new DOMException("Full", "QuotaExceededError"); }, {
-      stage() {}, release() { released = true; },
-    }),
+    capture: () => dispatchOf(() => { throw new DOMException("Full", "QuotaExceededError"); }, () => { released = true; }),
     awaitUploads: async () => {},
     onCommitted() { cleared = true; },
     onReceipt() {},
@@ -74,7 +81,7 @@ Existing targets request exact delivery; fresh Codex targets retain their
 engine and directory without pretending they have a reserved ID.
 
 ```ts
-const attention = { surface: "card", transcript: "hidden", focusedRef: "/house/report.doc.card" };
+const attention: AttentionSnapshot = { surface: "card", transcript: "hidden", focusedRef: "/house/report.doc.card" };
 JSON.stringify(boundTurnFields({ boxSlug: "test1", target: { kind: "session", sessionId: "kitchen", contextDir: "kitchen" }, attention }))
 => {"session":"kitchen","exactSession":true,"viewContext":{"surface":"card","transcript":"hidden","focusedRef":"/house/report.doc.card"}}
 
@@ -109,9 +116,7 @@ const store = createEmissionStore();
 let released = false;
 let refused = false;
 const captured = await captureVoiceSend({
-  capture: () => Object.assign(async () => ({ disposition: "sent", emissionId: "m", deduplicated: false }), {
-    stage() {}, release() { released = true; },
-  }),
+  capture: () => dispatchOf(async () => ({ disposition: "sent", emissionId: "m", deduplicated: false }), () => { released = true; }),
   awaitUploads: async () => { throw new DOMException("Upload failed", "NetworkError"); },
   readDraft: store.get,
   preserve: () => store.editor.setText("Spoken text"),

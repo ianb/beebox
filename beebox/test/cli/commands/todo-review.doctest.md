@@ -356,7 +356,7 @@ const capped = (await run(many.root, ["check"])).out.join("\n");
 capped.includes("25 of 29 shown; the rest come in later runs.")
 => true
 
-const saved = JSON.parse(await fs.readFile(path.join(many.root, ".beebox/todo-review-sweep.json"), "utf-8")).review.items.map((i) => i.text);
+const saved = JSON.parse(await fs.readFile(path.join(many.root, ".beebox/todo-review-sweep.json"), "utf-8")).review.items.map((i: { text: string }) => i.text);
 `${String(saved.length)}: ${saved[0]} … ${saved[24]}`
 => 25: Task 01 … Task 25
 ```

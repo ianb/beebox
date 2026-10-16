@@ -17,11 +17,12 @@ import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeec
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { useChatScroll, SEND_SPACER_MIN_HEIGHT } from "../../chat-scroll/scroll";
 import {
-  buildDataItems,
+  buildSettledItems,
+  buildTailItems,
   dataItemKey,
   renderDataItem,
+  useRenderItemContext,
   type DataItem,
-  type RenderItemContext,
   type SpeechPlaybackState,
 } from "./message-items";
 import { MAX_RETAINED_MESSAGES } from "../../../../machines/chat-types";
@@ -199,9 +200,15 @@ function MessageListInner({
   const streamingShown = snapshot.matches("streaming")
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
+  // Settled and tail items are built apart, so a streamed token leaves the
+  // settled items (and the rows memoized on them) unchanged.
+  const settled = useMemo<DataItem[]>(
+    () => buildSettledItems({ groups, modelMarkers, debugView, proseEnabled }),
+    [groups, modelMarkers, debugView, proseEnabled],
+  );
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled],
+    () => [...settled, ...buildTailItems({ groupCount: groups.length, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled })],
+    [settled, groups.length, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled],
   );
 
   const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen } = useChatScroll();
@@ -266,12 +273,7 @@ function MessageListInner({
   // group share `live-${liveTurnId}` so React reconciles them in place.
   const { liveKey, liveTargetUuid } = useLiveTurnKey({ data, liveTurnId, streamingShown });
 
-  // Newest assistant group's index, for the now-playing speech-highlight match.
-  const lastAssistantGroupIndex = lastAssistantGroupIndexIn(data);
-
-  const renderCtx = useMemo<RenderItemContext>(() => ({
-    streamText,
-    streamTools,
+  const renderCtx = useRenderItemContext({
     debugView,
     currentUserEmail,
     currentUserName,
@@ -281,10 +283,9 @@ function MessageListInner({
     handleReplaySpeech,
     onZoomView,
     proseEnabled,
-    lastAssistantGroupIndex,
     captureVerbs,
     audioOverlayStore, onHqSendLive,
-  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, captureVerbs, audioOverlayStore, onHqSendLive]);
+  });
 
   // A first capture into an empty chat still shows its pending bubble.
   if (messages.length === 0 && !isStreaming && captureBubbles.length === 0) {
@@ -295,6 +296,9 @@ function MessageListInner({
       </div>
     );
   }
+
+  // Newest assistant group's index, for the now-playing speech-highlight match.
+  const lastAssistantGroupIndex = lastAssistantGroupIndexIn(data);
 
   return (
     <div className="relative flex-1 min-h-0 w-full min-w-0 flex flex-col overflow-x-hidden">
@@ -337,7 +341,7 @@ function MessageListInner({
                   style={{ minHeight: spacer }}
                 >
                   <div ref={spacer === undefined ? undefined : liveContentRef} data-chat-live-turn-content={spacer === undefined ? undefined : ""}>
-                    {renderDataItem(item, renderCtx)}
+                    {renderDataItem(item, { ctx: renderCtx, lastAssistantGroupIndex })}
                   </div>
                 </div>
               );

@@ -17,21 +17,31 @@ import {
 import { transientStatePath } from "../src/transient-state.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import assert from "node:assert/strict";
+import type { Connector, SyncResult } from "../src/connector.js";
+import type { ActivityFile } from "../src/connector-activity/core.js";
 
 /** A connector whose next sync returns (or throws) what the test queues. */
-function scripted(name, outcomes) {
+function scripted(name: string, outcomes: (SyncResult | Error)[]): Connector {
   return {
     name,
-    produces: [],
     inboxPaths: [],
     async sync() {
       const next = outcomes.shift();
       if (next instanceof Error) throw next;
+      assert.ok(next, "scripted connector ran out of outcomes");
       return next;
     },
   };
 }
-const ok = (created, updated = []) => ({ success: true, created, updated });
+const ok = (created: string[], updated: string[] = []): SyncResult => ({ success: true, created, updated });
+
+/** The gmail entry of an activity file, which the test expects to exist. */
+function gmailOf(file: ActivityFile) {
+  const gmail = file.connectors.gmail;
+  assert.ok(gmail, "no gmail activity recorded");
+  return gmail;
+}
 ```
 
 ## A new item is a new top-level card
@@ -70,10 +80,11 @@ thrown
 => network down
 
 const file = await loadConnectorActivity(box.root);
-JSON.stringify(Object.keys(file.connectors.gmail.days))
+JSON.stringify(Object.keys(gmailOf(file).days))
 => ["2026-09-18"]
 
-const day = file.connectors.gmail.days["2026-09-18"];
+const day = gmailOf(file).days["2026-09-18"];
+assert.ok(day);
 `runs=${day.runs} ok=${day.ok} newItems=${day.newItems} created=${day.created} updated=${day.updated} errored=${day.errored} skipped=${day.skipped}`
 => runs=5 ok=2 newItems=1 created=3 updated=1 errored=2 skipped=1
 
@@ -90,7 +101,7 @@ an all-error day, not as a day with no runs.
 const later = new Date("2026-11-30T15:00:00Z");
 await syncConnector(scripted("gmail", [ok([])]), { boxRoot: box.root, now: later });
 const pruned = await loadConnectorActivity(box.root);
-JSON.stringify(Object.keys(pruned.connectors.gmail.days))
+JSON.stringify(Object.keys(gmailOf(pruned).days))
 => ["2026-11-30"]
 
 addDays("2026-11-30", -(ACTIVITY_RETENTION_DAYS - 1)) > "2026-09-18"

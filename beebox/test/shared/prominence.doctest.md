@@ -33,7 +33,7 @@ const result = Prominence.safeParse("headline");
 result.success
 => false
 
-result.error.issues[0].message
+result.error?.issues[0]?.message
 => «*»"entry-point"|"primary"|"background"
 ```
 

@@ -11,10 +11,11 @@ import { findOrphanMaps, pruneOrphanMaps } from "../../../src/core/maps/orphans.
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { lstat, symlink } from "node:fs/promises";
 import { join } from "node:path";
 
-async function exists(box, rel: string): Promise<boolean> {
+async function exists(box: TmpBox, rel: string): Promise<boolean> {
   return lstat(join(box.root, rel)).then(() => true, () => false);
 }
 ```

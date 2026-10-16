@@ -11,10 +11,10 @@ docs/implemented-plans/notifications.md (Track D).
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { runJudge } from "../../../../src/cli/commands/judge/command.js";
-import { createFakeJev } from "../../../../src/services/jev.js";
+import { runJudge, type JudgeOptions } from "../../../../src/cli/commands/judge/command.js";
+import { createFakeJev, type JevService } from "../../../../src/services/jev.js";
 import { JevError } from "../../../../src/services/jev-wire.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 
 const TRIP = `---
 questions:
@@ -43,7 +43,7 @@ The state is one email card: frontmatter (from, to, subject) and body.
 `;
 
 /** An email card long enough not to draw the thin-state warning. */
-const email = (subject, text) => `---\nfrom: school@example.org\nto: parent@example.org\nsubject: ${subject}\n---\n${text}\n${"Details follow in the rest of this message. ".repeat(8)}\n`;
+const email = (subject: string, text: string) => `---\nfrom: school@example.org\nto: parent@example.org\nsubject: ${subject}\n---\n${text}\n${"Details follow in the rest of this message. ".repeat(8)}\n`;
 
 /** The fake: a trip email is a trip, a question expects a reply today. */
 const jev = () => createFakeJev({
@@ -61,16 +61,21 @@ const jev = () => createFakeJev({
 });
 
 /** Run with output captured; stdout, then `stderr:` lines, then the exit code. */
-async function judge(box, cardPath, options, run = {}) {
+async function judge(
+  box: TmpBox,
+  cardPath: string,
+  options: Partial<JudgeOptions>,
+  run: { stdin?: string; env?: NodeJS.ProcessEnv; service?: JevService | undefined } = {},
+) {
   const { stdin = "", env = {} } = run;
   // `service: undefined` means no injected service: the env fake or the box's key.
   const service = "service" in run ? run.service : jev();
-  const out = [];
+  const out: string[] = [];
   const origLog = console.log;
   const origErr = console.error;
   console.log = (...args) => { out.push(args.join(" ")); };
   console.error = (...args) => { out.push(`stderr: ${args.join(" ")}`); };
-  let code;
+  let code: number | undefined;
   try {
     code = await runJudge({ boxRoot: box.root, cardPath, options: { min: [], choice: [], ...options }, stdin, env, jev: service });
   } finally {
@@ -233,7 +238,7 @@ const [situation, request, exit] = out.split("\n").filter((l) => !l.startsWith("
 situation
 => situation: the root briefing's purpose (_content/briefing.briefing.card)
 
-JSON.stringify(JSON.parse(request), null, 2)
+JSON.stringify(JSON.parse(request ?? ""), null, 2)
 => {
   "model": "typesafe/jev-«*»",
   "provider": {
@@ -279,7 +284,7 @@ A `situation:` ref replaces the briefing; with neither, the dry run says so.
 ```ts continue
 await box.write("_content/about/household.doc.card", "---\ntitle: Household\n---\nTwo adults share this box.\n");
 await box.write("_config/judgments/with-situation.judgment.card", TRIP.replace("---\nY", "situation:\n  ref: /_content/about/household.doc.card\n---\nY"));
-const stdout = (out) => out.split("\n").filter((l) => !l.startsWith("stderr:"));
+const stdout = (out: string) => out.split("\n").filter((l) => !l.startsWith("stderr:"));
 stdout(await judge(box, "_config/judgments/with-situation.judgment.card", { dryRun: true }, { stdin: "x" }))[0]
 => situation: _content/about/household.doc.card
 
@@ -328,7 +333,7 @@ Within the limit, the batch is one state: every card after a `=== <path>` line.
 ```ts continue
 const service = jev();
 await judge(box, trip, { cards: true }, { stdin: CARDS, service });
-service.judgeCalls.length + " " + String(service.judgeCalls[0].state).split("\n").filter((l) => l.startsWith("===")).join(", ")
+service.judgeCalls.length + " " + String(service.judgeCalls[0]?.state).split("\n").filter((l) => l.startsWith("===")).join(", ")
 => 1 === _content/inbox/trip.email.card, === _content/inbox/lunch.email.card, === _content/inbox/receipt.email.card
 ```
 

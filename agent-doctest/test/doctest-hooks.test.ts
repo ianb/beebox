@@ -512,7 +512,7 @@ world
 
   const source = generateTestSource(md, "/test.doctest.md");
   // Each test should get its own __prints and print
-  t.ok(source.includes("const __doctest_prints = []"), "should declare __prints");
+  t.ok(source.includes("const __doctest_prints: string[] = []"), "should declare __prints");
   t.ok(source.includes("const print = "), "should declare print");
   // Check should use __withPrints
   t.ok(source.includes("__doctest_withPrints(__doctest_prints,"), "should drain prints in check");
@@ -590,7 +590,7 @@ print("second");
 
   const source = generateTestSource(md, "/test.doctest.md");
   // Two tests, each with their own __prints
-  const printDecls = (source.match(/const __doctest_prints = \[\]/g) || []).length;
+  const printDecls = (source.match(/const __doctest_prints: string\[\] = \[\]/g) || []).length;
   t.equal(printDecls, 2, "each test should have its own __prints");
 });
 

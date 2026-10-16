@@ -156,4 +156,4 @@ and nothing else. `preset.ts` binds its implementation to that declaration
 - `beebox` and `agent-doctest` each grew a `tsconfig.tooling.json`, because
   their main tsconfig sets `rootDir: "src"` and a package-root file trips TS6059.
   That exposed a wider hole, filed separately as
-  [beebox lints `scripts/` and `test/` but never type-checks them](../../code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md).
+  [beebox lints `scripts/` and `test/` but never type-checks them](2026-08-25-beebox-scripts-and-test-untypechecked.md).

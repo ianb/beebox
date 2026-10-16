@@ -22,7 +22,6 @@ const box = await makeTmpBox({ git: true });
 await box.write(
   "_bookkeeping/jobs/sweep.intake.job.card",
   createIntakeJobTemplate({
-    created: "2026-07-01T00:00:00Z",
     connector: "gmail",
     description: "Triage 3 inbox items",
     items: [],

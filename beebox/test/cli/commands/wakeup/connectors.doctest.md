@@ -16,7 +16,7 @@ function connector(
   name: string,
   sync: Connector["sync"],
 ): Connector {
-  return { name, produces: [], inboxPaths: [], sync };
+  return { name, inboxPaths: [], sync };
 }
 
 async function captureOutput<T>(fn: () => Promise<T>): Promise<T> {

@@ -6,6 +6,7 @@ live wrapper. Mounted only with the explicit development-surface opt-in.
 
 ```ts setup
 import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { bodyField } from "../../../../helpers/doctest-helpers.js";
 import { mkdtempSync, writeFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";
@@ -52,13 +53,13 @@ res.statusCode
 ```
 
 ```ts continue
-Buffer.from(res.body.contentBase64, "base64").toString() === "hello\n"
+Buffer.from(String(bodyField(res.body, "contentBase64")), "base64").toString() === "hello\n"
 => true
 
-res.body.contentType
+bodyField(res.body, "contentType")
 => text/markdown
 
-res.body.markers.startsWith("sha256:")
+String(bodyField(res.body, "markers")).startsWith("sha256:")
 => true
 ```
 

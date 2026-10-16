@@ -7,7 +7,7 @@
  * mechanics.
  */
 
-import { type ReactNode } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
 import { isNoResponseOnly, parseAcks, parseCallouts, type AckIndication } from "../../../../lib/structured-output-parsing";
@@ -96,17 +96,15 @@ export interface SpeechPlaybackState {
   remainingCount: number;
 }
 
-/**
- * Build the interleaved data array: groups + chronological markers, with
- * `<ack>` tags hung off the preceding user message and assistant groups with
- * no visible content (or a no-response-only ack) suppressed. Pure given its inputs.
- *
- * Debug view keeps raw text that normal rendering strips (such as an ack),
- * but an entry with no text or visible activity still has no message body.
- */
-export function buildDataItems(opts: {
+interface SettledItemsInput {
   groups: MessageGroup[];
   modelMarkers: ModelMarker[];
+  debugView: boolean;
+  proseEnabled: boolean;
+}
+
+interface TailItemsInput {
+  groupCount: number;
   streamingShown: boolean;
   streamText: string;
   streamTools: SessionContentBlock[];
@@ -115,8 +113,27 @@ export function buildDataItems(opts: {
   captureBubbles: CaptureBubbleModel[];
   debugView: boolean;
   proseEnabled: boolean;
-}): DataItem[] {
-  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled } = opts;
+}
+
+/**
+ * Build the interleaved data array: settled items, then the tail (pending
+ * voice messages, capture bubbles, the streaming turn). Pure given its inputs.
+ */
+export function buildDataItems(opts: SettledItemsInput & Omit<TailItemsInput, "groupCount">): DataItem[] {
+  return [...buildSettledItems(opts), ...buildTailItems({ ...opts, groupCount: opts.groups.length })];
+}
+
+/**
+ * The settled items: groups + chronological markers, with `<ack>` tags hung
+ * off the preceding user message and assistant groups with no visible content
+ * (or a no-response-only ack) suppressed. Built apart from the tail so a
+ * streamed token leaves these items, and their `acks` arrays, unchanged.
+ *
+ * Debug view keeps raw text that normal rendering strips (such as an ack),
+ * but an entry with no text or visible activity still has no message body.
+ */
+export function buildSettledItems(opts: SettledItemsInput): DataItem[] {
+  const { groups, modelMarkers, debugView, proseEnabled } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -149,6 +166,13 @@ export function buildDataItems(opts: {
       if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
     }
   }
+  return items;
+}
+
+/** The items after the settled ones; the streaming turn changes on every token. */
+export function buildTailItems(opts: TailItemsInput): DataItem[] {
+  const { groupCount, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView, proseEnabled } = opts;
+  const items: DataItem[] = [];
   for (const pending of pendingHq) items.push({ kind: "pendingHq", pending });
   for (const model of captureBubbles) items.push({ kind: "captureBubble", model });
   if (streamingShown) {
@@ -162,15 +186,17 @@ export function buildDataItems(opts: {
       streamTools,
     });
     if (hasAssistantSurface([entry], { debugView, proseEnabled })) {
-      items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length });
+      items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groupCount });
     }
   }
   return items;
 }
 
+/**
+ * What every row reads besides its own item. Keep it free of per-token values:
+ * a new context re-renders every row (`GroupItem` is memoized on it).
+ */
 export interface RenderItemContext {
-  streamText: string;
-  streamTools: SessionContentBlock[];
   debugView: boolean;
   currentUserEmail: string | undefined;
   currentUserName: string | undefined;
@@ -180,7 +206,6 @@ export interface RenderItemContext {
   handleReplaySpeech: (options: ReplaySpeechOptions) => void;
   onZoomView: OnZoomView;
   proseEnabled: boolean;
-  lastAssistantGroupIndex: number;
   /** Retry a failed pending capture (re-seals the staging session). */
   captureVerbs: CaptureVerbs;
   /** Written by the two audio-review events; read by `UserMessage`'s badges. */
@@ -190,18 +215,37 @@ export interface RenderItemContext {
 }
 
 /**
- * Render one message group (compaction / interrupted / self-note / user /
- * assistant), wrapped in an error boundary keyed by group identity.
+ * The row context, memoized on its fields. Every row is memoized on this
+ * object's identity, so it must keep identity across streamed tokens. A hook
+ * with its own `useMemo`: built inline in `MessageListInner`, the compiler
+ * memoized it together with the row list, which changes per token, and every
+ * row re-rendered per token (`test/…/messages.streaming-renders.doctest.md`).
  */
-function GroupItem({
-  group, groupIndex, acks, ctx,
+export function useRenderItemContext(fields: RenderItemContext): RenderItemContext {
+  const { debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive } = fields;
+  return useMemo(
+    () => ({ debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive }),
+    [debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive],
+  );
+}
+
+/**
+ * Render one message group (compaction / interrupted / self-note / user /
+ * assistant), wrapped in an error boundary keyed by group identity. Memoized:
+ * the list rebuilds every row element per streamed token, and a settled row's
+ * props (group, acks, ctx) keep identity across tokens.
+ */
+function GroupItemInner({
+  group, groupIndex, acks, ctx, latestAssistant,
 }: {
   group: MessageGroup;
   groupIndex: number;
   acks?: AckIndication[];
   ctx: RenderItemContext;
+  /** This is the newest assistant group, which auto-played speech highlights. */
+  latestAssistant: boolean;
 }) {
-  const { debugView, currentUserEmail, currentUserName, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled, audioOverlayStore } = ctx;
+  const { debugView, currentUserEmail, currentUserName, speechPlayback, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled, audioOverlayStore } = ctx;
   const boundaryLabel = `${group.type}#${groupIndex}:${group.entries[0]?.uuid ?? ""}`;
   let body: ReactNode;
   if (group.type === "compaction") {
@@ -227,11 +271,11 @@ function GroupItem({
     const pid = speechPlayback.playingMessageId;
     const isStreamId = typeof pid === "string" && pid.startsWith("stream");
     const playingThis = speechPlayback.isPlaying &&
-      (pid === groupUuid || (isStreamId && groupIndex === lastAssistantGroupIndex));
+      (pid === groupUuid || (isStreamId && latestAssistant));
     const statusId = speechPlayback.statusMessageId;
     const statusIsStream = typeof statusId === "string" && statusId.startsWith("stream");
     const statusThis = statusId === groupUuid
-      || (statusIsStream && groupIndex === lastAssistantGroupIndex);
+      || (statusIsStream && latestAssistant);
     body = (
       <div className="py-0.5">
         <AssistantMessage
@@ -254,12 +298,16 @@ function GroupItem({
   }
   return <MessageErrorBoundary label={boundaryLabel}>{body}</MessageErrorBoundary>;
 }
+const GroupItem = memo(GroupItemInner);
 
 /**
  * Map a single `DataItem` to its rendered node. The streaming-tail and
  * marker variants render inline; group variants delegate to `GroupItem`.
+ * `lastAssistantGroupIndex` stays out of `ctx`: it changes when a reply first
+ * shows, and only the two rows it moves between should render then.
  */
-export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNode {
+export function renderDataItem(item: DataItem, row: { ctx: RenderItemContext; lastAssistantGroupIndex: number }): ReactNode {
+  const { ctx, lastAssistantGroupIndex } = row;
   if (item.kind === "marker") {
     return (
       <div className="flex justify-center py-1">
@@ -277,5 +325,5 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
     const { retry: handleCaptureRetry, discard: handleCaptureDiscard } = ctx.captureVerbs;
     return <CaptureBubbleView model={item.model} onRetry={handleCaptureRetry} onDiscard={handleCaptureDiscard} />;
   }
-  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} ctx={ctx} />;
+  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} ctx={ctx} latestAssistant={item.groupIndex === lastAssistantGroupIndex} />;
 }

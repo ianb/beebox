@@ -7,11 +7,11 @@ publication id and current candidate revision supplied by the server.
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PublicationReviewCard, type Publication } from "../../../src/components/publications/PublicationReviewCard.js";
+import { PublicationReviewCard, type Publication, type Candidate } from "../../../src/components/publications/PublicationReviewCard.js";
 
 globalThis.React = React;
 
-const site = {
+const site: Publication = {
   pubId: "pub-reference-1",
   name: "notes",
   cardPath: "publications/Notes.publication.card",
@@ -27,8 +27,8 @@ const site = {
   activeFiles: [],
   remoteStatus: { status: "available" },
   pending: null,
-  connection: { name: "publishing", status: "active", capabilities: { accessLive: "verified" } },
-} as Publication;
+  connection: { name: "publishing", status: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "verified", workerDeploy: "verified", accessLive: "verified" } },
+};
 
 const markup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {
   site,
@@ -56,7 +56,7 @@ markup.includes("disabled")
 ```
 
 ```ts setup
-const preparedSite = {
+const preparedSite: Publication & { pending: Candidate } = {
   ...site,
   approved: { tier: "secret", status: "live", expiresAt: null },
   requested: { kind: "site", hostHandle: "host", tier: "secret", expiresAt: null },
@@ -69,7 +69,7 @@ const preparedSite = {
     preview: [{ path: "release/very-long-generated-filename-that-should-wrap-on-mobile.html", bytes: 2048, sha256: "d".repeat(64) }],
     scan: { total: 0, byKind: {}, skippedBinaries: 0, sample: [] },
   },
-} as Publication;
+};
 const preparedMarkup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {
   site: preparedSite,
   sharedHost: { hostname: "publish.example.com", connectionName: "publishing", status: "attached" },

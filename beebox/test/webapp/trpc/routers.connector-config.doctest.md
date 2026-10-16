@@ -11,31 +11,43 @@ mount-writing procedures that DO exist are covered in
 `trpc-drive-mounts.doctest.md`.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
 import { getLog } from "../../../src/lib/git/core/operations.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";
 import { simpleGit } from "simple-git";
 
-function caller(boxRoot) {
-  const ctx = {
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = {
     boxRoot,
     boxSlug: "test",
-    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], readRecent: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
     user: null,
     authed: true,
     isOwner: true,
+    isAuthenticatedOwner: false,
+    actor: "none",
   };
   return appRouter.createCaller(ctx);
 }
 
-async function readJson(box, rel) {
+async function lastCommit(boxRoot: string) {
+  const [latest] = await getLog(boxRoot, 1);
+  assert.ok(latest, "box has a commit");
+  return latest;
+}
+
+async function readJson(box: TmpBox, rel: string) {
   return JSON.parse(await box.read(rel));
 }
 
-async function code(p) {
-  return p.then(() => "none", (e) => e.code);
+async function code(p: Promise<unknown>) {
+  return p.then(() => "none", (e: unknown) => (e instanceof TRPCError ? e.code : String(e)));
 }
 ```
 
@@ -65,7 +77,7 @@ JSON.stringify(cfg)
 ```
 
 ```ts continue
-(await getLog(box.root, 1))[0].subject
+(await lastCommit(box.root)).subject
 => Update calendar sync config
 ```
 
@@ -155,7 +167,7 @@ JSON.stringify(res)
 JSON.stringify(await readJson(box, "_config/connectors/gmail.json"))
 => {"query":"is:unread","action":{"type":"track"}}
 
-(await getLog(box.root, 1))[0].subject
+(await lastCommit(box.root)).subject
 => Update Gmail filter config
 ```
 
@@ -215,9 +227,9 @@ JSON.stringify(await readJson(box, "_config/connectors/gmail.json"))
 
 ```ts continue
 // Re-saving the identical empty config commits nothing new.
-const before = (await getLog(box.root, 1))[0].hash;
+const before = (await lastCommit(box.root)).hash;
 await c.admin.updateGmailConfig({ query: "", labels: [] });
-const after = (await getLog(box.root, 1))[0].hash;
+const after = (await lastCommit(box.root)).hash;
 before === after
 => true
 ```

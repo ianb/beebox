@@ -29,17 +29,18 @@ import { AuthFileLockError, AuthStoreUnavailableError } from "../../src/webapp/l
 process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
 
 const dir = await mkdtemp(join(tmpdir(), "bbx-auth-"));
-process.env.BBX_AUTH_FILE = join(dir, "auth.json");
+const AUTH_FILE = join(dir, "auth.json");
+process.env.BBX_AUTH_FILE = AUTH_FILE;
 delete process.env.BBX_OWNER_EMAIL;
 
 // `=> throws` only catches synchronous throws; async calls reject, so assert on
 // the rejected error's name instead.
-async function rejectName(fn) {
+async function rejectName(fn: () => Promise<unknown>) {
   try {
     await fn();
     return "no-throw";
   } catch (e) {
-    return e.name;
+    return e instanceof Error ? e.name : String(e);
   }
 }
 ```
@@ -70,11 +71,11 @@ getLocalOwnerEmail()
 The file is 0600, and the plaintext password never appears in it.
 
 ```ts continue
-const info = await stat(process.env.BBX_AUTH_FILE);
+const info = await stat(AUTH_FILE);
 (info.mode & 0o777).toString(8)
 => 600
 
-const raw = await import("node:fs/promises").then((fs) => fs.readFile(process.env.BBX_AUTH_FILE, "utf-8"));
+const raw = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
 raw.includes("correct horse")
 => false
 ```
@@ -133,7 +134,7 @@ await rejectName(() => addUser({ email: "second@example.com", name: "Second", pa
 ## Set password bumps `gen` (revokes outstanding sessions)
 
 ```ts continue
-const before = getLocalUser("member@example.com").gen;
+const before = getLocalUser("member@example.com")?.gen;
 const after = (await setPassword({ email: "member@example.com", password: "n3wsecret" })).gen;
 `${before} -> ${after}`
 => 1 -> 2
@@ -197,7 +198,7 @@ process.env.BBX_AUTH_SCRYPT_N = String(2 ** 13);
 (await verifyPassword({ email: "boxholder@example.com", password: "correct horse" }))?.email
 => boxholder@example.com
 
-const rehashed = await import("node:fs/promises").then((fs) => fs.readFile(process.env.BBX_AUTH_FILE, "utf-8"));
+const rehashed = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
 JSON.parse(rehashed).users[0].scrypt.N
 => 8192
 ```
@@ -205,7 +206,7 @@ JSON.parse(rehashed).users[0].scrypt.N
 `gen` is unchanged by a rehash (it's not a credential change).
 
 ```ts continue
-getLocalUser("boxholder@example.com").gen
+getLocalUser("boxholder@example.com")?.gen
 => 1
 ```
 

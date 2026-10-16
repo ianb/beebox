@@ -63,6 +63,8 @@ export interface FakeChatBackend extends ChatBackend {
   prewarmCount: number;
   /** How many times `closeWarm()` has been called. */
   closeWarmCount: number;
+  /** Whether a warm slot is held or a prewarm is in flight; always defined on the fake. */
+  hasWarm(): boolean;
   /**
    * When true (default), each `prewarm()` installs its warm slot
    * synchronously. Set false to hold warm-ups in flight so a test can

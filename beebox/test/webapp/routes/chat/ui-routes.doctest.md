@@ -10,24 +10,26 @@ because this flow has no consent prompt.
 
 ```ts setup
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
+import { bodyField } from "../../../helpers/doctest-helpers.js";
+import { eventSchemas } from "../../../../src/core/event-bus/schemas.js";
 import type { UiScanEntry, UiScanPayload } from "../../../../src/shared/ui-scan/core.js";
 
 /** A syntactically-valid (but not pending) request id — real ids are UUIDs. */
 const VALID_ID = "00000000-0000-0000-0000-000000000000";
 
 // The request route is loopback-only: it requires the per-box agent bearer.
-function agentAuth(ctx) {
+function agentAuth(ctx: TestServer) {
   return { authorization: `Bearer ${getOrCreateAgentToken(ctx.boxRoot)}` };
 }
 
 // The browser learns which id to answer from the transient `ui-scan-request`
 // bus event (no id is caller-supplied). Subscribe BEFORE starting the long-poll.
-function captureRequestId(ctx) {
-  return new Promise((resolve) => {
+function captureRequestId(ctx: TestServer) {
+  return new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({
       listener: (e) => {
-        if (e.event === "ui-scan-request") resolve(e.data.requestId);
+        if (e.event === "ui-scan-request") resolve(eventSchemas["ui-scan-request"].parse(e.data).requestId);
       },
     });
   });
@@ -73,7 +75,7 @@ const res = await ctx.request({
   payload: { session: "s1", timeoutMs: 3000 },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${bodyField(res.body, "error")}`);
 =>
 status: 403
 error: forbidden
@@ -97,7 +99,7 @@ const res = await ctx.request({
   headers: agentAuth(ctx),
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${bodyField(res.body, "error")}`);
 =>
 status: 504
 error: no-client
@@ -131,7 +133,7 @@ const ackRes = await ctx.request({
 print(`ack ok: ${JSON.stringify(ackRes.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${bodyField(res.body, "error")}`);
 =>
 ack ok: {"ok":true}
 status: 504
@@ -164,8 +166,8 @@ await ctx.request({
 });
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
-print(`reason: ${res.body.reason}`);
+print(`error: ${bodyField(res.body, "error")}`);
+print(`reason: ${bodyField(res.body, "reason")}`);
 =>
 status: 502
 error: failed
@@ -200,10 +202,10 @@ const answer = await ctx.request({
 print(`answer ok: ${JSON.stringify(answer.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`coverage: ${res.body.coverage}`);
-print(`channel: ${res.body.channel}`);
-print(`omitted: ${res.body.omittedUnnamed}`);
-print(`first entry: ${res.body.entries[0].id}`);
+print(`coverage: ${bodyField(res.body, "coverage")}`);
+print(`channel: ${bodyField(res.body, "channel")}`);
+print(`omitted: ${bodyField(res.body, "omittedUnnamed")}`);
+print(`first entry: ${bodyField(res.body, "entries", 0, "id")}`);
 =>
 answer ok: {"ok":true}
 status: 200
@@ -240,7 +242,7 @@ await ctx.request({
 });
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`coverage: ${res.body.coverage}`);
+print(`coverage: ${bodyField(res.body, "coverage")}`);
 =>
 status: 200
 coverage: dom-native-unavailable
@@ -259,9 +261,9 @@ context.
 
 ```ts
 const ctx = await makeTestServer();
-const post = async (payload: unknown): Promise<string> => {
+const post = async (payload: Record<string, unknown>): Promise<string> => {
   const res = await ctx.request({ method: "POST", url: `/api/chat/ui/${VALID_ID}`, payload });
-  return `${res.statusCode} ${res.body.error}`;
+  return `${res.statusCode} ${bodyField(res.body, "error")}`;
 };
 print(await post({ ...scanPayload, coverage: "everything" }));
 print(await post({ ...scanPayload, surprise: true }));
@@ -300,14 +302,14 @@ const res = await ctx.request({
   payload: scanPayload,
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${bodyField(res.body, "error")}`);
 const malformedId = await ctx.request({
   method: "POST",
   url: "/api/chat/ui/..%2F..%2Ftarget",
   payload: { ack: true },
 });
 print(`traversal status: ${malformedId.statusCode}`);
-print(`traversal error: ${malformedId.body.error}`);
+print(`traversal error: ${bodyField(malformedId.body, "error")}`);
 =>
 status: 404
 error: unknown-request

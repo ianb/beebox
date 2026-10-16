@@ -12,7 +12,12 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { notifyBoxholder, notifyChannels } from "../../../src/core/notify-boxholder.js";
+import type { NotificationInput } from "../../../src/core/notify-boxholder.js";
+import type { Loudness } from "../../../src/core/notification/intent.js";
+import type { ApnsEnvironment } from "../../../src/services/apns.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { createFakeApns } from "../../../src/services/apns.js";
 import {
   createMobilePairingTicket,
@@ -24,7 +29,8 @@ import {
 } from "../../../src/core/mobile/pairing.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 
-process.env.BBX_PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-apns-channel-${process.pid}-${Date.now()}`);
+const PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-apns-channel-${process.pid}-${Date.now()}`);
+process.env.BBX_PUSH_STORE_DIR = PUSH_STORE_DIR;
 const ENV = ["BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID", "BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY"];
 for (const name of ENV) delete process.env[name];
 
@@ -33,14 +39,15 @@ const PHONE = "a1".repeat(32);
 const TABLET = "b2".repeat(32);
 
 /** Pair a phone and register its APNs token, as the app does at launch. */
-async function pairPhone(box, opts) {
+async function pairPhone(box: TmpBox, opts: { label: string; token: string; environment: ApnsEnvironment }) {
   const ticket = createMobilePairingTicket(box.root, { createdBy: "owner@example.com" });
   const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: opts.label });
+  invariant(device, "pairing ticket redeems");
   await registerDevicePush(box.root, { deviceId: device.deviceId, token: opts.token, environment: opts.environment });
   return device;
 }
 
-function intent(loudness) {
+function intent(loudness: Loudness): NotificationInput {
   return {
     title: "Pick up Sam at 3",
     body: "The reminder you asked for this morning.",
@@ -51,8 +58,9 @@ function intent(loudness) {
   };
 }
 
-async function logged(box) {
+async function logged(box: TmpBox) {
   const [n] = (await readRecent(box.root, { days: 1, now: NOW })).toReversed();
+  invariant(n, "a notification was logged");
   return n.deliveries.map((d) => `${d.channel} ${d.status}${d.detail ? `: ${d.detail}` : ""}`).join("\n");
 }
 ```
@@ -77,6 +85,7 @@ placeholder.
 
 ```ts continue
 const [sent] = apns.sent;
+invariant(sent, "the push reached the fake APNs");
 JSON.stringify([sent.token === PHONE, sent.environment, sent.headers, sent.payload.target, sent.payload.loudness, sent.payload.notificationId === result.id])
 => [true,"sandbox",{"apns-push-type":"alert","apns-topic":"app.beebox.fake","apns-collapse-id":"pickup"},"chat:new","loud",true]
 ```
@@ -86,7 +95,7 @@ the target, and never the token:
 
 ```ts continue
 const debug = await fs.readFile(path.join(box.root, ".beebox", "push-debug.log"), "utf-8");
-const line = JSON.parse(debug.trim().split("\n").at(-1));
+const line = JSON.parse(debug.trim().split("\n").at(-1) ?? "");
 JSON.stringify([line.channel, line.device, line.environment, line.loudness, line.target, line.result, debug.includes(PHONE)])
 => ["apns","Jamie's iPhone","sandbox","loud","chat:new","sent",false]
 ```
@@ -205,5 +214,5 @@ for (const name of ENV) delete process.env[name];
 
 ```ts cleanup
 await box.cleanup();
-await fs.rm(process.env.BBX_PUSH_STORE_DIR, { recursive: true, force: true });
+await fs.rm(PUSH_STORE_DIR, { recursive: true, force: true });
 ```

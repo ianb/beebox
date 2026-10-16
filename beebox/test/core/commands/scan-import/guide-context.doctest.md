@@ -7,6 +7,7 @@ with a warning; a present-but-invalid guide card is a hard error rather than
 a silent scan-without-priors. This file pins that resolution ladder.
 
 ```ts setup
+import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -48,19 +49,19 @@ disambiguation-only rule into the vision prompt.
 const root = await makeBoxDir();
 await writeGuide(root, createInitialGuideTemplate({ name: "scan" }));
 const resolved = await resolveScanGuideContext(root);
-resolved.source
+resolved?.source
 => guide
 
-JSON.stringify(resolved.warnings)
+JSON.stringify(resolved?.warnings)
 => []
 
-resolved.text.split("\n")[0]
+resolved?.text.split("\n")[0]
 => # Scan Guide
 
-resolved.text.includes("disambiguation only")
+resolved?.text.includes("disambiguation only")
 => true
 
-resolved.text.includes("**Default → Ask User**")
+resolved?.text.includes("**Default → Ask User**")
 => true
 
 await fs.rm(root, { recursive: true, force: true });
@@ -73,10 +74,10 @@ const root = await makeBoxDir();
 await writeGuide(root, createInitialGuideTemplate({ name: "scan" }));
 await fs.writeFile(path.join(root, "CLAUDE_SCANS.md"), "# Old priors\n");
 const resolved = await resolveScanGuideContext(root);
-resolved.source
+resolved?.source
 => guide
 
-resolved.warnings[0].includes("CLAUDE_SCANS.md is ignored")
+resolved?.warnings[0]?.includes("CLAUDE_SCANS.md is ignored")
 => true
 
 await fs.rm(root, { recursive: true, force: true });
@@ -91,13 +92,14 @@ lowercase filename variant is honored too.
 const root = await makeBoxDir();
 await fs.writeFile(path.join(root, "CLAUDE_SCANS.md"), "# Scan Context\n- Dave (born 1950)\n");
 const resolved = await resolveScanGuideContext(root);
+assert.ok(resolved);
 resolved.source
 => claude-scans
 
 resolved.text.includes("Dave (born 1950)")
 => true
 
-resolved.warnings[0].includes("deprecated")
+resolved.warnings[0]?.includes("deprecated")
 => true
 
 await fs.rm(root, { recursive: true, force: true });
@@ -107,7 +109,7 @@ await fs.rm(root, { recursive: true, force: true });
 const root = await makeBoxDir();
 await fs.writeFile(path.join(root, "claude_scans.md"), "lowercase priors\n");
 const resolved = await resolveScanGuideContext(root);
-resolved.source
+resolved?.source
 => claude-scans
 
 await fs.rm(root, { recursive: true, force: true });
@@ -134,12 +136,12 @@ validation. Scanning without priors would commit misread names silently, so
 the resolver refuses instead.
 
 ```ts
-async function resolveError(root) {
+async function resolveError(root: string) {
   try {
     await resolveScanGuideContext(root);
     return "(no error)";
   } catch (e) {
-    return `${e.name}: ${e.message}`;
+    return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
   }
 }
 

@@ -6,7 +6,9 @@ registry behind them is covered by `pending-browser-request.doctest.md`.
 
 ```ts setup
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../helpers/doctest-server.js";
+import { eventSchemas } from "../../src/core/event-bus/schemas.js";
+import { isRecord } from "../../src/shared/is-record.js";
 
 // An 8-byte PNG signature plus a trailing byte — enough to pass the route's
 // magic-byte check.
@@ -18,21 +20,33 @@ const VALID_ID = "00000000-0000-0000-0000-000000000000";
 
 // The request route is loopback-only: it requires the per-box agent bearer.
 // getOrCreateAgentToken mints/reads the same token file verifyAgentBearer checks.
-function agentAuth(ctx) {
+function agentAuth(ctx: TestServer) {
   return { authorization: `Bearer ${getOrCreateAgentToken(ctx.boxRoot)}` };
 }
 
 // The browser learns which id to answer from the transient `screenshot-request`
 // bus event (no id is caller-supplied). Subscribe BEFORE starting the long-poll,
 // then await the emitted id — this is the real server-generated-id path.
-function captureRequestId(ctx) {
-  return new Promise((resolve) => {
+function captureRequestId(ctx: TestServer) {
+  return new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({
       listener: (e) => {
-        if (e.event === "screenshot-request") resolve(e.data.requestId);
+        if (e.event === "screenshot-request") resolve(eventSchemas["screenshot-request"].parse(e.data).requestId);
       },
     });
   });
+}
+
+// A field of a JSON response body, `undefined` when the body is not an object.
+function field(body: unknown, key: string): unknown {
+  return isRecord(body) ? body[key] : undefined;
+}
+
+// A string field of a JSON response body; fails the test when it is not one.
+function stringField(body: unknown, key: string): string {
+  const value = field(body, key);
+  if (typeof value !== "string") throw new Error(`expected a string ${key} in ${JSON.stringify(body)}`);
+  return value;
 }
 
 // Build a multipart body with an optional file + text fields. Returns a Buffer
@@ -65,7 +79,7 @@ const res = await ctx.request({
   payload: { declined: true },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 status: 404
 error: unknown-request
@@ -89,7 +103,7 @@ const res = await ctx.request({
   payload: { declined: true },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 status: 400
 error: bad-request-id
@@ -112,7 +126,7 @@ const res = await ctx.request({
   headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 status: 400
 error: not-png
@@ -139,7 +153,7 @@ const res = await ctx.request({
   headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 status: 400
 error: too-large
@@ -163,7 +177,7 @@ const res = await ctx.request({
   payload: { session: "s1", timeoutMs: 3000 },
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 status: 403
 error: forbidden
@@ -188,7 +202,7 @@ const res = await ctx.request({
   headers: agentAuth(ctx),
 });
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 status: 504
 error: no-client
@@ -223,7 +237,7 @@ const ackRes = await ctx.request({
 print(`ack ok: ${JSON.stringify(ackRes.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 ack ok: {"ok":true}
 status: 504
@@ -254,7 +268,7 @@ const answer = await ctx.request({
 print(`answer ok: ${JSON.stringify(answer.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`error: ${res.body.error}`);
+print(`error: ${field(res.body, "error")}`);
 =>
 answer ok: {"ok":true}
 status: 409
@@ -297,10 +311,10 @@ const answer = await ctx.request({
 print(`answer ok: ${JSON.stringify(answer.body)}`);
 const res = await longPoll;
 print(`status: ${res.statusCode}`);
-print(`fidelity: ${res.body.fidelity}`);
-print(`viewport: ${JSON.stringify(res.body.viewport)}`);
-print(`path ends: ${res.body.path.endsWith(`/_tmp/screenshot-${requestId}.png`)}`);
-print(`path absolute: ${res.body.path.startsWith("/")}`);
+print(`fidelity: ${field(res.body, "fidelity")}`);
+print(`viewport: ${JSON.stringify(field(res.body, "viewport"))}`);
+print(`path ends: ${stringField(res.body, "path").endsWith(`/_tmp/screenshot-${requestId}.png`)}`);
+print(`path absolute: ${stringField(res.body, "path").startsWith("/")}`);
 // The 200 is sent only after the PNG is written; the file therefore exists.
 const saved = await ctx.read(`_tmp/screenshot-${requestId}.png`);
 print(`saved non-empty: ${saved.length > 0}`);
@@ -341,7 +355,7 @@ const poll = fetch(`http://127.0.0.1:${port}/test/api/chat/screenshot/request`, 
   headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
   body: JSON.stringify({ session: "s1", timeoutMs: 30000 }),
   signal: controller.signal,
-}).then(() => "resolved", (e) => e.name);
+}).then(() => "resolved", (e) => (e instanceof Error ? e.name : String(e)));
 
 // Wait until the request has parked (its id is on the bus), then sever the
 // client connection mid-poll.
@@ -359,7 +373,7 @@ const late = await ctx.request({
   payload: { declined: true },
 });
 print(`late status: ${late.statusCode}`);
-print(`late error: ${late.body.error}`);
+print(`late error: ${field(late.body, "error")}`);
 =>
 poll outcome: AbortError
 late status: 404

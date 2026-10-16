@@ -11,7 +11,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const PACKAGE_ROOT = join(import.meta.dirname, "../..");
 
-async function grantInChild(boxRoot, email) {
+async function grantInChild(boxRoot: string, email: string) {
   const code = `const { grantBoxAccess } = await import("./src/webapp/box-config-write.ts"); await grantBoxAccess({ boxRoot: process.env.TEST_BOX_ROOT, email: process.env.TEST_EMAIL });`;
   const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", code], {
     cwd: PACKAGE_ROOT,
@@ -19,7 +19,7 @@ async function grantInChild(boxRoot, email) {
     stdio: ["ignore", "ignore", "pipe"],
   });
   let stderr = "";
-  child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+  child.stderr.on("data", (chunk: Buffer) => { stderr += String(chunk); });
   const codeResult = await new Promise((resolve, reject) => {
     child.once("error", reject);
     child.once("exit", resolve);

@@ -4,8 +4,11 @@ One request verifies declaration plus exact material bytes. There is no second
 client finalize call to lose when a share extension exits.
 
 ```ts setup
-import { makeTestServer } from "../../helpers/doctest-server.js";
-import { buildMultipartForm } from "../../../src/lib/multipart.js";
+import { z } from "zod";
+import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/doctest-server.js";
+import type { QuickCaptureDeclaration } from "../../../src/shared/quick-capture.js";
+import type { CaptureRecord } from "../../../src/core/quick-capture/store.js";
+import { buildMultipartForm, type MultipartPart } from "../../../src/lib/multipart.js";
 import { readCapture, writeCapture } from "../../../src/core/quick-capture/store.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
 import { materializeCaptureSource } from "../../../src/core/quick-capture/source.js";
@@ -14,25 +17,41 @@ import { join } from "node:path";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 import { createHash } from "node:crypto";
 const id="11111111-1111-4111-8111-111111111111";
-const declaration={version:1,capturedAt:"2026-10-12T12:00:00Z",source:"apple-share-extension",material:{kind:"clipping",text:"Quoted evidence"}};
-async function upload(ctx,value,extra=[]) {
+const declaration: QuickCaptureDeclaration={version:1,capturedAt:"2026-10-12T12:00:00Z",source:"apple-share-extension",material:{kind:"clipping",text:"Quoted evidence"}};
+const CaptureData=z.looseObject({material:z.looseObject({text:z.unknown()}).nullish(),delivery:z.looseObject({state:z.unknown()}).nullish()});
+const TrpcData=z.object({result:z.object({data:CaptureData})});
+const TrpcError=z.object({error:z.object({message:z.string()})});
+const Choices=z.object({delivery:z.object({choices:z.array(z.object({candidateId:z.string()}))})});
+// The `result.data` object of a successful tRPC response.
+function dataOf(res: InjectResult) { return TrpcData.parse(res.body).result.data; }
+// The `error.message` of a failed tRPC response.
+function errorMessageOf(res: InjectResult) { return TrpcError.parse(res.body).error.message; }
+// The first delivery choice offered on a capture's detail.
+function firstChoiceId(res: InjectResult) { return Choices.parse(TrpcData.parse(res.body).result.data).delivery.choices[0]?.candidateId; }
+// The text of a clipping capture's declared material.
+function clippingText(record: CaptureRecord | null) {
+  const material=record?.declaration.material;
+  return material?.kind==="clipping" ? material.text : undefined;
+}
+async function upload(ctx: TestServer,value: QuickCaptureDeclaration,extra: MultipartPart[]=[]) {
   const {body,boundary}=buildMultipartForm([{kind:"field",field:{name:"declaration",value:JSON.stringify(value)}},...extra]);
   return ctx.request({method:"POST",url:`/api/quick-captures/${id}`,payload:body,headers:{"content-type":`multipart/form-data; boundary=${boundary}`}});
 }
-async function mobile(ctx,email) {
+async function mobile(ctx: TestServer,email: string) {
   const ticket=createMobilePairingTicket(ctx.boxRoot,{createdBy:email});
   const pair=await redeemMobilePairingTicket(ctx.boxRoot,{pairingToken:ticket.token,deviceLabel:"Synthetic test phone"});
+  if(!pair) throw new Error("pairing failed");
   return {authorization:`Bearer ${pair.deviceToken}`};
 }
-async function ownedUpload(ctx,opts) {
+async function ownedUpload(ctx: TestServer,opts: { value: QuickCaptureDeclaration; headers: Record<string, string> }) {
   const {body,boundary}=buildMultipartForm([{kind:"field",field:{name:"declaration",value:JSON.stringify(opts.value)}}]);
   return ctx.request({method:"POST",url:`/api/quick-captures/${id}`,payload:body,headers:{...opts.headers,"content-type":`multipart/form-data; boundary=${boundary}`}});
 }
-async function eventUpload(ctx,opts) {
+async function eventUpload(ctx: TestServer,opts: { id: string; value: QuickCaptureDeclaration }) {
   const {body,boundary}=buildMultipartForm([{kind:"field",field:{name:"declaration",value:JSON.stringify(opts.value)}}]);
   return ctx.request({method:"POST",url:`/api/quick-captures/${opts.id}`,payload:body,headers:{"content-type":`multipart/form-data; boundary=${boundary}`}});
 }
-async function settleEvent(ctx,eventId) {
+async function settleEvent(ctx: TestServer,eventId: string) {
   for(let n=0;n<200;n++) {
     const record=await readCapture(ctx.boxRoot,eventId);
     if(record!==null&&record.state!=="accepted"&&record.state!=="preparing") return record;
@@ -40,7 +59,7 @@ async function settleEvent(ctx,eventId) {
   }
   return readCapture(ctx.boxRoot,eventId);
 }
-async function settle(ctx) {
+async function settle(ctx: TestServer) {
   for(let n=0;n<200;n++) {
     const record=await readCapture(ctx.boxRoot,id);
     if(record?.state==="saved"||record?.state==="failed") return record;
@@ -63,7 +82,7 @@ await upload(ctx,{...declaration,material:{kind:"clipping",text:"Different evide
 => {statusCode:409,body:{error:"This capture ID already belongs to different content."}}
 
 const detail=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`});
-[detail.statusCode,detail.body.result.data.state,detail.body.result.data.serverAccepted,detail.body.result.data.material.text]
+[detail.statusCode,dataOf(detail).state,dataOf(detail).serverAccepted,dataOf(detail).material?.text]
 => [200,"saved",true,"Quoted evidence"]
 
 await ctx.cleanup();
@@ -73,7 +92,7 @@ Missing file and undeclared/extra bytes refuse the entire composite.
 
 ```ts
 const ctx=await makeTestServer();
-const image={...declaration,input:"Find the problem",material:{kind:"image",id,mimeType:"image/png",byteLength:3,sha256:createHash("sha256").update("abc").digest("hex"),fileName:"shot.png"}};
+const image: QuickCaptureDeclaration={...declaration,input:"Find the problem",material:{kind:"image",id,mimeType:"image/png",byteLength:3,sha256:createHash("sha256").update("abc").digest("hex"),fileName:"shot.png"}};
 await upload(ctx,image)
 => {statusCode:400,body:{error:"The complete declared material was not received."}}
 
@@ -105,15 +124,15 @@ await ownedUpload(ctx,{value:declaration,headers:b})
 => {statusCode:403,body:{error:"This capture belongs to another user."}}
 
 const hidden=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`,headers:b});
-[hidden.statusCode,hidden.body.error.message]
+[hidden.statusCode,errorMessageOf(hidden)]
 => [403,"This capture belongs to another user."]
 
 const otherList=await ctx.request({method:"GET",url:"/api/trpc/quickCapture.list",headers:b});
-otherList.body.result.data
+dataOf(otherList)
 => {captures:[]}
 
 const deleted=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{...a,"content-type":"application/json"},payload:{id}});
-[deleted.statusCode,deleted.body.result.data.state]
+[deleted.statusCode,dataOf(deleted).state]
 => [200,"gone"]
 
 await ownedUpload(ctx,{value:declaration,headers:a})
@@ -134,26 +153,26 @@ await settleEvent(ctx,id);
 await eventUpload(ctx,{id:eventId,value:{version:1,capturedAt:"2026-10-12T12:01:00Z",source:"apple-native-input",parentCaptureId:id,input:"My retained context"}});
 await settleEvent(ctx,eventId);
 const before=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id:eventId}))}`});
-[before.body.result.data.state,before.body.result.data.input,before.body.result.data.delivery.state]
+[dataOf(before).state,dataOf(before).input,dataOf(before).delivery?.state]
 => ["blocked","My retained context","needs-choice"]
 
 await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
 const original=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`});
-const gone=original.body.result.data;
+const gone=dataOf(original);
 [gone.state,gone.input,gone.material,gone.sourceRef,gone.transcript,gone.delivery]
 => ["gone",null,null,null,null,null]
 
 const tombstone=await readCapture(ctx.boxRoot,id);
-[tombstone.declaration.input,tombstone.declaration.material,tombstone.transcript]
+[tombstone?.declaration.input,tombstone?.declaration.material,tombstone?.transcript]
 => [null,null,null]
 
 const after=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id:eventId}))}`});
-const kept=after.body.result.data;
+const kept=dataOf(after);
 [kept.state,kept.input,kept.sourceRef,kept.delivery]
 => ["blocked","My retained context",null,null]
 
-const late=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.choose",headers:{"content-type":"application/json"},payload:{id:eventId,candidateId:before.body.result.data.delivery.choices[0].candidateId}});
-[late.statusCode,late.body.error.message]
+const late=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.choose",headers:{"content-type":"application/json"},payload:{id:eventId,candidateId:firstChoiceId(before)}});
+[late.statusCode,errorMessageOf(late)]
 => [404,"The original capture was deleted."]
 
 await eventUpload(ctx,{id:"33333333-3333-4333-8333-333333333333",value:{version:1,capturedAt:"2026-10-12T12:02:00Z",source:"apple-native-input",parentCaptureId:id,input:"Late words"}})
@@ -187,7 +206,7 @@ const quoted="文".repeat(100000);
 await upload(ctx,{...declaration,material:{kind:"clipping",text:quoted}})
 => {statusCode:200,body:{id:"11111111-1111-4111-8111-111111111111",state:"accepted"}}
 
-(await readCapture(ctx.boxRoot,id)).declaration.material.text.length
+clippingText(await readCapture(ctx.boxRoot,id))?.length
 => 100000
 
 await settleEvent(ctx,id);
@@ -195,7 +214,7 @@ const escapedId="22222222-2222-4222-8222-222222222222";
 await eventUpload(ctx,{id:escapedId,value:{...declaration,material:{kind:"clipping",text:"\u0000".repeat(100000)}}})
 => {statusCode:200,body:{id:"22222222-2222-4222-8222-222222222222",state:"accepted"}}
 
-(await readCapture(ctx.boxRoot,escapedId)).declaration.material.text.length
+clippingText(await readCapture(ctx.boxRoot,escapedId))?.length
 => 100000
 
 await settleEvent(ctx,escapedId);
@@ -208,7 +227,7 @@ before any buffered POST can seal. A 404 read alone is never deletion evidence.
 ```ts
 const ctx=await makeTestServer();
 const deleted=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
-[deleted.statusCode,deleted.body.result.data]
+[deleted.statusCode,dataOf(deleted)]
 => [200,{id:"11111111-1111-4111-8111-111111111111",state:"gone",attempts:0,serverAccepted:true}]
 
 await upload(ctx,declaration)
@@ -225,9 +244,10 @@ removes it.
 const ctx=await makeTestServer();
 await acceptQuickCapture({boxRoot:ctx.boxRoot,id,owner:null,declaration:{...declaration,input:"Keep this"}});
 const record=await readCapture(ctx.boxRoot,id);
+if(record===null) throw new Error("capture was not stored");
 const written=await materializeCaptureSource(ctx.boxRoot,record);
 await writeCapture(ctx.boxRoot,{...record,state:"preparing"});
-const exists=(rel)=>access(join(ctx.boxRoot,rel)).then(()=>true,()=>false);
+const exists=(rel: string)=>access(join(ctx.boxRoot,rel)).then(()=>true,()=>false);
 const before=await exists(written);
 await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
 ({written,before,after:await exists(written)})

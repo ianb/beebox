@@ -12,7 +12,7 @@ import { isTaskOutputPathForBox, encodeProjectDir } from "../../../../src/core/c
 const BOX_ROOT = "/srv/boxes/alpha";
 const ENCODED = encodeProjectDir(BOX_ROOT);
 
-function taskPath({ root, cwd, session, file }) {
+function taskPath({ root, cwd, session, file }: { root?: string; cwd?: string; session?: string; file?: string }) {
   return `${root ?? "/private/tmp"}/claude-501/${cwd ?? ENCODED}/${session ?? "sess-1"}/tasks/${file ?? "t1.output"}`;
 }
 ```

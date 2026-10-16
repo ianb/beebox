@@ -11,7 +11,7 @@ import { buildLoadContext } from "../../src/core/load-context.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 /** Build a throwaway box from a path -> content map and return its warnings as "rule: path: message" lines. */
-async function warningsFor(files) {
+async function warningsFor(files: Record<string, string>) {
   const box = await makeTmpBox();
   try {
     for (const [file, content] of Object.entries(files)) await box.write(file, content);
@@ -24,9 +24,9 @@ async function warningsFor(files) {
 }
 
 /** A card whose frontmatter is just a `prominence` mark. */
-const marked = (prominence) => `---\nprominence: ${prominence}\n---\n`;
+const marked = (prominence: string) => `---\nprominence: ${prominence}\n---\n`;
 /** `n` cards P1..Pn in `_content/notes`, all with the given mark. */
-const cards = (n, prominence) =>
+const cards = (n: number, prominence: string) =>
   Object.fromEntries(Array.from({ length: n }, (_, i) => [`_content/notes/P${i + 1}.doc.card`, marked(prominence)]));
 ```
 

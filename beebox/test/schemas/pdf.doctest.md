@@ -11,7 +11,8 @@ The type is `pdf` because that is the only format the pipeline reads today;
 ```ts setup
 import { PdfSchema, createPdfTemplate } from "../../src/schemas/pdf.js";
 import { FileSchema } from "../../src/schemas/file.js";
-import { parseCardText } from "../../src/core/card-io.js";
+import { cardFields, parseCardText } from "../../src/core/card-io.js";
+import { isRecord } from "../../src/shared/is-record.js";
 import { createCardSchemaMap } from "../../src/schemas.js";
 
 const schemas = await createCardSchemaMap();
@@ -41,7 +42,8 @@ const card = createPdfTemplate({
   body: "## Statement\n\nAmount due 128.40\n",
 });
 const parsed = parseCardText(card, { source, schemas });
-JSON.stringify([parsed.fields.format, parsed.fields.metadata.pages, parsed.fields.docling.version, parsed.fields.error ?? null])
+const fields = cardFields(parsed, PdfSchema);
+JSON.stringify([fields.format, fields.metadata?.pages, fields.docling?.version, fields.error ?? null])
 => ["pdf",14,"2.117.0",null]
 ```
 
@@ -49,10 +51,10 @@ The provenance entry is the same shape `file.card` uses, so anything that reads
 a file card's `filename:` reads a pdf card's too:
 
 ```ts continue
-JSON.stringify(parsed.fields.filename)
+JSON.stringify(fields.filename)
 => {"ref":"attach/source.pdf","via":{"channel":"scan-import","at":"2026-04-02T10:23:00Z"},"original-name":"utility-bill.pdf","mime-type":"application/pdf","size":248392}
 
-FileSchema.frontmatterSchema.safeParse({ type: "file", filename: parsed.fields.filename }).success
+FileSchema.frontmatterSchema.safeParse({ type: "file", filename: fields.filename }).success
 => true
 ```
 
@@ -63,7 +65,7 @@ known; anything that is not an ISO date is rejected:
 const withOriginal = (original: string): boolean =>
   FileSchema.frontmatterSchema.safeParse({
     type: "file",
-    filename: { ...parsed.fields.filename, via: { ...parsed.fields.filename.via, original, note: "Found in the attic" } },
+    filename: { ...fields.filename, via: { ...fields.filename.via, original, note: "Found in the attic" } },
   }).success;
 JSON.stringify(["1974", "1974-06", "1974-06-02", "June 1974"].map(withOriginal))
 => [true,true,true,false]
@@ -80,7 +82,8 @@ const card = createPdfTemplate({
   body: "",
 });
 const parsed = parseCardText(card, { source, schemas });
-JSON.stringify([parsed.fields.error, parsed.fields.docling ?? null, parsed.rawBody])
+const failed = cardFields(parsed, PdfSchema);
+JSON.stringify([failed.error, failed.docling ?? null, parsed.rawBody])
 => ["Docling exited 1: model weights unavailable",null,""]
 ```
 
@@ -89,7 +92,8 @@ JSON.stringify([parsed.fields.error, parsed.fields.docling ?? null, parsed.rawBo
 ```ts
 const base = { type: "pdf", format: "pdf", filename: { ref: "attach/x.pdf", via: { channel: "scan-import", at: "2026-04-02T10:23:00Z" } } };
 
-PdfSchema.frontmatterSchema.parse({ ...base, unusable: true }).unusable
+const unusableCard = PdfSchema.frontmatterSchema.parse({ ...base, unusable: true });
+isRecord(unusableCard) && unusableCard["unusable"]
 => true
 
 PdfSchema.frontmatterSchema.safeParse({ ...base, unusable: "yes" }).success

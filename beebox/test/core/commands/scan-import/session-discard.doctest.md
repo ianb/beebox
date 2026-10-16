@@ -24,9 +24,10 @@ import { runPhotoMode } from "../../../../src/core/commands/scan-import/command.
 import { createFakeScanVision } from "../../../../src/services/scan-vision.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/doctest-helpers.js";
 import { textPdf } from "../../../helpers/pdf-fixtures.js";
 
-async function refuseCommits(box) {
+async function refuseCommits(box: TmpBox) {
   const { stdout } = await execa("git", ["rev-parse", "--git-path", "hooks"], { cwd: box.root });
   const hook = join(box.root, stdout, "pre-commit");
   await writeFile(hook, "#!/bin/sh\necho 'Work permission has expired' >&2\nexit 1\n");
@@ -34,7 +35,7 @@ async function refuseCommits(box) {
   return () => rm(hook);
 }
 
-async function importPdf(box) {
+async function importPdf(box: TmpBox) {
   const pdfPath = join(box.root, "incoming.pdf");
   await writeFile(pdfPath, textPdf());
   const docling = createFakeDocling({ markdown: "# Scan\n", pageCount: 1, figureCount: 1 });
@@ -42,17 +43,17 @@ async function importPdf(box) {
   return runPdfMode(ctx, { pdfPath, docling }).then((r) => `imported ${String(r.success)}`, (e) => `threw: ${e.message.split("\n")[0]}`);
 }
 
-async function sessions(box) {
+async function sessions(box: TmpBox) {
   const entries = await readdir(join(box.root, "_content/inbox")).catch(() => []);
   return entries.filter((e) => e.startsWith("scan-")).length;
 }
 
-async function questions(box) {
+async function questions(box: TmpBox) {
   const entries = await readdir(join(box.root, "_bookkeeping/questions")).catch(() => []);
   return entries.filter((e) => e.endsWith(".question.card")).length;
 }
 
-async function staged(box) {
+async function staged(box: TmpBox) {
   const { stdout } = await execa("git", ["diff", "--cached", "--name-only"], { cwd: box.root });
   return stdout === "" ? "nothing staged" : stdout;
 }

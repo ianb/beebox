@@ -40,7 +40,7 @@ const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.
 device !== null
 => true
 
-const sender = await resolveMobileSender(box.root, { authorization: `Bearer ${device.deviceToken}` });
+const sender = await resolveMobileSender(box.root, { authorization: `Bearer ${device?.deviceToken}` });
 JSON.stringify(sender)
 => {"email":"ada@example.com","name":"Ada Lovelace"}
 ```
@@ -49,6 +49,7 @@ That identity is what flows into the message tag, so the transcript shows a real
 sender instead of an unattributed `<typed>`:
 
 ```ts continue
+if (sender === null) throw new Error("expected a sender");
 injectUserAttr("<typed>hello from my phone</typed>", sender)
 => <typed user="Ada Lovelace" user-email="ada@example.com">hello from my phone</typed>
 ```
@@ -74,7 +75,7 @@ rather than failing.
 ```ts continue
 const ticket2 = createMobilePairingTicket(box.root, { createdBy: "grace@example.com" });
 const device2 = await redeemMobilePairingTicket(box.root, { pairingToken: ticket2.token, deviceLabel: "iPad" });
-JSON.stringify(await resolveMobileSender(box.root, { authorization: `Bearer ${device2.deviceToken}` }))
+JSON.stringify(await resolveMobileSender(box.root, { authorization: `Bearer ${device2?.deviceToken}` }))
 => {"email":"grace@example.com","name":"grace@example.com"}
 ```
 
@@ -86,7 +87,7 @@ user — matching the cookie path's `null` for an unauthenticated request.
 ```ts continue
 const openTicket = createMobilePairingTicket(box.root);
 const openDevice = await redeemMobilePairingTicket(box.root, { pairingToken: openTicket.token, deviceLabel: "kiosk" });
-await resolveMobileSender(box.root, { authorization: `Bearer ${openDevice.deviceToken}` })
+await resolveMobileSender(box.root, { authorization: `Bearer ${openDevice?.deviceToken}` })
 => null
 ```
 

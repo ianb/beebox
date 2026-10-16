@@ -16,10 +16,11 @@ import {
   readWakeupFailures,
   recordWakeupAbandoned,
   recordWakeupFailure,
+  type WakeupRetryDecision,
 } from "../../../../src/core/scan/promote/wakeup-retry.js";
 import { markWakeupPending, runPendingWakeup } from "../../../../src/core/scan/promote/wakeup.js";
 
-const minutes = (ms) => ms / 60000;
+const minutes = (ms: number) => ms / 60000;
 ```
 
 ## The backoff schedule, and where it stops
@@ -30,7 +31,7 @@ recovers on its own and a permanent one is abandoned inside a working session.
 
 ```ts
 const attempts = Array.from({ length: MAX_WAKEUP_ATTEMPTS }, (_v, i) => i + 1);
-const describe = (d) => (d.kind === "abandon" ? "abandon" : minutes(d.delayMs) + "m");
+const describe = (d: WakeupRetryDecision) => (d.kind === "abandon" ? "abandon" : minutes(d.delayMs) + "m");
 attempts.map((n) => describe(decideWakeupRetry(n))).join(" ")
 => 2m 4m 8m 15m 15m abandon
 ```
@@ -105,7 +106,7 @@ const alwaysFails = () => {
 };
 
 const passes = Array.from({ length: 20 }, (_v, i) => i);
-const outcomes = [];
+const outcomes: string[] = [];
 await passes.reduce(
   (chain) =>
     chain.then(async () => {

@@ -4,14 +4,27 @@ Tests for agent injection in the procedure engine — mock runners,
 directive passing, and fallback commits for uncommitted agent changes.
 
 ```ts setup
+import assert from "node:assert/strict";
+import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
+import type { Result } from "../../../src/shared/result.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
+import type { FakeAgent } from "../fake-agent.js";
 import { modelTier, providerOf } from "../../../src/shared/agent-models.js";
 
-const describeModel = (model: string) => `${providerOf(model)} ${modelTier(model)}`;
+const describeModel = (model: string | undefined) => {
+  assert.ok(model !== undefined);
+  return `${providerOf(model)} ${modelTier(model)}`;
+};
 import { execSync } from "node:child_process";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
+
+/** The value of a successful result; fails the test on an error. */
+function valueOf<T, E>(result: Result<T, E>): T {
+  assert.ok(result.ok);
+  return result.value;
+}
 ```
 
 ## Agent step with mock runner
@@ -42,9 +55,9 @@ await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add agent-test procedure");
 
 // Fake agent: captures what it receives, writes a file, commits
-let fakeAgent;
-const mockCreateAgent = (opts) => {
-  fakeAgent = createFakeAgent({
+const fakeAgents: FakeAgent[] = [];
+const mockCreateAgent: AgentFactory = (opts) => {
+  const agent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
       await box.write("_bookkeeping/output/agent-result.txt", "processed 3 items");
@@ -52,7 +65,8 @@ const mockCreateAgent = (opts) => {
       return { success: true, output: "Done" };
     },
   });
-  return fakeAgent;
+  fakeAgents.push(agent);
+  return agent;
 };
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -64,16 +78,19 @@ const result = await startProcedure({
 print(`success: ${result.ok}`);
 
 // Agent was called exactly once
+const fakeAgent = fakeAgents[0];
+assert.ok(fakeAgent);
 print(`agent calls: ${fakeAgent.invocations.length}`);
 
 // The system prompt includes the context block with precheck output
-const systemPrompt = fakeAgent.invocations[0].systemPrompt;
+const systemPrompt = fakeAgent.invocations[0]?.systemPrompt;
+assert.ok(systemPrompt);
 print(`has precheck output: ${systemPrompt.includes("3 items to process")}`);
 print(`has step ref: ${systemPrompt.includes("agent-step")}`);
 print(`has agent instructions: ${systemPrompt.includes("Process the items")}`);
 
 // Model was mapped from friendly name
-print(`model: ${describeModel(fakeAgent.invocations[0].options.model)}`);
+print(`model: ${describeModel(fakeAgent.invocations[0]?.options.model)}`);
 
 // Agent's file was preserved
 const agentFile = await box.read("_bookkeeping/output/agent-result.txt");
@@ -113,13 +130,14 @@ steps:
 `);
 box.commitAll("Add codex procedure");
 
-let fakeAgent;
-const createAgent = (opts) => {
-  fakeAgent = createFakeAgent({
+const fakeAgents: FakeAgent[] = [];
+const createAgent: AgentFactory = (opts) => {
+  const agent = createFakeAgent({
     name: opts.name,
     act: async () => ({ success: true }),
   });
-  return fakeAgent;
+  fakeAgents.push(agent);
+  return agent;
 };
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({
@@ -128,7 +146,9 @@ const result = await startProcedure({
   options: { createAgent },
 });
 print(`success: ${result.ok}`);
-print(`model: ${describeModel(fakeAgent.invocations[0].options.model)}`);
+const fakeAgent = fakeAgents[0];
+assert.ok(fakeAgent);
+print(`model: ${describeModel(fakeAgent.invocations[0]?.options.model)}`);
 =>
 success: true
 model: openai efficient
@@ -169,11 +189,11 @@ steps:
 `);
 box.commitAll("Add openrouter procedure");
 
-const models = [];
-const createAgent = (opts) => {
+const models: string[] = [];
+const createAgent: AgentFactory = (opts) => {
   const agent = createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
   const invoke = agent.invoke.bind(agent);
-  agent.invoke = async (options) => { models.push(options.model); return invoke(options); };
+  agent.invoke = async (options) => { if (options.model !== undefined) models.push(options.model); return invoke(options); };
   return agent;
 };
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -218,7 +238,7 @@ steps:
 await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add rejected procedure");
 
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => ({
     success: false,
@@ -238,8 +258,8 @@ const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card")
 const outputFiles = await box.list("_bookkeeping/output");
 print(`success: ${result.ok}`);
 print(`error returned: ${result.ok ? "" : result.error.message}`);
-print(`step: ${run.steps[0].status}`);
-print(`error recorded: ${run.steps[0].run.error}`);
+print(`step: ${run?.steps[0]?.status}`);
+print(`error recorded: ${run?.steps[0]?.run?.error}`);
 print(`finalizer ran: ${outputFiles.includes("finalized.txt")}`);
 print(`validation ran: ${outputFiles.includes("validated.txt")}`);
 =>
@@ -278,7 +298,7 @@ steps:
 `);
 box.commitAll("Add judge-rejected procedure");
 
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => ({ success: true }),
   structuredFailure: {
@@ -297,9 +317,9 @@ const runDir = runs.split("\n").find((file) => file.includes("judge-rejected_"))
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`success: ${result.ok}`);
 print(`error returned: ${result.ok ? "" : result.error.message}`);
-print(`step: ${run.steps[0].status}`);
-print(`validation status: ${run.steps[0].validate.status}`);
-print(`validation error: ${run.steps[0].validate.error}`);
+print(`step: ${run?.steps[0]?.status}`);
+print(`validation status: ${run?.steps[0]?.validate?.status}`);
+print(`validation error: ${run?.steps[0]?.validate?.error}`);
 =>
 success: false
 error returned: Procedure judge-rejected failed at step: work — Agent invocation failed: Model claude-retired is not supported
@@ -329,13 +349,14 @@ steps:
 `);
 box.commitAll("Add directed procedure");
 
-let fakeAgent;
-const mockCreateAgent = (opts) => {
-  fakeAgent = createFakeAgent({
+const fakeAgents: FakeAgent[] = [];
+const mockCreateAgent: AgentFactory = (opts) => {
+  const agent = createFakeAgent({
     name: opts.name,
     act: async () => ({ success: true }),
   });
-  return fakeAgent;
+  fakeAgents.push(agent);
+  return agent;
 };
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -345,7 +366,10 @@ await startProcedure({
   options: { directive: "Focus on technical content", createAgent: mockCreateAgent },
 });
 
-const prompt = fakeAgent.invocations[0].systemPrompt;
+const fakeAgent = fakeAgents[0];
+assert.ok(fakeAgent);
+const prompt = fakeAgent.invocations[0]?.systemPrompt;
+assert.ok(prompt);
 print(`has directive: ${prompt.includes("<directive>")}`);
 print(`directive text: ${prompt.includes("Focus on technical content")}`);
 =>
@@ -378,7 +402,7 @@ steps:
 box.commitAll("Add messy procedure");
 
 // Fake agent that writes a file but doesn't commit
-const mockCreateAgent = (opts) => createFakeAgent({
+const mockCreateAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async ({ boxRoot }) => {
     await box.write("_bookkeeping/output/uncommitted.txt", "forgot to commit this");
@@ -440,7 +464,7 @@ await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add mixed procedure");
 
 let agentRan;
-const createAgent = (opts) => createFakeAgent({
+const createAgent: AgentFactory = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     agentRan = true;

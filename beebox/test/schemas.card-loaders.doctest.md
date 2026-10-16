@@ -16,7 +16,7 @@ const schemas = new Map<string, CardSchema>([
 
 function summaryOf(path: string, fields: Record<string, unknown>) {
   const type = fields["type"];
-  return summarize({ path, type: typeof type === "string" ? type : undefined, fields }, schemas);
+  return summarize(typeof type === "string" ? { path, type, fields } : { path, fields }, schemas);
 }
 ```
 

@@ -29,11 +29,11 @@ const photoBytes = Buffer.concat([
 
 // `request` parses the body as JSON, which an image is not — go through inject
 // directly so the response arrives as bytes.
-async function fetchMedia(refPath) {
+async function fetchMedia(refPath: string) {
   return app.server.inject({ method: "GET", url: `/${TEST_SLUG}/api/session-media/${refPath}` });
 }
 
-async function writeTranscript(lines) {
+async function writeTranscript(lines: string[]) {
   const logPath = getSessionLogPath(app.boxRoot, SESSION);
   await mkdir(path.dirname(logPath), { recursive: true });
   await writeFile(logPath, `${lines.join("\n")}\n`, "utf-8");
@@ -91,7 +91,7 @@ bytes never were. Saying which is which would only describe someone's failed
 upload back to them:
 
 ```ts continue
-const status = async (refPath) => (await fetchMedia(refPath)).statusCode;
+const status = async (refPath: string) => (await fetchMedia(refPath)).statusCode;
 const misses = await Promise.all([
   status("no-such-session/entry-1/0"),
   status(`${SESSION}/no-such-entry/0`),

@@ -17,6 +17,7 @@ const eventBus = {
   emit: () => 0,
   emitTransient: () => {},
   readSince: () => [],
+  readRecent: () => [],
   subscribe: () => ({ unsubscribe: () => {} }),
   prune: () => 0,
   close: () => {},

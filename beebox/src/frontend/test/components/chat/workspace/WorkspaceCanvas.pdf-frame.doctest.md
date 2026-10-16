@@ -13,6 +13,7 @@ show them.
 
 ```ts setup
 import * as React from "react";
+import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PdfFrame } from "../../../../src/components/PdfFrame.js";
 import { registerFileType } from "../../../../src/file-type-registry.js";
@@ -27,7 +28,7 @@ import { isWorkspacePdf } from "../../../../src/components/chat/workspace/Worksp
 for (const entry of [pdfRenderer, binaryRenderer]) registerFileType(entry.selector, { renderer: entry.renderer });
 globalThis.React = React;
 
-function render(props) {
+function render(props: React.ComponentProps<typeof PdfFrame>) {
   return renderToStaticMarkup(React.createElement(PdfFrame, props));
 }
 
@@ -94,6 +95,7 @@ height floor. Unsupported viewers still receive the fallback links.
 ```ts
 const pane = render({ ...base, mode: "companion", workspacePdf: true });
 const beforeObject = pane.split("<object")[0];
+assert.ok(beforeObject !== undefined);
 beforeObject.includes("Handbook")
 => false
 

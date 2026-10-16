@@ -29,7 +29,7 @@ A chat with no choice of its own follows the box; one with a choice keeps it.
 ```ts
 const box = await makeTmpBox();
 const unpinned = await resolveSessionModel(box.root, FOLLOW);
-JSON.stringify([unpinned.model.length > 0, unpinned.source])
+JSON.stringify([(unpinned.model?.length ?? 0) > 0, unpinned.source])
 => [true,"default"]
 
 const pinned = "claude-sonnet-5";

@@ -19,7 +19,7 @@ async function makeBox() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-install-todo-view-"));
 }
 
-async function readVersions(box) {
+async function readVersions(box: string) {
   const text = await fs.readFile(path.join(box, "_config/template-versions.json"), "utf-8");
   return JSON.parse(text);
 }

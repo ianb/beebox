@@ -11,22 +11,35 @@ that entry — the rest of the chain still runs.
 ```ts setup
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { handleCreateAfterSuccess } from "../../../src/cli/tick-utils.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+
+function makeScript(overrides: Partial<ParsedScheduledScript>): ParsedScheduledScript {
+  return {
+    cron: undefined, at: undefined, rrule: undefined, until: undefined,
+    notBefore: undefined, onWakeup: false, once: false, enabled: true,
+    action: { kind: "runs", command: "true" }, requestedBy: undefined,
+    description: undefined, reason: undefined,
+    createAfterSuccess: [], budget: undefined, lockGroup: undefined,
+    timeoutMs: undefined, requires: undefined,
+    ...overrides,
+  };
+}
 
 /** Run the chain handler with console output captured instead of printed. */
-async function runChain(box, createAfterSuccess) {
-  const errors = [];
-  const logs = [];
+async function runChain(box: TmpBox, createAfterSuccess: ParsedScheduledScript["createAfterSuccess"]) {
+  const errors: unknown[] = [];
+  const logs: unknown[] = [];
   const realError = console.error;
   const realLog = console.log;
-  console.error = (msg) => errors.push(msg);
-  console.log = (msg) => logs.push(msg);
+  console.error = (msg: unknown) => { errors.push(msg); };
+  console.log = (msg: unknown) => { logs.push(msg); };
   try {
     await handleCreateAfterSuccess({
       boxRoot: box.root,
       scriptName: "nightly-notes",
-      parsed: { createAfterSuccess },
+      parsed: makeScript({ createAfterSuccess }),
     });
   } finally {
     console.error = realError;

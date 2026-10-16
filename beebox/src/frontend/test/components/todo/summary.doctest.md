@@ -11,19 +11,19 @@ follow-up never counts. `CardTodos.tsx` owns that query; this is the line.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
-import { controlTargetSelector, directoryListPath } from "../../../src/components/todo/summary.js";
+import { controlTargetSelector, directoryListPath, type SummaryReduction } from "../../../src/components/todo/summary.js";
 
 globalThis.React = React;
 
 const none = { open: 0, onPlate: 0, done: 0, parked: 0, escalated: 0 };
 
-function line(reduction, onClick = null) {
+function line(reduction: Partial<SummaryReduction>, onClick: (() => void) | null = null) {
   const openAction = onClick === null ? null : { onClick, title: "Go to the first open todo" };
   return renderToStaticMarkup(React.createElement(TodoSummaryLine, { reduction: { ...none, ...reduction }, openAction }));
 }
 
 /** The line as a reader sees it: tags stripped, `[…]` around the one control. */
-function text(html) {
+function text(html: string) {
   return html.replace(/<button[^>]*>([^<]*)<\/button>/g, "[$1]").replace(/<[^>]+>/g, "");
 }
 ```

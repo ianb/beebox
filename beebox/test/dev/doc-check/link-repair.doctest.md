@@ -9,10 +9,10 @@ import { repairFrontmatterPaths, repairLinks, duplicateBasenames, buildBasenameL
 
 // A tiny fake tree: bugs/foo.md has moved to closed/bugs/foo.md.
 const files = ["issues/closed/bugs/foo.md", "issues/features/bar.md", "beebox/docs/guide.md"];
-const exists = (p) => files.includes(p);
+const exists = (p: string) => files.includes(p);
 const lookup = buildBasenameLookup(files);
-const repair = (fromRel, content) => repairLinks({ fromRel, content, fileExists: exists, basenameLookup: lookup });
-const repairFrontmatter = (fromRel, content) => repairFrontmatterPaths({ fromRel, content, fileExists: exists, basenameLookup: lookup });
+const repair = (fromRel: string, content: string) => repairLinks({ fromRel, content, fileExists: exists, basenameLookup: lookup });
+const repairFrontmatter = (fromRel: string, content: string) => repairFrontmatterPaths({ fromRel, content, fileExists: exists, basenameLookup: lookup });
 ```
 
 ## A stale link is rewritten to the file's current location
@@ -103,7 +103,7 @@ JSON.stringify(amb.unfixable)
 
 ```ts
 const readme = repairLinks({ fromRel: "docs/a.md", content: "[r](./missing/README.md)", fileExists: () => false, basenameLookup: buildBasenameLookup(["x/README.md"]) });
-readme.unfixable[0].reason
+readme.unfixable[0]?.reason
 => non-unique-basename
 ```
 

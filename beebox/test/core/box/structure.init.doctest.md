@@ -17,7 +17,7 @@ async function makeTmpDir() {
 // Simulate what `bbx init` does on a fresh path: scaffold the box (npm-package
 // half + operational half, both at the one root), run the card installers,
 // then git init + single commit at that same root.
-async function fullInit(target) {
+async function fullInit(target: string) {
   const { boxRoot } = await scaffoldBoxRoot(target);
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
@@ -32,7 +32,7 @@ async function fullInit(target) {
   return { boxRoot };
 }
 
-async function listFiles(root, subdir) {
+async function listFiles(root: string, subdir: string) {
   const dir = path.join(root, subdir);
   try {
     const entries = await fs.readdir(dir);
@@ -78,7 +78,7 @@ const log = await getLog(boxRoot, 5);
 log.length
 => 1
 
-log[0].subject
+log[0]?.subject
 => Initialize Bee Box
 ```
 

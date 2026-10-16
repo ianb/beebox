@@ -131,7 +131,11 @@ const OUTSIDE_VITE_SHARED_RAW = [
 ];
 
 export default [
-  ...vibeCheck({ react: true }),
+  // `test` in roots (boxholder decision, 2026-10-16): test/ is held to the same
+  // reviewed ruleset as src/, matching ../../eslint.config.ts. Outside the
+  // roots, files fall through to eslint-config-agent's unreviewed base, whose
+  // extra bans (`??`, inline unions, fs-filename) are not house style.
+  ...vibeCheck({ react: true, roots: ["src", "test"] }),
   // Base import-boundary ban: every frontend source file. no-restricted-imports
   // does NOT merge across flat configs (last match wins), so any later block
   // that sets this rule must restate every pattern it still wants — see the

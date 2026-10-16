@@ -26,7 +26,7 @@ A file holding a pointer is reported with the size and hash the content
 const box = await makeTmpBox();
 await box.write("n.attach/photo.jpg", POINTER);
 const p = await probePointer(box.path("n.attach/photo.jpg"));
-`${p?.size} ${p?.sha256.slice(0, 12)}`
+`${p?.size} ${p?.sha256?.slice(0, 12)}`
 => 300000 2ee2c7d49384
 ```
 

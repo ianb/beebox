@@ -381,7 +381,7 @@ const removedOne = await clearComments(store, { subject: tracked, id: "c-0001" }
 const afterOne = (await readComments(store, tracked)).comments.length;
 const removedRest = await clearComments(store, { subject: tracked });
 const listedAfter = await listAll(store);
-const stillListed = listedAfter.some((e) => e.subject?.relPath === "beebox/docs/plans/foo.md");
+const stillListed = listedAfter.some((e) => e.subject !== null && "relPath" in e.subject && e.subject.relPath === "beebox/docs/plans/foo.md");
 const missingId = await clearComments(store, { subject: scratch, id: "nope" });
 const cleared = { removedOne, afterOne, removedRest, stillListed, missingId };
 JSON.stringify(cleared)

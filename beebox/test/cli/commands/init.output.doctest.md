@@ -15,8 +15,8 @@ import * as path from "node:path";
 import { runInit } from "../../../src/cli/commands/init.js";
 
 /** Run `fn` with console.log captured; returns the lines it printed. */
-async function withOutput(fn) {
-  const lines = [];
+async function withOutput(fn: () => unknown) {
+  const lines: string[] = [];
   const original = console.log;
   console.log = (...args) => { lines.push(args.join(" ")); };
   try {
@@ -36,7 +36,7 @@ const boxRoot = path.join(dir, "abox");
 ```ts
 const fresh = await withOutput(() => runInit(boxRoot, { branch: "main" }));
 JSON.stringify({
-  banner: fresh[0].startsWith("Initialized Bee Box at "),
+  banner: fresh[0]?.startsWith("Initialized Bee Box at "),
   structure: fresh.includes("Directory structure created:"),
   procedures: fresh.some((l) => l.startsWith("Installed 4 procedure(s)")),
   schedules: fresh.some((l) => l.startsWith("Installed 8 schedule(s)")),
@@ -66,7 +66,7 @@ main.personality.card" would not say which box.
 await fs.rm(path.join(boxRoot, "_config/main.personality.card"));
 const refilled = await withOutput(() => runInit(boxRoot, { branch: "main" }));
 JSON.stringify({
-  header: refilled[0].startsWith("Updated Bee Box at "),
+  header: refilled[0]?.startsWith("Updated Bee Box at "),
   refilled: refilled.includes("Installed _config/main.personality.card"),
   lines: refilled.length,
 })

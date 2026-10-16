@@ -17,7 +17,7 @@ import { getStatus } from "../../src/lib/git/core/operations.js";
 const PACKAGE_ROOT = join(import.meta.dirname, "../..");
 const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/git-commit-child.ts");
 
-function startCommitter(boxRoot, name, env) {
+function startCommitter(boxRoot: string, name: string, env: NodeJS.ProcessEnv) {
   const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, boxRoot, name], {
     cwd: PACKAGE_ROOT,
     stdio: ["pipe", "pipe", "pipe"],
@@ -28,11 +28,13 @@ function startCommitter(boxRoot, name, env) {
   child.stderr.on("data", (chunk) => { state.err += String(chunk); });
   return state;
 }
+type Committer = ReturnType<typeof startCommitter>;
+interface Outcome { name: string; code: number | null; out: string; last: string | undefined; stderr: string }
 
 // Resolves once the child has written its file and parked on the starting gun.
-function awaitReady(state) {
-  return new Promise((resolve, reject) => {
-    const check = () => { if (state.out.includes("ready")) resolve(undefined); };
+function awaitReady(state: Committer) {
+  return new Promise<void>((resolve, reject) => {
+    const check = () => { if (state.out.includes("ready")) resolve(); };
     state.child.stdout.on("data", check);
     check();
     state.child.once("error", reject);
@@ -42,8 +44,8 @@ function awaitReady(state) {
   });
 }
 
-function awaitOutcome(state) {
-  return new Promise((resolve) => {
+function awaitOutcome(state: Committer) {
+  return new Promise<Outcome>((resolve) => {
     state.child.once("exit", (code) => {
       const lines = state.out.trim().split("\n");
       resolve({ name: state.name, code, out: state.out, last: lines[lines.length - 1], stderr: state.err });
@@ -53,7 +55,7 @@ function awaitOutcome(state) {
 
 // Spawn one committer per name, wait until every one is parked, then release
 // them all at once so they contend for the index for real.
-async function raceCommitters(boxRoot, names) {
+async function raceCommitters(boxRoot: string, names: string[]) {
   const states = names.map((name) => startCommitter(boxRoot, name, {}));
   await Promise.all(states.map(awaitReady));
   for (const state of states) state.child.stdin.write("go\n");
@@ -64,14 +66,14 @@ async function raceCommitters(boxRoot, names) {
 // actually touched. Commits are delimited by a record-separator byte because
 // `--name-only` already puts a blank line between the header and the files, so
 // a blank line cannot also delimit commits.
-function describeCommit(record) {
-  const [header, ...rest] = record.trim().split("\n");
+function describeCommit(record: string) {
+  const [header = "", ...rest] = record.trim().split("\n");
   const [subject, trailer] = header.split("|");
   const files = rest.filter((line) => line !== "");
   return `${subject} / by=${trailer} / files=${files.join(",")}`;
 }
 
-async function describeLog(boxRoot, count) {
+async function describeLog(boxRoot: string, count: number) {
   const format = "--format=%x1e%s|%(trailers:key=Committed-By,valueonly,separator=)";
   const raw = await simpleGit(boxRoot).raw(["log", format, "--name-only", `-${count}`]);
   const records = raw.split("\u001e").filter((record) => record.trim() !== "");
@@ -99,7 +101,7 @@ Every one of them produced a commit — nobody was silently absorbed by another
 writer's commit and reported success:
 
 ```ts continue
-outcomes.filter((o) => o.last.startsWith("committed") && !o.last.endsWith("null")).length
+outcomes.filter((o) => o.last?.startsWith("committed") && !o.last.endsWith("null")).length
 => 5
 ```
 

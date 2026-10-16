@@ -7,6 +7,7 @@ resolve their semantic place on cold entry, while warm selection wins.
 ```ts setup
 import { cardChatSearch, legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/lib/system-card-navigation.js";
 import { routeConversationRequest } from "../../src/components/chat/everywhere/conversation-intent.js";
+type RouteIntentInput = Parameters<typeof routeConversationRequest>[0];
 import { SYSTEM_CARD_PATHS } from "../../../shared/system-card-paths.js";
 import { serializeViewUrl } from "../../src/lib/view-url.js";
 const browse = { path: SYSTEM_CARD_PATHS.browse, viewer: null, params: {}, viewState: { directory: "_content/recipes", detail: { path: "_content/recipes/a.doc.card", viewer: "Source", params: {}, viewState: null } } };
@@ -83,11 +84,11 @@ JSON.stringify([SYSTEM_CARD_PATHS.dashboard, SYSTEM_CARD_PATHS.settings, SYSTEM_
 ```
 
 ```ts
-const input = { first: true, chatPage: false, search: {}, selection: { kind: "resolving", contextDir: "", requestId: "cold" }, remembered: null, ...systemCardEntryContext(browse) };
+const input: RouteIntentInput = { first: true, chatPage: false, search: {}, selection: { kind: "resolving", contextDir: "", requestId: "cold" }, remembered: null, ...systemCardEntryContext(browse) };
 JSON.stringify(routeConversationRequest(input))
 => {"kind":"landmark","contextDir":"_content/recipes"}
 
-const chosen = { kind: "ready", target: { kind: "session", sessionId: "chosen", contextDir: "_content/work" }, label: "Work" };
+const chosen: RouteIntentInput["selection"] = { kind: "ready", target: { kind: "session", sessionId: "chosen", contextDir: "_content/work" }, label: "Work" };
 routeConversationRequest({ ...input, first: false, selection: chosen })
 => null
 

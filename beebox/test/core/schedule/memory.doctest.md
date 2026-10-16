@@ -15,14 +15,16 @@ import { loadScriptState } from "../../../src/core/schedule/state.js";
 import { cursorAdvances } from "../../../src/core/schedule/memory.js";
 import { runShell } from "../../../src/core/procedure/shell.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { invariant } from "../../../src/shared/invariant.js";
 
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 
-const head = (box) => execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
+const head = (box: TmpBox) => execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
 
 /** Force one run of `watch`, capturing the tick's warnings. */
-async function tick(box) {
-  const warnings = [];
+async function tick(box: TmpBox) {
+  const warnings: string[] = [];
   const origWarn = console.warn;
   console.warn = (...args) => { warnings.push(args.join(" ")); };
   try {
@@ -89,6 +91,7 @@ The run succeeded, so the cursor moved to HEAD, and the carry is in state:
 
 ```ts continue
 const first = await loadScriptState(box.root, "watch");
+invariant(first.lastRun, "first run recorded its time");
 [first.lastCommit === head(box), first.carry].join(" ")
 => true told them about old
 ```
@@ -156,7 +159,7 @@ big.warnings
   "  watch: carry of 5000 bytes truncated to 4096"
 ]
 
-(await loadScriptState(box.root, "watch")).carry.length
+(await loadScriptState(box.root, "watch")).carry?.length
 => 4096
 ```
 

@@ -9,7 +9,7 @@ when every view renders.
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { checkViews } from "../../../../src/cli/commands/view/command.js";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
 
@@ -32,7 +32,7 @@ async function makeViewBox() {
 }
 
 // Views live at `<boxRoot>/src/views`.
-async function writeView(box, rel, content) {
+async function writeView(box: TmpBox, rel: string, content: string) {
   const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);

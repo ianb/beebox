@@ -37,6 +37,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@babel/core": "7.29.0",
+    "@happy-dom/global-registrator": "20.14.6",
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/d3": "^7.4.3",
     "@types/node": "^24.0.0",
@@ -47,6 +49,7 @@
     "autoprefixer": "^10.4.20",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9.39.2",
+    "happy-dom": "20.14.6",
     "lint-staged": "^16.2.7",
     "madge": "^8.0.0",
     "oxlint": "^1.47.0",

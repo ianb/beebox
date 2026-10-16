@@ -6,8 +6,9 @@ Pure presentation given a `now`: the one-line form the CLI prints, and the
 
 ```ts setup
 import { formatLocationLine, locationAge } from "../../src/core/location-format.js";
+import type { StoredLocation } from "../../src/core/location-store.js";
 
-const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 20.4, capturedAt: "2026-06-29T12:00:00.000Z", source: "web" };
+const FIX: StoredLocation = { lat: 45.5231, lng: -122.6765, accuracy: 20.4, capturedAt: "2026-06-29T12:00:00.000Z", source: "web" };
 ```
 
 ## Fresh fix: coarse age + rounded accuracy

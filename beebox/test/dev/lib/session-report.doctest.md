@@ -68,7 +68,7 @@ The callback receives multiple bounded chunks rather than one materialized
 report. Joining them reconstructs the public markdown output.
 
 ```ts
-const chunks = [];
+const chunks: string[] = [];
 await writeSessionReport({
   logPath,
   rawTranscriptCommand: "bbx session session-123 --raw --allow-huge",

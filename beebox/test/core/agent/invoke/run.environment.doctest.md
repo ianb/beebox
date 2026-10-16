@@ -8,7 +8,13 @@ external SDK/CLI boundaries are replaced here.
 ```ts setup
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { buildScriptEnv } from "../../../../src/core/script-env/core.js";
+import type { ConsumeStreamOptions } from "../../../../src/core/agent/invoke/stream.js";
+import type { CodexSdkSessionOptions } from "../../../../src/services/codex-sdk-session/core.js";
 import * as auth from "../../../../src/core/agent/auth-preflight.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 ```
 
 ```ts
@@ -17,11 +23,11 @@ const originalSecret = process.env.BBX_HUB_SECRET;
 const originalId = process.env.BBX_TRIAGE_RUN_ID;
 process.env.BBX_HUB_SECRET = "synthetic-server-secret";
 process.env.BBX_TRIAGE_RUN_ID = "inherited-run";
-let claudeEnv: Record<string, string> = {};
+let claudeEnv: Record<string, unknown> = {};
 const { runAgent } = await t.mockImport("../../../../src/core/agent/invoke/run.ts", {
   "../../../../src/core/agent/auth-preflight.ts": { ...auth, checkClaudeAuth: async () => {} },
-  "../../../../src/core/agent/invoke/stream.ts": { consumeAgentStream: async ({ queryOptions }) => {
-    claudeEnv = queryOptions.env;
+  "../../../../src/core/agent/invoke/stream.ts": { consumeAgentStream: async ({ queryOptions }: ConsumeStreamOptions) => {
+    claudeEnv = isRecord(queryOptions.env) ? queryOptions.env : {};
     return { outputBuf: "", resultMessage: null, assignedSessionId: null, errorText: "synthetic stop", hadAssistantActivity: false };
   } },
 });
@@ -29,13 +35,13 @@ await runAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "", env: { BBX
 JSON.stringify([claudeEnv.BBX_TRIAGE_RUN_ID, claudeEnv.BBX_TRIAGE_RESEARCH, claudeEnv.BBX_SPAWN_PROFILE, claudeEnv.BBX_HUB_SECRET ?? null, process.env.BBX_TRIAGE_RUN_ID])
 => ["claude-run","1","agent",null,"inherited-run"]
 
-let codexEnv: Record<string, string> = {};
+let codexEnv: Record<string, string | undefined> = {};
 const { runCodexAgent } = await t.mockImport("../../../../src/core/agent/codex-run/core.ts", {
   "../../../../src/core/agent/auth-preflight.ts": { ...auth, checkCodexAuth: async () => {} },
   "../../../../src/core/agent/ensure-codex-plugin.ts": { ensureCodexPluginInstalled: async () => {} },
 });
-const result = await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "", env: { BBX_TRIAGE_RUN_ID: "codex-run", BBX_TRIAGE_RESEARCH: "1" } }, options => {
-  codexEnv = options.env;
+const result = await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "", env: { BBX_TRIAGE_RUN_ID: "codex-run", BBX_TRIAGE_RESEARCH: "1" } }, (options: CodexSdkSessionOptions) => {
+  codexEnv = options.env ?? {};
   return { id: null, run: async () => ({ sessionId: "fake-session", output: "done", resultText: "done", durationMs: 1, status: "completed", error: null, usage: null, items: [] }) };
 });
 result.success
@@ -48,7 +54,7 @@ codexEnv.CODEX_HOME === process.env.CODEX_HOME
 => true
 
 let defaultEnv: unknown = "unset";
-await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "" }, options => {
+await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "" }, (options: CodexSdkSessionOptions) => {
   defaultEnv = options.env;
   return { id: null, run: async () => ({ sessionId: "fake-default", output: "done", resultText: "done", durationMs: 1, status: "completed", error: null, usage: null, items: [] }) };
 });

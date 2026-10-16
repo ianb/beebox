@@ -9,7 +9,7 @@ a box that needs a human alone. See `src/core/docs-refresh.ts`.
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { GENERATE_MARKER } from "../../src/core/docs-gen/generate/core.js";
@@ -35,7 +35,7 @@ async function makeCleanBox() {
   return box;
 }
 
-function git(box, ...args) {
+function git(box: TmpBox, ...args: string[]) {
   return execFileSync("git", args, { cwd: box.root }).toString().trim();
 }
 ```
@@ -184,7 +184,7 @@ pending.length > 0
 => true
 
 git(box, "config", "--unset", "core.hooksPath");
-const result = await refreshGeneratedDocs({ boxRoot: box.root, recover: true });
+const result = await refreshGeneratedDocs({ boxRoot: box.root });
 JSON.stringify({ status: result.status, rules: git(box, "ls-files", ".claude/rules").includes("card-pdf.md"), pending: git(box, "for-each-ref", "--format=%(objectname)", "refs/bbx/migrations/docs-refresh/pending"), clean: git(box, "status", "--porcelain") === "" })
 => {"status":"refreshed","rules":true,"pending":"","clean":true}
 ```

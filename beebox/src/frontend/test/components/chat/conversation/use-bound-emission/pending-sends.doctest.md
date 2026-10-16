@@ -33,7 +33,7 @@ function memoryStorage() {
 }
 
 /** A store over `storage` for box `test` (the default scope). */
-const open = (storage, scope?: { boxSlug: string; storageScope: string }) =>
+const open = (storage: ReturnType<typeof memoryStorage>, scope?: { boxSlug: string; storageScope: string }) =>
   createPendingSendsStore(storage, scope ?? { boxSlug: "test", storageScope: "test" });
 
 const chatBinding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
@@ -207,7 +207,7 @@ production API base retains the historical `test1` key.
 const storage = memoryStorage();
 const paperScope = storageScopeFor("/paper-cards/test1/api");
 const chatScope = storageScopeFor("/chat-everywhere/test1/api");
-const scoped = (storageScope) => open(storage, { boxSlug: "test1", storageScope });
+const scoped = (storageScope: string) => open(storage, { boxSlug: "test1", storageScope });
 const test1Binding: SendBinding = { ...chatBinding, boxSlug: "test1" };
 scoped(paperScope).stage(typed("paper", "Paper message"), test1Binding);
 scoped(chatScope).stage(typed("chat", "Chat message"), test1Binding);

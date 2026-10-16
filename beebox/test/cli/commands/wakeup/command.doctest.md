@@ -10,6 +10,7 @@ import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
 import { createIntakeJobsForUnjobbed, cleanupStaleJobs } from "../../../../src/cli/commands/wakeup/command.js";
+import type { Connector } from "../../../../src/connector.js";
 ```
 
 ## createIntakeJobsForUnjobbed
@@ -40,7 +41,7 @@ jobFiles.length
 => 1
 
 // The job references both items
-const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0]), "utf-8");
+const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0] ?? ""), "utf-8");
 content.includes("ref: _content/inbox/note1.doc.card")
 => true
 
@@ -105,8 +106,8 @@ jobFiles.length
 => 2
 
 // One normal-priority job with the doc, one low-priority with captures
-const job0 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0]), "utf-8");
-const job1 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[1]), "utf-8");
+const job0 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0] ?? ""), "utf-8");
+const job1 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[1] ?? ""), "utf-8");
 const allContent = job0 + job1;
 allContent.includes("note.doc.card")
 => true
@@ -156,7 +157,7 @@ count
 => 1
 
 const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
-const content = await readFile(join(box.root, "_bookkeeping/jobs", allFiles.find(f => f.endsWith(".intake.job.card"))), "utf-8");
+const content = await readFile(join(box.root, "_bookkeeping/jobs", allFiles.find(f => f.endsWith(".intake.job.card")) ?? ""), "utf-8");
 content.includes("email-outbound")
 => false
 ```
@@ -190,7 +191,7 @@ await box.seed("_content/inbox/email/thread-1/msg-001.email-message.card", "<ema
 await box.seed("_content/inbox/pages-saved/page1.doc.card", "---\ntitle: Saved\n---\n");
 box.commitAll("add items");
 
-const fakeGmail = { name: "gmail", inboxPaths: ["_content/inbox/email"] };
+const fakeGmail: Connector = { name: "gmail", inboxPaths: ["_content/inbox/email"], sync: async () => ({ success: true, created: [], updated: [] }) };
 const count = await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail });
 
 // Only the email item — the pages-saved item is left for full wakeup
@@ -199,7 +200,7 @@ count
 
 const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
 const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
-const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0]), "utf-8");
+const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0] ?? ""), "utf-8");
 content.includes("connector: gmail")
 => true
 
@@ -228,7 +229,7 @@ await createIntakeJobsForUnjobbed(box.root);
 const jobsDir = join(box.root, "_bookkeeping/jobs");
 const intakeJobs = async () => (await readdir(jobsDir)).filter((f) => f.endsWith(".intake.job.card")).sort();
 const [unscoped] = await intakeJobs();
-unscoped.endsWith("-inbox.intake.job.card")
+unscoped?.endsWith("-inbox.intake.job.card")
 => true
 ```
 
@@ -236,12 +237,12 @@ The gmail-scoped scan takes both email items. The unscoped job keeps the doc,
 and its description counts what remains:
 
 ```ts continue
-const fakeGmail = { name: "gmail", inboxPaths: ["_content/inbox/email"] };
+const fakeGmail: Connector = { name: "gmail", inboxPaths: ["_content/inbox/email"], sync: async () => ({ success: true, created: [], updated: [] }) };
 await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail })
 => 2
 
 const gmailJob = (await intakeJobs()).find((f) => f.endsWith("-gmail.intake.job.card"));
-const gmailContent = await readFile(join(jobsDir, gmailJob), "utf-8");
+const gmailContent = await readFile(join(jobsDir, gmailJob ?? ""), "utf-8");
 [
   gmailContent.includes("connector: gmail"),
   gmailContent.includes("ref: _content/inbox/email/x.email-thread.card"),
@@ -249,7 +250,7 @@ const gmailContent = await readFile(join(jobsDir, gmailJob), "utf-8");
 ].join(" ")
 => true true true
 
-const unscopedContent = await readFile(join(jobsDir, unscoped), "utf-8");
+const unscopedContent = await readFile(join(jobsDir, unscoped ?? ""), "utf-8");
 [
   unscopedContent.includes("email-thread"),
   unscopedContent.includes("ref: _content/inbox/note.doc.card"),
@@ -279,7 +280,7 @@ await box.seed(
 );
 box.commitAll("setup");
 
-const fakeGmail = { name: "gmail", inboxPaths: ["_content/inbox/email"] };
+const fakeGmail: Connector = { name: "gmail", inboxPaths: ["_content/inbox/email"], sync: async () => ({ success: true, created: [], updated: [] }) };
 await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail })
 => 1
 

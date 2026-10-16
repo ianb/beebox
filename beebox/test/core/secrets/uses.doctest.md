@@ -16,6 +16,7 @@ import { boxSecretStatus, declareSecret, grantSecret, listSecrets, setSecret } f
 import { resolveSecret } from "../../../src/core/secrets/resolve.js";
 import { loadSecretStore } from "../../../src/core/secrets/store.js";
 import { builtinSecretUses, describeSecret, formatSecretUsesLines, secretUsesFor } from "../../../src/core/secrets/uses.js";
+import { invariant } from "../../../src/shared/invariant.js";
 
 async function useTempStore() {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secret-uses-"));
@@ -56,7 +57,7 @@ const dir = await useTempStore();
 await declareSecret({ name: "weatherapi", note: "from weatherapi.com", uses: ["forecasts in the morning brief"] });
 await declareSecret({ name: "weatherapi", uses: ["the umbrella reminder trick", "forecasts in the morning brief"] });
 const store = await loadSecretStore();
-JSON.stringify(store.ok ? store.value.secrets["weatherapi"].uses : null)
+JSON.stringify(store.ok ? store.value.secrets["weatherapi"]?.uses : null)
 => ["forecasts in the morning brief","the umbrella reminder trick"]
 ```
 
@@ -96,7 +97,7 @@ that they outlive the key:
 
 ```ts continue
 await setSecret({ name: "weatherapi", value: "placeholder-value-1", uses: ["tide times"] });
-JSON.stringify((await listSecrets())[0].uses.declared)
+JSON.stringify((await listSecrets())[0]?.uses.declared)
 => ["forecasts in the morning brief","severe-weather alerts","tide times"]
 ```
 
@@ -120,7 +121,7 @@ await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", pur
 await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", purpose: "forecast-trick", access: "agent" });
 await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", purpose: "umbrella-reminder", access: "agent" });
 const store = await loadSecretStore();
-JSON.stringify(store.ok ? store.value.secrets["weatherapi"].purposes : null)
+JSON.stringify(store.ok ? store.value.secrets["weatherapi"]?.purposes : null)
 => ["forecast-trick","umbrella-reminder"]
 ```
 
@@ -129,7 +130,7 @@ A refusal records nothing — only a real disclosure is a use:
 ```ts continue
 await resolveSecret({ boxRoot: boxDir, slug: "other-box", name: "weatherapi", purpose: "snooping", access: "agent" });
 const afterRefusal = await loadSecretStore();
-JSON.stringify(afterRefusal.ok ? afterRefusal.value.secrets["weatherapi"].purposes : null)
+JSON.stringify(afterRefusal.ok ? afterRefusal.value.secrets["weatherapi"]?.purposes : null)
 => ["forecast-trick","umbrella-reminder"]
 ```
 
@@ -139,7 +140,9 @@ that can contradict the other two, which is why it is never merged into them:
 ```ts continue
 await describeSecret({ name: "weatherapi", addUses: ["forecasts in the morning brief"] });
 const status = await boxSecretStatus("demo-box");
-print(formatSecretUsesLines(status.granted[0].uses).join("\n"));
+const [granted] = status.granted;
+invariant(granted, "the box holds a grant");
+print(formatSecretUsesLines(granted.uses).join("\n"));
 =>
 also declared: forecasts in the morning brief
 observed: forecast-trick, umbrella-reminder

@@ -97,7 +97,7 @@ owner. Instruction rows name `AGENTS.md`, and a new box is converted
 const box = await makeTmpBox({ git: "none" });
 const missing = (files: string[], rows: typeof GUIDANCE_SURFACES): string[] =>
   rows.filter((row) => !files.some((f) => guidancePathPattern(row.path).test(f) || guidanceSurfaceFor(f) === row)).map((row) => row.path);
-const fromTemplates = GUIDANCE_SURFACES.filter((row) => row.install.via === "tracker" || row.install.via === "seed");
+const fromTemplates = GUIDANCE_SURFACES.filter((row) => row.install.via === "tracker");
 missing(await boxFiles(box.root), fromTemplates)
 => []
 

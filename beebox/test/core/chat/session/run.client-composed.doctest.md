@@ -13,6 +13,7 @@ query, so they mark the whole query.
 
 ```ts setup
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
+import assert from "node:assert/strict";
 import { combineQueuedInputs } from "../../../../src/core/chat/session/state.js";
 import { buildQueryOptions } from "../../../../src/core/agent/invoke/run.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
@@ -31,6 +32,7 @@ const session = new ChatSession(box.root, { backend, systemPrompt: plainTestProm
 await session.send({ text: "<typed>hello</typed>" });
 await waitForRuns(backend, { count: 1, timeoutMs: 2000 });
 const run = backend.lastRun();
+assert.ok(run);
 const done = once(session, "done");
 run.emitSessionInit("sess-cc");
 run.emitResult();

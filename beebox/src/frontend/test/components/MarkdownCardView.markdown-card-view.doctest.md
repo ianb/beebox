@@ -44,7 +44,7 @@ const todos = [
   { text: "Order lumber", status: "done" },
 ];
 
-function renderFields(fields, context) {
+function renderFields(fields: Record<string, unknown>, context?: React.ContextType<typeof CardTodosContext>): string {
   const table = React.createElement(FrontmatterFields, { fields, onNavigate: () => undefined, basePath: cardPath });
   return renderToStaticMarkup(context === undefined ? table : React.createElement(CardTodosContext.Provider, { value: context }, table));
 }
@@ -97,7 +97,7 @@ and a measure reads as its value with its note.
 
 ```ts setup
 /** The visible text of each `<dt>`/`<dd>` cell, in order, "|"-separated. */
-function cells(html) {
+function cells(html: string): string {
   return html.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
 }
 ```
@@ -144,20 +144,21 @@ body line 5 after a three-line frontmatter is file line 8.
 ```ts setup
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import type { FileData } from "../../src/file-type-registry.js";
 import { MarkdownCardView } from "../../src/components/MarkdownCardView/view.js";
 import { BoxSlugProvider } from "../../src/lib/box-slug.js";
 
 /** Render a doc card's view inside a router and a query client that never answers. */
-async function renderCard(body) {
-  const data = {
+async function renderCard(body: string): Promise<string> {
+  const data: FileData = {
     path: "_content/Trip.doc.card",
     frontmatter: { title: "Trip Report" },
     body,
     bodyLineOffset: 3,
-    schema: { hasBodyField: true, defaultProminence: null },
+    schema: { hasBodyField: true, defaultProminence: "ordinary" },
   };
   const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "page" });
-  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: view });
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
@@ -187,15 +188,15 @@ the missing body. A body that is only the repeated title heading counts as
 empty.
 
 ```ts setup
-async function renderRecord(body) {
-  const data = {
+async function renderRecord(body: string): Promise<string> {
+  const data: FileData = {
     path: "_content/inventory/Solder.record.card",
     frontmatter: { title: "Solder", location: { text: "Tray 3" } },
     body,
-    schema: { hasBodyField: true, defaultProminence: null },
+    schema: { hasBodyField: true, defaultProminence: "ordinary" },
   };
   const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "page" });
-  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: view });
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
@@ -214,16 +215,16 @@ no "Name" row: a record is headed by its `name:`, which the header already
 shows. A card headed by something else (its `title:`) keeps the `name` row.
 
 ```ts
-async function renderFront(frontmatter) {
-  const data = { path: "_content/lending/Camp_stove.record.card", frontmatter, body: "", schema: { hasBodyField: true, defaultProminence: null } };
+async function renderFront(frontmatter: Record<string, unknown>): Promise<string | null> {
+  const data: FileData = { path: "_content/lending/Camp_stove.record.card", frontmatter, body: "", schema: { hasBodyField: true, defaultProminence: "ordinary" } };
   const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "page" });
-  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: view });
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
   const html = renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() }, React.createElement(RouterProvider, { router })));
   const section = /data-card-section="frontmatter">(.*?)<\/dl>/s.exec(html);
-  return section === null ? null : cells(section[1]);
+  return section === null ? null : cells(section[1] ?? "");
 }
 
 await renderFront({ name: "Camp stove", location: { text: "With Idris" }, quantity: { value: "1 stove" } })
@@ -258,9 +259,9 @@ also a row in the field block, and a body heading that repeats it is hidden.
 A record is titled by its `name:`.
 
 ```ts setup
-async function renderEmbed(data) {
+async function renderEmbed(data: FileData): Promise<string> {
   const view = React.createElement(MarkdownCardView, { data, onNavigate: () => undefined, mode: "embed" });
-  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1" }, view);
+  const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: view });
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
@@ -268,7 +269,7 @@ async function renderEmbed(data) {
 }
 
 /** The `data-card-section` names in page order. */
-function sectionOrder(html) {
+function sectionOrder(html: string): Array<string | undefined> {
   return [...html.matchAll(/data-card-section="([^"]*)"/g)].map((m) => m[1]);
 }
 ```
@@ -279,7 +280,7 @@ const html = await renderEmbed({
   frontmatter: { name: "Solder", location: { text: "Tray 3" }, quantity: { value: "2 spools" } },
   body: "# Solder\n\nLead-free, 0.8mm.\n",
   detail: "Tray 3 · 2 spools",
-  schema: { hasBodyField: true, defaultProminence: null },
+  schema: { hasBodyField: true, defaultProminence: "ordinary" },
 });
 [sectionOrder(html), html.split("Solder<").length - 1, html.includes("Tray 3 · 2 spools"), html.includes("Lead-free")]
 => [["heading", "body", "frontmatter"], 1, true, true]

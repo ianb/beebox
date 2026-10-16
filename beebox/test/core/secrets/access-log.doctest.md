@@ -23,7 +23,7 @@ import { accessLogSegmentPath, recordSecretMint } from "../../../src/core/secret
 import { getBoxTimeISO } from "../../../src/lib/time.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
-async function readLog(iso) {
+async function readLog(iso: string) {
   const lines = (await readFile(accessLogSegmentPath(iso), "utf-8")).trim().split("\n");
   return lines.map((line) => JSON.parse(line));
 }

@@ -12,19 +12,24 @@ window stays contiguous.
 
 ```ts setup
 import { prependOlderMessages } from "../../src/machines/chatMachine/chat-actions.js";
+import { initialChatContext } from "../../src/machines/chatMachine/chat-machine-context.js";
 import { MAX_RETAINED_MESSAGES } from "../../src/machines/chat-types.js";
+import type { SessionEntry } from "../../src/api-chat.js";
 
 // Entries are identified by uuid only; nothing here reads their content.
-const page = (from, count) =>
+const page = (from: number, count: number): SessionEntry[] =>
   Array.from({ length: count }, (_, i) => ({
     uuid: `e${from + i}`,
-    type: "user",
+    type: "user" as const,
     timestamp: "2026-08-25T00:00:00Z",
     content: [],
   }));
-const uuids = (messages) => messages.map((m) => m.uuid);
-const prepend = (context, messages) =>
-  prependOlderMessages({ context, event: { type: "PREPEND_MESSAGES", messages } });
+const uuids = (messages: SessionEntry[] | undefined) => (messages ?? []).map((m) => m.uuid);
+const prepend = (context: { messages: SessionEntry[] }, messages: SessionEntry[]) =>
+  prependOlderMessages({
+    context: { ...initialChatContext({ sessionInput: "new" }), messages: context.messages },
+    event: { type: "PREPEND_MESSAGES", messages },
+  });
 ```
 
 ## A page that fits is prepended whole
@@ -43,7 +48,7 @@ the incoming page survive — the two immediately older than what is on screen.
 ```ts
 const context = { messages: page(0, MAX_RETAINED_MESSAGES - 2) };
 const result = prepend(context, page(900, 5));
-result.messages.length
+result.messages?.length
 => 600
 
 uuids(result.messages).slice(0, 3).join(",")

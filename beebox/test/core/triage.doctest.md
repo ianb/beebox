@@ -237,7 +237,7 @@ JSON.stringify(result.applications.map((a) => ({
   }
 ]
 
-const yaml = await box.read(result.applications[0].questionPath);
+const yaml = await box.read(result.applications[0]?.questionPath ?? "");
 yaml.includes("id: recipes")
 => true
 

@@ -9,7 +9,7 @@ to the most-active chat: the exact misdirection the "send a message first" gate
 existed to prevent.
 
 ```ts setup
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
@@ -20,7 +20,7 @@ import { resolveBulkDeliveryTarget } from "../../../../src/core/bulk-upload/work
 const COINED = "33333333-4444-4555-8666-777777777777";
 const OTHER = "88888888-9999-4aaa-8bbb-cccccccccccc";
 
-function makeRegistry(box) {
+function makeRegistry(box: TmpBox) {
   return new ChatSessionRegistry(box.root, {
     backend: createFakeChatBackend(),
     buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
@@ -93,7 +93,7 @@ await setMostActive(box.root, OTHER);
 await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
 
 const reserved = await resolveBulkDeliveryTarget({ boxRoot: box.root, registry, targetSessionId: COINED, contextDir: "" });
-reserved.sessionId
+reserved?.sessionId
 => 33333333-4444-4555-8666-777777777777
 ```
 

@@ -7,7 +7,9 @@ the box accepts it, and the harness is told to start the conversation under
 exactly that id.
 
 ```ts setup
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { ChatSessionRegistryOptions } from "../../../../src/core/chat/session/registry/options.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../../helpers/chat-session-spawner-helpers.js";
@@ -18,7 +20,7 @@ import { appendHistory, loadHistoryEntries, getMostActive } from "../../../../sr
  * pointer is written last of the three, so waiting on it means history and the
  * feature seeds are already durable.
  */
-async function waitForSessionRecorded(box, sessionId) {
+async function waitForSessionRecorded(box: TmpBox, sessionId: string) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     if (await getMostActive(box.root) === sessionId) return;
@@ -31,7 +33,7 @@ const COINED = "11111111-2222-4333-8444-555555555555";
 const OTHER = "99999999-8888-4777-8666-555555555555";
 
 /** A tmp box with a fake backend and a registry; `cleanup()` shuts both down. */
-async function makeChat(opts) {
+async function makeChat(opts?: ChatSessionRegistryOptions) {
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = new ChatSessionRegistry(box.root, {
@@ -42,7 +44,7 @@ async function makeChat(opts) {
   return {
     box, backend, registry,
     cleanup: async () => { registry.shutdown(); await box.cleanup(); },
-    reserve: (fields) => registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {}, ...fields }),
+    reserve: (fields: { sessionId?: string; contextDir?: string | null; seedFeatures?: Record<string, string> }) => registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {}, ...fields }),
     // Send the first message and wait for the fire-and-forget bookkeeping.
     firstRun: async () => {
       await registry.getOrCreate(COINED).send("hello");
@@ -70,7 +72,7 @@ const again = await chat.reserve({ contextDir: "_content/recipes" });
 [first, again]
 => [{ kind: "reserved", sessionId: "11111111-2222-4333-8444-555555555555" }, { kind: "reserved", sessionId: "11111111-2222-4333-8444-555555555555" }]
 
-chat.registry.getReservation(COINED).contextDir
+chat.registry.getReservation(COINED)?.contextDir
 => null
 ```
 
@@ -108,7 +110,9 @@ await chat.reserve({});
 await chat.registry.getOrCreate(COINED).send("hello");
 await tick();
 
-const opts = chat.backend.lastRun().startOptions;
+const run = chat.backend.lastRun();
+assert.ok(run);
+const opts = run.startOptions;
 ({ coined: opts.coinedSessionId, resume: opts.resumeSessionId ?? null })
 => { coined: "11111111-2222-4333-8444-555555555555", resume: null }
 
@@ -176,7 +180,7 @@ chat.registry.sweepIdle();
 chat.registry.isKnownSession(COINED)
 => true
 
-chat.registry.getReservation(COINED).sessionId
+chat.registry.getReservation(COINED)?.sessionId
 => 11111111-2222-4333-8444-555555555555
 ```
 
@@ -253,7 +257,7 @@ await chat.reserve({ sessionId: OTHER, contextDir: "" });
 
 ({
   root: chat.registry.reservationForDirectory(""),
-  unbound: chat.registry.getReservation(COINED).contextDir,
+  unbound: chat.registry.getReservation(COINED)?.contextDir,
 })
 => { root: "99999999-8888-4777-8666-555555555555", unbound: "_content/recipes" }
 ```
