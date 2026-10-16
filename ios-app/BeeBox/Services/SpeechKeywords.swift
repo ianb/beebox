@@ -169,6 +169,7 @@ enum SpeechKeywords {
     private static let sendPatterns = [
         [Choice(["send", "sent", "same", "deliver", "finished", "finish", "said"]), OptionalWord(["a", "the", "an"]), "message"],
         ["it's", OptionalWord(["a", "the", "an"]), "message"],
+        ["just", OptionalWord(["a", "the", "an"]), "message"],
         ["message", Choice(["done", "finished"])],
         ["send", "now"],
     ].flatMap(expand)
