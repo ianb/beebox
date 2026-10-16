@@ -41,10 +41,13 @@ async function writeCached(path: string, code: string): Promise<void> {
   await rename(partial, path);
 }
 
-/** A change to this hook or to the compiler's package invalidates every cached module. */
+/** A change to this hook or to any package in the transform invalidates every cached module. */
+const require = createRequire(import.meta.url);
 const CACHE_SALT = [
   await readText(fileURLToPath(import.meta.url)),
-  await readText(createRequire(import.meta.url).resolve("babel-plugin-react-compiler/package.json")),
+  ...await Promise.all(["babel-plugin-react-compiler", "@babel/core", "esbuild"].map(
+    async (name) => readText(require.resolve(`${name}/package.json`)),
+  )),
 ].join("\0");
 
 /**

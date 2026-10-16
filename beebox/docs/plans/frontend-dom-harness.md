@@ -60,10 +60,11 @@ from three new dev dependencies. Not a BIG CHANGE.
   browser.
 - `beebox/src/frontend/vite.config.ts:29-31`: *"code does not hand-roll
   useCallback/useMemo for render performance; keep one only for an identity a
-  non-React consumer compares"*. The message-list fix relies on the compiler
-  for stable values and adds only `memo` on one row component, which the
-  compiler does not provide. Running the compiler in tests is what lets a test
-  hold the code to that rule rather than pushing it toward hand memoization.
+  non-React consumer compares"*. The message-list fix adds `memo` on one row
+  component, which the compiler does not provide, and one hand `useMemo` for
+  the row context that memoized row compares: the compiler folded the
+  existing one into a wider scope (Track C). Running the compiler in tests is
+  what shows where its memoization holds and where it does not.
 - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
   … as a bug"*) and the 7-day release age (`pnpm-workspace.yaml`,
   `minimumReleaseAge: 10080`): pin `happy-dom` and its registrator at 20.14.6,

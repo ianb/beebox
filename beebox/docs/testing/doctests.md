@@ -147,7 +147,8 @@ re-renders, and which components re-render.
 Every test process loads frontend modules through the React Compiler, with
 the options the Vite build uses (`src/frontend/test/helpers/react-compiler-hooks.ts`,
 registered in `.taprc`). Memoization in a doctest therefore matches the
-browser. Compiled modules are cached in `src/frontend/node_modules/.cache/`.
+browser under the normal build, which runs the compiler (`REACT_COMPILER=0`
+turns it off for debugging). Compiled modules are cached in `src/frontend/node_modules/.cache/`.
 
 Rules:
 
