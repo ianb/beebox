@@ -41,6 +41,7 @@ import type { EmissionStore } from "../../../../input/emission-store";
 import { useCaptureBubbles } from "../../useCaptureBubbles";
 import { lazyOverlay } from "../../../../lib/lazy-component";
 import { captureModeForRequest } from "../../../../lib/capture-intent";
+import type { CaptureExit } from "../../../../pages/capture/useCaptureSession/hook";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../../../DocumentTitle";
@@ -154,7 +155,7 @@ function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCaptu
   captureMode: boolean;
   usesNativeShell: boolean;
   sessionId: string | null;
-  onExitCapture: () => void;
+  onExitCapture: (outcome: CaptureExit) => void;
 }) {
   if (!captureMode || usesNativeShell) return null;
   return <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} />;
@@ -165,6 +166,10 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [sendSignal, setSendSignal] = useState(0);
   const bumpSendSignal = useCallback(() => setSendSignal((n) => n + 1), []);
+  // Done in capture is the person's own send too, but the message it makes
+  // arrives seconds later from the box; the list anchors it on arrival.
+  const [captureSignal, setCaptureSignal] = useState(0);
+
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [typingMode, setTypingMode] = useState(false);
@@ -176,7 +181,11 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
   useEffect(() => {
     if (openCaptureOnMount === true) setCaptureMode((current) => captureModeForRequest(current, true));
   }, [openCaptureOnMount]);
-  return { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
+  const exitCapture = useCallback((outcome: CaptureExit) => {
+    setCaptureMode(false);
+    if (outcome === "sealed") setCaptureSignal((n) => n + 1);
+  }, []);
+  return { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, captureSignal, exitCapture, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }
 
@@ -208,7 +217,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   // under one singleton key per box, so it survives a session switch AND a
   // reload — the design's singleton-draft promise.
   const { expiredAttachments, dismissExpiredAttachments } = useEmissionPersistence({ boxSlug, emissionStore });
-  const { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
+  const { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, captureSignal, exitCapture, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
     typingLocked, setTypingLocked, captureMode, setCaptureMode } = useChatFrameState(openCaptureOnMount);
   // Server-derived pending capture bubbles (survive reload; refined live below).
   const { bubbles: captureBubbleList, applyCaptureStatus, verbs: captureVerbs } = useCaptureBubbles(sessionId);
@@ -338,7 +347,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       currentUserEmail={currentUser ? currentUser.email : undefined} currentUserName={currentUser ? currentUser.name : undefined}
       modelMarkers={model.modelMarkers}
       loadingOlder={loadingOlder}
-      sendSignal={sendSignal} liveTurnId={liveTurnId}
+      sendSignal={sendSignal} captureSignal={captureSignal} liveTurnId={liveTurnId}
       snapshot={snapshot}
       textareaRef={textareaRef}
       debugView={debugView}
@@ -359,7 +368,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       audioOverlayStore={audioOverlayStore}
       openers={openers} unstarted={unstarted}
       />
-      <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} />
+      <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={exitCapture} />
     </InputStoreProvider>
   );
 }

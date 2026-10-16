@@ -21,6 +21,7 @@
 
 import { useCallback, useRef } from "react";
 import { uploadChatFile } from "../../../lib/file-upload";
+import { assertReadable, UnreadableFileError } from "../../../lib/file-readable";
 import { errorMessage } from "@shared/error-guards";
 import type { EmissionStore, FileItem, FileTransferState } from "../../../input/emission-store";
 
@@ -79,6 +80,9 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
     const handles = pendingUploadsRef.current[kind];
     const stillOurs = () => handles.get(id) === file;
     try {
+      // A file that can't be read fails inside the transfer as a "network
+      // error"; check first so the chip can say what actually happened.
+      await assertReadable(file, { name: file.name });
       const uploaded = await uploadChatFile(file, {
         // Every attachment of one message shares the draft's batch directory.
         batch: editor.uploadBatch(),
@@ -94,7 +98,12 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
       console.error(`[chat] Failed to upload ${kind === "file" ? "file" : "image original"}:`, e);
       // Keep the handle: retry needs it, and the chip offers exactly that.
       if (!stillOurs()) return;
-      setState(kind, { id, state: { status: "failed", message: errorMessage(e) } });
+      setState(kind, {
+        id,
+        state: e instanceof UnreadableFileError
+          ? { status: "failed", message: e.message, unreadable: true }
+          : { status: "failed", message: errorMessage(e) },
+      });
     }
   }, [editor, setState]);
 

@@ -12,10 +12,17 @@
  *   banner the user saw before pressing Done only covered failures that had
  *   already happened; sealing over new ones would discard that media without
  *   ever offering the retry.
+ * - **Nothing landed is not a capture.** The box seals an empty session and
+ *   drops it without a message, so a Done after every upload failed (or was
+ *   skipped) used to close the overlay onto a chat that said nothing at all.
+ *   It stays open instead and says why.
  */
 
 import { useState, useRef, useCallback } from "react";
 import { clearResumeSessionId, CaptureAlreadySealedError } from "../api";
+
+/** How the capture surface closed: sealed for delivery, or left without sending. */
+export type CaptureExit = "sealed" | "left";
 
 export interface CaptureFinish {
   finalizing: boolean;
@@ -31,6 +38,8 @@ export function useCaptureFinish(opts: {
   stopRecorder: () => Promise<void>;
   /** Monotonic failure counter, read synchronously across the await. */
   readFailureSeq: () => number;
+  /** True while no media of this capture is on the box, read after the wait. */
+  nothingLanded: () => boolean;
   /** Refuse new media for the rest of the seal. */
   closeForSealing: () => void;
   /** Re-open when a Done bounces back instead of sealing. */
@@ -42,12 +51,13 @@ export function useCaptureFinish(opts: {
   finalizeCaptureSession: (sessionId: string) => Promise<void>;
   cancelCaptureSession: (sessionId: string) => Promise<void>;
   setError: (message: string) => void;
-  onExit: () => void;
+  /** `sealed`: Done handed the capture to the box, which delivers it to the chat. */
+  onExit: (outcome: CaptureExit) => void;
 }): CaptureFinish {
   const [finalizing, setFinalizing] = useState(false);
   const skipRequested = useRef(false);
 
-  const { sessionId, recording, stopRecorder, readFailureSeq } = opts;
+  const { sessionId, recording, stopRecorder, readFailureSeq, nothingLanded } = opts;
   const { closeForSealing, reopenAfterSealing } = opts;
   const { awaitPending, abortPending, clearPendingAndFailed, stopCamera } = opts;
   const { finalizeCaptureSession, cancelCaptureSession, setError, onExit } = opts;
@@ -84,18 +94,24 @@ export function useCaptureFinish(opts: {
         setError("Some uploads failed while finishing. Retry them, or press Done again to finalize without them.");
         return;
       }
+      if (nothingLanded()) {
+        reopenAfterSealing();
+        setFinalizing(false);
+        setError("Nothing uploaded, so there is nothing to send. Retry the failed uploads, or use the trash button to leave.");
+        return;
+      }
       await finalizeCaptureSession(sessionId);
       clearResumeSessionId(); // sealed — no longer resumable
       stopCamera();
       clearPendingAndFailed();
-      onExit();
+      onExit("sealed");
     } catch (err) {
       reopenAfterSealing();
       setError(`Finalize failed: ${err instanceof Error ? err.message : "unknown"}`);
       setFinalizing(false);
     }
   }, [
-    sessionId, finalizing, recording, stopRecorder, readFailureSeq, awaitPending,
+    sessionId, finalizing, recording, stopRecorder, readFailureSeq, nothingLanded, awaitPending,
     closeForSealing, reopenAfterSealing, skipWasRequested, finalizeCaptureSession,
     stopCamera, clearPendingAndFailed, setError, onExit,
   ]);
@@ -118,7 +134,7 @@ export function useCaptureFinish(opts: {
         else console.error("[capture] Cancel failed:", err);
       }
     }
-    onExit();
+    onExit("left");
   }, [sessionId, recording, stopRecorder, clearPendingAndFailed, stopCamera, cancelCaptureSession, onExit]);
 
   return { finalizing, handleDone, handleCancel, skipPendingUploads };

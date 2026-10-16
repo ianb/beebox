@@ -23,11 +23,19 @@ import { StatusBar } from "./StatusBar";
 import { DeviceSettings } from "./DeviceSettings";
 import { CameraViewport } from "./CameraViewport";
 import { CaptureErrorBanner } from "./CaptureErrorBanner";
+import { CapturePhotoStrip } from "./CapturePhotoStrip";
 import { CaptureControls } from "../CaptureControls";
 import { CaptureResumeDialog } from "./CaptureResumeDialog";
 import { useCaptureResume, type ResumableCaptureView } from "./useCaptureResume";
-import { useCaptureSession, type CaptureResumeTarget } from "../../../pages/capture/useCaptureSession/hook";
+import { useCaptureSession, type CaptureResumeTarget, type CaptureExit } from "../../../pages/capture/useCaptureSession/hook";
 import { CaptureAlreadySealedError } from "../../../pages/capture/api";
+
+/** Items that are on the box or on their way: what a Done would send. */
+function sendableCount(c: {
+  photosUploaded: number; photosUploading: number; audioUploaded: number; audioUploading: number; filesUploaded: number; filesUploading: number;
+}): number {
+  return c.photosUploaded + c.photosUploading + c.audioUploaded + c.audioUploading + c.filesUploaded + c.filesUploading;
+}
 
 function formatTime(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
@@ -45,7 +53,7 @@ function toResumeTarget(capture: ResumableCaptureView): CaptureResumeTarget {
   };
 }
 
-export function CaptureOverlay({ targetSessionId, onExit, includeControlIds }: { targetSessionId: string | null; onExit: () => void; includeControlIds?: boolean }) {
+export function CaptureOverlay({ targetSessionId, onExit, includeControlIds }: { targetSessionId: string | null; onExit: (outcome: CaptureExit) => void; includeControlIds?: boolean }) {
   const hasControlIds = includeControlIds !== false;
   const [decision, setDecision] = useState<Decision>(null);
   const [busy, setBusy] = useState(false);
@@ -112,7 +120,7 @@ export function CaptureOverlay({ targetSessionId, onExit, includeControlIds }: {
 function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: {
   targetSessionId: string | null;
   resume: CaptureResumeTarget | null;
-  onExit: () => void;
+  onExit: (outcome: CaptureExit) => void;
   includeControlIds: boolean;
 }) {
   const { state, devices, uploads, inputs, camera, videoRef, actions } = useCaptureSession({ targetSessionId, resume, onExit });
@@ -130,8 +138,8 @@ function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: 
         includeControlIds={includeControlIds}
         recording={recording} recordingTime={recordingTime} formatTime={formatTime}
         audioTotal={counts.audioTotal} audioUploading={counts.audioUploading} audioUploaded={counts.audioUploaded} audioFailed={counts.audioFailed}
-        photoTotal={counts.photoTotal} photosUploading={counts.photosUploading} photosUploaded={counts.photosUploaded} photosFailed={counts.photosFailed}
-        fileTotal={counts.fileTotal} filesUploading={counts.filesUploading} filesUploaded={counts.filesUploaded} filesFailed={counts.filesFailed}
+        photoTotal={counts.photoTotal} photosUploading={counts.photosUploading} photosUploaded={counts.photosUploaded} photosFailed={counts.photosFailed} photosUnreadable={counts.photosUnreadable}
+        fileTotal={counts.fileTotal} filesUploading={counts.filesUploading} filesUploaded={counts.filesUploaded} filesFailed={counts.filesFailed} filesUnreadable={counts.filesUnreadable}
         activeUploadPercent={uploads.activeUpload ? uploads.activeUpload.percent : null}
         finalizing={finalizing}
         showSettings={showSettings}
@@ -164,6 +172,8 @@ function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: 
         onFlipCamera={() => void flipCamera()}
       />
 
+      <CapturePhotoStrip states={uploads.photoStates} previews={uploads.photoPreviews} includeControlIds={includeControlIds} />
+
       <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={handleGallerySelect} />
       <input ref={uploadRef} type="file" multiple hidden onChange={handleFileSelect} />
 
@@ -171,7 +181,9 @@ function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: 
         includeControlIds={includeControlIds}
         sessionId={sessionId} recording={recording} finalizing={finalizing} pendingUploads={counts.pendingUploads}
         hasContent={counts.photoTotal > 0 || counts.audioTotal > 0 || counts.fileTotal > 0}
+        sendable={sendableCount(counts)}
         photosFailed={counts.photosFailed} audioFailed={counts.audioFailed} filesFailed={counts.filesFailed}
+        unreadable={counts.photosUnreadable + counts.filesUnreadable}
         onDone={() => void handleDone()} onCancel={() => void handleCancel()} onToggleRecording={() => void toggleRecording()}
         onRetryFailed={retryFailedUploads} retryFeedback={retryFeedback} onSkipPending={skipPendingUploads}
       />
