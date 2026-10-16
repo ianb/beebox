@@ -7,7 +7,8 @@ registered for production). `runRegisterFakePush(boxRoot, { label })` is
 driven directly and returns the exit code.
 
 ```ts setup
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
 import { runRegisterFakePush } from "../../../src/cli/commands/pairing.js";
 import {
   createMobilePairingTicket,
@@ -21,13 +22,13 @@ const ENV = ["BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_
 for (const name of ENV) delete process.env[name];
 const KEYS = { BBX_APNS_KEY_PATH: "/keys/AuthKey.p8", BBX_APNS_KEY_ID: "KEY", BBX_APNS_TEAM_ID: "TEAM", BBX_APNS_BUNDLE_ID: "app.example" };
 
-async function run(box, label) {
-  const out = [];
+async function run(box: TmpBox, label: string) {
+  const out: string[] = [];
   const origLog = console.log;
   const origErr = console.error;
   console.log = (...args) => { out.push(args.join(" ")); };
   console.error = (...args) => { out.push(`stderr: ${args.join(" ")}`); };
-  let code;
+  let code: number | undefined;
   try {
     code = await runRegisterFakePush(box.root, { label });
   } finally {
@@ -54,7 +55,7 @@ is in the `apns` audience with a token that says what it is:
 ```ts continue
 const [device] = listMobileDevices(box.root);
 const [registration] = devicePushRegistrations(box.root);
-JSON.stringify([device.label, device.createdBy, device.push?.environment, registration.token.startsWith("fake-")])
+JSON.stringify([device?.label, device?.createdBy, device?.push?.environment, registration?.token.startsWith("fake-")])
 => ["dev phone",null,"sandbox",true]
 ```
 
@@ -87,6 +88,7 @@ A box where a phone registered for production APNs is a real box:
 ```ts continue
 const ticket = createMobilePairingTicket(box.root, { createdBy: "owner@example.com" });
 const phone = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "Jamie's iPhone" });
+assert.ok(phone);
 await registerDevicePush(box.root, { deviceId: phone.deviceId, token: "a1".repeat(32), environment: "production" });
 [await run(box, "another"), await run(box, "  ")].join("\n")
 =>

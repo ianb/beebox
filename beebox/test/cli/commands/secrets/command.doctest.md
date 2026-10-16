@@ -35,9 +35,9 @@ async function useTempStore() {
 }
 
 /** Run a `run*` action with console output captured and `process.exit` trapped. */
-async function runCaptured(fn) {
-  const logs = [];
-  const errors = [];
+async function runCaptured(fn: () => unknown) {
+  const logs: string[] = [];
+  const errors: string[] = [];
   const origLog = console.log;
   const origError = console.error;
   const origExit = process.exit;

@@ -61,7 +61,7 @@ function recipesDrive() {
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
       driveFile({ id: "sheet-1", name: "Budget 2026", mimeType: SHEET_MIME, parent: "folder-1" }),
     ],
-    spreadsheets: [["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Budget 2026" })]],
+    spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Budget 2026" })]]),
   });
 }
 

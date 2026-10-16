@@ -31,7 +31,7 @@ const dir = await mkdtemp(join(tmpdir(), "bbx-auth-cli-"));
 process.env.BBX_AUTH_FILE = join(dir, "auth.json");
 delete process.env.BBX_OWNER_EMAIL;
 
-async function passwordFile(password) {
+async function passwordFile(password: string) {
   const file = join(dir, `pw-${Math.random().toString(36).slice(2)}.txt`);
   await writeFile(file, `${password}\n`);
   return file;
@@ -43,23 +43,23 @@ async function passwordFile(password) {
  * error — letting that reach the real `process.exit` would kill the test
  * runner, so it's swapped for a throw-and-catch during the call only).
  */
-async function runCaptured(fn) {
-  const logs = [];
-  const errors = [];
+async function runCaptured(fn: () => unknown) {
+  const logs: string[] = [];
+  const errors: string[] = [];
   const origLog = console.log;
   const origError = console.error;
   const origExit = process.exit;
-  let exitCode;
+  let exitCode: number | undefined;
   console.log = (...args) => { logs.push(args.join(" ")); };
   console.error = (...args) => { errors.push(args.join(" ")); };
-  process.exit = (code) => {
-    exitCode = code ?? 0;
+  process.exit = (code?: number | string | null) => {
+    exitCode = Number(code ?? 0);
     throw new Error("__doctest_process_exit__");
   };
   try {
     await fn();
   } catch (e) {
-    if (e.message !== "__doctest_process_exit__") throw e;
+    if (!(e instanceof Error) || e.message !== "__doctest_process_exit__") throw e;
   } finally {
     console.log = origLog;
     console.error = origError;

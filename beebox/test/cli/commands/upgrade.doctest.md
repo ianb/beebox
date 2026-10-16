@@ -16,12 +16,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
-import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError } from "../../../src/cli/commands/upgrade.js";
+import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError, type CommandRunner, type RunCommandArgs } from "../../../src/cli/commands/upgrade.js";
 import { BoxShapeError } from "../../../src/lib/box-shape.js";
 import { acquireBoxWork, boxMaintenanceStatus, boxWorkEnvironment, withoutBoxWork } from "../../../src/lib/box-maintenance.js";
 import { getStatus, getHead, getLog } from "../../../src/lib/git/core/operations.js";
 
-async function waitForClosed(boxRoot) {
+async function waitForClosed(boxRoot: string) {
   for (let attempt = 0; attempt < 100; attempt++) {
     if (await boxMaintenanceStatus(boxRoot)) return;
     await new Promise(resolve => setTimeout(resolve, 10));
@@ -32,7 +32,7 @@ async function waitForClosed(boxRoot) {
 const OLD_VERSION = "0.1.0";
 const NEW_VERSION = "0.2.0";
 
-async function writeInstalledVersion(boxRoot, version) {
+async function writeInstalledVersion(boxRoot: string, version: string) {
   await fs.mkdir(path.join(boxRoot, "node_modules/beebox"), { recursive: true });
   await fs.writeFile(
     path.join(boxRoot, "node_modules/beebox/package.json"),
@@ -40,12 +40,12 @@ async function writeInstalledVersion(boxRoot, version) {
   );
 }
 
-async function readInstalledVersion(boxRoot) {
+async function readInstalledVersion(boxRoot: string): Promise<string> {
   const raw = await fs.readFile(path.join(boxRoot, "node_modules/beebox/package.json"), "utf-8");
   return JSON.parse(raw).version;
 }
 
-async function readPinnedSpec(boxRoot) {
+async function readPinnedSpec(boxRoot: string): Promise<string> {
   const raw = await fs.readFile(path.join(boxRoot, "package.json"), "utf-8");
   return JSON.parse(raw).dependencies["beebox"];
 }
@@ -86,15 +86,25 @@ const HEALTH_OK = JSON.stringify({ boxChecks: [{ name: "plugin-config", ok: true
  *  returns `outputs[label]` verbatim for a step that should exit 0 with
  *  specific output (a validate report with warnings, a health report with
  *  failing rows). */
-function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile, outputs }) {
+interface FakeRunnerOptions {
+  boxRoot: string;
+  calls: string[];
+  failLabel?: string;
+  failOutput?: string;
+  junkFile?: string;
+  outputs?: Record<string, string>;
+}
+
+function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile, outputs }: FakeRunnerOptions): CommandRunner {
   return async ({ label }) => {
     calls.push(label);
     if (label === failLabel) {
       // A real template/migration write can scaffold a never-tracked file before failing.
       if (junkFile) await fs.writeFile(path.join(boxRoot, junkFile), "junk");
-      return { code: 1, output: failOutput };
+      return { code: 1, output: failOutput ?? "" };
     }
-    if (outputs?.[label] !== undefined) return { code: 0, output: outputs[label] };
+    const canned = outputs?.[label];
+    if (canned !== undefined) return { code: 0, output: canned };
     if (label === "pnpm-install") await writeInstalledVersion(boxRoot, NEW_VERSION);
     if (label === "pnpm-install-restore") await writeInstalledVersion(boxRoot, OLD_VERSION);
     if (label === "bbx-health") return { code: 0, output: HEALTH_OK };
@@ -102,13 +112,18 @@ function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile, outpu
   };
 }
 
-async function tryUpgrade(boxRoot, runCommand, startPath) {
-  startPath = startPath ?? boxRoot;
+function upgrade(boxRoot: string, runCommand: CommandRunner, startPath: string = boxRoot) {
+  return runUpgrade({ to: NEW_VERSION }, { runCommand, startPath });
+}
+
+/** The error an upgrade that must fail throws. */
+async function upgradeError(boxRoot: string, runCommand: CommandRunner, startPath: string = boxRoot): Promise<unknown> {
   try {
-    return await runUpgrade({ to: NEW_VERSION }, { runCommand, startPath });
+    await upgrade(boxRoot, runCommand, startPath);
   } catch (e) {
     return e;
   }
+  throw new Error("upgrade did not fail");
 }
 ```
 
@@ -120,15 +135,15 @@ string:
 
 ```ts
 const boxRoot = await makeV3Fixture();
-const calls = [];
-const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls }));
+const calls: string[] = [];
+const result = await upgrade(boxRoot, makeFakeRunner({ boxRoot, calls }));
 result.installedVersion
 => 0.2.0
 
 calls
 => ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc","bbx-validate","bbx-health"]
 
-(await getLog(boxRoot, 1))[0].trailers
+(await getLog(boxRoot, 1))[0]?.trailers
 => {"Upgraded-To":"beebox@0.2.0"}
 ```
 
@@ -153,15 +168,15 @@ the upgrade commits and the result carries the output for the summary
 
 ```ts
 const boxRoot = await makeV3Fixture();
-const calls = [];
-const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls, failLabel: "bbx-validate", failOutput: "content/Acids.course.card: missing required field learner" }));
+const calls: string[] = [];
+const result = await upgrade(boxRoot, makeFakeRunner({ boxRoot, calls, failLabel: "bbx-validate", failOutput: "content/Acids.course.card: missing required field learner" }));
 result.validationIssues
 => content/Acids.course.card: missing required field learner
 
 calls
 => ["preflight-validate","pnpm-install","bbx-migrate","bbx-init","tsc","bbx-validate","bbx-health"]
 
-(await getLog(boxRoot, 1))[0].trailers
+(await getLog(boxRoot, 1))[0]?.trailers
 => {"Upgraded-To":"beebox@0.2.0"}
 ```
 
@@ -176,8 +191,8 @@ exit code alone would print success over it:
 ```ts
 const boxRoot = await makeV3Fixture();
 const warned = "content/Acids.course.card\n  warning: no schema registered for card type \"course\" — card not validated\n1 file checked, 1 warning in 1 file\n";
-const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [], outputs: { "bbx-validate": warned } }));
-result.validationIssues.split("\n")[1].trim()
+const result = await upgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [], outputs: { "bbx-validate": warned } }));
+result.validationIssues?.split("\n")[1]?.trim()
 => warning: no schema registered for card type "course" — card not validated
 ```
 
@@ -202,14 +217,14 @@ const report = JSON.stringify({ boxChecks: [
   { name: "google-auth", ok: false, message: "Google authorization expired", severity: "warning" },
 ] });
 const runner = makeFakeRunner({ boxRoot, calls: [], outputs: {} });
-const result = await tryUpgrade(boxRoot, async (request) => request.label === "bbx-health" ? { code: 1, output: report } : runner(request));
+const result = await upgrade(boxRoot, async (request: RunCommandArgs) => request.label === "bbx-health" ? { code: 1, output: report } : runner(request));
 result.pluginHealth
 => [
   "plugin-type-unprovided (error): 2 cards of type course have no schema. The courseware plugin provides it: `bbx plugins list`, then its README.",
   "legacy-exposition-rules (warning): content/Acids.attach/Plan.exposition-plan.card still carries rules",
 ]
 
-(await getLog(boxRoot, 1))[0].trailers
+(await getLog(boxRoot, 1))[0]?.trailers
 => {"Upgraded-To":"beebox@0.2.0"}
 ```
 
@@ -219,7 +234,7 @@ one line in the same list rather than silence:
 ```ts continue
 const crashed = makeFakeRunner({ boxRoot: await makeV3Fixture(), calls: [], outputs: {} });
 const boxRoot2 = await makeV3Fixture();
-const broken = await tryUpgrade(boxRoot2, async (request) => request.label === "bbx-health" ? { code: 1, output: "TypeError: boom\n    at health.ts:1" } : makeFakeRunner({ boxRoot: boxRoot2, calls: [] })(request));
+const broken = await upgrade(boxRoot2, async (request: RunCommandArgs) => request.label === "bbx-health" ? { code: 1, output: "TypeError: boom\n    at health.ts:1" } : makeFakeRunner({ boxRoot: boxRoot2, calls: [] })(request));
 broken.pluginHealth.map((line) => line.replace(/\(.*\)/, "(...)"))
 => ["bbx health --json exited 1 without a JSON report (...): TypeError: boom"]
 ```
@@ -242,9 +257,9 @@ pre-upgrade commit.
 ```ts
 const boxRoot = await makeV3Fixture();
 const snapshotSha = await getHead(boxRoot);
-const calls = [];
+const calls: string[] = [];
 const runCommand = makeFakeRunner({ boxRoot, calls, failLabel: "bbx-migrate", failOutput: "boom: migration blew up", junkFile: "untracked-scaffold.txt" });
-const thrown = await tryUpgrade(boxRoot, runCommand);
+const thrown = await upgradeError(boxRoot, runCommand);
 thrown instanceof UpgradeStepFailedError
 => true
 
@@ -299,13 +314,13 @@ predates the one-root layout refuses with a clear error:
 ```ts
 const boxRoot = await makeV3Fixture();
 await fs.writeFile(path.join(boxRoot, "README.md"), "uncommitted\n");
-const dirty = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [] }));
+const dirty = await upgradeError(boxRoot, makeFakeRunner({ boxRoot, calls: [] }));
 
 const legacyRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-upgrade-legacy-"));
 await fs.mkdir(path.join(legacyRoot, ".beebox"), { recursive: true });
 await fs.writeFile(path.join(legacyRoot, ".beebox/box.json"), "");
 execSync("git init -q -b main && git add -A && git commit -q -m init --allow-empty", { cwd: legacyRoot });
-const legacy = await tryUpgrade(legacyRoot, makeFakeRunner({ boxRoot: legacyRoot, calls: [] }), legacyRoot);
+const legacy = await upgradeError(legacyRoot, makeFakeRunner({ boxRoot: legacyRoot, calls: [] }), legacyRoot);
 
 [dirty instanceof DirtyWorkingTreeError, legacy instanceof BoxShapeError]
 => [true, true]
@@ -325,20 +340,20 @@ admission only after the final commit. No installer or live box is contacted.
 ```ts
 const boxRoot = await makeV3Fixture();
 const active = await acquireBoxWork(boxRoot, { reason: "test" });
-const calls = [];
+const calls: string[] = [];
 let denied = false;
 let childJoins = false;
 let maintenancePermit = false;
 const fake = makeFakeRunner({ boxRoot, calls });
-const runCommand = async (request) => {
+const runCommand = async (request: RunCommandArgs) => {
   if (request.label === "pnpm-install") {
     denied = await withoutBoxWork(() => acquireBoxWork(boxRoot, { reason: "test" })).then(async work => { await work.release(); return false; }, () => true);
-    maintenancePermit = JSON.parse(boxWorkEnvironment().BBX_BOX_WORK).maintenance;
+    maintenancePermit = JSON.parse(boxWorkEnvironment().BBX_BOX_WORK ?? "").maintenance;
   }
   if (request.label === "bbx-migrate") childJoins = request.args.includes("--within-maintenance");
   return fake(request);
 };
-const upgrading = tryUpgrade(boxRoot, runCommand);
+const upgrading = upgrade(boxRoot, runCommand);
 await waitForClosed(boxRoot);
 calls.length
 => 0
@@ -361,8 +376,8 @@ engine. It does not validate that restored engine, so it cannot reopen work.
 
 ```ts
 const boxRoot = await makeV3Fixture();
-const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [], failLabel: "tsc", failOutput: "bad types" }));
-({ failed: result instanceof UpgradeStepFailedError, phase: (await boxMaintenanceStatus(boxRoot)).phase, version: await readPinnedSpec(boxRoot) })
+const result = await upgradeError(boxRoot, makeFakeRunner({ boxRoot, calls: [], failLabel: "tsc", failOutput: "bad types" }));
+({ failed: result instanceof UpgradeStepFailedError, phase: (await boxMaintenanceStatus(boxRoot))?.phase, version: await readPinnedSpec(boxRoot) })
 => {"failed":true,"phase":"exclusive","version":"0.1.0"}
 ```
 

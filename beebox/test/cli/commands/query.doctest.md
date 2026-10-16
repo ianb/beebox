@@ -13,6 +13,7 @@ same approach as `test/cli/commands/todos.doctest.md`.
 
 ```ts setup
 import { runQueryForBox } from "../../../src/cli/commands/query.js";
+import type { TodoQueryResult } from "../../../src/core/todo/query.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
@@ -20,8 +21,10 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox();
 await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 
-async function run(options) {
-  const logs = [];
+type QueryOptions = Parameters<typeof runQueryForBox>[1]["options"];
+
+async function run(options?: QueryOptions) {
+  const logs: string[] = [];
   const origLog = console.log;
   console.log = (...args) => { logs.push(args.join(" ")); };
   try {
@@ -32,7 +35,7 @@ async function run(options) {
   return logs.join("\n");
 }
 
-function doc(title, body) {
+function doc(title: string, body: string) {
   return `---\ntitle: ${title}\n---\n${body}`;
 }
 
@@ -156,7 +159,7 @@ The structured form carries what the text form summarizes — including the
 position and reference fields that make an undated todo legible.
 
 ```ts continue
-const parsed = JSON.parse(await run({ here: PORCH, referring: false, json: true }));
+const parsed: TodoQueryResult = JSON.parse(await run({ here: PORCH, referring: false, json: true }));
 
 JSON.stringify(parsed.query)
 => {"here":"_content/projects/Porch","glob":"_content/projects/Porch/**","includeReferring":false,"group":"place"}
@@ -164,8 +167,8 @@ JSON.stringify(parsed.query)
 JSON.stringify(parsed.reduction)
 => {"open":2,"done":1,"dropped":0,"parked":0,"onPlate":2,"escalated":0,"next":"2026-08-10"}
 
-const child = parsed.groups[0].rows[0].items.find((i) => i.text === "File the copy");
-JSON.stringify([child.sectionPath, child.parent, child.annotation, child.matching])
+const child = parsed.groups[0]?.rows[0]?.items.find((i) => i.text === "File the copy");
+JSON.stringify([child?.sectionPath, child?.parent, child?.annotation, child?.matching])
 => [["Demolition"],{"kind":"body","line":8},"Sofia has the scanner",true]
 ```
 
@@ -174,8 +177,8 @@ JSON.stringify([child.sectionPath, child.parent, child.annotation, child.matchin
 ```ts continue
 const origError = console.error;
 const origExit = process.exit;
-const errors = [];
-let exitCode = null;
+const errors: string[] = [];
+let exitCode: number | string | null | undefined = null;
 console.error = (...args) => { errors.push(args.join(" ")); };
 process.exit = (code) => { exitCode = code; throw new Error("exit"); };
 try {

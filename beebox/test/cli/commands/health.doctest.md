@@ -7,16 +7,19 @@ found nothing to do reads `ok: <reason>`; one held back reads
 `waiting: <reason>`.
 
 ```ts setup
+import type { BoxScheduleHealth } from "../../../src/core/schedule/health-box.js";
+import type { TaskHealth } from "../../../src/core/schedule/health.js";
+import type { HealthCheck } from "../../../src/shared/health-check.js";
 import { formatHealthText } from "../../../src/cli/commands/health.js";
 import { scheduledTasksCheck } from "../../../src/webapp/trpc/routers/health/checks/schedules.js";
 
 const now = new Date("2026-09-26T12:00:00Z");
 const hourAgo = "2026-09-26T11:00:00Z";
-const task = (fields) => ({
+const task = (fields: Pick<TaskHealth, "name" | "status"> & Partial<TaskHealth>): TaskHealth => ({
   description: undefined, lastRun: hourAgo, lastSuccess: hourAgo, consecutiveFailures: 0,
   lastError: null, alertedAt: null, alertedFor: null, ...fields,
 });
-const health = {
+const health: BoxScheduleHealth = {
   scheduler: { status: "running", lastTickAt: now.toISOString(), ageMs: 60_000 },
   engineWait: null,
   tasks: [
@@ -28,7 +31,7 @@ const health = {
 ```
 
 ```ts
-const boxChecks = [
+const boxChecks: HealthCheck[] = [
   scheduledTasksCheck(health, now),
   { name: "inbox-writable", ok: true, message: "ok", severity: "error" },
   { name: "google-auth", ok: false, message: "Google needs reconnecting", severity: "warning" },
@@ -49,9 +52,9 @@ Box checks:
 The check is still there for the dashboard, naming the same task.
 
 ```ts continue
-boxChecks[0].ok
+boxChecks[0]?.ok
 => false
 
-boxChecks[0].message.includes("sync-notes")
+boxChecks[0]?.message.includes("sync-notes")
 => true
 ```
