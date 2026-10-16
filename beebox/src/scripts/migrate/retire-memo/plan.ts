@@ -159,6 +159,8 @@ interface MemoResult {
   dropped: string[];
   failures: string[];
   recording: Recording | undefined;
+  /** A doc already at the target (an interrupted run), with what this plan would write there. */
+  existingDoc: { path: string; planned: string } | undefined;
 }
 
 /** The memo's fields, read once with their expected shapes. */
@@ -211,7 +213,8 @@ function planRecording(args: { recording: Recording; fields: MemoFields; body: s
   const existing = input.texts.get(recording.card);
   if (existing === undefined) result.writes.push({ kind: "audio", path: recording.card, after: audioText });
   else if (existing !== audioText) return `${recording.card} already exists with different content`;
-  if (recording.from !== recording.to) result.moves.push({ from: recording.from, to: recording.to });
+  // Also for a recording an interrupted run moved: the helper then repairs its annex link.
+  result.moves.push({ from: recording.from, to: recording.to });
   const cardLink = `attach/${recording.stem}.audio.card`;
   // eslint-disable-next-line security/detect-non-literal-regexp -- bodyRef is escaped by escapeRegex; the link delimiters are fixed text.
   const linked = new RegExp(String.raw`(\]\(<?|ref=")(?:\./)?${escapeRegex(recording.bodyRef)}(?=>?\)|")`, "g");
@@ -239,7 +242,7 @@ function docFields(title: string, fields: MemoFields): Record<string, unknown> {
 }
 
 function planMemo(memoPath: string, input: PlanInput): MemoResult {
-  const result: MemoResult = { writes: [], moves: [], dropped: [], failures: [], recording: undefined };
+  const result: MemoResult = { writes: [], moves: [], dropped: [], failures: [], recording: undefined, existingDoc: undefined };
   const fail = (message: string): MemoResult => ({ ...result, failures: [`${memoPath}: ${message}`] });
   const text = input.texts.get(memoPath) ?? "";
   const raw = frontmatter(text);
@@ -272,10 +275,8 @@ function planMemo(memoPath: string, input: PlanInput): MemoResult {
 
   const docPath = join(path.posix.dirname(memoPath), `${cardBasename(memoPath)}.doc.card`);
   const docText = renderFrontmatterBlock(docFields(titled.title, fields), body);
-  const existing = input.texts.get(docPath);
-  const own = mentionRewriter([memoPath], []);
-  if (existing === undefined) result.writes.push({ kind: "doc", path: docPath, after: docText });
-  else if (rewriteMentions(existing, own) !== rewriteMentions(docText, own)) return fail(`${docPath} already exists with different content`);
+  if (input.texts.has(docPath)) result.existingDoc = { path: docPath, planned: docText };
+  else result.writes.push({ kind: "doc", path: docPath, after: docText });
   return result;
 }
 
@@ -289,7 +290,7 @@ function mentionRewriter(memoPaths: string[], recordings: Recording[]): MentionR
   const replacements = new Map<string, string>();
   for (const memo of memoPaths) replacements.set(`${cardBasename(memo)}.memo.card`, `${cardBasename(memo)}.doc.card`);
   for (const r of recordings) {
-    if (r.sibling || r.from === r.to) continue;
+    if (r.sibling) continue;
     const scope = path.posix.basename(path.posix.dirname(r.from));
     replacements.set(`${scope}/${r.name}`, `${scope}/${r.stem}.attach/${r.name}`);
   }
@@ -305,6 +306,7 @@ export function planRetireMemo(input: PlanInput): RetireMemoPlan {
   const plan: RetireMemoPlan = { writes: [], moves: [], deletes: [], dropped: [], failures: [] };
   const memoPaths = [...input.texts.keys()].filter((p) => p.endsWith(".memo.card")).toSorted();
   const recordings: Recording[] = [];
+  const existingDocs: Array<{ path: string; planned: string }> = [];
   for (const memoPath of memoPaths) {
     const result = planMemo(memoPath, input);
     plan.failures.push(...result.failures);
@@ -314,12 +316,21 @@ export function planRetireMemo(input: PlanInput): RetireMemoPlan {
     plan.dropped.push(...result.dropped);
     plan.deletes.push(memoPath);
     if (result.recording !== undefined) recordings.push(result.recording);
+    if (result.existingDoc !== undefined) existingDocs.push(result.existingDoc);
   }
   if (plan.failures.length > 0) return plan;
 
   const rewriter = mentionRewriter(memoPaths, recordings);
-  const siblings = mentionPattern(recordings.filter((r) => r.sibling && r.from !== r.to).map((r) => r.name));
+  // A doc an interrupted run wrote already has its links rewritten; compare it rewritten too.
+  for (const doc of existingDocs) {
+    if (rewriteMentions(input.texts.get(doc.path) ?? "", rewriter) !== rewriteMentions(doc.planned, rewriter)) {
+      plan.failures.push(`${doc.path.replace(/\.doc\.card$/, ".memo.card")}: ${doc.path} already exists with different content`);
+    }
+  }
+  const siblings = mentionPattern(recordings.filter((r) => r.sibling && !r.moved).map((r) => r.name));
+  const recordingCards = new Set(recordings.map((r) => r.card));
   const check = (file: string, text: string): void => {
+    if (recordingCards.has(file)) return;
     if (siblings !== null && text.match(siblings) !== null) plan.failures.push(`${file}: mentions a recording that moves into an attach scope; update it by hand first`);
   };
   // New docs first: a memo that links another memo links its doc.

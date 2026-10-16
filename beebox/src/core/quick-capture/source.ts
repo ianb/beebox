@@ -197,7 +197,10 @@ export async function writeSourceTranscription(args: { boxRoot: string; record: 
       if (isRecord(previous) && previous["message"] === args.error && previous["permanent"] === (args.permanent === true)) return;
       parsed.fields["transcription-error"] = { permanent: args.permanent === true, message: args.error, "attempted-at": args.attemptedAt };
     }
-    await writeFileAtomic(abs, { content: serializeCardText({ schema: parsed.schema, fields: parsed.fields }) });
+    // A chat filing the doc can move this folder between the read and the write.
+    // Not recreating it makes that write fail, so the capture retries against
+    // the filed doc instead of leaving an orphan card behind.
+    await writeFileAtomic(abs, { content: serializeCardText({ schema: parsed.schema, fields: parsed.fields }), createDir: false });
     await stageAndCommitPaths(args.boxRoot, { paths: [cardRef], message: "Record quick capture transcription" });
   });
 }

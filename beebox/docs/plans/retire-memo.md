@@ -334,7 +334,7 @@ none
 | Migration failed; quick capture reconciles a memo source | planned | `migration-pending` error, no tombstone | clear |
 | Filing chat moves the doc during transcription | planned (delayed provider) | re-resolve under lock | clear |
 | Card write fails after transcription | planned | transcript recorded only after write | clear (retry) |
-| Doc moved between re-resolution and the transcript write | no | the write fails (ENOENT), the transcript is not marked recorded, the next attempt re-resolves | clear (self-heals on retry) |
+| Doc moved between re-resolution and the transcript write | no | the write does not recreate the moved folder (`writeFileAtomic` `createDir: false`), so it fails; the transcript is not marked recorded, and the next attempt re-resolves | clear (self-heals on retry) |
 
 ## Agent-flow / user-flow edge cases
 

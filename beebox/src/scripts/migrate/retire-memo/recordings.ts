@@ -16,8 +16,10 @@ import type { PlanInput } from "./plan.js";
 const AUDIO_EXTENSIONS = new Set([".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac", ".aac", ".mp4"]);
 
 export interface Recording {
-  /** Audio file now, box-relative. Equals `to` once moved. */
+  /** Audio file in its old layout, box-relative. */
   from: string;
+  /** An interrupted run already moved it; moving again only repairs annex links. */
+  moved: boolean;
   to: string;
   card: string;
   /** File name inside the audio card's attach scope. */
@@ -43,7 +45,7 @@ export function findRecordings(memoPath: string, input: PlanInput): { found: Rec
   const place = (args: { from: string; name: string; sibling: boolean; bodyRef: string }): void => {
     const stem = audioStem(args.name) ?? args.name;
     const card = `${attach}/${stem}.audio.card`;
-    found.push({ ...args, stem, card, to: `${attachDirFor(card)}/${args.name}` });
+    found.push({ ...args, stem, card, moved: false, to: `${attachDirFor(card)}/${args.name}` });
   };
   for (const file of input.files) {
     if (path.posix.dirname(file) === dir) {
@@ -66,11 +68,12 @@ export function findRecordings(memoPath: string, input: PlanInput): { found: Rec
     if (!input.files.has(moved) || found.some((r) => r.to === moved)) continue;
     const stem = cardBasename(cardPath);
     const sibling = stem === base;
-    found.push({ from: moved, to: moved, card: cardPath, name, stem, sibling, bodyRef: sibling ? name : `attach/${name}` });
+    const from = sibling ? (dir === "." ? name : `${dir}/${name}`) : `${attach}/${name}`;
+    found.push({ from, to: moved, moved: true, card: cardPath, name, stem, sibling, bodyRef: sibling ? name : `attach/${name}` });
   }
   if (found.length > 1) failures.push(`${memoPath}: more than one recording (${found.map((r) => r.from).join(", ")}); move the extra ones out first`);
   for (const r of found) {
-    if (r.from !== r.to && input.files.has(r.to)) failures.push(`${memoPath}: ${r.to} already exists`);
+    if (!r.moved && input.files.has(r.to)) failures.push(`${memoPath}: ${r.to} already exists`);
   }
   return { found, failures };
 }

@@ -227,7 +227,32 @@ move landed before the interruption.
 const audioCard = after(plan(voice, ["c/X.attach/recording.m4a"]), (w) => w.kind === "audio");
 const moved = plan({ ...voice, "c/X.attach/recording.audio.card": audioCard }, ["c/X.attach/recording.attach/recording.m4a"]);
 [moved.failures, moved.moves, moved.writes.map((w) => `${w.kind} ${w.path}`), moved.deletes]
-=> [[],[],["doc c/X.doc.card"],["c/X.memo.card"]]
+=> [[],[{from:"c/X.attach/recording.m4a",to:"c/X.attach/recording.attach/recording.m4a"}],["doc c/X.doc.card"],["c/X.memo.card"]]
+```
+
+The move is planned again even then: the annex-preserving move repairs the
+recording's link when an earlier attempt renamed it but stopped before
+fixing the link.
+
+A memo that links another memo is resumed too: the doc the first run wrote
+already links the other doc, and the rerun compares it that way.
+
+```ts
+const pair = { "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: A\n", "See [B](./B.memo.card)\n"), "n/B.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: B\n") };
+const firstA = written(pair, "n/A.doc.card");
+plan({ ...pair, "n/A.doc.card": firstA }).failures
+=> []
+```
+
+A sibling recording whose audio card was written before the interruption
+resumes without mistaking that card's own reference for a stray mention.
+
+```ts
+const sibMemo = { "n/Note.memo.card": memo("status: new\ncreated: 2026-05-01T08:00:00-05:00\n") };
+const sibCard = after(plan(sibMemo, ["n/Note.m4a"]), (w) => w.kind === "audio");
+const resumed = plan({ ...sibMemo, "n/Note.attach/Note.audio.card": sibCard }, ["n/Note.m4a"]);
+[resumed.failures, resumed.moves]
+=> [[],[{from:"n/Note.m4a",to:"n/Note.attach/Note.attach/Note.m4a"}]]
 ```
 
 A doc already at the target that differs from what the plan writes is not

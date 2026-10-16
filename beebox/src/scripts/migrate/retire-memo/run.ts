@@ -85,8 +85,28 @@ async function memosLeft(boxRoot: string): Promise<string[]> {
   return (await walk(boxRoot, "")).map((f) => f.path).filter((p) => p.endsWith(".memo.card"));
 }
 
-async function verify(boxRoot: string, written: PlannedWrite[]): Promise<string[]> {
+/** A moved recording that no longer resolves: missing, or an annex link that points outside the object store. */
+async function brokenRecording(boxRoot: string, rel: string): Promise<string | null> {
+  const abs = path.join(boxRoot, rel);
+  let stat;
+  try {
+    stat = await fs.lstat(abs);
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return `recording missing: ${rel}`;
+    throw e;
+  }
+  if (!stat.isSymbolicLink()) return null;
+  const target = path.resolve(path.dirname(abs), await fs.readlink(abs));
+  return target.startsWith(path.join(boxRoot, ".git", "annex", "objects") + path.sep) ? null : `recording link does not reach the annex: ${rel}`;
+}
+
+async function verify(boxRoot: string, done: { written: PlannedWrite[]; moved: string[] }): Promise<string[]> {
+  const { written, moved } = done;
   const problems = (await memosLeft(boxRoot)).map((p) => `memo left: ${p}`);
+  for (const rel of moved) {
+    const broken = await brokenRecording(boxRoot, rel);
+    if (broken !== null) problems.push(broken);
+  }
   const schemas = await createCardSchemaMap(boxRoot);
   for (const write of written) {
     if (write.kind === "referrer") continue;
@@ -106,6 +126,7 @@ export type RunMode = "plan" | "apply" | "verify";
 export async function runRetireMemo({ boxRoot, mode }: { boxRoot: string; mode: RunMode }): Promise<{ code: number; lines: string[] }> {
   const lines: string[] = [];
   let written: PlannedWrite[] = [];
+  let moved: string[] = [];
   if (mode !== "verify") {
     lines.push(...await codeWarnings(boxRoot));
     const all = await walk(boxRoot, "");
@@ -137,8 +158,9 @@ export async function runRetireMemo({ boxRoot, mode }: { boxRoot: string; mode: 
     for (const w of plan.writes.filter((x) => x.kind === "referrer")) await write(w);
     for (const memo of plan.deletes) await fs.rm(path.join(boxRoot, memo));
     written = plan.writes;
+    moved = plan.moves.map((m) => m.to);
   }
-  const problems = await verify(boxRoot, written);
+  const problems = await verify(boxRoot, { written, moved });
   if (problems.length > 0) {
     lines.push(...problems, `retire-memo: verify failed; ${String(problems.length)} problem(s).`);
     return { code: 1, lines };
