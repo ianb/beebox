@@ -21,7 +21,7 @@ const storeFile = path.join(storeDir, "push-subscriptions.json");
 const SUB = { endpoint: "https://push.example/store-test", keys: { p256dh: "p", auth: "a" } };
 const NOW = new Date("2026-07-01T00:00:00Z");
 
-async function tryCall(fn) {
+async function tryCall(fn: () => Promise<unknown>) {
   try {
     return await fn();
   } catch (e) {
@@ -55,7 +55,7 @@ const readResult = await tryCall(() => endpointsForBox("boxa"));
 readResult instanceof PushStoreCorruptError
 => true
 
-readResult.storePath === storeFile
+readResult instanceof PushStoreCorruptError && readResult.storePath === storeFile
 => true
 ```
 

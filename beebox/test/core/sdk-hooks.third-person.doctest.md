@@ -11,6 +11,7 @@ the phrase itself.
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
 import { cardValidatorHook } from "../../src/core/sdk-hooks.js";
 import { thirdPersonPhrases } from "../../src/core/card-lint/third-person.js";
 
@@ -21,9 +22,16 @@ await mkdir(join(box, "_content"), { recursive: true });
 await mkdir(join(box, "_bookkeeping/jobs"), { recursive: true });
 const { hooks } = cardValidatorHook();
 
+// The `additionalContext` a hook injected, or undefined when it injected none.
+function contextOf(out: HookJSONOutput | undefined): string | undefined {
+  if (out === undefined || "async" in out) return undefined;
+  const specific = out.hookSpecificOutput;
+  return specific !== undefined && "additionalContext" in specific ? specific.additionalContext : undefined;
+}
+
 // Write a card, run the hook as if the agent had just written it, and return
 // the injected context (null when the hook stays quiet).
-async function afterWrite(rel, toolInput) {
+async function afterWrite(rel: string, toolInput: { content?: string; old_string?: string; new_string?: string }) {
   const file_path = join(box, rel);
   const text = toolInput.content ?? `---\ntype: memo\n---\n${toolInput.new_string ?? ""}\n`;
   await writeFile(file_path, text);
@@ -33,14 +41,16 @@ async function afterWrite(rel, toolInput) {
     tool_input: { file_path, ...toolInput },
     tool_response: {},
     tool_use_id: "t",
+    session_id: "s",
+    transcript_path: "",
     cwd: box,
-  });
+  }, undefined, { signal: new AbortController().signal });
   // The card linter may add its own notes for these bare test cards; keep
   // only the third-person reminder.
-  const context = out?.hookSpecificOutput?.additionalContext ?? "";
-  return context.split("\n\n").find((note) => note.includes("calls them")) ?? null;
+  const context = contextOf(out) ?? "";
+  return context.split("\n\n").find((note: string) => note.includes("calls them")) ?? null;
 }
-const memo = (body) => `---\ntype: memo\n---\n${body}\n`;
+const memo = (body: string) => `---\ntype: memo\n---\n${body}\n`;
 ```
 
 A card in the person's area that says "the user confirmed" gets the reminder,

@@ -8,6 +8,7 @@ directory is a properly initialized box. `findBoxRoot` walks up to find the
 box root.
 
 ```ts setup
+import { strict as assert } from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -19,9 +20,9 @@ async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-doctest-"));
 }
 
-async function listDirs(root) {
-  const result = [];
-  async function walk(dir, prefix) {
+async function listDirs(root: string) {
+  const result: string[] = [];
+  async function walk(dir: string, prefix: string) {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     for (const e of entries) {
       if (e.isDirectory()) {
@@ -145,6 +146,7 @@ await findBoxRoot(unrelatedDir)
 const tmp = await makeTmpDir();
 const { boxRoot } = await scaffoldBoxRoot(tmp);
 const meta1 = await getBoxMetadata(boxRoot);
+assert.ok(meta1);
 meta1.version
 => 1.0.0
 ```
@@ -152,6 +154,7 @@ meta1.version
 ```ts continue
 await initBox(boxRoot, { skipGit: true });
 const meta2 = await getBoxMetadata(boxRoot);
+assert.ok(meta2);
 meta2.created === meta1.created
 => true
 

@@ -10,31 +10,37 @@ covers native resolution and stray-file detection.
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { z } from "zod";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas.js";
 import { getTemplate } from "../../src/templates-registry.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
-import { loadCardFromText } from "../../src/core/card-io.js";
+import { loadCardFromText, type LoadCardContext } from "../../src/core/card-io.js";
 
 // shapeVersion 3: schemas live in `<box.root>/src/schemas/` and resolve
 // `beebox/*` natively (deps:true symlinks node_modules/beebox at the engine).
 async function makeSchemaBox() {
   return makeTmpBox({ deps: true });
 }
-async function writeSchema(box, name, content) {
+async function writeSchema(box: TmpBox, name: string, content: string) {
   const p = path.join(box.root, "src/schemas", name);
   await fs.mkdir(path.dirname(p), { recursive: true });
   await fs.writeFile(p, content);
   return p;
 }
 
+// Whether a card schema's frontmatter object declares `field`.
+function hasField(schema: z.ZodType | undefined, field: string): boolean {
+  return schema instanceof z.ZodObject && field in schema.shape;
+}
+
 // Returns the error class name when a card fails to load, or "no-error".
-async function loadErrorName(content, source, ctx) {
+async function loadErrorName(content: string, source: string, ctx: LoadCardContext) {
   try {
     await loadCardFromText({ content, source, ctx });
     return "no-error";
   } catch (e) {
-    return e.constructor.name;
+    return e instanceof Error ? e.constructor.name : String(e);
   }
 }
 
@@ -102,7 +108,7 @@ const box = await makeSchemaBox();
 await writeSchema(box, "widget.ts", WIDGET_SCHEMA);
 
 const loaded = await loadBoxSchemas(box.root);
-[loaded.cardSchemas.length, loaded.cardSchemas[0].type].join("|")
+[loaded.cardSchemas.length, loaded.cardSchemas[0]?.type].join("|")
 => 1|widget
 ```
 
@@ -150,20 +156,20 @@ drops the cache. The next load content-hash-busts the changed file and sees it.
 const rbox = await makeSchemaBox();
 const wpath = await writeSchema(rbox, "widget.ts", WIDGET_SCHEMA);
 const v1 = await loadBoxSchemas(rbox.root);
-"color" in v1.cardSchemas[0].frontmatterSchema.shape
+hasField(v1.cardSchemas[0]?.frontmatterSchema, "color")
 => false
 
 await fs.writeFile(wpath, WIDGET_SCHEMA_V2);
 
 // Without invalidation: the cached set is returned — edit not yet visible.
 const stale = await loadBoxSchemas(rbox.root);
-"color" in stale.cardSchemas[0].frontmatterSchema.shape
+hasField(stale.cardSchemas[0]?.frontmatterSchema, "color")
 => false
 
 // After invalidation: the changed file is re-imported, edit visible.
 invalidateBoxSchemas(rbox.root);
 const fresh = await loadBoxSchemas(rbox.root);
-"color" in fresh.cardSchemas[0].frontmatterSchema.shape
+hasField(fresh.cardSchemas[0]?.frontmatterSchema, "color")
 => true
 ```
 

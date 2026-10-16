@@ -24,7 +24,7 @@ import { generateContext } from "../../src/webapp/context.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
 import { readRecent } from "../../src/core/notification/log.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-qaging-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
@@ -37,19 +37,19 @@ const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: ASKE
 // makeTmpBox writes a shapeVersion-3 marker with no version/created; ageQuestions
 // calls getSystemState → getBoxMetadata, which parses those, so seed a marker
 // carrying both (it must keep shapeVersion 3 or getBoxShape rejects the box).
-async function seedBox(box) {
+async function seedBox(box: TmpBox) {
   await box.seed(".beebox/box.json", MARKER);
 }
 
-function addMs(date, ms) {
+function addMs(date: Date, ms: number) {
   return new Date(date.getTime() + ms);
 }
 
-function setTime(date) {
+function setTime(date: Date) {
   process.env.BBX_TIME = date.toISOString();
 }
 
-function question(opts) {
+function question(opts: { prompt: string; askedAt?: string; expiresAfter?: string }) {
   const { prompt, askedAt, expiresAfter } = opts;
   const lines = ["---", `prompt: ${prompt}`, "input:", "  type: text"];
   if (askedAt !== undefined) lines.push(`asked-at: ${askedAt}`);
@@ -59,7 +59,7 @@ function question(opts) {
 }
 
 // Trailers on HEAD, one per line.
-function headTrailers(root) {
+function headTrailers(root: string) {
   return execSync("git log -1 --format=%B", { cwd: root, stdio: "pipe" }).toString().trim();
 }
 ```
@@ -97,7 +97,7 @@ push.describe()
   https://push.example/qaging → ⏰ Reminder: a question is waiting: What color?
 
 const [logged] = await readRecent(box.root, { days: 1 });
-JSON.stringify([logged.intent.target, logged.intent.loudness, logged.deliveries.find((d) => d.channel === "web-push").status])
+JSON.stringify([logged?.intent.target, logged?.intent.loudness, logged?.deliveries.find((d) => d.channel === "web-push")?.status])
 => ["question:_bookkeeping/questions/Color.question.card","quiet","sent"]
 ```
 

@@ -7,14 +7,20 @@ frontmatter keys.
 
 ```ts setup
 import { symlink, mkdir } from "node:fs/promises";
-import { applyMark, markPlace } from "../../src/core/place-mark.js";
-import { saveLocation } from "../../src/core/location-store.js";
+import { applyMark, markPlace, type MarkResult } from "../../src/core/place-mark.js";
+import { saveLocation, type StoredLocation } from "../../src/core/location-store.js";
 import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 18 };
-const stored = (fix, capturedAt) => ({ ...fix, capturedAt, source: "web" });
+const stored = (fix: { lat: number; lng: number; accuracy: number }, capturedAt: string): StoredLocation => ({ ...fix, capturedAt, source: "web" });
+
+/** The success arm of a mark result. */
+function marked(res: MarkResult): Extract<MarkResult, { ok: true }> {
+  if (!res.ok) throw new Error(`mark failed: ${res.error}`);
+  return res;
+}
 const CARD = "---\nname: Home\nfavorite: true\n---\nMy home — important because it's the default context.\n";
 ```
 
@@ -25,10 +31,10 @@ const out = applyMark(CARD, { fix: FIX, expand: false });
 out.outcome
 => set
 
-out.text.includes("favorite: true") && out.text.includes("My home — important because it's the default context.")
+out.text?.includes("favorite: true") && out.text.includes("My home — important because it's the default context.")
 => true
 
-out.text.includes("lat: 45.5231") && out.text.includes("lng: -122.6765") && /radius: \d+/.test(out.text)
+out.text?.includes("lat: 45.5231") && out.text.includes("lng: -122.6765") && /radius: \d+/.test(out.text)
 => true
 ```
 
@@ -36,7 +42,7 @@ out.text.includes("lat: 45.5231") && out.text.includes("lng: -122.6765") && /rad
 
 ```ts
 const commented = "---\nname: Home  # the main house\naddress: 1 Main St\n---\nbody\n";
-applyMark(commented, { fix: FIX, expand: false }).text.includes("# the main house")
+applyMark(commented, { fix: FIX, expand: false }).text?.includes("# the main house")
 => true
 ```
 
@@ -47,7 +53,7 @@ const box = await makeTmpBox();
 await box.write("places/Home.place.card", CARD);
 await saveLocation(box.root, stored(FIX, "2026-06-29T12:00:00.000Z"));
 const res = await markPlace({ boxRoot: box.root, cardPath: "places/Home.place.card", expand: false, now: new Date("2026-06-29T12:04:00.000Z") });
-JSON.stringify({ ok: res.ok, changed: res.changed, marked: res.message.startsWith("Marked Home") })
+JSON.stringify({ ok: res.ok, changed: marked(res).changed, marked: marked(res).message.startsWith("Marked Home") })
 => {"ok":true,"changed":true,"marked":true}
 
 const saved = await box.read("places/Home.place.card");
@@ -66,7 +72,7 @@ const box = await makeTmpBox();
 await box.write("places/Home.place.card", "---\nname: Home\nlat: 45.5231\nlng: -122.6765\nradius: 200\n---\nbody\n");
 await saveLocation(box.root, stored(FIX, "2026-06-29T12:00:00.000Z"));
 const res = await markPlace({ boxRoot: box.root, cardPath: "places/Home.place.card", expand: false, now: new Date("2026-06-29T12:01:00.000Z") });
-JSON.stringify({ changed: res.changed, covers: res.message.includes("already covers") })
+JSON.stringify({ changed: marked(res).changed, covers: marked(res).message.includes("already covers") })
 => {"changed":false,"covers":true}
 ```
 
@@ -83,7 +89,7 @@ await box.write("places/Home.place.card", small);
 // ~1.5km away
 await saveLocation(box.root, stored({ lat: 45.5360, lng: -122.6765, accuracy: 18 }, "2026-06-29T12:00:00.000Z"));
 const res = await markPlace({ boxRoot: box.root, cardPath: "places/Home.place.card", expand: false, now: new Date("2026-06-29T12:01:00.000Z") });
-JSON.stringify({ changed: res.changed, outside: res.message.includes("--expand") })
+JSON.stringify({ changed: marked(res).changed, outside: marked(res).message.includes("--expand") })
 => {"changed":false,"outside":true}
 
 (await box.read("places/Home.place.card")) === small
@@ -92,7 +98,7 @@ JSON.stringify({ changed: res.changed, outside: res.message.includes("--expand")
 
 ```ts continue
 const res2 = await markPlace({ boxRoot: box.root, cardPath: "places/Home.place.card", expand: true, now: new Date("2026-06-29T12:01:00.000Z") });
-JSON.stringify({ changed: res2.changed, expanded: res2.message.startsWith("Expanded Home") })
+JSON.stringify({ changed: marked(res2).changed, expanded: marked(res2).message.startsWith("Expanded Home") })
 => {"changed":true,"expanded":true}
 ```
 
@@ -163,7 +169,7 @@ const box = await makeTmpBox();
 await box.write("places/Home.place.card", CARD);
 await saveLocation(box.root, stored(FIX, "2020-01-01T00:00:00.000Z"));
 const res = await markPlace({ boxRoot: box.root, cardPath: "places/Home.place.card", expand: false, now: new Date("2026-06-29T12:00:00.000Z") });
-JSON.stringify({ ok: res.ok, stale: res.message.includes("[stale]") })
+JSON.stringify({ ok: res.ok, stale: marked(res).message.includes("[stale]") })
 => {"ok":true,"stale":true}
 ```
 

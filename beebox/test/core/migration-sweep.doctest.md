@@ -10,10 +10,13 @@ import { once } from "node:events";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
+import { strict as assert } from "node:assert";
+import { MIGRATIONS, MANIFEST_PATH, type Migration } from "../../src/core/migrations.js";
+import type { TmpBox } from "../helpers/doctest-helpers.js";
+import { createFakeAgent } from "./fake-agent.js";
 import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance.js";
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
-import { sweepMigrations } from "../../src/core/migration-sweep.js";
+import { sweepMigrations, type SweepResult } from "../../src/core/migration-sweep.js";
 
 // Every registered migration is retired and runs the shared no-op, so a pending
 // one is a clean no-op on any box: the sweep's own bookkeeping is what gets
@@ -25,10 +28,32 @@ const PROBE = "annex-config-2026-08";
 // append a test-only entry to this process's copy of the registry. The
 // procedure itself is always the injected `runProcedure` callback.
 const PROCEDURE = "test-procedure";
-MIGRATIONS.push({ name: PROCEDURE, procedure: PROCEDURE });
+const procedureMigration: Migration = { name: PROCEDURE, procedure: PROCEDURE };
+// MIGRATIONS is readonly to product code, and no seam injects a list; this
+// test registers its procedure in the module's own registry on purpose.
+(MIGRATIONS as Migration[]).push(procedureMigration);
+
+type SweepStatus<S extends SweepResult["status"]> = Extract<SweepResult, { status: S }>;
+
+function hasStatus<S extends SweepResult["status"]>(result: SweepResult, status: S): result is SweepStatus<S> {
+  return result.status === status;
+}
+
+/** Narrow a sweep result to one status so its fields can be read. */
+function expectStatus<S extends SweepResult["status"]>(result: SweepResult, status: S): SweepStatus<S> {
+  if (!hasStatus(result, status)) throw new Error(`expected sweep status ${status}, got ${result.status}`);
+  return result;
+}
+
+/** The question path of a failed sweep. */
+function questionOf(result: SweepResult): string {
+  const failed = expectStatus(result, "failed");
+  assert.ok(failed.question !== undefined);
+  return failed.question;
+}
 
 /** Seed the manifest as fully applied, optionally leaving some names pending. */
-async function seedManifest(box, opts) {
+async function seedManifest(box: TmpBox, opts: { pending: string[] }) {
   const pending = new Set(opts.pending);
   const lines = MIGRATIONS
     .filter((m) => !pending.has(m.name))
@@ -36,7 +61,7 @@ async function seedManifest(box, opts) {
   await box.write(MANIFEST_PATH, lines.join("\n") + "\n");
 }
 
-function git(box, ...args) {
+function git(box: TmpBox, ...args: string[]) {
   return execFileSync("git", args, { cwd: box.root }).toString().trim();
 }
 ```
@@ -94,7 +119,7 @@ await seedManifest(box, { pending: [PROBE] });
 await box.commitAll("seed migration manifest");
 
 const result = await sweepMigrations({ boxRoot: box.root });
-JSON.stringify({ status: result.status, applied: result.applied.map((m) => m.name) })
+JSON.stringify({ status: result.status, applied: expectStatus(result, "applied").applied.map((m) => m.name) })
 => {"status":"applied","applied":["annex-config-2026-08"]}
 ```
 
@@ -135,7 +160,7 @@ await box.commitAll("script then procedure pending");
 const result = await sweepMigrations({ boxRoot: box.root });
 JSON.stringify({
   status: result.status,
-  applied: result.applied.map((m) => m.name),
+  applied: expectStatus(result, "needs-procedure").applied.map((m) => m.name),
   phase: await boxMaintenanceStatus(box.root),
 })
 => {"status":"needs-procedure","applied":["annex-config-2026-08"],"phase":null}
@@ -158,18 +183,18 @@ await seedManifest(box, { pending: [PROCEDURE] });
 await box.commitAll("procedure pending");
 let runs = 0;
 let exit = 1;
-const runProcedure = async (procedure, { onOutput }) => { runs += 1; onOutput(`${procedure} attempt ${String(runs)} failed\n`); return exit; };
+const runProcedure = async (procedure: string, { onOutput }: { onOutput: (text: string) => void }) => { runs += 1; onOutput(`${procedure} attempt ${String(runs)} failed\n`); return exit; };
 const first = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
-const questionText = await box.read(first.question);
-JSON.stringify({ status: first.status, runs, question: first.question, carriesOutput: questionText.includes("test-procedure attempt 1 failed"), receipt: git(box, "for-each-ref", "--format=%(refname)", "refs/bbx/migrations/test-procedure/repair-started") })
+const questionText = await box.read(questionOf(first));
+JSON.stringify({ status: first.status, runs, question: questionOf(first), carriesOutput: questionText.includes("test-procedure attempt 1 failed"), receipt: git(box, "for-each-ref", "--format=%(refname)", "refs/bbx/migrations/test-procedure/repair-started") })
 => {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_test-procedure-0.question.card","carriesOutput":true,"receipt":""}
 
 const second = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
 const record = await boxMaintenanceStatus(box.root);
-JSON.stringify({ status: second.status, runs, question: second.question, record: record.phase, owner: record.owner })
+JSON.stringify({ status: second.status, runs, question: questionOf(second), record: record?.phase, owner: record?.owner })
 => {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_test-procedure-0.question.card","record":"exclusive","owner":null}
 
-await box.write(first.question, questionText.replace("---\n", "---\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
+await box.write(questionOf(first), questionText.replace("---\n", "---\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
 await box.commitAll("answer");
 exit = 0;
 const third = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
@@ -188,11 +213,11 @@ await box.commitAll("pending again");
 const unfinished = git(box, "rev-parse", "HEAD");
 git(box, "update-ref", "refs/bbx/migrations/test-procedure/repair-started", unfinished);
 const stale = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
-JSON.stringify({ status: stale.status, runs, question: stale.question, namesReceipt: (await box.read(stale.question)).includes(`Recovery: ${unfinished}`) })
+JSON.stringify({ status: stale.status, runs, question: questionOf(stale), namesReceipt: (await box.read(questionOf(stale))).includes(`Recovery: ${unfinished}`) })
 => {"status":"failed","runs":2,"question":"_bookkeeping/questions/Migration_test-procedure-1.question.card","namesReceipt":true}
 
 const manual = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: false, runProcedure });
-JSON.stringify({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), open: manual.questions })
+JSON.stringify({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), open: expectStatus(manual, "attention").questions })
 => {"status":"attention","runs":3,"recorded":true,"open":["_bookkeeping/questions/Migration_test-procedure-1.question.card"]}
 ```
 
@@ -217,7 +242,7 @@ const holder = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirn
 await once(holder.stdout, "data");
 
 const deferred = await sweepMigrations({ boxRoot: box.root, yield: true });
-JSON.stringify({ status: deferred.status, holders: deferred.holders.map((entry) => entry.reason), phase: await boxMaintenanceStatus(box.root) })
+JSON.stringify({ status: deferred.status, holders: expectStatus(deferred, "deferred").holders.map((entry) => entry.reason), phase: await boxMaintenanceStatus(box.root) })
 => {"status":"deferred","holders":["fixture child"],"phase":null}
 
 holder.stdin.end("finish");
@@ -235,7 +260,7 @@ await seedManifest(box, { pending: [PROBE] });
 const deploy = await closeBoxMaintenance(box.root, { reason: "deployment" });
 const behindDeploy = await sweepMigrations({ boxRoot: box.root, yield: true });
 await deploy.release();
-JSON.stringify({ status: behindDeploy.status, holders: behindDeploy.holders.map((entry) => entry.reason) })
+JSON.stringify({ status: behindDeploy.status, holders: expectStatus(behindDeploy, "deferred").holders.map((entry) => entry.reason) })
 => {"status":"deferred","holders":["deployment"]}
 ```
 
@@ -353,16 +378,16 @@ const result = await sweepMigrations({
     calls += 1;
     return (await readFile(join(boxRoot, MANIFEST_PATH), "utf8")).includes(PROBE) ? 0 : 2;
   },
-  repairAgent: { invokeStructured: async () => {
+  repairAgent: createFakeAgent({ name: "repair", sessionId: "repair-session", act: async () => ({}), structuredResult: () => {
     agents += 1;
-    return { success: true, sessionId: "repair-session", data: { status: "needs-human", reason: "Choose between divergent copies." } };
-  } },
+    return { status: "needs-human", reason: "Choose between divergent copies." };
+  } }),
 });
-JSON.stringify({ status: result.status, applied: result.applied.length, partial: result.applied[0].partial, agents, calls })
+JSON.stringify({ status: result.status, applied: expectStatus(result, "attention").applied.length, partial: expectStatus(result, "attention").applied[0]?.partial, agents, calls })
 => {"status":"attention","applied":2,"partial":true,"agents":1,"calls":3}
 
 const next = await sweepMigrations({ boxRoot: box.root });
-JSON.stringify({ status: next.status, questions: next.questions.length })
+JSON.stringify({ status: next.status, questions: expectStatus(next, "attention").questions.length })
 => {"status":"attention","questions":1}
 ```
 
@@ -385,7 +410,7 @@ const owner = await acquireBoxMaintenance(box.root, { reason: "deployment" });
 await owner.prepare();
 const result = await owner.run(() => sweepMigrations({ boxRoot: box.root, withinMaintenance: true }));
 await owner.release();
-JSON.stringify({ status: result.status, phase: (await boxMaintenanceStatus(box.root)).phase })
+JSON.stringify({ status: result.status, phase: (await boxMaintenanceStatus(box.root))?.phase })
 => {"status":"no-manifest","phase":"exclusive"}
 ```
 
@@ -402,7 +427,7 @@ const owner = await acquireBoxMaintenance(box.root, { reason: "deployment" });
 await owner.prepare();
 const result = await owner.run(() => sweepMigrations({ boxRoot: box.root, withinMaintenance: true }));
 await owner.release();
-JSON.stringify({ status: result.status, phase: (await boxMaintenanceStatus(box.root)).phase })
+JSON.stringify({ status: result.status, phase: (await boxMaintenanceStatus(box.root))?.phase })
 => {"status":"needs-procedure","phase":"ready"}
 ```
 
@@ -425,7 +450,7 @@ await seedManifest(box, { pending: [PROBE] });
 await box.commitAll("seed");
 const failed = await sweepMigrations({ boxRoot: box.root, runScript: async () => 1 });
 const record = await boxMaintenanceStatus(box.root);
-JSON.stringify({ status: failed.status, phase: record.phase, owner: record.owner, ref: git(box, "for-each-ref", "--format=%(refname)", failed.recoveryRef) === failed.recoveryRef })
+JSON.stringify({ status: failed.status, phase: record?.phase, owner: record?.owner, ref: git(box, "for-each-ref", "--format=%(refname)", expectStatus(failed, "failed").recoveryRef) === expectStatus(failed, "failed").recoveryRef })
 => {"status":"failed","phase":"exclusive","owner":null,"ref":true}
 
 const work = await acquireBoxWork(box.root, { reason: "chat run" });
@@ -456,9 +481,9 @@ await box.commitAll("seed");
 const ownerLock = join(git(box, "rev-parse", "--absolute-git-dir"), "bbx-maintenance/owner.lock");
 let repairs = 0;
 const lost = await sweepMigrations({ boxRoot: box.root, repair: true,
-  repairAgent: { invokeStructured: async () => { repairs += 1; return { success: true, data: { status: "fixed" } }; } },
+  repairAgent: createFakeAgent({ name: "repair", act: async () => ({}), structuredResult: () => { repairs += 1; return { status: "fixed" }; } }),
   runScript: async () => { await forceAcquireLock(ownerLock, { id: "thief" }); await releaseLock(ownerLock); return 0; } });
-JSON.stringify({ status: lost.status, error: lost.error, repairs, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE) })
+JSON.stringify({ status: lost.status, error: expectStatus(lost, "commit-failed").error, repairs, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE) })
 => {"status":"commit-failed","error":"maintenance ownership lost","repairs":0,"recorded":false}
 ```
 
