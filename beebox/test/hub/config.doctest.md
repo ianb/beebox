@@ -8,21 +8,36 @@ warnings. See `src/hub/config.ts`.
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { loadHubConfig, HubConfigError } from "../../src/hub/config.js";
+import { loadHubConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-async function writeConfig(dir, obj) {
+async function writeConfig(dir: string, obj: object): Promise<string> {
   const configPath = path.join(dir, "hub.json");
   await fs.writeFile(configPath, JSON.stringify(obj, null, 2));
   return configPath;
 }
 
-async function tryLoad(configPath) {
+async function tryLoad(configPath: string): Promise<HubConfig | Error> {
   try {
     return await loadHubConfig(configPath);
   } catch (e) {
-    return e;
+    if (e instanceof Error) return e;
+    throw e;
   }
+}
+
+/** A load that must succeed. */
+async function loadOk(configPath: string): Promise<HubConfig> {
+  const result = await tryLoad(configPath);
+  if (result instanceof Error) throw result;
+  return result;
+}
+
+/** A load that must fail; returns the error. */
+async function loadRejected(configPath: string): Promise<Error> {
+  const result = await tryLoad(configPath);
+  if (!(result instanceof Error)) throw new Error(`expected ${configPath} to be rejected`);
+  return result;
 }
 ```
 
@@ -32,11 +47,11 @@ async function tryLoad(configPath) {
 const box = await makeTmpBox();
 await box.write("boxes/test1/.beebox/box.json", "");
 const configPath = await writeConfig(box.root, { boxes: { test1: { path: "./boxes/test1" } } });
-const config = await tryLoad(configPath);
+const config = await loadOk(configPath);
 config instanceof HubConfigError
 => false
 
-config.boxes.test1.path === path.join(box.root, "boxes/test1")
+config.boxes.test1?.path === path.join(box.root, "boxes/test1")
 => true
 ```
 
@@ -44,7 +59,7 @@ config.boxes.test1.path === path.join(box.root, "boxes/test1")
 
 ```ts continue
 const badConfig = await writeConfig(box.root, { boxes: {}, extraKey: true });
-const err = await tryLoad(badConfig);
+const err = await loadRejected(badConfig);
 err instanceof HubConfigError
 => true
 
@@ -70,7 +85,7 @@ hub.
 
 ```ts continue
 const reservedConfig = await writeConfig(box.root, { boxes: { webhook: { path: "./boxes/test1" } } });
-const err2 = await tryLoad(reservedConfig);
+const err2 = await loadRejected(reservedConfig);
 err2 instanceof HubConfigError
 => true
 
@@ -99,7 +114,7 @@ const dupeConfig = await writeConfig(box.root, {
     "test1-again": { path: "./boxes/test1" },
   },
 });
-const dupeErr = await tryLoad(dupeConfig);
+const dupeErr = await loadRejected(dupeConfig);
 dupeErr instanceof HubConfigError
 => true
 
@@ -124,7 +139,7 @@ const symlinkConfig = await writeConfig(box.root, {
     "test1-symlink": { path: "./boxes/test1-link" },
   },
 });
-const symlinkErr = await tryLoad(symlinkConfig);
+const symlinkErr = await loadRejected(symlinkConfig);
 symlinkErr instanceof HubConfigError
 => true
 
@@ -145,7 +160,7 @@ await fs.mkdir(legacyState, { recursive: true });
 await fs.writeFile(path.join(legacyState, "state.json"), "old\n");
 const legacyConfigPath = await writeConfig(box.root, { boxes: { legacy: { path: "./boxes/legacy" } } });
 const legacyConfig = await loadHubConfig(legacyConfigPath);
-legacyConfig.boxes.legacy.path === path.join(box.root, "boxes/legacy")
+legacyConfig.boxes.legacy?.path === path.join(box.root, "boxes/legacy")
 => true
 
 await fs.access(legacyState).then(() => true)
@@ -243,7 +258,7 @@ const keepNoLazyPath = await writeConfig(box3.root, {
   boxes: { test1: { path: "./boxes/test1" } },
   keepRecent: 1,
 });
-const keepErr = await tryLoad(keepNoLazyPath);
+const keepErr = await loadRejected(keepNoLazyPath);
 keepErr instanceof HubConfigError
 => true
 

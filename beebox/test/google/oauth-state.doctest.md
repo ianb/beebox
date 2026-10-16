@@ -11,6 +11,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import assert from "node:assert/strict";
 import {
   createGoogleOAuthState,
   consumeGoogleOAuthState,
@@ -25,6 +26,7 @@ const boxRoot = await mkdtemp(path.join(os.tmpdir(), "oauth-state-"));
 ```ts
 const state = createGoogleOAuthState({ boxRoot, boxSlug: "ledger", returnPath: "admin", createdBy: "owner@example.com" });
 const parsed = parseOAuthState(state);
+assert.ok(parsed, "the minted state parses");
 JSON.stringify({ boxSlug: parsed.boxSlug, hasNonce: parsed.nonce.length > 0 })
 => {"boxSlug":"ledger","hasNonce":true}
 ```
@@ -67,6 +69,7 @@ real minted nonce, so `consumeGoogleOAuthState` rejects it:
 
 ```ts continue
 const legacy = parseOAuthState("ledger:admin");
+assert.ok(legacy, "the legacy state parses");
 consumeGoogleOAuthState({ boxRoot, nonce: legacy.nonce })
 => null
 ```

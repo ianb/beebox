@@ -8,7 +8,7 @@
 import { classifyApnsFailure, ApnsSendError } from "../../src/services/apns.js";
 
 /** One library failure, classified. */
-function show(failure) {
+function show(failure: unknown) {
   const result = classifyApnsFailure(failure);
   return result instanceof ApnsSendError ? `error: ${result.message}` : `gone: ${result.reason}`;
 }

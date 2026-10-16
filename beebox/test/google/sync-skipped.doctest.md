@@ -19,10 +19,11 @@ import { createGmailConnector } from "../../src/connectors/gmail/connector.js";
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar/connector.js";
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive/connector.js";
 import { clearBoxConfigCache } from "../../src/core/box/config.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import type { SyncResult } from "../../src/connector.js";
 
 /** One line per connector: success, then how it skipped. */
-function describe(name, result) {
+function describe(name: string, result: SyncResult) {
   const skip = result.skipped
     ? `${result.skipped.reason}: ${result.skipped.detail.slice(0, 40)}`
     : "(not skipped)";
@@ -30,7 +31,7 @@ function describe(name, result) {
 }
 
 /** Rewrite the box's Google policy and drop the mtime-keyed config cache. */
-async function setPolicy(box, googleServices) {
+async function setPolicy(box: TmpBox, googleServices: Record<string, boolean>) {
   await box.write("_config/box.json", JSON.stringify({ googleServices }));
   clearBoxConfigCache(box.root);
 }
@@ -60,7 +61,7 @@ wakeup log knows which switch to flip:
 
 ```ts continue
 const off = await createGoogleDriveConnector(box.root).sync();
-off.skipped.detail
+off.skipped?.detail
 => Enable it in box settings (`googleServices.drive` in `_config/box.json`)
 ```
 
@@ -84,14 +85,14 @@ const gmail = await createGmailConnector(box.root).sync();
 const calendar = await createGoogleCalendarConnector(box.root).sync();
 const drive = await createGoogleDriveConnector(box.root).sync();
 
-[gmail, calendar, drive].map((r) => `${r.success}/${r.skipped.reason}`).join(" ")
+[gmail, calendar, drive].map((r) => `${r.success}/${r.skipped?.reason}`).join(" ")
 => true/not-configured true/not-configured true/not-configured
 ```
 
 Every detail is a relay-ready sentence, not the old one-size "not configured":
 
 ```ts continue
-drive.skipped.detail.startsWith("Google auth unavailable:")
+drive.skipped?.detail.startsWith("Google auth unavailable:")
 => true
 ```
 

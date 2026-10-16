@@ -24,7 +24,8 @@ import { boxSlug } from "../../src/lib/box-slug.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "google-auth-status-"));
-process.env.BBX_GOOGLE_TOKENS_FILE = path.join(tmp, "google-tokens.json");
+const TOKENS_FILE = path.join(tmp, "google-tokens.json");
+process.env.BBX_GOOGLE_TOKENS_FILE = TOKENS_FILE;
 
 /** A box holding the OAuth app's client credentials — `configured` is per-box. */
 async function grantedBox() {
@@ -37,20 +38,21 @@ async function grantedBox() {
   return box;
 }
 
-/** Run `fn`, returning whatever it throws instead of propagating. */
-async function tryCall(fn) {
+/** Run `fn`, which must throw, and return the error instead of propagating it. */
+async function tryCall(fn: () => Promise<unknown>): Promise<Error> {
   try {
-    return await fn();
+    await fn();
   } catch (e) {
-    return e;
+    if (e instanceof Error) return e;
+    throw e;
   }
+  throw new Error("expected the call to throw");
 }
 
 /** A GaxiosError-shaped rejection, the way google-auth-library v10 throws it. */
-function gaxiosError(message, data) {
+function gaxiosError(message: string, data?: object): Error {
   const e = new Error(message);
-  if (data) e.response = { data };
-  return e;
+  return data ? Object.assign(e, { response: { data } }) : e;
 }
 ```
 
@@ -100,7 +102,7 @@ const expired = await classifyRefreshFailure(
   gaxiosError("invalid_grant", { error: "invalid_grant", error_description: "Token has been expired or revoked." }),
   {},
 );
-expired.name
+expired?.name
 => GoogleAuthExpiredError
 
 // The token state is machine-wide, but `configured` asks whether THIS box holds
@@ -161,7 +163,7 @@ The flag is stored beside the credential it describes, so it travels with the
 token file rather than living in any one box:
 
 ```ts continue
-const onDisk = JSON.parse(await readFile(process.env.BBX_GOOGLE_TOKENS_FILE, "utf-8"));
+const onDisk = JSON.parse(await readFile(TOKENS_FILE, "utf-8"));
 JSON.stringify(Object.keys(onDisk).sort())
 => ["accessToken","authCheckedAt","needsReauthSince","reauthReason","refreshToken","tokenExpiry"]
 ```
@@ -175,10 +177,10 @@ shared by gmail, calendar, and drive across every box on the server. There is no
 safe automatic recovery, so the write refuses and the bytes stay for a human.
 
 ```ts continue
-await writeFile(process.env.BBX_GOOGLE_TOKENS_FILE, '{"refreshToken": "trun');
+await writeFile(TOKENS_FILE, '{"refreshToken": "trun');
 const failure = await tryCall(() => saveGoogleTokens({ accessToken: "fresh" }));
 print(`error: ${failure.name}`);
-print(`onDisk: ${await readFile(process.env.BBX_GOOGLE_TOKENS_FILE, "utf-8")}`);
+print(`onDisk: ${await readFile(TOKENS_FILE, "utf-8")}`);
 =>
 error: GoogleTokenStoreCorruptError
 onDisk: {"refreshToken": "trun
@@ -187,9 +189,9 @@ onDisk: {"refreshToken": "trun
 A genuinely absent file is the legitimate first run, and still starts fresh.
 
 ```ts continue
-await rm(process.env.BBX_GOOGLE_TOKENS_FILE, { force: true });
+await rm(TOKENS_FILE, { force: true });
 await saveGoogleTokens({ refreshToken: "first-ever" });
-JSON.parse(await readFile(process.env.BBX_GOOGLE_TOKENS_FILE, "utf-8")).refreshToken
+JSON.parse(await readFile(TOKENS_FILE, "utf-8")).refreshToken
 => first-ever
 ```
 

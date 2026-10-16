@@ -21,6 +21,7 @@ JSON.stringify(codexSdkThreadOptions({
   systemPrompt: "system",
   model: "test-model",
   additionalDirectories: ["/box/package"],
+  analytics: false,
 }))
 => {"workingDirectory":"/box/content","sandboxMode":"danger-full-access","approvalPolicy":"never","model":"test-model","additionalDirectories":["/box/package"]}
 ```
