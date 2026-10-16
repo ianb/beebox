@@ -12,6 +12,8 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import { bodyField } from "../../helpers/doctest-helpers.js";
+import { z } from "zod";
 import { signSession } from "../../../src/webapp/auth.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 
@@ -32,10 +34,12 @@ async function pair(who: string | null, label: string): Promise<string> {
   return device.deviceId;
 }
 
+const DevicesPayload = z.object({ scope: z.string(), devices: z.array(z.looseObject({ id: z.string(), label: z.string() })) });
+
 async function devicesAs(email: string) {
   const cookie = `bbx_session=${signSession({ email, name: email })}`;
   const response = await ctx.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: { cookie } });
-  return { status: response.statusCode, payload: response.body.result?.data };
+  return { status: response.statusCode, payload: DevicesPayload.parse(bodyField(response.body, "result", "data")) };
 }
 
 await pair("priya@example.com", "owner phone");
@@ -68,8 +72,8 @@ The refusal is NOT_FOUND rather than FORBIDDEN: a distinct code would confirm
 the id exists on this box.
 
 ```ts continue
-const ownerDeviceId = owner.payload.devices.find((d) => d.label === "owner phone").id;
-const memberDeviceId = member.payload.devices[0].id;
+const ownerDeviceId = owner.payload.devices.find((d) => d.label === "owner phone")?.id ?? "";
+const memberDeviceId = member.payload.devices[0]?.id ?? "";
 const memberCookie = `bbx_session=${signSession({ email: "tomas@example.com", name: "tomas" })}`;
 
 async function unpairAsMember(deviceId: string) {
@@ -79,7 +83,7 @@ async function unpairAsMember(deviceId: string) {
     headers: { cookie: memberCookie, "content-type": "application/json" },
     payload: { deviceId },
   });
-  return response.body.error ? response.body.error.data.code : "ok";
+  return bodyField(response.body, "error") ? bodyField(response.body, "error", "data", "code") : "ok";
 }
 
 `somebody else's: ${await unpairAsMember(ownerDeviceId)}, their own: ${await unpairAsMember(memberDeviceId)}`
@@ -105,7 +109,7 @@ const asMachine = await plain.request({
 });
 delete process.env.BBX_BROWSE_API_KEY;
 
-`${asMachine.statusCode} ${asMachine.body.error.data.code}`
+`${asMachine.statusCode} ${bodyField(asMachine.body, "error", "data", "code")}`
 => 403 FORBIDDEN
 ```
 

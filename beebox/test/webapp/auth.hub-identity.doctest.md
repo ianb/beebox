@@ -10,10 +10,10 @@ unit tests against fake `FastifyRequest`-shaped objects — no server boot
 needed to exercise the header logic itself.
 
 ```ts setup
-import { resolveRequestIdentity, verifyHubSecret, isHubMode, signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
+import { resolveRequestIdentity, verifyHubSecret, isHubMode, signSession, COOKIE_NAME, type IdentityRequest } from "../../src/webapp/auth.js";
 
 /** Minimal fake FastifyRequest: just enough of the shape resolveRequestIdentity/verifyHubSecret read. */
-function fakeRequest({ headers, cookies }) {
+function fakeRequest({ headers, cookies }: Partial<IdentityRequest>): IdentityRequest {
   return { headers: headers ?? {}, cookies: cookies ?? {} };
 }
 

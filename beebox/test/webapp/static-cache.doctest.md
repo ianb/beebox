@@ -36,7 +36,7 @@ async function makeDist() {
  * FIRST (the decorator carries the first registration's cache options), then
  * the scoped immutable assets mount, then the un-hashed files.
  */
-async function makeServer(dist) {
+async function makeServer(dist: string) {
   const app = Fastify();
   await app.register(fastifyStatic, { root: dist, serve: false });
   await app.register(fastifyStatic, {

@@ -15,7 +15,7 @@ import * as path from "node:path";
 const ctx = await makeTestServer();
 const logPath = path.join(ctx.boxRoot, ".beebox", "csp-reports.log");
 
-async function postCsp(contentType, body) {
+async function postCsp(contentType: string, body: unknown) {
   const res = await ctx.server.inject({
     method: "POST",
     url: "/api/csp-report",
@@ -42,7 +42,7 @@ await postCsp("application/csp-report", { "csp-report": { "violated-directive": 
 => 204
 
 const lines = logLines();
-const parsed = JSON.parse(lines[lines.length - 1]);
+const parsed = JSON.parse(lines[lines.length - 1] ?? "");
 // Field is capped well under its original 5021 chars (2048 + ellipsis).
 parsed.doc.length <= 2049
 => true

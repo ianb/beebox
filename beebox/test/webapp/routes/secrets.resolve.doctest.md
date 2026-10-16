@@ -16,7 +16,8 @@ Values below are obvious placeholders.
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
+import { makeTestServer, TEST_SLUG, type TestServer } from "../../helpers/doctest-server.js";
+import { bodyField } from "../../helpers/doctest-helpers.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { grantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { secretsLogDir } from "../../../src/core/secrets/store.js";
@@ -34,14 +35,14 @@ async function accessLog() {
 }
 
 /** One "label: status kind" line for a resolve attempt with the given headers. */
-async function attempt(ctx, label, headers) {
+async function attempt(ctx: TestServer, label: string, headers: Record<string, string>) {
   const denied = await ctx.request({
     method: "POST",
     url: "/api/secrets/resolve",
     payload: { name: "weatherapi", purpose: "weather-trick" },
     headers,
   });
-  return `${label}: ${denied.statusCode} ${denied.body.kind}`;
+  return `${label}: ${denied.statusCode} ${bodyField(denied.body, "kind")}`;
 }
 ```
 
@@ -84,9 +85,9 @@ const serverOnly = await ctx.request({
   headers: agentAuth,
 });
 print(`status: ${serverOnly.statusCode}`);
-print(`kind: ${serverOnly.body.kind}`);
+print(`kind: ${bodyField(serverOnly.body, "kind")}`);
 print(`leaks the value: ${JSON.stringify(serverOnly.body).includes("placeholder-mistral-key")}`);
-print(serverOnly.body.message);
+print(bodyField(serverOnly.body, "message"));
 =>
 status: 403
 kind: agent-access-not-granted
@@ -104,8 +105,8 @@ const unknown = await ctx.request({
   headers: agentAuth,
 });
 print(`status: ${unknown.statusCode}`);
-print(`kind: ${unknown.body.kind}`);
-print(unknown.body.message);
+print(`kind: ${bodyField(unknown.body, "kind")}`);
+print(bodyField(unknown.body, "message"));
 =>
 status: 404
 kind: unknown-secret
@@ -153,7 +154,7 @@ const bad = await ctx.request({
   payload: { name: "weatherapi" },
   headers: agentAuth,
 });
-print(`status: ${bad.statusCode} ${bad.body.kind}`);
+print(`status: ${bad.statusCode} ${bodyField(bad.body, "kind")}`);
 => status: 400 bad-request
 ```
 
@@ -162,14 +163,14 @@ agent-authored callers cannot write a newline, a JSON blob, or a whole prompt
 into the boxholder's access log:
 
 ```ts continue
-async function badPurpose(purpose) {
+async function badPurpose(purpose: string) {
   const reply = await ctx.request({
     method: "POST",
     url: "/api/secrets/resolve",
     payload: { name: "weatherapi", purpose },
     headers: agentAuth,
   });
-  return `${reply.statusCode} ${reply.body.kind}`;
+  return `${reply.statusCode} ${bodyField(reply.body, "kind")}`;
 }
 print(`newline: ${await badPurpose("weather\ntrick")}`);
 print(`uppercase: ${await badPurpose("WeatherTrick")}`);

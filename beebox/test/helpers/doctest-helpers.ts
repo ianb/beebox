@@ -149,3 +149,13 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
 
   return box;
 }
+
+/** A (nested) field of a JSON response body, or undefined when any step of the path is absent. */
+export function bodyField(body: unknown, ...path: Array<string | number>): unknown {
+  let value: unknown = body;
+  for (const key of path) {
+    if (typeof value !== "object" || value === null) return undefined;
+    value = Reflect.get(value, key);
+  }
+  return value;
+}

@@ -10,6 +10,7 @@ filename rejection — not the acceptance rules themselves.
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import { bodyField } from "../../helpers/doctest-helpers.js";
 import { createBrowserTaskTemplate } from "../../../src/schemas/browser-task.js";
 
 const PNG_BYTES = Buffer.from(
@@ -90,12 +91,12 @@ const validRes = await server.request({
   headers: MULTIPART_HEADERS,
 });
 
-JSON.stringify({ statusCode: validRes.statusCode, ok: validRes.body.ok, count: validRes.body.count })
+JSON.stringify({ statusCode: validRes.statusCode, ok: bodyField(validRes.body, "ok"), count: bodyField(validRes.body, "count") })
 => {"statusCode":200,"ok":true,"count":1}
 ```
 
 ```ts continue
-const batchDir = validRes.body.dir;
+const batchDir = String(bodyField(validRes.body, "dir"));
 (await readdir(join(server.boxRoot, batchDir))).sort().join(", ")
 => photo.png, records.json
 ```
@@ -115,7 +116,7 @@ const badJsonRes = await server.request({
   headers: MULTIPART_HEADERS,
 });
 
-JSON.stringify({ statusCode: badJsonRes.statusCode, ok: badJsonRes.body.ok, message: badJsonRes.body.message })
+JSON.stringify({ statusCode: badJsonRes.statusCode, ok: bodyField(badJsonRes.body, "ok"), message: bodyField(badJsonRes.body, "message") })
 => {"statusCode":400,"ok":false,"message":"records must be valid JSON"}
 ```
 
@@ -141,7 +142,7 @@ const pathyRes = await server.request({
   headers: MULTIPART_HEADERS,
 });
 
-JSON.stringify({ statusCode: pathyRes.statusCode, ok: pathyRes.body.ok })
+JSON.stringify({ statusCode: pathyRes.statusCode, ok: bodyField(pathyRes.body, "ok") })
 => {"statusCode":400,"ok":false}
 ```
 
@@ -163,7 +164,7 @@ const dupBody = buildMultipart([
   { name: "photo.png", filename: "photo.png", contentType: "image/png", value: PNG_BYTES },
 ]);
 const dup = await server.request({ method: "POST", url: "/api/cards/submit", payload: dupBody, headers: MULTIPART_HEADERS });
-JSON.stringify([dup.statusCode, dup.body.message])
+JSON.stringify([dup.statusCode, bodyField(dup.body, "message")])
 => [400,"duplicate file name: photo.png"]
 ```
 

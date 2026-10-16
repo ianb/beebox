@@ -9,6 +9,7 @@ declaration is a couple of lines (base URL + auth header shape).
 ```ts setup
 import Fastify from "fastify";
 import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { bodyField } from "../../../../helpers/doctest-helpers.js";
 import { grantSecret, setSecret } from "../../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../../src/lib/box-slug.js";
 
@@ -38,7 +39,7 @@ const res = await ctx.request({
 res.statusCode
 => 503
 
-res.body.error
+bodyField(res.body, "error")
 => No API key for "replicate" — ask the boxholder to grant the "replicate" secret to this box (bbx secrets set replicate; bbx secrets grant <box> replicate)
 ```
 
@@ -56,13 +57,13 @@ const ok = await ctx.request({
 ok.statusCode
 => 200
 
-ok.body.auth
+bodyField(ok.body, "auth")
 => Bearer r8_test_key
 
-JSON.stringify(ok.body.cookie)
+JSON.stringify(bodyField(ok.body, "cookie"))
 => null
 
-ok.body.echo.input.prompt
+bodyField(ok.body, "echo", "input", "prompt")
 => hi
 ```
 
@@ -73,7 +74,7 @@ const nope = await ctx.request({ method: "POST", url: "/api/adapters/nope/v1/x",
 nope.statusCode
 => 404
 
-nope.body.error
+bodyField(nope.body, "error")
 => Unknown adapter "nope" — available: replicate, mistral, anthropic, openai, openrouter
 ```
 

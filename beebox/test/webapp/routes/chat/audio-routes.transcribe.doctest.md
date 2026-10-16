@@ -11,10 +11,11 @@ can be shown once and named instead of vanishing into a console warning.
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
+import { bodyField } from "../../../helpers/doctest-helpers.js";
 import { buildMultipartForm } from "../../../../src/lib/multipart.js";
 
-async function postClip(ctx) {
+async function postClip(ctx: TestServer) {
   const { body, boundary } = buildMultipartForm([
     { kind: "file", file: { name: "file", filename: "segment.wav", contentType: "audio/wav", data: Buffer.alloc(64) } },
   ]);
@@ -40,7 +41,7 @@ await mkdir(join(ctx.boxRoot, "_config"), { recursive: true });
 await writeFile(join(ctx.boxRoot, "_config/transcription.json"), JSON.stringify({ hqService: "mai" }));
 
 const res = await postClip(ctx);
-JSON.stringify({ status: res.statusCode, code: res.body.code, permanent: res.body.permanent, namesTheSecret: /"openrouter"/.test(res.body.error) })
+JSON.stringify({ status: res.statusCode, code: bodyField(res.body, "code"), permanent: bodyField(res.body, "permanent"), namesTheSecret: /"openrouter"/.test(String(bodyField(res.body, "error"))) })
 => {"status":500,"code":"missing_openrouter_key","permanent":true,"namesTheSecret":true}
 ```
 
