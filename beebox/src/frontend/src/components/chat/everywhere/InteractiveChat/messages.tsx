@@ -27,8 +27,7 @@ import {
 import { MAX_RETAINED_MESSAGES } from "../../../../machines/chat-types";
 import { useRevealAnchor } from "./reveal-anchor";
 import { TranscriptSelection } from "./TranscriptSelection";
-import { parseDeliveredUserMessageParts } from "@shared/delivered-user-message";
-import { startCaptureWait, stepCaptureWait, type CaptureAnchorView, type CaptureAnchorWait } from "./capture-anchor";
+import { useCaptureAnchor } from "./use-capture-anchor";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
@@ -140,63 +139,6 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
   );
 }
 
-/** The newest delivered capture message's identity, to tell a new arrival from the last one. */
-function lastCaptureUuid(groups: MessageGroup[]): string | null {
-  for (const group of groups.toReversed()) {
-    if (group.type !== "user") continue;
-    for (const entry of group.entries.toReversed()) {
-      const isCapture = entry.content.some((block) => block.type === "text" && block.text !== undefined
-        && parseDeliveredUserMessageParts(block.text).some((part) => part.kind === "capture"));
-      if (isCapture) return entry.uuid;
-    }
-  }
-  return null;
-}
-
-/** Done in capture anchors the capture when it shows up; see `capture-anchor.ts`. */
-function useCaptureAnchor(opts: {
-  captureSignal: number;
-  sendSignal: number;
-  groups: MessageGroup[];
-  captureBubbles: CaptureBubbleModel[];
-  atBottom: boolean;
-  contentElRef: React.RefObject<HTMLDivElement | null>;
-  anchorToTop: (el: Element | null) => void;
-}): void {
-  const { captureSignal, sendSignal, groups, captureBubbles, atBottom, contentElRef, anchorToTop } = opts;
-  const newestCapture = useMemo(() => lastCaptureUuid(groups), [groups]);
-  const wait = useRef<CaptureAnchorWait | null>(null);
-  // The list as of the previous commit: the one Done closed over.
-  const seen = useRef<CaptureAnchorView>({ newestCapture, bubbleIds: [], readerAway: false });
-  const lastCaptureSignal = useRef(captureSignal);
-  const lastSendSignal = useRef(sendSignal);
-
-  useLayoutEffect(() => {
-    const now: CaptureAnchorView = { newestCapture, bubbleIds: captureBubbles.map((b) => b.id), readerAway: !atBottom };
-    // A typed send takes the anchor and ends any wait.
-    if (sendSignal !== lastSendSignal.current) {
-      lastSendSignal.current = sendSignal;
-      wait.current = null;
-    }
-    if (captureSignal !== lastCaptureSignal.current) {
-      lastCaptureSignal.current = captureSignal;
-      wait.current = startCaptureWait(seen.current);
-    }
-    seen.current = now;
-    const content = contentElRef.current;
-    if (wait.current === null || !content) return;
-    const { wait: next, step } = stepCaptureWait(wait.current, now);
-    wait.current = next;
-    if (step.anchor === "user") {
-      const users = content.querySelectorAll("[data-role=\"user\"]");
-      anchorToTop(users[users.length - 1] ?? null);
-    } else if (step.anchor === "bubble") {
-      // Bubbles render in model order after the transcript, so the DOM index matches.
-      anchorToTop(content.querySelectorAll("[data-role=\"captureBubble\"]")[step.index] ?? null);
-    }
-  }, [captureSignal, sendSignal, newestCapture, captureBubbles, atBottom, contentElRef, anchorToTop]);
-}
-
 function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
@@ -284,7 +226,7 @@ function MessageListInner({
     anchorToTop(users[users.length - 1] ?? null);
   }, [sendSignal, anchorToTop]);
 
-  useCaptureAnchor({ captureSignal, sendSignal, groups, captureBubbles, atBottom, contentElRef, anchorToTop });
+  useCaptureAnchor({ captureSignal, sendSignal, groups, captureBubbles, contentElRef, anchorToTop });
 
   // Mounting this list IS opening a thread: `InteractiveChat` is keyed by
   // session (ChatPage), so a session switch remounts. Say so to the controller
