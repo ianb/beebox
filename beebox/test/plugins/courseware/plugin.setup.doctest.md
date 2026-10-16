@@ -14,6 +14,7 @@ setup builds it the same way (`test/helpers/plugin-bundles.ts`) so the test does
 not depend on a prior build.
 
 ```ts setup
+import type { TmpBox } from "../../helpers/doctest-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { bbx, readmeStubs as readPluginStubs, stubbedBox as stubbedPluginBox } from "../../helpers/plugin-readme.js";
 import { loadBoxSchemas } from "../../../src/schemas.js";
@@ -24,7 +25,7 @@ await buildPluginBundlesIntoDist();
 const stubbedBox = () => stubbedPluginBox("courseware");
 
 /** `bbx validate <paths>` in the box: exit code and the report. */
-async function validate(box, paths: string[]): Promise<{ code: number; report: string[] }> {
+async function validate(box: TmpBox, paths: string[]): Promise<{ code: number; report: string[] }> {
   const { code, report } = await bbx(box, ["validate", ...paths]);
   return { code, report };
 }

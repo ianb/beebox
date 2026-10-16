@@ -8,7 +8,7 @@ system sleep, so a plain `setTimeout` would fire the instant the machine wakes
 and kill a run that barely got to execute.
 
 ```ts setup
-import { startAwakeTimeout } from "../../src/shared/awake-timeout.js";
+import { startAwakeTimeout, type AwakeElapsed } from "../../src/shared/awake-timeout.js";
 import {
   execWithTimeout,
   CommandError,
@@ -29,15 +29,15 @@ under-counts by design. This example sets the gap far above any stall and waits
 for the timeout to fire, rather than racing a fixed sleep against it:
 
 ```ts
-let fired = null;
-const timer = startAwakeTimeout({ timeoutMs: 60, periodMs: 10, sleepGapMs: 5_000, onTimeout: (e) => { fired = e; } });
-await eventually(() => fired !== null, { label: "the awake timeout fires" })
+const state: { fired: AwakeElapsed | null } = { fired: null };
+const timer = startAwakeTimeout({ timeoutMs: 60, periodMs: 10, sleepGapMs: 5_000, onTimeout: (e) => { state.fired = e; } });
+await eventually(() => state.fired !== null, { label: "the awake timeout fires" })
 => true
 
-fired.awakeMs >= 60
+state.fired !== null && state.fired.awakeMs >= 60
 => true
 
-fired.sleepDetected
+state.fired?.sleepDetected
 => false
 ```
 

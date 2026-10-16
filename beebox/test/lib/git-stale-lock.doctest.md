@@ -15,7 +15,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import * as childProcess from "node:child_process";
 import { promisify } from "node:util";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import type { Test } from "tap";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 import { inspectIndexLock, INDEX_LOCK_STALE_MS, formatAge } from "../../src/lib/git-stale-lock.js";
 
 const execFileAsync = promisify(childProcess.execFile);
@@ -25,7 +26,7 @@ const execFileAsync = promisify(childProcess.execFile);
 // probe then answered `unknown-holder` — correctly, but not what these
 // sections are about. The only process that can hold a lock this file plants
 // is this one, so the real `lsof` is narrowed to it with `-a -p`.
-function lsofThisProcess(args, options) {
+function lsofThisProcess(args: string[], options: childProcess.ExecFileOptions) {
   const at = args.indexOf("--");
   if (at < 0) throw new Error(`unexpected lsof arguments: ${args.join(" ")}`);
   const narrowed = [...args.slice(0, at), "-a", "-p", String(process.pid), ...args.slice(at)];
@@ -41,20 +42,24 @@ function lsofTimedOut() {
 
 // Import `modulePath` with `lsof` calls routed to `lsof`; every other command
 // runs for real.
-function withLsof(t, modulePath, lsof) {
-  const execFile = (...args) => childProcess.execFile(...args);
-  execFile[promisify.custom] = (file, args, options) =>
-    file === "lsof" ? lsof(args, options) : execFileAsync(file, args, options);
+function withLsof(t: Test, modulePath: string, lsof: (args: string[], options: childProcess.ExecFileOptions) => Promise<unknown>) {
+  const execFile = Object.assign(
+    (file: string, args: string[], options: childProcess.ExecFileOptions, callback: (error: childProcess.ExecFileException | null, stdout: string | Buffer, stderr: string | Buffer) => void) => childProcess.execFile(file, args, options, callback),
+    {
+      [promisify.custom]: (file: string, args: string[], options: childProcess.ExecFileOptions) =>
+        file === "lsof" ? lsof(args, options) : execFileAsync(file, args, options),
+    },
+  );
   return t.mockImport(modulePath, { "node:child_process": { ...childProcess, execFile } });
 }
 
 const STALE_LOCK = "../../src/lib/git-stale-lock.ts";
 
-const lockPathOf = (box) => join(box.root, ".git", "index.lock");
+const lockPathOf = (box: TmpBox) => join(box.root, ".git", "index.lock");
 
 // Write a lock file and backdate it, standing in for one a killed git left
 // behind `ageMs` ago.
-async function plantLock(box, ageMs) {
+async function plantLock(box: TmpBox, ageMs: number) {
   const lockPath = lockPathOf(box);
   await writeFile(lockPath, "partially written index\n");
   const when = new Date(Date.now() - ageMs);
@@ -127,7 +132,7 @@ console.error = realError;
 ```
 
 ```ts continue
-logged.length === 1 && logged[0].includes("removed an abandoned")
+logged.length === 1 && logged[0]?.includes("removed an abandoned")
 => true
 ```
 

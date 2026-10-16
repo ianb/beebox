@@ -7,29 +7,31 @@ The caller owns cleanup and passes only the card's box-relative path.
 ```ts setup
 import { mkdir, readFile, symlink, truncate, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { preparePublication, PUBLICATION_FILE_LIMITS } from "../../src/publish/prepare/core/prepare-publication.js";
+import assert from "node:assert/strict";
+import { preparePublication, PUBLICATION_FILE_LIMITS, type PrepareDeps, type ProjectCommandRequest } from "../../src/publish/prepare/core/prepare-publication.js";
 import { releaseIdForFiles } from "../../src/publish/manifest-edge.js";
 import { createPublicationCardTemplate } from "../../src/schemas/publication.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
 
 const CARD = "_content/Example.publication.card";
 const ATTACH = "_content/Example.attach";
 const pubId = "abcdefghijklmnop2345672345";
-const definition = { pubId, connection: "personal", title: "Example site", tier: "secret" };
+type CardInput = Parameters<typeof createPublicationCardTemplate>[0];
+const definition: CardInput = { pubId, connection: "personal", title: "Example site", tier: "secret" };
 
 /** Write the card; the source directory, not the card, picks static or project mode. */
-async function writeDefinition(box, value = {}, card = CARD) {
+async function writeDefinition(box: TmpBox, value: Partial<CardInput> = {}, card = CARD) {
   await box.write(card, createPublicationCardTemplate({ ...definition, ...value }));
 }
 
 /** Write a card and its source files under `<Name>.attach/static|project/`. */
-async function writeFixture(box, { mode = "static", files = {}, card = CARD, ...fields } = {}) {
+async function writeFixture(box: TmpBox, { mode = "static", files = {}, card = CARD, ...fields }: { mode?: string; files?: Record<string, string>; card?: string } & Partial<CardInput> = {}) {
   await writeDefinition(box, fields, card);
   const attach = card.replace(/\.publication\.card$/, ".attach");
   for (const [file, text] of Object.entries(files)) await box.write(`${attach}/${mode}/${file}`, text);
 }
 
-async function prepareError(box, card = CARD) {
+async function prepareError(box: TmpBox, card = CARD) {
   const result = await preparePublication({ boxRoot: box.root, card }, { ownerEmail: null });
   if (result.ok) {
     await result.prepared.cleanup();
@@ -52,6 +54,8 @@ await box.write("_content/CLAUDE.md", "private authoring guidance");
 const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 result.ok
 => true
+
+assert.ok(result.ok);
 
 result.prepared.contentHash === await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }])))
 => true
@@ -82,10 +86,10 @@ await box.write("_content/Example.attach/project/package.json", JSON.stringify({
 await box.write("_content/Example.attach/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
 let buildCount = 0;
 let firstBuildStarted: () => void = () => {};
-const started = new Promise((resolve) => { firstBuildStarted = resolve; });
+const started = new Promise<void>((resolve) => { firstBuildStarted = resolve; });
 let finishFirstBuild: () => void = () => {};
-const firstGate = new Promise((resolve) => { finishFirstBuild = resolve; });
-const deps = {
+const firstGate = new Promise<void>((resolve) => { finishFirstBuild = resolve; });
+const deps: PrepareDeps = {
   ownerEmail: null,
   runProjectCommand: async ({ step, cwd }) => {
     if (step !== "build") return;
@@ -111,6 +115,8 @@ const firstResult = await firstPrepare;
 const secondResult = await secondPrepare;
 firstResult.ok && secondResult.ok
 => true
+
+assert.ok(firstResult.ok && secondResult.ok);
 
 await readFile(path.join(firstResult.prepared.stagedDir, "index.html"), "utf-8")
 => <p>build-1</p>
@@ -138,6 +144,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, {
 result.ok
 => true
 
+assert.ok(result.ok);
+
 commandCount
 => 0
 
@@ -157,7 +165,7 @@ await writeDefinition(box);
 await box.write("_content/Example.attach/project/package.json", JSON.stringify({ scripts: { build: "vite build" } }));
 await box.write("_content/Example.attach/project/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
 await box.write("_content/Example.attach/project/dist/stale-private.txt", "must disappear before build");
-const calls = [];
+const calls: ProjectCommandRequest[] = [];
 const parentEnv = { PATH: "/usr/bin:/bin", HOME: "/home/agent", LANG: "C.UTF-8", CLOUDFLARE_API_TOKEN: "not-in-child", OPENAI_API_KEY: "not-in-child" };
 const result = await preparePublication({ boxRoot: box.root, card: CARD }, {
   ownerEmail: null,
@@ -174,13 +182,15 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, {
 result.ok
 => true
 
+assert.ok(result.ok);
+
 JSON.stringify(calls.map((call) => call.step))
 => ["install","build"]
 
-JSON.stringify(Object.keys(calls[0].env).sort())
+JSON.stringify(Object.keys(calls[0]?.env ?? {}).sort())
 => ["HOME","LANG","PATH","TEMP","TMP","TMPDIR"]
 
-calls[0].env.CLOUDFLARE_API_TOKEN
+calls[0]?.env.CLOUDFLARE_API_TOKEN
 => undefined
 
 JSON.stringify(result.prepared.preview.map((file) => file.path))
@@ -205,6 +215,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, {
 
 result.ok
 => false
+
+assert.ok(!result.ok);
 
 result.reason
 => project-command-failed
@@ -236,6 +248,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, { own
 result.ok
 => false
 
+assert.ok(!result.ok);
+
 result.message.includes("public alias")
 => true
 
@@ -263,6 +277,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, {
 result.ok
 => false
 
+assert.ok(!result.ok);
+
 result.message.includes("CLAUDE.md")
 => true
 
@@ -289,6 +305,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, {
 
 result.ok
 => false
+
+assert.ok(!result.ok);
 
 result.message.includes("AGENTS.md")
 => true
@@ -318,6 +336,8 @@ const accepted = await preparePublication({ boxRoot: box.root, card: CARD }, { o
 
 accepted.ok
 => true
+
+assert.ok(accepted.ok);
 
 await box.cleanup();
 ```
@@ -351,6 +371,8 @@ await box.write("_content/Example.attach/static/assets/map.svg", "<svg xmlns='ht
 const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 result.ok
 => true
+
+assert.ok(result.ok);
 
 JSON.stringify(result.prepared.preview.map((file) => file.path))
 => ["assets/map.svg","days/one.html","index.html","packing.html"]
@@ -392,6 +414,8 @@ release id.
 const again = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 again.ok && again.prepared.contentHash === result.prepared.contentHash
 => true
+
+assert.ok(again.ok);
 
 await again.prepared.cleanup();
 await box.cleanup();
@@ -508,6 +532,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, { own
 result.ok
 => false
 
+assert.ok(!result.ok);
+
 result.reason
 => bundle-policy
 
@@ -533,6 +559,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, { own
 
 result.ok
 => false
+
+assert.ok(!result.ok);
 
 result.reason
 => bundle-policy
@@ -568,6 +596,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, { own
 result.ok
 => false
 
+assert.ok(!result.ok);
+
 result.observed
 => 104857601
 
@@ -589,6 +619,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, { own
 
 result.ok
 => false
+
+assert.ok(!result.ok);
 
 result.observed
 => 2001
@@ -613,6 +645,8 @@ const result = await preparePublication({ boxRoot: box.root, card: CARD }, { own
 
 result.ok
 => false
+
+assert.ok(!result.ok);
 
 result.reason
 => bundle-policy

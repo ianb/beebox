@@ -35,6 +35,7 @@ what differs is skipping the transport's own auth-header parsing, which is
 through real `server.inject()` with `alpha`'s actual bearer header.
 
 ```ts setup
+import { TRPCError } from "@trpc/server";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { execSync } from "node:child_process";
@@ -46,13 +47,15 @@ import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
+import type { EventBus } from "../../src/core/event-bus/core.js";
 
 const BETA_MARKER = "BETA-SECRET-MARKER-9f3c1a";
 
-const noBus = {
+const noBus: EventBus = {
   emit: () => 0,
   emitTransient: () => {},
   readSince: () => [],
+  readRecent: () => [],
   subscribe: () => ({ unsubscribe: () => {} }),
   prune: () => 0,
   close: () => {},
@@ -60,7 +63,7 @@ const noBus = {
 
 /** A tRPC caller authenticated to `alpha` (or any given box), the shape the
  *  real per-box auth wall constructs after admitting a request. */
-function callerFor(boxRoot, eventBus) {
+function callerFor(boxRoot: string, eventBus?: EventBus) {
   return appRouter.createCaller({
     boxRoot,
     boxSlug: "alpha",
@@ -70,15 +73,16 @@ function callerFor(boxRoot, eventBus) {
     authed: true,
     isOwner: true,
     isAuthenticatedOwner: true,
+    actor: "user",
   });
 }
 
 /** Run a tRPC call, reporting either its result or the error code. */
-async function attempt(fn) {
+async function attempt<T>(fn: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; code: string | undefined }> {
   try {
     return { ok: true, value: await fn() };
   } catch (e) {
-    return { ok: false, code: e.code };
+    return { ok: false, code: e instanceof TRPCError ? e.code : undefined };
   }
 }
 ```

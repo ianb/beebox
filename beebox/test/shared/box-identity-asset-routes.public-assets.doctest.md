@@ -10,7 +10,7 @@ import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
 const pattern = perBoxIdentityAssetPattern("");
-const matchingProxy = (url) => new RegExp(pattern).test(url) ? pattern : undefined;
+const matchingProxy = (url: string) => new RegExp(pattern).test(url) ? pattern : undefined;
 ```
 
 ```ts
@@ -47,16 +47,17 @@ production worker continues to use `/icons/...`.
 
 ```ts
 const source = await readFile(new URL("../../src/frontend/public/sw.js", import.meta.url), "utf8");
-const listeners = new Map();
-let notification;
+interface PushEventLike { data: { json: () => unknown }; waitUntil: (promise: Promise<unknown>) => Promise<unknown> }
+const listeners = new Map<string, (event: PushEventLike) => unknown>();
+const notifications: { title: string; options: { icon?: string; badge?: string } }[] = [];
 const scope = "http://localhost:3210/main/";
 const self = {
-  addEventListener(type, listener) { listeners.set(type, listener); },
+  addEventListener(type: string, listener: (event: PushEventLike) => unknown) { listeners.set(type, listener); },
   skipWaiting() {},
   clients: { claim() {}, matchAll: async () => [], openWindow() {} },
   registration: {
     scope,
-    showNotification: async (title, options) => { notification = { title, options }; },
+    showNotification: async (title: string, options: { icon?: string; badge?: string }) => { notifications.push({ title, options }); },
   },
 };
 vm.runInNewContext(source, { self, URL, fetch });
@@ -64,11 +65,11 @@ vm.runInNewContext(source, { self, URL, fetch });
 listeners.has("fetch")
 => false
 
-listeners.get("push")({
+listeners.get("push")?.({
   data: { json: () => ({ title: "Hello", body: "world", url: "/main/test1/" }) },
-  waitUntil: (promise) => promise,
+  waitUntil: (promise: Promise<unknown>) => promise,
 });
 await new Promise((resolve) => setImmediate(resolve));
-JSON.stringify([notification.options.icon, notification.options.badge])
+JSON.stringify([notifications[0]?.options.icon, notifications[0]?.options.badge])
 => ["http://localhost:3210/main/icons/icon-192.png","http://localhost:3210/main/icons/icon-192.png"]
 ```

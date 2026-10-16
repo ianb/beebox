@@ -22,7 +22,7 @@ const samples = [1, 2, 3, 4, 5].map((attempt) => {
 // Every draw for a given attempt is <= that attempt's ceiling, and attempt 5's
 // max observed draw cannot exceed the cap even though its un-clamped ceiling
 // (16000) would allow it.
-JSON.stringify(samples.map((max, i) => max <= [1000, 2000, 4000, 8000, 8000][i]))
+JSON.stringify(samples.map((max, i) => max <= ([1000, 2000, 4000, 8000, 8000][i] ?? -1)))
 => [true,true,true,true,true]
 ```
 

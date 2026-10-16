@@ -10,14 +10,14 @@ and dropped from the chat's history.
 import { Readable } from "node:stream";
 import { jsonlLines } from "../../src/lib/jsonl-lines.js";
 
-async function lines(chunks) {
-  const out = [];
+async function lines(chunks: (string | Uint8Array)[]) {
+  const out: string[] = [];
   for await (const line of jsonlLines(Readable.from(chunks))) out.push(line);
   return out;
 }
 
 /** Make the two separators visible in a shown value. */
-function visible(text) {
+function visible(text: string) {
   return text.replaceAll("\u2028", "<LS>").replaceAll("\u2029", "<PS>");
 }
 ```

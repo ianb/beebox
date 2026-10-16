@@ -6,6 +6,7 @@ box. A ref that escapes returns `null` and is treated everywhere as a broken
 (nonexistent) ref, never followed.
 
 ```ts setup
+import assert from "node:assert/strict";
 import { symlink } from "node:fs/promises";
 import {
   containWithinBox,
@@ -158,6 +159,7 @@ the box root and the target.
 const box = await makeTmpBox();
 await box.write("_content/note.card", "hello from inside");
 const inside = containWithinBox(box.root, box.path("_content/note.card"));
+assert.ok(inside !== null);
 await readContainedFile(box.root, inside)
 => hello from inside
 ```
@@ -170,6 +172,7 @@ read throws. A legitimate in-box file, and a not-yet-existing target, both pass
 ```ts continue
 await symlink("/etc/hosts", box.path("_content/escape.card"));
 const link = containWithinBox(box.root, box.path("_content/escape.card"));
+assert.ok(link !== null);
 JSON.stringify(link)
 => "_content/escape.card"
 
@@ -185,7 +188,9 @@ await realpathContained(box.root, inside)
 => _content/note.card
 
 // not-yet-existing in-box target: not an escape, returned unchanged
-await realpathContained(box.root, containWithinBox(box.root, box.path("_content/missing.card")))
+const missing = containWithinBox(box.root, box.path("_content/missing.card"));
+assert.ok(missing !== null);
+await realpathContained(box.root, missing)
 => _content/missing.card
 ```
 

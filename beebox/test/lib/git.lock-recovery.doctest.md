@@ -25,7 +25,7 @@ const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/box-git-lock-child.ts");
 // Start a real process that takes the box git lock, wait until it holds it,
 // then SIGKILL it — a genuine crashed holder, guard directory and all, with no
 // exit handler having run.
-async function crashedHolder(boxRoot, env) {
+async function crashedHolder(boxRoot: string, env: NodeJS.ProcessEnv) {
   const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, boxRoot], {
     cwd: PACKAGE_ROOT,
     stdio: ["ignore", "pipe", "pipe"],
@@ -84,7 +84,7 @@ reader can tell "a process died holding this" from "the index is genuinely
 busy":
 
 ```ts continue
-warnings.length === 1 && warnings[0].includes("Proceeding WITHOUT the lock")
+warnings.length === 1 && warnings[0]?.includes("Proceeding WITHOUT the lock")
 => true
 ```
 
