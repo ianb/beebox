@@ -61,5 +61,5 @@ Notebook audio lacks.
   in the WebView today.
 
 Nothing in the journeys asked for this; the chemistry journey
-(`beebox/test/user-stories/journeys/D-chemistry/`) is the nearest fit. If
+(`beebox/test/plugins/courseware/journeys/D-chemistry/`) is the nearest fit. If
 built, the landing commit adds Gemini Notebook to `ACKNOWLEDGEMENTS.md`.

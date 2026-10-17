@@ -23,7 +23,7 @@ generated files stay uncommitted:
 - A-lending: `.agents/skills/beebox-rule-card-loan/` was left untracked
   ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), R3).
 - D-chemistry: `_content/briefing.md` was modified and uncommitted
-  ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), R1).
+  ([report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md), R1).
 - F-newcomer: the same `briefing.md` change; the dashboard showed "dirty (3
   files)" with two untracked chat cards
   ([report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md), row 96). A person reads

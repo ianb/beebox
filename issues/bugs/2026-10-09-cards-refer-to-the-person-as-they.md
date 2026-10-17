@@ -29,5 +29,5 @@ or a knowledge audit that has the agent summarize a session about the
 person. The guide's SPEAKING section already says "you" on cards.
 
 The walk report is in the journey-walks-oct workstream
-(`beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md`, row
+(`beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md`, row
 36) and is not yet on `main`.
