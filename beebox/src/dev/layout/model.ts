@@ -107,6 +107,7 @@ export type RuleId =
   | "scan"
   | "set-members"
   | "plugin-imports"
+  | "typescript-imports"
   | "member-imports"
   | "registry"
   | "side-effect-registration"
