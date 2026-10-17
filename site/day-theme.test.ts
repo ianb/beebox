@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
-import { dayRotation, dayThemeScript, themeStylesheets, type DayTheme } from "./day-theme.js";
+import { dayRotation, dayThemeScript, themeImages, themeStylesheets, type DayTheme } from "./day-theme.js";
 
 const BEEBOX_DIR = path.resolve(import.meta.dirname, "..", "beebox");
 
@@ -92,4 +92,21 @@ test("the switch picks a theme of the other appearance and remembers it", () => 
   const later = runScript({ dark: false, stored: picked.system });
   assert.equal(later.theme()?.system, picked.system);
   assert.equal(runScript({ dark: false, stored: "removed-theme" }).theme()?.appearance, "light");
+});
+
+test("the switch shows every theme of an appearance before repeating one", () => {
+  const dark = dayRotation().filter((theme) => theme.appearance === "dark").map((theme) => theme.system);
+  const page = runScript({ dark: false });
+  page.ready();
+  const seen: string[] = [];
+  for (let i = 0; i < dark.length; i++) {
+    page.click();
+    seen.push(page.theme()?.system ?? "");
+    page.click();
+  }
+  assert.deepEqual(seen.toSorted(), dark.toSorted());
+});
+
+test("theme images are the sibling files the stylesheets name", () => {
+  assert.deepEqual(themeImages('a { background: url("./a.webp"), url(./b.svg#frame0), url("./a.webp"); } b { mask: url("data:x"); }'), ["a.webp", "b.svg"]);
 });

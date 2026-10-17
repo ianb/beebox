@@ -7,8 +7,8 @@
 //
 // The day's theme comes from the themes whose appearance (light or dark)
 // matches the visitor's color-scheme preference. The header's light/dark
-// button switches to the other appearance and picks a random theme of it; the
-// choice is remembered for later pages when browser storage allows.
+// button switches to the other appearance, dealing its themes in shuffled
+// order; the choice is remembered for later pages when browser storage allows.
 //
 // A small script loads synchronously at the top of <body> (no inline script:
 // the site is CSP-clean) and sets the theme's attributes on <body> and on each
@@ -52,7 +52,12 @@ export async function themeStylesheets(beeboxDir: string): Promise<string[]> {
   return names;
 }
 
-/** Writes dist/assets/themes/themes.css (all theme rules, one file). */
+/**
+ * Writes dist/assets/themes/themes.css (all theme rules, one file) and copies
+ * the images those rules name with `url("./…")` beside it, so the relative
+ * URLs resolve as they do in the app. A named image that is missing fails the
+ * build rather than shipping a theme without its artwork.
+ */
 export async function writeThemeAssets(params: { beeboxDir: string; distDir: string }): Promise<void> {
   const themesDir = path.join(params.beeboxDir, "src/frontend/src/themes");
   const outDir = path.join(params.distDir, "assets/themes");
@@ -61,15 +66,26 @@ export async function writeThemeAssets(params: { beeboxDir: string; distDir: str
   for (const name of await themeStylesheets(params.beeboxDir)) {
     parts.push(`/* ---- ${name} (beebox/src/frontend/src/themes/) ---- */\n${await fs.readFile(path.join(themesDir, name), "utf8")}`);
   }
-  await fs.writeFile(path.join(outDir, "themes.css"), parts.join("\n"), "utf8");
+  const css = parts.join("\n");
+  for (const image of themeImages(css)) {
+    await fs.copyFile(path.join(themesDir, image), path.join(outDir, image));
+  }
+  await fs.writeFile(path.join(outDir, "themes.css"), css, "utf8");
+}
+
+/** The sibling files a stylesheet names with `url("./…")`, without fragments. */
+export function themeImages(css: string): string[] {
+  const names = [...css.matchAll(/url\(["']?\.\/([\w.-]+?)(?:#[\w-]*)?["']?\)/g)].map((match) => match[1] ?? "");
+  return [...new Set(names)].toSorted();
 }
 
 export function dayThemeScript(rotation: readonly DayTheme[]): string {
   return `(() => {
   const ROTATION = ${JSON.stringify(rotation)};
   const KEY = 'bbx-site-theme';
-  const read = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
-  const write = name => { try { localStorage.setItem(KEY, name); } catch { /* storage blocked: the choice lasts this page */ } };
+  const DECK = 'bbx-site-theme-deck';
+  const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
+  const write = (key, value) => { try { localStorage.setItem(key, value); } catch { /* storage blocked: the choice lasts this page */ } };
   const of = appearance => ROTATION.filter(theme => theme.appearance === appearance);
   const dayPick = () => {
     const dark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
@@ -79,7 +95,7 @@ export function dayThemeScript(rotation: readonly DayTheme[]): string {
     const day = Math.floor((now.getTime() - now.getTimezoneOffset() * 60000) / 86400000);
     return choices[((day % choices.length) + choices.length) % choices.length];
   };
-  let pick = ROTATION.find(theme => theme.system === read()) || dayPick();
+  let pick = ROTATION.find(theme => theme.system === read(KEY)) || dayPick();
   if (!pick) return;
   const set = (el, name, value) => { if (value === null) el.removeAttribute(name); else el.setAttribute(name, value); };
   const body = document.body;
@@ -93,15 +109,36 @@ export function dayThemeScript(rotation: readonly DayTheme[]): string {
     set(body, 'data-chrome-stock', pick.stock);
     set(body, 'data-site-appearance', pick.appearance);
   };
-  // Switches to a random theme of the other appearance; the current theme
-  // never comes back on the same click.
+  // Each appearance has a shuffled deck: the switch deals its themes one at a
+  // time and reshuffles only once all have been shown, so every theme comes up
+  // before any repeats. The deck is kept with the choice, across pages.
+  let decks = {};
+  try { decks = JSON.parse(read(DECK) || '{}') || {}; } catch { decks = {}; }
+  const deal = appearance => {
+    const names = of(appearance).map(theme => theme.system);
+    let deck = (Array.isArray(decks[appearance]) ? decks[appearance] : []).filter(name => names.includes(name) && name !== pick.system);
+    if (deck.length === 0) {
+      deck = names.filter(name => name !== pick.system);
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      // A new deck never opens with the theme the last one ended on.
+      const last = decks[appearance + '-last'];
+      if (deck.length > 1 && deck[0] === last) deck.push(deck.shift());
+    }
+    const name = deck.shift();
+    decks[appearance] = deck;
+    decks[appearance + '-last'] = name;
+    write(DECK, JSON.stringify(decks));
+    return ROTATION.find(theme => theme.system === name);
+  };
   const toggle = () => {
-    const list = of(pick.appearance === 'dark' ? 'light' : 'dark').filter(theme => theme.system !== pick.system);
-    const next = list[Math.floor(Math.random() * list.length)];
+    const next = deal(pick.appearance === 'dark' ? 'light' : 'dark');
     if (!next) return;
     pick = next;
     window.bbxDayTheme.theme = pick;
-    write(pick.system);
+    write(KEY, pick.system);
     show();
     apply(document);
   };
