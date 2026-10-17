@@ -1,9 +1,9 @@
 ---
 title: "Retrieval practice in tutoring updates the progress card; a miss gets a cited explanation"
 workstream: unattached
-area: beebox
+area: courseware
 needs: [design]
-labels: [courseware, competitive-research]
+labels: [competitive-research]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-notebooklm-research — comparing Gemini Notebook's quiz loop with courseware
@@ -42,3 +42,9 @@ is the practice that feeds it.
 
 Spaced review and numeric mastery stay rejected
 (`courseware-phase1.md:205, 431`); this is practice, not scheduling.
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.

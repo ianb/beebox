@@ -17,7 +17,7 @@ walk a folder said "Content, 3 items" with 13 entries inside. In the
 F-newcomer walk the badge said 3 todos on the plate while the card said "4
 open". Each number is correct for a different set. Reports:
 [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 54),
-[D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 11),
+[D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 11),
 [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 22, 29).
 
 ## Mechanism

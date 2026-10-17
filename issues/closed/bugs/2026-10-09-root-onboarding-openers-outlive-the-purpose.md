@@ -54,9 +54,9 @@ Related: [landmark arrival](../../../beebox/docs/implemented-plans/landmark-arri
 (Track B introduced the fading openers);
 [first-screen-says-nothing-about-what-this-is](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
 
-Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 45,
+Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 45,
 [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 12,
 [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R9,
 [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R6,
 [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) R5,
-[D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R4.
+[D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) R4.

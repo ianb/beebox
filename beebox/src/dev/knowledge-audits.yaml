@@ -6355,6 +6355,11 @@ tests:
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + courseware plugin skill) ===
   #
+  # 2026-10-17: test1 no longer activates courseware and has no course. Run
+  # these against a disposable test1 copy that lists `courseware` under
+  # `plugins` in `_config/box.json` and has the plugin's stubs (setup in
+  # src/plugins/courseware/README.md). Plain test1 has no courseware skill.
+  #
   # Status (2026-10-10): revised for the courseware plugin move
   # (docs/implemented-plans/plugins.md, Track 5) and not rerun since. The skill is now
   # `courseware` (mirrored to .claude/skills/courseware/ while the plugin is

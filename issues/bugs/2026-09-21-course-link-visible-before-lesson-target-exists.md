@@ -1,7 +1,7 @@
 ---
 title: "A new course exposes a Lesson Plan link before its target exists"
 workstream: unattached
-area: beebox
+area: courseware
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey D authoring timeline
@@ -25,7 +25,7 @@ from a Git commit. The target appears in the first course commit `b93bf20`.
 The final reference is correct; the authoring sequence exposed an incomplete
 set of linked files to a person who was already navigating it.
 
-Evidence: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+Evidence: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
 notes 8 and 10. The retained run is `D-chemistry-2026-09-21`; transcript tool
 IDs `toolu_01YERQrSM3fdKZi4TcWPgi6g` and `toolu_018zfcL6WQ5m7ETD7s1KyqYK`
 identify the writes. No product change was made.
@@ -33,3 +33,14 @@ identify the writes. No product change was made.
 A safer authoring order or a visible in-progress state could address this.
 This evidence does not establish a need for transactional filesystem machinery.
 Related: [no visible in-progress document edit state](2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md).
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.
+
+The write order comes from the course build, which writes the course
+manifest before its parts. The fix is an authoring order in the courseware
+skill. The general need, a visible sign that a card is still being written,
+stays with the related core issue linked above.

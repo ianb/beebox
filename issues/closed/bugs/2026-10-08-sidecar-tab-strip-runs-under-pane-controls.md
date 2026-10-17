@@ -24,4 +24,4 @@ Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-1
 
 ## Re-encounter 2026-10-09 (journey walks)
 
-Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show only "×". [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 42, shot 19): the "Box" tab shows only its close button. [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 41, shots 14, 15, 17): the Box and briefing tabs show only "×".
+Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show only "×". [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (row 42, shot 19): the "Box" tab shows only its close button. [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 41, shots 14, 15, 17): the Box and briefing tabs show only "×".
