@@ -67,9 +67,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     lazy var preferences = PreferencesWindowController(
         boxStore: boxStore,
         hosting: hosting,
+        runtime: runtime,
+        updates: updates,
         uploadFolders: uploadFolders,
         uploads: uploads
-    )
+    ) { [runtime, uploads] in
+        Uninstaller.run {
+            await runtime.stop()
+        } revokeScanTokens: {
+            await uploads.revokeAllScanTokens()
+        }
+    }
 
     private var termSource: DispatchSourceSignal?
 
@@ -147,59 +155,48 @@ struct BoxMenu: View {
     let quit: () -> Void
 
     var body: some View {
+        Button("Preferences…") { preferences.show(.boxes) }
+            .keyboardShortcut(",")
+        Button("Pair with a Box…") { preferences.startPairing() }
+        Divider()
         let remoteBoxes = boxStore.boxes.filter { !$0.hostedLocally }
         if remoteBoxes.isEmpty && !hosting.enabled {
             Text("No boxes paired")
         }
         ForEach(remoteBoxes) { box in
-            Button("\(box.label) — Open") { NSWorkspace.shared.open(box.baseURL) }
+            Button("Open \(box.label)") { NSWorkspace.shared.open(box.baseURL) }
         }
         if !uploadFolders.folders.isEmpty {
             Divider()
+            Text("Watched Folders")
             ForEach(uploadFolders.folders) { folder in
-                Button("\(folder.photosAlbum.map { "Photos “\($0.title)”" } ?? folder.folder.lastPathComponent): \(UploadStatusText.line(for: uploads.statuses[folder.id]))") {
-                    preferences.show(.uploads)
+                Menu("\(WatchedFolderText.name(folder)) — \(UploadStatusText.line(for: uploads.statuses[folder.id]))") {
+                    Button("Show in Finder") { NSWorkspace.shared.open(folder.folder) }
+                    Button("Send New Files Now") { Task { await uploads.sweepAll() } }
+                    Button("Watched Folder Settings…") { preferences.show(.watched) }
                 }
             }
         }
         if hosting.enabled {
             Divider()
-            Text("This Mac: \(runtime.statusText)")
+            Text("Box on this Mac: \(runtime.statusText)")
             ForEach(runtime.timingLines, id: \.self) { Text($0) }
-            if !runtime.memorySummary.isEmpty {
-                Text(runtime.memorySummary)
-            }
             if case .running(let url) = runtime.phase {
-                Button("This Mac — Open") { NSWorkspace.shared.open(url) }
+                Button("Open Box on this Mac") { NSWorkspace.shared.open(url) }
                 if let setup = runtime.firstRunSetupURL {
                     Button("Open First-Run Setup") { NSWorkspace.shared.open(setup) }
                 }
-                Button("Stop") { Task { await runtime.stop() } }
-            } else if runtime.phase == .stopped || runtime.isFailedPhase {
-                Button("Start") { runtime.start() }
             }
-            Button("Show Box Folder") { NSWorkspace.shared.open(Paths.box) }
-            Button("Show Box Log") { NSWorkspace.shared.open(Paths.log) }
+            Button("Show Box Files") { NSWorkspace.shared.open(Paths.box) }
+            if runtime.isRunning {
+                Button("Stop Box") { Task { await runtime.stop() } }
+            } else if runtime.phase == .stopped || runtime.isFailedPhase {
+                Button("Start Box") { runtime.start() }
+            }
         }
-        Divider()
-        Button("Pair with a Box…") { preferences.startPairing() }
-        Button("Preferences…") { preferences.show(.boxes) }
-            .keyboardShortcut(",")
-        Button("Show App Log") { NSWorkspace.shared.open(Paths.appLog) }
         Divider()
         if let version = updates.available {
             Button("Update to Bee Box \(version)…") { updates.checkForUpdates() }
-        }
-        Button("Check for Updates…") { updates.checkForUpdates() }
-            .disabled(!updates.enabled)
-        Text("Bee Box \(BundleConfig.version)")
-        Divider()
-        Button("Uninstall Bee Box…") {
-            Uninstaller.run { [runtime] in
-                await runtime.stop()
-            } revokeScanTokens: { [uploads] in
-                await uploads.revokeAllScanTokens()
-            }
         }
         Button(runtime.isRunning ? "Stop Box and Quit" : "Quit Bee Box") { quit() }
     }

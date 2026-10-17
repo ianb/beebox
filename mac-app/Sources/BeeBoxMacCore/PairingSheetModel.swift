@@ -30,12 +30,16 @@ public final class PairingSheetModel: ObservableObject {
         case paired(label: String)
     }
 
-    public static let helpText = "On your box, open Settings, choose Create QR, then Copy Link."
+    public static let helpText = "On your box, open Settings, choose Copy Link (Mac) under Companion Apps, then paste the link here."
 
     @Published public var text = "" {
         didSet { if text != oldValue { reparse() } }
     }
     @Published public private(set) var state: State = .empty
+    /// A pairing link found on the clipboard, offered rather than pasted: the
+    /// person chooses to use it.
+    @Published public private(set) var clipboardOffer: Preview?
+    private var offeredText: String?
 
     private var link: PairingLink?
     private let pair: (PairingLink) async -> PairResult
@@ -44,11 +48,23 @@ public final class PairingSheetModel: ObservableObject {
         self.pair = pair
     }
 
-    /// Fills the field from the clipboard when it holds a pairing link; leaves
-    /// the field alone otherwise, so unrelated clipboard text never appears.
-    public func fill(fromPasteboard string: String?) {
-        guard let string, Self.parse(string) != nil else { return }
-        text = string.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// Offers the clipboard's pairing link, if it holds one. Unrelated
+    /// clipboard text is never shown.
+    public func offer(fromPasteboard string: String?) {
+        guard let string, let link = Self.parse(string) else {
+            clipboardOffer = nil
+            offeredText = nil
+            return
+        }
+        offeredText = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        clipboardOffer = Self.preview(link)
+    }
+
+    /// Puts the offered clipboard link in the field.
+    public func useClipboardOffer() {
+        guard let offeredText else { return }
+        text = offeredText
+        clipboardOffer = nil
     }
 
     public var canAdd: Bool {
