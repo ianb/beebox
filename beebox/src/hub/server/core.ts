@@ -49,6 +49,7 @@ import { HASHED_ASSET_STATIC_OPTIONS } from "../../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../../webapp/base-prefix.js";
 import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { hasScanAuth } from "./scan-gate.js";
+import { verifyAgentBearer } from "../../core/agent/token.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -482,7 +483,10 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // through to the wall below, which 401s it.
     const scanAuthed = slug !== null
       && await hasScanAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers, reqPath, slug });
-    const perBoxAuthed = mobileAuthed || scanAuthed;
+    // The box's own agent token (`core/agent/token.ts`), verified against that
+    // box: a `bbx` command pointed at the hub URL instead of the child's port.
+    const agentBoxRoot = slug === null ? undefined : boxRootBySlug.get(slug);
+    const perBoxAuthed = mobileAuthed || scanAuthed || (agentBoxRoot !== undefined && verifyAgentBearer(agentBoxRoot, request.headers.authorization));
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), isWebhook, hubSecret, openAccess });

@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-points-at-ui — verifying bbx chat ui by hand
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("Hub accepts a box's agent token"). The hub's catch-all wall now accepts the agent bearer, verified against the named box's `.beebox/agent-token`, and proxies it with no identity headers, like a mobile token. Checked through the dev router: the reported request now reaches the box route (504 `no-client`, since no browser was attached), and a wrong token is still 401. The WebSocket upgrade path does not accept it; `bbx` commands use HTTP. Regression section in `beebox/test/hub/server.auth.doctest.md`.
 
 Running `bbx chat ui` (and by the same path, `bbx chat screenshot`) with
 `BBX_SERVER_URL=http://localhost:3210/<worktree>` returns `401 Not
