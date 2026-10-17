@@ -9,8 +9,9 @@ issues:
 # Bee Box for Mac as a shell around a box
 
 This plan grows `mac-app/` from a menu-bar launcher for one local VM box into
-a shell around any box. The shell shows a box's web app in its own window,
-pairs with a remote box through a pasted link, and absorbs the folder watching
+a shell around any box. The shell has no window of its own: it opens a box's
+web app in the default browser, pairs with a remote box through a pasted link
+so that its native features hold a credential, and absorbs the folder watching
 that `scan-uploader` and its launchd agent do today. Hosting a box locally
 becomes one option, not a requirement. A new Swift package holds the code the
 iOS app and the Mac app share, and it gives that code tests that run without
@@ -18,7 +19,7 @@ a simulator.
 
 **Issues addressed:**
 - [Mac companion app](../../../issues/features/2026-10-07-mac-companion-app.md),
-  in part: this plan covers pairing, the web app window, the scanner and
+  in part: this plan covers pairing, the box menu, the scanner and
   Photos upload, and the local box. Input (global shortcut, voice,
   selections) and the quick-drop entry stay open under that issue.
 - [iOS pairing-flow robustness](../../../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md),
@@ -27,7 +28,7 @@ a simulator.
   open with a note, so the finish skill must not close it; it is listed so the
   note gets written.
 - Related, not addressed: [an unreachable box shows a blank screen](../../../issues/bugs/2026-09-12-ios-unreachable-box-shows-a-blank-screen.md)
-  (the Mac web view needs the same overlay; Track D reuses its classification),
+  (the Mac has no web view this round, so the overlay does not apply),
   [engine updates without an app release](../../../issues/features/2026-10-10-mac-app-engine-updates-without-app-release.md),
   [device tokens have no expiry](../../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md)
   (a Mac adds one more long-lived device token; no change in kind).
@@ -37,27 +38,31 @@ a simulator.
 No design section yet for the whole plan. Tracks A–C change no surface a
 person sees except the iOS pairing error message, which restores
 already-decided behavior (the robustness issue asks for it). Tracks D–G add
-new surfaces (the window, the pairing sheet, the uploader settings, the Photos
-permission flow). Before Track D starts, bbx-design writes
+new surfaces (the box menu, the pairing dialog, the uploader settings, the
+Photos permission flow). Before Track D starts, bbx-design writes
 `mac-app-shell.design.md` for those surfaces. The decisions already made by
 the boxholder (anchor issue, "Decisions (boxholder, 2026-10-07)", and
 2026-10-17 in this workstream) are the inputs:
 
-- Wrap the web app, as the iOS app does.
+- The web app stays in the browser. No web-view window for now (boxholder,
+  2026-10-17: "no window at all, only web access"). This narrows the anchor
+  issue's "wrap the web app" for this round.
 - One shared layer, not two codebases.
 - Pairing is by link, copied and pasted. The iPhone does not get a paste
   option (2026-10-17).
-- The app can host a box locally, but does not have to.
+- The app can host a box locally, but does not have to. Hosting is off by
+  default, and with it off the app downloads nothing for it (boxholder,
+  2026-10-17).
 - The ScanSnap folder upload and the Photos album export move into the app
   (2026-10-17).
 - The Clerk extension and the iOS input shell do not change.
 
 ## Smallest fix and budget
 
-The smallest change that delivers "pair the Mac app with a remote box and see
-it" is Track D alone: a `Window` scene with a `WKWebView`, a paste sheet, and a
-copy of the iOS pairing code. That is about 400 lines, and it creates the
-second codebase the boxholder ruled out.
+The smallest change that delivers "pair the Mac app with a remote box and open
+it" is Track D alone: a paste dialog, a box list in the menu, and a copy of the
+iOS pairing code. That is about 250 lines, and it creates the second codebase
+the boxholder ruled out.
 
 The chosen design, by track (source + test lines, additions plus deletions;
 moved code counts on both sides):
@@ -67,23 +72,19 @@ moved code counts on both sides):
 | A. Shared package, pairing link and redeem | 250 | 250 | iOS adopts it; `project.pbxproj` about 30 |
 | B. One command runs Apple tests; finish runs it | 150 | 40 | `bin/` script + preflight group |
 | C. Paired-box store moves to the package | 750 (moved) | 150 | `PairedBoxStore`, credential store, `PairedBox`, bearer construction |
-| D. Mac window, paste pairing, `beebox:` links | 600 | 150 | |
+| D. Box menu, paste pairing, `beebox:` links | 300 | 100 | no web view |
 | E. Scanner folder upload in Swift | 700 | 500 | ports the `scan-uploader` doctest cases |
 | F. Photos album export with PhotoKit | 300 | 150 | |
-| G. Local box as one entry in the shell | 250 | 50 | |
+| G. Local box optional, one entry in the menu | 200 | 50 | |
 | Docs | about 300 | | contract docs, AGENTS/README |
 
-Total about 4,600 lines: **BIG CHANGE.** The size comes from three things the
+Total about 4,250 lines: **BIG CHANGE.** The size comes from three things the
 boxholder asked for: a shared layer (C is mostly moved code), a Swift
 reimplementation of the scan client (E), and a PhotoKit exporter to replace
 `osxphotos` (F). Each track ships nothing on its own; the plan lands as one
 piece.
 
-The boxholder approved planning and incremental implementation for this
-workstream. This plan asks for one more decision: approval of the full scale,
-or approval of Tracks A and B (about 700 lines) now with the rest re-estimated
-after them. A and B make no Mac change and are useful even if the rest
-changes.
+The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
 
 ## Stated preferences this plan trades against
 
@@ -159,8 +160,9 @@ changes.
   to move into the app.
 - **Web view auth**: `ios-app/BeeBox/Views/ChatWebView.swift:1156-1170` attaches
   `Authorization: Bearer` to the first request, and the box answers with the
-  `bbx_mobile` cookie. **Reuse** the same request builder on macOS (moved to the
-  package in Track D).
+  `bbx_mobile` cookie. **Not reused** this round: the Mac opens boxes in the
+  browser and has no web view. The bearer header for its own API calls comes
+  from `BoxRequest.swift:27`.
 - **Local box runtime**: `mac-app/Sources/BeeBoxMac/BoxRuntime.swift` (phases
   `stopped / working / running(URL) / failed`, served on `localhost:3280`).
   `BEEBOX_PORT` overrides the default port (`BoxRuntime.swift:39-45`).
@@ -327,47 +329,42 @@ changes.
   construction (no dependencies), update the anchors, and run the iOS build
   and tests. This happens as the first chunk of D needs them.
 
-### D. The Mac window, paste pairing, and `beebox:` links
+### D. The box menu, paste pairing, and `beebox:` links
 
-- **What**: the Mac app gets a `Window` scene that shows the selected paired
-  box's web app in a `WKWebView`. The app gets a "Pair with a Box…" sheet and a
-  box list in the menu. It registers the `beebox` URL scheme.
-- **Why this needs to change**: today the app can only open its local box in
-  the browser (`BeeBoxMacApp.swift:78`) and cannot pair with anything.
+- **What**: the menu lists the paired boxes. "Open <label>" opens the box's web
+  app in the default browser. "Pair with a Box…" opens a small pairing dialog.
+  The app registers the `beebox` URL scheme. There is no web-view window
+  (boxholder, 2026-10-17).
+- **Why this needs to change**: today the app knows only its local box
+  (`BeeBoxMacApp.swift:78`) and cannot pair with anything, so it has no
+  credential for scan and Photos upload to a remote box.
 - **Direction**:
-  - The sheet reads the pasteboard when it opens. If the pasteboard holds a
-    `beebox://pair` link, the sheet fills it in; otherwise it shows a field.
-    The sheet always shows the host and label and asks "Add this box?" before
-    it redeems. This closes the confirmation gap from the robustness issue on
-    the Mac.
-  - A `beebox://pair` link opened from the browser goes to the same sheet,
+  - The dialog reads the pasteboard when it opens. If the pasteboard holds a
+    `beebox://pair` link, the dialog fills it in; otherwise it shows a field.
+    The dialog always shows the host, label and scheme and asks "Add this
+    box?" before it redeems. This closes the confirmation gap from the
+    robustness issue on the Mac.
+  - A `beebox://pair` link opened from the browser goes to the same dialog,
     through one entry point.
   - The device label is `Host.current().localizedName`.
-  - The web view loads the ordinary `<baseURL>/chat`, with the bearer header
-    on the first request (the shared bearer construction from C). It must
-    NOT use `PairedBox.chatURL`, which adds `nativeComposer=1` and hides the
-    web composer (`PairedBox.swift:47-55`); the Mac has no native composer,
-    so the web composer is the only one. A test asserts the Mac URL has no
-    `nativeComposer` item.
-  - It reuses the unreachable-box classification from the 2026-09-12 fix, so
-    a failed load shows what failed and offers a retry.
-  - The Mac shell injects no native bridge: input is out of scope, so the
-    page runs as plain web.
-  - Transport policy is App Transport Security with `NSAllowsLocalNetworking`,
-    the same Info.plist setting as iOS (`ios-app/BeeBox/Info.plist:45-48`):
-    https anywhere. `NSAllowsLocalNetworking` permits http to any IP address,
-    so ATS alone is not the boundary. `PairingLink.allowsPlainHTTP` checks the
-    host before the redeem: http is accepted only for loopback, `.local`
+  - "Open <label>" opens `<baseURL>/` with `NSWorkspace.shared.open`. The
+    browser uses its own login; the device token never goes to the browser.
+  - Transport policy: `PairingLink.allowsPlainHTTP` checks the host before the
+    redeem. https is accepted anywhere; http only for loopback, `.local`
     names, and private or link-local addresses (10/8, 172.16/12, 192.168/16,
     100.64/10 for Tailscale, 169.254/16, fc00::/7, fe80::/10). Any other http
-    link is refused with a message. Table-driven tests cover each range and
-    a public IP. The confirmation sheet shows the scheme, and says "not
+    link is refused with a message. Table-driven tests cover each range and a
+    public IP. The Info.plist sets `NSAllowsLocalNetworking`, as iOS does
+    (`ios-app/BeeBox/Info.plist:45-48`); ATS alone is not the boundary,
+    because that key permits http to any IP address. The dialog says "not
     encrypted" for http.
-  - The app keeps `LSUIElement` and adds a Dock icon only while the window is
-    open (`NSApp.setActivationPolicy(.regular)` on open, `.accessory` on
-    close).
-- **Vocabulary lock-ins**: menu titles "Pair with a Box…",
-  "Open <label>".
+  - A paired box whose device token the box refuses (401) shows "Pair again"
+    in its menu entry.
+  - The pairing dialog is a small `Window` scene; while it is open the app
+    shows a Dock icon (`NSApp.setActivationPolicy(.regular)`), and `.accessory`
+    again when it closes. Text fields in an `LSUIElement` app need that to take
+    keyboard focus reliably.
+- **Vocabulary lock-ins**: menu titles "Pair with a Box…", "Open <label>".
 - **First implementation chunk**: written after the design doc; it must not
   start with an open question.
 
@@ -452,33 +449,40 @@ changes.
   menu-bar app, iCloud download, and HEIC conversion. The track is
   re-planned from what the spike finds.
 
-### G. The local box as one entry in the shell
+### G. The local box: optional, and one entry in the menu
 
-- **What**: when the app hosts a box, that box appears in the box list and
-  opens in the shell window instead of the browser.
+- **What**: hosting becomes a setting. When it is on, the local box is one
+  entry in the box menu and opens in the browser as today.
 - **Why this needs to change**: the boxholder wants local hosting to be
   optional and "a small amount of code on top" (anchor issue). Today it is the
-  app's only function.
+  app's only function: `applicationDidFinishLaunching` calls `runtime.start()`
+  unconditionally (`BeeBoxMacApp.swift:35`), which pulls the vminit and beebox
+  images on first launch (`mac-app/README.md`, "What the app uses").
 - **Direction**:
-  - Hosting becomes a setting ("Run a box on this Mac"), off by default for
-    a new install. When the setting is on, `BoxRuntime` starts at launch as
-    today.
+  - "Run a box on this Mac" is a setting, off by default. With it off the app
+    never constructs the container manager, never pulls an image, and creates
+    nothing under `runtime/`. Turning it on starts `BoxRuntime` as today;
+    turning it off stops the box and leaves the downloaded image in place. A
+    "Remove downloaded box image" item frees the space.
+  - Transition: an install that already has a box (`~/BeeBox/<name>/.beebox/box.json`
+    exists) starts with the setting on, so an existing local box keeps
+    running after the update.
   - The local entry is a `PairedBox` with `hostedLocally = true` and no device
-    token. The web view uses the ordinary cookie login, and "Open First-Run
-    Setup" loads in the window.
+    token; its `baseURL` is the runtime's `running(URL)` value. "Open First-Run
+    Setup" stays as today.
   - Scanner upload to the local box needs a device token, so the boxholder
-    pairs the local box the same way as a remote one, by copying the link
-    from its settings page in the window. The shell intercepts navigation to
-    `beebox://pair` in its own web view, so a link clicked there pairs without
-    the clipboard.
-- **Vocabulary lock-ins**: `PairedBox.hostedLocally`.
-- **First implementation chunk**: written after D.
+    pairs the local box the same way as a remote one: "Copy Link" on its
+    settings page, then "Pair with a Box…".
+- **Vocabulary lock-ins**: `PairedBox.hostedLocally`; setting title "Run a box
+  on this Mac".
+- **First implementation chunk**: the setting and the launch gate, with a test
+  that the runtime is not constructed when the setting is off.
 
 ## Could this be simpler?
 
 - **Simplest version:** Track D alone, with the pairing and storage code copied
   into `mac-app/`, and keep `scan-uploader`'s launchd agent for scans. About
-  400 lines.
+  250 lines.
   - It fails the boxholder's "build a shared layer… rather than two separate
     codebases".
   - The copied pairing code would be a second untested copy.
@@ -490,8 +494,8 @@ changes.
   the uv/pipx install and Full Disk Access, which the move into the app is
   meant to remove. Track F's spike decides whether PhotoKit holds up. If it
   does not, the fallback is to shell out.
-- **Not done:** a native bridge on the Mac, a native composer, and multiple
-  local boxes. Each is deferred below.
+- **Not done:** a web-view window, a native bridge on the Mac, a native
+  composer, and multiple local boxes. Each is deferred below.
 
 ## Subplans
 
@@ -505,7 +509,7 @@ changes.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| A pasted link has no `baseURL` or no scheme | A: fixture tests | `parse` returns nil; the sheet says it is not a pairing link | Clear |
+| A pasted link has no `baseURL` or no scheme | A: fixture tests | `parse` returns nil; the dialog says it is not a pairing link | Clear |
 | The ticket expired or was used (401) | A: `redeem/error-401` | `PairingError.rejected` with the server message | Clear |
 | The box restarted and dropped the in-memory ticket | No | Same 401 path | Clear message, wrong cause; see NOT in scope |
 | The redeem response has no `token` | A: new case | `.malformedResponse` | Clear |
@@ -520,11 +524,10 @@ changes.
 | A standing error (folder unmounted, box down) | E | folder status, plus a mark on the menu-bar icon | Clear in the app; not notified |
 | The Photos permission is denied | F | export stops; the folder shows the reason | Clear |
 | An iCloud original fails to download | F | asset stays unexported and is retried next sweep | Clear in the sweep summary |
-| The remote box is unreachable in the window | D | the unreachable overlay | Clear |
+| The remote box is unreachable when the app calls it (mint, upload) | D, E | the menu entry and the folder status name the host | Clear |
 | Keychain write fails after a scan token mint | E | revoke at once, then report | Clear |
 | The paired box is removed with upload on | E | revoke the scan token first | Clear; a failed revoke is shown |
 | The Mac's device is revoked on the box, its scan token is not | No | listed by name in Scan uploaders | Visible on the box only; open question |
-| The Mac loads the iOS chat URL and hides the web composer | D: URL test | separate Mac request | Clear (test) |
 | The device token is revoked on the box | D, E | 401 → the box shows "Pair again" | Clear |
 
 ## Agent-flow / user-flow edge cases
@@ -539,7 +542,7 @@ changes.
   with the transport error (A).
 - **Fabricated value**: not applicable. No agent writes any of these values;
   they come from the box or the person.
-- **Validation error UX**: errors appear to a person in the sheet, not to an
+- **Validation error UX**: errors appear to a person in the dialog, not to an
   agent. Covered by the design doc for D.
 - **Transition state**: existing iOS installs keep their store file and
   Keychain item, because the iOS profile carries today's values (C). An
@@ -570,21 +573,16 @@ changes.
 
 ## Open design questions
 
-- **Hosting off by default for new installs (G).** Lean: off. The boxholder said
-  the shell "can start a box locally but doesn't have to"; a pairing-only user
-  should not download a VM image. An existing install keeps hosting on.
-- **Should the shell keep a Dock icon and Cmd-Tab entry while the window is
-  open (D)?** Lean: yes. Settle in the design doc.
 - **Revoking the Mac's device does not revoke its scan token (E).** Linking them
   needs a server-side association (the scan token records the device id, and
   `revokeDevice` revokes both): a schema change. Lean: not now. The token is
-  visible and revocable by name in Settings → Scan uploaders. Boxholder
-  decides.
+  visible and revocable by name in Settings → Scan uploaders. Decided
+  2026-10-17: accepted ("Scan token lifespan is fine").
 - **The Mac app requires macOS 26 even for pairing only.** `mac-app/Package.swift`
   sets `.macOS("26.0")` and `build-app.sh` writes `LSMinimumSystemVersion`
   26.0, because the VM framework needs it. A pairing-only user on an older Mac
   cannot run the shell. Supporting one means putting the VM code behind an
-  availability boundary. Lean: accept the 26 floor. The package's own floor
+  availability boundary. Decided 2026-10-17: accept the 26 floor. The package's own floor
   (14) changes nothing for users.
 
 ## Knowledge audits
@@ -597,8 +595,8 @@ are covered by the cross-model review instead.
 ## What will hold this after it ships
 
 - **`swift test`** is the main tier. In `apple-shared/`: pairing link and
-  redeem against the shared fixtures, and the store. In `mac-app/`: the Mac
-  web request, the pairing sheet state, and the scan sweep against a fake
+  redeem against the shared fixtures, and the store. In `mac-app/`: the pairing
+  dialog state, the hosting gate, and the scan sweep against a fake
   transport and temp folders. It needs no simulator, so it is cheap to run on
   every change. This is the new test tier for Apple code. It replaces nothing
   and sits below the existing simulator tier.
@@ -627,12 +625,12 @@ are covered by the cross-model review instead.
 2. B1: `bin/apple-test --package-only`, preflight group, tests.
 3. A2: iOS adopts the package (pbxproj), single-flight, `PairingOutcome`, error display. B1 gains `--ios`; run it.
 4. bbx-design: `mac-app-shell.design.md` for D–G; boxholder review.
-5. D with C: window, sheet, `beebox:` scheme. Each piece of C moves when D
+5. D with C: box menu, pairing dialog, `beebox:` scheme. Each piece of C moves when D
    first needs it (model and bearer first, then the store), with its
    contract-doc anchors.
 7. E: `ScanSweep`, then the Mac wiring, the scan token mint, coexistence, login item, notifications; contract doc lists the Swift client.
 8. F: spike with the boxholder, then PhotoKit export.
-9. G: hosting setting, local entry, in-web-view pairing link.
+9. G: hosting setting and launch gate, local entry.
 10. Docs: `mac-app/README.md`, `ios-app/AGENTS.md`, `scan-uploader/README.md`, `scan-upload-contract.md`; ACKNOWLEDGEMENTS not needed (nothing adopted from outside).
 
 ## Rollout shape
@@ -644,17 +642,17 @@ are covered by the cross-model review instead.
     `bin/apple-test` passes on this Mac.
   - **C:** the moved tests pass under `swift test`, and the iOS app builds
     and its suite passes.
-  - **D:** `swift test` covers the Mac web request (bearer on the first
-    request, no `nativeComposer`) and the pairing sheet's state (pasteboard
-    link, malformed text, confirm, each `PairingError`). One recorded
-    walkthrough exhibit against this worktree's test box: paste, confirm,
-    window loads, revoked device shows "Pair again", unreachable box shows the
-    overlay.
+  - **D:** `swift test` covers the pairing dialog's state (pasteboard link,
+    malformed text, http host policy, confirm, each `PairingError`). One
+    recorded walkthrough exhibit against this worktree's test box: paste,
+    confirm, the box appears in the menu and opens in the browser, a revoked
+    device shows "Pair again".
   - **E:** each ported scan-uploader case passes, plus missing folder, box
     offline, and credential refused, each shown in the folder status.
-  - **G:** a walkthrough exhibit: hosting on, first-run setup in the window,
-    pairing the local box by clicking the link in its own settings page, and
-    one run with `BEEBOX_PORT` set to show the entry follows it.
+  - **G:** a test that the runtime is not constructed with hosting off; a
+    walkthrough exhibit: a fresh state directory with hosting off downloads
+    nothing, turning hosting on starts the box, and one run with `BEEBOX_PORT`
+    set shows the entry follows it.
   - **F:** the spike's checks are recorded.
 - **No data migration on the box.** On the device, the iOS store file and
   Keychain item keep their names (C).
