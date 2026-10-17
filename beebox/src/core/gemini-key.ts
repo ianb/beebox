@@ -15,14 +15,15 @@
 import { resolveSecret, type SecretRead } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
-const GEMINI_SECRET_NAME = "gemini";
+export const GEMINI_SECRET_NAME = "gemini";
 
 /**
  * How a caller is spending this key. The `purpose` is stated by the CALLER
  * rather than fixed here because this key has two genuinely different spends —
  * describing a scan and answering a question about a recording — and a single
  * hardcoded label made the access log claim every audio question was vision
- * work. `observe: false` is the status-only probe (see `resolveSecret`).
+ * work. `observe: false` is a read that does not spend the key (see
+ * `resolveSecret`); an "is it configured?" check uses `secretIsResolvable`.
  */
 export interface GeminiKeyRead extends SecretRead {
   /** Matches `SECRET_PURPOSE_PATTERN` — it goes verbatim into the access log. */

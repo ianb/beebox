@@ -85,8 +85,10 @@ export interface ResolveSecretOptions {
   slug?: string;
   /**
    * Does this resolve count as USE? Omit (or `true`) for real work — the
-   * ordinary case. `false` is for a status-only probe: a health check asking
-   * "is this key configured?" resolves the value but never spends it.
+   * ordinary case. `false` is for a read that needs the value but does not
+   * spend it, such as picking a route before the real call resolves again. A
+   * check that only asks "is this key configured?" uses `secretIsResolvable`
+   * and never reaches the log.
    *
    * The split is deliberate and lands in two different places:
    *
