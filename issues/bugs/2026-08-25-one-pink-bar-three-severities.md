@@ -1,6 +1,6 @@
 ---
 title: "One pink bar flattens unrelated status and error states"
-workstream: unattached
+workstream: error-severity
 area: beebox
 labels: [journey-findings, ui-sensibility]
 filed-by: agent
@@ -56,3 +56,31 @@ so by evening's end the badge read 3+ with nothing wrong.
 
 Related: [implementation-vocab-leaks-into-ui](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
 (the wording of 1); the debug-log badge notes appended there on 2026-08-23.
+
+## Plan (2026-10-17, worktree-error-severity)
+
+Every source that reaches chat's status bar, by what it means for the person:
+
+| Source | What the person sees | Class |
+|---|---|---|
+| History failed to load (`fetchInitial` onError) | The conversation did not load | a — must act |
+| Send refused or failed before the box took it (`STREAM_FAILED`, `accepted: false`; includes the "not logged in" refusal) | Message got no answer | a |
+| The box reported the turn failed (`STREAM_ERROR`) or the run died (turn-stream `error` frame) | Message got no answer | a |
+| Legacy `STREAM_BUSY` | Message was dropped | a |
+| Native composer did not confirm a selection | Selection was not added | a |
+| Live turn stream dropped (subscription `onError`, e.g. "Active connection is not open"; stream ended with no result) | The live text stopped; the reply may still land | c if the reply lands, b while the box is still working, a if the box stopped with no reply |
+| Recording did not start (start timeout, setup error) | Nothing was recorded | a |
+| Live transcription lost during recording, transcription timeout, microphone interruption or loss | Recording kept going or kept its text | b (interruption already clears itself on recovery: c) |
+
+Change:
+
+1. Chat machine: a dropped turn stream becomes its own event. It does not set
+   `error`. The refresh that follows decides: the reply is in history → clear
+   with no banner; the box is still busy → a warning that the reply will
+   appear; the box is idle with no reply → an error that the box stopped
+   before answering.
+2. Transcription machine: each error carries a level (`error` or `warning`).
+3. The status bar renders errors in the existing danger style and warnings in
+   the existing `warning-50` style used by settings and voice notices.
+
+Not changed: wording of server refusals (their own copy; see the vocab issue).

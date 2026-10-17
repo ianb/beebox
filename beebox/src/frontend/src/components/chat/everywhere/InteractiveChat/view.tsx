@@ -271,6 +271,9 @@ function usePlaceChat(props: ChatBodyProps): PlaceChat {
   return useMemo(() => ({ contextDir, showsOwnOpeners, busy, sendOpener }), [contextDir, showsOwnOpeners, busy, sendOpener]);
 }
 
+/** The live reply stopped arriving while the box is still working on it. */
+const REPLY_LOST_WARNING = "Lost the live reply. It will appear here when the box finishes.";
+
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, nativeComposer } = props;
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
@@ -291,8 +294,8 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           <BackgroundTasks tasks={props.backgroundTasks} />
           <ScreenshotRequestUI controller={props.screenshots} />
           <ChatStatusBanners
-            error={nativeCommandError ?? error}
-            transcriptionError={voice.transcription.error}
+            error={nativeCommandError ?? error ?? (voice.transcription.errorLevel === "error" ? voice.transcription.error : null)}
+            warning={props.replyLost ? REPLY_LOST_WARNING : voice.transcription.errorLevel === "warning" ? voice.transcription.error : null}
             onDismissError={() => {
               if (nativeCommandError !== null) {
                 dismissNativeCommandError();
