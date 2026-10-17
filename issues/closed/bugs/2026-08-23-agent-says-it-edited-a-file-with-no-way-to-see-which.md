@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, twelve minutes into a first session
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("Chat edit lines link to the file they changed"). In a finished edit or new-file line ("Updated Theme Tour"), the file's name is a link that opens the card in the workspace beside the chat; the card's menu already offers View history. Boxholder chose the name link only, with no separate history link. Not covered: a change the agent makes through a shell command reads "took a step" and has no link. Checked in the worktree test box with a real Edit; regression cases in `beebox/src/frontend/test/components/chat.activity-wording.doctest.md`.
 
 **2026-10-17 status:** part 1 below is fixed by 72226e395 ("Chat: expanded activity lines name the thing and show what changed"). An edit row now names its object ("Updated Errands", "Made a change to Errands", with the folder in muted text), and a finished edit shows a short before/after excerpt. Part 2 remains: the row has no link to the card it changed or to that card's history (`activity-rendering.tsx` renders no link). This issue now tracks that route from chat to the change.
 
