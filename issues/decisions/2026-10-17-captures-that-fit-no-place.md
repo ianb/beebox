@@ -9,7 +9,7 @@ discovered-by: Ian
 discovered-in: worktree-fabric-research — planning how word-less captures get filed
 ---
 
-The [filing plan](../../beebox/docs/plans/file-wordless-captures.md) has the
+The [filing plan](../../beebox/docs/implemented-plans/file-wordless-captures.md) has the
 background agent read a phone capture that arrived with no words, give it a
 title and a description, and move it to the landmark whose `destinations`
 fit. When none fits, the plan's interim behavior leaves the titled capture in

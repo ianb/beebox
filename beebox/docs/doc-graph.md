@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-17T17:51:58Z
-Total documents: 537
+Generated: 2026-10-17T23:51:44Z
+Total documents: 540
 
 ## Issues
 
@@ -262,6 +262,7 @@ Referenced by:
 - docs/plans/general-browser.md:78 (mention) — - `AGENTS.md` (monorepo root) — the dev-page casualness carve-out applies to
 - docs/plans/ios-companion-app.md:29 (mention) — - `beebox/AGENTS.md` — the tRPC-vs-raw-Fastify boundary (`AGENTS.md`: *"Raw Fastify routes … are only for … file upload/
 - docs/plans/ios-input-plane-parity.md:31 (mention) — - `AGENTS.md`: keep the change scoped to the native input plane and its bridge;
+- docs/plans/mac-app-shell.md:297 (mention) — The script is TypeScript with a thin loader, per root `AGENTS.md`.
 - docs/plans/operator-member-password-reset.md:87 (mention) — - **HTTP route boundary.** `AGENTS.md` says: *“HTTP endpoints go in tRPC by
 - docs/plans/prompt-surface-cleanup-evaluation.md:394 (mention) — section files, `@`-included into AGENTS.md; **every box agent loads it**
 - docs/plans/public-site-box-authoring-export.md:71 (mention) — - **The box workbench spaces now exist.** The authoring box's `AGENTS.md` defines
@@ -317,7 +318,6 @@ Referenced by:
 - ../issues/AGENTS.md:250 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
 - ../issues/bugs/2026-09-28-knowledge-audit-later-tests-lose-generated-guidance.md:29 (mention) — `AGENTS.md` includes and generate context mirrors without committing them.
 - ../issues/bugs/2026-10-09-codex-title-runs-keep-tools-and-box-context.md:20 (mention) — - `runCodexAgent` always expands the box `AGENTS.md` into the system prompt
-- ../issues/bugs/2026-10-09-knowledge-audit-read-matcher-misses-cd-and-variable-paths.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 - ../issues/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -336,6 +336,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-09-27-file-watcher-doctest-stale-box-listing.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:42 (mention) — - `ensureAgentContext` (`:411`), which writes `AGENTS.md`, the
+- ../issues/closed/bugs/2026-10-09-knowledge-audit-read-matcher-misses-cd-and-variable-paths.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 - ../issues/closed/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:2 (mention) — title: "Landmark chats exclude the box's own root AGENTS.md and rules since the host-isolation fix"
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -417,6 +418,7 @@ Referenced by:
 - ../research/claude-elixir-phoenix/README.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/claude-elixir-phoenix/enforcement-and-hooks.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/external-skills-harvest.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- ../research/fabric-review.md:3 (link) — *Reviewed 2026-10-17 from public material only: fabric.so feature, guide, pricing, privacy, terms, connections and chang
 - ../research/gstack/README.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/gstack/notes/design-consultation.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/gstack/notes/design-shotgun.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -729,6 +731,7 @@ Referenced by:
 - ../dev/devprocess-talk/slides/index.md:3 (link) — Draft deck for the development-practice talk; one file per slide. Main slides are numbered, supporting slides carry a le
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:17 (mention) — **Place chats are skipped.** A place chat writes to a different transcript directory (for example `…--content-inventory`
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:125 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
+- ../issues/closed/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("vibe-init writes a .madgerc that skips type imports"). `vibe
 - ../issues/closed/decisions/2026-08-19-bee-box-rename.md:27 (mention) — moved to Discord, and `README.md` links the Bee Box server there.
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:22 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:83 (mention) — root `CLAUDE.md`, so nothing moved into `CLAUDE.md`. The root `README.md`
@@ -1131,6 +1134,7 @@ Referenced by:
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:57 (mention) — > has 64 files and none in the USE genre — `connectors.md` explains the
 - ../issues/features/2026-10-08-cross-tool-todo-as-a-target-use-case.md:35 (mention) — the connector pattern (`beebox/docs/connectors.md`).
+- ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 - ../research/imbue-studio/comparison.md:197 (mention) — **What Bee Box has.** Connectors sync into cards and commit (`docs/connectors.md`);
 
 References:
@@ -1258,6 +1262,7 @@ Referenced by:
 - docs/implemented-plans/exhibit-comments.md:66 (mention) — - `beebox/docs/engineering-principles.md` **8** (one way to do each thing):
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/file-layout.md:50 (mention) — (`docs/engineering-principles.md:87-93`): *"a cluster that encodes its
+- docs/implemented-plans/file-wordless-captures.md:104 (mention) — - `beebox/docs/engineering-principles.md`: reuse over new machinery. The plan adds no card type, no capture state and no
 - docs/implemented-plans/hq-dictation-switch.md:29 (mention) — `docs/engineering-principles.md` #8: no new attribute, no new registry —
 - docs/implemented-plans/hub-healthz-box-aggregation.md:32 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
 - docs/implemented-plans/ios-audio-session-routing.md:34 (mention) — - `beebox/docs/engineering-principles.md:49` — **4. Resilient AND never
@@ -1508,7 +1513,7 @@ Referenced by:
 - docs/guides.md:11 (link) — | Installing beebox: Docker, from source, with an agent | [install](install.md) |
 - docs/implemented-plans/doc-structure-install-server.md:75 (mention) — | (new) | `install.md`: which path for whom; what every path shares |
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
-- ../issues/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — ts,tsx src/"` into every project it bootstraps (`install.md`, and its own
+- ../issues/closed/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("vibe-init writes a .madgerc that skips type imports"). `vibe
 
 References:
 - → docs/install/docker.md (link)
@@ -1573,7 +1578,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1881 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1895 lines | current reference
 
 Referenced by:
 - AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1585,6 +1590,7 @@ Referenced by:
 - docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
 - docs/implemented-plans/doc-structure.md:237 (mention) — are cited by number (`mobile-contract.md`).
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
+- docs/implemented-plans/file-wordless-captures.md:243 (mention) — 4. Reference docs: `beebox/docs/mobile-contract.md` ("Material without authored input is saved without inventing an agen
 - docs/implemented-plans/ios-log-forwarding.md:56 (mention) — machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
 - docs/implemented-plans/ios-per-box-device-lock.md:265 (mention) — no `docs/mobile-contract.md` change because nothing crosses the wire. Commits
 - docs/implemented-plans/ios-quick-chat-hq.md:121 (mention) — `docs/mobile-contract.md` §4.2): the engine that produced HQ text. New on
@@ -1612,7 +1618,9 @@ Referenced by:
 - docs/plans/invite-links-and-password-change.md:126 (mention) — `mobile-contract.md` change is required.
 - docs/plans/ios-input-plane-parity.md:95 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - docs/plans/ios-share-extension-capture.md:52 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/BeeBox/Services/LogForwarder.swift:283` posts to `t
+- docs/plans/mac-app-shell.md:211 (mention) — `beebox/docs/mobile-contract.md` §1.1.
 - docs/plans/workspace-pane-controls.md:84 (mention) — | `docs/mobile-contract.md:285-290`: attention carries “focusedRef, and visible/hidden transcript”; “ordinary route move
+- docs/triage.md:28 (link) — ([mobile contract](mobile-contract.md), quick capture; `src/core/quick-capture/filing.ts`).
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:21 (mention) — The boxholder requires the setting to work on iOS. The existing mobile contract requires web/native wire changes to upda
 - ../.claude/skills/bbx-ios-overlap/SKILL.md:13 (mention) — The reference is `beebox/docs/mobile-contract.md`: §7 Contract Surface Index,
 - ../AGENTS.md:9 (link) — - **Native iOS companion:** [ios-app/AGENTS.md](ios-app/AGENTS.md). It shares an [HTTP/bridge contract](beebox/docs/mobi
@@ -1633,6 +1641,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:23 (mention) — (contract row S3 in `docs/mobile-contract.md` §5.5), which belongs with the
 - ../issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md:54 (mention) — ceiling). `docs/mobile-contract.md` carries the shared statement of the rule
 - ../issues/closed/bugs/2026-09-12-non-owner-cannot-see-or-revoke-their-own-paired-device.md:50 (mention) — `beebox/docs/mobile-contract.md` §1.2.
+- ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md:17 (mention) — (`beebox/src/core/quick-capture/source.ts:28-35`; `beebox/docs/mobile-contract.md`,
 - ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:14 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
 - ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:27 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md:78 (mention) — (`docs/mobile-contract.md` §8 and the iOS mirror updated with it).
@@ -1653,7 +1662,7 @@ Referenced by:
 - ../issues/features/2026-09-28-private-chat-sessions-search-gating.md:21 (mention) — (`docs/mobile-contract.md` §2.3), so shared boxes with distinct identities
 - ../issues/features/2026-09-29-tailscale-onboarding-without-auth-key.md:41 (mention) — (`beebox/docs/mobile-contract.md` §1.1).
 - ../issues/features/2026-10-06-ios-on-device-hq-transcription.md:16 (mention) — (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
-- ../issues/features/2026-10-07-mac-companion-app.md:28 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
+- ../issues/features/2026-10-07-mac-companion-app.md:30 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
 - ../issues/features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md:35 (mention) — (`beebox/docs/mobile-contract.md`) should also count, since a contract change
 - ../research/installable-app/tailscale.md:103 (mention) — (`beebox/docs/mobile-contract.md` §1.1). A box-owned node gives that URL a
 - ../research/omi-review.md:175 (link) — as our [mobile contract](../beebox/docs/mobile-contract.md) drift table.
@@ -1709,13 +1718,14 @@ Referenced by:
 - docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:48 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:389 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
-- docs/mobile-contract.md:982 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:985 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:76 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
 - ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:375 (mention) — - **Lives in:** `beebox/src/shared/agent-models.ts`, `beebox/src/shared/model-ids.ts`, `beebox/src/shared/chat-models.ts
 - ../issues/closed/bugs/2026-10-06-third-party-engine-privacy-telemetry-and-security-report.md:45 (mention) — `beebox/docs/model-policy.md:175-177`). Host choice, training, and retention
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:72 (mention) — (`docs/model-policy.md`). [medium]
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:35 (mention) — an unpinned box uses the strong tier (`docs/model-policy.md`).
+- ../research/fabric-review.md:77 (mention) — - **Data and cost.** Plain files on the person's host, git, `bbx`; the person's own model subscription and keys (`beebox
 - ../research/imbue-studio/comparison.md:17 (mention) — | Model switching | Provider = harness; same-harness account rebind restarts the agent; cross-harness switch is a summar
 
 References:
@@ -1918,7 +1928,7 @@ References:
 
 #### docs/scan-upload-contract.md
 
-Title: "Scan Upload Wire Contract" | 267 lines | current reference
+Title: "Scan Upload Wire Contract" | 272 lines | current reference
 
 Referenced by:
 - docs/guides.md:53 (link) — | Scan upload wire contract | [scan-upload-contract](scan-upload-contract.md) |
@@ -1927,12 +1937,13 @@ Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:42 (mention) — Docs reported separately: `docs/scan-upload-contract.md` (the version's
 - docs/implemented-plans/scanner-ingest.md:280 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
+- docs/plans/mac-app-shell.md:633 (mention) — 10. Docs: `mac-app/README.md`, `ios-app/AGENTS.md`, `scan-uploader/README.md`, `scan-upload-contract.md`; ACKNOWLEDGEMEN
 - docs/plans/pdf-intake-design.md:23 (link) — [scan-upload contract](../scan-upload-contract.md) covers scanner clients. The sections below
 - docs/plans/scan-guide-card.md:184 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
-- docs/scan-upload-contract.md:9 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
+- docs/scan-upload-contract.md:10 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
 - ../AGENTS.md:10 (link) — - **Stand-alone scan uploader (laptop client):** [scan-uploader/AGENTS.md](scan-uploader/AGENTS.md). Zero runtime depend
 - ../dev/devprocess-talk/reports/sweep-quality.md:286 (mention) — - **Lives in:** `scan-uploader/src/cli/contract-version.ts`, `beebox/src/core/scan/contract-version.ts`, `beebox/docs/sc
-- ../issues/features/2026-10-07-mac-companion-app.md:32 (mention) — `beebox/docs/scan-upload-contract.md`), so it is part of the app instead of
+- ../issues/features/2026-10-07-mac-companion-app.md:34 (mention) — `beebox/docs/scan-upload-contract.md`), so it is part of the app instead of
 
 References:
 - → docs/scan-upload-contract.md (mention)
@@ -2293,7 +2304,7 @@ References:
 
 #### docs/triage.md
 
-Title: "Triage" | 117 lines | current reference
+Title: "Triage" | 122 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:159 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
@@ -2306,6 +2317,7 @@ Referenced by:
 - docs/guides.md:42 (link) — | Triage: the intake pipeline | [triage](triage.md) |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/docs-reorg.md:342 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
+- docs/implemented-plans/file-wordless-captures.md:243 (mention) — 4. Reference docs: `beebox/docs/mobile-contract.md` ("Material without authored input is saved without inventing an agen
 - docs/implemented-plans/mvp-implementation-guide.md:21 (mention) — > intake→triage→handle pipeline now, `../triage.md`), and the
 - docs/implemented-plans/one-root-box-layout.md:468 (mention) — (`docs/triage.md`).
 - docs/implemented-plans/questions-end-to-end.md:40 (mention) — ask time). `docs/triage.md:131` already demands this: *"needing to carry both
@@ -2327,11 +2339,13 @@ Referenced by:
 - ../issues/decisions/2026-08-01-scan-handler-move-into-place.md:9 (mention) — `docs/triage.md`, the handle stage needs a `procedure:` (inline or
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:80 (mention) — role with a handler procedure (`docs/triage.md`). Could the admin landmark host
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:89 (mention) — (`docs/triage.md`) or a Drive-specific destination — the Drive connector may
+- ../research/fabric-review.md:72 (mention) — - **Organization is explicit and inspectable.** Cards in directories with git history; landmarks mark places; the intake
 - ../research/imbue-studio/comparison.md:200 (mention) — work (`docs/triage.md`). There is no Slack connector, and the todo sweep and
 - ../research/pai/README.md:63 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
 
 References:
 - → docs/reports/triage-design-2026-09-13.md (link)
+- → docs/mobile-contract.md (link)
 - → docs/box/triage-instructions.md (link)
 
 ### docs/architecture/
@@ -2346,6 +2360,7 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:42 (mention) — - **Reality/tension** — architecture/01-what-is-this.md:11: "This group chat is
 - docs/plans/agent-docs.md:376 (mention) — - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:14 (mention) — spirit-phrased last row, in `01-what-is-this.md`, `02-cards-and-memory.md`,
+- ../research/fabric-review.md:92 (mention) — | Several named agents with personalities per account | **Reject.** One box, one agent, one personality is deliberate; s
 - ../research/lifeos-review.md:51 (mention) — - **The dashboard is operations**, not a life view (`beebox/src/frontend/src/pages/DashboardPage.tsx`): questions, inbox
 
 #### docs/architecture/02-cards-and-memory.md
@@ -2425,6 +2440,7 @@ Referenced by:
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:15 (mention) — `outline.md`, `spirit.md`, and `writing-style.md`: capture pages became the
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:64 (mention) — covers proactivity as ambition but never states the question; spirit.md
+- ../issues/decisions/2026-10-17-captures-that-fit-no-place.md:23 (mention) — - Asking about each one nags. Random screenshots arrive often, and a question per item is the kind of tracking `beebox/d
 
 #### docs/architecture/writing-style.md
 
@@ -2528,6 +2544,7 @@ Referenced by:
 - docs/implemented-plans/publication-card-home.md:165 (mention) — - `docs/box/publishing.md`: rewrite sections at lines 14, 80, 82, 129, 542 and 645. One example card plus `static/`; the
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
 - ../issues/closed/features/2026-10-02-static-publications-render-markdown.md:11 (mention) — Closed: implemented on branch worktree-static-markdown-publish (commits db822652d, 407ea84bf, 058ab8a32). Open questions
+- ../research/fabric-review.md:94 (mention) — | Streaming desktop drive, canvas, Kanban, client portals with link analytics | **Reject.** The box is already files on
 - ../research/notebooklm/README.md:27 (mention) — | Public "chat with my collection" links, featured notebooks, analytics | **reject** | an agent running for strangers at
 - ../research/openui/beebox-fit.md:101 (mention) — (`beebox/docs/box/publishing.md`). A Markdoc data tag would publish as a
 - ../research/openui/beebox-surfaces.md:71 (mention) — Worker; `index.md` becomes HTML (`beebox/docs/box/publishing.md`). Published
@@ -2598,7 +2615,7 @@ Title: "Triage instructions and replay" | 133 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:405 (mention) — is on-demand `docs/box/triage-instructions.md`, with short discoverability pointers
-- docs/triage.md:94 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
+- docs/triage.md:99 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
 - src/core/agent-guide/guide.md:426 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:153 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
 
@@ -2850,7 +2867,7 @@ Referenced by:
 - docs/design/trust.md:49 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
 - docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
 - docs/landmarks.md:230 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
-- docs/mobile-contract.md:1295 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+- docs/mobile-contract.md:1298 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
 - docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:18 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:24 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
@@ -2900,6 +2917,7 @@ Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:103 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
 - docs/notifications.md:91 (link) — within hours ([chat timers](chat/schedules.md)).
 - ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
+- ../research/fabric-review.md:73 (mention) — - **One agent per box, with the whole box.** The agent is Claude Code or Codex with a shell, procedures and schedules (`
 - ../research/lifeos-review.md:68 (mention) — | Weekly review that shows last week's "next step" and freezes a snapshot | **Adapt**, as a scheduled procedure that ope
 
 References:
@@ -2984,6 +3002,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:61 (mention) — | `google-drive.md` | `connectors/drive.md` |
 - docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
 - docs/user-stories/catalog/2026-06-26.md:2716 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
+- ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 
 References:
 - → docs/connectors/google-auth.md (link)
@@ -2998,6 +3017,7 @@ Referenced by:
 - docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/connectors/gmail.md` (the shorthand section currently describes it as legacy),
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/user-stories/catalog/2026-06-26.md:2057 (mention) — - docs/connectors/gmail.md lines 37-41 (user documentation with examples)
+- ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 
 References:
 - → docs/connectors/google-auth.md (link)
@@ -3228,6 +3248,7 @@ Referenced by:
 - docs/design/README.md:25 (link) — - [`trust.md`](trust.md) — two axes: trust to act (question → confirmation → automatic, question rules) and trust to kee
 - docs/design/representation.md:71 (mention) — ladder instead (`trust.md`).
 - docs/implemented-plans/design-md-retired-sections.md:55 (mention) — process-fields; see `../design/trust.md`.*
+- docs/implemented-plans/file-wordless-captures.md:52 (mention) — `beebox/docs/design/trust.md` names as what *"lets the box act forward on some
 - docs/implemented-plans/plugins.design.md:66 (mention) — Per `design/trust.md`, question then confirmation then automatic:
 - docs/plans/ios-app-intent-capture.md:74 (mention) — - `docs/design/trust.md`, “capture must cost nothing in the moment, or the thought is not captured.” Local persistence p
 - docs/plans/ios-app-intent-capture.product-shape.review.md:40 (mention) — - `beebox/docs/design/trust.md:56-61` says “Quick chat is a compromise, not a pattern to copy” and that “capture must co
@@ -3235,6 +3256,7 @@ Referenced by:
 - ../.claude/skills/bbx-design/TEMPLATE.md:42 (mention) — <!-- design/trust.md: question → confirmation → automatic. Per action the box
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:24 (mention) — `trust.md` (optional `memo`/`directive`; full vocabulary list),
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:53 (mention) — - **Vocabularies `trust.md` omits**: belief basis
+- ../issues/decisions/2026-10-17-captures-that-fit-no-place.md:32 (mention) — 2. When several no-fit captures look alike (three recipes, two receipts), the agent proposes one change: a new landmark
 
 References:
 - → docs/design/durability-and-provenance.md (mention)
@@ -3323,7 +3345,7 @@ Referenced by:
 
 #### docs/development/technologies.md
 
-Title: "Technologies and AI services" | 44 lines | current reference
+Title: "Technologies and AI services" | 45 lines | current reference
 
 Referenced by:
 - docs/development.md:31 (link) — **[Technologies and AI services](development/technologies.md)** names the stack and the
@@ -3331,6 +3353,8 @@ Referenced by:
 - docs/development/workflow.md:5 (mention) — services](technologies.md).
 - docs/implemented-plans/doc-structure-development.md:64 (mention) — | `technologies.md` | `development/technologies.md` |
 - docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+- ../issues/docs-and-chores/2026-10-17-public-provider-list-drifts-from-code.md:13 (mention) — `beebox/docs/development/technologies.md` ("AI services used"). Page
+- ../research/fabric-review.md:96 (mention) — | Subprocessor list that names one vendor while the product offers ten; training on content unless the person opts out |
 
 References:
 - → docs/development.md (link)
@@ -3880,7 +3904,7 @@ Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
 - docs/box-layout.md:137 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:1012 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:1015 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:34 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -5040,6 +5064,26 @@ References:
 - → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
 - → docs/implemented-plans/file-layout.md (link)
 
+#### docs/implemented-plans/file-wordless-captures.md
+
+Title: "File phone captures that arrive with no words" | 252 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md:13 (mention) — **Closed 2026-10-17:** implemented on `worktree-fabric-research` (commits fa73c9c10 through 854813bb, plan `beebox/docs/
+- ../issues/decisions/2026-10-17-captures-that-fit-no-place.md:12 (link) — The [filing plan](../../beebox/docs/implemented-plans/file-wordless-captures.md) has the
+
+References:
+- → ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md (link)
+- → ../issues/decisions/2026-10-17-captures-that-fit-no-place.md (link)
+- → ../issues/features/2026-09-25-quick-drop-entry-points.md (link)
+- → ../issues/bugs/2026-08-20-capture-success-is-invisible.md (link)
+- → docs/design/trust.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/ios-app-intent-capture.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/triage.md (mention)
+
 #### docs/implemented-plans/first-run-openers.md
 
 Title: "First-run openers" | 120 lines | shipped history | implemented
@@ -5115,7 +5159,7 @@ Title: "HQ transcription for every dictated message" | 109 lines | shipped histo
 Referenced by:
 - docs/chat/composer.md:67 (mention) — Every voice send with a recording requests the HQ pass (`docs/implemented-plans/hq-always.md`);
 - docs/implemented-plans/ios-quick-chat-hq.md:11 (link) — ([hq-always](hq-always.md)). The iOS box-screen quick chat composer is the one
-- docs/mobile-contract.md:406 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
+- docs/mobile-contract.md:409 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:4 (frontmatter) — superseded-by: ../implemented-plans/hq-always.md
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:11 (link) — > **Superseded 2026-10-09** by [hq-always](../implemented-plans/hq-always.md): every
 - ../issues/bugs/2026-09-21-typed-text-lost-when-hq-lands-after-a-recording-error.md:13 (mention) — > the HQ pass (`beebox/docs/plans/hq-always.md`), so the HQ wait this bug lives
@@ -5178,7 +5222,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:764 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:767 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -5251,7 +5295,7 @@ Title: "On-device HQ for iOS quick chat thoughts" | 236 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/hq-always.md:83 (link) — | iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reache
-- docs/mobile-contract.md:1286 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+- docs/mobile-contract.md:1289 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
 - ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:40 (link) — should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
 
 References:
@@ -5486,7 +5530,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1706 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1716 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -6463,7 +6507,7 @@ Referenced by:
 - docs/plans/scan-retry-and-document-route.md:110 (link) — [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md), because Track 3 depends on them.
 - docs/plans/scan-vision-claude.md:443 (mention) — scan section of `docs/implemented-plans/scanner-ingest.md`.
 - docs/plans/scanner-ingest-docling-decisions.md:13 (link) — decision changes. Parent plan: [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md).
-- docs/scan-upload-contract.md:16 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
+- docs/scan-upload-contract.md:19 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:8 (mention) — Resolved by `e09cd6d23` ("pdf: judge the text layer, and stop OCRing at weak defaults"): added `assessTextLayer`/`PdfPro
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:96 (link) — [`implemented-plans/scanner-ingest.md`](../../../beebox/docs/implemented-plans/scanner-ingest.md) records
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
@@ -7372,7 +7416,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1306 lines | proposal | partial
 
 Referenced by:
-- docs/mobile-contract.md:648 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:651 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:15 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../beebox/docs/plans/agent-points-at-ui.md
@@ -7394,7 +7438,7 @@ Title: "Native Android companion app" | 761 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:349 (mention) — - **Android.** No Android client exists yet; `docs/plans/android-companion-app.md` describes
-- docs/mobile-contract.md:262 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-contract.md:265 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
 - docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
 - docs/plans/agent-points-at-ui.md:155 (mention) — cross-platform shape (`docs/plans/android-companion-app.md`, Track 0).
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:7 (mention) — `beebox/docs/plans/android-companion-app.md` is build-ready and its
@@ -7530,8 +7574,8 @@ Referenced by:
 - ../issues/closed/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md:10 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md:7 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md:12 (link) — [change-based test selection](../../../beebox/docs/plans/change-based-test-selection.md),
+- ../issues/closed/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md:9 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md:67 (link) — Related: [change-based test selection](../../beebox/docs/plans/change-based-test-selection.md)
-- ../issues/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md:9 (frontmatter) — design: ../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/features/2026-10-16-test-select-says-why-each-test-was-selected.md:9 (frontmatter) — design: ../../beebox/docs/plans/change-based-test-selection.md
 
 References:
@@ -7612,7 +7656,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 513 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1011 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:1014 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -7894,7 +7938,7 @@ Referenced by:
 - docs/plans/document-comments.md:332 (mention) — - The document viewer route, which is **defined by `general-browser.md`**, not
 - ../issues/closed/code-quality/2026-08-22-retire-doc-browser-dead-code.md:29 (link) — ([general-browser](../../../beebox/docs/plans/general-browser.md), Track 5),
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:73 (link) — - [general-browser](../../../beebox/docs/plans/general-browser.md) — its
-- ../issues/features/2026-08-22-issues-browser-has-no-workstream-filter.md:22 (link) — ([general-browser](../../beebox/docs/plans/general-browser.md)), which
+- ../issues/closed/features/2026-08-22-issues-browser-has-no-workstream-filter.md:25 (link) — ([general-browser](../../../beebox/docs/plans/general-browser.md)), which
 
 References:
 - → ../issues/closed/docs-and-chores/2026-08-22-exhibits-doc-overstates-container-chrome.md (frontmatter)
@@ -8091,9 +8135,11 @@ No references in or out.
 Title: "iOS quick capture: Siri, voice, and sharing with context" | 309 lines | proposal | partial
 
 Referenced by:
+- docs/implemented-plans/file-wordless-captures.md:106 (mention) — - `beebox/docs/plans/ios-app-intent-capture.md:23`: save *"without inventing a task now"*. Kept: filing reads and places
 - docs/plans/ios-app-intent-capture.product-shape.review.md:72 (mention) — **Citation:** “this plan does not settle … share-sheet, or media capture” (`ios-app-intent-capture.md:14`).
 - docs/plans/ios-app-intent-capture.review.md:3 (link) — Reviewed 2026-10-12 by Codex, with independent **Claude Fable** cross-model review. Target: [revised plan](ios-app-inten
 - ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:35 (link) — The reviewed [quick-capture plan](../../beebox/docs/plans/ios-app-intent-capture.md)
+- ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md:24 (mention) — `beebox/docs/plans/ios-app-intent-capture.md:23`: save the screenshot "without
 
 References:
 - → ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md (frontmatter)
@@ -8161,7 +8207,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1700 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1710 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -8244,6 +8290,39 @@ References:
 Title: "Plan Engineering Review — Replayable document triage" | 212 lines | plan review
 
 No references in or out.
+
+#### docs/plans/mac-app-shell.design.md
+
+Title: "Bee Box for Mac as a shell around a box: design" | 191 lines | proposal | active
+
+Referenced by:
+- docs/plans/mac-app-shell.md:40 (link) — for it). Tracks D–G are designed in [mac-app-shell.design.md](mac-app-shell.design.md):
+
+References:
+- → docs/plans/mac-app-shell.md (link)
+
+#### docs/plans/mac-app-shell.md
+
+Title: "Bee Box for Mac as a shell around a box" | 662 lines | proposal | active
+
+Referenced by:
+- docs/plans/mac-app-shell.design.md:9 (link) — **Parent plan:** [mac-app-shell.md](mac-app-shell.md), Tracks D–G.
+- ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:10 (link) — **2026-10-17 note (partly resolved):** iOS pairing now goes through the shared `apple-shared` package: one redeem per ti
+- ../issues/code-quality/2026-10-17-ios-bridge-message-routing-untested.md:8 (mention) — discovered-in: worktree-app-shell — iOS testing review for beebox/docs/plans/mac-app-shell.md
+- ../issues/features/2026-10-07-mac-companion-app.md:12 (link) — **2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, o
+
+References:
+- → ../issues/features/2026-10-07-mac-companion-app.md (frontmatter)
+- → ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md (frontmatter)
+- → ../issues/features/2026-10-07-mac-companion-app.md (link)
+- → ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md (link)
+- → ../issues/bugs/2026-09-12-ios-unreachable-box-shows-a-blank-screen.md (link)
+- → ../issues/features/2026-10-10-mac-app-engine-updates-without-app-release.md (link)
+- → ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md (link)
+- → docs/plans/mac-app-shell.design.md (link)
+- → docs/mobile-contract.md (mention)
+- → AGENTS.md (mention)
+- → docs/scan-upload-contract.md (mention)
 
 #### docs/plans/migration-reliability.md
 

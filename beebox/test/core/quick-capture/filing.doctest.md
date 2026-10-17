@@ -3,7 +3,7 @@
 A phone capture with no words used to be saved and never read. Now the worker
 requests filing, and a sweep queues the capture's doc on the intake job once
 the person's burst of captures settles, then starts a box cycle whose agent
-titles and files it (`docs/plans/file-wordless-captures.md`).
+titles and files it (`docs/implemented-plans/file-wordless-captures.md`).
 
 `filingPlan` makes every decision from the records, the docs the sweep read,
 and the refs pending jobs hold, so these examples call it directly.

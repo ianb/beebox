@@ -1,9 +1,9 @@
 ---
 title: "File phone captures that arrive with no words"
-status: draft
+status: implemented
 workstream: fabric-research
 issues:
-  - ../../../issues/bugs/2026-10-17-captures-without-words-are-never-processed.md
+  - ../../../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md
 ---
 # File phone captures that arrive with no words
 
@@ -11,7 +11,7 @@ A phone capture with no typed or dictated words is saved and then nothing
 reads it. This plan has the box read, title and file such captures a short
 time after a burst of captures ends, without acting on them.
 
-**Issues addressed:** [captures without words are never processed](../../../issues/bugs/2026-10-17-captures-without-words-are-never-processed.md).
+**Issues addressed:** [captures without words are never processed](../../../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md).
 Related, not closed by this plan: [captures that fit no place](../../../issues/decisions/2026-10-17-captures-that-fit-no-place.md)
 (the decision this plan defers), [quick drop entry points](../../../issues/features/2026-09-25-quick-drop-entry-points.md)
 (entry points, not processing), [capture success is invisible](../../../issues/bugs/2026-08-20-capture-success-is-invisible.md)
@@ -247,3 +247,5 @@ clone.
 Done when the doctests above pass, the knowledge audit has run, and a manual
 walk on a worktree test box shows a shared image retitled and filed. No data
 migration: the fields are optional and absent on old records.
+
+Implementation note: the knowledge audit named above was not added. Built-in intake-job instructions are inlined into the reactor prompt, which a knowledge audit does not exercise; three live reactor runs on a throwaway box stood in for it.

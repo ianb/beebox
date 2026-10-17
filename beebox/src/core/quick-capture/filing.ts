@@ -1,5 +1,5 @@
 /**
- * Filing for captures that arrive with no words (docs/plans/file-wordless-captures.md).
+ * Filing for captures that arrive with no words (docs/implemented-plans/file-wordless-captures.md).
  * The worker requests filing; the sweep waits until the owner's burst settles,
  * queues the docs on the unscoped intake job, and starts a wakeup. Done is read
  * from the doc (retitled or moved), never from the job disappearing: `bbx finish`
