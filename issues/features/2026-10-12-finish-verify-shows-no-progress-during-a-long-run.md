@@ -9,9 +9,10 @@ discovered-in: worktree-test-selection-breadth — measuring broad test:changed 
 design: ../../beebox/docs/plans/change-based-test-selection.md
 ---
 
-`bin/finish-verify.ts` runs each check with `spawnSync` (`:141`) and writes
-the output file after the check exits (`:182`). It prints a result line only
-when a check is done (`:243`). A `test:changed` run of about 500 files takes
+`bin/finish-verify-process.ts` runs each check with `spawn` and buffers its
+output in memory (`:47`–`:59`). `bin/finish-verify.ts` writes the output file
+after the check exits (`:244`) and prints a result line only when a check is
+done (`:327`). A `test:changed` run of about 500 files takes
 10–13 minutes. During that time the finish agent and the person see no
 output and no output file. theme-polish's coding feedback
 (`theme-polish/coding-feedback/20261008T231544Z-landed.md`) asked for it:

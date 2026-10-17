@@ -41,9 +41,9 @@ Name a concrete interaction before rerunning: conflict resolution, overlapping
 behavior, or changes to a shared dependency, schema, build configuration, or test
 fixture that affect this work; mere possibility is not a reason to rerun.
 
-Run only affected checks: save one `bin/finish-preflight --json --no-merge` sheet,
-then `bin/finish-verify --sheet <file> --only tests|typecheck|lint|smoke|site`, one
-at a time (a bare run re-preflights; parallel ones contend), or named tests.
+Run only affected checks: save a `bin/finish-preflight --json --no-merge` sheet
+(re-save after any edit), pass it to each `bin/finish-verify --sheet <file> --only
+tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named tests.
 Docs-only close-out needs its pre-commit doc-check, not application tests. Report
 which evidence was reused, the intervening delta, and why it remains applicable.
 

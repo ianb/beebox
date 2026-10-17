@@ -42,10 +42,10 @@ import the stylesheet in `main/app.tsx`, and register the theme/stock in
 `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 Check the real app visually; the studio does not exercise live navigation,
 portaled menus or chat state. On a phone, check composer dictation and disabled
-send, nav badges and focus rings. Screen and print rules live in separate files:
-when a scoped selector gains specificity, emulate print media and confirm the
-print reset still wins. A worktree backend started before the catalog entry
-rejects the new theme; `bin/workstreams status` shows it `ready (stale)` (see
+send, nav badges and focus rings. When a scoped selector gains specificity,
+emulate print media and confirm the print rules still win. A worktree backend
+started before a new system theme's catalog entry refuses to select it;
+`bin/workstreams list` shows it `ready (stale)` (see
 [router operations](../../bin/docs/router-operations.md)). Keep unrelated
 explicit card themes independent.
 
