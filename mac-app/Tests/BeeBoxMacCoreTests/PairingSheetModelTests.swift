@@ -7,15 +7,20 @@ import XCTest
 final class PairingSheetModelTests: XCTestCase {
     private let link = "beebox://pair?baseURL=https%3A%2F%2Fworkshop.example.ts.net%2Fworkshop&label=Workshop&pairingToken=t1"
 
-    func testThePasteboardFillsTheFieldOnlyWithAPairingLink() {
+    func testTheClipboardLinkIsOfferedNotPasted() {
         let model = PairingSheetModel { _ in .duplicate }
 
-        model.fill(fromPasteboard: "a grocery list")
+        model.offer(fromPasteboard: "a grocery list")
+        XCTAssertNil(model.clipboardOffer)
+
+        model.offer(fromPasteboard: "  \(link)\n")
         XCTAssertEqual(model.text, "")
         XCTAssertEqual(model.state, .empty)
+        XCTAssertEqual(model.clipboardOffer, .init(label: "Workshop", host: "workshop.example.ts.net", encrypted: true))
 
-        model.fill(fromPasteboard: "  \(link)\n")
+        model.useClipboardOffer()
         XCTAssertEqual(model.text, link)
+        XCTAssertNil(model.clipboardOffer)
         XCTAssertEqual(model.state, .ready(.init(label: "Workshop", host: "workshop.example.ts.net", encrypted: true)))
         XCTAssertTrue(model.canAdd)
     }

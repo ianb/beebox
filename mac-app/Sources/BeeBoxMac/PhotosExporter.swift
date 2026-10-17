@@ -1,3 +1,4 @@
+import AppKit
 import BeeBoxMacCore
 import Foundation
 import ImageIO
@@ -13,6 +14,13 @@ struct PhotosExporter: PhotosExporting {
     let ledgerDirectory: URL
     /// `photos-export.ts` bounds an export to ten minutes; so does this.
     var timeLimit: Duration = .seconds(600)
+
+    /// System Settings → Privacy & Security → Photos, where a denied request
+    /// can only be changed.
+    static func openPrivacySettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") else { return }
+        NSWorkspace.shared.open(url)
+    }
 
     static func requestAccess() async -> Bool {
         let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)

@@ -91,8 +91,13 @@ two on what it is for:
 - **Boxes.** The paired boxes as a list: label, host, and state (paired,
   "credential refused — pair again", on this Mac and not paired). Buttons:
   "Pair with a Box…", "Open in Browser", "Remove…".
-  - **The pairing sheet** has a link field, filled from the clipboard when it
-    holds a `beebox://pair` link, and one line of help.
+  - **The pairing sheet** has a link field and one line of help. When the
+    clipboard holds a `beebox://pair` link, the sheet offers it ("The
+    clipboard has a pairing link for Workshop — Use It") instead of pasting
+    it unasked (boxholder, 2026-10-17: auto-paste was helpful but confusing).
+  - On the box, Settings → Companion Apps has two separate actions: "Show QR
+    Code (iPhone)" and "Copy Link (Mac)", which makes the code and copies the
+    link in one click. (Copy Link used to appear only after Create QR.)
   - As soon as the field parses, the sheet previews the box's label, host,
     and scheme, with "not encrypted" for http.
   - "Add" redeems the ticket. A failure stays in the sheet with the box's
@@ -161,12 +166,13 @@ app." The behavior does not change.
 
 Tomas connects his Mac to the server box "Workshop" for scans.
 
-1. In the browser he opens Workshop's Settings. In the companion pairing
-   section he clicks "Create QR", then "Copy Link". The box creates a ticket
-   that lasts 10 minutes.
+1. In the browser he opens Workshop's Settings. Under Companion Apps he
+   clicks "Copy Link (Mac)". The box creates a ticket that lasts 10 minutes
+   and the link is on his clipboard.
 2. He chooses "Pair with a Box…" from the menu-bar icon. Preferences opens
-   on Boxes with the sheet; the link is filled in, and the preview reads
-   "Workshop — workshop.example.ts.net (https)". He clicks Add. The app
+   on Boxes with the sheet, which offers the clipboard's link for Workshop; he
+   clicks Use It, the preview reads "Workshop — workshop.example.ts.net", and
+   he clicks Add. The app
    redeems the ticket, stores the device credential in the Keychain, and
    clears the clipboard. Workshop appears in the list and in the menu.
 3. On the Watched Folders tab he chooses "Add Folder…" and picks `~/Scans` in the

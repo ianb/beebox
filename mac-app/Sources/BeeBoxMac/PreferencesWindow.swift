@@ -60,7 +60,7 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
         if let link {
             model.text = link
         } else {
-            model.fill(fromPasteboard: NSPasteboard.general.string(forType: .string))
+            model.offer(fromPasteboard: NSPasteboard.general.string(forType: .string))
         }
         navigation.pairing = model
         present(.boxes)
@@ -188,8 +188,8 @@ struct BoxesTab: View {
     var body: some View {
         TabPage(explanation: """
             A paired box opens from the Bee Box menu and can receive files from watched folders. \
-            To pair, open the box in a browser, go to Settings → Companion Apps, choose Create QR, then Copy Link, \
-            and paste the link here. Each box lists this Mac under its paired devices, where you can remove it.
+            To pair, open the box in a browser, go to Settings → Companion Apps, choose Copy Link (Mac), \
+            then choose Pair with a Box… here. Each box lists this Mac under its paired devices, where you can remove it.
             """) {
             if let failure = boxStore.loadFailure {
                 Text("Your paired boxes could not be read, so nothing will be saved: \(failure)")
@@ -282,7 +282,17 @@ struct PairingSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Pair with a Box").font(.headline)
             Text(PairingSheetModel.helpText).foregroundStyle(.secondary)
-            TextField("beebox://pair?…", text: $model.text)
+            if let offer = model.clipboardOffer, model.text.isEmpty {
+                HStack {
+                    Image(systemName: "doc.on.clipboard")
+                    Text("The clipboard has a pairing link for \(offer.label) (\(offer.host)).")
+                    Spacer()
+                    Button("Use It") { model.useClipboardOffer() }
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.6)))
+            }
+            TextField("Paste a beebox://pair link", text: $model.text)
                 .textFieldStyle(.roundedBorder)
                 .disabled(isPairing)
             stateView
@@ -396,7 +406,7 @@ struct LocalBoxTab: View {
                         }
                     }
                     Section {
-                        Text("To send this box files from a watched folder, pair with it like any other box: open it in the browser, then Settings → Companion Apps → Copy Link.")
+                        Text("To send this box files from a watched folder, pair with it like any other box: open it in the browser, then Settings → Companion Apps → Copy Link (Mac).")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 } else {
