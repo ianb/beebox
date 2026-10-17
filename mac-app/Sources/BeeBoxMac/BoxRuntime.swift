@@ -59,12 +59,20 @@ final class BoxRuntime: ObservableObject {
         return URL(string: path, relativeTo: boxURL)?.absoluteURL
     }
 
+    /// Whether the boxholder still wants the box running ("Run a box on this
+    /// Mac"). A start checks it before each step that downloads or creates
+    /// something, so turning hosting off mid-start stops there.
+    var isWanted: () -> Bool = { true }
+    private var startTask: Task<Void, Never>?
+
     func start() {
         guard phase == .stopped || isFailed else { return }
-        Task { await run() }
+        startTask = Task { await run() }
     }
 
     func stop() async {
+        startTask?.cancel()
+        startTask = nil
         statsTask?.cancel()
         statsTask = nil
         // The forwarder stays up until the server has exited: the server's
@@ -150,6 +158,7 @@ final class BoxRuntime: ObservableObject {
             guard let kernelPath = Paths.kernel else {
                 throw RuntimeError("the app bundle has no Linux kernel; build it with scripts/build-app.sh, or set BEEBOX_KERNEL")
             }
+            try proceed()
             try prepareDirectories()
             // The init filesystem comes from Apple's vminit image, pulled once
             // (small) at the version matching the pinned Containerization.
@@ -163,7 +172,9 @@ final class BoxRuntime: ObservableObject {
             let source = ImageSource(store: manager.imageStore) { [weak self] line in
                 await MainActor.run { self?.phase = .working(line) }
             }
+            try proceed()
             let (image, _) = try await source.image()
+            try proceed()
             // Only creating the box makes a first start; an app update's image
             // download is slow too, but it is still an ordinary start.
             if !boxIsInitialized() { progress?.operation = .firstStart }
@@ -175,6 +186,7 @@ final class BoxRuntime: ObservableObject {
                 try await runOnce(&manager, image: image, log: log, arguments: ["bbx", "engine", "init", "/data/box"])
             }
 
+            try proceed()
             phase = .working("Starting box…")
             try? manager.delete(Self.containerID)
             let container = try await create(&manager, image: image, log: log, arguments: nil)
@@ -215,11 +227,26 @@ final class BoxRuntime: ObservableObject {
             phase = .running(base.appending(path: "box/"))
             finish(succeeded: true)
             watch(container, exit: exit)
+        } catch is StartAbandoned {
+            appLog("start abandoned: hosting was turned off or the box was stopped")
+            finish(succeeded: false)
+            phase = .stopped
+        } catch is CancellationError {
+            appLog("start cancelled")
+            finish(succeeded: false)
+            phase = .stopped
         } catch {
             appLog("start failed: \(error)")
             finish(succeeded: false)
             phase = .failed(String(describing: error))
         }
+    }
+
+    private struct StartAbandoned: Error {}
+
+    private func proceed() throws {
+        try Task.checkCancellation()
+        guard isWanted() else { throw StartAbandoned() }
     }
 
     private func prepareDirectories() throws {

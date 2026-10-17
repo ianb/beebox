@@ -7,6 +7,13 @@ only), bundled by esbuild into a single self-contained script — `node
 dist/scan-uploader.mjs` runs it on any machine with no checkout, no `bbx`,
 and no `npm install`.
 
+On a Mac, the Bee Box app does this job without Node or launchd: pair it with
+the box, then add the folder (or a Photos album) under Preferences → Uploads
+([mac-app/README.md](../mac-app/README.md)). The app refuses a folder this
+uploader's launchd agent still watches; remove the agent first with
+`bin/scan-uploader schedule uninstall`. This package remains for other
+machines and for Macs without the app.
+
 ## What it does
 
 Each run, for every configured folder:

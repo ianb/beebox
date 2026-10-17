@@ -63,6 +63,18 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<key>SUFeedURL</key><string>${FEED_URL}</string>
 	<key>SUPublicEDKey</key><string>${SPARKLE_PUBLIC_KEY}</string>
 	<key>SUEnableAutomaticChecks</key><true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key><string>${BUNDLE_ID}.pairing</string>
+			<key>CFBundleURLSchemes</key><array><string>beebox</string></array>
+		</dict>
+	</array>
+	<key>NSPhotoLibraryUsageDescription</key><string>Bee Box exports new photos from the albums you choose and sends them to your box.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key><true/>
+	</dict>
 </dict>
 </plist>
 PLIST

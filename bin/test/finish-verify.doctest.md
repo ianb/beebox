@@ -47,7 +47,7 @@ if the command ran preflight it would exit 1 instead.
 ```ts
 const help = cli("--help");
 [help.status, help.stdout.split("\n")[0]]
-=> [0, "usage: bin/finish-verify [--sheet <file>] [--only tests|typecheck|lint|smoke|site]"]
+=> [0, "usage: bin/finish-verify [--sheet <file>] [--only tests|typecheck|lint|smoke|site|apple]"]
 ```
 
 An unknown flag and an unknown `--only` kind are usage errors: exit 2, the
@@ -62,7 +62,7 @@ const badKind = cli("--only", "test");
 
 ``` continue
 assert.match(unknown.stderr, /Unknown option '--sheeet'/);
-assert.match(badKind.stderr, /--only takes tests, typecheck, lint, smoke, site; got 'test'/);
+assert.match(badKind.stderr, /--only takes tests, typecheck, lint, smoke, site, apple; got 'test'/);
 ```
 
 ## Interruption stops the checks' whole process tree
