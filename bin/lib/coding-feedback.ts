@@ -37,7 +37,7 @@ const RESOLVED_BY = ["env", "mtime", "flag", "none"] as const;
 
 const isoSchema = z.iso.datetime();
 
-export const sessionSchema = z.object({
+const sessionSchema = z.object({
   engine: z.enum(ENGINES).nullable(),
   sessionId: z.string().min(1).nullable(),
   transcriptPath: z.string().min(1).nullable(),

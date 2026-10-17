@@ -7,7 +7,7 @@ import * as path from "node:path";
 import { API, DiagnosticCategory, type Diagnostic } from "@typescript/native/unstable/sync";
 
 export interface CompilerError {
-  /** Absolute path of the file the error is in; undefined for a config or global error. */
+  /** Absolute path of the file the error is in (the tsconfig for a config error); undefined for a global error. */
   fileName: string | undefined;
   code: number;
   /** The message with its chained detail lines, indented as `tsc` prints them. */
@@ -15,7 +15,7 @@ export interface CompilerError {
 }
 
 /** The project's tsconfig did not load (the API returned no project for it). */
-export class ProjectNotLoadedError extends Error {
+class ProjectNotLoadedError extends Error {
   readonly configPath: string;
   constructor(configPath: string) {
     super(`TypeScript did not load the project ${configPath}`);

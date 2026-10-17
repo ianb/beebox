@@ -35,7 +35,7 @@ import { Prominence } from "../shared/prominence.js";
 import { SystemThemeChoiceSchema } from "../shared/card-theme/core.js";
 
 /** Sort order for `expand` fan-out results. */
-export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
+const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
 export type LandmarkOrderType = z.infer<typeof LandmarkOrder>;
 
 /**
@@ -66,7 +66,7 @@ export type LandmarkLinkData = z.infer<typeof LandmarkLink>;
  * title + a child count) instead of flattening into the landmark's flat
  * link list. When omitted, results flatten inline as before.
  */
-export const LandmarkExpand = z.object({
+const LandmarkExpand = z.object({
   query: z.string(),
   group: z.string().optional(),
   order: LandmarkOrder.optional(),

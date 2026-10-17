@@ -46,7 +46,7 @@ const RunStepValidate = z.object({
 });
 
 /** One step's execution record. */
-export const RunStep = z.object({
+const RunStep = z.object({
   id: z.string(),
   status: z.enum(["pending", "running", "completed", "skipped", "failed"]),
   "started-at": Iso.optional(),

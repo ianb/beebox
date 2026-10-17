@@ -55,8 +55,9 @@ separately. Not a BIG CHANGE.
   beebox code imports it after Track C. This is the side-by-side setup the
   TypeScript team recommends for 7.0 (see Prior art).
 - Boxholder: "if we can upgrade everything but typescript-eslint, and setup a
-  future issue for fixing that later". knip and `agent-doctest` are the other
-  exceptions, and they need the boxholder's yes (Open design questions).
+  future issue for fixing that later". Then, 2026-10-17: "we should update
+  knip and investigate what it found. We don't have to port agent-doctest
+  typecheck." So knip moves to 6.x, and `agent-doctest` stays on 6.0.
 - Handoff: "The human may remove doctests entirely, so do not invest in
   doctest-specific accommodation." So `agent-doctest` stays on the 6.0 API.
 - `beebox/docs/engineering-principles.md` §8 "One way to do each thing": every
@@ -165,12 +166,11 @@ Adopted item is configuration only, so no ACKNOWLEDGEMENTS.md entry.
   `@typescript/native` there (runtime use after Track C). `agent-doctest`
   keeps its `typescript` (now the 6.0 alias) in `dependencies`
   (`agent-doctest/package.json:23`; `check.ts:18` imports it at runtime).
-  knip stays on 5.x (see Implementation notes).
+  knip goes to 6.x, which parses with oxc and imports no TypeScript.
   `personal-vibe-check` keeps its peer `typescript >=5` (it is a published
   preset; consumers bring their own) and gets both in `devDependencies`.
 - **Why:** the `tsc` binary in every script becomes 7.0 with no script edits.
-  typescript-eslint (peer `>=4.8.4 <6.1.0`) and knip 5 (peer `<7`) resolve
-  `typescript` to 6.0.2.
+  typescript-eslint (peer `>=4.8.4 <6.1.0`) resolves `typescript` to 6.0.2.
 - **Lock-ins:** the alias name `@typescript/native` (the announcement's name).
 - **First chunk:** edit the 11 files, `pnpm install`, then confirm
   `node_modules/.bin/tsc --version` prints 7.0.2, `node_modules/typescript`
@@ -312,7 +312,7 @@ none
 - typescript-eslint on 7.x: blocked upstream until 7.1 ships an API and
   typescript-eslint releases against it. Follow-up issue filed with this plan.
 - `agent-doctest`'s `doctest-typecheck` and the three doctests that import
-  `typescript`: they stay on 6.0, subject to the open question below.
+  `typescript`: they stay on 6.0 (boxholder, 2026-10-17).
   Porting `check.ts` means replacing `createIncrementalProgram`, which the
   7.0 API does not offer. Listed in the follow-up issue.
 - Moving existing boxes' `typescript` devDependency to 7.0: a change on
@@ -322,13 +322,7 @@ none
 
 ## Open design questions
 
-- **knip on 5.x (needs the boxholder).** knip 6 drops its TypeScript
-  dependency, but on this tree it reports 34 more unused exports, one
-  unlisted dependency and one unlisted binary than knip 5, and asks for
-  `knip.ts` changes; the weekly `knip-sweep` diff would show them all at once.
-  knip 5 on the 6.0 alias reports exactly what it did on 5.9. Lean: keep 5.x
-  here and do the knip 6 migration on its own (listed in the follow-up issue).
-- **`agent-doctest` on 6.0 (needs the boxholder).** It is outside "everything
+- **`agent-doctest` on 6.0 (decided: stays).** It is outside "everything
   but typescript-eslint". Lean: accept it, because the handoff says doctests
   may be removed and porting needs a non-incremental rewrite of `check.ts`.
   If not accepted, a Track C chunk ports it to `@typescript/native` directly
@@ -374,7 +368,18 @@ Deploys with the next landing. The server's `pnpm install --frozen-lockfile`
 
 Where the build differs from the tracks above, and why:
 
-- **knip stays on 5.x.** See Open design questions.
+- **knip 6.** It reported findings knip 5 did not. 34 were exported values
+  (mostly zod schemas and `as const` lists) whose only use outside their
+  file is through an exported `typeof X` type: knip 5, built on TypeScript,
+  counted that type reference as a use; knip 6, on oxc, does not. No file
+  imports any of them, so they are unexported (one, `DESTINATION_KINDS`,
+  became a plain union type, since only its type was used). It also found
+  `ws`, imported at runtime by `webapp/routes/chat/audio-routes.ts` but
+  undeclared (it came through `@fastify/websocket`), now a `beebox`
+  dependency; `tail` as an unlisted system binary; six `ignoreBinaries`
+  entries it no longer needs; and frontend doctests and CSS outside its
+  `project`. After the fixes it reports the same seven findings knip 5 did
+  before this branch.
 - **The backend `exclude` for `src/plugins/*/view/**` was reverted.** Backend
   lint reaches those files through `tsconfig.json`; excluding them broke the
   lint project service. `src/types/css.d.ts` sits under `src/**`, so it

@@ -18,7 +18,7 @@ import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import { routingCandidateSchema, type RoutingCandidate } from "./policy.js";
 
 const QUICK_CHAT_STATES = ["needs-choice", "sending", "sent", "discarded"] as const;
-export const QUICK_CHAT_REASONS = ["uncertain", "routing-unavailable", "destination-gone"] as const;
+const QUICK_CHAT_REASONS = ["uncertain", "routing-unavailable", "destination-gone"] as const;
 export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
 /** How the person entered the thought. External inputs are neither keyboard text nor a recording. */
 export const QUICK_CHAT_ORIGINS = ["typed", "voice", "external"] as const;
@@ -46,7 +46,7 @@ const destinationSchema = z.object({ label: z.string(), sessionId: z.string().op
  * The web page a send carries: routing evidence and the row's label. Page
  * text is third-party; it never becomes the delivered message.
  */
-export const quickChatPageSchema = z.object({ title: z.string(), url: z.string(), site: z.string().optional() });
+const quickChatPageSchema = z.object({ title: z.string(), url: z.string(), site: z.string().optional() });
 export type QuickChatPage = z.infer<typeof quickChatPageSchema>;
 
 const baseShape = {

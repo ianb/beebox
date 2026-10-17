@@ -30,9 +30,14 @@ await writeFile(join(project, "tsconfig.json"), JSON.stringify({
   include: ["**/*.ts", "**/*.tsx"],
 }));
 
+// tap's NODE_OPTIONS loads its processinfo require hook into every child
+// node. TypeScript 7's `bin/tsc` is an ES module, and that hook loading it
+// through require() fails with ERR_REQUIRE_CYCLE_MODULE. tap puts the
+// variable back on every spawn, so `env -u` drops it inside the child and the
+// script runs as the pre-commit hook runs it.
 async function run(dir: string) {
   try {
-    const r = await execFileAsync("bash", [script, dir]);
+    const r = await execFileAsync("env", ["-u", "NODE_OPTIONS", "bash", script, dir]);
     return { code: 0, out: r.stdout + r.stderr };
   } catch (e) {
     const err = e as { code?: number; stdout?: string; stderr?: string };

@@ -95,7 +95,7 @@ export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
 const NATIVE_ALIAS_PREFIX = "npm:typescript@";
 
 /** The engine's `@typescript/native` dependency is missing or not an `npm:typescript@` alias. */
-export class EngineTypescriptAliasError extends Error {
+class EngineTypescriptAliasError extends Error {
   readonly spec: string | undefined;
   constructor(spec: string | undefined) {
     super(`Expected @typescript/native to be "${NATIVE_ALIAS_PREFIX}<range>" in the engine's dependencies, found ${spec ?? "nothing"}`);

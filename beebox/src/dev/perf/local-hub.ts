@@ -66,7 +66,7 @@ export async function ensurePerfBox(refresh: boolean): Promise<string | undefine
   return copy;
 }
 
-export const perfHubConfigSchema = z.object({
+const perfHubConfigSchema = z.object({
   box: z.string(),
   slug: z.string(),
   hubPort: z.number().int(),

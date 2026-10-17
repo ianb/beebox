@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { isRecord } from "../../shared/is-record.js";
 
 /** `@typescript/native/package.json` has no `bin.tsc` string. */
-export class TscBinaryNotFoundError extends Error {
+class TscBinaryNotFoundError extends Error {
   readonly packageJsonPath: string;
   constructor(packageJsonPath: string) {
     super(`No bin.tsc in ${packageJsonPath}`);
