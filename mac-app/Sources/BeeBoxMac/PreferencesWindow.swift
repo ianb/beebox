@@ -9,6 +9,7 @@ import SwiftUI
 final class PreferencesWindowController {
     enum Tab: Hashable {
         case boxes
+        case uploads
         case general
     }
 
@@ -21,11 +22,15 @@ final class PreferencesWindowController {
     let navigation = Navigation()
     private let boxStore: BoxStore
     private let hosting: HostingController
+    private let uploadFolders: UploadFolderStore
+    private let uploads: UploadCoordinator
     private var window: NSWindow?
 
-    init(boxStore: BoxStore, hosting: HostingController) {
+    init(boxStore: BoxStore, hosting: HostingController, uploadFolders: UploadFolderStore, uploads: UploadCoordinator) {
         self.boxStore = boxStore
         self.hosting = hosting
+        self.uploadFolders = uploadFolders
+        self.uploads = uploads
     }
 
     func show(_ tab: Tab) {
@@ -55,7 +60,13 @@ final class PreferencesWindowController {
     }
 
     private func makeWindow() -> NSWindow {
-        let root = PreferencesView(navigation: navigation, boxStore: boxStore, hosting: hosting) { [weak self] in
+        let root = PreferencesView(
+            navigation: navigation,
+            boxStore: boxStore,
+            hosting: hosting,
+            uploadFolders: uploadFolders,
+            uploads: uploads
+        ) { [weak self] in
             self?.startPairing()
         }
         let window = NSWindow(contentViewController: NSHostingController(rootView: root))
@@ -72,13 +83,18 @@ struct PreferencesView: View {
     @ObservedObject var navigation: PreferencesWindowController.Navigation
     @ObservedObject var boxStore: BoxStore
     @ObservedObject var hosting: HostingController
+    let uploadFolders: UploadFolderStore
+    let uploads: UploadCoordinator
     let startPairing: () -> Void
 
     var body: some View {
         TabView(selection: $navigation.tab) {
-            BoxesTab(boxStore: boxStore, startPairing: startPairing)
+            BoxesTab(boxStore: boxStore, uploads: uploads, startPairing: startPairing)
                 .tabItem { Label("Boxes", systemImage: "shippingbox") }
                 .tag(PreferencesWindowController.Tab.boxes)
+            UploadsTab(folders: uploadFolders, coordinator: uploads, boxStore: boxStore)
+                .tabItem { Label("Uploads", systemImage: "tray.and.arrow.up") }
+                .tag(PreferencesWindowController.Tab.uploads)
             GeneralTab(hosting: hosting)
                 .tabItem { Label("General", systemImage: "gearshape") }
                 .tag(PreferencesWindowController.Tab.general)
@@ -97,10 +113,12 @@ extension PairingSheetModel: Identifiable {
 
 struct BoxesTab: View {
     @ObservedObject var boxStore: BoxStore
+    let uploads: UploadCoordinator
     let startPairing: () -> Void
     @State private var selection: PairedBox.ID?
     @State private var confirmingRemoval: PairedBox?
     @State private var removalError: String?
+    @State private var forceRemoval: PairedBox?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -143,10 +161,20 @@ struct BoxesTab: View {
             isPresented: Binding(get: { confirmingRemoval != nil }, set: { if !$0 { confirmingRemoval = nil } }),
             presenting: confirmingRemoval
         ) { box in
-            Button("Remove", role: .destructive) { remove(box) }
+            Button("Remove", role: .destructive) { Task { await remove(box, force: false) } }
             Button("Cancel", role: .cancel) {}
         } message: { _ in
-            Text("This Mac forgets the box and its credential. The box still lists this Mac under its paired devices until you remove it there.")
+            Text("This Mac forgets the box, stops its upload folders, and revokes its scanner credential. The box still lists this Mac under its paired devices until you remove it there.")
+        }
+        .alert(
+            "The scanner credential was not revoked",
+            isPresented: Binding(get: { forceRemoval != nil }, set: { if !$0 { forceRemoval = nil } }),
+            presenting: forceRemoval
+        ) { box in
+            Button("Remove Anyway", role: .destructive) { Task { await remove(box, force: true) } }
+            Button("Keep", role: .cancel) {}
+        } message: { _ in
+            Text("\(removalError ?? "")\n\nRemove anyway leaves the credential on the box until you revoke it there under Settings → Scan uploaders.")
         }
     }
 
@@ -164,12 +192,14 @@ struct BoxesTab: View {
         boxStore.refused.contains(box.id) ? .red : .secondary
     }
 
-    private func remove(_ box: PairedBox) {
-        do {
-            try boxStore.remove(box)
+    private func remove(_ box: PairedBox, force: Bool) async {
+        switch await uploads.removeBox(box, force: force) {
+        case .removed:
             removalError = nil
-        } catch {
-            removalError = "Could not remove \(box.label): \(error.localizedDescription)"
+            forceRemoval = nil
+        case .revokeFailed(let reason):
+            removalError = reason
+            if !force { forceRemoval = box }
         }
     }
 }

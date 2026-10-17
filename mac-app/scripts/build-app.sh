@@ -70,6 +70,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 			<key>CFBundleURLSchemes</key><array><string>beebox</string></array>
 		</dict>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key><string>Bee Box exports new photos from the albums you choose and sends them to your box.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key><true/>

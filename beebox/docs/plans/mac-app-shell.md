@@ -391,10 +391,12 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
     in the Keychain. A device paired by a non-owner gets FORBIDDEN, and the
     settings say that only the box owner's pairing can upload scans.
   - Credential lifecycle:
-    - The token name is fixed per install (`mac-<host>-<4 hex from the
-      install id>`). A `CONFLICT` means this install minted it earlier and
-      lost the plaintext, so the app revokes that name and mints again; it
-      never adds suffixes.
+    - Each mint gets a fresh name, `mac-<host>-<yyyymmdd>-<4 random hex>`,
+      and the app records it per box so it can revoke it. A fixed name cannot
+      work: `createScanToken` refuses any name already in the store, revoked
+      ones included (`beebox/src/core/scan/tokens.ts:144-146`), so a second
+      mint after a revoke would always fail. (Found 2026-10-17 during
+      implementation; the first draft assumed a revoke freed the name.)
     - If the Keychain write fails after a mint, the app revokes the token at
       once, then reports the failure.
     - Turning upload off or removing the paired box revokes the token
@@ -420,7 +422,7 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
   - Notifications follow `notify.ts`'s two rules: silent on a quiet sweep, and
     only newly observed events.
 - **Vocabulary lock-ins**: `UploadFolder`, `ScanSweep`; scan token name
-  `mac-<host>-<install>`; `x-scan-client-build` value prefix `mac-`.
+  `mac-<host>-<yyyymmdd>-<hex>`; `x-scan-client-build` value prefix `mac-`.
 - **First implementation chunk**: `ScanSweep` over a folder with `keep`, and
   the check/PUT client, tested against the fake transport. No app wiring.
 

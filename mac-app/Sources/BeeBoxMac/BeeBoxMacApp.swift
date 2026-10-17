@@ -14,11 +14,13 @@ struct BeeBoxMacApp: App {
                 updates: delegate.updates,
                 boxStore: delegate.boxStore,
                 hosting: delegate.hosting,
+                uploadFolders: delegate.uploadFolders,
+                uploads: delegate.uploads,
                 preferences: delegate.preferences,
                 quit: delegate.stopAndExit
             )
         } label: {
-            BoxIcon(runtime: delegate.runtime)
+            BoxIcon(runtime: delegate.runtime, uploads: delegate.uploads)
         }
     }
 }
@@ -37,7 +39,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         deviceLabel: Host.current().localizedName ?? "Mac"
     )
     lazy var hosting = HostingController(runtime: runtime, boxStore: boxStore, defaults: .standard)
-    lazy var preferences = PreferencesWindowController(boxStore: boxStore, hosting: hosting)
+    let uploadFolders = UploadFolderStore(storageURL: Paths.support.appending(path: "upload-folders.json"))
+    lazy var uploads = UploadCoordinator(
+        folders: uploadFolders,
+        boxes: boxStore,
+        scanTokens: MacKeychain.scanTokens,
+        tokenClient: ScanTokenClient(transport: URLSessionTransport(session: .shared), userAgent: "BeeBox-Mac/\(BundleConfig.version)"),
+        sweeper: ScanSweep(
+            transport: URLSessionTransport(session: .shared),
+            clientBuild: "mac-\(BundleConfig.version)",
+            now: { Date() },
+            sleep: { duration in
+                do {
+                    try await Task.sleep(for: duration)
+                } catch {
+                    // Cancelled: the sweep is being torn down with the app.
+                }
+            }
+        ),
+        photos: PhotosExporter(ledgerDirectory: Paths.support.appending(path: "photos", directoryHint: .isDirectory)),
+        hostName: Host.current().localizedName ?? "mac",
+        oldUploaderPlist: OldUploaderCheck.plistURL(home: Paths.home),
+        now: { Date() },
+        notify: UploadNotifications.post
+    )
+    private lazy var uploadTriggers = UploadTriggers(coordinator: uploads, folders: uploadFolders)
+    lazy var preferences = PreferencesWindowController(
+        boxStore: boxStore,
+        hosting: hosting,
+        uploadFolders: uploadFolders,
+        uploads: uploads
+    )
 
     private var termSource: DispatchSourceSignal?
 
@@ -53,6 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         source.resume()
         termSource = source
         hosting.startIfEnabled()
+        if !uploadFolders.folders.isEmpty { UploadNotifications.requestPermission() }
+        uploadTriggers.start()
     }
 
     /// `beebox://pair` links clicked in a browser. Every link goes to the
@@ -87,10 +121,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct BoxIcon: View {
     @ObservedObject var runtime: BoxRuntime
+    @ObservedObject var uploads: UploadCoordinator
 
     var body: some View {
-        Image(systemName: runtime.menuIcon)
-            .accessibilityLabel("Bee Box: \(runtime.statusText)")
+        // An upload problem marks the icon until a sweep clears it; it is
+        // never a notification (the design doc's "Uploads stuck" row).
+        if uploads.hasStandingProblem, !runtime.isFailedPhase {
+            Image(systemName: "exclamationmark.triangle")
+                .accessibilityLabel("Bee Box: an upload folder needs attention")
+        } else {
+            Image(systemName: runtime.menuIcon)
+                .accessibilityLabel("Bee Box: \(runtime.statusText)")
+        }
     }
 }
 
@@ -99,6 +141,8 @@ struct BoxMenu: View {
     @ObservedObject var updates: Updates
     @ObservedObject var boxStore: BoxStore
     @ObservedObject var hosting: HostingController
+    @ObservedObject var uploadFolders: UploadFolderStore
+    @ObservedObject var uploads: UploadCoordinator
     let preferences: PreferencesWindowController
     let quit: () -> Void
 
@@ -109,6 +153,14 @@ struct BoxMenu: View {
         }
         ForEach(remoteBoxes) { box in
             Button("\(box.label) — Open") { NSWorkspace.shared.open(box.baseURL) }
+        }
+        if !uploadFolders.folders.isEmpty {
+            Divider()
+            ForEach(uploadFolders.folders) { folder in
+                Button("\(folder.photosAlbum.map { "Photos “\($0.title)”" } ?? folder.folder.lastPathComponent): \(UploadStatusText.line(for: uploads.statuses[folder.id]))") {
+                    preferences.show(.uploads)
+                }
+            }
         }
         if hosting.enabled {
             Divider()

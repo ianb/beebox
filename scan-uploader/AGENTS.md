@@ -26,7 +26,7 @@ macOS-only behaviour (the `trash` disposition, `schedule`, notifications) either
 refuses outright or degrades to a no-op elsewhere — match whichever the
 neighbouring code does rather than inventing a third posture.
 
-## The wire contract is shared with a package that shares no code
+## The wire contract is shared with packages that share no code
 
 [`../beebox/docs/scan-upload-contract.md`](../beebox/docs/scan-upload-contract.md)
 is the only coordination point with the server. Every site here that encodes
@@ -34,9 +34,12 @@ part of it carries `// WIRE CONTRACT (scan-upload): …`. Change both sides, tha
 document, and the server's route doctests in one change.
 
 **If you change what a correct client must *do*, bump
-`SCAN_CONTRACT_VERSION`** in `src/cli/contract-version.ts` *and* in
-`beebox/src/core/scan/contract-version.ts` — two spellings of one number, never
-per-side versions. That covers the client obligations (settle gate, identity
+`SCAN_CONTRACT_VERSION`** in `src/cli/contract-version.ts`,
+`beebox/src/core/scan/contract-version.ts`, and the Mac app's
+`mac-app/Sources/BeeBoxMacCore/Scan/ContractVersion.swift` — three spellings
+of one number, never per-side versions. The Mac app is a second client of
+the same contract; change its sweep (`mac-app/Sources/BeeBoxMacCore/Scan/`)
+with this one. That covers the client obligations (settle gate, identity
 snapshot, restat-before-disposition, which responses permit a disposition), the
 check-state vocabulary, a status the client branches on, a limit the client must
 respect, and the hash or path shape. It does *not* cover an additive field, a

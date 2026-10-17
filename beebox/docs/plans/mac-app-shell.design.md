@@ -162,7 +162,7 @@ Tomas connects his Mac to the server box "Workshop" for scans.
 3. On the Uploads tab he chooses "Add Folder…" and picks `~/Scans` in the
    system folder picker, then Workshop as its box. The app checks for the old
    uploader's agent on that folder and finds none. The row says "Sending new
-   files creates a scanner credential named mac-tomas-mbp-3f2a on Workshop"
+   files creates a scanner credential named mac-tomas-mbp-20261017-3f2a on Workshop"
    and he clicks "Start Uploading". The app
    creates the scan token through his pairing and stores it in the Keychain.
 4. He scans two pages. About ten seconds after the scanner finishes writing,
