@@ -40,6 +40,7 @@
     "@fastify/cookie": "^11.0.2",
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^24.0.0",
+    "@typescript/native": "npm:typescript@7.0.2",
     "agent-browser": "^0.27.0",
     "better-sqlite3": "^12.10.0",
     "esbuild": "^0.25.12",
@@ -49,7 +50,7 @@
     "patch-package": "^8.0.0",
     "shellcheck": "4.1.0",
     "tsx": "^4.23.1",
-    "typescript": "^5.9.3"
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "overrides": {
     "react": "^18.3.1",
@@ -68,7 +69,8 @@
     "peerDependencyRules": {
       "allowedVersions": {
         "@typescript-eslint/parser": "8",
-        "eslint-plugin-react-hooks": "7"
+        "eslint-plugin-react-hooks": "7",
+        "madge>typescript": "6"
       }
     }
   },
