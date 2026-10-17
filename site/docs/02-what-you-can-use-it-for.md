@@ -26,7 +26,7 @@ does, what it needs, and what is still rough.
 - [Cooking from your recipes](uses/cooking-from-your-recipes.md): keep your recipes as cards that rescale and carry your substitutions.
 - [People and places](uses/people-and-places.md): tell it who the people in your life are and which places to recognize.
 - [Routines that run without you](uses/routines-that-run-without-you.md): put recurring work on a schedule or into a procedure, and read the result after.
-- [Learning a subject](uses/learning-a-subject.md): have it build a course and keep an evidence-backed record of what you understood.
+- [Learning a subject](uses/learning-a-subject.md): with the courses add-on turned on, have it build a course and keep an evidence-backed record of what you understood.
 - [Publishing from your cards](uses/publishing-from-your-cards.md): put a page or small site from your box on the public web, with your approval to go live and a one-step takedown.
 
 ## Walking backwards: the features and the uses behind them

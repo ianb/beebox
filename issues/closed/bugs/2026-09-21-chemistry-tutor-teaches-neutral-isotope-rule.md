@@ -1,7 +1,7 @@
 ---
 title: "Chemistry tutor teaches a false isotope rule before correcting it"
 workstream: unattached
-area: beebox
+area: courseware
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey D chemistry study
