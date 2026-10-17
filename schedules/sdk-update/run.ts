@@ -133,7 +133,8 @@ for (const { channel, npmName } of PACKAGES) {
 /**
  * The families whose pin is behind the newest settled version, as
  * `update-agent-sdk --check` words them. It exits 1 when any family is behind
- * and 0 when none is; anything else is a check that could not run.
+ * and 0 when none is; anything else is a check that could not run. An uncaught
+ * error also exits 1, so a behind report must end with the check's closing line.
  */
 async function settledButUnapplied(): Promise<string[]> {
   const result = await execa("node", ["--import", "tsx", path.join(REPO_ROOT, "bin", "update-agent-sdk.ts"), "--check"], {
@@ -142,6 +143,9 @@ async function settledButUnapplied(): Promise<string[]> {
   });
   if (result.exitCode === 0) return [];
   if (result.exitCode !== 1) refuse(`update-agent-sdk --check exited ${String(result.exitCode)}: ${result.stderr.trim()}`);
+  if (!result.stdout.trimEnd().endsWith("Run `pnpm update-agent-sdk` to bump.")) {
+    refuse(`update-agent-sdk --check exited 1 without finishing: ${result.stderr.trim()}`);
+  }
   const lines = result.stdout.split("\n").filter((line) => line.includes(" is behind: "));
   if (lines.length === 0) refuse(`update-agent-sdk --check exited 1 but named no family behind: ${result.stdout.trim()}`);
   return lines;
