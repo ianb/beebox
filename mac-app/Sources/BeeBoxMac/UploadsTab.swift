@@ -24,7 +24,7 @@ struct UploadsTab: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(folders.folders, selection: $selection) { folder in
-                    UploadRow(folder: folder, status: coordinator.statuses[folder.id], box: box(for: folder), folders: folders) { box in
+                    UploadRow(folder: folder, status: coordinator.statuses[folder.id], box: box(for: folder), folders: folders, locked: coordinator.isSweeping) { box in
                         Task { message = await coordinator.reconnect(box: box)?.message }
                     }
                 }
@@ -133,6 +133,9 @@ private struct UploadRow: View {
     let status: FolderStatus?
     let box: PairedBox?
     @ObservedObject var folders: UploadFolderStore
+    /// A sweep reads the disposition when it starts; changing it mid-sweep
+    /// would not apply to files that sweep is about to move.
+    let locked: Bool
     let reconnect: (PairedBox) -> Void
 
     var body: some View {
@@ -157,6 +160,7 @@ private struct UploadRow: View {
                     }
                     .labelsHidden()
                     .frame(width: 170)
+                    .disabled(locked)
                 }
             }
             Text(UploadStatusText.line(for: status))
@@ -183,6 +187,9 @@ enum UploadStatusText {
         }
         if status.rejectedInFolder > 0 {
             parts.append("\(status.rejectedInFolder) refused by the box, left in the folder")
+        }
+        if status.failedInFolder > 0 {
+            parts.append("\(status.failedInFolder) could not be sent and will be tried again")
         }
         return parts.joined(separator: " · ")
     }

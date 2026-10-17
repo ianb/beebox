@@ -86,9 +86,10 @@ public struct SweepSummary: Equatable, Sendable {
     /// Sums two rounds the way `run-all.ts` does: counts add, the contract
     /// version is the later observation unless that round made no request.
     /// Combines a settle-retry round with the rounds before it. Each round
-    /// re-walks the whole folder, so what happened (uploads, new refusals,
-    /// errors) adds up, while what the folder holds (duplicates, refused files
-    /// waiting there, unsettled files) is the later round's observation. Summing
+    /// re-walks the whole folder, so what happened (uploads, new refusals)
+    /// adds up, while what the folder holds (duplicates, refused files waiting
+    /// there, unsettled files, files that failed again) is the later round's
+    /// observation. Summing
     /// those would report one refused file as two after one retry. (The Node
     /// runner sums everything; its counts are only printed, never shown as a
     /// standing status.)
@@ -100,7 +101,7 @@ public struct SweepSummary: Equatable, Sendable {
             rejectedOnUpload: rejectedOnUpload + later.rejectedOnUpload,
             skippedUnsettled: later.skippedUnsettled,
             skippedIdentityChanged: skippedIdentityChanged + later.skippedIdentityChanged,
-            errors: errors + later.errors,
+            errors: later.errors,
             rejectedFileNames: rejectedFileNames + later.rejectedFileNames,
             contractVersion: later.contractVersion ?? contractVersion,
             standingProblem: later.standingProblem ?? standingProblem

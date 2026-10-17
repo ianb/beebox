@@ -85,16 +85,17 @@ public final class BoxStore: ObservableObject {
     /// Adds the local box, or updates its URL. It has no device token until the
     /// boxholder pairs it like any other box.
     public func setLocalBox(label: String, baseURL: URL) {
-        if let index = boxes.firstIndex(where: \.hostedLocally) {
-            guard boxes[index].baseURL != baseURL || boxes[index].label != label else { return }
-            boxes[index].baseURL = baseURL
-            boxes[index].label = label
-        } else if let index = boxes.firstIndex(where: { $0.isSameBox(as: baseURL) }) {
-            boxes[index].hostedLocally = true
+        var changed = boxes
+        if let index = changed.firstIndex(where: \.hostedLocally) {
+            guard changed[index].baseURL != baseURL || changed[index].label != label else { return }
+            changed[index].baseURL = baseURL
+            changed[index].label = label
+        } else if let index = changed.firstIndex(where: { $0.isSameBox(as: baseURL) }) {
+            changed[index].hostedLocally = true
         } else {
-            boxes.append(PairedBox(id: UUID(), label: label, baseURL: baseURL, hostedLocally: true))
+            changed.append(PairedBox(id: UUID(), label: label, baseURL: baseURL, hostedLocally: true))
         }
-        _ = save()
+        _ = commit(changed)
     }
 
     public func markCredentialRefused(_ box: PairedBox) {
@@ -105,9 +106,8 @@ public final class BoxStore: ObservableObject {
     /// never leaves a token with no box to name it.
     public func remove(_ box: PairedBox) throws {
         try credentials.deleteToken(for: box.id)
-        boxes.removeAll { $0.id == box.id }
+        guard commit(boxes.filter { $0.id != box.id }) else { throw BoxStoreError.saveFailed }
         refused.remove(box.id)
-        guard save() else { throw BoxStoreError.saveFailed }
     }
 
     private func store(link: PairingLink, deviceToken: String) -> PairResult {
@@ -125,13 +125,22 @@ public final class BoxStore: ObservableObject {
             log.error("pairing store failed stage=keychain-readback")
             return .storeFailed
         }
-        if let index = boxes.firstIndex(where: { $0.id == box.id }) {
-            boxes[index] = box
+        var changed = boxes
+        if let index = changed.firstIndex(where: { $0.id == box.id }) {
+            changed[index] = box
         } else {
-            boxes.append(box)
+            changed.append(box)
+        }
+        guard commit(changed) else {
+            // A token for a box that was never recorded would be an orphan.
+            if !boxes.contains(where: { $0.id == box.id }) {
+                do { try credentials.deleteToken(for: box.id) } catch {
+                    log.error("orphan device token not deleted box=\(box.id, privacy: .public)")
+                }
+            }
+            return .storeFailed
         }
         refused.remove(box.id)
-        guard save() else { return .storeFailed }
         return .paired(box)
     }
 
@@ -145,16 +154,19 @@ public final class BoxStore: ObservableObject {
         }
     }
 
-    private func save() -> Bool {
+    /// Saves `changed`, then publishes it. A list that could not be saved is
+    /// never published.
+    private func commit(_ changed: [PairedBox]) -> Bool {
         guard loadFailure == nil else { return false }
         do {
             try FileManager.default.createDirectory(at: storageURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(Snapshot(boxes: boxes)).write(to: storageURL, options: .atomic)
-            return true
+            try JSONEncoder().encode(Snapshot(boxes: changed)).write(to: storageURL, options: .atomic)
         } catch {
             log.error("paired boxes save failed error=\(String(describing: error), privacy: .public)")
             return false
         }
+        boxes = changed
+        return true
     }
 
     private struct Snapshot: Codable {

@@ -174,6 +174,101 @@ final class UploadCoordinatorTests: XCTestCase {
     }
 }
 
+@MainActor
+final class UploadReviewFixTests: XCTestCase {
+    private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("beebox-mac-fixes-\(UUID().uuidString)")
+
+    override func setUpWithError() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try FileManager.default.removeItem(at: directory)
+    }
+
+    /// A folder whose save failed must never be published, or a sweep would
+    /// act on settings the person was told were not saved.
+    func testAFolderThatCannotBeSavedIsNotPublished() throws {
+        let blocker = directory.appendingPathComponent("not-a-directory")
+        try Data().write(to: blocker)
+        let store = UploadFolderStore(storageURL: blocker.appendingPathComponent("uploads.json"))
+        let folder = UploadFolder(id: UUID(), folderPath: directory.path, boxID: UUID(), disposition: .trash, photosAlbum: nil)
+
+        XCTAssertFalse(store.add(folder))
+        XCTAssertTrue(store.folders.isEmpty)
+    }
+
+    private func pairedRig(sweeper: FakeSweeper, tokens: ScriptedTransport, clock: MutableClock) async throws -> (UploadCoordinator, UploadFolderStore, PairedBox) {
+        let boxes = BoxStore(
+            storageURL: directory.appendingPathComponent("boxes.json"),
+            credentials: FakeCredentials(),
+            redeemer: PairingRedeemer(transport: FakeTransport(status: 200, body: #"{"token":"device"}"#), userAgent: "ua"),
+            deviceLabel: "Test Mac"
+        )
+        guard case .paired(let box) = await boxes.pair(pairingLink()) else { throw XCTSkip("pairing fixture failed") }
+        let folders = UploadFolderStore(storageURL: directory.appendingPathComponent("uploads.json"))
+        let coordinator = UploadCoordinator(
+            folders: folders, boxes: boxes, scanTokens: FakeCredentials(),
+            tokenClient: ScanTokenClient(transport: tokens, userAgent: "ua"),
+            sweeper: sweeper, photos: nil, hostName: "Test Mac",
+            oldUploaderPlist: directory.appendingPathComponent("none.plist"),
+            now: { clock.now }, notify: { _ in }
+        )
+        return (coordinator, folders, box)
+    }
+
+    func testAFailedMintLeavesNoRecordedName() async throws {
+        let tokens = ScriptedTransport()
+        tokens.queue(500, #"{"error":{"message":"boom"}}"#)
+        let (coordinator, folders, box) = try await pairedRig(sweeper: FakeSweeper(), tokens: tokens, clock: MutableClock())
+
+        let problem = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
+
+        XCTAssertNotNil(problem)
+        XCTAssertNil(folders.scanTokenNames[box.id])
+    }
+
+    func testRetryAfterHoldsEveryTriggerForThatBox() async throws {
+        let tokens = ScriptedTransport()
+        tokens.queue(200, #"{"result":{"data":{"name":"n","token":"scan","createdAt":"x"}}}"#)
+        let sweeper = FakeSweeper()
+        sweeper.summary = SweepSummary.empty.with(problem: .rateLimited(retryAfterSeconds: 60))
+        let clock = MutableClock()
+        let (coordinator, _, box) = try await pairedRig(sweeper: sweeper, tokens: tokens, clock: clock)
+
+        _ = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
+        XCTAssertEqual(sweeper.targets.count, 1)
+
+        await coordinator.sweepAll()
+        XCTAssertEqual(sweeper.targets.count, 1, "asked again inside the Retry-After window")
+
+        clock.now = clock.now.addingTimeInterval(61)
+        sweeper.summary = .empty
+        await coordinator.sweepAll()
+        XCTAssertEqual(sweeper.targets.count, 2)
+    }
+
+    func testFilesThatFailedToSendShowInTheStatus() async throws {
+        let tokens = ScriptedTransport()
+        tokens.queue(200, #"{"result":{"data":{"name":"n","token":"scan","createdAt":"x"}}}"#)
+        let sweeper = FakeSweeper()
+        var summary = SweepSummary.empty
+        summary.errors = 1
+        sweeper.summary = summary
+        let (coordinator, folders, box) = try await pairedRig(sweeper: sweeper, tokens: tokens, clock: MutableClock())
+
+        _ = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
+
+        let folder = try XCTUnwrap(folders.folders.first)
+        XCTAssertEqual(coordinator.statuses[folder.id]?.failedInFolder, 1)
+    }
+}
+
+@MainActor
+final class MutableClock {
+    var now = Date(timeIntervalSince1970: 1_792_195_200)
+}
+
 final class FakeSweeper: FolderSweeping, @unchecked Sendable {
     private let lock = NSLock()
     private var _summary = SweepSummary.empty

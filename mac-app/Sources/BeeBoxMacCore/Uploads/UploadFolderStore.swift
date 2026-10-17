@@ -53,30 +53,33 @@ public final class UploadFolderStore: ObservableObject {
         load()
     }
 
+    // Each change is saved before it is published: a folder whose save failed
+    // must not be swept, and a name that was not saved must not be relied on.
+
     @discardableResult
     public func add(_ folder: UploadFolder) -> Bool {
         guard !folders.contains(where: { $0.folderPath == folder.folderPath }) else { return false }
-        folders.append(folder)
-        return save()
+        return commit(folders: folders + [folder], scanTokenNames: scanTokenNames)
     }
 
     @discardableResult
     public func update(_ folder: UploadFolder) -> Bool {
         guard let index = folders.firstIndex(where: { $0.id == folder.id }) else { return false }
-        folders[index] = folder
-        return save()
+        var changed = folders
+        changed[index] = folder
+        return commit(folders: changed, scanTokenNames: scanTokenNames)
     }
 
     @discardableResult
     public func remove(_ folder: UploadFolder) -> Bool {
-        folders.removeAll { $0.id == folder.id }
-        return save()
+        commit(folders: folders.filter { $0.id != folder.id }, scanTokenNames: scanTokenNames)
     }
 
     @discardableResult
     public func setScanTokenName(_ name: String?, forBox boxID: UUID) -> Bool {
-        scanTokenNames[boxID] = name
-        return save()
+        var names = scanTokenNames
+        names[boxID] = name
+        return commit(folders: folders, scanTokenNames: names)
     }
 
     public func folders(forBox boxID: UUID) -> [UploadFolder] {
@@ -95,16 +98,18 @@ public final class UploadFolderStore: ObservableObject {
         }
     }
 
-    private func save() -> Bool {
+    private func commit(folders newFolders: [UploadFolder], scanTokenNames newNames: [UUID: String]) -> Bool {
         guard loadFailure == nil else { return false }
         do {
             try FileManager.default.createDirectory(at: storageURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(Snapshot(folders: folders, scanTokenNames: scanTokenNames)).write(to: storageURL, options: .atomic)
-            return true
+            try JSONEncoder().encode(Snapshot(folders: newFolders, scanTokenNames: newNames)).write(to: storageURL, options: .atomic)
         } catch {
             log.error("upload folders save failed error=\(String(describing: error), privacy: .public)")
             return false
         }
+        folders = newFolders
+        scanTokenNames = newNames
+        return true
     }
 
     private struct Snapshot: Codable {

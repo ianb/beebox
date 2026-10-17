@@ -51,6 +51,7 @@ struct PhotosExporter: PhotosExporting {
 
         let deadline = ContinuousClock.now + timeLimit
         var written = 0
+        var skipped = 0
         for asset in pending {
             guard ContinuousClock.now < deadline else { break }
             switch await Self.jpegData(for: asset) {
@@ -72,7 +73,13 @@ struct PhotosExporter: PhotosExporting {
                 // An iCloud original that would not download: left out of the
                 // ledger, so the next sweep tries it again.
                 appLog("photos export skipped one asset: \(problem)")
+                skipped += 1
             }
+        }
+        if skipped > 0 {
+            // The ones written are in the folder and the sweep sends them; the
+            // problem stays visible until every photo has exported.
+            return .failure(.failed("\(skipped) of \(pending.count) new photos could not be exported (an iCloud original may not have downloaded); they are tried again each sweep"))
         }
         return .success(written)
     }

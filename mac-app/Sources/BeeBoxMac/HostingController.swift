@@ -29,6 +29,7 @@ final class HostingController: ObservableObject {
         )
         runtimeExists = FileManager.default.fileExists(atPath: Paths.runtime.path)
         opensAtLogin = SMAppService.mainApp.status == .enabled
+        runtime.isWanted = { [weak self] in self?.enabled ?? false }
         // The local box joins the box list when it is serving, at whatever URL
         // the runtime chose (BEEBOX_PORT moves it).
         phaseWatch = runtime.$phase.sink { [weak boxStore] phase in

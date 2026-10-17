@@ -60,6 +60,9 @@ public struct FolderStatus: Equatable, Sendable {
     public var lastSentAt: Date?
     public var totalSent = 0
     public var rejectedInFolder = 0
+    /// Files the last sweep could not send (too large, a server error); they
+    /// stay in the folder and are tried again.
+    public var failedInFolder = 0
     public var problem: FolderProblem?
 }
 
@@ -82,6 +85,8 @@ public enum FolderRemoval: Equatable, Sendable {
 @MainActor
 public final class UploadCoordinator: ObservableObject {
     @Published public private(set) var statuses: [UploadFolder.ID: FolderStatus] = [:]
+    /// True while a sweep runs; settings that a sweep reads are locked then.
+    @Published public private(set) var isSweeping = false
 
     private let folders: UploadFolderStore
     private let boxes: BoxStore
@@ -93,8 +98,10 @@ public final class UploadCoordinator: ObservableObject {
     private let oldUploaderPlist: URL
     private let now: () -> Date
     private let notify: (UploadNotice) -> Void
-    private var sweeping = false
     private var sweepAgain = false
+    /// A box that answered 429 is not asked again before this time, whatever
+    /// triggers the next sweep.
+    private var notBefore: [PairedBox.ID: Date] = [:]
     private let log = Logger(subsystem: "run.beebox.mac", category: "uploads")
 
     public init(
@@ -128,12 +135,12 @@ public final class UploadCoordinator: ObservableObject {
     /// Sweeps every folder. A call while a sweep runs schedules one more pass
     /// after it instead of running two at once.
     public func sweepAll() async {
-        if sweeping {
+        if isSweeping {
             sweepAgain = true
             return
         }
-        sweeping = true
-        defer { sweeping = false }
+        isSweeping = true
+        defer { isSweeping = false }
         repeat {
             sweepAgain = false
             for folder in folders.folders {
@@ -218,6 +225,9 @@ public final class UploadCoordinator: ObservableObject {
             status.problem = .boxMissing
             return
         }
+        if let wait = notBefore[box.id], now() < wait {
+            return
+        }
         guard let scanToken = scanTokens.readToken(for: box.id) else {
             status.problem = boxes.token(for: box) == nil ? .boxNotPaired : .scanTokenUnavailable("no scanner credential on this Mac")
             return
@@ -233,6 +243,10 @@ public final class UploadCoordinator: ObservableObject {
         let summary = await sweeper.run(target, retryRejected: false)
         status.lastSweepAt = now()
         status.rejectedInFolder = summary.rejected
+        status.failedInFolder = summary.errors
+        if case .rateLimited(let seconds) = summary.standingProblem {
+            notBefore[box.id] = now().addingTimeInterval(TimeInterval(seconds))
+        }
         if summary.uploaded > 0 {
             status.lastSentAt = now()
             status.totalSent += summary.uploaded
@@ -255,11 +269,16 @@ public final class UploadCoordinator: ObservableObject {
     private func ensureScanToken(for box: PairedBox) async -> Result<Void, FolderProblem> {
         if scanTokens.readToken(for: box.id) != nil { return .success(()) }
         guard let deviceToken = boxes.token(for: box) else { return .failure(.boxNotPaired) }
+        // The name is recorded before the mint, so a crash after the mint still
+        // leaves this Mac able to revoke it. Revoking a name that was never
+        // minted is a no-op (404).
         let name = ScanTokenClient.newTokenName(host: hostName, now: now(), random: UUID().uuidString.lowercased())
+        guard folders.setScanTokenName(name, forBox: box.id) else { return .failure(.credentialNotSaved) }
         let token: String
         do {
             token = try await tokenClient.mint(baseURL: box.baseURL, deviceToken: deviceToken, name: name)
         } catch {
+            folders.setScanTokenName(nil, forBox: box.id)
             return .failure(problem(for: error, box: box))
         }
         do {
@@ -268,12 +287,9 @@ public final class UploadCoordinator: ObservableObject {
         } catch {
             // The box holds a token this Mac cannot use; take it back.
             log.error("scan token keychain write failed; revoking name=\(name, privacy: .public)")
-            await revokeAfterFailedSave(box: box, deviceToken: deviceToken, name: name)
-            return .failure(.credentialNotSaved)
-        }
-        guard folders.setScanTokenName(name, forBox: box.id) else {
-            forgetScanToken(forBox: box.id)
-            await revokeAfterFailedSave(box: box, deviceToken: deviceToken, name: name)
+            if await revokeAfterFailedSave(box: box, deviceToken: deviceToken, name: name) {
+                forgetScanToken(forBox: box.id)
+            }
             return .failure(.credentialNotSaved)
         }
         log.info("scan token minted name=\(name, privacy: .public)")
@@ -282,12 +298,30 @@ public final class UploadCoordinator: ObservableObject {
 
     /// The box holds a token this Mac could not keep; take it back. A failure
     /// leaves it listed by name in the box's Settings → Scan uploaders.
-    private func revokeAfterFailedSave(box: PairedBox, deviceToken: String, name: String) async {
+    /// False when the revoke failed; the name then stays recorded, so removing
+    /// the box later tries again.
+    private func revokeAfterFailedSave(box: PairedBox, deviceToken: String, name: String) async -> Bool {
         do {
             try await tokenClient.revoke(baseURL: box.baseURL, deviceToken: deviceToken, name: name)
+            return true
         } catch {
             log.error("unsaved scan token not revoked name=\(name, privacy: .public) error=\(String(describing: error), privacy: .public)")
+            return false
         }
+    }
+
+    /// For uninstall: revokes every scan token this Mac minted. Returns a line
+    /// per token it could not revoke, naming the box and the token, so the
+    /// person can revoke it in the box's Settings → Scan uploaders.
+    public func revokeAllScanTokens() async -> [String] {
+        var failures: [String] = []
+        for (boxID, name) in folders.scanTokenNames {
+            if let failure = await revokeScanToken(forBox: boxID) {
+                let label = boxes.boxes.first { $0.id == boxID }?.label ?? "a box"
+                failures.append("\(name) on \(label): \(failure)")
+            }
+        }
+        return failures
     }
 
     private func forgetScanToken(forBox boxID: UUID) {
