@@ -24,7 +24,7 @@ walks show a cost of that rule for structured types.
 - D-chemistry: the agent told the person the progress page "lists each idea
   and what you've actually shown". The page has no such table, because the
   per-idea fields are in Properties
-  ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), row 30).
+  ([report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md), row 30).
 
 This is the designed behavior, not a failed fix.
 
@@ -52,4 +52,4 @@ a body section, belongs to the same decision. Related:
 
 ## Re-encounter 2026-10-09 (journey walks)
 
-Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a loan's front is only the quoted sentence; person, dates and the flag sit behind Properties. The walker: "for thirty it's not a list I'd scan". [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 34): an inventory item shows only its title and "No body content". `record` has a `body` field, so `splitCardFields` sends every type field to Properties (`beebox/src/frontend/src/lib/card-field-faces.ts:50-56`) and the empty body renders "No body content" (`MarkdownCardView/CardBody.tsx:121`); the record schema itself advises "probably no body" for an inventory item (`beebox/src/schemas/record.tsx:124`), so following the schema guidance produces an empty front. [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 32): a course progress page opened as one paragraph; its per-idea entries went to Properties, though the chat had said the page records the person's words for each rating. The walker's summary: "Half plumbing, half the thing I want".
+Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a loan's front is only the quoted sentence; person, dates and the flag sit behind Properties. The walker: "for thirty it's not a list I'd scan". [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 34): an inventory item shows only its title and "No body content". `record` has a `body` field, so `splitCardFields` sends every type field to Properties (`beebox/src/frontend/src/lib/card-field-faces.ts:50-56`) and the empty body renders "No body content" (`MarkdownCardView/CardBody.tsx:121`); the record schema itself advises "probably no body" for an inventory item (`beebox/src/schemas/record.tsx:124`), so following the schema guidance produces an empty front. [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (row 32): a course progress page opened as one paragraph; its per-idea entries went to Properties, though the chat had said the page records the person's words for each rating. The walker's summary: "Half plumbing, half the thing I want".

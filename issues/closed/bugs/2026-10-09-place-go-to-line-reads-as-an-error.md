@@ -37,4 +37,4 @@ Related: [chats-bind-to-a-landmark-once-and-never-move](../../bugs/2026-08-25-ch
 (why the conversation does not follow the person to the new place).
 
 Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) rows 24, 37, and 62,
-[D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 40.
+[D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) row 40.

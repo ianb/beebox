@@ -39,8 +39,8 @@ desktop and phone.
 - **Admin**: host-wide controls, owner only, in six tabs: an overview of each section's state, agents (which agent is running and which extra OpenRouter models a box may run), people (allowed users and invites), connections, secrets (each key a collapsed row showing what uses it), and the host, which holds notifications: browser push on or off, a three-day list of what each channel did, and the paired phones.
 
 Each kind of card gets its own display: a recipe with scalable amounts, a
-course with its lessons and your progress, a dashboard or a todo list, a
-document, a spreadsheet, a PDF, a photo, a person, or a folder. A card shows
+dashboard or a todo list, a document, a spreadsheet, a PDF, a photo, a person,
+or a folder. A card shows
 its content on the front; turning it over shows its properties, such as the
 fields of its type, how it was found, its attachments, and its last change.
 Cards can also carry a card theme and a stock: plain, paper, sticky note, or

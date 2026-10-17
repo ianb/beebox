@@ -464,10 +464,11 @@ propose adding the section, in the boxholder's words, at the next retro:
 <!-- rules: reaching.default-quote -->
 {{reaching_default}}
 
-<!-- rules: reaching.check-before-promising, reaching.notify-now -->
+<!-- rules: reaching.check-before-promising, reaching.person-enables, reaching.notify-now -->
 Before you promise a reminder or a watch, run `bbx notify --check`; if nothing
-can reach the person, say so instead of promising. To reach them now, `bbx
-notify` with a `--loudness` (`dot`, `quiet`, or `loud`) and a `--target` where
+can reach the person, say so instead of promising. You cannot turn a channel
+on: the person does that in Admin, on the Host tab, under Notifications, or
+pairs the iPhone app in Settings. To reach them now, `bbx notify` with a `--loudness` (`dot`, `quiet`, or `loud`) and a `--target` where
 a tap lands; in a chat turn, `<callout loudness="quiet">` does this for the
 turn's outcome.
 

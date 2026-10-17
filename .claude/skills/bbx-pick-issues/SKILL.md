@@ -84,7 +84,8 @@ Signals, roughly in order of how well they have predicted a real body of work:
   owner or a tombstone. Not a clustering signal.
 
 Exclude by default: `needs: [manual-testing]` (the developer's own queue),
-`watch/` (trigger-driven, never picked), and anything with a next action
+`watch/` (trigger-driven, never picked), plugin areas such as
+`area: courseware` (opt-in plugins, not core), and anything with a next action
 (`bin/issues next-action`; that is `bbx-issue-actions` territory — mention
 them, don't work them).
 
