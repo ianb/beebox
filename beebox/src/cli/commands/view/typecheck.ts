@@ -100,9 +100,11 @@ async function typecheckOneView(args: { viewPath: string; slug: string }): Promi
       // view's local card type vs ViewProps). Checking the whole view body
       // instead would flag unrelated internal type noise — e.g. Float32Array
       // lib-variance — that has nothing to do with the migration.
-      // An error with no file is a config or global error: it means the
-      // harness did not check, so it fails the view rather than passing it.
-      if (d.fileName !== undefined && path.basename(d.fileName) !== "harness.ts") continue;
+      // An error in the generated tsconfig, or with no file (a global error),
+      // means the harness did not check, so it fails the view rather than
+      // passing it.
+      const where = d.fileName === undefined ? null : path.basename(d.fileName);
+      if (where !== null && where !== "harness.ts" && where !== "tsconfig.json") continue;
       errors.push(d.message);
     }
     return errors.length === 0 ? { slug, ok: true } : { slug, ok: false, errors };
