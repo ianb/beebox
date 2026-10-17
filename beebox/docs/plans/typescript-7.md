@@ -1,6 +1,6 @@
 ---
 title: "Move the repo to TypeScript 7, except typescript-eslint"
-status: draft
+status: active
 workstream: ts7
 issues:
   - ../../../issues/exploration/2026-10-17-try-typescript-7-native-compiler.md
@@ -55,9 +55,8 @@ separately. Not a BIG CHANGE.
   beebox code imports it after Track C. This is the side-by-side setup the
   TypeScript team recommends for 7.0 (see Prior art).
 - Boxholder: "if we can upgrade everything but typescript-eslint, and setup a
-  future issue for fixing that later". So knip moves to 6.x (no TypeScript
-  dependency). `agent-doctest` is the one other exception, and it needs the
-  boxholder's yes (Open design questions).
+  future issue for fixing that later". knip and `agent-doctest` are the other
+  exceptions, and they need the boxholder's yes (Open design questions).
 - Handoff: "The human may remove doctests entirely, so do not invest in
   doctest-specific accommodation." So `agent-doctest` stays on the 6.0 API.
 - `beebox/docs/engineering-principles.md` §8 "One way to do each thing": every
@@ -166,13 +165,12 @@ Adopted item is configuration only, so no ACKNOWLEDGEMENTS.md entry.
   `@typescript/native` there (runtime use after Track C). `agent-doctest`
   keeps its `typescript` (now the 6.0 alias) in `dependencies`
   (`agent-doctest/package.json:23`; `check.ts:18` imports it at runtime).
-  knip goes from `^5.83.1` to 6.x in root and `beebox` `package.json`, with
-  whatever `knip.ts` changes knip 6 needs.
+  knip stays on 5.x (see Implementation notes).
   `personal-vibe-check` keeps its peer `typescript >=5` (it is a published
   preset; consumers bring their own) and gets both in `devDependencies`.
 - **Why:** the `tsc` binary in every script becomes 7.0 with no script edits.
-  typescript-eslint (peer `>=4.8.4 <6.1.0`) resolves `typescript` to 6.0.2.
-  knip 6 parses with oxc and imports no TypeScript.
+  typescript-eslint (peer `>=4.8.4 <6.1.0`) and knip 5 (peer `<7`) resolve
+  `typescript` to 6.0.2.
 - **Lock-ins:** the alias name `@typescript/native` (the announcement's name).
 - **First chunk:** edit the 11 files, `pnpm install`, then confirm
   `node_modules/.bin/tsc --version` prints 7.0.2, `node_modules/typescript`
@@ -237,8 +235,8 @@ Adopted item is configuration only, so no ACKNOWLEDGEMENTS.md entry.
       `transpileModule` for all five workflows; TS1108 is a checker error,
       so `--noCheck` suppresses it and the filter goes away.
 - **Lock-ins:** `beebox/src/lib/typescript/` as the only importer of
-  `@typescript/native`. A lint rule (`no-restricted-imports` for `typescript`
-  and `@typescript/native` outside that directory) enforces it, per §11.
+  `@typescript/native` and `typescript`. The layout rule `typescript-imports`
+  enforces it, per §11 (see Implementation notes).
 - **Hook boundary:** `sdk-hooks.ts:69` awaits `lintViewMarkdown` with no
   catch, and the callback builds `additionalContext` only from returned
   errors (`sdk-hooks.ts:65-72`). The port wraps the call: an exception
@@ -324,6 +322,12 @@ none
 
 ## Open design questions
 
+- **knip on 5.x (needs the boxholder).** knip 6 drops its TypeScript
+  dependency, but on this tree it reports 34 more unused exports, one
+  unlisted dependency and one unlisted binary than knip 5, and asks for
+  `knip.ts` changes; the weekly `knip-sweep` diff would show them all at once.
+  knip 5 on the 6.0 alias reports exactly what it did on 5.9. Lean: keep 5.x
+  here and do the knip 6 migration on its own (listed in the follow-up issue).
 - **`agent-doctest` on 6.0 (needs the boxholder).** It is outside "everything
   but typescript-eslint". Lean: accept it, because the handoff says doctests
   may be removed and porting needs a non-incremental rewrite of `check.ts`.
@@ -365,3 +369,33 @@ Done when: every `typecheck` script passes on 7.0; `pnpm lint` passes on 6.0;
 `build:workflows` succeed. No data migration.
 Deploys with the next landing. The server's `pnpm install --frozen-lockfile`
 (`deploy.sh:425`) installs the Linux binary from the lockfile.
+
+## Implementation notes
+
+Where the build differs from the tracks above, and why:
+
+- **knip stays on 5.x.** See Open design questions.
+- **The backend `exclude` for `src/plugins/*/view/**` was reverted.** Backend
+  lint reaches those files through `tsconfig.json`; excluding them broke the
+  lint project service. `src/types/css.d.ts` sits under `src/**`, so it
+  already types their CSS imports in the backend program.
+- **Layout parser lifetime.** The layout tooling keeps one parser per process
+  (layout commands are short-lived) and memoizes trees by file and text.
+  `layout-check` parses 4,018 files 9,102 times; without the memo it took
+  13 s against 9.2 s on 5.9, with it 8.6 s. The Markdown check opens one
+  parser per check. Closing the previous file in the next file's snapshot was
+  tried and was slower (23 s).
+- **The Markdown check keeps its `ts` parameter threading**, now with the
+  parser alongside, so the module stays lazily loaded for the eagerly
+  imported CLI.
+- **Lock-in as a layout rule, not an eslint rule.** The eslint config's
+  `no-restricted-imports` blocks replace one another per glob, so a repo-wide
+  pattern would have to be repeated in five blocks.
+- **madge.** madge 8.0.0 (latest) declares an optional `typescript ^5.4.4`
+  peer. `lint:circular` passes on 6.0; a root `peerDependencyRules` entry
+  allows `madge>typescript` 6.
+- **`pnpm smoke`** fails on two pre-existing bugs (filed:
+  `issues/bugs/2026-10-17-release-smoke-imports-wildcard-exports-and-calls-engine-serve.md`).
+  With the first skipped locally, every TypeScript step passed from the
+  release tarball.
+

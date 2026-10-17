@@ -1,5 +1,5 @@
 ---
-title: "Move typescript-eslint and doctest-typecheck to TypeScript 7 when 7.1 ships an API"
+title: "Move typescript-eslint, knip and doctest-typecheck off the TypeScript 6.0 API"
 workstream: unattached
 area: beebox
 labels: [tooling, typecheck]
@@ -9,7 +9,7 @@ discovered-in: worktree-ts7 — the TypeScript 7 move kept these tools on the 6.
 ---
 
 The [TypeScript 7 plan](../../beebox/docs/plans/typescript-7.md) moves every
-compile, typecheck and beebox runtime use of TypeScript to 7.0. Two users of
+compile, typecheck and beebox runtime use of TypeScript to 7.0. Three users of
 the old JavaScript compiler API stay on the `typescript` name, which points at
 `@typescript/typescript6` (6.0):
 
@@ -18,6 +18,11 @@ the old JavaScript compiler API stay on the `typescript` name, which points at
   request ([#12518](https://github.com/typescript-eslint/typescript-eslint/issues/12518)):
   7.0 has no API. They track 7.x support in
   [#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940).
+- **knip** 5.x imports `typescript`. knip 6 parses with oxc and needs no
+  TypeScript, so this one does not wait for 7.1. It is its own migration: on
+  2026-10-17 knip 6 reported 34 more unused exports than knip 5, one unlisted
+  dependency (`ws` in `beebox/src/webapp/routes/chat/audio-routes.ts`), one
+  unlisted binary (`tail` in `bin/deploy-lock.test.ts`), and `knip.ts` hints.
 - **`agent-doctest`'s `doctest-typecheck`** (`agent-doctest/src/typecheck/check.ts`)
   and the three doctests that import `typescript`. If the doctest tier is
   removed, this item goes with it.
