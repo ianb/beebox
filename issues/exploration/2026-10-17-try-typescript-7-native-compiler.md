@@ -108,7 +108,7 @@ All four fixes are also valid under 5.9, so they can land before any switch.
 | Consumer | Uses | Can it stay on 5.x while `tsgo` checks? |
 |---|---|---|
 | typescript-eslint 8.59 (typed rules in `personal-vibe-check/preset.ts:667`) | in-process program via `projectService` | Must stay. Peer is `>=4.8.4 <6.1.0`. |
-| knip 5.88 | in-process program | Must stay. Peer is `<7`. |
+| knip 5.88 | in-process program | Peer is `<7`. knip 6 parses with oxc and has no TypeScript dependency, so an upgrade removes this. |
 | `tsx` | esbuild only, reads tsconfig | Not affected. |
 | tap / `@tapjs/test` / `tshy` | depend on `typescript` 5.9 themselves | Not affected; they bring their own. |
 | `agent-doctest` `doctest-typecheck` | `createIncrementalProgram` in-process | Must stay. No doctest work planned (the doctest tier may go away). |
@@ -117,8 +117,8 @@ All four fixes are also valid under 5.9, so they can land before any switch.
 | finish-verify, husky pre-commit | run `pnpm typecheck` per package | Switch automatically if the package scripts switch. |
 | Editors | no `.vscode`/`typescript.tsdk` in the repo | Each editor uses its own TS. Unchanged. |
 
-So a full move of `typescript` to 7.x is blocked: typescript-eslint, knip, and
-beebox's own runtime code need the 5.x API.
+So a full move of `typescript` to 7.x is blocked by typescript-eslint. beebox's
+own runtime code can move to the 7.0 `unstable/` API (see below).
 
 ### Recommendation
 
@@ -140,3 +140,31 @@ not elsewhere. On this tree that difference was one line.
 Revisit the full migration when typescript-eslint and knip support 7.x and the
 7.x API is no longer `unstable`. beebox's runtime uses would then move to that
 API or keep 5.x as a separate dependency.
+
+### Parse through the 7.0 API (added 2026-10-17)
+
+The 7.0 API parses in the Go process and returns syntax trees over a pipe.
+Measured with `typescript/unstable/sync` and an in-memory file system:
+
+| Workload | 5.9 `createSourceFile` | 7.0.2 API |
+|---|---|---|
+| Load | 100 ms | 40 ms + 9 ms process start |
+| 4 plugin view files | 13 ms | 89 ms first, under 1 ms cached |
+| 1,500 beebox files, one snapshot | 1.0 s | 1.6 s |
+| 1,500 files, one snapshot each, no tsconfig | — | 31 s |
+| 1,500 files, one snapshot each, `noLib`/`noResolve` tsconfig | — | 1.8 s |
+
+Node counts match 5.9 in every run. Files left open stay open across
+snapshots, so per-file use must close each file. Reusing one file name with
+`fileChanges: { changed }` returned stale trees.
+
+The 7.0 node API matches 5.9 for what our walkers use (`kind`, `parent`,
+`forEachChild`, `getStart`, `getText`). Three guards are renamed:
+`isParameterDeclaration`, `isPropertySignatureDeclaration`,
+`isStringLiteralLikeNode`. The 7.1 nightlies export the same modules without
+the `unstable/` prefix.
+
+The decision and the work are in the
+[TypeScript 7 plan](../../beebox/docs/plans/typescript-7.md). The tools that
+stay on the 6.0 API are in
+[the follow-up](../watch/2026-10-17-move-typescript-eslint-to-typescript-7.md).
