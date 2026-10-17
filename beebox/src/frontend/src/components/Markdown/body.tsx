@@ -15,13 +15,14 @@
  *    render with `view:` / relative-path / lightbox routing baked in.
  *  - The `{% quote %}` tag becomes `QuoteInline` or `QuoteBlock` (see
  *    `markdoc-config.ts` and `Quote.tsx`).
+ *  - A fenced code block becomes `Fence`: the block plus a Copy button.
  *
  * Callers can pass `components` to override or extend the map. The most
  * common case is chat, which replaces `Link`, `Img`, and `Para` to render
  * file previews, sized inline images, and lone-image grid layouts.
  */
 
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useRef } from "react";
 import * as React from "react";
 import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
 import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
@@ -35,6 +36,7 @@ import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
 import { assignLocators, stampLocators } from "@shared/todo-locators";
 import { makeLink, type LinkContext } from "../markdown-link/link";
+import { Button } from "../ui/Button";
 import { Image } from "../ui/Image";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
@@ -51,7 +53,7 @@ import type { ReactNode } from "react";
 
 // Named value imports don't resolve from this CommonJS module under Node's ESM loader.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { transform, renderers } = Markdoc;
+const { transform, renderers, Tag, nodes: markdocNodes } = Markdoc;
 
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
 // `parse` — see lib/markdoc-parse.ts.
@@ -154,6 +156,28 @@ function Para({ children, align, title, lang, dir }: { children?: ReactNode; ali
   );
 }
 
+/**
+ * A fenced code block with a Copy button. An agent puts a drafted message in a
+ * fence for the person to paste elsewhere; the button copies the block's text
+ * as rendered, without selecting by hand. The button floats inside the block
+ * so wrapped lines flow around it; the text is read from its own span so the
+ * button's label is never copied.
+ */
+function Fence({ children, "data-language": language }: { children?: ReactNode; "data-language"?: string }) {
+  const textRef = useRef<HTMLSpanElement>(null);
+  const copy = async (): Promise<void> => {
+    await navigator.clipboard.writeText(textRef.current?.textContent ?? "");
+  };
+  return (
+    <pre data-language={language}>
+      <Button size="sm" intent="secondary" className="float-right ml-2 mb-1" flash={{ label: "Copied" }} aria-live="polite" onClick={copy}>
+        Copy
+      </Button>
+      <span ref={textRef}>{children}</span>
+    </pre>
+  );
+}
+
 interface RenderConfigBundle {
   config: Config;
   components: Record<string, React.ComponentType<Record<string, unknown>>>;
@@ -171,6 +195,14 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
       paragraph: { render: "Para", children: ["inline"] },
+      // Markdoc's own fence transform hardcodes `pre`; this one emits `Fence`.
+      fence: {
+        ...markdocNodes.fence,
+        transform(node, cfg) {
+          const children = node.children.length > 0 ? node.transformChildren(cfg) : [node.attributes.content];
+          return new Tag("Fence", node.transformAttributes(cfg), children);
+        },
+      },
       blockquote: { render: "Blockquote", children: ["paragraph", "tag", "blockquote", "list", "heading", "fence"] },
       link: {
         render: "Link",
@@ -218,6 +250,7 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
   const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
     Fragment: cast(Fragment),
     Para: cast(Para),
+    Fence: cast(Fence),
     Blockquote: cast(({ children }: { children?: ReactNode }) => <blockquote className="bbx-blockquote">{children}</blockquote>),
     Link: cast(Link),
     Img: cast(Img),
