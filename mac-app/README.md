@@ -66,6 +66,16 @@ to `container build` itself: it recreates the builder from the 2 GB default
 otherwise. Keep VM state under `<worktree>/scratch/`, not the session
 scratchpad.
 
+## Entitlements
+
+`BeeBoxMac.entitlements` holds `com.apple.security.virtualization` (the VM)
+and `com.apple.security.personal-information.photos-library` (Photos album
+export). A Developer ID build runs under the hardened runtime, where a
+protected resource without its entitlement is denied silently: no prompt, and
+the app is not listed in System Settings → Privacy & Security. Ad hoc builds
+skip the hardened runtime, so they do not show the problem; check a new
+protected resource with a signed build.
+
 ## Run during development
 
 Give a development build its own bundle id and state, so it does not share
