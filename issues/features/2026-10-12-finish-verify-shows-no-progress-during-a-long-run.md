@@ -29,3 +29,7 @@ The first line of a `test:changed` run gives the file count and an estimated
 time (change-based-test-selection plan, revision 2026-10-12). This item is
 for the `finish-tooling` workstream because that workstream is editing
 `bin/finish-verify.ts` now.
+
+**2026-10-16 (retrospective 20261016-225122):** asked for again in
+`theme-polish/20261016T124904Z-landed.md`: a 576-file selected run took about
+27 minutes, beyond the printed estimate, with no per-file progress.
