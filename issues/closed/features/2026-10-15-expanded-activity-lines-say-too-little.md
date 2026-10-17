@@ -53,5 +53,5 @@ and the raw JSON there is no middle level.
 
 ## Related
 
-- [Codex bash activity shows its shell wrapper](../../bugs/2026-08-30-codex-bash-activity-shows-shell-wrapper.md).
+- [Codex bash activity shows its shell wrapper](../bugs/2026-08-30-codex-bash-activity-shows-shell-wrapper.md).
 - [Surface agent error detail in chat](../../features/2026-07-11-surface-agent-error-detail-in-chat-ui.md).

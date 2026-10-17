@@ -16,12 +16,12 @@
 import { resolveSecret, type SecretRead } from "../secrets/resolve.js";
 
 /** The store name this key lives under — matches the retired file's basename. */
-const OPENAI_SECRET_NAME = "openai";
+export const OPENAI_SECRET_NAME = "openai";
 
 /**
- * `read` is optional because most callers just want the key; the health check
- * passes `observe: false` so asking "is this configured?" does not stamp the
- * entry as used (`resolveSecret`).
+ * `read` is optional because most callers just want the key. A caller that
+ * only asks "is this configured?" uses `secretIsResolvable` with
+ * {@link OPENAI_SECRET_NAME} and never reads the value.
  */
 export async function getOpenAiEmbeddingsKey(boxRoot: string, read?: SecretRead): Promise<string | null> {
   const resolved = await resolveSecret({

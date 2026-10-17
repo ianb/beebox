@@ -8,10 +8,11 @@
  * reachable at all.
  */
 
-import { getGeminiApiKey } from "../../../../../core/gemini-key.js";
-import { getOpenAiThinkingKey } from "../../../../../core/openai-thinking-key.js";
-import { getOpenRouterKey, routeVia } from "../../../../../core/openrouter.js";
-import { getOpenAiEmbeddingsKey } from "../../../../../core/search/embeddings-key.js";
+import { GEMINI_SECRET_NAME } from "../../../../../core/gemini-key.js";
+import { OPENAI_THINKING_SECRET_NAME } from "../../../../../core/openai-thinking-key.js";
+import { OPENROUTER_SECRET_NAME } from "../../../../../core/openrouter.js";
+import { OPENAI_SECRET_NAME } from "../../../../../core/search/embeddings-key.js";
+import { secretIsResolvable } from "../../../../../core/secrets/resolve.js";
 import { hqRoutesThroughOpenRouter, isMaiHqService, loadTranscriptionConfig } from "../../../../../core/transcription/dispatch/core.js";
 import { loadTtsConfig } from "../../../../../core/tts/config.js";
 import type { HealthCheck } from "../router.js";
@@ -29,15 +30,15 @@ import type { HealthCheck } from "../router.js";
  * key, where every service is direct and the line would be noise.
  */
 export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> {
-  const openRouterKey = await getOpenRouterKey(boxRoot, { purpose: "health-check", observe: false });
-  if (openRouterKey === null) return [];
+  if (!(await hasServerKey(boxRoot, OPENROUTER_SECRET_NAME))) return [];
 
   const hqService = (await loadTranscriptionConfig(boxRoot)).hqService;
-  const geminiKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
+  const hasGemini = await hasServerKey(boxRoot, GEMINI_SECRET_NAME);
 
-  const routes: Array<[string, string | null]> = [
-    ["semantic search", await getOpenAiEmbeddingsKey(boxRoot, { observe: false })],
-    ["audio questions", geminiKey],
+  // Each route: does the service's own provider key exist?
+  const routes: Array<[string, boolean]> = [
+    ["semantic search", await hasServerKey(boxRoot, OPENAI_SECRET_NAME)],
+    ["audio questions", hasGemini],
   ];
   const lines: string[] = [];
   // Three different truths about HQ transcription, and conflating them would
@@ -46,18 +47,18 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
   if (isMaiHqService(hqService)) {
     lines.push(`HQ transcription (${hqService}) → OpenRouter only; MAI is reachable no other way`);
   } else if (hqRoutesThroughOpenRouter(hqService)) {
-    routes.push([`HQ transcription (${hqService})`, await getOpenAiThinkingKey(boxRoot, { observe: false })]);
+    routes.push([`HQ transcription (${hqService})`, await hasServerKey(boxRoot, OPENAI_THINKING_SECRET_NAME)]);
   } else {
     lines.push(`HQ transcription (${hqService}) → Mistral only; OpenRouter cannot serve Voxtral`);
   }
   // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
-  if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", geminiKey]);
+  if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", hasGemini]);
   // Speech is a chosen backend, not a fallback: neither backend routes
   // through OpenRouter, so this states the fact rather than which key won.
   const ttsBackend = (await loadTtsConfig(boxRoot)).backend;
   lines.push(`speech (${ttsBackend}) → its own provider only; OpenRouter does not stand in`);
 
-  lines.unshift(...routes.map(([label, direct]) => `${label} → ${direct === null ? "OpenRouter" : "its own provider"}`));
+  lines.unshift(...routes.map(([label, direct]) => `${label} → ${direct ? "its own provider" : "OpenRouter"}`));
   return [
     {
       name: "model-routes",
@@ -84,8 +85,8 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
  * `model-routes` says which way the rest is reached.
  */
 export async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
-  const directKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
-  if (directKey === null && (await loadTtsConfig(boxRoot)).backend === "gemini") {
+  const direct = await hasServerKey(boxRoot, GEMINI_SECRET_NAME);
+  if (!direct && (await loadTtsConfig(boxRoot)).backend === "gemini") {
     return {
       name: "gemini-api-key",
       ok: false,
@@ -94,12 +95,13 @@ export async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
       severity: "warning",
     };
   }
-  const route = await routeVia({ boxRoot, purpose: "health-check", directKey, observe: false });
+  // The same preference as `routeVia`: the direct key, else OpenRouter.
+  const route = direct ? "direct" : (await hasServerKey(boxRoot, OPENROUTER_SECRET_NAME)) ? "openrouter" : null;
   // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   const geminiSelected = process.env["BBX_SCAN_VISION"] === "gemini";
   const message =
     route !== null
-      ? route.via === "direct"
+      ? route === "direct"
         ? "Gemini API key configured"
         : "No Gemini key — audio questions and the Gemini scan backend go through OpenRouter"
       : geminiSelected
@@ -111,4 +113,12 @@ export async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
     message,
     severity: "warning",
   };
+}
+
+/**
+ * Does this box hold a usable server-access grant for `name`? A presence
+ * check: it reads no value and writes no access-log line.
+ */
+function hasServerKey(boxRoot: string, name: string): Promise<boolean> {
+  return secretIsResolvable({ boxRoot, name, access: "server" });
 }
