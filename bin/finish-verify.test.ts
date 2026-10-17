@@ -191,3 +191,16 @@ test("output reaches the log while the check is still running", async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("a command that cannot start rejects with its spawn error and leaves the log closed", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "finish-verify-"));
+  try {
+    const logPath = join(dir, "0-tests.log");
+    await assert.rejects(run({ argv: [join(dir, "no-such-command")], cwd: dir, logPath }), { code: "ENOENT" });
+    // Give a trailing `close` event its turn; a second closeSync would throw EBADF here.
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(readFileSync(logPath, "utf-8"), "");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -47,9 +47,11 @@ export function run(input: { argv: string[]; cwd: string; logPath?: string }): P
     stdio: ["ignore", "pipe", "pipe"],
   });
   running.add(child);
-  const log = input.logPath === undefined ? undefined : openSync(input.logPath, "w");
+  let log = input.logPath === undefined ? undefined : openSync(input.logPath, "w");
+  // A failed spawn emits both `error` and `close`; the second must not close again.
   const closeLog = (): void => {
     if (log !== undefined) closeSync(log);
+    log = undefined;
   };
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
