@@ -24,7 +24,7 @@ export interface AgentInvokeOptions {
   systemPrompt?: string;
   /** User prompt for this invocation. */
   prompt: string;
-  /** Model override (e.g., "claude-haiku-4-5-20251001"). */
+  /** Model override (e.g., "claude-haiku-5-5"). */
   model?: string;
   /**
    * Whether this run loads the box's own agent context — AGENTS.md, the

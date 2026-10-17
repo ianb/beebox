@@ -165,7 +165,7 @@ await box.write("_config/box.json", JSON.stringify({
   agentModel: "gpt-5.6-sol",
 }));
 (await caller(box.root).admin.boxConfig()).agentModel
-=> gpt-6-sol
+=> gpt-6.1-sol
 ```
 
 An invalid configured engine is not presented as a valid Claude default. The

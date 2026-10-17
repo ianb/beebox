@@ -48,7 +48,7 @@ Codex entries here are labeled as such; they carry their own pin.
   Daybreak default), `0.3.302` (2026-10-18T16:47Z; fork subagents on by
   default, see its entry). A settled version that is not yet applied now
   starts a session on its own, with no new release needed (2026-10-17).
-  Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+  The model aliases are current (2026-10-17): `sonnet`, `haiku`, and `sol` name Sonnet 5.5, Haiku 5.5, and GPT-6.1 Sol.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
