@@ -104,6 +104,15 @@ Residuals, left in their current class:
 - If the history refresh after a dropped stream fails, and `chat-complete`
   arrived during that refresh, the warning stays until the next send or
   dismiss. Before this change the same case left the danger bar.
+- A message queued while the dropped turn's box is still busy sits after the
+  reply in history, so the warning stays until that later turn ends, then
+  clears. Identifying the dropped turn's own reply needs turn correlation.
+- Reviewer-reported, not reproduced: in a new chat, if the turn stream fails
+  before the box assigns the session id, the machine keeps `sessionInput:
+  "new"` and every refresh takes the no-history branch, so the warning could
+  stay until the next send, dismiss, or reload. Two test-box runs of a new
+  chat recovered. A reliable fix needs the session assignment tied to the
+  accepted turn (a protocol choice for Ian).
 - The legacy `STREAM_BUSY` text ("Agent is busy with another request") is
   unchanged.
 

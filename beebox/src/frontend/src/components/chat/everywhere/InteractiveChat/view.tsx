@@ -297,10 +297,13 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           <ChatStatusBanners
             error={nativeCommandError ?? error ?? (transcriptionIsError ? voice.transcription.error : null)}
             warning={props.replyLost ? REPLY_LOST_WARNING : transcriptionIsError ? null : voice.transcription.error}
-            // Dismiss only the source shown, so a hidden warning surfaces next.
+            // Dismiss only the source shown (same precedence as above), so a
+            // hidden message surfaces next.
             onDismissError={() => {
               if (nativeCommandError !== null) dismissNativeCommandError();
-              else if (error || props.replyLost) send({ type: "DISMISS_ERROR" });
+              else if (error) send({ type: "DISMISS_ERROR" });
+              else if (transcriptionIsError && voice.transcription.error) voice.transcription.dismissError();
+              else if (props.replyLost) send({ type: "DISMISS_ERROR" });
               else voice.transcription.dismissError();
             }}
             activeSchedules={schedules.activeSchedules}
