@@ -63,7 +63,10 @@ xcodebuild \
   build
 ```
 
-Run XCTest against an installed simulator selected from `simctl`:
+`bin/apple-test --ios` runs the shared package's `swift test`
+(`../apple-shared/`, pairing link and redeem; no simulator) and then this
+suite on a simulator it picks; the finish preflight runs it for changes here.
+By hand, run XCTest against an installed simulator selected from `simctl`:
 
 ```sh
 xcodebuild \
@@ -99,6 +102,13 @@ project file:
 2. `PBXBuildFile`
 3. Membership in the correct `PBXGroup`
 4. Membership in the app or test target's `PBXSourcesBuildPhase`
+
+The app and the share extension link the local Swift package `../apple-shared`
+(`BeeBoxShared`): an `XCLocalSwiftPackageReference` in the project's
+`packageReferences`, and per target an `XCSwiftPackageProductDependency` in
+`packageProductDependencies` plus a `PBXBuildFile` in its Frameworks phase.
+Code both iOS and the Mac app use goes there; see `../apple-shared/` and
+`bin/apple-test`.
 
 Prefer adding files through Xcode when practical. If editing `project.pbxproj`
 directly, use unique 24-character IDs consistent with the file, keep app/test

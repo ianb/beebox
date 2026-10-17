@@ -499,7 +499,7 @@ scheme-less `baseURL` rejection, a `session` param, and the DEBUG-only `authToke
 
 ```ts
 runFamily("pairing-url", validatePairingURL)
-=> {"family":"pairing-url","cases":6,"pass":6}
+=> {"family":"pairing-url","cases":7,"pass":7}
 ```
 
 ## redeem

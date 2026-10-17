@@ -1,3 +1,4 @@
+import BeeBoxShared
 import Combine
 import Foundation
 import UIKit
@@ -10,24 +11,34 @@ final class PairedBoxStore: ObservableObject {
     private let storageURL: URL
     private let credentialStore: PairedBoxCredentialStoreProtocol
     private let selectedBoxStore: SharedSelectedBoxSnapshotStoreProtocol
+    private let redeemer: PairingRedeemer
+    private let deviceLabel: @MainActor () -> String
+    private var tickets = PairingTicketLedger()
 
     convenience init() {
         let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         self.init(
             storageURL: supportDirectory.appendingPathComponent("paired-boxes.json"),
-            credentialStore: PairedBoxCredentialStore(),
+            credentialStore: PairedBoxCredentialStore.ios,
             selectedBoxStore: SharedSelectedBoxStore()
         )
     }
 
     init(
         storageURL: URL,
-        credentialStore: PairedBoxCredentialStoreProtocol = PairedBoxCredentialStore(),
-        selectedBoxStore: SharedSelectedBoxSnapshotStoreProtocol = SharedSelectedBoxStore()
+        credentialStore: PairedBoxCredentialStoreProtocol = PairedBoxCredentialStore.ios,
+        selectedBoxStore: SharedSelectedBoxSnapshotStoreProtocol = SharedSelectedBoxStore(),
+        redeemer: PairingRedeemer = PairingRedeemer(
+            transport: URLSessionTransport(session: .shared),
+            userAgent: BoxRequest.userAgent
+        ),
+        deviceLabel: @escaping @MainActor () -> String = { UIDevice.current.name }
     ) {
         self.storageURL = storageURL
         self.credentialStore = credentialStore
         self.selectedBoxStore = selectedBoxStore
+        self.redeemer = redeemer
+        self.deviceLabel = deviceLabel
         load()
     }
 
@@ -110,45 +121,50 @@ final class PairedBoxStore: ObservableObject {
         return true
     }
 
-    func pair(from url: URL) async -> Bool {
-        guard url.scheme == "beebox", url.host == "pair" else {
-            return false
-        }
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            return false
-        }
-        let queryItems = components.queryItems ?? []
-        guard let baseURLString = queryItems.value(named: "baseURL") ?? queryItems.value(named: "url") else {
-            return false
-        }
-        guard let baseURL = URL(string: baseURLString), baseURL.scheme != nil, baseURL.host != nil else {
-            return false
-        }
-        let label = queryItems.value(named: "label") ?? "Bee Box"
-        if let pairingToken = queryItems.value(named: "pairingToken") ?? queryItems.value(named: "token") {
-            do {
-                let redeemed = try await redeemPairing(baseURL: baseURL, pairingToken: pairingToken)
-                return addOrSelectBox(
-                    label: label,
-                    baseURL: baseURL,
-                    sessionID: queryItems.value(named: "session"),
-                    authToken: redeemed.token
-                )
-            } catch {
-                return false
-            }
-        }
+    func pair(from url: URL) async -> PairingOutcome {
         #if DEBUG
-        let directAuthToken = queryItems.value(named: "authToken")
+        let allowDirectAuthToken = true
         #else
-        let directAuthToken: String? = nil
+        let allowDirectAuthToken = false
         #endif
-        return addOrSelectBox(
-            label: label,
-            baseURL: baseURL,
-            sessionID: queryItems.value(named: "session"),
-            authToken: directAuthToken
+        guard let link = PairingLink.parse(url, allowDirectAuthToken: allowDirectAuthToken) else {
+            return .notAPairingLink
+        }
+        guard let pairingToken = link.pairingToken else {
+            return storeBox(from: link, authToken: link.directAuthToken)
+        }
+        guard tickets.begin(pairingToken) else {
+            BoxLog.info("pairing redeem skipped reason=duplicate-link", category: .pairing)
+            return .duplicate
+        }
+        do {
+            let deviceToken = try await redeemer.redeem(
+                baseURL: link.baseURL,
+                pairingToken: pairingToken,
+                deviceLabel: deviceLabel()
+            )
+            let outcome = storeBox(from: link, authToken: deviceToken)
+            tickets.finish(pairingToken, stored: outcome == .paired)
+            return outcome
+        } catch {
+            tickets.finish(pairingToken, stored: false)
+            BoxLog.warn("pairing redeem failed error=\(error.logLabel)", category: .pairing)
+            return .failed(.redeem(error))
+        }
+    }
+
+    private func storeBox(from link: PairingLink, authToken: String?) -> PairingOutcome {
+        let stored = addOrSelectBox(
+            label: link.label,
+            baseURL: link.baseURL,
+            sessionID: link.sessionID,
+            authToken: authToken
         )
+        guard stored else {
+            BoxLog.error("pairing store failed", category: .pairing)
+            return .failed(.storeFailed)
+        }
+        return .paired
     }
 
     #if DEBUG
@@ -318,22 +334,6 @@ final class PairedBoxStore: ObservableObject {
         }
     }
 
-    private func redeemPairing(baseURL: URL, pairingToken: String) async throws -> PairingRedeemResponse {
-        var request = URLRequest(url: baseURL.appendingPathComponent("api/pairing/redeem"))
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("BeeBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
-        request.httpBody = try JSONEncoder().encode(PairingRedeemRequest(
-            pairingToken: pairingToken,
-            deviceLabel: UIDevice.current.name
-        ))
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw URLError(.userAuthenticationRequired)
-        }
-        return try JSONDecoder().decode(PairingRedeemResponse.self, from: data)
-    }
-
     private struct MissingTokenReadback: Swift.Error {
         static let error = MissingTokenReadback()
     }
@@ -350,23 +350,8 @@ private struct StoreSnapshot: Codable {
     var selectedBoxID: PairedBox.ID?
 }
 
-private struct PairingRedeemRequest: Encodable {
-    var pairingToken: String
-    var deviceLabel: String
-}
-
-private struct PairingRedeemResponse: Decodable {
-    var token: String
-}
-
 extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
-    }
-}
-
-private extension Array where Element == URLQueryItem {
-    func value(named name: String) -> String? {
-        first { $0.name == name }?.value
     }
 }

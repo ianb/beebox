@@ -1,14 +1,28 @@
 ---
 title: "The secret access log is never pruned, and 99% of it is one health check's probe"
-workstream: unattached
+workstream: secrets-log
 area: beebox
 labels: [secrets]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-finish-migrations — closing the secret-store transition window
-needs: [decision]
 priority: important
+resolution: implemented
 ---
+
+**Implemented 2026-10-17** in 9726dad44 and 7e3c1f3f9. Ian chose 12 months
+of retention. The Google "is it configured" check (`requirements.ts`,
+`google/auth-status.ts`) now calls `hasBoxGoogleClientCreds`, which uses the
+new `secretIsResolvable`. It applies the grant checks of `resolveSecret`
+without reading a value, and it writes no access-log line. Wakeup housekeeping
+runs `pruneSecretAccessLog`, which deletes segments older than
+`ACCESS_LOG_RETENTION_MONTHS` (12) by the machine clock. `lastUsed` is not
+changed.
+
+fe0f5bb0d applies the same check to the model-picker checks
+(`serviceCapabilities`, `glmKeyUsable`, `openRouterKeyUsable`) and the health
+key checks. The Deepgram health check still reads its value, because the JSON
+must parse.
 
 The secret access log has no retention policy, and almost everything in it is
 one repeated probe rather than real activity. Two separate problems that

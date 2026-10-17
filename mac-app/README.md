@@ -1,9 +1,31 @@
 # Bee Box for Mac
 
-A menu-bar app that runs the beebox Linux image in a lightweight VM through
-Apple's [Containerization](https://github.com/apple/containerization)
-framework (pinned at 0.48.0). Experimental; findings are in
+A menu-bar app around a box. It pairs with boxes (a link copied from a box's
+Settings → Companion Apps, pasted into Preferences → Boxes, or a `beebox://pair`
+link clicked in the browser) and opens them in the browser. It uploads new
+files from watched folders and Photos albums to a box (Preferences → Uploads),
+which replaces `scan-uploader`'s launchd agent on this Mac. It can also run a
+box itself, in a lightweight VM through Apple's
+[Containerization](https://github.com/apple/containerization) framework
+(pinned at 0.48.0): Preferences → General → "Run a box on this Mac", off by
+default. With it off the app downloads nothing. Design:
+[mac-app-shell.md](../beebox/docs/plans/mac-app-shell.md); VM findings:
 [phase1-spike-app.md](../research/installable-app/phase1-spike-app.md).
+
+## Code layout
+
+- `Sources/BeeBoxMacCore/`: the logic, with no AppKit and no VM: paired boxes
+  (`BoxStore`), the pairing sheet's model, the hosting setting, the scan-upload
+  client (`Scan/`, a second client of
+  [the scan-upload contract](../beebox/docs/scan-upload-contract.md)), and
+  upload folders, scan tokens and Photos bookkeeping (`Uploads/`).
+- `Sources/BeeBoxMac/`: the app: menu, Preferences, VM runtime, PhotoKit,
+  folder events.
+- `../apple-shared/` (`BeeBoxShared`): code shared with the iOS app: the
+  pairing link, redeem, the http host policy, the Keychain store.
+- Tests: `swift test --disable-swift-testing` here, or `bin/apple-test` from
+  the monorepo root. `LiveScanSweepTests` runs only with
+  `BEEBOX_LIVE_SCAN_URL` and `BEEBOX_LIVE_SCAN_TOKEN` set, against a test box.
 
 Requires macOS 26 on Apple silicon. An older macOS refuses to open the app
 with the system's own "requires macOS 26.0 or later" message
@@ -45,6 +67,16 @@ otherwise. Keep VM state under `<worktree>/scratch/`, not the session
 scratchpad.
 
 ## Run during development
+
+Give a development build its own bundle id and state, so it does not share
+preferences or the paired-box list with an installed Bee Box:
+`BUNDLE_ID=run.beebox.mac.dev scripts/build-app.sh`, then launch with
+`BEEBOX_STATE_DIR` and `BEEBOX_BOXES_DIR` pointing into the worktree's
+`scratch/`. Keychain items use the services `run.beebox.mac.device-token` and
+`run.beebox.mac.scan-token` whatever the bundle id. An ad hoc build has a new
+code signature each time, so macOS asks again for each item the previous build
+made; the app reads each item once per launch. Signing development builds
+with a stable identity (`SIGN_IDENTITY`) avoids the repeat prompts.
 
 ```sh
 open -n build/BeeBox.app \

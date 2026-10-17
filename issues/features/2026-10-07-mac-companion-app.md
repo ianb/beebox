@@ -1,6 +1,6 @@
 ---
 title: "A Mac companion app, the desktop equivalent of the iOS app: input, selections, scanner upload, and optionally a locally hosted box"
-workstream: unattached
+workstream: app-shell
 area: mac-app
 labels: [desktop, input]
 needs: [design]
@@ -8,6 +8,8 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main — follow-on from the installable-app research
 ---
+
+**2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, opens boxes in the browser, uploads a folder (Swift port of `scan-uploader`) and a Photos album, and can host a local box (off by default); see [the plan](../../beebox/docs/plans/mac-app-shell.md). Still open: input (global shortcut, voice, selections) and the quick-drop entry. Not yet exercised by hand: minting a scan token from a device paired by a real owner, the Uploads tab end to end, a PhotoKit export on a real library, Open at Login, notifications, and local hosting start/stop.
 
 The iOS app (`ios-app/`) gives the phone a native front door to a box: fast
 input (native composer, voice with Apple's speech recognition, capture),

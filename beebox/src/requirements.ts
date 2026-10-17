@@ -20,7 +20,7 @@ import {
   isGoogleServiceAllowed,
   type GoogleServiceName,
 } from "./core/box/config.js";
-import { getBoxGoogleClientCreds } from "./google/auth.js";
+import { hasBoxGoogleClientCreds } from "./google/auth.js";
 import { loadSecretStore } from "./core/secrets/store.js";
 import { boxSlug } from "./lib/box-slug.js";
 import { getBoxDir } from "./lib/paths/core.js";
@@ -41,7 +41,7 @@ type Predicate = (boxRoot: string) => Promise<boolean>;
 function googleServicePredicate(service: GoogleServiceName): Predicate {
   return async (boxRoot) => {
     if (!hasGoogleTokens(boxRoot)) return false;
-    if ((await getBoxGoogleClientCreds(boxRoot)) === null) return false;
+    if (!(await hasBoxGoogleClientCreds(boxRoot))) return false;
     return isGoogleServiceAllowed(boxRoot, service);
   };
 }
