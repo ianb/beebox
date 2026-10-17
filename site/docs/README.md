@@ -29,7 +29,7 @@ description: "Documentation for Bee Box: a personal assistant built from a codin
 > its own, so you can always tell the two apart.
 > Email is handled from within the box, with replies drafted for you. Recipes
 > scale; people and places are recognized; a project gets a working memory;
-> something you are learning gets a course built for it. And what you correct
+> something you are learning can get a course, with the courses add-on. And what you correct
 > stays corrected. Each of these has a page under "uses" below, including what
 > is still rough.
 >
