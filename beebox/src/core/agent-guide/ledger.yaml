@@ -559,6 +559,12 @@ rows:
     bin: core
     reason: A promise the box cannot keep is the failure; the check is one command.
     audits: [remind-vs-schedule]
+  - id: reaching.person-enables
+    rule: The agent cannot turn a notification channel on; the person does it in Admin, Host tab, Notifications, or pairs the iPhone app in Settings.
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: "An agent asked how to turn on notifications grepped box-docs and could not answer, then offered to set them up itself (journey walks, 2026-10-08 and 2026-10-09). The phone steps are mechanics in bbx-commands.md."
+    audits: [outbound-notifications]
   - id: reaching.notify-now
     rule: Reach the boxholder now with bbx notify, a loudness (dot, quiet, loud) and a target; in a chat turn a callout does it.
     handle: REACHING_THE_BOXHOLDER

@@ -2,7 +2,7 @@
 title: "courseware image generation"
 workstream: unknown
 needs: [design]
-area: beebox
+area: courseware
 priority: backlog
 ---
 
@@ -49,3 +49,9 @@ type earn its place (needs the overlay renderer + calibration UX)? Is a
 text-to-image step something a *box agent* should invoke at all, or stays a
 dev-side tool? How does the post-render audit fit our existing screenshot/render
 verification for figures?
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.

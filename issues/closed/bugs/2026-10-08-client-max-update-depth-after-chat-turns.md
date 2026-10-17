@@ -40,7 +40,7 @@ walk. The count is the evidence:
 | [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R2) | 5 | About 0.5 s after turn completion; not every turn |
 | [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R2) | 3 | Each after a turn that edited a card open in a panel |
 | [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 49) | 1 | One second after turn 6 |
-| [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (R4) | 7 in 5 root-chat turns | None in the scoped chat, which had no panels |
+| [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (R4) | 7 in 5 root-chat turns | None in the scoped chat, which had no panels |
 | [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R1) | 2 | One second after turns 4 and 5 |
 
 The [second B-inventory walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R5)

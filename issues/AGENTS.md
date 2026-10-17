@@ -101,7 +101,9 @@ updating both this contract and `KNOWN_FRONTMATTER_KEYS` there.
   person's preferred name when known or `agent` for
   an agent-originated finding.
 - `area:` identifies the owning product area (e.g. `beebox`, `router`,
-  `vibe-check`, `clerk`, `docs`). `labels:` is an optional list of
+  `vibe-check`, `clerk`, `docs`). An issue owned by an opt-in plugin uses the
+  plugin's name (e.g. `courseware`), not `beebox`; core and journey work skip
+  those areas unless the developer asks for plugin work. `labels:` is an optional list of
   kebab-case cross-cutting group names; use it instead of inventing schema
   fields. Category, area, and labels are independent; labels are a facet in the
   `workstreams/issues/` browser.

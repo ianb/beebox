@@ -66,5 +66,5 @@ courseware case: domain cards need a reader-facing study view while retaining
 the agent's durable plan and evidence. It is a broader information hierarchy
 question than merely hiding the Properties panel.
 
-Evidence: [D chemistry report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+Evidence: [D chemistry report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
 screenshots 08, 10–13, and 22.

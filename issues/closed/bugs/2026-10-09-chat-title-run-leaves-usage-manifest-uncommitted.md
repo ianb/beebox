@@ -42,11 +42,11 @@ commit's name. Choosing needs a look at who reads the manifest (`bbx usage`).
 Related: [conversation-keeps-placeholder-title](../../closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md)
 (closed; it added the per-chat title run).
 
-Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) R4,
+Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) R4,
 [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R4,
 [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R4,
 [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R2,
 [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) R4,
-[D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R3.
+[D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) R3.
 
 2026-10-09 follow-up (cross-model review): the nightly `bbx chat review run` also commits the manifest after it releases its review lock, and the commit now names the file (`Usage: record agent sessions`, `Commit-Source: usage-manifest`) since it can hold other runs' lines.

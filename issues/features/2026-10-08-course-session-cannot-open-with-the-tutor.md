@@ -1,7 +1,7 @@
 ---
 title: "A course session cannot open with the tutor speaking first"
 workstream: unattached
-area: beebox
+area: courseware
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — D-chemistry journey walk, 2026-10-08
@@ -27,8 +27,20 @@ chat sends on open, or let the course build a briefing in its attach scope.
 Either needs a rule for who may start a turn without the person typing.
 Related: [course study home](2026-09-21-course-study-home-last-next-uncertain.md).
 
-Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 67, shot 22).
+Report: [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 67, shot 22).
 
 ## Re-encounter 2026-10-09 (journey walks)
 
-Mostly met, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 46, 49, 67-68). Met: the Chemistry landmark carries openers; "Go to Chemistry" opens a fresh place chat with "Pick up where I left off", and one click gave a recap and the saved question. Missing: the tutor still does not speak first, and the openers came from the agent, not the skill (R9). The issue's mechanism section (openers only from a briefing) is stale.
+Mostly met, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 46, 49, 67-68). Met: the Chemistry landmark carries openers; "Go to Chemistry" opens a fresh place chat with "Pick up where I left off", and one click gave a recap and the saved question. Missing: the tutor still does not speak first, and the openers came from the agent, not the skill (R9). The issue's mechanism section (openers only from a briefing) is stale.
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.
+
+The general part, a chat that opens with a message from the agent, is
+core and is tracked in
+[the agent hands the person into a new chat](2026-10-16-agent-hands-user-into-new-chat.md).
+This issue keeps the course part: what the tutor says first and where the
+course declares it.
