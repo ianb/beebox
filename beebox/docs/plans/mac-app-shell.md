@@ -38,8 +38,8 @@ a simulator.
 Tracks A–C change no surface a person sees except the iOS pairing error
 message, which restores already-decided behavior (the robustness issue asks
 for it). Tracks D–G are designed in [mac-app-shell.design.md](mac-app-shell.design.md):
-a menu-only app (menus, system alerts, the folder picker; no windows), the
-pairing alert, upload folders and their status, and the hosting switch. The decisions already made by
+a menu for glancing and opening boxes, and a Preferences window (Boxes with
+the pairing sheet, Uploads, General) for setup. No web view. The decisions already made by
 the boxholder (anchor issue, "Decisions (boxholder, 2026-10-07)", and
 2026-10-17 in this workstream) are the inputs:
 
@@ -71,13 +71,13 @@ moved code counts on both sides):
 | A. Shared package, pairing link and redeem | 250 | 250 | iOS adopts it; `project.pbxproj` about 30 |
 | B. One command runs Apple tests; finish runs it | 150 | 40 | `bin/` script + preflight group |
 | C. Paired-box store moves to the package | 750 (moved) | 150 | `PairedBoxStore`, credential store, `PairedBox`, bearer construction |
-| D. Box menu, paste pairing, `beebox:` links | 300 | 100 | no web view |
+| D. Box menu, Preferences, pairing sheet, `beebox:` links | 600 | 150 | no web view |
 | E. Scanner folder upload in Swift | 700 | 500 | ports the `scan-uploader` doctest cases |
 | F. Photos album export with PhotoKit | 300 | 150 | |
 | G. Local box optional, one entry in the menu | 200 | 50 | |
 | Docs | about 300 | | contract docs, AGENTS/README |
 
-Total about 4,250 lines: **BIG CHANGE.** The size comes from three things the
+Total about 4,600 lines: **BIG CHANGE.** The size comes from three things the
 boxholder asked for: a shared layer (C is mostly moved code), a Swift
 reimplementation of the scan client (E), and a PhotoKit exporter to replace
 `osxphotos` (F). Each track ships nothing on its own; the plan lands as one
@@ -332,19 +332,20 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
 ### D. The box menu, paste pairing, and `beebox:` links
 
 - **What**: the menu lists the paired boxes. "Open <label>" opens the box's web
-  app in the default browser. "Pair with a Box…" opens a small pairing dialog.
+  app in the default browser. "Pair with a Box…" opens the pairing sheet in a
+  new Preferences window.
   The app registers the `beebox` URL scheme. There is no web-view window
   (boxholder, 2026-10-17).
 - **Why this needs to change**: today the app knows only its local box
   (`BeeBoxMacApp.swift:78`) and cannot pair with anything, so it has no
   credential for scan and Photos upload to a remote box.
 - **Direction**:
-  - The dialog reads the pasteboard when it opens. If the pasteboard holds a
-    `beebox://pair` link, the dialog fills it in; otherwise it shows a field.
-    The dialog always shows the host, label and scheme and asks "Add this
+  - The sheet reads the pasteboard when it opens. If the pasteboard holds a
+    `beebox://pair` link, the sheet fills it in; otherwise it shows a field.
+    The sheet always shows the host, label and scheme and asks "Add this
     box?" before it redeems. This closes the confirmation gap from the
     robustness issue on the Mac.
-  - A `beebox://pair` link opened from the browser goes to the same dialog,
+  - A `beebox://pair` link opened from the browser goes to the same sheet,
     through one entry point.
   - The device label is `Host.current().localizedName`.
   - "Open <label>" opens `<baseURL>/` with `NSWorkspace.shared.open`. The
@@ -356,13 +357,16 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
     link is refused with a message. Table-driven tests cover each range and a
     public IP. The Info.plist sets `NSAllowsLocalNetworking`, as iOS does
     (`ios-app/BeeBox/Info.plist:45-48`); ATS alone is not the boundary,
-    because that key permits http to any IP address. The dialog says "not
+    because that key permits http to any IP address. The sheet says "not
     encrypted" for http.
   - A paired box whose device token the box refuses (401) shows "Pair again"
     in its menu entry.
-  - The pairing dialog is an `NSAlert` with a text field as its accessory
-    view; the app activates itself first (`NSApp.activate`) so the field takes
-    keyboard focus. No app windows (design doc).
+  - Pairing is a sheet on Preferences → Boxes (a SwiftUI `Settings` scene with
+    Boxes, Uploads and General tabs). The sheet previews the parsed link
+    before "Add" and keeps a failure inline. The app activates itself
+    (`NSApp.activate`) when Preferences opens, so the window takes keyboard
+    focus in an `LSUIElement` app. Its view state (field text → parsed link
+    → policy → redeem outcome) is a pure model, tested with `swift test`.
   - The box's pairing section copy changes from "iOS Companion" to
     "Companion apps", naming the Mac link path (design doc, "The box's
     settings page"). Copy only.
@@ -511,7 +515,7 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| A pasted link has no `baseURL` or no scheme | A: fixture tests | `parse` returns nil; the dialog says it is not a pairing link | Clear |
+| A pasted link has no `baseURL` or no scheme | A: fixture tests | `parse` returns nil; the sheet says it is not a pairing link | Clear |
 | The ticket expired or was used (401) | A: `redeem/error-401` | `PairingError.rejected` with the server message | Clear |
 | The box restarted and dropped the in-memory ticket | No | Same 401 path | Clear message, wrong cause; see NOT in scope |
 | The redeem response has no `token` | A: new case | `.malformedResponse` | Clear |
@@ -544,7 +548,7 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
   with the transport error (A).
 - **Fabricated value**: not applicable. No agent writes any of these values;
   they come from the box or the person.
-- **Validation error UX**: errors appear to a person in the dialog, not to an
+- **Validation error UX**: errors appear to a person in the sheet, not to an
   agent. Covered by the design doc for D.
 - **Transition state**: existing iOS installs keep their store file and
   Keychain item, because the iOS profile carries today's values (C). An
@@ -598,7 +602,7 @@ are covered by the cross-model review instead.
 
 - **`swift test`** is the main tier. In `apple-shared/`: pairing link and
   redeem against the shared fixtures, and the store. In `mac-app/`: the pairing
-  dialog state, the hosting gate, and the scan sweep against a fake
+  sheet state, the hosting gate, and the scan sweep against a fake
   transport and temp folders. It needs no simulator, so it is cheap to run on
   every change. This is the new test tier for Apple code. It replaces nothing
   and sits below the existing simulator tier.
@@ -627,7 +631,7 @@ are covered by the cross-model review instead.
 2. B1: `bin/apple-test --package-only`, preflight group, tests.
 3. A2: iOS adopts the package (pbxproj), single-flight, `PairingOutcome`, error display. B1 gains `--ios`; run it.
 4. bbx-design: `mac-app-shell.design.md` for D–G; boxholder review.
-5. D with C: box menu, pairing dialog, `beebox:` scheme. Each piece of C moves when D
+5. D with C: box menu, Preferences and the pairing sheet, `beebox:` scheme. Each piece of C moves when D
    first needs it (model and bearer first, then the store), with its
    contract-doc anchors.
 7. E: `ScanSweep`, then the Mac wiring, the scan token mint, coexistence, login item, notifications; contract doc lists the Swift client.
@@ -644,7 +648,7 @@ are covered by the cross-model review instead.
     `bin/apple-test` passes on this Mac.
   - **C:** the moved tests pass under `swift test`, and the iOS app builds
     and its suite passes.
-  - **D:** `swift test` covers the pairing dialog's state (pasteboard link,
+  - **D:** `swift test` covers the pairing sheet's state (pasteboard link,
     malformed text, http host policy, confirm, each `PairingError`). One
     recorded walkthrough exhibit against this worktree's test box: paste,
     confirm, the box appears in the menu and opens in the browser, a revoked
