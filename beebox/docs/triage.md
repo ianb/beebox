@@ -22,6 +22,11 @@ These commands are not automatically chained by wakeup. Run the stage required
 for the work at hand; an item left between stages remains available to the next
 run.
 
+Phone captures that arrive with no words do not use this pipeline. They wait
+in `_content/captures/` and join the box's intake job, where the reactor's
+agent files them by the same landmark `destinations`
+([mobile contract](mobile-contract.md), quick capture; `src/core/quick-capture/filing.ts`).
+
 ## Define a category
 
 A triage category is a landmark card whose `destinations` frontmatter contains

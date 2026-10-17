@@ -29,6 +29,7 @@ entry; that entry names the handler \`procedure\` for the bucket.
 Two sorting mechanisms process items that land in \`_content/inbox/\`. Don't confuse a **job** (a card in \`_bookkeeping/jobs/\` that tells the reactor to do a unit of work) with a **triaged item** (an inbox item routed to a category to await its handler) — they're different things that happen to share the word "intake":
 
 - **Jobs → reactor** — the primary routing path: the wakeup cycle and the connectors create job cards in \`_bookkeeping/jobs/\`, and the reactor processes them one cycle per wakeup.
+  An intake job can also hold phone captures that arrived with no words (refs under \`_content/captures/\`). They are filed by the landmark \`destinations\` directly; they never enter the intake → triage → handle buckets.
 - **The intake → triage → handle pipeline** — runs when invoked directly (\`bbx intake\` / \`bbx triage\` / \`bbx handle\`), moving items through \`_content/inbox/intake/\` → \`staged/\` → \`triaged/<category>/\`.
 
 ## Confidence levels
