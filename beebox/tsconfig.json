@@ -50,6 +50,7 @@
   // here may import it — see src/schemas/image/list-entry.tsx and
   // eslint.config.ts. `src/plugins/*/view.tsx` is a plugin's browser view
   // module, excluded for the same reason: the frontend program and
-  // tsconfig.declarations.json (which emits its `.d.ts`) cover it.
-  "exclude": ["node_modules", "dist", "src/frontend", "src/schemas/*/list-entry.tsx", "src/plugins/*/view.tsx"]
+  // tsconfig.declarations.json (which emits its `.d.ts`) cover it. The same
+  // goes for the helpers under `src/plugins/*/view/`, which only the view imports.
+  "exclude": ["node_modules", "dist", "src/frontend", "src/schemas/*/list-entry.tsx", "src/plugins/*/view.tsx", "src/plugins/*/view/**"]
 }
