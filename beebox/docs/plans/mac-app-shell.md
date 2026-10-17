@@ -265,9 +265,10 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
   ```
   The iOS caller passes `#if DEBUG` as `allowDirectAuthToken`, which keeps
   today's rule. `PairedBoxStore` holds the in-flight pairing tokens; a second
-  call for a token already in flight returns `.alreadyInProgress` without a
+  call for a token already in flight, or already redeemed by this process,
+  returns `.duplicate` without a
   second POST. `pair(from:)` returns `PairingOutcome` (`paired`, `notAPairingLink`,
-  `alreadyInProgress`, `failed(PairingError)`). `PairBoxView` shows the
+  `duplicate`, `failed(PairingFailure)`). `PairBoxView` shows the
   failure text for a scanned code. The deep-link paths (`onOpenURL`, delegate)
   log the failure with `BoxLog` and show it as an alert on the box screen.
 - **Vocabulary lock-ins**: directory `apple-shared/`, package and module

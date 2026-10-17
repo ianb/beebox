@@ -48,14 +48,16 @@ composer not suppressed, wrong attribution — with no error surfaced).
   | side | anchor |
   |---|---|
   | iOS scheme registration | `ios-app/BeeBox/Info.plist` — `CFBundleURLSchemes = ["beebox"]`, name `app.beebox.ios.pairing` |
-  | iOS parser | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.pair(from:)` (requires `scheme == "beebox"` AND `host == "pair"`) |
+  | native parser | `apple-shared/Sources/BeeBoxShared/PairingLink.swift` — `PairingLink.parse(_:allowDirectAuthToken:)` (requires `scheme == "beebox"` AND `host == "pair"`); tested against `test/mobile-contract/fixtures/pairing-url/` by `apple-shared/Tests/BeeBoxSharedTests/PairingLinkTests.swift` |
+  | iOS entry | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.pair(from:)` → `PairingOutcome` (`ios-app/BeeBox/Models/PairingOutcome.swift`) |
   | box link generator | `src/frontend/src/components/settings/CompanionPairingSection.tsx` — `pairingDeepLink(token)`, `boxBaseUrl()`, `qrSvg()` |
   | box render site | `src/frontend/src/pages/SettingsPage.tsx` — `<CompanionPairingSection />` |
-- **Drift:** SILENT. A bad/unparseable URL makes `pair` return `false` with no toast.
-- **Known duplicate-dispatch hazard:** both `BeeBoxApp.onOpenURL` and
-  `BeeBoxAppDelegate.application(open:)` (→ `PairingURLInbox.shared.accept` →
-  `BeeBoxApp.onReceive`) can fire for one URL, producing two redeem POSTs; the second fails on
-  the single-use token and is swallowed. Carried as an open risk (§9).
+- **Drift:** CLEAR. A bad `beebox://pair` link returns `.notAPairingLink`, and a failed redeem
+  returns `.failed(…)`; the QR scanner and the deep-link path both show the message.
+- **Duplicate dispatch:** both `BeeBoxApp.onOpenURL` and `BeeBoxAppDelegate.application(open:)`
+  feed `PairingURLInbox`, whose handler is the only caller of `pair(from:)`. `PairedBoxStore`
+  remembers pairing tickets in flight and tickets it redeemed, so a second delivery of one link
+  returns `.duplicate` without a second POST.
 
 ### 1.2 Pairing-ticket mint (any box access)
 
@@ -93,12 +95,12 @@ composer not suppressed, wrong attribution — with no error surfaced).
   iOS reads **only** `token`. The device token is `crypto.randomBytes(32).toString("base64url")`,
   returned once in cleartext, then only its SHA-256 hash is persisted.
 - **Errors:** 400 `{ error }` (bad body); 401 `{ error: "Pairing code is invalid or expired." }`
-  (bad/expired/used/wrong-box). iOS maps any non-2xx → `URLError(.userAuthenticationRequired)` →
-  `pair` returns `false`.
+  (bad/expired/used/wrong-box). The native redeemer maps a non-2xx to
+  `PairingError.rejected(status:message:)`, with `message` from the `error` field when present.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native caller | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.redeemPairing(baseURL:pairingToken:)`, types `PairingRedeemRequest`/`PairingRedeemResponse` |
+  | native caller | `apple-shared/Sources/BeeBoxShared/PairingRedeemer.swift` — `PairingRedeemer.redeem(baseURL:pairingToken:deviceLabel:)`, types `RedeemRequest`/`RedeemResponse`; tested against `test/mobile-contract/fixtures/redeem/` by `apple-shared/Tests/BeeBoxSharedTests/PairingRedeemerTests.swift` |
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/redeem`, `RedeemBody` |
   | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt?,apns? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
   | hub wall allowance | `src/hub/server/core.ts` — `isMobilePairingRedeem` |
@@ -1725,8 +1727,8 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
 - **APNs payload names no box (CLOSED 2026-09-26).** §5.10's payload carries `box`, the box
   slug, and the iOS tap opens on the paired box with that slug. A payload without `box` still opens
   on the selected box.
-- **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
-  redeem 401s on the single-use token (§1.1).
+- **Duplicate deep-link handling (CLOSED 2026-10-17).** One inbox handler pairs, and the store
+  skips a ticket it is redeeming or has redeemed (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending
   pairings live only in process memory (10-min TTL) and can be lost to a lazy 5-min box idle-stop
   mid-flow.
@@ -1817,6 +1819,10 @@ beebox/src/webapp/trpc/routers/quick-chat.ts
 beebox/src/core/chat/routing/quick-chat-record.ts
 beebox/src/core/notification/apns-channel/payload.ts
 beebox/src/core/notification/target.ts
+
+# Shared Apple code: pairing link parser and redeem (used by ios-app/, and mac-app/ next)
+apple-shared/Sources/BeeBoxShared/PairingLink.swift
+apple-shared/Sources/BeeBoxShared/PairingRedeemer.swift
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/BeeBox/Views/ChatWebView.swift

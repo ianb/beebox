@@ -63,7 +63,10 @@ xcodebuild \
   build
 ```
 
-Run XCTest against an installed simulator selected from `simctl`:
+`bin/apple-test --ios` runs the shared package's `swift test`
+(`../apple-shared/`, pairing link and redeem; no simulator) and then this
+suite on a simulator it picks; the finish preflight runs it for changes here.
+By hand, run XCTest against an installed simulator selected from `simctl`:
 
 ```sh
 xcodebuild \

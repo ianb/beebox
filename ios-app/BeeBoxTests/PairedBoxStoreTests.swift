@@ -319,7 +319,7 @@ private struct PersistedSnapshot: Codable {
     var selectedBoxID: UUID?
 }
 
-private final class FakeCredentialStore: PairedBoxCredentialStoreProtocol {
+final class FakeCredentialStore: PairedBoxCredentialStoreProtocol {
     enum Failure: Error {
         case writeFailed
         case deleteFailed
@@ -358,7 +358,7 @@ private final class FakeCredentialStore: PairedBoxCredentialStoreProtocol {
     }
 }
 
-private final class FakeSelectedBoxSnapshotStore: SharedSelectedBoxSnapshotStoreProtocol {
+final class FakeSelectedBoxSnapshotStore: SharedSelectedBoxSnapshotStoreProtocol {
     var snapshot: SharedPairedBoxesSnapshot?
     var events: [String] = []
 

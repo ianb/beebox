@@ -15,6 +15,7 @@ struct BeeBoxApp: App {
     @StateObject private var boxLockManager = BoxLockManager()
     @State private var captureLogStates: [UUID: String] = [:]
     @StateObject private var pairingURLInbox = PairingURLInbox.shared
+    @State private var pairingFailureMessage: String?
 
     private var captureFixtureActive: Bool {
         #if DEBUG
@@ -88,18 +89,39 @@ struct BeeBoxApp: App {
                         )
                     }
                 }
+                // Both URL callbacks (this one and the app delegate's) feed the
+                // inbox, so the inbox handler below is the only place a link
+                // is paired.
                 .onOpenURL { url in
-                    Task {
-                        if QuickCaptureURLInbox.handles(url) { QuickCaptureURLInbox.shared.accept(url) }
-                        else { _ = await store.pair(from: url) }
-                    }
+                    pairingURLInbox.accept(url)
                 }
                 .onReceive(pairingURLInbox.$pendingURL.compactMap(\.self)) { url in
-                    Task {
-                        if QuickCaptureURLInbox.handles(url) { QuickCaptureURLInbox.shared.accept(url) }
-                        else { _ = await store.pair(from: url) }
-                        pairingURLInbox.clear(url)
+                    pairingURLInbox.clear(url)
+                    if QuickCaptureURLInbox.handles(url) {
+                        QuickCaptureURLInbox.shared.accept(url)
+                        return
                     }
+                    guard url.scheme == "beebox", url.host == "pair" else {
+                        BoxLog.info("open url ignored reason=unhandled-link", category: .lifecycle)
+                        return
+                    }
+                    Task {
+                        let outcome = await store.pair(from: url)
+                        if let message = outcome.failureMessage {
+                            pairingFailureMessage = message
+                        }
+                    }
+                }
+                .alert(
+                    "Pairing Failed",
+                    isPresented: Binding(
+                        get: { pairingFailureMessage != nil },
+                        set: { if !$0 { pairingFailureMessage = nil } }
+                    )
+                ) {
+                    Button("OK", role: .cancel) { pairingFailureMessage = nil }
+                } message: {
+                    Text(pairingFailureMessage ?? "")
                 }
         }
     }
