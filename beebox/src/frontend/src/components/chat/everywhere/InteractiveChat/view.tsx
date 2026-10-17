@@ -279,6 +279,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
   const placeChat = usePlaceChat(props);
   const cancelArrival = useWorkspace()?.cancelArrival;
+  const transcriptionIsError = voice.transcription.errorLevel === "error";
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
@@ -294,15 +295,13 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           <BackgroundTasks tasks={props.backgroundTasks} />
           <ScreenshotRequestUI controller={props.screenshots} />
           <ChatStatusBanners
-            error={nativeCommandError ?? error ?? (voice.transcription.errorLevel === "error" ? voice.transcription.error : null)}
-            warning={props.replyLost ? REPLY_LOST_WARNING : voice.transcription.errorLevel === "warning" ? voice.transcription.error : null}
+            error={nativeCommandError ?? error ?? (transcriptionIsError ? voice.transcription.error : null)}
+            warning={props.replyLost ? REPLY_LOST_WARNING : transcriptionIsError ? null : voice.transcription.error}
+            // Dismiss only the source shown, so a hidden warning surfaces next.
             onDismissError={() => {
-              if (nativeCommandError !== null) {
-                dismissNativeCommandError();
-              } else {
-                send({ type: "DISMISS_ERROR" });
-                voice.transcription.dismissError();
-              }
+              if (nativeCommandError !== null) dismissNativeCommandError();
+              else if (error || props.replyLost) send({ type: "DISMISS_ERROR" });
+              else voice.transcription.dismissError();
             }}
             activeSchedules={schedules.activeSchedules}
             onCancelSchedule={schedules.handleCancelSchedule}

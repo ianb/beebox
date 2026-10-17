@@ -64,7 +64,7 @@ Every source that reaches chat's status bar, by what it means for the person:
 | Source | What the person sees | Class |
 |---|---|---|
 | History failed to load (`fetchInitial` onError) | The conversation did not load | a — must act |
-| Send refused or failed before the box took it (`STREAM_FAILED`, `accepted: false`; includes the "not logged in" refusal) | Message got no answer | a |
+| Send refused, or its start request failed (`STREAM_FAILED`, `accepted: false`; includes the "not logged in" refusal) | Message got no answer, as far as the page knows | a |
 | The box reported the turn failed (`STREAM_ERROR`) or the run died (turn-stream `error` frame) | Message got no answer | a |
 | Legacy `STREAM_BUSY` | Message was dropped | a |
 | Native composer did not confirm a selection | Selection was not added | a |
@@ -84,3 +84,31 @@ Change:
    the existing `warning-50` style used by settings and voice notices.
 
 Not changed: wording of server refusals (their own copy; see the vocab issue).
+
+### Outcome (2026-10-17)
+
+Implemented as planned, plus two fixes from the cross-model review (codex
+gpt-6-sol): a reply already in history clears the warning even while a queued
+later turn keeps the box busy, and *dismiss* clears only the message shown.
+Verified in the worktree's test box by making the turn-stream subscribe fail
+with "Active connection is not open": a short reply landed with no bar; a long
+turn showed the warning, which cleared when the reply landed; with the box's
+agent process killed mid-turn, the error showed.
+
+Residuals, left in their current class:
+
+- A send whose start request fails on the network (`accepted: false` with no
+  refusal) may still have been admitted by the box. It stays an error and the
+  optimistic message is dropped, as before this change. Telling the two apart
+  needs a receipt lookup.
+- If the history refresh after a dropped stream fails, and `chat-complete`
+  arrived during that refresh, the warning stays until the next send or
+  dismiss. Before this change the same case left the danger bar.
+- The legacy `STREAM_BUSY` text ("Agent is busy with another request") is
+  unchanged.
+
+Question for Ian: server refusals reach the bar in their own words, e.g.
+"Claude Code is not logged in — run `claude auth login` on this machine". The
+brief asks for plain user wording; this change does not rewrite server copy.
+Should the chat bar map known refusals (not logged in, provider not set up) to
+person-facing text, or should the server's refusal copy change?

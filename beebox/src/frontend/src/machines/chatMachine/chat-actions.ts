@@ -151,13 +151,15 @@ export const NO_REPLY_ERROR = "The box stopped before it answered. Send your mes
  * a warning, for the next refresh (chat-complete) to settle. The box is idle
  * with no reply: the turn really failed, so it becomes an error.
  */
+// Reply first: busy is session-wide, so a queued next turn must not hold a
+// warning for a reply already in history.
 export function settleLostReply(
   { context, messages, busy }: { context: ChatContext; messages: SessionEntry[]; busy: boolean },
 ): Partial<Pick<ChatContext, "replyLost" | "error">> {
-  if (!context.replyLost || busy) return {};
+  if (!context.replyLost) return {};
   const last = messages.at(-1);
   if (last?.type === "assistant" && entryText(last).length > 0) return { replyLost: false };
-  return { replyLost: false, error: NO_REPLY_ERROR };
+  return busy ? {} : { replyLost: false, error: NO_REPLY_ERROR };
 }
 
 /** A legacy STREAM_BUSY rejects the active send before it can be persisted. */

@@ -87,6 +87,18 @@ await settled(actor)
 => { replyLost: false, error: null }
 ```
 
+## The reply landed while a later turn runs: nothing is shown
+
+`busy` covers the whole session, so a queued next turn keeps the box busy after
+the dropped turn's reply is already in history. The reply is checked first.
+
+```ts
+const actor = await chatWith({ entries: [question, entry("a1", "assistant", "hello")], total: 2, sessionId: "s1", running: true, busy: true });
+dropMidTurn(actor);
+await settled(actor)
+=> { replyLost: false, error: null }
+```
+
 ## The box stopped with no reply: an error
 
 A subprocess that exits mid-turn also ends the stream with no result. History
