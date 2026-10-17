@@ -13,13 +13,14 @@
 .bbx-system-theme-preview[data-chrome-theme="posy"] .bbx-system-theme-toolbar{color:#201525;background:#ffe2e9;border-color:#c7b6cf;}
 .bbx-system-theme-preview[data-chrome-theme="posy"] .bbx-system-theme-desk>span{background:#ffd6e1;border-color:#b8a8c2;box-shadow:2px 2px 0 #c8b9cf;}
 [data-chrome-theme="posy"] .bbx-app-nav{color:var(--posy-ink);background:#ffe2e9;border-bottom:2px solid #c7b6cf;padding-block:9px;}
-[data-chrome-theme="posy"] .bbx-app-nav button{color:#201525;background:#ffdf55;border:1px solid #9b88a4;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;font-weight:700;}
-[data-chrome-theme="posy"] .bbx-app-nav button[aria-pressed="true"]{color:#fff4e9;background:#f01978;border-color:#b59daf;}
+[data-chrome-theme="posy"] .bbx-app-nav button:not(#bbx-nav-errors){color:#201525;background:#ffdf55;border:1px solid #9b88a4;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;font-weight:700;}
+[data-chrome-theme="posy"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors){color:#fff4e9;background:#f01978;border-color:#b59daf;}
 [data-chrome-theme="posy"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material){color:var(--posy-ink);background:#fff7f0;border:4px solid transparent;border-image:var(--posy-frame) 24 / 4px / 0 stretch;box-shadow:0 2px 5px #52374720;}
 [data-chrome-theme="posy"] .bbx-chat-user-paper{color:#fff8ef;background:#ef2679;border:1px solid #b99eb1;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;}
 [data-chrome-theme="posy"] :is(.bbx-chat-reply-material,.bbx-chat-callout) .prose:not(.bbx-card-theme *){color:var(--posy-ink);--tw-prose-body:var(--posy-ink);--tw-prose-headings:var(--posy-ink);--tw-prose-bold:var(--posy-ink);--tw-prose-links:#ad1557;}
 [data-chrome-theme="posy"] .bbx-chat-callout>.text-accent-dark{color:#67467b;}
 [data-chrome-theme="posy"] .bbx-composer-material>section{background:transparent;border:0;}
+[data-chrome-theme="posy"] .bbx-composer-material>div.bg-gradient-to-r{background:transparent;}
 [data-chrome-theme="posy"] .bbx-composer-material textarea{background:#fff7f0;color:var(--posy-ink);border:1px solid #b8a8c2;}
 [data-chrome-theme="posy"] .bbx-composer-material textarea::placeholder{color:#765a72;}
 [data-chrome-theme="posy"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic.bg-primary):enabled{background:#f01978;color:#fff5eb;border:1px solid #ad91a8;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;}
