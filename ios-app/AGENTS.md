@@ -103,6 +103,13 @@ project file:
 3. Membership in the correct `PBXGroup`
 4. Membership in the app or test target's `PBXSourcesBuildPhase`
 
+The app and the share extension link the local Swift package `../apple-shared`
+(`BeeBoxShared`): an `XCLocalSwiftPackageReference` in the project's
+`packageReferences`, and per target an `XCSwiftPackageProductDependency` in
+`packageProductDependencies` plus a `PBXBuildFile` in its Frameworks phase.
+Code both iOS and the Mac app use goes there; see `../apple-shared/` and
+`bin/apple-test`.
+
 Prefer adding files through Xcode when practical. If editing `project.pbxproj`
 directly, use unique 24-character IDs consistent with the file, keep app/test
 target membership separate, and immediately run `xcodebuild -list` followed by
