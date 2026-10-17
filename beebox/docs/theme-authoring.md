@@ -26,7 +26,9 @@ Unknown names render base styles until CSS matches. Existing studies are
 `rose-trellis-study` and `gold-thread-study` are in `theme-studio-textiles.css`.
 Goldfish and Doodlebit are catalog themes, available in the studio as
 `goldfish` / `water` and `doodlebit` / `ink`. Tempest (`tempest` / `water`),
-Veil (`veil` / `pigment`), and Gilt (`gilt` / `leaf`) are also catalog themes.
+Veil (`veil` / `pigment`), Gilt (`gilt` / `leaf`), Phosphor (`phosphor` /
+`terminal`), Overprint (`overprint` / `plate`), and Posy (`posy` / `paisley`)
+are also catalog themes.
 
 Scope every draft selector to `.bbx-theme-studio` and its draft attribute: lazy
 CSS stays loaded after navigation. Keep draft CSS under `pages/dev/`, out of
