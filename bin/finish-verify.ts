@@ -37,7 +37,7 @@ class PreflightFailedError extends Error {
   }
 }
 
-const KINDS: VerificationCommand["kind"][] = ["tests", "typecheck", "lint", "smoke", "site"];
+const KINDS: VerificationCommand["kind"][] = ["tests", "typecheck", "lint", "smoke", "site", "apple"];
 
 /** A usage mistake: exit 2 with the usage text, and run nothing. */
 class UsageError extends Error {
