@@ -84,7 +84,7 @@ the deletion of the segment that recorded the use.
 ```ts continue
 const logDir = secretsLogDir();
 await mkdir(logDir, { recursive: true });
-for (const name of ["2025-08.jsonl", "2025-09.jsonl", "2025-10.jsonl", "2026-10.jsonl", "notes.txt", "2024-01.jsonl.bak"]) {
+for (const name of ["2025-08.jsonl", "2025-09.jsonl", "2025-10.jsonl", "2026-10.jsonl", "notes.txt", "2024-01.jsonl.bak", "2024-13.jsonl"]) {
   await writeFile(join(logDir, name), "");
 }
 await setSecret({ name: "deepgram", value: "placeholder-deepgram-key" });
@@ -102,7 +102,7 @@ print(`second sweep: ${(await pruneSecretAccessLog(new Date("2026-10-17T12:00:00
 =>
 retention: 12 months
 pruned: 2025-08.jsonl, 2025-09.jsonl
-kept: 2024-01.jsonl.bak, 2025-10.jsonl, 2026-10.jsonl, notes.txt
+kept: 2024-01.jsonl.bak, 2024-13.jsonl, 2025-10.jsonl, 2026-10.jsonl, notes.txt
 lastUsed survives: 2025-08-15T12:00:00.000Z
 second sweep: 0
 ```

@@ -31,7 +31,7 @@ import type { SecretRefusalKind } from "./errors.js";
 import { loadSecretStore, mutateSecretStore, secretsLogDir } from "./store.js";
 
 /** A monthly segment's file name, capturing its `YYYY-MM`. */
-const SEGMENT_NAME = /^(\d{4}-\d{2})\.jsonl$/;
+const SEGMENT_NAME = /^(\d{4}-(?:0[1-9]|1[0-2]))\.jsonl$/;
 
 /** Minimum gap between `lastUsed` stamps for one (box, secret) pair. */
 const LAST_USED_THROTTLE_MS = 60 * 60 * 1000;
