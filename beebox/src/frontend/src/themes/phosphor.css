@@ -1,9 +1,20 @@
 /* Phosphor: a monochrome ANSI terminal, separated by text and tone instead of framed controls. */
 .bbx-box-presentation[data-chrome-theme="phosphor"]{
   color:#80f58d;background:repeating-linear-gradient(0deg,#7eff8c0c 0 1px,transparent 1px 4px),radial-gradient(ellipse at 50% 25%,#082d15,#020b05 78%);
-  font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;--bbx-selection:#a5ffad;--bbx-selection-ink:#061009;--bbx-focus-ring:#a5ffad;
+  font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;--bbx-selection:#a5ffad;--bbx-selection-ink:#061009;--bbx-focus-ring:#a5ffad;--bbx-desk-background:#020b05;--bbx-desk-pattern:repeating-linear-gradient(0deg,#7eff8c0c 0 1px,transparent 1px 4px);--bbx-desk-edge:#237038;--bbx-bar-paper:#031008;--bbx-bar-edge:#237038;
 }
 [data-chrome-theme="phosphor"],.bbx-card-theme[data-card-theme="phosphor"]{font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace!important;}
+[data-chrome-theme="phosphor"] :is(.bbx-conversation-desk,.bbx-companion-desk[data-active-card],.bbx-interface-card-desk[data-card-content="card"],.bbx-interface-browse-panel[data-card-content="card"],.bbx-interface-tabstrip > [role="none"]::before,.bbx-interface-tabstrip > [role="none"]::after,.bbx-app-nav > div){background:transparent;}
+[data-chrome-theme="phosphor"] .bbx-interface-card-desk[data-card-content="neutral"]{background:#06130a;}
+[data-chrome-theme="phosphor"] :is(.bbx-chat-meta-material,.bbx-chat-pending-material,.bbx-chat-empty-label){color:#60bb70;background:#06130a;}
+[data-chrome-theme="phosphor"] #bbx-chat-load-older{color:#80f58d;background:#06130a;border:1px solid #237038;}
+[data-chrome-theme="phosphor"] [aria-label="Pane controls"] button{color:#80f58d;background:#031008;border:1px solid #237038;}
+[data-chrome-theme="phosphor"] [aria-label="Pane controls"] button:hover{color:#020b05;background:#80f58d;}
+.bbx-interface-tab[data-card-theme="phosphor"]{color:#83ed91;background:#06130a;border-color:#237038;border-radius:0;}
+.bbx-interface-tab[data-card-theme="phosphor"][data-active="true"]{background:#0b2411;}
+.bbx-system-theme-preview[data-chrome-theme="phosphor"]{--bbx-desk-background:#020b05;background:repeating-linear-gradient(0deg,#7eff8c0c 0 1px,transparent 1px 4px),#020b05;}
+.bbx-system-theme-preview[data-chrome-theme="phosphor"] .bbx-system-theme-toolbar{background:#031008;border-color:#237038;}
+.bbx-system-theme-preview[data-chrome-theme="phosphor"] .bbx-system-theme-desk>span{background:#0b2411;border-color:#328646;box-shadow:0 0 5px #55ed6c55;}
 
 [data-chrome-theme="phosphor"] .bbx-app-nav{
   color:#8bff98;background:#031008;border:0;box-shadow:none;font:600 13px/1.4 "IBM Plex Mono","SFMono-Regular",Consolas,monospace;text-shadow:0 0 8px #45ff6766;padding-block:8px;
@@ -27,21 +38,23 @@
 [data-chrome-theme="phosphor"] .bbx-composer-material>section{background:transparent;border:0;}
 [data-chrome-theme="phosphor"] .bbx-composer-material textarea{color:#a7ffb1;background:#020b05;border:0!important;box-shadow:none!important;outline:0;font-family:inherit;font-size:13px;line-height:1.5;}
 [data-chrome-theme="phosphor"] .bbx-composer-material textarea::placeholder{color:#4ba75e;}
-[data-chrome-theme="phosphor"] :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic){
+[data-chrome-theme="phosphor"] :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit){
   position:relative;min-width:0;padding:8px 4px;color:#78ed8a;background:transparent;border:0;box-shadow:none;font:600 11px/1 monospace;letter-spacing:-.04em;white-space:nowrap;
 }
-[data-chrome-theme="phosphor"]  :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic) svg{visibility:hidden;}
+[data-chrome-theme="phosphor"]  :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit) svg{display:none;}
+[data-chrome-theme="phosphor"] #bbx-composer-mic[title="Resume recording (stops speech)"]>span{display:none;}
 [data-chrome-theme="phosphor"] #bbx-composer-mic[title="Stop recording"]::after{content:"[STOP]";}
 [data-chrome-theme="phosphor"] #bbx-composer-mic[title="Resume recording (stops speech)"]::after{content:"[RESUME]";}
 [data-chrome-theme="phosphor"] #bbx-composer-mic[title="Voice input (narration mode)"]::after{content:"[NARR]";}
 [data-chrome-theme="phosphor"] #bbx-composer-mic[title="Voice input"]::after{content:"[REC]";}
-[data-chrome-theme="phosphor"] .bbx-composer-material .bbx-voice-paused{display:none;}
 [data-chrome-theme="phosphor"] #bbx-composer-add::after{content:"[ + ]";}
 [data-chrome-theme="phosphor"] #bbx-composer-capture::after{content:"[CAM]";}
 [data-chrome-theme="phosphor"] #bbx-composer-keyboard::after{content:"[KEY]";}
 [data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile)::after{content:"[SEND]";}
+[data-chrome-theme="phosphor"] #bbx-composer-dictation-cancel::after{content:"[CANCEL]";}
+[data-chrome-theme="phosphor"] #bbx-composer-dictation-edit::after{content:"[EDIT]";}
 [data-chrome-theme="phosphor"] #bbx-composer-mic::after{content:"[REC]";}
-[data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic):enabled{color:#a7ffb1;background:#092313;}
+[data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit):enabled{color:#a7ffb1;background:#092313;}
 .bbx-card-theme[data-card-theme="phosphor"]{
   --bbx-paper:#041108;--bbx-ink:#83ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#a7ffb1;--bbx-edge:#328646;--bbx-underlay:#020804;--bbx-tint:#082311;--bbx-sheet:#082311;--bbx-quote-paper:#082311;--bbx-quote-layer-paper:#082311;--bbx-blockquote-paper:#082311;--bbx-blockquote-padding:.6em 1em;--bbx-blockquote-edge:0;--bbx-code-paper:#020804;--bbx-code-ink:#a7ffb1;--bbx-sheet-radius:0;--bbx-selection:#a7ffb1;--bbx-selection-ink:#020804;--bbx-bullet:#70ec83;--bbx-counter:#70ec83;color-scheme:dark;
   font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
@@ -58,20 +71,22 @@
 .bbx-card-theme[data-card-theme="phosphor"] #bbx-studio-action::before{content:"[ ";}
 .bbx-card-theme[data-card-theme="phosphor"] #bbx-studio-action::after{content:" ]";}
 .bbx-card-theme[data-card-theme="phosphor"] #bbx-studio-disabled{background:#041108;color:#488454;border:0;}
-:is([data-chrome-theme="phosphor"],[data-card-theme="phosphor"]) :is(button,textarea,input):focus-visible{outline:2px solid #b4ffbd;outline-offset:2px;}
+:is([data-chrome-theme="phosphor"],.bbx-card-theme[data-card-theme="phosphor"]) :is(button,textarea,input):focus-visible{outline:2px solid #b4ffbd;outline-offset:2px;}
 @media(hover:hover){[data-chrome-theme="phosphor"] .bbx-app-nav button:hover{color:#d0ffd4;background:#0b2e15;}}
 
 /* Preserve semantic states and focus while keeping the terminal's text-first control language. */
-[data-chrome-theme="phosphor"] :is(button,a,[role="button"],textarea,input):focus-visible{outline:2px solid #b4ffbd!important;outline-offset:2px;background-color:#092313;}
+[data-chrome-theme="phosphor"] :is(button,a,[role="button"],textarea,input):focus-visible:not(.bbx-card-theme *):not(.bbx-interface-tab[data-card-theme]:not([data-card-theme="phosphor"]) *){outline:2px solid #b4ffbd!important;outline-offset:2px;background-color:#092313;}
 [data-chrome-theme="phosphor"] .bbx-app-nav :is(button,a){box-shadow:none;border:0;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material,[data-chrome-theme="phosphor"] .bbx-chat-callout,[data-chrome-theme="phosphor"] .bbx-composer-material,[data-chrome-theme="phosphor"] .bbx-chat-user-paper{border:0;box-shadow:none;border-radius:0;}
 .bbx-card-theme[data-card-theme="phosphor"] :is(button,a,[role="button"]){border-radius:0;box-shadow:none;}
 
-[data-chrome-theme="phosphor"] :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic){border-radius:0!important;box-shadow:none!important;background:transparent;}
-[data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic):enabled{background:#092313;}
+[data-chrome-theme="phosphor"] :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit){border-radius:0!important;box-shadow:none!important;background:transparent;}
+[data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit):enabled{background:#092313;}
 [data-chrome-theme="phosphor"] #bbx-nav-profile{position:relative;color:#7cf08c;background:transparent;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] #bbx-nav-profile img{display:none;}
 [data-chrome-theme="phosphor"] #bbx-nav-profile::before{content:"[ MENU ]";font:600 11px/1 monospace;letter-spacing:.04em;}
+[data-chrome-theme="phosphor"] #bbx-nav-profile::after{content:none;}
+[data-chrome-theme="phosphor"] #bbx-nav-profile>[role="img"]{display:none;}
 [data-chrome-theme="phosphor"] .bbx-place-pill{font-family:inherit;color:#8bff98;background:#031008;}
 [data-chrome-theme="phosphor"] .bbx-place-pill::before{content:"[ ";color:#3baa55;}
 [data-chrome-theme="phosphor"] .bbx-place-pill::after{content:" ]";color:#3baa55;}
