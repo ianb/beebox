@@ -30,5 +30,5 @@ Evidence from CODING_FEEDBACK, 2026-10-15 to 2026-10-16:
 What would fix it: a `--why` mode (or a summary in the first line) that groups
 the selection by reason, with the count for each: the changed path that reached
 a test where one exists, and otherwise the category (for example, tests the
-graph cannot resolve, which are always selected). Then a session can see that
-one import accounts for most of the selection.
+graph cannot resolve). Then a session can see that one import accounts for
+most of the selection.
