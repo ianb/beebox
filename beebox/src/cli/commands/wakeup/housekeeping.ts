@@ -1,7 +1,8 @@
 /**
  * `bbx wakeup` step 2: housekeeping.
  *
- * Sweeps stale tmp uploads and abandoned captures, and refills and commits the
+ * Sweeps stale tmp uploads, abandoned captures and old secret access-log
+ * segments, and refills and commits the
  * root landmark. (The todo-review sweep that used to run here is the stock
  * `todo-review` procedure's precheck now, on its own schedule —
  * `docs/plans/todos-ui.md` Track 7.) Lifted out of `wakeup.ts` so the orchestrator
@@ -9,6 +10,7 @@
  */
 
 import { cleanupOldTmpUploads } from "../../../core/housekeeping.js";
+import { pruneSecretAccessLog } from "../../../core/secrets/access-log.js";
 import { sweepAbandonedCaptures } from "../../../core/capture/sweep.js";
 import { installRootLandmark } from "../../../core/box/structure/core.js";
 import { stageFiles, commitPaths } from "../../../lib/git/core/operations.js";
@@ -29,6 +31,12 @@ export async function runHousekeeping(boxRoot: string): Promise<void> {
   if (captureSweep.discarded.length > 0) {
     console.log(`  Discarded ${captureSweep.discarded.length} empty abandoned capture session(s)`);
   }
+  // The log is machine-level, so every box's wakeup sweeps the same directory;
+  // after the first one of a month the rest find nothing to delete.
+  const prunedSegments = await pruneSecretAccessLog(new Date());
+  if (prunedSegments.length > 0) {
+    console.log(`  Pruned ${prunedSegments.length} old secret access-log segment(s): ${prunedSegments.join(", ")}`);
+  }
   const rootLandmarkPath = await installRootLandmark(boxRoot);
   if (rootLandmarkPath !== null) {
     // Persist the refill so it survives, propagates to clones, and doesn't
@@ -48,7 +56,7 @@ export async function runHousekeeping(boxRoot: string): Promise<void> {
       console.warn(`  Refilled ${rootLandmarkPath} but could not commit it:`, e);
     }
   }
-  if (swept === 0 && rootLandmarkPath === null) {
+  if (swept === 0 && prunedSegments.length === 0 && rootLandmarkPath === null) {
     console.log("  Nothing to clean up");
   }
 

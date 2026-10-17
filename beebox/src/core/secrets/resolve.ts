@@ -18,6 +18,11 @@
  * secret it was never granted is exactly what an access log is for. What the
  * log records and what the STORE records are two different questions, which is
  * why `observe: false` exists — see the option's comment below.
+ *
+ * A caller that only asks "is this configured?" and never needs the value uses
+ * `secretIsResolvable` instead: same checks, no value, no log line. That
+ * question once ran on every scheduler tick for every box and made up ~99% of
+ * the log.
  */
 
 import { boxSlug } from "../../lib/box-slug.js";
@@ -34,7 +39,7 @@ import {
   UnknownSecretError,
   type SecretRefusal,
 } from "./errors.js";
-import { loadSecretStore, secretsFilePath, type SecretAccessLevel } from "./store.js";
+import { loadSecretStore, secretsFilePath, type SecretAccessLevel, type SecretStoreData } from "./store.js";
 
 /**
  * What a `purpose` may look like: a short lowercase label, `transcription`,
@@ -124,25 +129,54 @@ export async function resolveSecret(opts: ResolveSecretOptions): Promise<Result<
     );
   }
 
+  const refusal = accessRefusal({ store: loaded.value, slug, name, access });
+  if (refusal !== null) return refuse(refusal);
   const entry = loaded.value.secrets[name];
-  const granted = loaded.value.grants[slug]?.[name];
-
-  if (granted === undefined) {
-    return refuse(
-      entry === undefined ? new UnknownSecretError(name) : new SecretNotGrantedError({ secretName: name, boxSlug: slug }),
-    );
-  }
-  if (entry === undefined) {
-    return refuse(new DanglingSecretGrantError({ secretName: name, boxSlug: slug }));
-  }
-  if (access === "agent" && granted === "server") {
-    return refuse(new SecretAgentAccessNotGrantedError({ secretName: name, boxSlug: slug }));
-  }
-  if (entry.value === undefined || entry.value === "") {
-    return refuse(new EmptySecretSlotError(name));
-  }
+  invariant(entry?.value !== undefined, `accessRefusal passed "${name}" without a value`);
 
   await appendSecretAccessEvent({ ts, box: slug, secret: name, purpose, event: "resolve" });
   if (opts.observe !== false) await stampSecretUse({ slug, name, nowIso: ts, purpose });
   return ok({ value: entry.value, suspect: entry.verified?.status === "failed" });
+}
+
+/**
+ * Would {@link resolveSecret} succeed for this box? The existence check for a
+ * configuration question ("is Google set up here?"): it reads the store and
+ * applies the same grant, access and empty-slot checks, but returns no value
+ * and writes nothing to the access log or the store. A caller that goes on to
+ * use the credential resolves it then, and that resolve is logged.
+ */
+export async function secretIsResolvable(opts: Omit<ResolveSecretOptions, "purpose" | "observe">): Promise<boolean> {
+  const loaded = await loadSecretStore();
+  if (!loaded.ok) return false;
+  const slug = opts.slug ?? (await boxSlug(opts.boxRoot));
+  return accessRefusal({ store: loaded.value, slug, name: opts.name, access: opts.access }) === null;
+}
+
+/** Why this box may not have this secret's value, or null when it may. */
+function accessRefusal(opts: {
+  store: SecretStoreData;
+  slug: string;
+  name: string;
+  access: SecretAccessLevel;
+}): SecretRefusal | null {
+  const { store, slug, name, access } = opts;
+  const entry = store.secrets[name];
+  const granted = store.grants[slug]?.[name];
+
+  if (granted === undefined) {
+    return entry === undefined
+      ? new UnknownSecretError(name)
+      : new SecretNotGrantedError({ secretName: name, boxSlug: slug });
+  }
+  if (entry === undefined) {
+    return new DanglingSecretGrantError({ secretName: name, boxSlug: slug });
+  }
+  if (access === "agent" && granted === "server") {
+    return new SecretAgentAccessNotGrantedError({ secretName: name, boxSlug: slug });
+  }
+  if (entry.value === undefined || entry.value === "") {
+    return new EmptySecretSlotError(name);
+  }
+  return null;
 }

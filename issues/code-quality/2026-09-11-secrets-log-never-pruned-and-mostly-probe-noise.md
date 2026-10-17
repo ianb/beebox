@@ -1,6 +1,6 @@
 ---
 title: "The secret access log is never pruned, and 99% of it is one health check's probe"
-workstream: unattached
+workstream: secrets-log
 area: beebox
 labels: [secrets]
 filed-by: agent

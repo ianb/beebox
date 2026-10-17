@@ -17,18 +17,31 @@
  * segment never loses the latter. It is stamped at most hourly per (box,
  * secret) — a per-resolve write would put the store's lock in the path of every
  * transcription.
+ *
+ * Segments older than {@link ACCESS_LOG_RETENTION_MONTHS} are deleted by
+ * {@link pruneSecretAccessLog}, which `bbx wakeup` housekeeping runs.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { boxSlug } from "../../lib/box-slug.js";
-import { errorMessage } from "../../shared/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import type { SecretRefusalKind } from "./errors.js";
 import { loadSecretStore, mutateSecretStore, secretsLogDir } from "./store.js";
 
+/** A monthly segment's file name, capturing its `YYYY-MM`. */
+const SEGMENT_NAME = /^(\d{4}-\d{2})\.jsonl$/;
+
 /** Minimum gap between `lastUsed` stamps for one (box, secret) pair. */
 const LAST_USED_THROTTLE_MS = 60 * 60 * 1000;
+
+/**
+ * How many whole months of access history to keep before the current one.
+ * The boxholder's call (2026-10-17): attribution questions further back than a
+ * year are not asked.
+ */
+export const ACCESS_LOG_RETENTION_MONTHS = 12;
 
 /** How many distinct observed `purpose` labels one entry keeps. */
 const MAX_OBSERVED_PURPOSES = 16;
@@ -72,6 +85,40 @@ function warnOnce(message: string): void {
 export function accessLogSegmentPath(iso: string): string {
   const month = iso.slice(0, 7);
   return path.join(secretsLogDir(), `${month}.jsonl`);
+}
+
+/**
+ * Delete monthly segments more than {@link ACCESS_LOG_RETENTION_MONTHS} months
+ * before `now`'s month. Returns the deleted file names. Files that are not
+ * `YYYY-MM.jsonl` are left alone.
+ *
+ * `now` is the machine's clock, not a box's: the log is machine-level, and a
+ * box stubbed to a future date must not delete real history. Never throws — a
+ * failed sweep is retried by the next one.
+ */
+export async function pruneSecretAccessLog(now: Date): Promise<string[]> {
+  const dir = secretsLogDir();
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - ACCESS_LOG_RETENTION_MONTHS, 1));
+  const cutoffMonth = cutoff.toISOString().slice(0, 7);
+  let names: string[];
+  try {
+    names = await fs.readdir(dir);
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") console.warn(`[secrets] could not list ${dir} for pruning: ${errorMessage(e)}`);
+    return [];
+  }
+  const removed: string[] = [];
+  for (const name of names.toSorted()) {
+    const month = SEGMENT_NAME.exec(name)?.[1];
+    if (month === undefined || month >= cutoffMonth) continue;
+    try {
+      await fs.unlink(path.join(dir, name));
+      removed.push(name);
+    } catch (e) {
+      if (errnoCode(e) !== "ENOENT") console.warn(`[secrets] could not prune ${name}: ${errorMessage(e)}`);
+    }
+  }
+  return removed;
 }
 
 /** Append one event. Never throws — a broken log must not break a resolve. */

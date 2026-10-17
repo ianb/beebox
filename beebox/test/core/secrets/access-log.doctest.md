@@ -16,10 +16,17 @@ never blocked by an unwritable log.
 Values are never logged, here as everywhere.
 
 ```ts setup
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { accessLogSegmentPath, recordSecretMint } from "../../../src/core/secrets/access-log.js";
+import {
+  ACCESS_LOG_RETENTION_MONTHS,
+  accessLogSegmentPath,
+  pruneSecretAccessLog,
+  recordSecretMint,
+} from "../../../src/core/secrets/access-log.js";
+import { setSecret } from "../../../src/core/secrets/lifecycle.js";
+import { loadSecretStore, mutateSecretStore, secretsLogDir } from "../../../src/core/secrets/store.js";
 import { getBoxTimeISO } from "../../../src/lib/time.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
@@ -65,6 +72,47 @@ await recordSecretMint({ boxRoot: box.root, secret: "deepgram", purpose: "deepgr
 const derived = (await readLog(getBoxTimeISO(box.root))).at(-1);
 derived.box.startsWith("bbx-doctest-")
 => true
+```
+
+## Segments older than twelve months are deleted
+
+`bbx wakeup` housekeeping runs `pruneSecretAccessLog`. It keeps the current
+month and the twelve before it, and leaves files it did not write alone.
+`lastUsed` on the store entry is untouched, so "is this still in use" survives
+the deletion of the segment that recorded the use.
+
+```ts continue
+const logDir = secretsLogDir();
+await mkdir(logDir, { recursive: true });
+for (const name of ["2025-08.jsonl", "2025-09.jsonl", "2025-10.jsonl", "2026-10.jsonl", "notes.txt", "2024-01.jsonl.bak"]) {
+  await writeFile(join(logDir, name), "");
+}
+await setSecret({ name: "deepgram", value: "placeholder-deepgram-key" });
+await mutateSecretStore({ purpose: "test" }, (store) => {
+  const entry = store.secrets.deepgram;
+  if (entry !== undefined) entry.lastUsed = { "example-box": "2025-08-15T12:00:00.000Z" };
+});
+
+print(`retention: ${ACCESS_LOG_RETENTION_MONTHS} months`);
+print(`pruned: ${(await pruneSecretAccessLog(new Date("2026-10-17T12:00:00Z"))).join(", ")}`);
+print(`kept: ${(await readdir(logDir)).toSorted().join(", ")}`);
+const store = await loadSecretStore();
+print(`lastUsed survives: ${store.ok && store.value.secrets.deepgram?.lastUsed?.["example-box"]}`);
+print(`second sweep: ${(await pruneSecretAccessLog(new Date("2026-10-17T12:00:00Z"))).length}`);
+=>
+retention: 12 months
+pruned: 2025-08.jsonl, 2025-09.jsonl
+kept: 2024-01.jsonl.bak, 2025-10.jsonl, 2026-10.jsonl, notes.txt
+lastUsed survives: 2025-08-15T12:00:00.000Z
+second sweep: 0
+```
+
+A machine with no log yet has nothing to sweep:
+
+```ts continue
+process.env.BBX_SECRETS_FILE = join(dir, "never-used", "secrets.json");
+(await pruneSecretAccessLog(new Date())).length
+=> 0
 ```
 
 ```ts cleanup
