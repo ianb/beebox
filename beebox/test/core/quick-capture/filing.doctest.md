@@ -82,13 +82,19 @@ filingPlan({ records: [capture("1")], docs: docs(placeholder("1")), queued: new 
 => { clear: [], dequeue: [], queue: [], kick: ["00000000-0000-4000-8000-000000000001"], exhausted: [] }
 ```
 
-Words win. Context added to a waiting capture takes it out of filing and, if
-it was queued, out of the job; the words route to chat as before.
+Words win. Context added to a waiting capture takes it out of the job at
+once; the words route to chat as before. The capture leaves filing for good
+when the words are delivered, and until then it only waits.
 
 ```ts
-const context = capture("9", { filingRequested: undefined, declaration: { version: 1, capturedAt: at(1), source: "apple-native-input", input: "compare this with ours", parentCaptureId: "00000000-0000-4000-8000-000000000001" } });
-filingPlan({ records: [capture("1"), context], docs: docs(placeholder("1")), queued: new Set([ref("1")]), now: T0 + 600000 })
-=> { clear: ["00000000-0000-4000-8000-000000000001"], dequeue: ["_content/captures/00000000-0000-4000-8000-000000000001.doc.card"], queue: [], kick: [], exhausted: [] }
+const words = { version: 1 as const, capturedAt: at(1), source: "apple-native-input" as const, input: "compare this with ours", parentCaptureId: "00000000-0000-4000-8000-000000000001" };
+const sending = capture("9", { state: "sending", filingRequested: undefined, declaration: words });
+filingPlan({ records: [capture("1"), sending], docs: docs(placeholder("1")), queued: new Set([ref("1")]), now: T0 + 600000 })
+=> { clear: [], dequeue: ["_content/captures/00000000-0000-4000-8000-000000000001.doc.card"], queue: [], kick: [], exhausted: [] }
+
+const sent = capture("9", { state: "sent", filingRequested: undefined, declaration: words });
+filingPlan({ records: [capture("1"), sent], docs: docs(placeholder("1")), queued: none, now: T0 + 600000 }).clear
+=> ["00000000-0000-4000-8000-000000000001"]
 ```
 
 A deleted context event does not take the capture out of filing, and a

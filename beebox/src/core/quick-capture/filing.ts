@@ -48,14 +48,15 @@ export function isFiled(doc: FilingDoc): boolean {
 export function filingPlan(args: { records: CaptureRecord[]; docs: ReadonlyMap<string, FilingDoc>; queued: ReadonlySet<string>; now: number }): FilingPlan {
   const { records, docs, queued, now } = args;
   const plan: FilingPlan = { clear: [], dequeue: [], queue: [], kick: [], exhausted: [] };
-  // A deleted context event no longer speaks for the capture.
-  const withContext = new Set(records.flatMap(record => record.state === "gone" ? [] : record.declaration.parentCaptureId ?? []));
+  // Words take a capture over once delivered. Until then it waits; a context event deleted before delivery gives it back.
+  const delivered = new Set(records.flatMap(record => record.state === "sent" ? record.declaration.parentCaptureId ?? [] : []));
+  const pending = new Set(records.flatMap(record => record.state === "gone" || record.state === "sent" ? [] : record.declaration.parentCaptureId ?? []));
   const waiting: CaptureRecord[] = [];
   for (const record of records) {
     if (record.filingRequested !== true) continue;
     const doc = docs.get(record.id) ?? null;
-    if (withContext.has(record.id)) {
-      plan.clear.push(record.id);
+    if (delivered.has(record.id) || pending.has(record.id)) {
+      if (delivered.has(record.id)) plan.clear.push(record.id);
       if (doc !== null && queued.has(doc.ref)) plan.dequeue.push(doc.ref);
     } else if (record.state === "gone" || isFiled(doc)) plan.clear.push(record.id);
     // Retry passes through "preparing" on its way back to "saved"; the request stays.
