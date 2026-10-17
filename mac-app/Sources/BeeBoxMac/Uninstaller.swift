@@ -28,7 +28,8 @@ enum Uninstaller {
         alert.messageText = "Uninstall Bee Box?"
         alert.informativeText = """
             This stops your box, deletes Bee Box's shared data (\(sizeText(of: Paths.support))): the downloaded \
-            image, accounts, agent sign-ins, and logs. Then it moves Bee Box to the Trash.
+            image, accounts, agent sign-ins, logs, and the paired boxes and their credentials. Then it moves \
+            Bee Box to the Trash.
 
             Your boxes in \(displayPath(Paths.boxes)) are kept unless you choose otherwise.
             """
@@ -49,6 +50,12 @@ enum Uninstaller {
             appLog("uninstalling\(trashBoxes ? " (boxes to the Trash)" : "")")
             await stopBox()
             var failures: [String] = []
+            // Paired boxes' credentials live in the Keychain, outside the
+            // shared data folder.
+            for store in MacKeychain.all {
+                let removed = store.purgeOrphanTokens(knownBoxIDs: [])
+                appLog("removed \(removed) Keychain item(s) for \(store.service)")
+            }
             let fm = FileManager.default
             if trashBoxes {
                 for box in boxes {

@@ -1,4 +1,6 @@
 import AppKit
+import BeeBoxMacCore
+import BeeBoxShared
 import SwiftUI
 
 @main
@@ -7,7 +9,14 @@ struct BeeBoxMacApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            BoxMenu(runtime: delegate.runtime, updates: delegate.updates, quit: delegate.stopAndExit)
+            BoxMenu(
+                runtime: delegate.runtime,
+                updates: delegate.updates,
+                boxStore: delegate.boxStore,
+                hosting: delegate.hosting,
+                preferences: delegate.preferences,
+                quit: delegate.stopAndExit
+            )
         } label: {
             BoxIcon(runtime: delegate.runtime)
         }
@@ -18,6 +27,17 @@ struct BeeBoxMacApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let runtime = BoxRuntime()
     let updates = Updates()
+    let boxStore = BoxStore(
+        storageURL: Paths.support.appending(path: "paired-boxes.json"),
+        credentials: MacKeychain.deviceTokens,
+        redeemer: PairingRedeemer(
+            transport: URLSessionTransport(session: .shared),
+            userAgent: "BeeBox-Mac/\(BundleConfig.version)"
+        ),
+        deviceLabel: Host.current().localizedName ?? "Mac"
+    )
+    lazy var hosting = HostingController(runtime: runtime, boxStore: boxStore, defaults: .standard)
+    lazy var preferences = PreferencesWindowController(boxStore: boxStore, hosting: hosting)
 
     private var termSource: DispatchSourceSignal?
 
@@ -32,7 +52,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         source.setEventHandler { [weak self] in self?.stopAndExit() }
         source.resume()
         termSource = source
-        runtime.start()
+        hosting.startIfEnabled()
+    }
+
+    /// `beebox://pair` links clicked in a browser. Every link goes to the
+    /// pairing sheet; nothing is redeemed until the person clicks Add.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard url.scheme == "beebox", url.host() == "pair" else {
+                appLog("open url ignored reason=unhandled-link")
+                continue
+            }
+            preferences.startPairing(link: url.absoluteString)
+        }
     }
 
     /// Stop the box, then exit. Quit and SIGTERM both come here; neither goes
@@ -65,27 +97,42 @@ struct BoxIcon: View {
 struct BoxMenu: View {
     @ObservedObject var runtime: BoxRuntime
     @ObservedObject var updates: Updates
+    @ObservedObject var boxStore: BoxStore
+    @ObservedObject var hosting: HostingController
+    let preferences: PreferencesWindowController
     let quit: () -> Void
 
     var body: some View {
-        Text(runtime.statusText)
-        ForEach(runtime.timingLines, id: \.self) { Text($0) }
-        if !runtime.memorySummary.isEmpty {
-            Text(runtime.memorySummary)
+        let remoteBoxes = boxStore.boxes.filter { !$0.hostedLocally }
+        if remoteBoxes.isEmpty && !hosting.enabled {
+            Text("No boxes paired")
         }
-        Divider()
-        if case .running(let url) = runtime.phase {
-            Button("Open Box") { NSWorkspace.shared.open(url) }
-            if let setup = runtime.firstRunSetupURL {
-                Button("Open First-Run Setup") { NSWorkspace.shared.open(setup) }
+        ForEach(remoteBoxes) { box in
+            Button("\(box.label) — Open") { NSWorkspace.shared.open(box.baseURL) }
+        }
+        if hosting.enabled {
+            Divider()
+            Text("This Mac: \(runtime.statusText)")
+            ForEach(runtime.timingLines, id: \.self) { Text($0) }
+            if !runtime.memorySummary.isEmpty {
+                Text(runtime.memorySummary)
             }
-            Button("Stop") { Task { await runtime.stop() } }
-        } else if runtime.phase == .stopped || runtime.isFailedPhase {
-            Button("Start") { runtime.start() }
+            if case .running(let url) = runtime.phase {
+                Button("This Mac — Open") { NSWorkspace.shared.open(url) }
+                if let setup = runtime.firstRunSetupURL {
+                    Button("Open First-Run Setup") { NSWorkspace.shared.open(setup) }
+                }
+                Button("Stop") { Task { await runtime.stop() } }
+            } else if runtime.phase == .stopped || runtime.isFailedPhase {
+                Button("Start") { runtime.start() }
+            }
+            Button("Show Box Folder") { NSWorkspace.shared.open(Paths.box) }
+            Button("Show Box Log") { NSWorkspace.shared.open(Paths.log) }
         }
         Divider()
-        Button("Show Box Folder") { NSWorkspace.shared.open(Paths.box) }
-        Button("Show Log") { NSWorkspace.shared.open(Paths.log) }
+        Button("Pair with a Box…") { preferences.startPairing() }
+        Button("Preferences…") { preferences.show(.boxes) }
+            .keyboardShortcut(",")
         Button("Show App Log") { NSWorkspace.shared.open(Paths.appLog) }
         Divider()
         if let version = updates.available {

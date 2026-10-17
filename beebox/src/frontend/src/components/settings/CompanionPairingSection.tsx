@@ -118,14 +118,14 @@ export function CompanionPairingSection() {
   };
 
   return (
-    <Card as="section" aria-label="iOS companion pairing" shadow>
+    <Card as="section" aria-label="Companion app pairing" shadow>
       <Stack gap="md">
         <Stack gap="xs">
           <Heading level={2}>
-            iOS Companion
+            Companion Apps
           </Heading>
           <Hint>
-            Pair the native app with this box using a short-lived QR code.
+            Pair the iPhone or Mac app with this box. Scan the QR code with the phone, or copy the link into the Mac app.
           </Hint>
         </Stack>
 

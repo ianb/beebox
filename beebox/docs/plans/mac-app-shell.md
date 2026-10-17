@@ -300,34 +300,25 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
   a `bin/` unit test for its simulator choice and argument handling, and the
   preflight group change with its test in `bin/finish-preflight.test.ts`.
 
-### C. The paired-box store moves into the package (after D starts)
+### C. The credential store and the ticket guard move into the package
 
-- **What**: move into `BeeBoxShared` only what the Mac shell uses: `PairedBox`,
-  `PairedBoxCredentialStore`, `BoxRequest`'s bearer construction, and
-  `PairedBoxStore`. `SharedSelectedBoxSnapshot` serves the iOS extensions
-  (`SharedSelectedBoxSnapshot.swift:3`) and stays in the iOS app behind its
-  existing protocol; the Mac passes no snapshot store. Platform values come in
-  through a `PlatformProfile` value (Keychain service and access group, user
-  agent, device label). The rule: code moves when its second caller exists,
-  not before.
-- **Why this needs to change**: the Mac app needs the same storage, Keychain
-  and dedupe rules. Copying them makes the second codebase the boxholder ruled
-  out.
-- **Direction**: `PairedBoxStore` loses `import UIKit` (only `UIDevice.current.name`
-  at `:328` needs it) and the direct call to
-  `VoiceAudioRetentionStore.forgetSynchronously(boxID:)`, which becomes an
-  `onRemove: (UUID) -> Void` hook the iOS app supplies. Defaults that are iOS
-  values today (`PairedBoxCredentialStore.swift:21-22`,
-  `SharedSelectedBoxSnapshot.swift:63`) move into the iOS app's
-  `PlatformProfile`. The existing `PairedBoxStoreTests` (11 cases) move with
-  the code and run under `swift test`. The anchors in
-  `beebox/docs/mobile-contract.md` (`ios-app/BeeBox/Models/PairedBox.swift`,
-  `ios-app/BeeBox/Storage/PairedBoxStore.swift`) change to the new paths in the
-  same commit.
-- **Vocabulary lock-ins**: `PlatformProfile`.
-- **First implementation chunk**: move `PairedBox` and the bearer header
-  construction (no dependencies), update the anchors, and run the iOS build
-  and tests. This happens as the first chunk of D needs them.
+- **What**: `PairedBoxCredentialStore` (Keychain, now with an optional access
+  group) and `PairingTicketLedger` (the in-flight/stored ticket rule) move
+  into `BeeBoxShared`. Each app keeps its own paired-box record and store.
+- **Why this needs to change**: the Mac app needs the same Keychain handling
+  and the same single-use-ticket rule.
+- **Direction (revised 2026-10-17, during implementation)**: the first draft
+  moved `PairedBox` and `PairedBoxStore` too. Reading the code showed that
+  `PairedBox` is used across the iOS app and its share extension, and the
+  store carries phone-only behavior (legacy plaintext-token migration, the
+  extension snapshot, voice-recording cleanup, the device lock, session ids).
+  Moving them would have added an import to most iOS files for no Mac
+  benefit. The Mac app has its own small `PairedBox` (`id`, `label`,
+  `baseURL`, `hostedLocally`) and `BoxStore` in `mac-app/Sources/BeeBoxMacCore/`.
+  What both apps share is the wire contract (link, redeem), the Keychain
+  store, the ticket rule, and the http host policy (`PairingTransport`).
+- **Vocabulary lock-ins**: `PairingTicketLedger`, `PairingTransport`;
+  `PairedBoxCredentialStore.ios`; `MacKeychain`.
 
 ### D. The box menu, paste pairing, and `beebox:` links
 
