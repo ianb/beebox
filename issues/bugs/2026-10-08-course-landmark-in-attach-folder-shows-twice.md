@@ -52,3 +52,11 @@ keep the folder but drop a `.attach` suffix ("Intro_Chemistry"), show the
 label only when the folder is an `.attach` folder, or move course landmarks
 out of the attach folder in the build-course skill. Symptom 2 still did not
 reproduce.
+
+**2026-10-17:** symptom 1 fixed on the bug-burndown branch ("The Here pill drops
+the .attach suffix"), the boxholder's choice of the three options above. The
+folder half reads "Here: Intro_Chemistry"; `dirBasename` moved to
+`beebox/src/frontend/src/lib/place-label.ts`. Checked in the browser on the
+worktree test box with a landmark in an attach folder. Symptom 2 is left: it did
+not reproduce, but `derived-links.ts` still lists a `primary` course card once
+as a card and once as a nested landmark. This issue stays open for it.
