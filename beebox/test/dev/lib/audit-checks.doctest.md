@@ -126,3 +126,27 @@ const underContent = runChecks(tmpTest, {
 JSON.stringify({ tmp: underTmp.cardsNotUnderChecks[0], content: underContent.cardsNotUnderChecks[0] })
 => {"tmp":{"prefix":"_tmp/","found":true,"foundAt":"./_tmp/Garden.doc.card"},"content":{"prefix":"_tmp/","found":false}}
 ```
+
+## Read checks resolve a leading `cd` and simple variables
+
+A Bash read counts when the file is reached through `cd dir; cat file` or
+`B=dir; cat $B/file`. A different file in the same directory still does not.
+
+```ts
+function readCheck(file: string, command: string) {
+  return runChecks({ ...auditTest, correct_matches: [], should_read: [file] }, {
+    behavior: { ...behavior("answer"), filesRead: [command] },
+    newOrModifiedCards: new Map(),
+  }).shouldReadChecks[0]?.wasRead;
+}
+const views = "node_modules/beebox/box-docs/views.md";
+JSON.stringify({
+  cdSemicolon: readCheck(views, "cd /box/node_modules/beebox/box-docs; cat views.md card-view.md"),
+  cdAnd: readCheck(views, "cd node_modules/beebox/box-docs/ && head -50 views.md"),
+  variable: readCheck(views, "B=node_modules/beebox/box-docs; cat $B/views.md"),
+  braced: readCheck(views, "export B='node_modules/beebox/box-docs' && sed -n 1,40p ${B}/views.md"),
+  otherFile: readCheck(views, "cd node_modules/beebox/box-docs && cat card-view.md"),
+  unsetVariable: readCheck(views, "cat $B/views.md"),
+})
+=> {"cdSemicolon":true,"cdAnd":true,"variable":true,"braced":true,"otherFile":false,"unsetVariable":false}
+```
