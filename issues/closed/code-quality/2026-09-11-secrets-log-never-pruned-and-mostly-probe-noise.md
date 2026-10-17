@@ -19,6 +19,11 @@ runs `pruneSecretAccessLog`, which deletes segments older than
 `ACCESS_LOG_RETENTION_MONTHS` (12) by the machine clock. `lastUsed` is not
 changed.
 
+fe0f5bb0d applies the same check to the model-picker checks
+(`serviceCapabilities`, `glmKeyUsable`, `openRouterKeyUsable`) and the health
+key checks. The Deepgram health check still reads its value, because the JSON
+must parse.
+
 The secret access log has no retention policy, and almost everything in it is
 one repeated probe rather than real activity. Two separate problems that
 compound: nothing deletes the log, and the log is roughly 100× larger than the
