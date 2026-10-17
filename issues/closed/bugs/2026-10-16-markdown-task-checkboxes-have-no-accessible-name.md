@@ -1,11 +1,14 @@
 ---
 title: Markdown task checkboxes have no accessible name
-workstream: unattached
+workstream: bug-burndown
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-theme-polish — Bloom browser tour
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown branch ("Markdown task checkboxes are labelled by their task text"). The `item` transform in `beebox/src/shared/markdoc-config/tags/core.ts` wraps the `Task` checkbox and the item's inline text in a `label`; a nested list stays outside it. The app and published pages both get the name. Verified in the browser on the worktree test box: the accessibility tree names each checkbox by its task text, nested items included. Test: `beebox/test/shared/markdoc-config.task.doctest.md`.
 
 Markdown task lists render disabled checkbox inputs followed by ordinary list
 text. The `Task` component in `beebox/src/frontend/src/components/Markdown/body.tsx`
