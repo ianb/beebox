@@ -91,6 +91,18 @@ filingPlan({ records: [capture("1"), context], docs: docs(placeholder("1")), que
 => { clear: ["00000000-0000-4000-8000-000000000001"], dequeue: ["_content/captures/00000000-0000-4000-8000-000000000001.doc.card"], queue: [], kick: [], exhausted: [] }
 ```
 
+A deleted context event does not take the capture out of filing, and a
+capture caught mid-Retry, briefly "preparing", keeps its request.
+
+```ts
+const deletedContext = capture("9", { state: "gone", filingRequested: undefined, declaration: { version: 1, capturedAt: at(1), source: "apple-native-input", input: "never sent", parentCaptureId: "00000000-0000-4000-8000-000000000001" } });
+filingPlan({ records: [capture("1"), deletedContext], docs: docs(placeholder("1")), queued: none, now: T0 + 600000 }).queue
+=> ["_content/captures/00000000-0000-4000-8000-000000000001.doc.card"]
+
+filingPlan({ records: [capture("1", { state: "preparing" })], docs: docs(placeholder("1")), queued: none, now: T0 + 600000 })
+=> { clear: [], dequeue: [], queue: [], kick: [], exhausted: [] }
+```
+
 Wakeups back off: 2, 4 and 8 minutes, then every 15. A capture waits for its
 next allowed time.
 

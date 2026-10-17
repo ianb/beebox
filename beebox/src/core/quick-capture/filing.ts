@@ -48,7 +48,8 @@ export function isFiled(doc: FilingDoc): boolean {
 export function filingPlan(args: { records: CaptureRecord[]; docs: ReadonlyMap<string, FilingDoc>; queued: ReadonlySet<string>; now: number }): FilingPlan {
   const { records, docs, queued, now } = args;
   const plan: FilingPlan = { clear: [], dequeue: [], queue: [], kick: [], exhausted: [] };
-  const withContext = new Set(records.flatMap(record => record.declaration.parentCaptureId ?? []));
+  // A deleted context event no longer speaks for the capture.
+  const withContext = new Set(records.flatMap(record => record.state === "gone" ? [] : record.declaration.parentCaptureId ?? []));
   const waiting: CaptureRecord[] = [];
   for (const record of records) {
     if (record.filingRequested !== true) continue;
@@ -56,8 +57,9 @@ export function filingPlan(args: { records: CaptureRecord[]; docs: ReadonlyMap<s
     if (withContext.has(record.id)) {
       plan.clear.push(record.id);
       if (doc !== null && queued.has(doc.ref)) plan.dequeue.push(doc.ref);
-    } else if (record.state !== "saved" || isFiled(doc)) plan.clear.push(record.id);
-    else waiting.push(record);
+    } else if (record.state === "gone" || isFiled(doc)) plan.clear.push(record.id);
+    // Retry passes through "preparing" on its way back to "saved"; the request stays.
+    else if (record.state === "saved") waiting.push(record);
   }
   const unsettled = new Set(records.filter(record => record.state !== "gone" && hasWordlessDeclaration(record)
     && now - Date.parse(record.acceptedAt) < FILING_SETTLE_MS).map(record => record.owner));

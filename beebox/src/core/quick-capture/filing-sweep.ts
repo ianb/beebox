@@ -11,7 +11,7 @@ import { reconcileCaptureSource } from "./source.js";
 import { listCaptures, readCapture, withCaptureLock, writeCapture, type CaptureRecord } from "./store.js";
 import { filingPlan, nextKickAt, FILING_WAITING_ERROR, type FilingDoc } from "./filing.js";
 
-/** Every job card's refs, with the jobs holding each (box-relative). */
+/** Every intake job's refs, with the jobs holding each (box-relative). Only intake jobs hold capture docs. */
 async function pendingJobRefs(boxRoot: string): Promise<Map<string, string[]>> {
   const jobsDir = getBoxDir(boxRoot, "jobs");
   const holders = new Map<string, string[]>();
@@ -19,7 +19,7 @@ async function pendingJobRefs(boxRoot: string): Promise<Map<string, string[]>> {
   try { files = await fs.readdir(jobsDir); }
   catch (error) { if (errnoCode(error) === "ENOENT") return holders; throw error; }
   for (const file of files) {
-    if (!file.endsWith("job.card")) continue;
+    if (!file.endsWith("intake.job.card") && !file.endsWith("intake-job.card")) continue;
     const fields = readCardFrontmatter(await fs.readFile(path.join(jobsDir, file), "utf8"));
     if (fields === null) continue;
     const job = path.relative(boxRoot, path.join(jobsDir, file)).split(path.sep).join("/");
@@ -41,7 +41,8 @@ async function updateRecord(args: { boxRoot: string; id: string; change: (record
   const { boxRoot, id, change } = args;
   await withCaptureLock({ boxRoot, id }, async () => {
     const record = await readCapture(boxRoot, id);
-    if (record === null || record.filingRequested !== true) return;
+    // A record that left "saved" since the sweep read it (a Retry in progress) keeps its fields for the next sweep.
+    if (record === null || record.filingRequested !== true || (record.state !== "saved" && record.state !== "gone")) return;
     change(record);
     await writeCapture(boxRoot, record);
   });
@@ -58,11 +59,11 @@ function clearFiling(record: CaptureRecord): void {
  * words took over) while a cycle is in its connector phase. With
  * `wakeupRunning`, no new cycle is planned or counted.
  */
-export async function runFilingSweep(args: { boxRoot: string; wakeupRunning: boolean }): Promise<boolean> {
+export async function runFilingSweep(args: { boxRoot: string; wakeupRunning: boolean; records?: CaptureRecord[] }): Promise<boolean> {
   const { boxRoot } = args;
   const records: CaptureRecord[] = [];
   const docs = new Map<string, FilingDoc>();
-  for (const listed of await listCaptures(boxRoot)) {
+  for (const listed of args.records ?? await listCaptures(boxRoot)) {
     if (listed.filingRequested !== true) { records.push(listed); continue; }
     const record = await reconcileCaptureSource(boxRoot, listed.id) ?? listed;
     records.push(record);

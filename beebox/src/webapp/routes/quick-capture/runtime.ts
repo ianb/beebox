@@ -4,7 +4,7 @@ import type { Services } from "../../../services/container.js";
 import { withoutBoxWork, withBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { getBoxTime } from "../../../lib/time.js";
-import { listCaptures } from "../../../core/quick-capture/store.js";
+import { listCaptures, type CaptureRecord } from "../../../core/quick-capture/store.js";
 import { processCapture, type CaptureWorkerContext } from "../../../core/quick-capture/worker.js";
 import { quickChatChat } from "../../trpc/quick-chat-delivery.js";
 import { runFilingSweep } from "../../../core/quick-capture/filing-sweep.js";
@@ -33,11 +33,11 @@ const waking = new Set<string>();
 function admitted(boxRoot: string, fn: () => Promise<unknown>): Promise<unknown> {
   return withoutBoxWork(() => withBoxWork({ boxRoot, reason: "quick capture filing" }, fn));
 }
-function scheduleFilingSweep(boxRoot: string): void {
+function scheduleFilingSweep(boxRoot: string, records: CaptureRecord[]): void {
   if (sweeping.has(boxRoot)) return;
   sweeping.add(boxRoot);
   track(boxRoot, admitted(boxRoot, async () => {
-    if (!(await runFilingSweep({ boxRoot, wakeupRunning: waking.has(boxRoot) }))) return;
+    if (!(await runFilingSweep({ boxRoot, wakeupRunning: waking.has(boxRoot), records }))) return;
     waking.add(boxRoot);
     track(boxRoot, admitted(boxRoot, () => runBbxWakeup({ boxRoot, triggeredBy: "quick-capture filing" }))
       .catch((error: unknown) => { console.error("[quick-capture] filing wakeup failed:", error); })
@@ -61,7 +61,7 @@ export function startQuickCaptureLifecycle(args: { server: FastifyInstance; boxR
           || (record.state === "failed" && record.nextAttemptAt !== undefined && Date.parse(record.nextAttemptAt) <= now);
         if (eligible) await withBoxWork({ boxRoot: args.boxRoot, reason: "quick capture recovery" }, () => processCapture(captureWorkerContext({ ...args, owner: record.owner }), record.id));
       }
-      if (records.some(record => record.filingRequested === true)) scheduleFilingSweep(args.boxRoot);
+      if (records.some(record => record.filingRequested === true)) scheduleFilingSweep(args.boxRoot, records);
     } finally { running = false; }
   };
   const run = (): void => {
