@@ -16,9 +16,8 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
         case general
     }
 
-    /// Which tab is showing and whether the pairing sheet is up.
+    /// Whether the pairing sheet is up.
     final class Navigation: ObservableObject {
-        @Published var tab: Tab = .boxes
         @Published var pairing: PairingSheetModel?
     }
 
@@ -51,8 +50,7 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
     }
 
     func show(_ tab: Tab) {
-        navigation.tab = tab
-        present()
+        present(tab)
     }
 
     /// Opens Boxes with the pairing sheet. `link` (from a `beebox://pair` URL)
@@ -64,14 +62,19 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
         } else {
             model.fill(fromPasteboard: NSPasteboard.general.string(forType: .string))
         }
-        navigation.tab = .boxes
         navigation.pairing = model
-        present()
+        present(.boxes)
     }
 
-    private func present() {
+    private static let order: [Tab] = [.boxes, .watched, .localBox, .general]
+    private var tabs: NSTabViewController?
+
+    private func present(_ tab: Tab) {
         let window = window ?? makeWindow()
         self.window = window
+        if let index = Self.order.firstIndex(of: tab) {
+            tabs?.selectedTabViewItemIndex = index
+        }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
@@ -81,61 +84,58 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
         NSApp.setActivationPolicy(.accessory)
     }
 
+    /// The macOS settings convention: tabs as labeled icons in the toolbar,
+    /// the window titled by the selected tab.
     private func makeWindow() -> NSWindow {
-        let root = PreferencesView(
-            navigation: navigation,
-            boxStore: boxStore,
-            hosting: hosting,
-            runtime: runtime,
-            updates: updates,
-            uploadFolders: uploadFolders,
-            uploads: uploads,
-            uninstall: uninstall
-        ) { [weak self] in
-            self?.startPairing()
-        }
-        let window = NSWindow(contentViewController: NSHostingController(rootView: root))
-        window.title = "Bee Box"
-        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        let controller = TitledTabViewController()
+        controller.tabStyle = .toolbar
+        controller.addTabViewItem(item(.boxes, "Boxes", "shippingbox", BoxesTab(
+            boxStore: boxStore, uploads: uploads, navigation: navigation
+        ) { [weak self] in self?.startPairing() }))
+        controller.addTabViewItem(item(.watched, "Watched Folders", "folder.badge.gearshape", UploadsTab(
+            folders: uploadFolders, coordinator: uploads, boxStore: boxStore
+        )))
+        controller.addTabViewItem(item(.localBox, "Box on this Mac", "desktopcomputer", LocalBoxTab(
+            hosting: hosting, runtime: runtime
+        )))
+        controller.addTabViewItem(item(.general, "General", "gearshape", GeneralTab(
+            hosting: hosting, updates: updates, uninstall: uninstall
+        )))
+        tabs = controller
+        let window = NSWindow(contentViewController: controller)
+        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.toolbarStyle = .preference
         window.isReleasedWhenClosed = false
         window.delegate = self
-        window.setContentSize(NSSize(width: 640, height: 480))
         window.center()
-        window.setFrameAutosaveName("BeeBoxPreferences")
         return window
+    }
+
+    private func item(_ tab: Tab, _ label: String, _ symbol: String, _ page: some View) -> NSTabViewItem {
+        let hosting = NSHostingController(rootView: page.frame(width: 620, height: 440))
+        hosting.sizingOptions = [.preferredContentSize]
+        let item = NSTabViewItem(viewController: hosting)
+        item.label = label
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
+        return item
     }
 }
 
-struct PreferencesView: View {
-    @ObservedObject var navigation: PreferencesWindowController.Navigation
-    @ObservedObject var boxStore: BoxStore
-    @ObservedObject var hosting: HostingController
-    let runtime: BoxRuntime
-    let updates: Updates
-    let uploadFolders: UploadFolderStore
-    let uploads: UploadCoordinator
-    let uninstall: () -> Void
-    let startPairing: () -> Void
+/// Titles the window after the selected tab, as macOS settings windows do.
+private final class TitledTabViewController: NSTabViewController {
+    override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
+        super.tabView(tabView, didSelect: tabViewItem)
+        // The tab controller resets the title while it swaps the page in; set
+        // it once that has finished.
+        let label = tabViewItem?.label ?? "Bee Box"
+        DispatchQueue.main.async { [weak self] in
+            self?.view.window?.title = label
+        }
+    }
 
-    var body: some View {
-        TabView(selection: $navigation.tab) {
-            BoxesTab(boxStore: boxStore, uploads: uploads, startPairing: startPairing)
-                .tabItem { Label("Boxes", systemImage: "shippingbox") }
-                .tag(PreferencesWindowController.Tab.boxes)
-            UploadsTab(folders: uploadFolders, coordinator: uploads, boxStore: boxStore)
-                .tabItem { Label("Watched Folders", systemImage: "folder.badge.gearshape") }
-                .tag(PreferencesWindowController.Tab.watched)
-            LocalBoxTab(hosting: hosting, runtime: runtime)
-                .tabItem { Label("Box on this Mac", systemImage: "desktopcomputer") }
-                .tag(PreferencesWindowController.Tab.localBox)
-            GeneralTab(hosting: hosting, updates: updates, uninstall: uninstall)
-                .tabItem { Label("General", systemImage: "gearshape") }
-                .tag(PreferencesWindowController.Tab.general)
-        }
-        .frame(minWidth: 600, minHeight: 440)
-        .sheet(item: $navigation.pairing) { model in
-            PairingSheet(model: model) { navigation.pairing = nil }
-        }
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        view.window?.title = tabView.selectedTabViewItem?.label ?? "Bee Box"
     }
 }
 
@@ -178,6 +178,7 @@ extension PairingSheetModel: Identifiable {
 struct BoxesTab: View {
     @ObservedObject var boxStore: BoxStore
     let uploads: UploadCoordinator
+    @ObservedObject var navigation: PreferencesWindowController.Navigation
     let startPairing: () -> Void
     @State private var selection: PairedBox.ID?
     @State private var confirmingRemoval: PairedBox?
@@ -221,6 +222,9 @@ struct BoxesTab: View {
                 Button("Remove…") { confirmingRemoval = selectedBox }
                     .disabled(selectedBox == nil)
             }
+        }
+        .sheet(item: $navigation.pairing) { model in
+            PairingSheet(model: model) { navigation.pairing = nil }
         }
         .alert(
             "Remove \(confirmingRemoval?.label ?? "this box")?",
