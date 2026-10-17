@@ -116,8 +116,6 @@ Residuals, left in their current class:
 - The legacy `STREAM_BUSY` text ("Agent is busy with another request") is
   unchanged.
 
-Question for Ian: server refusals reach the bar in their own words, e.g.
-"Claude Code is not logged in — run `claude auth login` on this machine". The
-brief asks for plain user wording; this change does not rewrite server copy.
-Should the chat bar map known refusals (not logged in, provider not set up) to
-person-facing text, or should the server's refusal copy change?
+Decided (Ian, 2026-10-17): server refusals keep their own words in the bar,
+e.g. "Claude Code is not logged in — run `claude auth login` on this machine".
+Repeating the server's error is acceptable; the chat bar does not remap them.
