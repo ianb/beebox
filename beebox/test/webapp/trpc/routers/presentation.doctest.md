@@ -28,7 +28,7 @@ An absent config is ordinary and exposes the stable built-in catalog.
 const box = await makeTmpBox();
 const first = await caller(box.root).presentation.get({ boxKey: "test" });
 JSON.stringify([first.catalog.map((theme) => theme.name), first.presentation, first.chrome, first.configProblems])
-=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon","deck","night-atlas","rose-trellis","gold-thread","goldfish","doodlebit","tempest","veil","gilt"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
+=> [["plain","spectrum","paper","post-it","candy","letter-set","bloom","ribbon","deck","night-atlas","rose-trellis","gold-thread","goldfish","doodlebit","phosphor","overprint","posy","tempest","veil","gilt"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
 
 JSON.stringify([
   first.canEditCardThemes,
@@ -111,7 +111,7 @@ JSON.stringify([
 await box.cleanup();
 ```
 
-## Deck saves through the same backend validator as the picker
+## Built-in themes save through the same backend validator as the picker
 
 A system theme offered by the frontend must also pass the backend mutation's
 chrome validation. Saving Deck without a stock persists the panels default;
@@ -148,6 +148,21 @@ await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { 
 clearBoxConfigCache(deckBox.root);
 (await caller(deckBox.root).presentation.get({ boxKey: "doodlebit-saved" })).chrome
 => { choice: { name: "doodlebit", stock: "ink" }, origin: "box-chrome", problem: null }
+
+await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "phosphor" } });
+clearBoxConfigCache(deckBox.root);
+(await caller(deckBox.root).presentation.get({ boxKey: "phosphor-saved" })).chrome
+=> { choice: { name: "phosphor", stock: "terminal" }, origin: "box-chrome", problem: null }
+
+await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "overprint" } });
+clearBoxConfigCache(deckBox.root);
+(await caller(deckBox.root).presentation.get({ boxKey: "overprint-saved" })).chrome
+=> { choice: { name: "overprint", stock: "plate" }, origin: "box-chrome", problem: null }
+
+await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "posy" } });
+clearBoxConfigCache(deckBox.root);
+(await caller(deckBox.root).presentation.get({ boxKey: "posy-saved" })).chrome
+=> { choice: { name: "posy", stock: "paisley" }, origin: "box-chrome", problem: null }
 
 await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: null });
 clearBoxConfigCache(deckBox.root);
