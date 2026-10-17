@@ -1,6 +1,6 @@
 ---
 title: "A Mac companion app, the desktop equivalent of the iOS app: input, selections, scanner upload, and optionally a locally hosted box"
-workstream: unattached
+workstream: app-shell
 area: mac-app
 labels: [desktop, input]
 needs: [design]
