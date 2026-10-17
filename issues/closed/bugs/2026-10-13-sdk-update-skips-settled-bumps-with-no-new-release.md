@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — scheduled run 20261013-203631
 labels: [sdk-update]
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown branch ("sdk-update starts a session when a settled bump is unapplied"). `schedules/sdk-update/run.ts` also runs `bin/update-agent-sdk.ts --check`; a family it reports behind starts the session, and the briefing lists it under "Settled, not yet applied". A check that cannot run fails the schedule. Verified with `bin/schedules run sdk-update --dry-run` on 2026-10-17: no new releases, SDK pinned `0.3.300` with `0.3.301` settled, and the run would hand off "1 settled bump not yet applied". No `--force` run. Residual: a release the session holds back on purpose now starts a session every day until the pin moves or a newer release arrives.
 
 The `sdk-update` runner starts an agent session only when a version is newer
 than the ledger's **Latest reviewed upstream version** line. A version that the
