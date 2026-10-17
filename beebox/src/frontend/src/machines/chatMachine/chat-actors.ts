@@ -336,7 +336,7 @@ export const streamActor = fromCallback(
               recordChatSendEvent(input.messageId, { event: "turn-stream-error", detail: { errorLength: err.message.length } });
               console.error(`[chat] turn stream subscription failed: ${err.message}`);
               logFsm("stream-throw", { msg: err.message, msgCount });
-              if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message, accepted: true });
+              if (!terminalFired) sendBack({ type: "STREAM_LOST", reason: err.message });
             },
             onComplete: () => {
               recordChatSendEvent(input.messageId, { event: "turn-stream-complete", detail: { terminalFired } });
@@ -344,7 +344,7 @@ export const streamActor = fromCallback(
               // result frame) — fall back to a history refresh.
               if (!terminalFired) {
                 logFsm("stream-eof-no-terminal", { msgCount });
-                sendBack({ type: "STREAM_FAILED", error: "Stream ended without result", accepted: true });
+                sendBack({ type: "STREAM_LOST", reason: "Stream ended without result" });
               }
             },
           },

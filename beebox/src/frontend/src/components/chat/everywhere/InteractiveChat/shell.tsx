@@ -196,7 +196,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     boxSlug: boxSlug ?? "default", target: conversationTarget,
     input: { sessionInput, contextDir, startEngine, startModel, initial }, onSessionAssignment,
   });
-  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
+  const { messages, pendingMessages, streamText, streamTools, error, replyLost, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, unstarted, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
@@ -343,7 +343,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       sessionId={sessionId}
       totalEntries={totalEntries}
       pendingCount={pendingMessages.filter((entry) => entry.pending === true).length}
-      error={error}
+      error={error} replyLost={replyLost}
       currentUserEmail={currentUser ? currentUser.email : undefined} currentUserName={currentUser ? currentUser.name : undefined}
       modelMarkers={model.modelMarkers}
       loadingOlder={loadingOlder}

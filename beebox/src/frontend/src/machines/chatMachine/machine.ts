@@ -35,7 +35,7 @@ import {
   promoteLastToPending,
   applyStreamError,
   untrackLastSend,
-  clearInterrupt, markTurnRefresh, sendInterrupt,
+  clearInterrupt, settleLostReply, markTurnRefresh, sendInterrupt,
   reconcilePendingWithDiagnostics,
 } from "./chat-actions";
 
@@ -205,6 +205,7 @@ export const chatMachine = setup({
               return {
                 error: null,
                 interrupting: false,
+                replyLost: false,
                 streamText: "",
                 streamTools: [],
                 liveTurnId: event.messageId, // keys the live bubble across finalize
@@ -217,7 +218,7 @@ export const chatMachine = setup({
             }),
           ],
         },
-        DISMISS_ERROR: { actions: assign({ error: null }) },
+        DISMISS_ERROR: { actions: assign({ error: null, replyLost: false }) },
       },
     },
     streaming: {
@@ -315,6 +316,13 @@ export const chatMachine = setup({
           // response that completed while we were disconnected.
           { target: "refreshing", actions: [assign(markTurnRefresh), assign(applyStreamError)] },
         ],
+        // The live view dropped; the agent may still be running, and its reply
+        // may already be in history. No banner until a refresh settles it.
+        // streamText stays for `refreshing` to swap, as for STREAM_RECOVER.
+        STREAM_LOST: [
+          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: [assign(markTurnRefresh), assign(clearInterrupt)] },
+          { target: "refreshing", actions: [({ event }) => logFsm("stream-lost", { reason: event.reason }), assign(markTurnRefresh), assign({ replyLost: true })] },
+        ],
         INTERRUPT: {
           actions: [
             assign({ interrupting: true }),
@@ -356,8 +364,11 @@ export const chatMachine = setup({
             // the authoritative copy and replaces this on remount.
             if (context.sessionInput === "new") {
               const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
+              const messages = synthetic ? [...context.messages, synthetic] : context.messages;
               return {
-                messages: synthetic ? [...context.messages, synthetic] : context.messages,
+                // No history to check: nothing streamed stays a warning until remount.
+                ...(synthetic ? settleLostReply({ context, messages, busy: false }) : {}),
+                messages,
                 streamText: "",
                 streamTools: [],
               };
@@ -367,6 +378,7 @@ export const chatMachine = setup({
               pendingMessages: context.pendingMessages,
             });
             return {
+              ...settleLostReply({ context, messages: reconciled.messages, busy: event.output.busy }),
               messages: reconciled.messages,
               pendingMessages: reconciled.pendingMessages,
               sessionId: event.output.sessionId,

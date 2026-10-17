@@ -32,6 +32,10 @@ export type ChatEvent =
   // — but the server reports the turn already finished, so recover by refreshing
   // history rather than waiting on a terminal event that will never arrive.
   | { type: "STREAM_RECOVER" }
+  // The live view of an accepted turn dropped (transport error, or the stream
+  // ended with no result). Sets no error: the refresh that follows decides
+  // from history whether the reply landed (settleLostReply).
+  | { type: "STREAM_LOST"; reason: string }
   | { type: "REFRESH" }
   | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
   | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }
@@ -89,6 +93,12 @@ export interface ChatContext {
    * subtype, is the discriminator.
    */
   interrupting: boolean;
+  /**
+   * True from a STREAM_LOST until a history refresh settles it: the turn's
+   * live text stopped and the reply has not been seen yet. While the box is
+   * still working it shows as a warning; see `settleLostReply`.
+   */
+  replyLost: boolean;
   /**
    * Why the machine is (or last was) in `refreshing`. `"turn"` is set on every
    * `streaming → refreshing` edge — the agent just worked; `"resync"` by the

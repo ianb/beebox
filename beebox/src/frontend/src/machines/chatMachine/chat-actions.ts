@@ -141,6 +141,27 @@ export function applyStreamError(
   };
 }
 
+/** Shown when a turn's live view dropped and the box went idle with no reply. */
+export const NO_REPLY_ERROR = "The box stopped before it answered. Send your message again.";
+
+/**
+ * Settle a dropped live view (`replyLost`) against refreshed history. The
+ * reply landed (history ends in assistant text): clear it with nothing shown,
+ * since that drop was a transient. The box is still working: keep it, shown as
+ * a warning, for the next refresh (chat-complete) to settle. The box is idle
+ * with no reply: the turn really failed, so it becomes an error.
+ */
+// Reply first: busy is session-wide, so a queued next turn must not hold a
+// warning for a reply already in history.
+export function settleLostReply(
+  { context, messages, busy }: { context: ChatContext; messages: SessionEntry[]; busy: boolean },
+): Partial<Pick<ChatContext, "replyLost" | "error">> {
+  if (!context.replyLost) return {};
+  const last = messages.at(-1);
+  if (last?.type === "assistant" && entryText(last).length > 0) return { replyLost: false };
+  return busy ? {} : { replyLost: false, error: NO_REPLY_ERROR };
+}
+
 /** A legacy STREAM_BUSY rejects the active send before it can be persisted. */
 export function untrackLastSend(
   { context }: { context: ChatContext },
@@ -156,8 +177,8 @@ export function untrackLastSend(
  * error is a user-initiated abort, not a failure — drop it and clear the
  * interrupt flag. streamText is left for `refreshing` to swap into history.
  */
-export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error"> {
-  return { interrupting: false, error: null };
+export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error" | "replyLost"> {
+  return { interrupting: false, error: null, replyLost: false };
 }
 
 /** Every `streaming → refreshing` edge: this refresh reconciles a turn the agent just ran. */

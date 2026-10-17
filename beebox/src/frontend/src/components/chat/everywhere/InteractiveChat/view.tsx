@@ -271,11 +271,15 @@ function usePlaceChat(props: ChatBodyProps): PlaceChat {
   return useMemo(() => ({ contextDir, showsOwnOpeners, busy, sendOpener }), [contextDir, showsOwnOpeners, busy, sendOpener]);
 }
 
+/** The live reply stopped arriving while the box is still working on it. */
+const REPLY_LOST_WARNING = "Lost the live reply. It will appear here when the box finishes.";
+
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, nativeComposer } = props;
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
   const placeChat = usePlaceChat(props);
   const cancelArrival = useWorkspace()?.cancelArrival;
+  const transcriptionIsError = voice.transcription.errorLevel === "error";
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
@@ -291,15 +295,16 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           <BackgroundTasks tasks={props.backgroundTasks} />
           <ScreenshotRequestUI controller={props.screenshots} />
           <ChatStatusBanners
-            error={nativeCommandError ?? error}
-            transcriptionError={voice.transcription.error}
+            error={nativeCommandError ?? error ?? (transcriptionIsError ? voice.transcription.error : null)}
+            warning={props.replyLost ? REPLY_LOST_WARNING : transcriptionIsError ? null : voice.transcription.error}
+            // Dismiss only the source shown (same precedence as above), so a
+            // hidden message surfaces next.
             onDismissError={() => {
-              if (nativeCommandError !== null) {
-                dismissNativeCommandError();
-              } else {
-                send({ type: "DISMISS_ERROR" });
-                voice.transcription.dismissError();
-              }
+              if (nativeCommandError !== null) dismissNativeCommandError();
+              else if (error) send({ type: "DISMISS_ERROR" });
+              else if (transcriptionIsError && voice.transcription.error) voice.transcription.dismissError();
+              else if (props.replyLost) send({ type: "DISMISS_ERROR" });
+              else voice.transcription.dismissError();
             }}
             activeSchedules={schedules.activeSchedules}
             onCancelSchedule={schedules.handleCancelSchedule}
