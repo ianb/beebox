@@ -40,3 +40,5 @@ the response already states.
 
 Worth keeping the sentinel's one virtue — a row is still written when the model
 is unknown — rather than dropping rows that cannot be attributed.
+
+> 2026-10-17 (main, issue survey): still true. The sentinel is written at two sites now: `beebox/src/services/claude-chat/codex-chat.ts:190` and `beebox/src/core/agent/codex-run/usage.ts:22`.
