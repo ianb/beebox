@@ -23,7 +23,14 @@ public struct PairingLink: Equatable, Sendable {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return nil
         }
-        let items = components.queryItems ?? []
+        // The box builds the link with URLSearchParams, which writes a space as
+        // `+` (form encoding); URLComponents alone would keep the `+`.
+        let items = (components.percentEncodedQueryItems ?? []).map { item in
+            URLQueryItem(
+                name: item.name,
+                value: item.value.flatMap { $0.replacingOccurrences(of: "+", with: "%20").removingPercentEncoding }
+            )
+        }
         guard let baseURLString = items.value(named: "baseURL") ?? items.value(named: "url") else {
             return nil
         }

@@ -34,7 +34,8 @@ composer not suppressed, wrong attribution — with no error surfaced).
 
 - **Direction:** external (QR scan / deep link / `simctl openurl`) → native.
 - **Wire shape:** `beebox://pair?baseURL=<url>&label=<name>&pairingToken=<token>` (all
-  URL-encoded). Query params:
+  form-encoded: the box builds it with `URLSearchParams`, which writes a space as `+`, so a
+  native parser decodes `+` as a space; fixture `pairing-url/label-form-encoded.json`). Query params:
   | param | aliases | required | notes |
   |---|---|---|---|
   | `baseURL` | `url` | yes | box base URL incl. slug; must have scheme+host or URL is rejected |
