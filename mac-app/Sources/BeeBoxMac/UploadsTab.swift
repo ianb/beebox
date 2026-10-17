@@ -34,7 +34,12 @@ struct UploadsTab: View {
                 }
             }
             if let message {
-                Text(message).foregroundStyle(.red)
+                HStack {
+                    Text(message).foregroundStyle(.red)
+                    if message == FolderProblem.photos(.accessDenied).message {
+                        Button("Open Privacy Settings") { PhotosExporter.openPrivacySettings() }
+                    }
+                }
             }
             HStack {
                 Button("Add Folder…") { addFolder() }
@@ -172,6 +177,9 @@ private struct UploadRow: View {
                 .foregroundStyle(status?.problem == nil ? Color.secondary : Color.red)
             if status?.problem == .sweep(.credentialRefused), let box {
                 Button("Reconnect") { reconnect(box) }.controlSize(.small)
+            }
+            if status?.problem == .photos(.accessDenied) {
+                Button("Open Privacy Settings") { PhotosExporter.openPrivacySettings() }.controlSize(.small)
             }
         }
         .help(folder.folderPath)

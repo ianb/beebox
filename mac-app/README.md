@@ -1,7 +1,7 @@
 # Bee Box for Mac
 
-A menu-bar app around a box. It pairs with boxes (a link copied from a box's
-Settings → Companion Apps, pasted into Preferences → Boxes, or a `beebox://pair`
+A menu-bar app around a box. It pairs with boxes (Copy Link (Mac) in a box's
+Settings → Companion Apps, then Pair with a Box… here, or a `beebox://pair`
 link clicked in the browser) and opens them in the browser. It uploads new
 files from watched folders and Photos albums to a box (Preferences → Watched Folders),
 which replaces `scan-uploader`'s launchd agent on this Mac. It can also run a
