@@ -122,6 +122,20 @@ async function writeKnipConfig(): Promise<string[]> {
   return ["Created knip.json"];
 }
 
+// 5b. Write .madgerc: madge counts `import type` edges unless told not to, and
+// conventions.md accepts type-only cycles.
+function writeMadgeConfig(): string[] {
+  const madgePath = join(cwd, ".madgerc");
+  if (existsSync(madgePath)) return [];
+  writeJson(madgePath, {
+    detectiveOptions: {
+      ts: { skipTypeImports: true },
+      tsx: { skipTypeImports: true },
+    },
+  });
+  return ["Created .madgerc"];
+}
+
 // 6. Install CLI tools + husky + lint-staged (pin versions where needed for compatibility)
 function installToolDeps(pkg: Record<string, unknown>): string[] {
   const toolDeps: Record<string, string | null> = {
@@ -283,6 +297,7 @@ async function main() {
     ...writePrettierConfig(),
     ...writeTsconfig(),
     ...(await writeKnipConfig()),
+    ...writeMadgeConfig(),
     ...installToolDeps(pkg),
     ...addLintStagedConfig(pkgPath, pkg),
     ...setupHuskyHook(),

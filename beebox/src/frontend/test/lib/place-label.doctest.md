@@ -10,7 +10,7 @@ route has no directory", `""` means "the box root", and a string is a real
 subdirectory. A non-null `dir` is what gets handed to `landmarks.forDir`.
 
 ```ts setup
-import { placeLabel } from "../../src/lib/place-label.js";
+import { dirBasename, placeLabel } from "../../src/lib/place-label.js";
 ```
 
 ## The box root is Home; a literal `/chat` route is still Chat
@@ -95,4 +95,20 @@ landing rather than inventing a label.
 ```ts
 JSON.stringify(placeLabel({ pathname: "/test1/nonesuch", boxSlug: "test1" }))
 => {"label":"Chat","dir":null}
+```
+
+## The folder half names the last directory, without `.attach`
+
+The pill's folder half shows the landmark directory's last segment. A course
+landmark lives in its card's attach folder, so that segment would read as a
+filename; the `.attach` suffix is dropped.
+
+```ts
+[
+  dirBasename(""),
+  dirBasename("projects/porch-rebuild"),
+  dirBasename("courses/Intro_Chemistry.attach"),
+  dirBasename("notes/.attach"),
+]
+=> ["/", "porch-rebuild", "Intro_Chemistry", ".attach"]
 ```

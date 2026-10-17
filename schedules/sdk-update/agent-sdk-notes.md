@@ -46,9 +46,9 @@ Codex entries here are labeled as such; they carry their own pin.
   after its transcript-row check; Codex stays at `0.162.1`. Next: `0.3.301`
   (settles 2026-10-17T14:35Z), Codex `0.163.0` (2026-10-17T21:30Z; check the
   Daybreak default), `0.3.302` (2026-10-18T16:47Z; fork subagents on by
-  default, see its entry). Settled versions start no session on a day with no
-  new release: `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
-  Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+  default, see its entry). A settled version that is not yet applied now
+  starts a session on its own, with no new release needed (2026-10-17).
+  The model aliases are current (2026-10-17): `sonnet`, `haiku`, and `sol` name Sonnet 5.5, Haiku 5.5, and GPT-6.1 Sol.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`

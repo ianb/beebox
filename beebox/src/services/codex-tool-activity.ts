@@ -81,6 +81,25 @@ function record(value: unknown): Record<string, unknown> {
   }
 }
 
+/**
+ * The command a Codex `command_execution` shows. Codex reports the shell
+ * invocation it ran, `<path>/bash -lc '<cmd>'`, where Claude reports the
+ * command alone. Only that exact shape with one plainly quoted argument is
+ * unwrapped; anything else, including an argument with escapes or shell
+ * expansions inside double quotes, shows verbatim. Codex's own record keeps
+ * the full invocation.
+ */
+export function codexDisplayCommand(command: string): string {
+  const match = /^(?:\S*\/)?bash -lc (.+)$/s.exec(command);
+  const arg = match?.[1];
+  if (arg === undefined || arg.length < 2) return command;
+  const quote = arg[0];
+  const inner = arg.slice(1, -1);
+  if (quote === "'" && arg.endsWith("'") && !inner.includes("'")) return inner;
+  if (quote === '"' && arg.endsWith('"') && !/["$\\`]/.test(inner)) return inner;
+  return command;
+}
+
 /** One provider-owned conversion point used by both live streaming and history. */
 export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
   const collab = collabToolCallSchema.safeParse(raw);
@@ -99,7 +118,7 @@ export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
       type: "tool_use",
       id: item.id,
       name: "Bash",
-      input: { command: item.command },
+      input: { command: codexDisplayCommand(item.command) },
     };
   }
   if (item.type === "fileChange") {
@@ -189,7 +208,7 @@ export function normalizeCodexSdkToolItem(item: CodexSdkItem): CodexToolContent 
   if (id === null) return null;
   switch (item.type) {
     case "command_execution":
-      return { type: "tool_use", id, name: "Bash", input: { command: item.command } };
+      return { type: "tool_use", id, name: "Bash", input: { command: codexDisplayCommand(item.command) } };
     case "file_change": {
       const paths = (declaredPresent(item.changes) ?? []).map((change) => change.path);
       return {

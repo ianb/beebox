@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-16T19:07:55Z
+Generated: 2026-10-17T17:51:58Z
 Total documents: 537
 
 ## Issues
@@ -299,7 +299,7 @@ Referenced by:
 - ../AGENTS.md:7 (link) — - **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
 - ../bin/docs/worktree-lifecycle.md:79 (mention) — Both agents read the tracked `AGENTS.md` files directly.
 - ../dev/devprocess-talk/bottlenecks.md:109 (mention) — 2. **Prose rule → measured failure → check.** Sigils (rule Sep 20, refusal Oct 7 after 83 sessions); Codex guidance (han
-- ../dev/devprocess-talk/chapters.md:297 (mention) — file: AGENTS.md
+- ../dev/devprocess-talk/chapters.md:298 (mention) — file: AGENTS.md
 - ../dev/devprocess-talk/chunks/README.md:102 (mention) — | CLAUDE.md / AGENTS.md, the root file, the package file | "the instruction file every agent reads first" |
 - ../dev/devprocess-talk/chunks/grows-unless-pruned.md:5 (mention) — source: root AGENTS.md; inventory.md "Mechanics into scripts" (rule 2026-10-07 059746c23)
 - ../dev/devprocess-talk/chunks/how-much-to-do-ladder.md:5 (mention) — source: inventory.md "How much to do"; AGENTS.md
@@ -1349,7 +1349,7 @@ Referenced by:
 - docs/unimplemented-plans/publish-pages-superseded.md:22 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
 - ../.claude/skills/bbx-plan/TEMPLATE.md:37 (mention) — - beebox/docs/engineering-principles.md — the twelve principles, by number
-- ../dev/devprocess-talk/chapters.md:163 (mention) — file: beebox/docs/engineering-principles.md
+- ../dev/devprocess-talk/chapters.md:164 (mention) — file: beebox/docs/engineering-principles.md
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:110 (mention) — - **Written up as a principle.** `beebox/docs/engineering-principles.md`
 - ../issues/closed/bugs/2026-08-08-worktree-remove-now-silent-mv-failure.md:36 (mention) — removal. Violates `docs/engineering-principles.md` §4 (resilient AND never
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:46 (mention) — `docs/engineering-principles.md`).
@@ -1896,7 +1896,7 @@ Referenced by:
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - docs/plugins.md:45 (mention) — README.md     What it is · Setup · Conventions · Migration · Uninstall
 - src/dev/AGENTS.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
-- ../.claude/agents/finish.md:99 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
+- ../.claude/agents/finish.md:98 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../AGENTS.md:69 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
 - ../dev/devprocess-talk/reports/sweep-instructions.md:322 (mention) — - **Lives in:** `beebox/src/dev/doc-check/` (check.ts, file-paths.ts, frontmatter.ts, link-repair.ts, private-link.ts) +
 - ../dev/devprocess-talk/reports/sweep-quality.md:227 (mention) — - **Lives in:** `beebox/src/dev/doc-check/`, `.husky/pre-commit` ("Any commit touching markdown runs the fast doc refere
@@ -2078,9 +2078,9 @@ Referenced by:
 - ../dev/devprocess-talk/reports/sweep-quality.md:266 (mention) — - **Lives in:** `.claude/skills/security-report/SKILL.md` (277 lines), `beebox/docs/security-report.md` (630 lines, 8 se
 - ../issues/bugs/2026-10-05-codex-hook-failures-show-no-output.md:103 (mention) — `beebox/docs/security-report.md`, which the lint hook skips. So a different
 - ../issues/bugs/2026-10-05-secret-fields-trigger-save-password.md:57 (mention) — `beebox/docs/security-report.md` (security-report skill). Each successful Show
-- ../issues/bugs/2026-10-06-thread-runs-skip-live-provider-check.md:21 (mention) — current behavior (`beebox/docs/security-report.md`, third-party models row).
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:36 (mention) — (`beebox/src/webapp/routes/api.ts:73` (moved to `beebox/src/webapp/routes/api/register/core.ts`)). `docs/security-report
 - ../issues/closed/bugs/2026-10-06-third-party-engine-privacy-telemetry-and-security-report.md:37 (mention) — `beebox/docs/security-report.md:316` has one "OpenRouter" egress row. It
+- ../issues/closed/bugs/2026-10-06-thread-runs-skip-live-provider-check.md:24 (mention) — current behavior (`beebox/docs/security-report.md`, third-party models row).
 - ../issues/closed/exploration/2026-09-17-typesafe-system-one-judgments.md:66 (mention) — section (`beebox/docs/security-report.md`, §3) is the place that has to
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:13 (mention) — `/security-report` skill as the committed rubric, `beebox/docs/security-report.md`,
 - ../issues/closed/features/2026-08-30-cross-box-leak-scan.md:15 (mention) — section below for the full list. `security-report.md` §7b and
@@ -2098,7 +2098,6 @@ References:
 - → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
 - → ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md (link)
 - → docs/implemented-plans/secret-custody.md (mention)
-- → ../issues/bugs/2026-10-06-thread-runs-skip-live-provider-check.md (link)
 - → ../issues/decisions/2026-07-20-git-push-confirmation.md (link)
 - → ../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
 - → docs/content-security-policy.md (link)
@@ -2251,7 +2250,7 @@ References:
 
 #### docs/theme-authoring.md
 
-Title: "Authoring themes" | 45 lines | current reference
+Title: "Authoring themes" | 57 lines | current reference
 
 Referenced by:
 - frontend.md:222 (link) — [theme authoring studio](docs/theme-authoring.md).
@@ -2260,6 +2259,7 @@ Referenced by:
 References:
 - → ../.claude/skills/bbx-theme/SKILL.md (link)
 - → docs/box/card-themes.md (link)
+- → ../bin/docs/router-operations.md (link)
 
 #### docs/todo-security.md
 
@@ -2441,12 +2441,12 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 204 lines | current reference
+Title: "Card themes" | 285 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
 - docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
-- docs/theme-authoring.md:38 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
+- docs/theme-authoring.md:44 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 - frontend.md:13 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 
 #### docs/box/history.md
@@ -2649,7 +2649,7 @@ Referenced by:
 - AGENTS.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:102 (link) — - [`docs/cards/format.md`](docs/cards/format.md) — the card format
 - docs/cards.md:10 (link) — | [Format](cards/format.md) | The file format: naming, frontmatter and body, the shared Markdoc tags, attachments, refs,
-- docs/cards/migrations.md:378 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:417 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/schemas.md:82 (link) — - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is
 - docs/cards/validation.md:99 (link) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/design/README.md:41 (link) — - **§3 File formats and envelopes** — taught the XML envelope; cards are YAML frontmatter + markdown ([`../cards/format.
@@ -2682,7 +2682,7 @@ References:
 
 #### docs/cards/migrations.md
 
-Title: "Card migrations" | 421 lines | current reference
+Title: "Card migrations" | 460 lines | current reference
 
 Referenced by:
 - AGENTS.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -2731,6 +2731,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md:21 (mention) — and it is written down in `docs/cards/migrations.md` and in the migration script's own
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:52 (mention) — stay registered forever (append-only `MIGRATIONS`, per `docs/cards/migrations.md`)
 - ../issues/closed/code-quality/2026-09-04-remove-one-root-v2-bootstrap.md:11 (mention) — Resolved 2026-10-08. The bootstrap modules, `resolveTopPathOrBootstrap`, and the one-root script were already deleted wi
+- ../issues/closed/code-quality/2026-10-16-migration-leftover-work-must-exit-partial.md:22 (mention) — `convert`; `docs/cards/migrations.md`, "Exit 2 means per-card partial
 - ../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md:98 (mention) — definitions come from. `docs/cards/migrations.md` step 7 applies: whatever moves,
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:19 (mention) — test1 via `bbx migrate --apply` (see `docs/cards/migrations.md`'s `todo-list-to-doc`
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:26 (mention) — (`docs/cards/migrations.md` is currently a maintainer runbook, not an
@@ -2756,7 +2757,7 @@ Referenced by:
 - README.md:103 (link) — - [`docs/cards/schemas.md`](docs/cards/schemas.md) — adding a new card type
 - docs/cards.md:11 (link) — | [Schemas](cards/schemas.md) | Adding a card type: the schema file, its hooks, registration, templates, the generated i
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:379 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
+- docs/cards/migrations.md:418 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/box-schema-reload.md:253 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:54 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
@@ -3273,7 +3274,7 @@ Title: "Code Maintenance" | 102 lines | current reference
 Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
 - docs/README.md:135 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
-- docs/cards/migrations.md:380 (link) — - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the peri
+- docs/cards/migrations.md:419 (link) — - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the peri
 - docs/development.md:41 (link) — | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to ru
 - docs/implemented-plans/box-retrospectives.md:422 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/doc-structure-development.md:53 (mention) — | Enrolled schedules | maintenance.md "four enrolled today"; development-workflow.md lists eleven | contradiction; the n
@@ -4056,7 +4057,7 @@ Title: "RFC: Cards as Markdown + YAML Frontmatter" | 2563 lines | shipped histor
 
 Referenced by:
 - docs/cards/format.md:9 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:378 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:417 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/validation.md:99 (mention) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/implemented-plans/remove-cardworks-and-xml.md:126 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
@@ -5011,6 +5012,7 @@ Referenced by:
 - docs/implemented-plans/file-layout.moves.subplan.md:10 (link) — Step 4 of [the file-layout plan](file-layout.md): move and rename files,
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:14 (mention) — four requested steps shipped: `beebox/docs/implemented-plans/file-layout.md`
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:119 (link) — [the file-layout plan](../../../beebox/docs/implemented-plans/file-layout.md): five
+- ../issues/closed/code-quality/2026-10-16-layout-check-unit-message-omits-the-small-fixes.md:12 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown branch ("Layout check's unit message names the smaller fixes and its ru
 
 References:
 - → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
@@ -5308,7 +5310,7 @@ References:
 Title: "Landmark arrival" | 940 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/migrations.md:324 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
+- docs/cards/migrations.md:363 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
 - docs/landmarks.md:302 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
@@ -6353,7 +6355,7 @@ References:
 Title: "Retire the four type-specific core Markdoc tags" | 312 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/migrations.md:347 (mention) — `docs/implemented-plans/retire-type-specific-core-tags.md`, Track 4. The four
+- docs/cards/migrations.md:386 (mention) — `docs/implemented-plans/retire-type-specific-core-tags.md`, Track 4. The four
 
 References:
 - → docs/implemented-plans/plugins-slice-2.md (mention)
@@ -7530,6 +7532,7 @@ Referenced by:
 - ../issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md:12 (link) — [change-based test selection](../../../beebox/docs/plans/change-based-test-selection.md),
 - ../issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md:67 (link) — Related: [change-based test selection](../../beebox/docs/plans/change-based-test-selection.md)
 - ../issues/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md:9 (frontmatter) — design: ../../beebox/docs/plans/change-based-test-selection.md
+- ../issues/features/2026-10-16-test-select-says-why-each-test-was-selected.md:9 (frontmatter) — design: ../../beebox/docs/plans/change-based-test-selection.md
 
 References:
 - → ../issues/closed/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md (frontmatter)
@@ -8680,7 +8683,7 @@ Title: "User-story journeys" | 295 lines | proposal | draft
 
 Referenced by:
 - test/user-stories/journeys/README.md:8 (link) — Design and rationale: [`docs/plans/user-story-journeys.md`](../../../docs/plans/user-story-journeys.md).
-- ../dev/devprocess-talk/chapters.md:396 (mention) — file: beebox/docs/plans/user-story-journeys.md
+- ../dev/devprocess-talk/chapters.md:397 (mention) — file: beebox/docs/plans/user-story-journeys.md
 - ../dev/devprocess-talk/inventory.md:572 (mention) — - **Where:** `beebox/test/user-stories/journeys/` (five journeys, walker prompt, provisioning), `beebox/docs/plans/user-
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:125 (mention) — - **New bottleneck exposed:** (a) panel voting bug: "shipped three stories with a ✅ directly above their own panel note…
 - ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
@@ -8961,7 +8964,7 @@ References:
 Title: "Migration rollout, May 2026, and retired migrators" | 80 lines | dated report
 
 Referenced by:
-- docs/cards/migrations.md:318 (link) — history; the early rollout is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
+- docs/cards/migrations.md:357 (link) — history; the early rollout is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
 - docs/implemented-plans/doc-structure-cards.md:65 (mention) — | `migrations.md` "Production rollout history" and the two retired migrators | `reports/migration-rollout-2026-05-23.md`
 
 References:
@@ -9019,7 +9022,7 @@ Title: "Stack Decisions" | 1216 lines | dated report
 Referenced by:
 - docs/architecture/AGENTS.md:5 (mention) — **Role:** this series is the onboarding narrative — the canonical human-facing "what is this." Engineering rationale liv
 - docs/design/README.md:4 (link) — decisions log, is frozen as a dated report: [`../reports/stack-decisions-2026-09-04.md`](../reports/stack-decisions-2026
-- ../dev/devprocess-talk/chapters.md:99 (mention) — file: beebox/docs/reports/stack-decisions-2026-09-04.md
+- ../dev/devprocess-talk/chapters.md:100 (mention) — file: beebox/docs/reports/stack-decisions-2026-09-04.md
 - ../dev/devprocess-talk/reports/sweep-instructions.md:352 (mention) — - **Lives in:** `beebox/docs/reports/stack-decisions-2026-09-04.md` (was `<old-package>/docs/stack-decisions.md`, then `
 - ../issues/closed/code-quality/2026-07-04-xstate-store-never-adopted.md:7 (mention) — > Closed 2026-09-24 as moot: no living document claims `@xstate/store` is adopted. `stack-decisions.md` became a frozen
 - ../research/lifeos-review.md:65 (mention) — | MCP server as the agent's interface to the app | **Reject.** Bee Box's in-box agent is the better bet; Life OS's laggi
@@ -9330,7 +9333,7 @@ Referenced by:
 
 #### docs/testing/smoke.md
 
-Title: "Smoke" | 102 lines | current reference
+Title: "Smoke" | 103 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:308 (mention) — smoke.md               does the app boot and walk at all? (the merge gate)
@@ -10768,7 +10771,6 @@ Referenced by:
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (link) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:42 (link) — Seen again in [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 44, shot 15): the Googl
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md:14 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 49, shot 17).
 - ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md:30 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 42, 55, 81; harness note H3)
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
 - ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:47 (link) — Seen again in two walks. [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45):
@@ -10777,6 +10779,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:40 (link) — Seen again in [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 58): "By date" does
 - ../issues/closed/bugs/2026-10-08-seed-briefing-reaching-me-speaks-agent-commands.md:47 (link) — Seen again in [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 16, shot 05): the se
 - ../issues/closed/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:27 (link) — Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show
+- ../issues/closed/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md:17 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 49, shot 17).
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
 - ../issues/closed/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md:21 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 72, 73).
 - ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../.
@@ -10795,7 +10798,7 @@ References:
 - → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
 - → ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md (link)
 - → ../issues/docs-and-chores/2026-10-09-box-docs-do-not-say-how-to-turn-on-notifications.md (link)
-- → ../issues/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md (link)
+- → ../issues/closed/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
 - → ../issues/closed/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)

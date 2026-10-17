@@ -52,8 +52,8 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
     // a box without a granted `glm` key fails the turn with the setup refusal.
     { label: "GLM 5.3", model: MODEL_ID.glm },
     { label: "GLM 5.3 Flash", model: MODEL_ID.glmFlash },
-    { label: "Sonnet 5", model: MODEL_ID.sonnet },
-    { label: "Haiku 4.5", model: MODEL_ID.haiku },
+    { label: "Sonnet 5.5", model: MODEL_ID.sonnet },
+    { label: "Haiku 5.5", model: MODEL_ID.haiku },
   ],
   codex: [
     { label: "Default (Codex)", model: null },

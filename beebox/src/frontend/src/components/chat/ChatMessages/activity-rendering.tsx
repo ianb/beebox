@@ -5,9 +5,12 @@
 
 import { Pre } from "../../ui/Pre";
 import { JsonView } from "../../ui/JsonView";
+import { InlineAction } from "../../ui/InlineAction";
+import { useWorkspace } from "../workspace/WorkspaceProvider/provider";
+import { cardTarget } from "../workspace/use-open-beside/hook";
 import type { SessionContentBlock } from "../../../api";
 import type { ActivityPart } from "../message-parsing";
-import { type Excerpt, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
+import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
 
 type ActivityParts = ActivityPart[];
 
@@ -56,6 +59,35 @@ function ExcerptView({ excerpt }: { excerpt: Excerpt }) {
 }
 
 /**
+ * The line's sentence, with the changed file's name as a link that opens it
+ * in the workspace. Plain text where there is no workspace to open it in, or
+ * nothing to open.
+ */
+function ToolSentence({ description, opens }: { description: string; opens: ToolCallDetail["opens"] }) {
+  const workspace = useWorkspace();
+  const at = opens === null ? -1 : description.lastIndexOf(opens.name);
+  if (workspace === null || opens === null || at === -1) return <span>{description}</span>;
+  return (
+    <span>
+      {description.slice(0, at)}
+      <InlineAction
+        intent="subtle"
+        title={`Open ${opens.name}`}
+        onClick={(event) => {
+          // Inside the line's <summary>: open the file without toggling the line.
+          event.preventDefault();
+          event.stopPropagation();
+          workspace.open(cardTarget(opens.path), { label: opens.name });
+        }}
+      >
+        {opens.name}
+      </InlineAction>
+      {description.slice(at + opens.name.length)}
+    </span>
+  );
+}
+
+/**
  * Render a single tool call: the plain-language line, its place, and, in an
  * expanded list, the plain excerpt under it. The excerpt sits inside the
  * summary so the opened raw input and result come after it. A lone step's
@@ -63,14 +95,14 @@ function ExcerptView({ excerpt }: { excerpt: Excerpt }) {
  */
 function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; excerptInline: boolean }) {
   const description = describeToolCall(block);
-  const { place, failed, excerpt } = describeToolDetail(block);
+  const { place, failed, excerpt, opens } = describeToolDetail(block);
 
   return (
     <details className="group/tool">
       <summary className="cursor-pointer list-none hover:text-warm-700 py-0.5">
         <span className="flex flex-wrap items-center gap-x-1">
           <span className="text-warm-500 group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
-          <span>{description}</span>
+          <ToolSentence description={description} opens={opens} />
           {place ? <span className="text-warm-500">· {place}</span> : null}
           {failed ? <span className="text-warm-500">· didn’t go through</span> : null}
         </span>

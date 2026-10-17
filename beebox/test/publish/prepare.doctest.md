@@ -452,8 +452,9 @@ await box.cleanup();
 ```
 
 Box Markdoc tags render to app components, which a static page cannot show.
-A task-list item becomes a plain disabled checkbox. `redacted` content is
-omitted entirely, inline or block. Any other box tag fails prepare.
+A task-list item becomes a plain disabled checkbox labelled by its text.
+`redacted` content is omitted entirely, inline or block. Any other box tag
+fails prepare.
 
 ```ts
 const box = await makeTmpBox();
@@ -473,7 +474,7 @@ await box.write("_content/Example.attach/static/index.md", [
 ].join("\n"));
 const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 const index = result.ok ? await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8") : result.message;
-index.includes('<input type="checkbox" disabled="" checked="">') && index.includes('<input type="checkbox" disabled="">') && !index.includes("<Task")
+index.includes('<label><input type="checkbox" disabled="" checked="">Tent</label>') && index.includes('<label><input type="checkbox" disabled="">Stove</label>') && !index.includes("<Task")
 => true
 
 index.includes("The answer is .")

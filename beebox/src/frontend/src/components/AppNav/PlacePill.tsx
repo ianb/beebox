@@ -44,7 +44,7 @@
 import { useEffect } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { trpc } from "../../lib/trpc/client";
-import type { Place } from "../../lib/place-label";
+import { dirBasename, type Place } from "../../lib/place-label";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { useLazyMenuOpen } from "../../hooks/useLazyMenuOpen";
 import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
@@ -76,13 +76,6 @@ function CaretIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
     </svg>
   );
-}
-
-/** Last segment of a box path; the root reads as "/". */
-function dirBasename(dir: string): string {
-  if (dir === "") return "/";
-  const segments = dir.split("/");
-  return segments[segments.length - 1] ?? dir;
 }
 
 export function PlacePill({

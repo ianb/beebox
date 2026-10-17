@@ -11,6 +11,13 @@
  * timeout, so a pathological view (an infinite loop or a promise that never
  * settles at module scope) can't hang the lister — it just times out and the
  * caller degrades that one view to an error marker.
+ *
+ * The parent's timeout dies with the parent, so the child also bounds itself:
+ * a worker thread SIGKILLs the runner at a deadline. A worker keeps its own
+ * event loop, so it fires while the import spins the main thread. A CPU-time
+ * limit was tried first; a `SIGXCPU` handler (tap installs one) swallows it,
+ * and macOS sends no SIGKILL at the hard limit. On 2026-10-16 an orphaned
+ * runner had spun for 16 days.
  */
 
 import * as fs from "node:fs/promises";
@@ -21,9 +28,13 @@ import { writeNodeViewModule, type ViewHostContext } from "../node-view-runtime.
 
 const RUNNER_FILENAME = "extract-meta-runner.mjs";
 const IMPORT_TIMEOUT_MS = 3_000;
+/** The runner's own deadline; past the parent's timeout, so it binds only once the parent is gone. */
+const RUNNER_DEADLINE_MS = IMPORT_TIMEOUT_MS * 2;
 
 /** The subprocess entry point: import the module, print its metadata exports as JSON. */
-const RUNNER_SOURCE = `const [, , moduleUrl] = process.argv;
+const RUNNER_SOURCE = `import { Worker } from "node:worker_threads";
+const [, , moduleUrl] = process.argv;
+new Worker("setTimeout(() => process.kill(process.pid, 'SIGKILL'), ${String(RUNNER_DEADLINE_MS)});", { eval: true }).unref();
 try {
   const mod = await import(moduleUrl);
   const out = {};

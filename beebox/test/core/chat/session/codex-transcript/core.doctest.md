@@ -10,7 +10,7 @@ import {
   codexHistoryListParams,
 } from "../../../../../src/core/chat/session/codex-transcript/core.js";
 import { retiredV2ContentCwds } from "../../../../../src/core/chat/session/codex-transcript/v2-cwd.js";
-import { normalizeCodexSdkToolItem, normalizeCodexToolItem } from "../../../../../src/services/codex-tool-activity.js";
+import { codexDisplayCommand, normalizeCodexSdkToolItem, normalizeCodexToolItem } from "../../../../../src/services/codex-tool-activity.js";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -93,6 +93,39 @@ JSON.stringify([
   normalizeCodexToolItem({ type: "collab_tool_call", id: "c", tool: "wait", receiver_thread_ids: [], status: "completed" }),
 ].map((block) => ({ name: block?.name, input: block?.input })))
 => [{"name":"Bash","input":{"command":"bbx status"}},{"name":"Edit","input":{"file_path":"store/A.card","status":"completed"}},{"name":"WebSearch","input":{"query":"Bee Box"}},{"name":"calendar.list","input":{"days":7}},{"name":"Agent","input":{"description":"/root/review","kind":"started","thread_id":"thread-1"}},{"name":"Agent","input":{"action":"wait","status":"completed","thread_ids":[]}}]
+```
+
+Codex reports a command as the shell invocation it ran. Both entry points show
+the command inside a `bash -lc` wrapper, as Claude's activity does:
+
+```ts
+normalizeCodexToolItem({ type: "commandExecution", id: "c", command: "/bin/bash -lc 'cat AGENTS.md'" })?.input
+=> { command: "cat AGENTS.md" }
+```
+
+Codex double-quotes an argument that holds a single quote:
+
+```ts
+codexDisplayCommand(`/opt/homebrew/bin/bash -lc "sed -n '1,80p' box-docs/card-image.md && rg -n EXIF box-docs"`)
+=> sed -n '1,80p' box-docs/card-image.md && rg -n EXIF box-docs
+```
+
+Anything else shows verbatim: a double-quoted argument with escapes or
+expansions, a different shell, or a command with no wrapper.
+
+```ts
+[
+  codexDisplayCommand(`/bin/bash -lc "echo \\"$HOME\\""`),
+  codexDisplayCommand("/bin/zsh -lc 'ls'"),
+  codexDisplayCommand("/bin/bash -lc 'a' && rm 'b'"),
+  codexDisplayCommand("bbx status"),
+]
+=> [
+  "/bin/bash -lc \"echo \\\"$HOME\\\"\"",
+  "/bin/zsh -lc 'ls'",
+  "/bin/bash -lc 'a' && rm 'b'",
+  "bbx status"
+]
 ```
 
 The live SDK vocabulary maps through a separate typed entry point while native

@@ -16,7 +16,7 @@ npx vibe-init
 2. Create `eslint.config.ts` importing the preset
 3. Create `prettier.config.ts` importing the base Prettier config
 4. Create `tsconfig.json` extending the base config (if none exists)
-5. Create `knip.json` for dead code detection
+5. Create `knip.json` for dead code detection, and `.madgerc` so `lint:circular` ignores type-only imports
 6. Install CLI tools (`eslint`, `prettier`, `oxlint`, `knip`, `madge`) as devDependencies
 7. Set up husky + lint-staged with a pre-commit hook (runs Prettier + ESLint on staged files)
 
@@ -95,6 +95,19 @@ Create `knip.json`:
 ```
 
 Set `entry` to your actual entry points. Add `ignore` and `ignoreDependencies` as needed.
+
+### 5b. Madge Config (circular imports)
+
+```json
+{
+  "detectiveOptions": {
+    "ts": { "skipTypeImports": true },
+    "tsx": { "skipTypeImports": true }
+  }
+}
+```
+
+Without it, madge counts `import type` edges, so every type-only back-edge into a barrel reads as a cycle. Type-only cycles are acceptable; this leaves only value cycles.
 
 ### 6. Package Scripts
 
