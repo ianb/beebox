@@ -165,4 +165,53 @@ JSON.stringify([views[0]?.slug, views[0]?.description, elapsedMs < 10000])
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A spinning import does not outlive the lister
+
+The timeout above is the parent's. When the parent dies first (a test process
+that ends, a killed server), the child still stops: a worker thread in the
+runner kills its own process at a deadline, even while the import spins. Start a lister on the hanging view, wait for its
+metadata runner, kill the lister with SIGKILL, and the runner is gone within
+seconds:
+
+```ts timeout=60s
+const box = await makeV3Box();
+await box.writeView("spins.tsx", `
+export const name = "Spins";
+while (true) {}
+export default function Spins() { return null; }
+`);
+
+const lister = spawn(
+  process.execPath,
+  ["--import", "tsx", "--input-type=module", "-e", 'const { listViews } = await import("./src/webapp/views/compiler/compile.ts"); await listViews(process.env.BOX_ROOT);'],
+  { cwd: PACKAGE_ROOT, env: { ...process.env, BOX_ROOT: box.contentRoot }, stdio: "ignore" },
+);
+
+function runnerOf(parentPid: number): number | null {
+  const rows = execFileSync("ps", ["-A", "-o", "pid=,ppid=,command="], { encoding: "utf8" }).split("\n");
+  for (const row of rows) {
+    const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(row);
+    if (match !== null && Number(match[2]) === parentPid && match[3]?.includes("extract-meta-runner")) return Number(match[1]);
+  }
+  return null;
+}
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
+const runner = await eventually(() => runnerOf(lister.pid ?? -1), { label: "the metadata runner starts", timeoutMs: 30000 });
+lister.kill("SIGKILL");
+await eventually(() => !alive(runner), { label: "the orphaned runner exits", timeoutMs: 15000 })
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
 ```
