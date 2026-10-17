@@ -41,7 +41,7 @@ enum PairingFailure: Equatable {
         case .redeem(.malformedResponse):
             return "The box answered, but not with a pairing. It may be running an older version."
         case .storeFailed:
-            return "The box paired, but this phone could not save the credential. Try again."
+            return "The box paired, but this phone could not save the credential. Make a new pairing link on the box and try again."
         }
     }
 }

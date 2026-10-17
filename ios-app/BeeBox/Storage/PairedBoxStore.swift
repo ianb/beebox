@@ -149,8 +149,14 @@ final class PairedBoxStore: ObservableObject {
                 pairingToken: pairingToken,
                 deviceLabel: deviceLabel()
             )
-            redeemedTokens.insert(pairingToken)
-            return storeBox(from: link, authToken: deviceToken)
+            let outcome = storeBox(from: link, authToken: deviceToken)
+            // Only a stored pairing makes a repeat of this link a no-op. After
+            // a failed save the ticket is spent on the box, so a repeat POSTs,
+            // gets the box's 401, and says to make a new link.
+            if outcome == .paired {
+                redeemedTokens.insert(pairingToken)
+            }
+            return outcome
         } catch {
             BoxLog.warn("pairing redeem failed error=\(error.logLabel)", category: .pairing)
             return .failed(.redeem(error))

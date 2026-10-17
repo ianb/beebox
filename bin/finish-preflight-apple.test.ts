@@ -66,3 +66,16 @@ test("no apple path, no apple check", () => {
     false,
   );
 });
+
+test("only docs under the apple dirs in a code diff names no apple check", () => {
+  const commands = verificationCommands({
+    paths: ["ios-app/README.md", "beebox/src/core/x.ts"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+  });
+  assert.equal(
+    commands.some((command) => command.kind === "apple"),
+    false,
+  );
+});

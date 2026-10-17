@@ -99,6 +99,22 @@ final class PairingFlowTests: XCTestCase {
         XCTAssertNotNil(outcome.failureMessage)
     }
 
+    /// A ticket the box redeemed but this phone failed to save is not a
+    /// completed pairing: a repeat must not be swallowed as a duplicate.
+    func testRepeatAfterCredentialSaveFailureIsNotADuplicate() async {
+        let transport = GatedTransport(status: 200, body: #"{"token":"device-token"}"#)
+        await transport.open()
+        let (store, credentials) = makeStore(transport: transport)
+        credentials.failAllWrites = true
+
+        _ = await store.pair(from: link)
+        let again = await store.pair(from: link)
+
+        XCTAssertNotEqual(again, .duplicate)
+        let requestCount = await transport.requestCount
+        XCTAssertEqual(requestCount, 2)
+    }
+
     func testNonPairingLinkIsNotRedeemed() async {
         let transport = GatedTransport(status: 200, body: #"{"token":"device-token"}"#)
         let (store, _) = makeStore(transport: transport)

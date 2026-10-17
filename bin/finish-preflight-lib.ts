@@ -301,12 +301,12 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
   // Apple code: one check for ios-app/, mac-app/ and apple-shared/. The argv
   // carries the changed paths so bin/apple-test picks its steps (the iOS
   // simulator run only for ios-app/ or apple-shared/). A prose .md among them
-  // is no reason to run tests, unless the diff is nothing else, which add()
-  // then skips as docs-only.
+  // is no reason to run tests. With only docs under the Apple dirs there is no
+  // check, except in an all-docs diff, where add() lists it as skipped.
   const applePaths = groups["(apple)"] ?? [];
-  if (applePaths.length > 0) {
-    const codePaths = applePaths.filter((path) => !isDocPath(path));
-    const argvPaths = codePaths.length > 0 ? codePaths : applePaths;
+  const appleCodePaths = applePaths.filter((path) => !isDocPath(path));
+  if (appleCodePaths.length > 0 || (docsOnly && applePaths.length > 0)) {
+    const argvPaths = appleCodePaths.length > 0 ? appleCodePaths : applePaths;
     add({
       kind: "apple",
       command: `bin/apple-test --changed ${argvPaths.join(" ")}`,

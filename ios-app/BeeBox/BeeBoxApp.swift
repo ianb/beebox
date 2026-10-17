@@ -96,16 +96,18 @@ struct BeeBoxApp: App {
                     pairingURLInbox.accept(url)
                 }
                 .onReceive(pairingURLInbox.$pendingURL.compactMap(\.self)) { url in
-                    pairingURLInbox.clear(url)
-                    if QuickCaptureURLInbox.handles(url) {
-                        QuickCaptureURLInbox.shared.accept(url)
-                        return
-                    }
-                    guard url.scheme == "beebox", url.host == "pair" else {
-                        BoxLog.info("open url ignored reason=unhandled-link", category: .lifecycle)
-                        return
-                    }
+                    // @Published delivers before it stores the new value, so the
+                    // clear runs in the task, after `accept` has finished.
                     Task {
+                        pairingURLInbox.clear(url)
+                        if QuickCaptureURLInbox.handles(url) {
+                            QuickCaptureURLInbox.shared.accept(url)
+                            return
+                        }
+                        guard url.scheme == "beebox", url.host == "pair" else {
+                            BoxLog.info("open url ignored reason=unhandled-link", category: .lifecycle)
+                            return
+                        }
                         let outcome = await store.pair(from: url)
                         if let message = outcome.failureMessage {
                             pairingFailureMessage = message
