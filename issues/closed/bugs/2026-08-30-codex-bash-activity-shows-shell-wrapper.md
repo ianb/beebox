@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "Codex always seems to show bash in its bash calls, in a way Claude doesn't. Not a big deal"
 priority: backlog
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown branch ("Codex command activity shows the command inside bash -lc"). Codex's `command` is a single shell-quoted string, `<path>/bash -lc '<cmd>'` or `… -lc "<cmd>"` when the command holds a single quote (sample: `beebox/test/dev/lib/test-runner/runner/codex-audit.doctest.md`; rollouts store the same as an argv array). `codexDisplayCommand` in `beebox/src/services/codex-tool-activity.ts` unwraps only that shape with a plainly quoted argument and otherwise returns the command verbatim. Both normalization entry points and the `codex-run` CLI line use it; the observed-activity record (`emitObservedActivity`) keeps the full invocation. Test: `beebox/test/core/chat/session/codex-transcript/core.doctest.md`.
 
 On codex-engine chats, command activity lines show the shell machinery —
 `bash -lc '…'`-style wrappers — where Claude-engine chats show just the

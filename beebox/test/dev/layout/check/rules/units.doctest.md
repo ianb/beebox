@@ -52,7 +52,7 @@ summary(clusterFindings)
 => unit-directory pkg/src/commands/wakeup.ts
 
 clusterFindings[0]?.message
-=> wakeup.ts and its helpers wakeup-outcome.ts, wakeup-steps.ts are one unit beside other units in pkg/src/commands; make pkg/src/commands/wakeup/ and move them in, dropping the wakeup- prefix
+=> wakeup.ts and its helpers wakeup-outcome.ts, wakeup-steps.ts are one unit beside other units in pkg/src/commands; make pkg/src/commands/wakeup/ and move them in, dropping the wakeup- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through wakeup.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)
 ```
 
 ## A helper reachable from two entries is infrastructure, not a unit
@@ -165,7 +165,7 @@ summary(setFindings)
 => unit-directory pkg/src/setdir/memberA/second.ts
 
 setFindings[0]?.message
-=> second.ts and its helpers second-helper.ts are one unit beside other units in pkg/src/setdir/memberA; make pkg/src/setdir/memberA/second/ and move them in, dropping the second- prefix
+=> second.ts and its helpers second-helper.ts are one unit beside other units in pkg/src/setdir/memberA; make pkg/src/setdir/memberA/second/ and move them in, dropping the second- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through second.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)
 ```
 
 ## A module used only under one subdirectory is shared-infrastructure
@@ -303,7 +303,7 @@ summary(registryEntryFindings)
 => unit-directory pkg/src/mod/user.ts
 
 registryEntryFindings[0]?.message
-=> user.ts and its helpers user-helper.ts are one unit beside other units in pkg/src/mod; make pkg/src/mod/user/ and move them in, dropping the user- prefix
+=> user.ts and its helpers user-helper.ts are one unit beside other units in pkg/src/mod; make pkg/src/mod/user/ and move them in, dropping the user- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through user.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)
 ```
 
 ## A registry-declaring module is never shared-infrastructure

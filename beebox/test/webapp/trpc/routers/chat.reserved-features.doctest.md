@@ -131,7 +131,7 @@ await updateFeaturesForSession(server.boxRoot, {
   updates: { narration: "on" },
   engine: "claude",
 });
-await api.chat.setModel({ session: started, model: "claude-sonnet-5" });
+await api.chat.setModel({ session: started, model: "claude-sonnet-5-5" });
 (await api.chat.features({ session: started })).features.narration
 => on
 ```

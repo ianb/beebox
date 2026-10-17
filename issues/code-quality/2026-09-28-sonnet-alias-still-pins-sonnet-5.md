@@ -49,3 +49,8 @@ pin reaches 2.1.293 no earlier than 2026-10-09.
 Claude Code 2.1.293): a `query()` with `model: "claude-haiku-5-5"` answered
 from that model with a `success` result. Codex `0.161.0`, now pinned, makes
 GPT-6.1 Sol its bundled default.
+
+**2026-10-17:** Sonnet done on the bug-burndown branch ("The sonnet alias
+names Sonnet 5.5"): `MODEL_ID.sonnet` is `claude-sonnet-5-5`, `claude-sonnet-5`
+normalizes to it, and the picker reads "Sonnet 5.5". The `haiku` and `sol`
+aliases are unchanged and keep this issue open.

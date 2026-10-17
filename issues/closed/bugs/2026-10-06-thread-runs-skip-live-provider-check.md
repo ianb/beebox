@@ -6,7 +6,10 @@ labels: [providers, security]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-third-party-engine-privacy — cross-model review of the third-party egress row
+resolution: wontfix
 ---
+
+**Closed 2026-10-17 (wontfix, moot):** thread sessions no longer exist. `beebox/src/core/chat/session/thread.ts` was deleted with the Telegram removal (`da6d70df9`), and no thread-session path remains in `beebox/src`. Chat turns re-check the provider through `liveProviderRefusal` in `beebox/src/core/chat/session/run/start-refusal.ts`. The security report's third-party models row no longer mentions threads.
 
 A running chat re-checks its third-party provider before each turn
 (`liveProviderRefusal` in `beebox/src/core/chat/session/run/core.ts`), so a
