@@ -221,19 +221,21 @@ anything outside it have no place.
 
 A finished edit or new file in the content folder names the file the line
 links to, by the name the sentence uses. A read, an edit still running, and a
-file outside the content folder link nothing. A Codex change across several
-files links the first.
+file outside the content folder link nothing. A Codex change has no result;
+its `completed` status marks it finished, and one across several files links
+the first.
 
 ```ts
 [
   detail("Edit", { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card" }).opens,
   detail("Write", { file_path: "_content/Errands.md" }).opens,
-  detail("Edit", { file_path: "_content/a.md", file_paths: ["_content/a.md", "_content/b.md"] }).opens,
+  describeToolDetail(tool("Edit", { file_path: "_content/a.md", file_paths: ["_content/a.md", "_content/b.md"], status: "completed" })).opens,
+  describeToolDetail(tool("Edit", { file_path: "_content/a.md", status: "inProgress" })).opens,
   detail("Read", { file_path: "_content/Errands.md" }).opens,
   describeToolDetail(tool("Edit", { file_path: "_content/Errands.md" })).opens,
   detail("Edit", { file_path: "_config/schemas/loan.ts" }).opens,
 ]
-=> [{ path: "_content/recipes/Lemon_Chicken.recipe.card", name: "Lemon Chicken" }, { path: "_content/Errands.md", name: "Errands" }, { path: "_content/a.md", name: "a" }, null, null, null]
+=> [{ path: "_content/recipes/Lemon_Chicken.recipe.card", name: "Lemon Chicken" }, { path: "_content/Errands.md", name: "Errands" }, { path: "_content/a.md", name: "a" }, null, null, null, null]
 ```
 
 An edit shows what it replaced and with what, trimmed. An edit that

@@ -354,6 +354,7 @@ export function describeToolDetail(block: SessionContentBlock): ToolCallDetail {
     place: isFileTool ? placeName(filePath(input)) : null,
     failed,
     excerpt: failed ? null : excerptDescribers.get(name)?.(input, done) ?? null,
-    opens: done && (name === "Edit" || name === "Write") ? openTarget(filePath(input)) : null,
+    // A Codex file change carries no result; its own status says it finished.
+    opens: (done || (!failed && input.status === "completed")) && (name === "Edit" || name === "Write") ? openTarget(filePath(input)) : null,
   };
 }
