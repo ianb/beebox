@@ -45,10 +45,10 @@ const initial = await caller(server).chat.status({});
 modelView(initial)
 => { model: "«*»", source: "default", boxDefault: "«*»" }
 
-await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
+await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5-5" });
 clearBoxConfigCache(server.boxRoot);
 modelView(await caller(server).chat.status({}))
-=> { model: "claude-sonnet-5", source: "default", boxDefault: "claude-sonnet-5" }
+=> { model: "claude-sonnet-5-5", source: "default", boxDefault: "claude-sonnet-5-5" }
 ```
 
 Clearing the pin returns the box to the `strong` tier, not to "whatever the
@@ -84,7 +84,7 @@ await caller(server).admin.updateBoxConfig({ agentModel: "sonnet" }).catch((e) =
 Pinning is the owner's call.
 
 ```ts continue
-await caller(server, { isOwner: false }).chat.setDefaultModel({ model: "claude-sonnet-5" }).catch((e) => e.code)
+await caller(server, { isOwner: false }).chat.setDefaultModel({ model: "claude-sonnet-5-5" }).catch((e) => e.code)
 => FORBIDDEN
 
 await server.cleanup();
@@ -107,7 +107,7 @@ assert.ok(claudeDefault, "an unpinned box still names a default");
 const unknown = "11111111-2222-3333-4444-555555555555";
 
 JSON.stringify([
-  await api.chat.setModel({ session: unknown, model: "claude-sonnet-5" }).catch((e) => e.code),
+  await api.chat.setModel({ session: unknown, model: "claude-sonnet-5-5" }).catch((e) => e.code),
   await api.chat.setFeature({ session: unknown, feature: "narration", value: "on" }).catch((e) => e.code),
 ])
 => ["NOT_FOUND","NOT_FOUND"]
@@ -136,12 +136,12 @@ const receipt = await api.chat.reserveSession({
 });
 print(`reserved: ${receipt.kind}`);
 const setOnCoined = await api.chat
-  .setModel({ session: "22222222-3333-4444-8555-666666666666", model: "claude-sonnet-5" })
+  .setModel({ session: "22222222-3333-4444-8555-666666666666", model: "claude-sonnet-5-5" })
   .then((r) => `ok model=${String(r.model)}`, (e) => `${String(e.code)}: ${String(e.message)}`);
 print(setOnCoined);
 =>
 reserved: reserved
-ok model=claude-sonnet-5
+ok model=claude-sonnet-5-5
 ```
 
 A reservation that names a model but no engine records the engine the model
