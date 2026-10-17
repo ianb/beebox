@@ -11,7 +11,6 @@ import * as os from "node:os";
 import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
-import type * as ts from "typescript";
 import { listViews, resolveViewsDir } from "../../../webapp/views/compiler/compile.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 
@@ -36,11 +35,11 @@ export interface ViewTypecheckResult {
  */
 async function typecheckOneView(args: { viewPath: string; slug: string }): Promise<ViewTypecheckResult> {
   const { viewPath, slug } = args;
-  // Loaded here, not at module scope: the whole TypeScript compiler is ~8 MB of
-  // JS, and `cli/index.ts` imports every command module eagerly — so a static
-  // import made EVERY `bbx` invocation, `--version` included, pay for it. Only
-  // this command needs it. (docs/plans/commit-performance.md, phase 1b.)
-  const ts = await import("typescript");
+  // Loaded here, not at module scope: `cli/index.ts` imports every command
+  // module eagerly, so a static import would make every `bbx` invocation load
+  // the TypeScript API. Only this command needs it.
+  // (docs/plans/commit-performance.md, phase 1b.)
+  const { typecheckProject } = await import("../../../lib/typescript/check.js");
   const reactNodeModules = path.dirname(
     path.dirname(
       createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
@@ -70,32 +69,41 @@ async function typecheckOneView(args: { viewPath: string; slug: string }): Promi
       "utf-8",
     );
 
-    const options: ts.CompilerOptions = {
-      noEmit: true,
-      jsx: ts.JsxEmit.ReactJSX,
-      module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.Bundler,
-      target: ts.ScriptTarget.ES2020,
-      lib: ["lib.es2020.d.ts", "lib.dom.d.ts"],
-      skipLibCheck: true,
-      // Lenient — we want field/assignability errors (which fire regardless),
-      // not implicit-any noise from loosely-typed view code.
-      strict: false,
-      esModuleInterop: true,
-      allowSyntheticDefaultImports: true,
-      types: [],
-    };
-    const program = ts.createProgram([harnessPath], options);
+    const configPath = path.join(tmpDir, "tsconfig.json");
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        compilerOptions: {
+          noEmit: true,
+          jsx: "react-jsx",
+          module: "esnext",
+          moduleResolution: "bundler",
+          target: "es2020",
+          lib: ["es2020", "dom"],
+          skipLibCheck: true,
+          // Lenient — we want field/assignability errors (which fire regardless),
+          // not implicit-any noise from loosely-typed view code.
+          strict: false,
+          types: [],
+          // The harness imports ViewProps from the package, outside tmpDir.
+          rootDir: "/",
+        },
+        files: ["harness.ts"],
+      }),
+      "utf-8",
+    );
     const errors: string[] = [];
-    for (const d of ts.getPreEmitDiagnostics(program)) {
+    for (const d of typecheckProject(configPath)) {
       // Report ONLY the boundary-assertion errors (in harness.ts), not the
       // view body. Box views can't import the real ViewCard (it's not a public
       // export), so a card-shape problem always surfaces at the boundary (the
       // view's local card type vs ViewProps). Checking the whole view body
       // instead would flag unrelated internal type noise — e.g. Float32Array
       // lib-variance — that has nothing to do with the migration.
-      if (path.basename(d.file?.fileName ?? "") !== "harness.ts") continue;
-      errors.push(ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+      // An error with no file is a config or global error: it means the
+      // harness did not check, so it fails the view rather than passing it.
+      if (d.fileName !== undefined && path.basename(d.fileName) !== "harness.ts") continue;
+      errors.push(d.message);
     }
     return errors.length === 0 ? { slug, ok: true } : { slug, ok: false, errors };
   } finally {

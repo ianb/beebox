@@ -302,6 +302,9 @@ importers:
       fraction.js:
         specifier: ^5.3.4
         version: 5.3.4
+      json5:
+        specifier: ^2.2.3
+        version: 2.2.3
       knip:
         specifier: ^5.83.1
         version: 5.88.1(@types/node@24.13.3)(@typescript/typescript6@6.0.2)
