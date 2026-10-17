@@ -262,6 +262,19 @@ export interface ToolCallDetail {
   failed: boolean;
   /** Null when the input has nothing plain to show, the step failed, or an edit has no result yet. */
   excerpt: Excerpt | null;
+  /**
+   * The content file a finished edit changed, for the line to link: its
+   * box-relative path, and the name the sentence calls it. A Codex change
+   * across several files links the first. Null for reads, failures, and
+   * files outside the content folder.
+   */
+  opens: { path: string; name: string } | null;
+}
+
+function openTarget(path: string): { path: string; name: string } | null {
+  const relative = contentRelative(path);
+  const name = thingName(path);
+  return relative && name ? { path: `_content/${relative}`, name } : null;
 }
 
 const EXCERPT_LINES = 3;
@@ -341,5 +354,6 @@ export function describeToolDetail(block: SessionContentBlock): ToolCallDetail {
     place: isFileTool ? placeName(filePath(input)) : null,
     failed,
     excerpt: failed ? null : excerptDescribers.get(name)?.(input, done) ?? null,
+    opens: done && (name === "Edit" || name === "Write") ? openTarget(filePath(input)) : null,
   };
 }

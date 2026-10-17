@@ -219,6 +219,23 @@ anything outside it have no place.
 => ["in recipes", "in Lemon Chicken", null, null, null]
 ```
 
+A finished edit or new file in the content folder names the file the line
+links to, by the name the sentence uses. A read, an edit still running, and a
+file outside the content folder link nothing. A Codex change across several
+files links the first.
+
+```ts
+[
+  detail("Edit", { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card" }).opens,
+  detail("Write", { file_path: "_content/Errands.md" }).opens,
+  detail("Edit", { file_path: "_content/a.md", file_paths: ["_content/a.md", "_content/b.md"] }).opens,
+  detail("Read", { file_path: "_content/Errands.md" }).opens,
+  describeToolDetail(tool("Edit", { file_path: "_content/Errands.md" })).opens,
+  detail("Edit", { file_path: "_config/schemas/loan.ts" }).opens,
+]
+=> [{ path: "_content/recipes/Lemon_Chicken.recipe.card", name: "Lemon Chicken" }, { path: "_content/Errands.md", name: "Errands" }, { path: "_content/a.md", name: "a" }, null, null, null]
+```
+
 An edit shows what it replaced and with what, trimmed. An edit that
 replaces every match says so.
 
@@ -253,7 +270,7 @@ agent asked for, so it has no excerpt:
 
 ```ts
 describeToolDetail(tool("Edit", { old_string: "350°", new_string: "375°" }))
-=> { place: null, failed: false, excerpt: null }
+=> { place: null, failed: false, excerpt: null, opens: null }
 ```
 
 Deleting text leaves an empty after side; an edit with no text on either
@@ -284,7 +301,7 @@ its excerpt is dropped so the asked-for text does not read as done:
 ```ts
 const failed = { ...tool("Edit", { file_path: "_content/recipes/Lemon_Chicken.recipe.card", old_string: "350°", new_string: "375°" }), resultSummary: "<tool_use_error>String to replace not found in file." };
 describeToolDetail(failed)
-=> { place: "in recipes", failed: true, excerpt: null }
+=> { place: "in recipes", failed: true, excerpt: null, opens: null }
 
 describeToolDetail({ ...tool("Edit", { old_string: "350°", new_string: "375°" }), resultSummary: "The file has been updated." }).failed
 => false
