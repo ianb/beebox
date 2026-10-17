@@ -7,11 +7,12 @@ derived from the same key-per-service facts `transcription/index.ts`'s
 the picker and the pass it configures can never disagree.
 
 ```ts setup
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { serviceCapabilities } from "../../src/core/model-capabilities.js";
 import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { secretsLogDir } from "../../src/core/secrets/store.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -100,6 +101,18 @@ await grantSecret({ slug, name: "mistral", access: "server" });
 const caps2 = await serviceCapabilities(box.root);
 caps2.hq.voxtral.usable
 => true
+```
+
+## Asking is not an access
+
+The pickers poll this question, so it reads no key values and writes nothing to
+the secret access log. The two checks in this store asked about granted keys
+(`openrouter`, `mistral`) and ungranted ones (`openai-thinking`, `gemini`), and
+neither wrote a line: no `resolve` and no refusal.
+
+```ts continue
+await readdir(secretsLogDir()).catch(() => [])
+=> []
 ```
 
 ```ts cleanup

@@ -68,7 +68,7 @@ A model the box's engine cannot run is refused at the boundary rather than
 stored and silently ignored later.
 
 ```ts continue
-const foreign = "gpt-6-sol";
+const foreign = "gpt-6.1-sol";
 await caller(server).chat.setDefaultModel({ model: foreign }).catch((e: Error) => e.message === `Model ${foreign} is unavailable for claude chats`)
 => true
 ```

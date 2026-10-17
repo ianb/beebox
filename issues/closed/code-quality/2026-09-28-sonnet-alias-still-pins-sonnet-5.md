@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Claude Code 2.1.284
 labels: [sdk-update]
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** all three aliases moved. `sonnet` → `claude-sonnet-5-5` ("The sonnet alias names Sonnet 5.5"); `haiku` → `claude-haiku-5-5` and `sol` → `gpt-6.1-sol` ("The haiku and sol aliases name Haiku 5.5 and GPT-6.1 Sol"). The retired ids `claude-sonnet-5`, `claude-haiku-4-5-20251001`, and `gpt-6-sol` normalize to the new ones in `beebox/src/shared/model-ids.ts`. `gpt-6.1-sol` is in the pinned Codex binary's catalog and answered a `codex exec` on 2026-10-17; `claude-haiku-5-5` was verified on 2026-10-09 (below). Dev tooling keeps its own Codex default (`bin/cross-model-run.ts`, `gpt-6-sol`), which this issue does not cover.
 
 Claude Code 2.1.284: *"Added Claude Sonnet 5.5 (`claude-sonnet-5-5`), now the
 default Sonnet model on the Anthropic API — 1M context, $2/$10 per Mtok with
@@ -21,7 +24,7 @@ sonnet: "claude-sonnet-5",
 
 so a box agent or chat that asks for `sonnet` keeps running Sonnet 5. This is the
 same case as `opus` a week ago
-([closed](../closed/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md)),
+([closed](2026-09-22-opus-alias-still-pins-opus-5.md)),
 which moved `opus` to `claude-opus-5-5`.
 
 **No pin dependency.** Probed 2026-09-28 on the current pin (`0.3.283`, bundled

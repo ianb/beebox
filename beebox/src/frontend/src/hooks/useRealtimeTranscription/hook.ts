@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useMachine } from "@xstate/react";
 import type { Actor } from "xstate";
-import { transcriptionStateOf } from "../../machines/realtimeTranscriptionMachine";
+import { transcriptionStateOf, type TranscriptionErrorLevel } from "../../machines/realtimeTranscriptionMachine";
 import { liveTranscriptionMachine } from "../../machines/realtime-transcription-live/machine";
 import { segmentCapturing, type FinalWord, type TranscriptionEvent, type TranscriptionState } from "../../machines/transcription-events";
 import type { PendingRecording } from "../../lib/audio/voice-stager";
@@ -70,6 +70,8 @@ export interface UseRealtimeTranscriptionResult {
   /** Live, unconfirmed text. May change as the recognizer revises. */
   interimTranscript: string;
   error: string | null;
+  /** `warning` when recording kept going or kept its text despite `error`. */
+  errorLevel: TranscriptionErrorLevel;
   /**
    * Begin a recording segment. Pass `{ earcon: true }` to play the
    * recording-start cue once capture is truly live (the mic started and
@@ -218,7 +220,7 @@ export function useRealtimeTranscription(
   const prevEarconStateRef = useRef<TranscriptionState>("idle");
 
   const state = transcriptionStateOf(snapshot);
-  const { finalTranscript, finalWords, interimTranscript, error, recording } = snapshot.context;
+  const { finalTranscript, finalWords, interimTranscript, error, errorLevel, recording } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);
 
   const startEvent = useCallback(
@@ -336,6 +338,7 @@ export function useRealtimeTranscription(
     finalWords,
     interimTranscript,
     error,
+    errorLevel,
     start,
     stop,
     submitSegment,
