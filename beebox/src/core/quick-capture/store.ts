@@ -19,6 +19,7 @@ export const captureRecordSchema = z.object({
   error: z.string().optional(), attempts: z.number().int().nonnegative().default(0),
   discardedBeforeAcceptance: z.boolean().optional(),
   nextAttemptAt: z.string().optional(), blockedByGone: z.boolean().optional(),
+  filingRequested: z.literal(true).optional(), filingKicks: z.number().int().nonnegative().optional(), filingKickAt: z.string().optional(),
 }).superRefine((record, ctx) => {
   if (record.state !== "gone" && !quickCaptureDeclarationSchema.safeParse(record.declaration).success) {
     ctx.addIssue({ code: "custom", message: "A live capture needs its complete declaration." });
