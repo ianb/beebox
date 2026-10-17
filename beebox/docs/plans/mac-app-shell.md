@@ -1,6 +1,6 @@
 ---
 title: "Bee Box for Mac as a shell around a box"
-status: draft
+status: active
 workstream: app-shell
 issues:
   - ../../../issues/features/2026-10-07-mac-companion-app.md

@@ -1,6 +1,6 @@
 ---
 title: "Bee Box for Mac as a shell around a box: design"
-status: draft
+status: active
 workstream: app-shell
 issues: []
 ---
