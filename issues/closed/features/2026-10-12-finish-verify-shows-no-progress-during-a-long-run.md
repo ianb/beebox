@@ -6,8 +6,11 @@ labels: [finish, cli, testing]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-test-selection-breadth — measuring broad test:changed runs, 2026-10-12
-design: ../../beebox/docs/plans/change-based-test-selection.md
+design: ../../../beebox/docs/plans/change-based-test-selection.md
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("finish-verify prints each check's log path and streams to it"). Before each check, finish-verify prints `run  <command> → <log path>`, and the check's stdout and stderr are appended to that log as they arrive. Per-file progress inside a test run is whatever the runner itself prints; this does not add a counter. Regression test in `bin/finish-verify.test.ts`.
 
 `bin/finish-verify-process.ts` runs each check with `spawn` and buffers its
 output in memory (`:47`–`:59`). `bin/finish-verify.ts` writes the output file

@@ -926,7 +926,7 @@ not changed: two places to keep in step are enough.
 after the command exits (`bin/finish-verify.ts:141`, `:182`). During a
 12-minute run, it shows nothing. The `finish-tooling` workstream is editing
 that file now, so this revision does not change it. The request is filed as
-`issues/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md`
+`issues/closed/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md`
 with `workstream: finish-tooling`.
 
 ### Could this be simpler?

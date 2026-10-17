@@ -1,5 +1,5 @@
-// Tests for finish-verify's output and verdict logic on synthetic results —
-// no commands are spawned.
+// Tests for finish-verify's output and verdict logic on synthetic results, and
+// one tiny `node -e` child for the streamed log.
 //
 // A `.test.ts` rather than a doctest, for bin/test-select.test.ts's reason: the
 // thing under test runs the suites, so testing it from inside one is circular.
@@ -8,13 +8,15 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { VerificationCommand } from "./finish-preflight-lib.js";
+import { run } from "./finish-verify-process.js";
 import {
   existsRelative,
   formatResult,
+  formatStart,
   parseFailingFiles,
   verdict,
   type CommandResult,
@@ -154,5 +156,38 @@ test("a beebox TAP path resolves against the package, not the command's cwd", ()
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a check's start line names the command and its log", () => {
+  assert.equal(
+    formatStart({ command: "pnpm --dir beebox test:changed", outputPath: "/tmp/0-tests.log" }),
+    "run  pnpm --dir beebox test:changed → /tmp/0-tests.log",
+  );
+});
+
+test("output reaches the log while the check is still running", async () => {
+  // The child prints, then waits until its own line is in the log before it
+  // exits. A log written only after exit never gets there, and the child is
+  // killed by its own timeout.
+  const dir = mkdtempSync(join(tmpdir(), "finish-verify-"));
+  try {
+    const logPath = join(dir, "0-tests.log");
+    const script = [
+      "const { readFileSync } = require('node:fs');",
+      "process.stdout.write('first\\n');",
+      "const deadline = Date.now() + 5000;",
+      "const poll = () => {",
+      "  if (readFileSync(process.argv[1], 'utf-8').includes('first')) { console.error('second'); return; }",
+      "  if (Date.now() > deadline) process.exit(3);",
+      "  setTimeout(poll, 20);",
+      "};",
+      "poll();",
+    ].join("\n");
+    const output = await run({ argv: [process.execPath, "-e", script, logPath], cwd: dir, logPath });
+    assert.equal(output.status, 0);
+    assert.equal(readFileSync(logPath, "utf-8"), "first\nsecond\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
