@@ -35,12 +35,11 @@ a simulator.
 
 ## Design
 
-No design section yet for the whole plan. Tracks A–C change no surface a
-person sees except the iOS pairing error message, which restores
-already-decided behavior (the robustness issue asks for it). Tracks D–G add
-new surfaces (the box menu, the pairing dialog, the uploader settings, the
-Photos permission flow). Before Track D starts, bbx-design writes
-`mac-app-shell.design.md` for those surfaces. The decisions already made by
+Tracks A–C change no surface a person sees except the iOS pairing error
+message, which restores already-decided behavior (the robustness issue asks
+for it). Tracks D–G are designed in [mac-app-shell.design.md](mac-app-shell.design.md):
+a menu-only app (menus, system alerts, the folder picker; no windows), the
+pairing alert, upload folders and their status, and the hosting switch. The decisions already made by
 the boxholder (anchor issue, "Decisions (boxholder, 2026-10-07)", and
 2026-10-17 in this workstream) are the inputs:
 
@@ -361,10 +360,12 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
     encrypted" for http.
   - A paired box whose device token the box refuses (401) shows "Pair again"
     in its menu entry.
-  - The pairing dialog is a small `Window` scene; while it is open the app
-    shows a Dock icon (`NSApp.setActivationPolicy(.regular)`), and `.accessory`
-    again when it closes. Text fields in an `LSUIElement` app need that to take
-    keyboard focus reliably.
+  - The pairing dialog is an `NSAlert` with a text field as its accessory
+    view; the app activates itself first (`NSApp.activate`) so the field takes
+    keyboard focus. No app windows (design doc).
+  - The box's pairing section copy changes from "iOS Companion" to
+    "Companion apps", naming the Mac link path (design doc, "The box's
+    settings page"). Copy only.
 - **Vocabulary lock-ins**: menu titles "Pair with a Box…", "Open <label>".
 - **First implementation chunk**: written after the design doc; it must not
   start with an open question.
