@@ -1,8 +1,8 @@
 ---
 title: "Chemistry progress summary still says the completed fluoride exercise is outstanding"
 workstream: unattached
-area: beebox
-labels: [courseware, progress]
+area: courseware
+labels: [progress]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — D chemistry journey saved-state review
@@ -45,3 +45,12 @@ synchronization requirement explicit when an assessment changes. These are
 locatable guidance surfaces, not proof that their wording caused this failure
 or that one extra instruction will reliably prevent it. This run only files
 the reproduced saved-state contradiction; it does not change the agent contract.
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.
+
+The stale summary is in a `progress` card, a courseware type. The fix is
+in the courseware guidance.

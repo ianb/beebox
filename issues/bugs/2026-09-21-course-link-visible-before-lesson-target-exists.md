@@ -1,7 +1,7 @@
 ---
 title: "A new course exposes a Lesson Plan link before its target exists"
 workstream: unattached
-area: beebox
+area: courseware
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey D authoring timeline
@@ -33,3 +33,14 @@ identify the writes. No product change was made.
 A safer authoring order or a visible in-progress state could address this.
 This evidence does not establish a need for transactional filesystem machinery.
 Related: [no visible in-progress document edit state](2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md).
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.
+
+The write order comes from the course build, which writes the course
+manifest before its parts. The fix is an authoring order in the courseware
+skill. The general need, a visible sign that a card is still being written,
+stays with the related core issue linked above.

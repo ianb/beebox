@@ -3,7 +3,7 @@ title: "Spoken overview of a card or landmark: a cited script read in the box's 
 workstream: unattached
 area: beebox
 needs: [design]
-labels: [voice, competitive-research, courseware]
+labels: [voice, competitive-research]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-notebooklm-research — comparing Gemini Notebook's Audio Overview with the box's TTS

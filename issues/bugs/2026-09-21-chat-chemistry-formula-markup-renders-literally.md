@@ -37,3 +37,9 @@ Unicode formulas (for example `H₂ + Cl₂ → 2 HCl`) in this chat renderer.
 Nothing found in the current courseware instructions requires `\ce{}` notation.
 Adding a formula renderer is a separate product/subsystem decision, not a
 requirement established by this walk.
+
+## 2026-10-17: stays core
+
+The walk that found this used a course, but a course is not the cause. Any
+chat answer about chemistry or mathematics can contain TeX notation, and the
+chat renderer shows it as literal text. This issue keeps `area: beebox`.

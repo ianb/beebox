@@ -1,7 +1,7 @@
 ---
 title: "A course landmark in the attach folder names the folder and lists the course twice"
 workstream: unattached
-area: beebox
+area: courseware
 labels: [low]
 filed-by: agent
 discovered-by: agent
@@ -60,3 +60,16 @@ folder half reads "Here: Intro_Chemistry"; `dirBasename` moved to
 worktree test box with a landmark in an attach folder. Symptom 2 is left: it did
 not reproduce, but `derived-links.ts` still lists a `primary` course card once
 as a card and once as a nested landmark. This issue stays open for it.
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.
+
+Symptom 1 is fixed. Symptom 2 needs a `primary` card and a landmark in
+that card's own attach folder. Only the courseware skill (step 7) puts a
+landmark there, and symptom 2 did not reproduce. The cheaper fix is in the
+skill: give the course no `prominence`, or place its landmark outside the
+attach folder. Change `derived-links.ts` only if a core pattern starts to
+nest a landmark in an attach folder.

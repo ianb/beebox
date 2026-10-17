@@ -1,8 +1,8 @@
 ---
 title: "A course needs a learner-facing study home"
 workstream: unattached
-area: beebox
-labels: [journey-findings, courseware, ui]
+area: courseware
+labels: [journey-findings, ui]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — D chemistry journey, 2026-09-21
@@ -45,3 +45,9 @@ Partly met in the [D-chemistry walk](../../beebox/test/plugins/courseware/journe
 ## Re-encounter 2026-10-09 (journey walks)
 
 Partly met, less than on 2026-10-08, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md). Met: the Chemistry place is a study home with a resume opener, and "Pick up where I left off" answers last and next in chat. Missing: the progress body is one paragraph, not the "Where you left off / Next time" layout seen on 2026-10-08, and the per-idea table is behind Properties (row 32, see the structured-card-front decision); one name per page (row 33: tab title "Intro chemistry progress" against link label "What I understand so far"); second person (row 20: "the learner", required by the build-course skill, `skills-content.ts:33`); and "next" agreeing across cards (row 58: the progress body and session log say balancing comes first, but the lesson plan the landmark links as "The plan" was not edited and still lists balancing seventh). In [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) the doc card did the job in one page with status, evidence and "Next time"; its weakness is that no surface showed it (row 26). The priority may be stale given the repeat.
+
+## 2026-10-17: courseware plugin scope
+
+Courses are the opt-in courseware plugin, not core Bee Box
+(`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
+core and journey work leave it out.
