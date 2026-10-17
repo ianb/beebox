@@ -133,6 +133,7 @@
 		AA5E00012F10000100000001 /* PairingOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5E00022F10000100000001 /* PairingOutcome.swift */; };
 		AA5E00032F10000100000001 /* BeeBoxShared in Frameworks */ = {isa = PBXBuildFile; productRef = AA5E00042F10000100000001 /* BeeBoxShared */; };
 		AA5E00062F10000100000001 /* PairingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5E00072F10000100000001 /* PairingFlowTests.swift */; };
+		AA5E00082F10000100000001 /* BeeBoxShared in Frameworks */ = {isa = PBXBuildFile; productRef = AA5E00092F10000100000001 /* BeeBoxShared */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -313,6 +314,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA5E00082F10000100000001 /* BeeBoxShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -585,6 +587,9 @@
 			dependencies = (
 			);
 			name = BeeBoxShareExtension;
+			packageProductDependencies = (
+				AA5E00092F10000100000001 /* BeeBoxShared */,
+			);
 			productName = BeeBoxShareExtension;
 			productReference = E2A000102D7B000100000001 /* BeeBoxShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -1177,6 +1182,10 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		AA5E00042F10000100000001 /* BeeBoxShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BeeBoxShared;
+		};
+		AA5E00092F10000100000001 /* BeeBoxShared */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BeeBoxShared;
 		};

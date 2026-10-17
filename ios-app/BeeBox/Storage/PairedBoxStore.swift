@@ -13,25 +13,20 @@ final class PairedBoxStore: ObservableObject {
     private let selectedBoxStore: SharedSelectedBoxSnapshotStoreProtocol
     private let redeemer: PairingRedeemer
     private let deviceLabel: @MainActor () -> String
-    /// Pairing tickets being redeemed now, or redeemed by this process. A ticket
-    /// is single-use, so a second delivery of the same link must not POST it
-    /// again: the second POST fails and would report a failure for a pairing
-    /// that worked.
-    private var redeemingTokens: Set<String> = []
-    private var redeemedTokens: Set<String> = []
+    private var tickets = PairingTicketLedger()
 
     convenience init() {
         let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         self.init(
             storageURL: supportDirectory.appendingPathComponent("paired-boxes.json"),
-            credentialStore: PairedBoxCredentialStore(),
+            credentialStore: PairedBoxCredentialStore.ios,
             selectedBoxStore: SharedSelectedBoxStore()
         )
     }
 
     init(
         storageURL: URL,
-        credentialStore: PairedBoxCredentialStoreProtocol = PairedBoxCredentialStore(),
+        credentialStore: PairedBoxCredentialStoreProtocol = PairedBoxCredentialStore.ios,
         selectedBoxStore: SharedSelectedBoxSnapshotStoreProtocol = SharedSelectedBoxStore(),
         redeemer: PairingRedeemer = PairingRedeemer(
             transport: URLSessionTransport(session: .shared),
@@ -138,11 +133,10 @@ final class PairedBoxStore: ObservableObject {
         guard let pairingToken = link.pairingToken else {
             return storeBox(from: link, authToken: link.directAuthToken)
         }
-        guard !redeemedTokens.contains(pairingToken), redeemingTokens.insert(pairingToken).inserted else {
+        guard tickets.begin(pairingToken) else {
             BoxLog.info("pairing redeem skipped reason=duplicate-link", category: .pairing)
             return .duplicate
         }
-        defer { redeemingTokens.remove(pairingToken) }
         do {
             let deviceToken = try await redeemer.redeem(
                 baseURL: link.baseURL,
@@ -150,14 +144,10 @@ final class PairedBoxStore: ObservableObject {
                 deviceLabel: deviceLabel()
             )
             let outcome = storeBox(from: link, authToken: deviceToken)
-            // Only a stored pairing makes a repeat of this link a no-op. After
-            // a failed save the ticket is spent on the box, so a repeat POSTs,
-            // gets the box's 401, and says to make a new link.
-            if outcome == .paired {
-                redeemedTokens.insert(pairingToken)
-            }
+            tickets.finish(pairingToken, stored: outcome == .paired)
             return outcome
         } catch {
+            tickets.finish(pairingToken, stored: false)
             BoxLog.warn("pairing redeem failed error=\(error.logLabel)", category: .pairing)
             return .failed(.redeem(error))
         }

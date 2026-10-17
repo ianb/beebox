@@ -1,3 +1,4 @@
+import BeeBoxShared
 import SwiftUI
 import UniformTypeIdentifiers
 import LocalAuthentication
@@ -76,7 +77,7 @@ final class ShareViewModel: ObservableObject {
             var savedLocally = false
             do {
                 try await unlockIfNeeded(metadata, loadID: nil)
-                guard let token = PairedBoxCredentialStore().readToken(for: metadata.id) else {
+                guard let token = PairedBoxCredentialStore.ios.readToken(for: metadata.id) else {
                     throw ShareLoadError.noCredential(metadata.label)
                 }
                 let box = metadata.pairedBox(withToken: token)
@@ -136,7 +137,7 @@ final class ShareViewModel: ObservableObject {
         Task {
             do {
                 try await unlockIfNeeded(metadata, loadID: loadID)
-                guard let token = PairedBoxCredentialStore().readToken(for: metadata.id) else {
+                guard let token = PairedBoxCredentialStore.ios.readToken(for: metadata.id) else {
                     throw ShareLoadError.noCredential(metadata.label)
                 }
                 let loadedAPI = ShareExtensionAPI(box: metadata.pairedBox(withToken: token))

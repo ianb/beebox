@@ -1,3 +1,4 @@
+import BeeBoxShared
 import XCTest
 @testable import BeeBox
 
