@@ -9,6 +9,12 @@ import { ComposerSpecimen } from "./ComposerStatesHarness";
 import { useDoodlebitMotion } from "../../../components/themes/useDoodlebitMotion";
 
 const ROUTE = "/$boxSlug/dev-harness/dev/theme-studio";
+const LEGACY_STUDY_IDS: Record<string, string> = {
+  "phosphor-study": "phosphor",
+  "overprint-study": "overprint",
+  "posy-study": "posy",
+};
+function canonicalThemeId(name: string): string { return LEGACY_STUDY_IDS[name] ?? name; }
 const SAMPLE = `A small collection of ideas for a neighborhood seed exchange. **Bring something simple**, and leave room for surprises.
 
 ## Before Saturday
@@ -48,10 +54,12 @@ const FIELDS = [
 
 export function ThemeStudioHarness() {
   const search = useSearch({ from: ROUTE });
-  const surface = useDoodlebitMotion(search.system === "doodlebit");
+  const systemName = canonicalThemeId(search.system);
+  const cardName = canonicalThemeId(search.card);
+  const surface = useDoodlebitMotion(systemName === "doodlebit");
   const navigate = useNavigate({ from: "/$boxSlug/dev/theme-studio" });
-  const system = THEME_CATALOG.find((theme) => theme.name === search.system);
-  const card = THEME_CATALOG.find((theme) => theme.name === search.card);
+  const system = THEME_CATALOG.find((theme) => theme.name === systemName);
+  const card = THEME_CATALOG.find((theme) => theme.name === cardName);
   return <div className="bbx-theme-studio min-h-screen">
     <section aria-label="Theme studio controls" className="bg-white text-warm-900 px-3 py-2 border-b border-warm-200">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2">
@@ -81,11 +89,11 @@ export function ThemeStudioHarness() {
       <datalist id="bbx-studio-system-stocks">{(system?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
       <datalist id="bbx-studio-card-stocks">{(card?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
     </section>
-    <div ref={surface} className="bbx-box-presentation min-h-screen" data-chrome-theme={search.system} data-chrome-stock={search.systemStock}>
+    <div ref={surface} className="bbx-box-presentation min-h-screen" data-chrome-theme={systemName} data-chrome-stock={search.systemStock}>
       <NavigationSample />
       <div className="grid lg:grid-cols-2 gap-4 p-3 sm:p-5 items-start">
         <ConversationSample />
-        <CardSample name={search.card} stock={search.cardStock} />
+        <CardSample name={cardName} stock={search.cardStock} />
       </div>
     </div>
   </div>;

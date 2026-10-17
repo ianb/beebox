@@ -253,6 +253,18 @@ pause when the mouse stops; the larger doodles and reading surfaces stay still.
 Touch and reduced-motion users get a static background. Both themes support
 system and individual-card selection and respect explicit nested card themes.
 
+## Phosphor, Overprint, and Posy
+
+Phosphor (`phosphor`, stock `terminal`) is a dark green monochrome terminal
+with ANSI-style text controls and compact fixed-width typography. Overprint
+(`overprint`, stock `plate`) uses richly grained abstract print artwork; its
+reading panels keep that material while shifting toward gray beneath restrained
+color. Posy (`posy`, stock `paisley`) pairs a vivid hand-painted paisley field
+with cream panels, small painted accents, and a quiet line frame.
+
+All three support system and individual-card selection, pair with Paper and
+Sticky note, and preserve explicit card materials.
+
 ## Tempest, Veil, and Gilt
 
 Tempest (`tempest`, stock `water`) combines luminous stormy ocean artwork with
