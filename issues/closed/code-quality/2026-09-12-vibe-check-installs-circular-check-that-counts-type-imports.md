@@ -5,7 +5,10 @@ area: personal-vibe-check
 filed-by: agent
 discovered-in: supplemental-lint schedule run 20260912-152524
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("vibe-init writes a .madgerc that skips type imports"). `vibe-init` now writes `.madgerc` with `skipTypeImports` for ts and tsx when none exists, the same way it writes `knip.json`; `install.md` and `README.md` document it. Checked by running vibe-init in a scratch project: it created `.madgerc`, and madge then reported no cycle for a type-only back-edge it had reported without the file. Not done here: whether `lint:circular` joins the pre-commit gate (a decision for the boxholder), the uninspectable madge warnings, and the preset's own `lint:circular` pointing at a missing `src/` (tracked in the linked issue).
 
 `personal-vibe-check` installs `"lint:circular": "madge --circular --extensions
 ts,tsx src/"` into every project it bootstraps (`install.md`, and its own
@@ -30,7 +33,7 @@ matches the convention it is handed. Worth deciding at the same time whether
 can be enforced, and one that prints 41 lines cannot.
 
 Related: the preset's own `lint:circular` still points at a `src/` it does not
-have ([personal-vibe-check has no working self-lint](2026-07-29-personal-vibe-check-no-self-lint.md)).
+have ([personal-vibe-check has no working self-lint](../../code-quality/2026-07-29-personal-vibe-check-no-self-lint.md)).
 
 Second, smaller thing noticed in the same run: madge prints `Processed 1812
 files (45 warnings)` and offers no way to see the warnings — `--warning` only

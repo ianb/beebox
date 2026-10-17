@@ -7,6 +7,8 @@ discovered-in: worktree-user-stories-refresh — journey B, twelve minutes into 
 priority: normal
 ---
 
+**2026-10-17 status:** part 1 below is fixed by 72226e395 ("Chat: expanded activity lines name the thing and show what changed"). An edit row now names its object ("Updated Errands", "Made a change to Errands", with the folder in muted text), and a finished edit shows a short before/after excerpt. Part 2 remains: the row has no link to the card it changed or to that card's history (`activity-rendering.tsx` renders no link). This issue now tracks that route from chat to the change.
+
 While answering a question, the assistant's activity line reported that it had
 **edited a file**. The person had asked a question, not asked for a change. From
 their notes:

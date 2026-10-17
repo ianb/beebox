@@ -49,6 +49,6 @@ Decision (boxholder, 2026-10-12): no text-only filter. `test:changed`
 prints the file count and an estimated time first, and the guidance says to
 run it in the background when the estimate is 5 minutes or more. Progress
 output from `finish-verify` is filed for the `finish-tooling` workstream:
-[finish-verify shows nothing while a long check runs](../../features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md).
+[finish-verify shows nothing while a long check runs](../features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md).
 The causes underneath (widely imported modules, per-file cost) belong to
 [per-file cost floor](../../code-quality/2026-08-09-test-suite-per-file-cost-floor.md).

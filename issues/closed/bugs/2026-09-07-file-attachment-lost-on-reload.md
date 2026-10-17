@@ -7,7 +7,10 @@ labels: [chat, composer, uploads]
 filed-by: agent
 discovered-by: agent
 discovered-in: add-files-inline workstream — verifying the restored inline-file path in the browser
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed. bc762c042 ("keep an uploaded chat image's original as a file the agent can use") made the upload route return the real `_tmp/...` path, and the files route now accepts `_tmp/chat/...` paths through `resolveBoxNamespacePathOnDisk`, so the restore's HEAD succeeds. Checked in the bug-burndown-2 worktree's test box: attached `reload-probe.txt` to the composer with text, reloaded the page, and the chip and the `[file#1]` token were both still there.
 
 Attach a file to the composer, reload the page, and the attachment is gone: its
 chip disappears and its `[file#N]` token is stripped from the restored text. An

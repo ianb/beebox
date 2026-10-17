@@ -5,7 +5,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { constants } from "node:os";
 import { basename, join } from "node:path";
 import { gitCommonDir } from "./test-git.js";
@@ -21,7 +21,7 @@ export interface RunOutput {
   status: number;
   /** stdout alone, for a child whose stdout is data (preflight's sheet). */
   stdout: string;
-  /** stdout then stderr, for the log. */
+  /** stdout then stderr, for parsing; the streamed log interleaves them as they arrived. */
   text: string;
 }
 
@@ -34,8 +34,11 @@ const running = new Set<ChildProcess>();
  * plain child shares our group only when the signal comes from the terminal;
  * an agent harness that kills our pid alone left tap running and holding a
  * test slot.
+ *
+ * With `logPath`, output is appended to that file as it arrives, so a long
+ * check can be followed while it runs.
  */
-export function run(input: { argv: string[]; cwd: string }): Promise<RunOutput> {
+export function run(input: { argv: string[]; cwd: string; logPath?: string }): Promise<RunOutput> {
   const [command, ...args] = input.argv;
   if (command === undefined) throw new EmptyCommandError();
   const child = spawn(command, args, {
@@ -44,17 +47,31 @@ export function run(input: { argv: string[]; cwd: string }): Promise<RunOutput> 
     stdio: ["ignore", "pipe", "pipe"],
   });
   running.add(child);
+  let log = input.logPath === undefined ? undefined : openSync(input.logPath, "w");
+  // A failed spawn emits both `error` and `close`; the second must not close again.
+  const closeLog = (): void => {
+    if (log !== undefined) closeSync(log);
+    log = undefined;
+  };
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
-  child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
-  child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
+  child.stdout.on("data", (chunk: Buffer) => {
+    stdout.push(chunk);
+    if (log !== undefined) writeSync(log, chunk);
+  });
+  child.stderr.on("data", (chunk: Buffer) => {
+    stderr.push(chunk);
+    if (log !== undefined) writeSync(log, chunk);
+  });
   return new Promise((resolve, reject) => {
     child.on("error", (error) => {
       running.delete(child);
+      closeLog();
       reject(error);
     });
     child.on("close", (status) => {
       running.delete(child);
+      closeLog();
       const out = Buffer.concat(stdout).toString();
       resolve({ status: status ?? 1, stdout: out, text: `${out}${Buffer.concat(stderr).toString()}` });
     });

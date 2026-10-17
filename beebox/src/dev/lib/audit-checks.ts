@@ -3,6 +3,32 @@
 import type { AgentBehavior, AutomatedChecks, AuditTest } from "./test-runner/runner/run-test.js";
 import type { SearchWhere } from "./test-suite-schema.js";
 
+const ASSIGNMENT = /(?:^|[;&|]\s*)(?:export\s+)?([A-Za-z_]\w*)=("[^"]*"|'[^']*'|[^\s;&|]+)/gu;
+const LEADING_CD = /^\s*cd\s+("[^"]*"|'[^']*'|[^\s;&|]+)\s*(?:&&|;)(.*)$/su;
+
+function unquote(value: string): string {
+  return /^(["']).*\1$/su.test(value) ? value.slice(1, -1) : value;
+}
+
+/**
+ * Whether a recorded read names `file`, after resolving the two shell forms
+ * agents use to reach it: `NAME=dir; cat $NAME/file` and a leading
+ * `cd dir && cat file` (or `;`). Each word after the `cd` is also tried
+ * joined to its directory. Anything more is left unresolved.
+ */
+export function readMentionsFile(read: string, file: string): boolean {
+  const vars = new Map<string, string>();
+  for (const [, name, value] of read.matchAll(ASSIGNMENT)) {
+    if (name !== undefined && value !== undefined) vars.set(name, unquote(value));
+  }
+  const expanded = read.replaceAll(/\$\{?([A-Za-z_]\w*)\}?/gu, (whole, name: string) => vars.get(name) ?? whole);
+  if (expanded.includes(file)) return true;
+  const cd = LEADING_CD.exec(expanded);
+  if (cd?.[1] === undefined || cd[2] === undefined) return false;
+  const dir = unquote(cd[1]).replace(/\/+$/u, "");
+  return cd[2].split(/[\s;&|]+/u).some((word) => word !== "" && `${dir}/${unquote(word)}`.includes(file));
+}
+
 interface RunChecksContext {
   behavior: AgentBehavior;
   newOrModifiedCards: Map<string, string>;
@@ -52,16 +78,16 @@ export function runChecks(
   });
   const shouldReadChecks = (test.should_read ?? []).map((file) => ({
     file,
-    wasRead: behavior.filesRead.some((read) => read.includes(file)),
+    wasRead: behavior.filesRead.some((read) => readMentionsFile(read, file)),
   }));
   let shouldReadAnyCheck: AutomatedChecks["shouldReadAnyCheck"];
   if (test.should_read_any !== undefined) {
-    const matched = test.should_read_any.find((file) => behavior.filesRead.some((read) => read.includes(file)));
+    const matched = test.should_read_any.find((file) => behavior.filesRead.some((read) => readMentionsFile(read, file)));
     shouldReadAnyCheck = { files: test.should_read_any, wasRead: matched !== undefined, matched };
   }
   const shouldNotReadChecks = (test.should_not_read ?? []).map((file) => ({
     file,
-    wasRead: behavior.filesRead.some((read) => read.includes(file)),
+    wasRead: behavior.filesRead.some((read) => readMentionsFile(read, file)),
   }));
   const bashContainsChecks = (test.bash_contains ?? []).map((expected) => {
     const matched = behavior.bashRawCommands.find((command) =>
