@@ -39,3 +39,16 @@ Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-
 ## Re-encounter 2026-10-09 (journey walks)
 
 Re-checked in [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 47; reproduced in `aa-d4`). Symptom 1 is still present: the place pill reads "Here: Intro_Chemistry.attach" (`PlacePill.tsx` shows the landmark directory's basename; the landmark is in the attach folder, `skills-content.ts:97`). Symptom 2 did not reproduce: "Places inside" lists Chemistry once and the place menu shows "Chemistry" and the box only, because the agent gave the course no `prominence`. The mechanism (`derived-links.ts`) is unchanged, so a `primary` course would still list twice.
+
+## 2026-10-17 bug burn-down: skipped, needs a decision
+
+Symptom 1 is not the one-line fix it looks like. The pill has two halves: the
+left half ("Where you are") already shows `landmark.label`; the right half
+("Here", `PlacePill.tsx:229-233`) is the current folder by design (the file's
+header comment: "folder icon + the dir's basename"; its title is the full
+directory path). Showing `landmark.label` there would print the same name in
+both halves for every landmark, for example "Chemistry | Chemistry". Choices:
+keep the folder but drop a `.attach` suffix ("Intro_Chemistry"), show the
+label only when the folder is an `.attach` folder, or move course landmarks
+out of the attach folder in the build-course skill. Symptom 2 still did not
+reproduce.

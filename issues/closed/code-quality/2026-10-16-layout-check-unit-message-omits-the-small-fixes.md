@@ -6,7 +6,10 @@ labels: [lint]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261016-225122
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown branch ("Layout check's unit message names the smaller fixes and its rule"). The unit-directory finding now also says to rename the mirrored tests, that importing through the entry may be the smaller fix when a new import made the unit, and cites `beebox/docs/implemented-plans/file-layout.md`, rule 5. It names neither the specific importer nor the test files: that needs data the rule does not carry, and the issue scoped the change to the message. Test: `beebox/test/dev/layout/check/rules/units.doctest.md`.
 
 `beebox/src/dev/layout/check/rules/units.ts:135` tells the author to make a
 unit directory and move the entry and its helpers in. Three sessions found

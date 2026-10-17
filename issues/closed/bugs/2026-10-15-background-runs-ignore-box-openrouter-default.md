@@ -66,5 +66,5 @@ have background work fail silently.
 
 - [Provider-endpoint config](../../features/2026-07-18-provider-endpoint-config.md).
 - [Explicit API key config](../../features/2026-07-20-explicit-api-key-config.md).
-- [Thread runs skip the live provider check](../../bugs/2026-10-06-thread-runs-skip-live-provider-check.md).
+- [Thread runs skip the live provider check](2026-10-06-thread-runs-skip-live-provider-check.md).
 - [OpenRouter chat models in admin (closed)](../features/2026-09-19-openrouter-chat-models-added-in-admin.md).

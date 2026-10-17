@@ -6,7 +6,10 @@ labels: [views, process-hygiene]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — the developer's machine was slow, 2026-10-16
+resolution: implemented
 ---
+
+**Closed 2026-10-17:** fixed on the bug-burndown branch ("View metadata runner kills itself at a deadline"). The runner in `beebox/src/webapp/views/compiler/meta-import.ts` starts an unref'd worker thread that SIGKILLs the runner's own process 6 s after start (twice the parent's 3 s timeout). The worker has its own event loop, so it fires while the import spins. The CPU-time limit this issue leaned toward failed in testing: under tap the runner inherits a `SIGXCPU` handler that never runs while the main thread spins, and macOS sends no SIGKILL at the hard limit. Test: `beebox/test/webapp/views/compiler.v2.doctest.md` starts a lister on a `while (true) {}` view, SIGKILLs the lister, and waits for the orphaned runner to exit. It fails without the fix.
 
 On 2026-10-16 one `extract-meta-runner.mjs` process from a `bbx-view-*` temp
 directory had run at 100% CPU for 16 days and 18 hours (327 CPU hours). Its

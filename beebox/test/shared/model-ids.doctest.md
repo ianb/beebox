@@ -29,6 +29,16 @@ normalizeModelId("claude-fable-5[1m]")
 => claude-fable-5-1
 ```
 
+Sonnet 5 folds into Sonnet 5.5, the model the `sonnet` alias now names.
+
+```ts
+normalizeModelId("claude-sonnet-5")
+=> claude-sonnet-5-5
+
+MODEL_ID.sonnet
+=> claude-sonnet-5-5
+```
+
 Fable 5 itself is retired the same way: a chat or procedure card that pinned
 it keeps working on Fable 5.1.
 

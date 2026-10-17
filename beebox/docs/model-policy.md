@@ -17,7 +17,7 @@ effect.
 ## Two levels
 
 **The box default** is `agentModel` in `_config/box.json`, beside `agentEngine`.
-It holds a concrete model id (`claude-sonnet-5`, `gpt-5.6-terra`, …). Missing
+It holds a concrete model id (`claude-sonnet-5-5`, `gpt-5.6-terra`, …). Missing
 means the **`strong` tier for the box's engine** — Opus on Claude, Sol on Codex
 — not "whatever the harness picks". A box always has a default it can name, so
 the chat UI can say what a follower will run and the model dial has something to
