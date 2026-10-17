@@ -2,8 +2,9 @@ import AppKit
 import BeeBoxMacCore
 import SwiftUI
 
-/// Preferences → Uploads: the watched folders and Photos albums, where each
-/// sends its files, what happens to a file after upload, and its status.
+/// Preferences → Watched Folders: the folders and Photos albums Bee Box
+/// watches, where each sends its new files, what happens to a file after it
+/// is sent, and its status.
 struct UploadsTab: View {
     @ObservedObject var folders: UploadFolderStore
     @ObservedObject var coordinator: UploadCoordinator
@@ -14,14 +15,17 @@ struct UploadsTab: View {
     @State private var message: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        TabPage(explanation: """
+            Bee Box watches these folders and sends each new file to a box, where it is filed like a scan. \
+            Add the folder your scanner saves to, or a Photos album: new photos in the album are copied to a folder \
+            in ~/Pictures/Bee Box and sent from there. Each file is sent once, and stays in the folder unless you choose \
+            otherwise. Bee Box must be running to watch (see General → Open at Login).
+            """) {
             if let failure = folders.loadFailure {
-                Text("Upload settings could not be read, so nothing will be saved: \(failure)").foregroundStyle(.red)
+                Text("Watched folder settings could not be read, so nothing will be saved: \(failure)").foregroundStyle(.red)
             }
             if folders.folders.isEmpty {
-                Text("No upload folders. Add the folder your scanner saves to, or a Photos album, and new files go to a box.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyListNote(text: "No watched folders yet.")
             } else {
                 List(folders.folders, selection: $selection) { folder in
                     UploadRow(folder: folder, status: coordinator.statuses[folder.id], box: box(for: folder), folders: folders, locked: coordinator.isSweeping) { box in
@@ -36,7 +40,7 @@ struct UploadsTab: View {
                 Button("Add Folder…") { addFolder() }
                 Button("Add Photos Album…") { Task { await addAlbum() } }
                 Spacer()
-                Button("Send Now") { Task { await coordinator.sweepAll() } }
+                Button("Send New Files Now") { Task { await coordinator.sweepAll() } }
                     .disabled(folders.folders.isEmpty)
                 Button("Remove…") { Task { await remove(force: false) } }
                     .disabled(selection == nil)
@@ -142,11 +146,11 @@ private struct UploadRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: folder.photosAlbum == nil ? "folder" : "photo.on.rectangle")
-                Text(folder.photosAlbum.map { "Photos “\($0.title)”" } ?? folder.folder.lastPathComponent)
+                Text(WatchedFolderText.name(folder))
                 Text("→ \(box?.label ?? "missing box")").foregroundStyle(.secondary)
                 Spacer()
                 if folder.photosAlbum == nil {
-                    Picker("After upload", selection: Binding(
+                    Picker("After sending", selection: Binding(
                         get: { folder.disposition },
                         set: { value in
                             var changed = folder
@@ -174,7 +178,14 @@ private struct UploadRow: View {
     }
 }
 
-/// The one-line status the Uploads row and the menu share.
+/// How a watched folder is named in the window and the menu.
+enum WatchedFolderText {
+    static func name(_ folder: UploadFolder) -> String {
+        folder.photosAlbum.map { "Photos “\($0.title)”" } ?? folder.folder.lastPathComponent
+    }
+}
+
+/// The one-line status the Watched Folders row and the menu share.
 enum UploadStatusText {
     static func line(for status: FolderStatus?) -> String {
         guard let status else { return "Waiting for the first sweep" }
@@ -227,7 +238,7 @@ private struct AddUploadSheet: View {
             case .folder(let url):
                 Text("Send new files in “\(url.lastPathComponent)”").font(.headline)
                 Text(url.path).font(.caption).foregroundStyle(.secondary)
-                Picker("After upload", selection: $model.disposition) {
+                Picker("After sending", selection: $model.disposition) {
                     Text("Keep the file").tag(UploadDisposition.keep)
                     Text("Move it into “imported”").tag(UploadDisposition.archive)
                     Text("Move it to the Trash").tag(UploadDisposition.trash)
@@ -250,7 +261,7 @@ private struct AddUploadSheet: View {
                 Picker("Send to", selection: $model.boxID) {
                     ForEach(boxes) { Text($0.label).tag(Optional($0.id)) }
                 }
-                Text("The first folder for a box creates a scanner credential for this Mac on that box. It is listed under the box's Settings → Scan uploaders.")
+                Text("The first watched folder for a box creates a scanner credential for this Mac on that box. It is listed under the box's Settings → Scan uploaders, and removing the last folder revokes it.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if let failure = model.failure {
@@ -259,7 +270,7 @@ private struct AddUploadSheet: View {
             HStack {
                 Spacer()
                 Button("Cancel", action: close).keyboardShortcut(.cancelAction)
-                Button("Start Uploading") {
+                Button("Start Watching") {
                     guard let box = boxes.first(where: { $0.id == model.boxID }) else { return }
                     model.working = true
                     Task {

@@ -4,12 +4,15 @@ import SwiftUI
 
 /// The app's one window. A menu-bar app (`LSUIElement`) has no SwiftUI scene
 /// that can be raised from an open-URL callback, so the window is AppKit-owned
-/// and anything can call `show`.
+/// and anything can call `show`. While it is open the app is a regular app
+/// (Dock icon, Cmd-Tab, menu bar), so switching away and back finds it again;
+/// closing it returns the app to the menu bar only.
 @MainActor
-final class PreferencesWindowController {
+final class PreferencesWindowController: NSObject, NSWindowDelegate {
     enum Tab: Hashable {
         case boxes
-        case uploads
+        case watched
+        case localBox
         case general
     }
 
@@ -22,15 +25,29 @@ final class PreferencesWindowController {
     let navigation = Navigation()
     private let boxStore: BoxStore
     private let hosting: HostingController
+    private let runtime: BoxRuntime
+    private let updates: Updates
     private let uploadFolders: UploadFolderStore
     private let uploads: UploadCoordinator
+    private let uninstall: () -> Void
     private var window: NSWindow?
 
-    init(boxStore: BoxStore, hosting: HostingController, uploadFolders: UploadFolderStore, uploads: UploadCoordinator) {
+    init(
+        boxStore: BoxStore,
+        hosting: HostingController,
+        runtime: BoxRuntime,
+        updates: Updates,
+        uploadFolders: UploadFolderStore,
+        uploads: UploadCoordinator,
+        uninstall: @escaping () -> Void
+    ) {
         self.boxStore = boxStore
         self.hosting = hosting
+        self.runtime = runtime
+        self.updates = updates
         self.uploadFolders = uploadFolders
         self.uploads = uploads
+        self.uninstall = uninstall
     }
 
     func show(_ tab: Tab) {
@@ -55,8 +72,13 @@ final class PreferencesWindowController {
     private func present() {
         let window = window ?? makeWindow()
         self.window = window
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
     }
 
     private func makeWindow() -> NSWindow {
@@ -64,17 +86,22 @@ final class PreferencesWindowController {
             navigation: navigation,
             boxStore: boxStore,
             hosting: hosting,
+            runtime: runtime,
+            updates: updates,
             uploadFolders: uploadFolders,
-            uploads: uploads
+            uploads: uploads,
+            uninstall: uninstall
         ) { [weak self] in
             self?.startPairing()
         }
         let window = NSWindow(contentViewController: NSHostingController(rootView: root))
-        window.title = "Bee Box Preferences"
-        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.title = "Bee Box"
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.isReleasedWhenClosed = false
-        window.setContentSize(NSSize(width: 560, height: 380))
+        window.delegate = self
+        window.setContentSize(NSSize(width: 640, height: 480))
         window.center()
+        window.setFrameAutosaveName("BeeBoxPreferences")
         return window
     }
 }
@@ -83,8 +110,11 @@ struct PreferencesView: View {
     @ObservedObject var navigation: PreferencesWindowController.Navigation
     @ObservedObject var boxStore: BoxStore
     @ObservedObject var hosting: HostingController
+    let runtime: BoxRuntime
+    let updates: Updates
     let uploadFolders: UploadFolderStore
     let uploads: UploadCoordinator
+    let uninstall: () -> Void
     let startPairing: () -> Void
 
     var body: some View {
@@ -93,17 +123,51 @@ struct PreferencesView: View {
                 .tabItem { Label("Boxes", systemImage: "shippingbox") }
                 .tag(PreferencesWindowController.Tab.boxes)
             UploadsTab(folders: uploadFolders, coordinator: uploads, boxStore: boxStore)
-                .tabItem { Label("Uploads", systemImage: "tray.and.arrow.up") }
-                .tag(PreferencesWindowController.Tab.uploads)
-            GeneralTab(hosting: hosting)
+                .tabItem { Label("Watched Folders", systemImage: "folder.badge.gearshape") }
+                .tag(PreferencesWindowController.Tab.watched)
+            LocalBoxTab(hosting: hosting, runtime: runtime)
+                .tabItem { Label("Box on this Mac", systemImage: "desktopcomputer") }
+                .tag(PreferencesWindowController.Tab.localBox)
+            GeneralTab(hosting: hosting, updates: updates, uninstall: uninstall)
                 .tabItem { Label("General", systemImage: "gearshape") }
                 .tag(PreferencesWindowController.Tab.general)
         }
-        .padding(20)
-        .frame(minWidth: 520, minHeight: 340)
+        .frame(minWidth: 600, minHeight: 440)
         .sheet(item: $navigation.pairing) { model in
             PairingSheet(model: model) { navigation.pairing = nil }
         }
+    }
+}
+
+/// One tab's page: what it is for, then its content, with the window's margins.
+struct TabPage<Content: View>: View {
+    let explanation: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(explanation)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            content()
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// The empty state of a list, framed so it does not touch the edges.
+struct EmptyListNote: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.5)))
     }
 }
 
@@ -121,15 +185,17 @@ struct BoxesTab: View {
     @State private var forceRemoval: PairedBox?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        TabPage(explanation: """
+            A paired box opens from the Bee Box menu and can receive files from watched folders. \
+            To pair, open the box in a browser, go to Settings → Companion Apps, choose Create QR, then Copy Link, \
+            and paste the link here. Each box lists this Mac under its paired devices, where you can remove it.
+            """) {
             if let failure = boxStore.loadFailure {
                 Text("Your paired boxes could not be read, so nothing will be saved: \(failure)")
                     .foregroundStyle(.red)
             }
             if boxStore.boxes.isEmpty {
-                Text("No boxes yet. Pair this Mac with a box to open it from the menu and send it scans.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyListNote(text: "No boxes yet.")
             } else {
                 List(boxStore.boxes, selection: $selection) { box in
                     HStack {
@@ -287,25 +353,101 @@ private struct PreviewLine: View {
     }
 }
 
-struct GeneralTab: View {
+struct LocalBoxTab: View {
     @ObservedObject var hosting: HostingController
+    @ObservedObject var runtime: BoxRuntime
 
     var body: some View {
-        Form {
-            Section {
-                Toggle("Run a box on this Mac", isOn: Binding(get: { hosting.enabled }, set: { hosting.setEnabled($0) }))
-                Text("Runs a box in a virtual machine. The first start downloads about 1 GB and unpacks it to a few GB. While this is off, the app downloads nothing.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Button("Remove Downloaded Box Image…") { hosting.confirmRemoveRuntime() }
-                    .disabled(hosting.enabled || !hosting.runtimeExists)
-            }
-            Section {
-                Toggle("Open at Login", isOn: Binding(get: { hosting.opensAtLogin }, set: { hosting.setOpensAtLogin($0) }))
-                if let error = hosting.loginItemError {
-                    Text(error).font(.caption).foregroundStyle(.red)
+        TabPage(explanation: """
+            Bee Box can run a box on this Mac, in a small virtual machine, instead of (or as well as) \
+            pairing with a box that runs somewhere else. Its files are in \(Paths.box.path.replacingOccurrences(of: Paths.home.path, with: "~")), \
+            and it opens in your browser at a localhost address that only this Mac can reach. \
+            It needs the Mac to be awake; for a box your phone can reach all day, run it on a server instead.
+            """) {
+            Form {
+                Section {
+                    Toggle("Run a box on this Mac", isOn: Binding(get: { hosting.enabled }, set: { hosting.setEnabled($0) }))
+                    Text("The first start downloads about 1 GB and unpacks it to a few GB. While this is off, Bee Box downloads nothing and runs no virtual machine.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if hosting.enabled {
+                    Section("Status") {
+                        Text(runtime.statusText)
+                        ForEach(runtime.timingLines, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
+                        if !runtime.memorySummary.isEmpty {
+                            Text(runtime.memorySummary).font(.caption).foregroundStyle(.secondary)
+                        }
+                        HStack {
+                            if case .running(let url) = runtime.phase {
+                                Button("Open in Browser") { NSWorkspace.shared.open(url) }
+                                if let setup = runtime.firstRunSetupURL {
+                                    Button("Open First-Run Setup") { NSWorkspace.shared.open(setup) }
+                                }
+                                Button("Stop") { Task { await runtime.stop() } }
+                            } else if runtime.phase == .stopped || runtime.isFailedPhase {
+                                Button("Start") { runtime.start() }
+                            }
+                            Spacer()
+                            Button("Show Box Files") { NSWorkspace.shared.open(Paths.box) }
+                        }
+                    }
+                    Section {
+                        Text("To send this box files from a watched folder, pair with it like any other box: open it in the browser, then Settings → Companion Apps → Copy Link.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                } else {
+                    Section {
+                        Button("Remove Downloaded Box Image…") { hosting.confirmRemoveRuntime() }
+                            .disabled(!hosting.runtimeExists)
+                        Text("Frees the disk space the virtual machine used. Your box files are kept.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
         }
-        .formStyle(.grouped)
+    }
+}
+
+struct GeneralTab: View {
+    @ObservedObject var hosting: HostingController
+    @ObservedObject var updates: Updates
+    let uninstall: () -> Void
+
+    var body: some View {
+        TabPage(explanation: "Bee Box lives in the menu bar. It needs to be running to watch folders and to run a box on this Mac.") {
+            Form {
+                Section {
+                    Toggle("Open at Login", isOn: Binding(get: { hosting.opensAtLogin }, set: { hosting.setOpensAtLogin($0) }))
+                    Text("Starts Bee Box when you log in, so watched folders keep sending after a restart.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if let error = hosting.loginItemError {
+                        Text(error).font(.caption).foregroundStyle(.red)
+                    }
+                }
+                Section("Updates") {
+                    HStack {
+                        Text("Bee Box \(BundleConfig.version)")
+                        Spacer()
+                        Button("Check for Updates…") { updates.checkForUpdates() }
+                            .disabled(!updates.enabled)
+                    }
+                    if !updates.enabled {
+                        Text("This build does not update itself.").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Section {
+                    HStack {
+                        Text("Removes Bee Box, its downloaded image, and its settings. You choose whether your box files go too.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Uninstall Bee Box…", action: uninstall)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+        }
     }
 }
