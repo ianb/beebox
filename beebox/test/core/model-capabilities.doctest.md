@@ -106,7 +106,9 @@ caps2.hq.voxtral.usable
 ## Asking is not an access
 
 The pickers poll this question, so it reads no key values and writes nothing to
-the secret access log. Every check above left the log empty.
+the secret access log. The two checks in this store asked about granted keys
+(`openrouter`, `mistral`) and ungranted ones (`openai-thinking`, `gemini`), and
+neither wrote a line: no `resolve` and no refusal.
 
 ```ts continue
 await readdir(secretsLogDir()).catch(() => [])
