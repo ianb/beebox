@@ -160,3 +160,37 @@ final class LocalBoxPairingTests: XCTestCase {
         XCTAssertEqual(credentials.tokens[box.id], "local-token")
     }
 }
+
+final class CachedCredentialStoreTests: XCTestCase {
+    final class CountingStore: PairedBoxCredentialStoreProtocol, @unchecked Sendable {
+        var tokens: [UUID: String] = [:]
+        var reads = 0
+        func readToken(for boxID: UUID) -> String? { reads += 1; return tokens[boxID] }
+        func writeToken(_ token: String, for boxID: UUID) throws { tokens[boxID] = token }
+        func deleteToken(for boxID: UUID) throws { tokens[boxID] = nil }
+        func purgeOrphanTokens(knownBoxIDs: Set<UUID>) -> Int { 0 }
+    }
+
+    func testEachItemIsReadOnceIncludingAMiss() {
+        let backing = CountingStore()
+        let id = UUID()
+        backing.tokens[id] = "t"
+        let cached = CachedCredentialStore(backing)
+        for _ in 0..<5 {
+            XCTAssertEqual(cached.readToken(for: id), "t")
+            XCTAssertNil(cached.readToken(for: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!))
+        }
+        XCTAssertEqual(backing.reads, 2)
+    }
+
+    func testWritesAndDeletesUpdateTheCache() throws {
+        let backing = CountingStore()
+        let cached = CachedCredentialStore(backing)
+        let id = UUID()
+        try cached.writeToken("new", for: id)
+        XCTAssertEqual(cached.readToken(for: id), "new")
+        try cached.deleteToken(for: id)
+        XCTAssertNil(cached.readToken(for: id))
+        XCTAssertEqual(backing.reads, 1, "only the write's own read-back reaches the Keychain")
+    }
+}

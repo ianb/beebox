@@ -1,11 +1,17 @@
+import BeeBoxMacCore
 import BeeBoxShared
 
 /// The Mac app's Keychain items, one service per kind of secret, in the app's
-/// default access group (it has no extensions to share with).
+/// default access group (it has no extensions to share with). The app reads
+/// them through a cache, so each item is read at most once per launch.
 enum MacKeychain {
-    static let deviceTokens = PairedBoxCredentialStore(service: "run.beebox.mac.device-token", accessGroup: nil)
+    private static let deviceTokenItems = PairedBoxCredentialStore(service: "run.beebox.mac.device-token", accessGroup: nil)
     /// This Mac's scan token per box, keyed by the box's id.
-    static let scanTokens = PairedBoxCredentialStore(service: "run.beebox.mac.scan-token", accessGroup: nil)
+    private static let scanTokenItems = PairedBoxCredentialStore(service: "run.beebox.mac.scan-token", accessGroup: nil)
 
-    static let all = [deviceTokens, scanTokens]
+    static let deviceTokens = CachedCredentialStore(deviceTokenItems)
+    static let scanTokens = CachedCredentialStore(scanTokenItems)
+
+    /// The raw stores, for uninstall to purge.
+    static let all = [deviceTokenItems, scanTokenItems]
 }

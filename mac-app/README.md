@@ -73,7 +73,10 @@ preferences or the paired-box list with an installed Bee Box:
 `BUNDLE_ID=run.beebox.mac.dev scripts/build-app.sh`, then launch with
 `BEEBOX_STATE_DIR` and `BEEBOX_BOXES_DIR` pointing into the worktree's
 `scratch/`. Keychain items use the services `run.beebox.mac.device-token` and
-`run.beebox.mac.scan-token` whatever the bundle id.
+`run.beebox.mac.scan-token` whatever the bundle id. An ad hoc build has a new
+code signature each time, so macOS asks again for each item the previous build
+made; the app reads each item once per launch. Signing development builds
+with a stable identity (`SIGN_IDENTITY`) avoids the repeat prompts.
 
 ```sh
 open -n build/BeeBox.app \
