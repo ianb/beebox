@@ -228,6 +228,22 @@ final class UploadReviewFixTests: XCTestCase {
         XCTAssertNil(folders.scanTokenNames[box.id])
     }
 
+    /// A name recorded with no token behind it (an attempt that stopped after
+    /// recording) is revoked before a new mint replaces it.
+    func testALeftoverNameIsRevokedBeforeANewMint() async throws {
+        let tokens = ScriptedTransport()
+        tokens.queue(404, #"{"error":{"message":"No active scan token with that name"}}"#)
+        tokens.queue(200, #"{"result":{"data":{"name":"n","token":"scan","createdAt":"x"}}}"#)
+        let (coordinator, folders, box) = try await pairedRig(sweeper: FakeSweeper(), tokens: tokens, clock: MutableClock())
+        folders.setScanTokenName("mac-left-over", forBox: box.id)
+
+        let problem = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
+
+        XCTAssertNil(problem)
+        XCTAssertEqual(tokens.requests.compactMap(\.url?.lastPathComponent), ["scanTokens.revoke", "scanTokens.create"])
+        XCTAssertNotEqual(folders.scanTokenNames[box.id], "mac-left-over")
+    }
+
     func testRetryAfterHoldsEveryTriggerForThatBox() async throws {
         let tokens = ScriptedTransport()
         tokens.queue(200, #"{"result":{"data":{"name":"n","token":"scan","createdAt":"x"}}}"#)

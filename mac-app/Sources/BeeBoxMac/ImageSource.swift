@@ -20,6 +20,9 @@ struct ImageSource {
         if let image = try? await store.get(reference: reference) {
             return (image, false)
         }
+        // A start abandoned while the image lookup ran (hosting turned off)
+        // must not begin the download.
+        try Task.checkCancellation()
         await report("Downloading Bee Box…")
         let counter = DownloadCounter()
         let report = self.report

@@ -50,11 +50,12 @@ enum Uninstaller {
         let trashBoxes = deleteBoxes.state == .on
         Task { @MainActor in
             appLog("uninstalling\(trashBoxes ? " (boxes to the Trash)" : "")")
+            // Revoke before the Keychain is cleared (after that this Mac can no
+            // longer reach its boxes as itself) and before the local box stops
+            // (it cannot answer once stopped).
+            let unrevoked = await revokeScanTokens()
             await stopBox()
             var failures: [String] = []
-            // Revoke before the Keychain is cleared: after that this Mac can no
-            // longer reach its boxes as itself.
-            let unrevoked = await revokeScanTokens()
             for line in unrevoked {
                 appLog("scan token not revoked: \(line)")
             }

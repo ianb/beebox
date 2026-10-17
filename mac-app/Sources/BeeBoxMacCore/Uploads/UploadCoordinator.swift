@@ -176,10 +176,12 @@ public final class UploadCoordinator: ObservableObject {
         if last, !force, let failure = await revokeScanToken(forBox: folder.boxID) {
             return .revokeFailed(failure)
         }
+        guard folders.remove(folder) else {
+            return .revokeFailed("The upload settings could not be saved, so the folder is still watched.")
+        }
         if last {
             forgetScanToken(forBox: folder.boxID)
         }
-        folders.remove(folder)
         statuses[folder.id] = nil
         return .removed
     }
@@ -269,9 +271,15 @@ public final class UploadCoordinator: ObservableObject {
     private func ensureScanToken(for box: PairedBox) async -> Result<Void, FolderProblem> {
         if scanTokens.readToken(for: box.id) != nil { return .success(()) }
         guard let deviceToken = boxes.token(for: box) else { return .failure(.boxNotPaired) }
+        // A name recorded with no token in the Keychain is left from an attempt
+        // that stopped after recording it (a crash, or a revoke that failed).
+        // Revoke it before replacing it; a name that was never minted is a
+        // no-op (404).
+        if let failure = await revokeScanToken(forBox: box.id) {
+            return .failure(.scanTokenUnavailable(failure))
+        }
         // The name is recorded before the mint, so a crash after the mint still
-        // leaves this Mac able to revoke it. Revoking a name that was never
-        // minted is a no-op (404).
+        // leaves this Mac able to revoke it.
         let name = ScanTokenClient.newTokenName(host: hostName, now: now(), random: UUID().uuidString.lowercased())
         guard folders.setScanTokenName(name, forBox: box.id) else { return .failure(.credentialNotSaved) }
         let token: String

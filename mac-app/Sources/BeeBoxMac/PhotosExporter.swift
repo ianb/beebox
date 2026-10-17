@@ -52,8 +52,11 @@ struct PhotosExporter: PhotosExporting {
         let deadline = ContinuousClock.now + timeLimit
         var written = 0
         var skipped = 0
-        for asset in pending {
-            guard ContinuousClock.now < deadline else { break }
+        for (index, asset) in pending.enumerated() {
+            guard ContinuousClock.now < deadline else {
+                skipped += pending.count - index
+                break
+            }
             switch await Self.jpegData(for: asset) {
             case .success(let jpeg):
                 let name = PhotosExportLedger.fileName(assetIdentifier: asset.localIdentifier, created: asset.creationDate)
