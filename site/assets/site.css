@@ -10,6 +10,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .bbx-app-nav { color: #fff8ec; }
 .by { margin-left: auto; font-size: 12px; }
 .by a { color: inherit; }
+.theme-toggle { display: none; place-items: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
+.theme-toggle:hover { background: #ffffff26; }
+.theme-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+[data-site-appearance] .theme-toggle { display: grid; }
+[data-site-appearance="light"] .theme-sun, [data-site-appearance="dark"] .theme-moon { display: none; }
 .bbx-place-pill { padding: 8px 14px; border: 1px solid; border-radius: 999px; cursor: pointer; list-style: none; }
 .bbx-place-pill::-webkit-details-marker { display: none; }
 .bbx-place-pill span { padding-left: 10px; }
@@ -62,6 +67,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 @media (max-width: 700px) {
   .by { display: none; }
+  .theme-toggle { margin-left: auto; }
   .bbx-app-nav > div { padding: 10px 12px; }
   #site-workspace { display: block; }
   .pane { height: 100%; padding: 12px 14px 35px; }
