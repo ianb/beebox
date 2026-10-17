@@ -1113,6 +1113,13 @@ else
   echo "  Lockfile changed (or no live install): installing the staged dependencies..."
   (cd "$stage_dir" && HUSKY=0 CI=true pnpm install --frozen-lockfile)
 fi
+# The view Markdown check and `bbx view typecheck` run TypeScript 7's Go
+# binary, which arrives as an optional per-platform dependency. Prove it runs
+# from the staged install before activating anything.
+if ! "$stage_dir/node_modules/.bin/tsc" --version >/dev/null; then
+  echo "The TypeScript 7 binary did not run from the staged install; not activating. Uploaded artifacts remain staged." >&2
+  exit 1
+fi
 boxes=()
 for box in /home/beebox/boxes/*/; do
   [[ -e "$box/.git" ]] && boxes+=(--box "$box")
