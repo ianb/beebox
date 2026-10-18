@@ -855,6 +855,29 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     (two import `typescript` outside `src/lib/typescript/`; one uses a tour
     helper from outside `test/tours/`). `verify` does not run `layout-check`
     yet; the commit hook caught these.
+  - Hand-work round (2026-10-18): the 8 files over 600 lines were split at
+    `##` boundaries into 19 parts (leaf assertion counts match); the
+    new-doctest guard refuses committing the parts, so `prepare
+    --uncommitted` converts them from blobs it writes to the object store.
+    The 14 blocklist files were converted after renaming their fixture
+    people. Sonnet agents restructured the files the cheap workers could not
+    (split long tests, options objects, typed fakes); test doubles of large
+    interfaces are built with `Object.assign(Object.create(proto), …)`, the
+    pattern `clerk.send.test.ts` already used, in place of `as` casts.
+    The 4 doctests with track V hand ports were deleted (their tests cover
+    them; `server.frozen-serve` gained one assertion). Manual tests convert
+    but `verify` does not run them. `verify` now compares leaf assertions
+    (subtests not counted), so splitting a test is not a count change.
+    `cards/extend-schema` and `plugins/courseware/plugin.types` typechecked
+    through the TypeScript 5 `typescript` package, which the layout rule
+    keeps behind `src/lib/typescript/` (the TypeScript 7 boundary). They now
+    use that boundary (`typecheckProject`, and a new `typecheckSource` for an
+    in-memory fixture). TypeScript 7 prints union members and object
+    properties in another order, so three expected messages changed to its
+    text: the one exception to "expected values are not edited", recorded
+    here and in the state's checks for those two markers.
+    Left: `scripts/knip-doctest-imports` (track 6 removes the script it
+    tests).
   - Driver changes from this round: `revert` now points references back at
     the doctest (before, `prepare`'s repoint stayed, so `test:manual` named
     missing files); `rm`/`kill` are forbidden only in command position, so

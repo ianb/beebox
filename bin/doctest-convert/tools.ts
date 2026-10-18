@@ -65,17 +65,40 @@ export function convert(doctests: readonly string[], flags: readonly string[]): 
 
 export interface TapResult {
   failures: number;
+  /** tap's count, in which each subtest is one assertion of its parent. */
   assertions: number;
+  /** Assertions inside the subtests, not counting the subtests: unchanged when a test is split in two. */
+  leafAssertions: number;
 }
 
-/** `<testsuite ...>` attributes from tap's junit output, by repo-relative file. */
+interface Suite {
+  attrs: Map<string, string>;
+  /** Child suites' leaf assertions, and how many children. */
+  childLeaves: number;
+  children: number;
+}
+
+/** Top-level `<testsuite>` results from tap's junit output, by repo-relative file. */
 export function parseJunit(xml: string, runFrom: string): Map<string, TapResult> {
   const out = new Map<string, TapResult>();
-  for (const m of xml.matchAll(/<testsuite\s([^>]*)>/g)) {
-    const attrs = new Map([...(m[1] ?? "").matchAll(/(\w+)="([^"]*)"/g)].map((a) => [a[1] ?? "", a[2] ?? ""]));
-    const name = attrs.get("name");
-    if (name === undefined) continue;
-    out.set(back(runFrom, name), { failures: Number(attrs.get("failures") ?? "0"), assertions: Number(attrs.get("assertions") ?? "0") });
+  const stack: Suite[] = [];
+  for (const m of xml.matchAll(/<testsuite\s([^>]*)>|<\/testsuite>/g)) {
+    if (m[1] !== undefined) {
+      stack.push({ attrs: new Map([...m[1].matchAll(/(\w+)="([^"]*)"/g)].map((a) => [a[1] ?? "", a[2] ?? ""])), childLeaves: 0, children: 0 });
+      continue;
+    }
+    const suite = stack.pop();
+    if (suite === undefined) continue;
+    const assertions = Number(suite.attrs.get("assertions") ?? "0");
+    const leafAssertions = assertions - suite.children + suite.childLeaves;
+    const parent = stack.at(-1);
+    if (parent !== undefined) {
+      parent.children += 1;
+      parent.childLeaves += leafAssertions;
+      continue;
+    }
+    const name = suite.attrs.get("name");
+    if (name !== undefined) out.set(back(runFrom, name), { failures: Number(suite.attrs.get("failures") ?? "0"), assertions, leafAssertions });
   }
   return out;
 }
@@ -171,6 +194,18 @@ export function typecheck(program: Program): TypeErrorAt[] {
 export function blobOf(file: string): string {
   const r = run({ cmd: "git", args: ["hash-object", file], cwd: "." });
   if (r.status !== 0) throw new ToolOutputError({ what: ["git hash-object", file], output: r.stderr });
+  return r.stdout.trim();
+}
+
+/**
+ * Write the file's blob into git's object store, so `revert` can restore a
+ * doctest that was never committed. Unreferenced, it lasts until `git gc`
+ * prunes it (two weeks by default): convert, verify, and commit or revert
+ * well inside that.
+ */
+export function storeBlob(file: string): string {
+  const r = run({ cmd: "git", args: ["hash-object", "-w", file], cwd: "." });
+  if (r.status !== 0) throw new ToolOutputError({ what: ["git hash-object -w", file], output: r.stderr });
   return r.stdout.trim();
 }
 

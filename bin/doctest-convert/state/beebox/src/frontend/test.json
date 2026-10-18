@@ -679,6 +679,180 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/src/frontend/test/components/chat.audio-overlay.doctest.md": {
+   "test": "beebox/src/frontend/test/components/chat.audio-overlay.test.ts",
+   "blob": "7eef5491e8f9a636d6523d586bd700b1cd7ef271",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 29,
+     "kind": "check"
+    },
+    {
+     "line": 41,
+     "kind": "check"
+    },
+    {
+     "line": 53,
+     "kind": "check"
+    },
+    {
+     "line": 67,
+     "kind": "check"
+    },
+    {
+     "line": 73,
+     "kind": "check"
+    },
+    {
+     "line": 83,
+     "kind": "check"
+    },
+    {
+     "line": 94,
+     "kind": "check"
+    },
+    {
+     "line": 111,
+     "kind": "check"
+    },
+    {
+     "line": 127,
+     "kind": "check"
+    },
+    {
+     "line": 141,
+     "kind": "check"
+    },
+    {
+     "line": 162,
+     "kind": "check"
+    },
+    {
+     "line": 171,
+     "kind": "check"
+    },
+    {
+     "line": 182,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "53": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "29": [
+     {
+      "method": "check",
+      "actual": "f211eb75e1ebe2cd",
+      "expected": "7272a6439a1cca57",
+      "line": 31
+     }
+    ],
+    "41": [
+     {
+      "method": "check",
+      "actual": "5b99e3c2e8d64b60",
+      "expected": "7272a6439a1cca57",
+      "line": 42
+     }
+    ],
+    "53": [
+     {
+      "method": "checkText",
+      "actual": "c0506ad662f008db",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 54
+     }
+    ],
+    "67": [
+     {
+      "method": "check",
+      "actual": "b323aaea20bfc0ab",
+      "expected": "987318354739b9e6",
+      "line": 66
+     }
+    ],
+    "73": [
+     {
+      "method": "check",
+      "actual": "a252727e334914c1",
+      "expected": "235d533f8501b9e0",
+      "line": 70
+     }
+    ],
+    "83": [
+     {
+      "method": "check",
+      "actual": "c038fadbc5ccdedb",
+      "expected": "a9d1b847683cdf15",
+      "line": 81
+     }
+    ],
+    "94": [
+     {
+      "method": "check",
+      "actual": "2880a791793b1d4d",
+      "expected": "92afe2fc3e22b63d",
+      "line": 90
+     }
+    ],
+    "111": [
+     {
+      "method": "checkText",
+      "actual": "0a1f51389a0736cf",
+      "expected": "a055b2a321b46f96",
+      "line": 111
+     }
+    ],
+    "127": [
+     {
+      "method": "check",
+      "actual": "0f5033ce54e2a650",
+      "expected": "fcbcf165908dd18a",
+      "line": 122
+     }
+    ],
+    "141": [
+     {
+      "method": "check",
+      "actual": "4e5c87a0d5ea1fd6",
+      "expected": "15336660e6675292",
+      "line": 134
+     }
+    ],
+    "162": [
+     {
+      "method": "check",
+      "actual": "549fd6e5914343ba",
+      "expected": "b5bea41b6c623f7c",
+      "line": 150
+     }
+    ],
+    "171": [
+     {
+      "method": "check",
+      "actual": "c22bcf7567a3afa6",
+      "expected": "fcbcf165908dd18a",
+      "line": 158
+     }
+    ],
+    "182": [
+     {
+      "method": "check",
+      "actual": "2c9636996d829cd3",
+      "expected": "fcbcf165908dd18a",
+      "line": 168
+     }
+    ]
+   },
+   "assertions": 24,
+   "expectedAssertions": 24,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/src/frontend/test/components/chat.emission-assemble.doctest.md": {
    "test": "beebox/src/frontend/test/components/chat.emission-assemble.test.ts",
    "blob": "38c54a875808457e3b982171ce4af96b0f0a5668",
@@ -5902,6 +6076,167 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/src/frontend/test/components/chat/everywhere/resolve-conversation.doctest.md": {
+   "test": "beebox/src/frontend/test/components/chat/everywhere/resolve-conversation.test.ts",
+   "blob": "6c9b7d4481e5d273811c274a21c0984eef6ad1ef",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 85,
+     "kind": "check"
+    },
+    {
+     "line": 115,
+     "kind": "check"
+    },
+    {
+     "line": 147,
+     "kind": "check"
+    },
+    {
+     "line": 169,
+     "kind": "check"
+    },
+    {
+     "line": 186,
+     "kind": "check"
+    },
+    {
+     "line": 204,
+     "kind": "check"
+    },
+    {
+     "line": 233,
+     "kind": "check"
+    },
+    {
+     "line": 251,
+     "kind": "check"
+    },
+    {
+     "line": 273,
+     "kind": "check"
+    },
+    {
+     "line": 289,
+     "kind": "check"
+    },
+    {
+     "line": 308,
+     "kind": "check"
+    },
+    {
+     "line": 318,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "85": [
+     {
+      "method": "check",
+      "actual": "aa5477fe7cdac383",
+      "expected": "715435212d2bd864",
+      "line": 101
+     }
+    ],
+    "115": [
+     {
+      "method": "check",
+      "actual": "8c2074ff26c063a5",
+      "expected": "cb45dac45c72d195",
+      "line": 144
+     }
+    ],
+    "147": [
+     {
+      "method": "check",
+      "actual": "6e0616bbfa15c21e",
+      "expected": "56e3280046ecc9d2",
+      "line": 187
+     }
+    ],
+    "169": [
+     {
+      "method": "check",
+      "actual": "bddf0c495f065d9e",
+      "expected": "d40768e84352a8e2",
+      "line": 214
+     }
+    ],
+    "186": [
+     {
+      "method": "check",
+      "actual": "d66305c98cc9f330",
+      "expected": "15c5fff7538a5cb1",
+      "line": 232
+     }
+    ],
+    "204": [
+     {
+      "method": "check",
+      "actual": "4751167ab3bffed2",
+      "expected": "040e9c31d16ef603",
+      "line": 265
+     }
+    ],
+    "233": [
+     {
+      "method": "check",
+      "actual": "fcb59e25d224eabc",
+      "expected": "cb561048481b5696",
+      "line": 294
+     }
+    ],
+    "251": [
+     {
+      "method": "check",
+      "actual": "7fcca9f9f83bce74",
+      "expected": "66039af8ce0c3727",
+      "line": 321
+     }
+    ],
+    "273": [
+     {
+      "method": "check",
+      "actual": "92d1e203179ab369",
+      "expected": "a76a1687b1bb4071",
+      "line": 347
+     }
+    ],
+    "289": [
+     {
+      "method": "check",
+      "actual": "b0dd9b7c9a6aee84",
+      "expected": "0020e7bc8b054bcb",
+      "line": 368
+     }
+    ],
+    "308": [
+     {
+      "method": "check",
+      "actual": "26a50240d7f921bf",
+      "expected": "7b606146be3e9259",
+      "line": 379
+     }
+    ],
+    "318": [
+     {
+      "method": "check",
+      "actual": "7f60d48fd8b750dd",
+      "expected": "a4d846e5b31aed54",
+      "line": 404
+     }
+    ]
+   },
+   "assertions": 22,
+   "leafAssertions": 24,
+   "expectedAssertions": 22,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/src/frontend/test/components/chat/InteractiveChat-attachments/file-routing.doctest.md": {
    "test": "beebox/src/frontend/test/components/chat/InteractiveChat-attachments/file-routing.test.ts",
    "blob": "cde1732ef8c8ae35e209f8ab5eb2060a372aa31f",
@@ -7981,6 +8316,82 @@
    },
    "assertions": 7,
    "expectedAssertions": 7,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/src/frontend/test/components/chat/user-message/upload-message.doctest.md": {
+   "test": "beebox/src/frontend/test/components/chat/user-message/upload-message.test.ts",
+   "blob": "53a5cc76aab082c42bdbd05c03c845ce7a045c97",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 24,
+     "kind": "check"
+    },
+    {
+     "line": 40,
+     "kind": "check"
+    },
+    {
+     "line": 54,
+     "kind": "check"
+    },
+    {
+     "line": 69,
+     "kind": "check"
+    },
+    {
+     "line": 83,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "24": [
+     {
+      "method": "check",
+      "actual": "6c828f50da52a8ac",
+      "expected": "0b4de5de8967573f",
+      "line": 30
+     }
+    ],
+    "40": [
+     {
+      "method": "check",
+      "actual": "e96f94f691e3b6eb",
+      "expected": "d51f3d94d49b39cb",
+      "line": 49
+     }
+    ],
+    "54": [
+     {
+      "method": "check",
+      "actual": "e96f94f691e3b6eb",
+      "expected": "830cf198032ddaee",
+      "line": 69
+     }
+    ],
+    "69": [
+     {
+      "method": "check",
+      "actual": "17d551b97dc599a4",
+      "expected": "81ac0faf24ec082b",
+      "line": 84
+     }
+    ],
+    "83": [
+     {
+      "method": "check",
+      "actual": "f417fc9059489b48",
+      "expected": "d6b5af43fe60bbd8",
+      "line": 96
+     }
+    ]
+   },
+   "assertions": 10,
+   "expectedAssertions": 10,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
@@ -11003,6 +11414,88 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/src/frontend/test/components/Markdown/body.scoped-tags.doctest.md": {
+   "test": "beebox/src/frontend/test/components/Markdown/body.scoped-tags.test.ts",
+   "blob": "258605e7caf0cc47902ac94fc93dfb30b5c37684",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 40,
+     "kind": "check"
+    },
+    {
+     "line": 48,
+     "kind": "check"
+    },
+    {
+     "line": 59,
+     "kind": "check"
+    },
+    {
+     "line": 67,
+     "kind": "check"
+    },
+    {
+     "line": 74,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "40": "lossy actual value (strengthen in phase 3)",
+    "48": "lossy actual value (strengthen in phase 3)",
+    "59": "lossy actual value (strengthen in phase 3)",
+    "67": "lossy actual value (strengthen in phase 3)",
+    "74": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "40": [
+     {
+      "method": "checkText",
+      "actual": "fe089dc3b865e4e2",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 41
+     }
+    ],
+    "48": [
+     {
+      "method": "checkText",
+      "actual": "8eb96f4ffef362e0",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 51
+     }
+    ],
+    "59": [
+     {
+      "method": "checkText",
+      "actual": "bac963b7e713e578",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 58
+     }
+    ],
+    "67": [
+     {
+      "method": "checkText",
+      "actual": "1f058f85299aad04",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 64
+     }
+    ],
+    "74": [
+     {
+      "method": "checkText",
+      "actual": "792c6fa8eadb7c87",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 70
+     }
+    ]
+   },
+   "assertions": 10,
+   "expectedAssertions": 10,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/src/frontend/test/components/Markdown/Quote.quote.doctest.md": {
    "test": "beebox/src/frontend/test/components/Markdown/Quote.quote.test.ts",
    "blob": "a74d1a8f97e19ca0c8e2a4333dd664055094657d",
@@ -11133,6 +11626,121 @@
    },
    "assertions": 13,
    "expectedAssertions": 13,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/src/frontend/test/components/Markdown/Todo.locators-render.doctest.md": {
+   "test": "beebox/src/frontend/test/components/Markdown/Todo.locators-render.test.ts",
+   "blob": "49877c5ef41fe0860784e5bdde579719cfd13e07",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 55,
+     "kind": "check"
+    },
+    {
+     "line": 62,
+     "kind": "check"
+    },
+    {
+     "line": 73,
+     "kind": "check"
+    },
+    {
+     "line": 83,
+     "kind": "check"
+    },
+    {
+     "line": 86,
+     "kind": "check"
+    },
+    {
+     "line": 96,
+     "kind": "check"
+    },
+    {
+     "line": 114,
+     "kind": "check"
+    },
+    {
+     "line": 128,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "83": "typed check failed on the run's value",
+    "86": "typed check failed on the run's value"
+   },
+   "awaited": [],
+   "checks": {
+    "55": [
+     {
+      "method": "checkText",
+      "actual": "2f7f99d9cee96622",
+      "expected": "95601edba3d7f2f3",
+      "line": 55
+     }
+    ],
+    "62": [
+     {
+      "method": "checkText",
+      "actual": "c97acad858a6de72",
+      "expected": "95601edba3d7f2f3",
+      "line": 62
+     }
+    ],
+    "73": [
+     {
+      "method": "check",
+      "actual": "5b92acf08e671f55",
+      "expected": "7837fab8ae3efec2",
+      "line": 71
+     }
+    ],
+    "83": [
+     {
+      "method": "checkText",
+      "actual": "0743dabc24f56bf0",
+      "expected": "f072cbec3bf88418",
+      "line": 80
+     }
+    ],
+    "86": [
+     {
+      "method": "checkText",
+      "actual": "65a9efe5cd49d7aa",
+      "expected": "0a092b11023211d9",
+      "line": 83
+     }
+    ],
+    "96": [
+     {
+      "method": "check",
+      "actual": "d3ea3e013b9a2791",
+      "expected": "bbb5fd2083b5c910",
+      "line": 97
+     }
+    ],
+    "114": [
+     {
+      "method": "check",
+      "actual": "b3c732bad042a4c2",
+      "expected": "befb08369702dbae",
+      "line": 120
+     }
+    ],
+    "128": [
+     {
+      "method": "check",
+      "actual": "22311e408f99221b",
+      "expected": "5036a75f739da9f9",
+      "line": 132
+     }
+    ]
+   },
+   "assertions": 14,
+   "expectedAssertions": 14,
    "suppressions": [],
    "problems": [],
    "changedActuals": []

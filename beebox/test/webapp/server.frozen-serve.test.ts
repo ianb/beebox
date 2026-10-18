@@ -25,6 +25,7 @@ void test("a frozen page's response, status and headers included", async (t) => 
       "x-content-type-options": "nosniff",
       [others]: any(String),
     },
-    body: any(String).includes("/api/proxy-image?url=").includes("bbxProxied").includes("https://example.com/a.png"),
+    // The fallback script is injected before `</body>`; the image URL is left intact.
+    body: any(String).matches(/\/api\/proxy-image\?url=[\S\s]*<\/body>/).includes("bbxProxied").includes("https://example.com/a.png"),
   });
 });

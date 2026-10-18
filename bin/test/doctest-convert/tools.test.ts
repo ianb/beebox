@@ -15,10 +15,10 @@ const xml = [
   "</testsuites>",
 ].join("\n");
 
-void test("each file's failures and assertions, by repo-relative path", async (t) => {
+void test("each file's failures and assertions, by repo-relative path; leaves do not count subtests", async (t) => {
   const results = parseJunit(xml, "beebox");
   t.check(
     { tabs: results.get("bin/test/lib/terminal-tabs.test.ts"), env: results.get("beebox/test/lib/env.test.ts") },
-    { tabs: { failures: 0, assertions: 3 }, env: { failures: 2, assertions: 25 } },
+    { tabs: { failures: 0, assertions: 3, leafAssertions: 4 }, env: { failures: 2, assertions: 25, leafAssertions: 25 } },
   );
 });

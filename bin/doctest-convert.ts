@@ -2,9 +2,12 @@
  * The doctest conversion driver (plan beebox/docs/plans/retire-doctest.md,
  * track 3). Temporary: track 6 deletes it with `bin/doctest-convert/`.
  *
- *   node --import tsx bin/doctest-convert.ts prepare <dir>
+ *   node --import tsx bin/doctest-convert.ts prepare <dir> [--uncommitted]
  *       Convert the directory's doctests, record them in
  *       bin/doctest-convert/state/<dir>.json, delete the doctests, and verify.
+ *       It skips a doctest with uncommitted changes, unless --uncommitted
+ *       (for doctests that cannot be committed, such as the parts of a split
+ *       file: the new-doctest guard refuses them).
  *   node --import tsx bin/doctest-convert.ts verify <dir|file>...
  *       Check converted files: static and runtime fidelity, lint, typecheck.
  *       Records the result in the state files.
@@ -56,15 +59,16 @@ function main(argv: readonly string[]): boolean {
   const modelAt = rest.indexOf("--model");
   const model = modelAt === -1 ? undefined : rest[modelAt + 1];
   const trial = rest.includes("--trial");
+  const uncommitted = rest.includes("--uncommitted");
   const paths = rest
-    .filter((a, i) => a !== "--trial" && (modelAt === -1 || (i !== modelAt && i !== modelAt + 1)))
+    .filter((a, i) => a !== "--trial" && a !== "--uncommitted" && (modelAt === -1 || (i !== modelAt && i !== modelAt + 1)))
     .map((p) => relative(REPO, resolve(p)));
   switch (command) {
     case "prepare": {
       const [dir] = paths;
       if (dir === undefined || paths.length > 1) throw new PrepareArgsError();
       return withLock(stateLockPath(), () => {
-        const state = prepare(dir, (s) => console.log(s));
+        const state = prepare(dir, { log: (s) => console.log(s), uncommitted });
         const converted = select(Object.keys(state.files).filter((d) => state.files[d]?.status === "converted"));
         if (converted.length > 0) verify(converted, { save: true });
         writeProgress(loadAll());
