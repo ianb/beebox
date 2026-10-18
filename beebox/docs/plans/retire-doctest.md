@@ -34,6 +34,13 @@ The work runs in two phases:
   - `2026-10-10-doctests-use-real-types-as-generic-fixtures`.
   - `2026-10-13-shared-helper-spawn-bin-ts-from-doctest`.
   - `2026-10-08-test-volume-sweep`.
+  - `2026-10-17-move-typescript-eslint-to-typescript-7`. The TypeScript 7
+    move (`beebox/docs/implemented-plans/typescript-7.md`) left
+    agent-doctest's doctest typecheck on the 6.0 API. That plan says,
+    under Open design questions, *"Lean: accept it, because the handoff says
+    doctests may be removed"*. Track 6 deletes `agent-doctest/src/typecheck/`,
+    whose `check.ts:18` has `import ts from "typescript"`, which leaves
+    typescript-eslint as the only 6.0 user.
 
 ## Design
 
@@ -382,6 +389,10 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
     - **Runtime fidelity:** the tap assertion count equals the manifest's
       check-and-throws count, and the test passes.
     - The file passes eslint and the owning program from `bin/test-roots.ts`.
+      Each program runs once per batch, serially, through its package's
+      `typecheck` script. That script runs TypeScript 7 since the ts7
+      merge (e.g. `beebox/package.json:71`). The driver never calls a
+      compiler binary directly, and never inside a worker.
   - `dispatch <batch> --model luna|haiku` runs one worker in a free slot.
     - Luna runs as `codex exec -m gpt-6-luna -s workspace-write -C <slot>`.
     - Haiku runs as `claude -p --model haiku --tools Read,Edit,Bash`, with
@@ -519,7 +530,8 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
       entries from the `exports` map (`agent-doctest/package.json:9-16`), and
       the `bin` entry.
   - **Other tools that read doctests:**
-    - knip: `knip.ts:2,25,51,59,116,182` and `knip-doctest-imports.ts`.
+    - knip (6.x since the 2026-10-17 upgrade): `knip.ts:2,25-26,51,59,176`
+      and `knip-doctest-imports.ts`.
     - doc-check: `beebox/src/dev/doc-check/check.ts:71-168` and
       `doc-graph-data/data.ts:22`.
     - Layout tools: `beebox/src/dev/layout/` (`graph.ts:16`, `scan/package/`,
