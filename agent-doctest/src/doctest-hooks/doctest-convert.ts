@@ -321,7 +321,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const testLines: string[] = [];
   for (const test of tests) {
     const text = [...test.body.map(textOf), ...test.teardowns.map((c) => c.code)].join("\n");
-    const out = !setupDeclares("print") && uses(text, "print") ? outName : null;
+    const out = !setupDeclares("print") && /(?<![\w$.])print\s*\(/.test(text) ? outName : null;
     const body: string[] = [];
     if (out !== null) body.push(`const ${out} = ${printedName}();`, `const print = ${out}.print;`);
     for (const { prose, code } of test.teardowns) {

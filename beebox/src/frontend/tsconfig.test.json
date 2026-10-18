@@ -15,6 +15,9 @@
     "../schemas/*/list-entry.tsx",
     "../plugins/*/view.tsx",
     "../types/markdown-it-footnote.d.ts",
-    "../types/view-widgets.d.ts"
+    "../types/view-widgets.d.ts",
+    // A few tests import backend route code by raw path; that code relies
+    // on the backend's Fastify augmentation.
+    "../types/fastify.d.ts"
   ]
 }
