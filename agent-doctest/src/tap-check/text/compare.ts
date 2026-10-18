@@ -19,6 +19,8 @@ import { mismatchHint, suggestExpected } from "./suggest.js";
 // Re-export public API from submodules
 export { serialize, registerSerializer } from "./serialize.js";
 export { type Extractions } from "./match.js";
+// The doctest-to-ts converter reads expected text as a value (src/convert/upgrade.ts).
+export { LiteralWildcard, parseLiteral } from "./literal.js";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 

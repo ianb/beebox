@@ -10,6 +10,9 @@ import { view } from "./data.js";
 import { Pattern } from "../patterns.js";
 import { render } from "./render.js";
 
+// The doctest-to-ts converter prints expected values with this renderer (src/convert/upgrade.ts).
+export { Source, render } from "./render.js";
+
 /** Passed for `expected` when the caller gave none. */
 export const NO_EXPECTED: unique symbol = Symbol("no expected value");
 

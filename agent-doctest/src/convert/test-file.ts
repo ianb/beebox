@@ -19,21 +19,9 @@
  * Plan: beebox/docs/plans/retire-doctest.md, track 2.
  */
 
-import { bracketBalance, type CodeBlock, parseCodeBlocks, parseExamples, type Example, type ThrowsExample } from "./doctest-parse.ts";
-import { parseFenceInfo, type FenceInfo } from "./doctest-info.ts";
-import { doctestOracle } from "./doctest-load.ts";
-import { oracleSplit, rewriteImports, splitExpression, splitStaticImports, typeOnlyImports } from "./doctest-split.ts";
-import { blockDeclarations, declaresName } from "./doctest-runtime.ts";
-import { nextTemplateState } from "./doctest-parse.ts";
+import { bracketBalance, type CodeBlock, parseCodeBlocks, parseExamples, type Example, type ThrowsExample, parseFenceInfo, type FenceInfo, doctestOracle, rewriteImports, splitStaticImports, typeOnlyImports, blockDeclarations, declaresName } from "../doctest-hooks/hooks.ts";
+import { emitExample, indent, type ConvertOptions, type ManifestExample } from "./example.ts";
 
-/** One example of the doctest, as the manifest records it. */
-export interface ManifestExample {
-  /** 1-based markdown line of the example's first line; its marker is `// doctest:L<line>`. */
-  line: number;
-  kind: "check" | "throws" | "statement";
-  /** The expected text after `=>` or `=> throws`; null for a statement. */
-  expected: string | null;
-}
 
 export interface Manifest {
   doctest: string;
@@ -98,45 +86,6 @@ function commentLines(lines: string[]): string[] {
   return lines.slice(start, end).map((l) => (l.trim() === "" ? "//" : `// ${l.trimEnd()}`));
 }
 
-/**
- * Indent code, except lines that begin inside a multi-line template literal:
- * an indent there would change the string.
- */
-function indent(code: string, by: string): string[] {
-  const out: string[] = [];
-  let inTemplate = false;
-  for (const line of code.split("\n")) {
-    out.push(inTemplate || line === "" ? line : `${by}${line}`);
-    inTemplate = nextTemplateState(inTemplate, line);
-  }
-  return out;
-}
-
-/**
- * Expected text as a string literal: a quoted string when it is one line,
- * else a template literal with backslashes, backticks, and `${` escaped.
- */
-function textLiteral(text: string): string {
-  if (!text.includes("\n")) return JSON.stringify(text);
-  return `\`${text.replaceAll("\\", "\\\\").replaceAll("`", "\\`").replaceAll("${", "\\${")}\``;
-}
-
-/** Whether a line may end in a `//` comment, which would swallow a following `,`. */
-function mayEndInComment(line: string): boolean {
-  return line.includes("//");
-}
-
-/** `name(\n  expr,\n  arg,\n)`, or on one line when `expr` is one line. */
-function call(opts: { prefix: string; expr: string; arg: string }): string {
-  const { prefix, expr, arg } = opts;
-  const lines = expr.split("\n");
-  if (lines.length === 1 && !mayEndInComment(expr)) return `${prefix}(${expr}, ${arg});`;
-  const body = indent(expr, "  ");
-  const last = body.length - 1;
-  if (mayEndInComment(body[last] ?? "")) body.push("  ,");
-  else body[last] = `${body[last]},`;
-  return [`${prefix}(`, ...body, `  ${arg},`, ");"].join("\n");
-}
 
 /** The first sentence of some prose, cut to 80 characters. */
 function firstSentence(prose: string[]): string | null {
@@ -185,39 +134,6 @@ function classify(markdown: string): { blocks: Classified[]; trailing: string[];
   return { blocks: out, trailing, title };
 }
 
-/** One example's lines in a test body, and its manifest entry. */
-function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: ReadonlySet<number>; tName: string; out: string | null }): { marker: string; setup: string; code: string; entry: ManifestExample } {
-  const marker = `// doctest:L${ctx.md}`;
-  if (ex.expected === null) {
-    // ex.source keeps the author's trailing `;`, which the parser strips from the expression.
-    return { marker, setup: rewriteImports(ex.source.trimEnd()), code: "", entry: { line: ctx.md, kind: "statement", expected: null } };
-  }
-  const expression = rewriteImports(ex.expression);
-  const split = (ctx.oracle.has(ctx.md) ? oracleSplit(expression) : null) ?? splitExpression(expression);
-  const setup = split.setup.join("\n");
-  if ("throws" in ex) {
-    // Parenthesized as the runtime does: `a, b` is one expression, not two arguments.
-    const fn = `async () => (${split.expr})`;
-    // checkThrows reads "Name: message" as name and message; the doctest
-    // runtime read any ":" that way, so a bare ":" needs the explicit mode.
-    const expected = ex.expected.includes(":") && !ex.expected.includes(": ")
-      ? `{ expected: ${JSON.stringify(ex.expected)}, mode: "full" }`
-      : JSON.stringify(ex.expected);
-    return {
-      marker,
-      setup,
-      code: call({ prefix: `await ${ctx.tName}.checkThrows`, expr: fn, arg: expected }),
-      entry: { line: ctx.md, kind: "throws", expected: ex.expected },
-    };
-  }
-  const actual = ctx.out === null ? split.expr : `${ctx.out}.with(${split.expr})`;
-  return {
-    marker,
-    setup,
-    code: call({ prefix: `await ${ctx.tName}.checkText`, expr: actual, arg: textLiteral(ex.expected) }),
-    entry: { line: ctx.md, kind: "check", expected: ex.expected },
-  };
-}
 
 /**
  * Code with its line comments and quoted strings blanked out, to find names
@@ -233,7 +149,7 @@ function uses(code: string, name: string): boolean {
   return new RegExp(String.raw`(?<![\w$.])${name.replace("$", String.raw`\$`)}\b`).test(code);
 }
 
-export function convertDoctest(markdown: string, opts: { filePath: string }): Conversion {
+export function convertDoctest(markdown: string, opts: ConvertOptions): Conversion {
   // Validates the file as the loader does (indented fences, bad directives,
   // vacuous wildcards, an orphan continue) and gives the esbuild splits.
   const oracle = doctestOracle(markdown, opts.filePath);
@@ -271,6 +187,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   let open: OpenTest | null = null;
   let pendingCleanup: Cleanup[] = [];
   const usedNames = new Map<string, number>();
+  const patterns = new Set<string>();
 
   for (const { block, info, prose, heading } of blocks) {
     const content = block.content;
@@ -349,7 +266,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
         body.push(r);
         continue;
       }
-      const { marker, setup, code, entry } = emitExample(r.ex, { md: r.md, oracle, tName, out });
+      const { marker, setup, code, entry } = emitExample(r.ex, { md: r.md, oracle, tName, out, options: opts, patterns, taken });
       examples.push(entry);
       if (!first) body.push("");
       first = false;
@@ -373,7 +290,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   }
 
   const allCode = [setupText, ...tests.flatMap((tt) => [...tt.body.map(textOf), ...tt.teardowns.map((c) => c.code)])].join("\n");
-  const helpers: string[] = [];
+  const helpers: string[] = [...patterns].toSorted();
   if (!setupDeclares("eventually") && uses(allCode, "eventually")) helpers.push("eventually");
   if (testLines.some((l) => l.trim().endsWith(`= ${printedName}();`))) helpers.push(tapImport("printed", printedName));
   const imports = [`import ${afters.length > 0 ? `${rootName}, ` : ""}{ ${tapImport("test", testName)} } from "tap";`];

@@ -1,0 +1,43 @@
+// # Text
+
+import { test } from "tap";
+import "agent-doctest/tap";
+
+// Multi-line expected text with backticks, `${`, and backslashes:
+void test("Multi-line expected text with backticks, ${, and backslashes:", async (t) => {
+  // doctest:L6
+  await t.checkText("line `one`\n${x} \\ two", `line \`one\`
+\${x} \\ two`);
+});
+
+// A multi-line expression with a trailing comment:
+void test("A multi-line expression with a trailing comment:", async (t) => {
+  // doctest:L15
+  t.check(
+    [1, 2,
+      3].length // three
+    ,
+    3,
+  );
+});
+
+// A statement split by a blank line stays one statement:
+void test("A statement split by a blank line stays one statement:", async (t) => {
+  // doctest:L23
+  const config = {
+    a: 1,
+
+  b: 2,
+  };
+  // doctest:L26
+  t.check(config.b, 2);
+});
+
+// A template literal's lines are not indented:
+void test("A template literal's lines are not indented:", async (t) => {
+  // doctest:L35
+  const s = `first
+second`;
+  await t.checkText(s, `first
+second`);
+});

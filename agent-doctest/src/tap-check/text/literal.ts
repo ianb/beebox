@@ -42,6 +42,40 @@ export function normalizeLiteral(expected: string, opts: { orderLike?: unknown }
   });
 }
 
+/** A `«…»` wildcard standing as a whole value in a parsed literal; `token` keeps the guillemets. */
+export class LiteralWildcard {
+  constructor(readonly token: string) {}
+}
+
+/**
+ * Parse `expected` as a literal, with each whole-value wildcard as a
+ * {@link LiteralWildcard}. A wildcard inside a quoted string stays in the
+ * string. Null when the text is not a literal, or a key is a wildcard.
+ */
+export function parseLiteral(expected: string): { value: unknown } | null {
+  const parser = new LiteralParser(expected);
+  const value = parser.parseDocument();
+  if (value === FAIL) return null;
+  const marker = new RegExp(`^([${VALUE_MARK}${KEY_MARK}])(\\d+)${END_MARK}$`);
+  const found = { keyWildcard: false };
+  const restore = (v: unknown): unknown => {
+    if (typeof v === "string") {
+      const m = marker.exec(v);
+      return m ? new LiteralWildcard(parser.wildcards[Number(m[2])] ?? "«*»") : v;
+    }
+    if (Array.isArray(v)) return v.map(restore);
+    if (!isPlainObject(v)) return v;
+    const out: Record<string, unknown> = {};
+    for (const [k, item] of Object.entries(v)) {
+      if (marker.test(k)) found.keyWildcard = true;
+      Object.defineProperty(out, k, { value: restore(item), enumerable: true, writable: true, configurable: true });
+    }
+    return out;
+  };
+  const restored = restore(value);
+  return found.keyWildcard ? null : { value: restored };
+}
+
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }

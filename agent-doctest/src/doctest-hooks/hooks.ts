@@ -32,9 +32,14 @@ export {
   generateTestModule,
   type GeneratedModule,
 } from "./doctest-generate.ts";
-export { generateTestSource, generateTypecheckModule } from "./doctest-load.ts";
+export { generateTestSource, generateTypecheckModule, doctestOracle } from "./doctest-load.ts";
 export { DoctestSyntaxError } from "./doctest-errors.ts";
-export { convertDoctest, ConvertError, type Conversion, type Manifest, type ManifestExample } from "./doctest-convert.ts";
+// For the doctest-to-ts converter (src/convert/), which reads doctests the
+// way the loader does. The loader never imports the converter.
+export { bracketBalance, nextTemplateState } from "./doctest-parse.ts";
+export { parseFenceInfo, type FenceInfo } from "./doctest-info.ts";
+export { oracleSplit, rewriteImports, splitExpression, splitStaticImports, typeOnlyImports } from "./doctest-split.ts";
+export { blockDeclarations, declaresName } from "./doctest-runtime.ts";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
 //
