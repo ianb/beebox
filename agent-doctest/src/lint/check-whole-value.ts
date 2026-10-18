@@ -32,6 +32,8 @@ function calleeIs(node: Node, name: string): boolean {
 function lossy(arg: Expression): string | null {
   if (arg.type === "BinaryExpression" && COMPARISONS.has(arg.operator)) return "comparison";
   if (arg.type === "UnaryExpression" && arg.operator === "!") return "boolean";
+  // `a.includes(x) && a.includes(y)`: a boolean made from lossy parts.
+  if (arg.type === "LogicalExpression" && (lossy(arg.left) !== null || lossy(arg.right) !== null)) return "boolean";
   if (arg.type === "CallExpression" && arg.callee.type === "Identifier" && arg.callee.name === "Boolean") return "boolean";
   if (calleeIs(arg, "JSON.stringify")) return "json";
   const member = memberName(arg);

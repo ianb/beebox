@@ -21,10 +21,13 @@ void test("check-whole-value flags lossy actual values", async (t) => {
       "t.checkText(JSON.stringify(x), '{}');",
       "other.check(list.length, 2);",
       "t.check(await load(), { ok: true });",
+      // A default value is not a boolean test.
+      "t.check(opts.name ?? 'default', 'x');",
     ],
     invalid: [
       { code: "t.check(a === b, true);", errors: [{ messageId: "comparison" }] },
       { code: "t.check(list.length, 4);", errors: [{ messageId: "size" }] },
+      { code: "t.check(p.includes('a') && p.includes('b'), true);", errors: [{ messageId: "boolean" }] },
       { code: "t.check(map.size, 2);", errors: [{ messageId: "size" }] },
       { code: "t.check(JSON.stringify(x), '{}');", errors: [{ messageId: "json" }] },
       { code: "t.check(!!x, true);", errors: [{ messageId: "boolean" }] },
