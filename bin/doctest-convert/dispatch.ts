@@ -166,6 +166,8 @@ export interface DispatchResult {
   reasons: string[];
   transcript: string;
   selected: Selected[];
+  /** For a trial: the slot's own `check` output. */
+  checkOutput?: string;
 }
 
 function contentOf(path: string): string | null {
@@ -180,7 +182,11 @@ function changedPaths(cwd: string): string[] {
     .map((l) => l.slice(3).replace(/^.* -> /, ""));
 }
 
-export function dispatch(batch: { paths: readonly string[]; model: Model }, log: (s: string) => void): DispatchResult {
+/**
+ * With `trial`, the edits are checked in the slot and not applied: the
+ * calibration run gives both models the same files.
+ */
+export function dispatch(batch: { paths: readonly string[]; model: Model; trial: boolean }, log: (s: string) => void): DispatchResult {
   const { paths, model } = batch;
   const selected = select(paths).filter((s) => s.file.status === "converted");
   const tests = selected.map((s) => s.file.test);
@@ -221,6 +227,12 @@ export function dispatch(batch: { paths: readonly string[]; model: Model }, log:
       reasons.push(`changed a path outside the batch: ${p}`);
     }
     if (reasons.length > 0) return { accepted: false, reasons, transcript: transcriptPath, selected };
+    if (batch.trial) {
+      const c = spawnSync("node", ["--import", "tsx", "bin/doctest-convert.ts", "check", ...tests], { cwd: slot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const passed = c.status === 0;
+      if (!passed) reasons.push("not verified in the slot");
+      return { accepted: passed, reasons, transcript: transcriptPath, selected, checkOutput: c.stdout + c.stderr };
+    }
 
     withApplyLock(() => {
       for (const t of tests) copyFileSync(join(slot, t), join(REPO, t));

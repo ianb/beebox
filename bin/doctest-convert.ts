@@ -16,6 +16,7 @@
  *   node --import tsx bin/doctest-convert.ts dispatch <dir|file>... --model luna|haiku
  *       Run one worker on the batch's unverified files in a free slot, then
  *       apply and verify its edits here. Exits 1 when the batch is rejected.
+ *       With --trial, check the edits in the slot and apply nothing.
  *   node --import tsx bin/doctest-convert.ts progress
  *       Rewrite bin/doctest-convert/PROGRESS.md.
  *
@@ -45,7 +46,10 @@ function main(argv: readonly string[]): boolean {
   const [command, ...rest] = argv;
   const modelAt = rest.indexOf("--model");
   const model = modelAt === -1 ? undefined : rest[modelAt + 1];
-  const paths = rest.filter((_, i) => modelAt === -1 || (i !== modelAt && i !== modelAt + 1)).map((p) => relative(REPO, resolve(p)));
+  const trial = rest.includes("--trial");
+  const paths = rest
+    .filter((a, i) => a !== "--trial" && (modelAt === -1 || (i !== modelAt && i !== modelAt + 1)))
+    .map((p) => relative(REPO, resolve(p)));
   switch (command) {
     case "prepare": {
       const [dir] = paths;
@@ -72,8 +76,9 @@ function main(argv: readonly string[]): boolean {
     }
     case "dispatch": {
       if (model !== "luna" && model !== "haiku") throw new ModelArgError(model);
-      const result = dispatch({ paths, model: model satisfies Model }, (s) => console.log(s));
-      report(result.selected);
+      const result = dispatch({ paths, model: model satisfies Model, trial }, (s) => console.log(s));
+      if (result.checkOutput === undefined) report(result.selected);
+      else console.log(result.checkOutput);
       for (const r of result.reasons) console.log(`rejected: ${r}`);
       return result.accepted;
     }
