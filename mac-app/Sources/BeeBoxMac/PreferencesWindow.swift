@@ -63,6 +63,7 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
             model.offer(fromPasteboard: NSPasteboard.general.string(forType: .string))
         }
         navigation.pairing = model
+        appLog("pairing sheet opened source=\(link == nil ? "menu" : "link") clipboardOffer=\(model.clipboardOffer != nil)")
         present(.boxes)
     }
 
@@ -70,17 +71,26 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
     private var tabs: NSTabViewController?
 
     private func present(_ tab: Tab) {
+        let firstShow = window == nil
         let window = window ?? makeWindow()
         self.window = window
         if let index = Self.order.firstIndex(of: tab) {
             tabs?.selectedTabViewItemIndex = index
         }
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate()
-        window.makeKeyAndOrderFront(nil)
+        // A menu item's action runs while the menu is still closing, and an
+        // app that has just become regular is not yet active; ordering the
+        // window front then can leave it hidden. Show it on the next turn.
+        DispatchQueue.main.async {
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+            appLog("preferences shown tab=\(tab) first=\(firstShow) visible=\(window.isVisible) key=\(window.isKeyWindow) frame=\(Int(window.frame.width))x\(Int(window.frame.height)) active=\(NSApp.isActive)")
+        }
     }
 
     func windowWillClose(_ notification: Notification) {
+        appLog("preferences closed")
         NSApp.setActivationPolicy(.accessory)
     }
 
@@ -107,13 +117,19 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
         window.toolbarStyle = .preference
         window.isReleasedWhenClosed = false
         window.delegate = self
+        // Size it now: the tab's preferred size is only known after its first
+        // layout, and a window shown before that can come up empty.
+        window.setContentSize(Self.pageSize)
         window.center()
         return window
     }
 
+    private static let pageSize = NSSize(width: 620, height: 440)
+
     private func item(_ tab: Tab, _ label: String, _ symbol: String, _ page: some View) -> NSTabViewItem {
-        let hosting = NSHostingController(rootView: page.frame(width: 620, height: 440))
+        let hosting = NSHostingController(rootView: page.frame(width: Self.pageSize.width, height: Self.pageSize.height))
         hosting.sizingOptions = [.preferredContentSize]
+        hosting.preferredContentSize = Self.pageSize
         let item = NSTabViewItem(viewController: hosting)
         item.label = label
         item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
@@ -428,6 +444,7 @@ struct GeneralTab: View {
     @ObservedObject var hosting: HostingController
     @ObservedObject var updates: Updates
     let uninstall: () -> Void
+    @State private var notifications = "…"
 
     var body: some View {
         TabPage(explanation: "Bee Box lives in the menu bar. It needs to be running to watch folders and to run a box on this Mac.") {
@@ -439,6 +456,15 @@ struct GeneralTab: View {
                     if let error = hosting.loginItemError {
                         Text(error).font(.caption).foregroundStyle(.red)
                     }
+                }
+                Section("Notifications") {
+                    HStack {
+                        Text("Notifications are \(notifications).")
+                        Spacer()
+                        Button("Open Notification Settings") { UploadNotifications.openSettings() }
+                    }
+                    Text("Bee Box sends one notification when a watched folder sends files or a box refuses one. Problems that last show in the menu instead.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Updates") {
                     HStack {
@@ -462,6 +488,10 @@ struct GeneralTab: View {
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
+        }
+        .task {
+            notifications = await UploadNotifications.status()
+            appLog("notifications status=\(notifications)")
         }
     }
 }

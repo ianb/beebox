@@ -23,8 +23,21 @@ struct PhotosExporter: PhotosExporting {
     }
 
     static func requestAccess() async -> Bool {
+        let before = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        appLog("photos access before=\(label(before)) after=\(label(status))")
         return status == .authorized || status == .limited
+    }
+
+    private static func label(_ status: PHAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: "not-determined"
+        case .restricted: "restricted"
+        case .denied: "denied"
+        case .authorized: "authorized"
+        case .limited: "limited"
+        @unknown default: "unknown-\(status.rawValue)"
+        }
     }
 
     static func albums() -> [PhotosAlbumRef] {
@@ -86,6 +99,9 @@ struct PhotosExporter: PhotosExporting {
                 appLog("photos export skipped one asset: \(problem)")
                 skipped += 1
             }
+        }
+        if written > 0 || skipped > 0 {
+            appLog("photos export album=\(album.title) new=\(pending.count) written=\(written) skipped=\(skipped)")
         }
         if skipped > 0 {
             // The ones written are in the folder and the sweep sends them; the

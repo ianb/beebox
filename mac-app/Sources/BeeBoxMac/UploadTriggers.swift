@@ -92,6 +92,24 @@ enum UploadNotifications {
         }
     }
 
+    /// "on", "off" (denied or turned off in System Settings), or "not asked".
+    static func status() async -> String {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral: return "on"
+        case .denied: return "off"
+        case .notDetermined: return "not asked"
+        @unknown default: return "unknown"
+        }
+    }
+
+    /// Bee Box's page in System Settings → Notifications.
+    static func openSettings() {
+        let id = Bundle.main.bundleIdentifier ?? "run.beebox.mac"
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     static func post(_ notice: UploadNotice) {
         let content = UNMutableNotificationContent()
         var lines: [String] = []

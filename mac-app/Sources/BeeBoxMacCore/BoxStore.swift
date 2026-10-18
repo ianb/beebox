@@ -19,6 +19,20 @@ public enum PairResult: Equatable, Sendable {
     case storeFailed
 }
 
+extension PairResult {
+    /// A bounded label for the log.
+    var logLabel: String {
+        switch self {
+        case .paired: "paired"
+        case .duplicate: "duplicate"
+        case .refusedTransport: "refused-plain-http"
+        case .noTicket: "no-ticket"
+        case .failed(let error): "failed \(error)"
+        case .storeFailed: "store-failed"
+        }
+    }
+}
+
 /// The boxes this Mac is paired with: metadata in a JSON file, device tokens in
 /// the Keychain.
 @MainActor
@@ -35,7 +49,7 @@ public final class BoxStore: ObservableObject {
     private let redeemer: PairingRedeemer
     private let deviceLabel: String
     private var tickets = PairingTicketLedger()
-    private let log = Logger(subsystem: "run.beebox.mac", category: "pairing")
+    private let log = MacLogger(category: "pairing")
 
     public init(
         storageURL: URL,
@@ -56,6 +70,7 @@ public final class BoxStore: ObservableObject {
 
     public func pair(_ link: PairingLink) async -> PairResult {
         guard PairingTransport(baseURL: link.baseURL).allowsRedeem else {
+            log.warning("pairing refused reason=plain-http host=\(link.baseURL.host() ?? "?")")
             return .refusedTransport
         }
         guard let ticket = link.pairingToken else {
@@ -70,10 +85,11 @@ public final class BoxStore: ObservableObject {
             deviceToken = try await redeemer.redeem(baseURL: link.baseURL, pairingToken: ticket, deviceLabel: deviceLabel)
         } catch {
             tickets.finish(ticket, stored: false)
-            log.warning("pairing redeem failed error=\(String(describing: error), privacy: .public)")
+            log.warning("pairing redeem failed error=\(String(describing: error))")
             return .failed(error)
         }
         let result = store(link: link, deviceToken: deviceToken)
+        log.info("pairing result=\(result.logLabel) host=\(link.baseURL.host() ?? "?")")
         if case .paired = result {
             tickets.finish(ticket, stored: true)
         } else {
@@ -99,6 +115,7 @@ public final class BoxStore: ObservableObject {
     }
 
     public func markCredentialRefused(_ box: PairedBox) {
+        log.warning("device credential refused host=\(box.displayHost)")
         refused.insert(box.id)
     }
 
@@ -108,6 +125,7 @@ public final class BoxStore: ObservableObject {
         try credentials.deleteToken(for: box.id)
         guard commit(boxes.filter { $0.id != box.id }) else { throw BoxStoreError.saveFailed }
         refused.remove(box.id)
+        log.info("box removed host=\(box.displayHost)")
     }
 
     private func store(link: PairingLink, deviceToken: String) -> PairResult {
@@ -135,7 +153,7 @@ public final class BoxStore: ObservableObject {
             // A token for a box that was never recorded would be an orphan.
             if !boxes.contains(where: { $0.id == box.id }) {
                 do { try credentials.deleteToken(for: box.id) } catch {
-                    log.error("orphan device token not deleted box=\(box.id, privacy: .public)")
+                    log.error("orphan device token not deleted box=\(box.id)")
                 }
             }
             return .storeFailed
@@ -150,7 +168,7 @@ public final class BoxStore: ObservableObject {
             boxes = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: storageURL)).boxes
         } catch {
             loadFailure = "\(storageURL.lastPathComponent) could not be read: \(error.localizedDescription)"
-            log.error("paired boxes load failed error=\(String(describing: error), privacy: .public)")
+            log.error("paired boxes load failed error=\(String(describing: error))")
         }
     }
 
@@ -162,7 +180,7 @@ public final class BoxStore: ObservableObject {
             try FileManager.default.createDirectory(at: storageURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(Snapshot(boxes: changed)).write(to: storageURL, options: .atomic)
         } catch {
-            log.error("paired boxes save failed error=\(String(describing: error), privacy: .public)")
+            log.error("paired boxes save failed error=\(String(describing: error))")
             return false
         }
         boxes = changed
