@@ -1,12 +1,19 @@
 ---
 title: "Main's test box shares the machine secret store with the boxholder's own local boxes"
 workstream: unattached
+resolution: implemented
 area: beebox
 labels: [secrets, dev-router]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — a test overwrote a real key on 2026-10-18
 ---
+
+> **Decided and implemented 2026-10-18 (9e24c0fc5).** The boxholder chose to
+> mark the test boxes. main's `beebox/.env` lists them on a `TEST_BOXES=` line;
+> each gets its own store (`secrets/main/<slug>.json` under the router state
+> directory), passed only to that box's hub child. Unlisted boxes keep the
+> machine store. See `bin/docs/router-operations.md`, Environment isolation.
 
 The dev router runs every box that `main` serves on one secret store,
 `~/.config/beebox/secrets.json`. That list includes the primary test box,
