@@ -144,9 +144,12 @@ counted 51,762 prose lines and 110,201 code lines, so the result is roughly
   reused, and the code is rebuilt in track 1.
   - `agent-doctest/src/tap-check/expected.ts`: typed `Expected<T>` with `w.*`
     wildcards over the text matcher.
-  - `beebox/test/vitest-spike/check.ts`: Vitest-style matchers, `[others]`,
-    `str`, and the suggestion printer. It is rebuilt because it depends on
-    Vitest's `toStrictEqual`.
+  - The Vitest spike of 2026-10-17 was deleted, not kept. It showed three
+    things this plan relies on:
+    - `[others]` and the `str` template work as typed patterns.
+    - A diff stays readable when matched patterns are replaced by actual
+      values.
+    - Two `check` overloads give one-line type errors.
   - Three hand-converted tests: `beebox/test/lib/box-slug.test.ts`,
     `test/core/mobile/session.test.ts`, and
     `test/webapp/server-root.healthz-schema-failures.test.ts`.
@@ -289,7 +292,11 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
   - **Diff:** the expected value is rendered with each matched pattern
     replaced by the actual value at that position, so the diff shows only
     real differences. Both sides go through the existing `buildDiff`.
-  - **Suggestion:** as in the spike's `suggest`.
+  - **Suggestion:** printed from the actual value as a TypeScript literal:
+    - identifier keys are unquoted;
+    - UUID strings print as `uuid()`;
+    - ISO timestamps print as `isoDate()`;
+    - a `Date` prints as `isoDate()`.
   - **Typing:** two overloads, so type errors stay short. A Promise `actual`
     is awaited, and the method returns a Promise.
   - **`checkText`:** wraps today's `inspect` unchanged.
