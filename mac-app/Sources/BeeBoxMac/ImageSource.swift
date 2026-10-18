@@ -21,6 +21,10 @@ struct ImageSource {
             return (image, false)
         }
         await report("Downloading Bee Box…")
+        // A start abandoned while the lookup or the report above ran (hosting
+        // turned off) must not begin the download. Nothing awaits between this
+        // check and the pull.
+        try Task.checkCancellation()
         let counter = DownloadCounter()
         let report = self.report
         let image: Containerization.Image

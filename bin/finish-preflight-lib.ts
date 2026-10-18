@@ -15,7 +15,7 @@ import { touchesDeployedPath } from "./deployed-paths.js";
 
 /** One thing finish-verify runs, with everything it needs to run it. */
 export interface VerificationCommand {
-  kind: "tests" | "typecheck" | "lint" | "smoke" | "site";
+  kind: "tests" | "typecheck" | "lint" | "smoke" | "site" | "apple";
   /** What the agent would type; also the display name in finish-verify output. */
   command: string;
   /** Repo-root-relative directory to run in. */
@@ -48,7 +48,6 @@ const NONE_DIRS = new Set([
   "docs",
   "exhibits",
   "feedback-review",
-  "ios-app",
   "issues",
   "notes",
   "private-issues",
@@ -56,6 +55,9 @@ const NONE_DIRS = new Set([
   "scratch",
   "workstream-exhibits",
 ]);
+
+/** Top-level directories checked together by bin/apple-test. */
+const APPLE_DIRS = new Set(["apple-shared", "ios-app", "mac-app"]);
 
 /** Root files that change what the root scripts check. */
 const ROOT_FILES = new Set([
@@ -71,6 +73,7 @@ export type PathGroup =
   | { kind: "package"; name: string }
   | { kind: "root" }
   | { kind: "none" }
+  | { kind: "apple" }
   | { kind: "unknown"; name: string };
 
 /**
@@ -95,6 +98,7 @@ export function groupOf(path: string, workspacePackages: Set<string>): PathGroup
     if (workspacePackages.has(dir)) return { kind: "package", name: dir };
   }
   if (ROOT_DIRS.has(head)) return { kind: "root" };
+  if (APPLE_DIRS.has(head)) return { kind: "apple" };
   if (NONE_DIRS.has(head)) return { kind: "none" };
   // Fail toward more verification, and say so: an unclassified directory is a
   // gap in this map, not a licence to skip checks.
@@ -241,7 +245,7 @@ function isolateFor(pkg: string): VerificationCommand["isolate"] | undefined {
  * Typecheck stays whole-tree (it is incremental now, and cheap warm).
  */
 export function verificationCommands(input: CommandInput): VerificationCommand[] {
-  const { packages, root } = groupPaths(input.paths, input.workspacePackages);
+  const { packages, root, groups } = groupPaths(input.paths, input.workspacePackages);
   const docsOnly = isDocsOnly(input.paths);
   const commands: VerificationCommand[] = [];
   const skipTypeLint = docsOnly
@@ -254,7 +258,8 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
     // Tests and the smoke walk answer for behaviour, so only a docs-only diff
     // excuses them; typecheck and lint additionally skip on the
     // nothing-changed-since-verified rule.
-    const behavioural = command.kind === "tests" || command.kind === "smoke";
+    const behavioural =
+      command.kind === "tests" || command.kind === "smoke" || command.kind === "apple";
     const skip = docsOnly ? "docs-only diff" : undefined;
     const reason = behavioural ? skip : skipTypeLint;
     commands.push(reason === undefined ? command : { ...command, skip: reason });
@@ -291,6 +296,23 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
       isolate: ROOT_ISOLATE,
     });
     add({ kind: "typecheck", command: "pnpm typecheck", cwd: ".", argv: ["pnpm", "typecheck"] });
+  }
+
+  // Apple code: one check for ios-app/, mac-app/ and apple-shared/. The argv
+  // carries the changed paths so bin/apple-test picks its steps (the iOS
+  // simulator run only for ios-app/ or apple-shared/). A prose .md among them
+  // is no reason to run tests. With only docs under the Apple dirs there is no
+  // check, except in an all-docs diff, where add() lists it as skipped.
+  const applePaths = groups["(apple)"] ?? [];
+  const appleCodePaths = applePaths.filter((path) => !isDocPath(path));
+  if (appleCodePaths.length > 0 || (docsOnly && applePaths.length > 0)) {
+    const argvPaths = appleCodePaths.length > 0 ? appleCodePaths : applePaths;
+    add({
+      kind: "apple",
+      command: `bin/apple-test --changed ${argvPaths.join(" ")}`,
+      cwd: ".",
+      argv: ["bin/apple-test", "--changed", ...argvPaths],
+    });
   }
 
   // The smoke tier: a code-related landing boots a real box and walks it

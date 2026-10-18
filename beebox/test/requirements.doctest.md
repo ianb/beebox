@@ -14,18 +14,33 @@ credential.
 Placeholder values throughout.
 
 ```ts setup
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkMissingConnectors } from "../src/requirements.js";
 import { declareSecret, grantSecret, revokeSecret, setSecret } from "../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../src/lib/box-slug.js";
+import { secretsLogDir } from "../src/core/secrets/store.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 async function useTempStore() {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
   return dir;
+}
+
+/** Every access-log line written so far, as `event secret` pairs. */
+async function logLines() {
+  const files = await readdir(secretsLogDir()).catch(() => []);
+  const lines = [];
+  for (const file of files) {
+    const text = await readFile(join(secretsLogDir(), file), "utf-8");
+    for (const line of text.trim().split("\n").filter(Boolean)) {
+      const e = JSON.parse(line);
+      lines.push(`${e.event} ${e.secret}`);
+    }
+  }
+  return lines;
 }
 
 /** What the scheduler would report as missing. */
@@ -111,6 +126,29 @@ print(`policy disabled: ${await missing(box.root, "gmail")}`);
 tokens + policy, no client grant: ["gmail"]
 client credentials granted: []
 policy disabled: ["gmail"]
+```
+
+## The check is not an access
+
+The scheduler asks this question on every tick, for every box. It used to
+resolve both client-credential values to answer it, which wrote two access-log
+lines each time — about 99% of the log. The check now reads grants only, so it
+writes nothing: neither `resolve` lines where Google is configured nor
+`unknown-secret` refusals where it is not.
+
+```ts continue
+await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: true } }));
+const before = (await logLines()).length;
+print(`configured: ${await missing(box.root, "gmail")}`);
+const other = await makeTmpBox();
+await other.write("_config/box.json", JSON.stringify({ googleServices: { gmail: true } }));
+print(`another box, no grant: ${await missing(other.root, "gmail")}`);
+await other.cleanup();
+print(`log lines written by the checks: ${(await logLines()).length - before}`);
+=>
+configured: []
+another box, no grant: ["gmail"]
+log lines written by the checks: 0
 ```
 
 ## A retired in-tree file does not satisfy it

@@ -1,0 +1,197 @@
+import BeeBoxShared
+import Combine
+import Foundation
+import os
+
+/// What happened to one pairing attempt.
+public enum PairResult: Equatable, Sendable {
+    case paired(PairedBox)
+    /// This app is redeeming, or already stored, the same ticket.
+    case duplicate
+    /// Plain http to an address outside the local network; nothing was sent.
+    case refusedTransport
+    /// The link carries no pairing ticket. The Mac never accepts a device token
+    /// in a link (that shortcut is a DEBUG-only iOS affordance).
+    case noTicket
+    case failed(PairingError)
+    /// The box paired, but the device token could not be stored here. The
+    /// ticket is spent on the box.
+    case storeFailed
+}
+
+extension PairResult {
+    /// A bounded label for the log.
+    var logLabel: String {
+        switch self {
+        case .paired: "paired"
+        case .duplicate: "duplicate"
+        case .refusedTransport: "refused-plain-http"
+        case .noTicket: "no-ticket"
+        case .failed(let error): "failed \(error)"
+        case .storeFailed: "store-failed"
+        }
+    }
+}
+
+/// The boxes this Mac is paired with: metadata in a JSON file, device tokens in
+/// the Keychain.
+@MainActor
+public final class BoxStore: ObservableObject {
+    @Published public private(set) var boxes: [PairedBox] = []
+    /// Boxes whose device token the box refused (401) this session.
+    @Published public private(set) var refused: Set<PairedBox.ID> = []
+    /// Set when the file exists but cannot be read. Saving is refused while it
+    /// is set, so a bad read never overwrites the boxholder's pairings.
+    public private(set) var loadFailure: String?
+
+    private let storageURL: URL
+    private let credentials: any PairedBoxCredentialStoreProtocol
+    private let redeemer: PairingRedeemer
+    private let deviceLabel: String
+    private var tickets = PairingTicketLedger()
+    private let log = MacLogger(category: "pairing")
+
+    public init(
+        storageURL: URL,
+        credentials: any PairedBoxCredentialStoreProtocol,
+        redeemer: PairingRedeemer,
+        deviceLabel: String
+    ) {
+        self.storageURL = storageURL
+        self.credentials = credentials
+        self.redeemer = redeemer
+        self.deviceLabel = deviceLabel
+        load()
+    }
+
+    public func token(for box: PairedBox) -> String? {
+        credentials.readToken(for: box.id)
+    }
+
+    public func pair(_ link: PairingLink) async -> PairResult {
+        guard PairingTransport(baseURL: link.baseURL).allowsRedeem else {
+            log.warning("pairing refused reason=plain-http host=\(link.baseURL.host() ?? "?")")
+            return .refusedTransport
+        }
+        guard let ticket = link.pairingToken else {
+            return .noTicket
+        }
+        guard tickets.begin(ticket) else {
+            log.info("pairing redeem skipped reason=duplicate-link")
+            return .duplicate
+        }
+        let deviceToken: String
+        do {
+            deviceToken = try await redeemer.redeem(baseURL: link.baseURL, pairingToken: ticket, deviceLabel: deviceLabel)
+        } catch {
+            tickets.finish(ticket, stored: false)
+            log.warning("pairing redeem failed error=\(String(describing: error))")
+            return .failed(error)
+        }
+        let result = store(link: link, deviceToken: deviceToken)
+        log.info("pairing result=\(result.logLabel) host=\(link.baseURL.host() ?? "?")")
+        if case .paired = result {
+            tickets.finish(ticket, stored: true)
+        } else {
+            tickets.finish(ticket, stored: false)
+        }
+        return result
+    }
+
+    /// Adds the local box, or updates its URL. It has no device token until the
+    /// boxholder pairs it like any other box.
+    public func setLocalBox(label: String, baseURL: URL) {
+        var changed = boxes
+        if let index = changed.firstIndex(where: \.hostedLocally) {
+            guard changed[index].baseURL != baseURL || changed[index].label != label else { return }
+            changed[index].baseURL = baseURL
+            changed[index].label = label
+        } else if let index = changed.firstIndex(where: { $0.isSameBox(as: baseURL) }) {
+            changed[index].hostedLocally = true
+        } else {
+            changed.append(PairedBox(id: UUID(), label: label, baseURL: baseURL, hostedLocally: true))
+        }
+        _ = commit(changed)
+    }
+
+    public func markCredentialRefused(_ box: PairedBox) {
+        log.warning("device credential refused host=\(box.displayHost)")
+        refused.insert(box.id)
+    }
+
+    /// Deletes the device token first, then the record, so a failed delete
+    /// never leaves a token with no box to name it.
+    public func remove(_ box: PairedBox) throws {
+        try credentials.deleteToken(for: box.id)
+        guard commit(boxes.filter { $0.id != box.id }) else { throw BoxStoreError.saveFailed }
+        refused.remove(box.id)
+        log.info("box removed host=\(box.displayHost)")
+    }
+
+    private func store(link: PairingLink, deviceToken: String) -> PairResult {
+        guard loadFailure == nil else { return .storeFailed }
+        var box = boxes.first { $0.isSameBox(as: link.baseURL) }
+            ?? PairedBox(id: UUID(), label: link.label, baseURL: link.baseURL, hostedLocally: false)
+        box.label = link.label
+        do {
+            try credentials.writeToken(deviceToken, for: box.id)
+        } catch {
+            log.error("pairing store failed stage=keychain")
+            return .storeFailed
+        }
+        guard credentials.readToken(for: box.id) == deviceToken else {
+            log.error("pairing store failed stage=keychain-readback")
+            return .storeFailed
+        }
+        var changed = boxes
+        if let index = changed.firstIndex(where: { $0.id == box.id }) {
+            changed[index] = box
+        } else {
+            changed.append(box)
+        }
+        guard commit(changed) else {
+            // A token for a box that was never recorded would be an orphan.
+            if !boxes.contains(where: { $0.id == box.id }) {
+                do { try credentials.deleteToken(for: box.id) } catch {
+                    log.error("orphan device token not deleted box=\(box.id)")
+                }
+            }
+            return .storeFailed
+        }
+        refused.remove(box.id)
+        return .paired(box)
+    }
+
+    private func load() {
+        guard FileManager.default.fileExists(atPath: storageURL.path) else { return }
+        do {
+            boxes = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: storageURL)).boxes
+        } catch {
+            loadFailure = "\(storageURL.lastPathComponent) could not be read: \(error.localizedDescription)"
+            log.error("paired boxes load failed error=\(String(describing: error))")
+        }
+    }
+
+    /// Saves `changed`, then publishes it. A list that could not be saved is
+    /// never published.
+    private func commit(_ changed: [PairedBox]) -> Bool {
+        guard loadFailure == nil else { return false }
+        do {
+            try FileManager.default.createDirectory(at: storageURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(Snapshot(boxes: changed)).write(to: storageURL, options: .atomic)
+        } catch {
+            log.error("paired boxes save failed error=\(String(describing: error))")
+            return false
+        }
+        boxes = changed
+        return true
+    }
+
+    private struct Snapshot: Codable {
+        var boxes: [PairedBox]
+    }
+}
+
+public enum BoxStoreError: Error {
+    case saveFailed
+}

@@ -1,24 +1,34 @@
+import BeeBoxMacCore
 import Foundation
 
-/// The app's own log (start, stop, image, and failure lines), in the state
-/// folder beside the box's log. A bundled app's NSLog output is hard to find,
-/// and these lines are what a failed start is diagnosed from.
+private let appLogger = MacLogger(category: "app")
+
+/// App-level events (start, stop, image, hosting, sweeps, windows). Goes to the
+/// unified log and to `app.log`; see `MacLog`.
 func appLog(_ message: String) {
-    let line = "\(ISO8601DateFormatter().string(from: Date())) \(message)\n"
-    FileHandle.standardError.write(Data(line.utf8))
-    AppLogFile.shared.append(line)
+    appLogger.info(message)
 }
 
-private final class AppLogFile: @unchecked Sendable {
+/// The log file behind `MacLog`: `logs/app.log` in the shared data folder.
+/// Kept to about 2 MB: past that the file becomes `app.log.1` (replacing the
+/// previous one) and a new one starts.
+final class AppLogFile: @unchecked Sendable {
     static let shared = AppLogFile()
+    private static let limit: UInt64 = 2_000_000
     private let lock = NSLock()
 
     func append(_ line: String) {
         lock.withLock {
             let url = Paths.appLog
-            if !FileManager.default.fileExists(atPath: url.path) {
-                try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                FileManager.default.createFile(atPath: url.path, contents: nil)
+            let fm = FileManager.default
+            if let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? UInt64, size > Self.limit {
+                let previous = url.appendingPathExtension("1")
+                try? fm.removeItem(at: previous)
+                try? fm.moveItem(at: url, to: previous)
+            }
+            if !fm.fileExists(atPath: url.path) {
+                try? fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                fm.createFile(atPath: url.path, contents: nil)
             }
             guard let handle = try? FileHandle(forWritingTo: url) else { return }
             defer { try? handle.close() }

@@ -24,7 +24,7 @@ sonnet: "claude-sonnet-5",
 
 so a box agent or chat that asks for `sonnet` keeps running Sonnet 5. This is the
 same case as `opus` a week ago
-([closed](../2026-09-22-opus-alias-still-pins-opus-5.md)),
+([closed](2026-09-22-opus-alias-still-pins-opus-5.md)),
 which moved `opus` to `claude-opus-5-5`.
 
 **No pin dependency.** Probed 2026-09-28 on the current pin (`0.3.283`, bundled

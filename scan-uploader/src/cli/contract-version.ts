@@ -29,6 +29,10 @@
  * ritual rather than being a new obligation — the contract's own change
  * discipline already requires the doc, both implementations, and the doctests
  * to move in one change.
+ *
+ * This number is spelled three times: here, in `beebox/src/core/scan/contract-version.ts`
+ * (the box), and in `mac-app/Sources/BeeBoxMacCore/Scan/ContractVersion.swift`
+ * (the Mac app's upload client). Bump all three in the same change.
  */
 export const SCAN_CONTRACT_VERSION = 1;
 

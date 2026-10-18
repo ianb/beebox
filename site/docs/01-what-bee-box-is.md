@@ -29,9 +29,9 @@ of what needs you; a chat with the agent, typed or spoken; a browser over
 everything in the box with tabs for what you have open; the queue of
 questions the agent is asking; a curated map of the box's notable places; a
 history of every change; settings and admin. Each kind of card has its own
-display: a recipe laid out as a recipe, a course with its lessons and your
-progress, a document, a spreadsheet, a PDF, a photo, a folder. There is an
-iPhone app, and a browser extension. The files are the
+display: a recipe laid out as a recipe, a todo list, a document, a
+spreadsheet, a PDF, a photo, a folder. There is an iPhone app, and a browser
+extension. The files are the
 substance underneath; the application is how you use it. See
 [the web interface](capabilities/web-interface.md).
 

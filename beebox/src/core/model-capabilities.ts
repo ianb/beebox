@@ -23,22 +23,20 @@
  *   `gemini` needs `gemini` alone (OpenRouter serves the model but cannot
  *   carry style direction to it, so it is deliberately not a fallback).
  *
- * Each underlying key is resolved at most once and reused across every
- * service it backs. Every resolve passes `observe: false` — this is a status
- * probe, not a use (see `resolveSecret`'s `observe` option doc): it must not
- * move `lastUsed`/`purposes` store metadata the way a real transcription or
- * TTS call does.
+ * Each underlying key is checked at most once and reused across every
+ * service it backs. The check is `secretIsResolvable`: this is a status probe,
+ * not a use, so it reads no value, writes no access-log line, and does not move
+ * `lastUsed`/`purposes` store metadata the way a real transcription or TTS call
+ * does.
  */
 
-import { getGeminiApiKey } from "./gemini-key.js";
-import { getMistralApiKey } from "./mistral-key.js";
-import { getOpenAiThinkingKey } from "./openai-thinking-key.js";
-import { getOpenRouterKey } from "./openrouter.js";
+import { GEMINI_SECRET_NAME } from "./gemini-key.js";
+import { MISTRAL_SECRET_NAME } from "./mistral-key.js";
+import { OPENAI_THINKING_SECRET_NAME } from "./openai-thinking-key.js";
+import { OPENROUTER_SECRET_NAME } from "./openrouter.js";
+import { secretIsResolvable } from "./secrets/resolve.js";
 import type { HqTranscriptionService } from "../shared/transcription-services.js";
 import type { TtsBackend } from "../shared/tts-backends.js";
-
-/** Short label for the access log — this module never spends a key, only checks it. */
-const CAPABILITY_PROBE_PURPOSE = "capability-check";
 
 export interface ServiceCapability {
   usable: boolean;
@@ -61,16 +59,13 @@ function capability(usable: boolean, needs: string[]): ServiceCapability {
  * make it usable otherwise.
  */
 export async function serviceCapabilities(boxRoot: string): Promise<ServiceCapabilities> {
-  const [openAiThinkingKey, mistralKey, openRouterKey, geminiKey] = await Promise.all([
-    getOpenAiThinkingKey(boxRoot, { observe: false }),
-    getMistralApiKey(boxRoot, { observe: false }),
-    getOpenRouterKey(boxRoot, { purpose: CAPABILITY_PROBE_PURPOSE, observe: false }),
-    getGeminiApiKey(boxRoot, { purpose: CAPABILITY_PROBE_PURPOSE, observe: false }),
+  const has = (name: string) => secretIsResolvable({ boxRoot, name, access: "server" });
+  const [hasOpenAiThinking, hasMistral, hasOpenRouter, hasGemini] = await Promise.all([
+    has(OPENAI_THINKING_SECRET_NAME),
+    has(MISTRAL_SECRET_NAME),
+    has(OPENROUTER_SECRET_NAME),
+    has(GEMINI_SECRET_NAME),
   ]);
-  const hasOpenAiThinking = openAiThinkingKey !== null;
-  const hasGemini = geminiKey !== null;
-  const hasMistral = mistralKey !== null;
-  const hasOpenRouter = openRouterKey !== null;
 
   const whisperFamily = capability(hasOpenAiThinking || hasOpenRouter, ["openai-thinking", "openrouter"]);
   const voxtralFamily = capability(hasMistral, ["mistral"]);

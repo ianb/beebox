@@ -130,6 +130,10 @@
 		C4D12871DDAB07BD753308C9 /* BoxRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000012C3C000100000001 /* BoxRequest.swift */; };
 		C48468E556191E0C86B5A2DB /* BeeBoxControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45483E955389DDC242BA267; };
 		C4A39068F637DE770285A41A /* BeeBoxControls.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C441F3223F31C2796FE1A30E; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AA5E00012F10000100000001 /* PairingOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5E00022F10000100000001 /* PairingOutcome.swift */; };
+		AA5E00032F10000100000001 /* BeeBoxShared in Frameworks */ = {isa = PBXBuildFile; productRef = AA5E00042F10000100000001 /* BeeBoxShared */; };
+		AA5E00062F10000100000001 /* PairingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5E00072F10000100000001 /* PairingFlowTests.swift */; };
+		AA5E00082F10000100000001 /* BeeBoxShared in Frameworks */ = {isa = PBXBuildFile; productRef = AA5E00092F10000100000001 /* BeeBoxShared */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -286,6 +290,8 @@
 		C4282BC2FB01E48E30D3E894 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C4FD31EBADC0B0727077CFCE /* BeeBoxControls.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeeBoxControls.entitlements; sourceTree = "<group>"; };
 		C441F3223F31C2796FE1A30E /* BeeBoxControls.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BeeBoxControls.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA5E00022F10000100000001 /* PairingOutcome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingOutcome.swift; sourceTree = "<group>"; };
+		AA5E00072F10000100000001 /* PairingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlowTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -293,6 +299,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA5E00032F10000100000001 /* BeeBoxShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -307,6 +314,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA5E00082F10000100000001 /* BeeBoxShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -359,6 +367,7 @@
 			children = (
 				C4AF4E9D07B219D273E629A1 /* VoiceNoteActivityAttributes.swift */,
 				5A1000122C3C000100000001 /* PairedBox.swift */,
+				AA5E00022F10000100000001 /* PairingOutcome.swift */,
 				F1A000052E00000100000001 /* NotificationTarget.swift */,
 				B0C500012F00000100000001 /* RootSurface.swift */,
 				B0C500102F00000100000001 /* QuickChatView.swift */,
@@ -466,6 +475,7 @@
 				C83000042C3C000100000001 /* BoxLockTests.swift */,
 				C9B000042D8A000100000001 /* BackgroundExecutionHoldTests.swift */,
 				5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */,
+				AA5E00072F10000100000001 /* PairingFlowTests.swift */,
 				5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */,
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
 				5A1009A42C3C000100000001 /* OnDeviceHqTranscriberTests.swift */,
@@ -539,6 +549,9 @@
 				E2A000212D7B000100000001 /* PBXTargetDependency */,
 			);
 			name = BeeBox;
+			packageProductDependencies = (
+				AA5E00042F10000100000001 /* BeeBoxShared */,
+			);
 			productName = BeeBox;
 			productReference = 5A1000102C3C000100000001 /* BeeBox.app */;
 			productType = "com.apple.product-type.application";
@@ -574,6 +587,9 @@
 			dependencies = (
 			);
 			name = BeeBoxShareExtension;
+			packageProductDependencies = (
+				AA5E00092F10000100000001 /* BeeBoxShared */,
+			);
 			productName = BeeBoxShareExtension;
 			productReference = E2A000102D7B000100000001 /* BeeBoxShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -610,6 +626,9 @@
 				Base,
 			);
 			mainGroup = 5A1000302C3C000100000001;
+			packageReferences = (
+				AA5E00052F10000100000001 /* XCLocalSwiftPackageReference "../apple-shared" */,
+			);
 			productRefGroup = 5A1000322C3C000100000001 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -694,6 +713,7 @@
 				B0C500012F00000100000002 /* RootSurface.swift in Sources */,
 				B0C500102F00000100000002 /* QuickChatView.swift in Sources */,
 				5A1000032C3C000100000001 /* PairedBoxStore.swift in Sources */,
+				AA5E00012F10000100000001 /* PairingOutcome.swift in Sources */,
 				5A1000042C3C000100000001 /* RootView.swift in Sources */,
 				B0C500142F00000100000002 /* BoxScreenView.swift in Sources */,
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
@@ -775,6 +795,7 @@
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
 				5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */,
+				AA5E00062F10000100000001 /* PairingFlowTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
 				B72000F22C3C000100000001 /* NativeControlRegistryTests.swift in Sources */,
 				B7200D032C3C000100000001 /* ScreenAwakeTests.swift in Sources */,
@@ -1151,6 +1172,24 @@
 		};
 		C4E8B3239E2623BA01FC826E /* Build configuration list for PBXNativeTarget BeeBoxControls */ = {isa = XCConfigurationList; buildConfigurations = (C42E22DD348F58A0AD6D6FD8, C4890F810094BAA9A0B880D4, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AA5E00052F10000100000001 /* XCLocalSwiftPackageReference "../apple-shared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../apple-shared";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA5E00042F10000100000001 /* BeeBoxShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BeeBoxShared;
+		};
+		AA5E00092F10000100000001 /* BeeBoxShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BeeBoxShared;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 5A1000702C3C000100000001 /* Project object */;
 }

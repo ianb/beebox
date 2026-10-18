@@ -40,7 +40,7 @@
  *   has no such parameter. The HQ path passes none, so the HQ path can route.
  */
 
-import { resolveSecret } from "./secrets/resolve.js";
+import { resolveSecret, secretIsResolvable } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
 export const OPENROUTER_SECRET_NAME = "openrouter";
@@ -125,13 +125,12 @@ export async function getOpenRouterKey(
 
 /**
  * Does this box have a usable OpenRouter key right now? A non-spending
- * presence check (observed neither in `lastUsed` nor `purposes`) backing the
+ * presence check (no value read, no access-log line, store metadata unmoved) backing the
  * chat picker's added-model rows, the `glmKeyUsable` precedent. The spawn
  * re-checks and refuses — the picker is a courtesy, the refusal is the gate.
  */
 export async function openRouterKeyUsable(boxRoot: string): Promise<boolean> {
-  const resolved = await resolveSecret({ boxRoot, name: OPENROUTER_SECRET_NAME, purpose: "menu-availability", access: "server", observe: false });
-  return resolved.ok;
+  return secretIsResolvable({ boxRoot, name: OPENROUTER_SECRET_NAME, access: "server" });
 }
 
 /**

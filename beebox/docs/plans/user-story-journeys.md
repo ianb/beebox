@@ -45,6 +45,10 @@ phone. Wants one place that holds what they are learning and shows what is cover
 next. *(The box models this richly — `Course`, `LessonPlan`, `Progress`, `ConceptMap` — so the
 question is whether any of it is reachable by someone who does not know it exists.)*
 
+*Retired 2026-10-17.* Courses moved to the opt-in courseware plugin, and journeys cover core
+Bee Box only. The definition and its four reports are kept with the plugin:
+[`test/plugins/courseware/journeys/D-chemistry/`](../../test/plugins/courseware/journeys/D-chemistry/README.md).
+
 ### E · "I can't keep up with the school schedule"
 
 Term dates, a newsletter, a class trip needing a form back, a conference sign-up with a booking
