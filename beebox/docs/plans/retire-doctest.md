@@ -439,25 +439,30 @@ Decided with the boxholder on 2026-10-18, after the generative review:
 
 - **What:**
   - A TypeScript program for every test root that lacks one.
-  - `agent-doctest/bin/doctest-to-ts.ts`, which converts one doctest to one
-    test file plus its fidelity manifest.
+  - `agent-doctest/bin/doctest-to-ts.mjs` (logic in
+    `src/doctest-hooks/doctest-convert.ts`), which converts one doctest to
+    one test file plus its fidelity manifest.
 - **Why:**
   - 12,478 expected values and 7,925 executable examples are too many to
     convert by hand or by model without drift.
   - A converted file that no program typechecks would lose the type checking
     doctests have today.
 - **Direction: typecheck programs.**
-  - Add `beebox/src/frontend/tsconfig.test.json`, which extends the frontend
-    config and includes `test/**/*`.
-  - Add test includes, or a `tsconfig.test.json`, for `browse/` and
-    `workstreams-app/` frontend/server tests.
-  - Keep the existing coverage for beebox `test/`, the root `bin/`, and
+  - Done (8a93e3ea7): `beebox/src/frontend/tsconfig.test.json` (the app plus
+    `test/`) is what `typecheck:frontend` checks. workstreams-app adds its
+    `test/server`, `test/shared` and `test/scenarios` to the backend program
+    and `test/frontend` through `src/frontend/tsconfig.test.json`. browse and
+    agent-doctest include all their tests; agent-doctest's 70 older test
+    errors this exposed were fixed.
+  - Existing coverage stays for beebox `test/`, the root `bin/`, and
     `scan-uploader/`.
-  - The frontend's lint config covers only `src/`
-    (`beebox/src/frontend/eslint.config.ts:147`). Converted frontend tests
-    need lint coverage, including the agent-doctest rules from track 1a.
-  - `bin/test-roots.ts` lists each test root with its program. The driver,
-    pre-commit, and track 6 use that list.
+  - Frontend lint already covered `test/` (main, 2026-10-16). The
+    agent-doctest rules now load in `beebox/src/frontend/eslint.config.ts`;
+    beebox's own config ignores `src/frontend/**`, so its frontend pattern
+    never applied.
+  - `bin/test-roots.ts` lists each test root, where it runs from (`bin/test/`
+    runs from beebox), and its typecheck script. The driver, pre-commit, and
+    track 6 use that list.
 - **Direction: the converter.** It is mechanical and exact. It never changes
   an assertion's strength.
 
@@ -468,17 +473,23 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   | Setup blocks | module-level code, verbatim, including top-level `await` |
   | Imports inside an example | the existing `rewriteImports` output: dynamic `await import()` in source order, not hoisted |
   | A plain block plus its `continue` blocks | one `test("<name>", async (t) => { … })` |
-  | `expr` / `=> text` | `await t.checkText(expr, \`text\`)`, backticks and `${` escaped |
-  | `=> throws Name: msg` | `await t.checkThrows(() => expr, "Name: msg")` |
+  | `expr` / `=> text` | `await t.checkText(expr, \`text\`)`, backticks, backslashes and `${` escaped. `checkText` ignores a string's trailing newlines, as the runtime's trim did |
+  | `=> throws Name: msg` | `await t.checkThrows(async () => expr, "Name: msg")`; an expected text with a `:` but no `: ` passes `{ expected, mode: "full" }`, since the runtime read any `:` as full mode |
   | Statement examples (2,370) | verbatim, with no generated line between a statement and the next example (`doctest-emit.ts:69-73`) |
-  | `print()` | a per-test `const out = printed()`; the next check becomes `await t.checkText(out.with(expr), …)`, reproducing `doctest-runtime.ts:171` |
+  | `print()` | a per-test `const out = printed(); const print = out.print;`; each check in that test becomes `await t.checkText(out.with(expr), …)`, reproducing `doctest-runtime.ts:171` |
   | `cleanup` | `t.teardown(async () => { try { … } catch (e) { t.error(e) } })` at the runtime's registration point |
-  | `teardown` | root-level `t.teardown` |
-  | `eventually` | imported from the helper |
+  | `teardown` | module-level `after(async () => { … })` |
+  | `eventually`, `printed` | imported from `agent-doctest/check` |
+  | Type-only imports in an example | hoisted to module-level `import type`, as the doctest typecheck does |
   | Setup that declares `t` | the callback parameter is named `tap` |
+  | Setup that declares `test` or `after` | tap's is imported as `tapTest` or `tapAfter` |
 
-  - Test names come from the nearest heading. Without one, the first prose
-    sentence, cut to 80 characters. Without that, `line N`.
+  - Test names come from the first sentence of the prose just before the
+    block, cut to 80 characters; a heading often covers several blocks.
+    Without prose, the nearest `##` heading. Without that, `line N`. A
+    repeated name gets ` (line N)`.
+  - The file header comment is the title and the prose before the first
+    block, except that an example block keeps its own last paragraph.
   - **Dropped behavior:** the per-example "still running" notice
     (`doctest-runtime.ts:145`). It is a diagnostic, not an assertion. Tap's
     300 s file timeout still ends a hang, and the stack names where. The 5
@@ -486,8 +497,9 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   - **Fidelity manifest:** each example's source line, kind, and expected
     text. The converter writes a `// doctest:L<n>` marker comment before each
     example it emits.
-  - **Statement examples:** the marker for a statement goes after the
-    statement, never between parts of a split statement.
+  - **Statement examples:** a marker goes before its example, except that
+    when an example is the second part of a statement a blank line split, its
+    marker waits until the statement's brackets close.
 - **Vocabulary lock-ins:**
   - The `.doctest.md` → `.test.ts` name mapping.
   - `printed()`.
