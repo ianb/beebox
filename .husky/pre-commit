@@ -191,14 +191,23 @@ fi
 # So typecheck the importers whenever the imported package's source is staged.
 # `bin/` imports beebox source too (`deferred-issues.ts`, `commit-provenance.ts`,
 # `base-prefix-injection.test.ts`) and is NOT a workspace package, so only the
-# root tsconfig covers it — the bin/ branch below lints but does not typecheck.
-# Both run in ~2.7s and only on a beebox/src commit.
+# root tsconfig covers it. Both run in ~2.7s and only on a beebox/src commit.
 if echo "$staged" | grep -q '^beebox/src/'; then
   if [ -z "${ws_app_typechecked:-}" ]; then
     echo "[pre-commit] workstreams-app: typecheck (imports beebox source)"
     run_in workstreams-app pnpm typecheck
   fi
   echo "[pre-commit] .: pnpm typecheck (bin/ imports beebox source)"
+  (cd "$REPO_DIR" && pnpm --silent typecheck)
+  root_typechecked=1
+fi
+
+# The root program (tsconfig.json `include`) is the only typecheck of bin/ and
+# schedules/ TypeScript. tap strips types, so a type error there otherwise
+# passes its own tests too
+# (issues/code-quality/2026-10-18-bin-typescript-is-not-typechecked-at-commit.md).
+if [ -z "${root_typechecked:-}" ] && echo "$staged" | grep -qE '^(bin|schedules)/.*\.(ts|tsx)$'; then
+  echo "[pre-commit] .: pnpm typecheck (bin/ or schedules/ TypeScript)"
   (cd "$REPO_DIR" && pnpm --silent typecheck)
 fi
 

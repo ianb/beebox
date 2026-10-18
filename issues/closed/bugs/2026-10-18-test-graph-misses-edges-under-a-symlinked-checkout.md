@@ -7,7 +7,10 @@ labels: [tooling, test-selection]
 filed-by: agent
 discovered-by: agent
 discovered-in: doctest-typecheck — retire-doctest track 6, removing the doctest esbuild plugin from bin/test-graph.ts
+resolution: implemented
 ---
+
+Fixed by the commit that carries this issue's `Issue:` trailer: `buildGraphFrom` resolves its config (roots, aliases, entrypoints) to real paths before the build. `bin/test-graph-fixture.ts` no longer takes the temp root's real path, so the fixture tests cover a symlinked root on macOS.
 
 `bin/test-graph.ts` builds the import graph with esbuild and turns each
 importer into a repo-relative path with `toRepoRel`, against the configured

@@ -16,6 +16,7 @@
  */
 
 import { build, type Metafile, type BuildFailure, type Plugin, type PluginBuild } from "esbuild";
+import { realpathSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
 import { candidateFiles, isRelative } from "./lib/resolve-rules.ts";
 import {
@@ -126,7 +127,32 @@ function isBuildFailure(e: unknown): e is BuildFailure {
   return typeof e === "object" && e !== null && "errors" in e;
 }
 
-export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
+/** The real path, or `p` itself when it does not exist (fail-open handles that case). */
+function realOrSelf(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch (e) {
+    if (e instanceof Error && "code" in e && e.code === "ENOENT") return p;
+    throw e;
+  }
+}
+
+/**
+ * esbuild reports importers by real path. Resolve the config the same way, so
+ * `toRepoRel` agrees with esbuild when the checkout is reached through a
+ * symlink; otherwise broken-import and ambiguity edges drop without an error.
+ */
+function realConfig(config: GraphConfig): GraphConfig {
+  return {
+    repoRoot: realOrSelf(config.repoRoot),
+    packageRoot: realOrSelf(config.packageRoot),
+    aliases: Object.fromEntries(Object.entries(config.aliases).map(([prefix, dir]) => [prefix, realOrSelf(dir)])),
+    entrypoints: config.entrypoints.map(realOrSelf),
+  };
+}
+
+export async function buildGraphFrom(givenConfig: GraphConfig): Promise<TestGraph> {
+  const config = realConfig(givenConfig);
   const entrypoints = config.entrypoints;
   const internals: GraphInternals = {
     extraEdges: new Map(),
