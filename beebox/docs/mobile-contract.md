@@ -1724,13 +1724,13 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   `webapp/local-users.ts`. Cross-process matters here because `bbx hub` verifies a bearer (stamping
   `lastUsedAt`) before proxying to the per-box child, which verifies it again and can revoke it, so
   two processes genuinely race the file. Those functions are now `async`. See
-  `test/core/mobile/pairing.store-concurrency.doctest.md`.
+  `test/core/mobile/pairing.store-concurrency.test.ts`.
 - **Token in plaintext, not Keychain (OPEN, iOS I6).** `PairedBoxStore` writes `authToken` as
   plaintext JSON in Application Support.
 - **Identity unified (CLOSED 2026-09-12).** The tRPC context now resolves a mobile request to the
   device's `createdBy` identity, so `user` is that person and `isOwner` is true only when they are
   the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
-  `resolveMobileSender` (`test/webapp/routes/chat/helpers.mobile-sender.doctest.md`); the context was the
+  `resolveMobileSender` (`test/webapp/routes/chat/helpers.mobile-sender.test.ts`); the context was the
   remaining piece.
 - **APNs payload names no box (CLOSED 2026-09-26).** §5.10's payload carries `box`, the box
   slug, and the iOS tap opens on the paired box with that slug. A payload without `box` still opens

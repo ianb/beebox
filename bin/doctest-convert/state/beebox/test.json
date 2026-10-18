@@ -10931,6 +10931,218 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/test/cli/lib/session.oversize-lines.doctest.md": {
+   "test": "beebox/test/cli/lib/session.oversize-lines.test.ts",
+   "blob": "55a62052607ae48c5eb4732da82644b74b0658ab",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 29,
+     "kind": "check"
+    },
+    {
+     "line": 45,
+     "kind": "statement"
+    },
+    {
+     "line": 49,
+     "kind": "check"
+    },
+    {
+     "line": 96,
+     "kind": "statement"
+    },
+    {
+     "line": 119,
+     "kind": "check"
+    },
+    {
+     "line": 142,
+     "kind": "check"
+    },
+    {
+     "line": 150,
+     "kind": "check"
+    },
+    {
+     "line": 160,
+     "kind": "check"
+    },
+    {
+     "line": 169,
+     "kind": "check"
+    },
+    {
+     "line": 191,
+     "kind": "statement"
+    },
+    {
+     "line": 228,
+     "kind": "check"
+    },
+    {
+     "line": 243,
+     "kind": "check"
+    },
+    {
+     "line": 256,
+     "kind": "check"
+    },
+    {
+     "line": 273,
+     "kind": "check"
+    },
+    {
+     "line": 301,
+     "kind": "statement"
+    },
+    {
+     "line": 318,
+     "kind": "check"
+    },
+    {
+     "line": 349,
+     "kind": "statement"
+    },
+    {
+     "line": 352,
+     "kind": "statement"
+    },
+    {
+     "line": 369,
+     "kind": "check"
+    },
+    {
+     "line": 396,
+     "kind": "statement"
+    },
+    {
+     "line": 412,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "29": [
+     {
+      "method": "check",
+      "actual": "3f7ba9ac1e1ff1ba",
+      "expected": "54faea9b3eeffce2",
+      "line": 29
+     }
+    ],
+    "49": [
+     {
+      "method": "checkText",
+      "actual": "8917501add64c44f",
+      "expected": "25530b4fdb39b659",
+      "line": 83
+     }
+    ],
+    "119": [
+     {
+      "method": "check",
+      "actual": "668535865c0e3d1c",
+      "expected": "d37e5fbb0b1a6dbc",
+      "line": 133
+     }
+    ],
+    "142": [
+     {
+      "method": "check",
+      "actual": "00e2e701cbf9bbdc",
+      "expected": "98bf0c1ede472249",
+      "line": 161
+     }
+    ],
+    "150": [
+     {
+      "method": "check",
+      "actual": "7db3e76db79cda03",
+      "expected": "29087f7bcc0403c7",
+      "line": 177
+     }
+    ],
+    "160": [
+     {
+      "method": "check",
+      "actual": "6e3d9dac7d91f60e",
+      "expected": "e81ae51e6f55a56e",
+      "line": 188
+     }
+    ],
+    "169": [
+     {
+      "method": "check",
+      "actual": "e0b63cc9c8611fae",
+      "expected": "5712f9330af25425",
+      "line": 202
+     }
+    ],
+    "228": [
+     {
+      "method": "check",
+      "actual": "27d2b82e89dcf86b",
+      "expected": "11988add43d88742",
+      "line": 267
+     }
+    ],
+    "243": [
+     {
+      "method": "check",
+      "actual": "2bae58b0b8f08849",
+      "expected": "595c10e02a92b4b2",
+      "line": 286
+     }
+    ],
+    "256": [
+     {
+      "method": "check",
+      "actual": "f172ae567cb6d969",
+      "expected": "f85504ce2fba88bd",
+      "line": 305
+     }
+    ],
+    "273": [
+     {
+      "method": "check",
+      "actual": "c96a5aa1545f0fa7",
+      "expected": "05b5f1471d0e57e1",
+      "line": 326
+     }
+    ],
+    "318": [
+     {
+      "method": "check",
+      "actual": "35b2fcef385b1b72",
+      "expected": "fd6a010bc9bb0c32",
+      "line": 372
+     }
+    ],
+    "369": [
+     {
+      "method": "checkText",
+      "actual": "18e9d497b3d8b8b5",
+      "expected": "ad05d76d0845bd3c",
+      "line": 426
+     }
+    ],
+    "412": [
+     {
+      "method": "checkText",
+      "actual": "3e495669525932f4",
+      "expected": "737a35e8b5bc9794",
+      "line": 459
+     }
+    ]
+   },
+   "assertions": 20,
+   "expectedAssertions": 20,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/test/cli/lib/session.self-note.doctest.md": {
    "test": "beebox/test/cli/lib/session.self-note.test.ts",
    "blob": "e24b5447fdab47cc635dac961234a54f7f572ef5",
@@ -16676,6 +16888,115 @@
    },
    "assertions": 28,
    "expectedAssertions": 28,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/core/agent/engine-availability-store.doctest.md": {
+   "test": "beebox/test/core/agent/engine-availability-store.test.ts",
+   "blob": "ea1dfca63ada3879cd3eb94ac9fb986927dc4836",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 38,
+     "kind": "statement"
+    },
+    {
+     "line": 45,
+     "kind": "check"
+    },
+    {
+     "line": 51,
+     "kind": "check"
+    },
+    {
+     "line": 55,
+     "kind": "check"
+    },
+    {
+     "line": 58,
+     "kind": "check"
+    },
+    {
+     "line": 66,
+     "kind": "check"
+    },
+    {
+     "line": 76,
+     "kind": "check"
+    },
+    {
+     "line": 91,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "45": "lossy actual value (strengthen in phase 3)",
+    "51": "lossy actual value (strengthen in phase 3)",
+    "66": "lossy actual value (strengthen in phase 3)",
+    "76": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "45": [
+     {
+      "method": "checkText",
+      "actual": "1b8b1c010e230c84",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 49
+     }
+    ],
+    "51": [
+     {
+      "method": "checkText",
+      "actual": "8b98a0202da69395",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 53
+     }
+    ],
+    "55": [
+     {
+      "method": "check",
+      "actual": "e7a72d44ab928fac",
+      "expected": "74234e98afe7498f",
+      "line": 56
+     }
+    ],
+    "58": [
+     {
+      "method": "check",
+      "actual": "b368af077e8e9956",
+      "expected": "74234e98afe7498f",
+      "line": 59
+     }
+    ],
+    "66": [
+     {
+      "method": "checkText",
+      "actual": "4be1a72b8c00e2fd",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 67
+     }
+    ],
+    "76": [
+     {
+      "method": "checkText",
+      "actual": "07babb3bba3485f5",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 77
+     }
+    ],
+    "91": [
+     {
+      "method": "check",
+      "actual": "2e1847f3be33748e",
+      "expected": "74234e98afe7498f",
+      "line": 87
+     }
+    ]
+   },
+   "assertions": 8,
+   "expectedAssertions": 8,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
@@ -24003,6 +24324,284 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/test/core/capture/prepare.doctest.md": {
+   "test": "beebox/test/core/capture/prepare.test.ts",
+   "blob": "ab2743af2abb72cd5efbc2b3f2289c96fdd8f557",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 162,
+     "kind": "statement"
+    },
+    {
+     "line": 174,
+     "kind": "check"
+    },
+    {
+     "line": 189,
+     "kind": "check"
+    },
+    {
+     "line": 203,
+     "kind": "check"
+    },
+    {
+     "line": 218,
+     "kind": "check"
+    },
+    {
+     "line": 243,
+     "kind": "check"
+    },
+    {
+     "line": 282,
+     "kind": "statement"
+    },
+    {
+     "line": 288,
+     "kind": "check"
+    },
+    {
+     "line": 303,
+     "kind": "check"
+    },
+    {
+     "line": 323,
+     "kind": "statement"
+    },
+    {
+     "line": 328,
+     "kind": "statement"
+    },
+    {
+     "line": 335,
+     "kind": "check"
+    },
+    {
+     "line": 345,
+     "kind": "statement"
+    },
+    {
+     "line": 349,
+     "kind": "check"
+    },
+    {
+     "line": 371,
+     "kind": "statement"
+    },
+    {
+     "line": 376,
+     "kind": "statement"
+    },
+    {
+     "line": 378,
+     "kind": "statement"
+    },
+    {
+     "line": 384,
+     "kind": "statement"
+    },
+    {
+     "line": 394,
+     "kind": "check"
+    },
+    {
+     "line": 416,
+     "kind": "statement"
+    },
+    {
+     "line": 420,
+     "kind": "statement"
+    },
+    {
+     "line": 428,
+     "kind": "statement"
+    },
+    {
+     "line": 434,
+     "kind": "statement"
+    },
+    {
+     "line": 448,
+     "kind": "check"
+    },
+    {
+     "line": 453,
+     "kind": "check"
+    },
+    {
+     "line": 460,
+     "kind": "check"
+    },
+    {
+     "line": 484,
+     "kind": "statement"
+    },
+    {
+     "line": 488,
+     "kind": "statement"
+    },
+    {
+     "line": 494,
+     "kind": "statement"
+    },
+    {
+     "line": 497,
+     "kind": "check"
+    },
+    {
+     "line": 507,
+     "kind": "check"
+    },
+    {
+     "line": 540,
+     "kind": "statement"
+    },
+    {
+     "line": 550,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "174": [
+     {
+      "method": "check",
+      "actual": "a2ccd38ddca10fca",
+      "expected": "e6558386e8705ab5",
+      "line": 183
+     }
+    ],
+    "189": [
+     {
+      "method": "checkText",
+      "actual": "204f5c13b6c9a5bb",
+      "expected": "4b07ae1e2e47d260",
+      "line": 204
+     }
+    ],
+    "203": [
+     {
+      "method": "check",
+      "actual": "7b40a93832fa1dd5",
+      "expected": "b2152fa5a06cb454",
+      "line": 217
+     }
+    ],
+    "218": [
+     {
+      "method": "check",
+      "actual": "ec7e738ed2b4f383",
+      "expected": "99c612d7d592e9b7",
+      "line": 239
+     }
+    ],
+    "243": [
+     {
+      "method": "check",
+      "actual": "c99e58b606c9ae11",
+      "expected": "0994801d82f53f9d",
+      "line": 281
+     }
+    ],
+    "288": [
+     {
+      "method": "check",
+      "actual": "b58b6796fb33ec29",
+      "expected": "5bcece93a1b2434d",
+      "line": 324
+     }
+    ],
+    "303": [
+     {
+      "method": "check",
+      "actual": "a247ba2bdf793c98",
+      "expected": "8151b07a2d5be3b0",
+      "line": 345
+     }
+    ],
+    "335": [
+     {
+      "method": "check",
+      "actual": "65ca5ca1b9d21211",
+      "expected": "2c27c19dc8f7cc52",
+      "line": 387
+     }
+    ],
+    "349": [
+     {
+      "method": "check",
+      "actual": "01ee443297c42305",
+      "expected": "a95552ee9575c60f",
+      "line": 400
+     }
+    ],
+    "394": [
+     {
+      "method": "check",
+      "actual": "b652195e7f9825ec",
+      "expected": "d5c63c943296a269",
+      "line": 459
+     }
+    ],
+    "448": [
+     {
+      "method": "check",
+      "actual": "44c3caa9ce645556",
+      "expected": "6b86b273ff34fce1",
+      "line": 532
+     }
+    ],
+    "453": [
+     {
+      "method": "check",
+      "actual": "65ca5ca1b9d21211",
+      "expected": "4bb362fdc2e7043c",
+      "line": 535
+     }
+    ],
+    "460": [
+     {
+      "method": "check",
+      "actual": "23691fa6e32d728b",
+      "expected": "fc292595b6be8a1e",
+      "line": 542
+     }
+    ],
+    "497": [
+     {
+      "method": "check",
+      "actual": "65ca5ca1b9d21211",
+      "expected": "3f3147a7dc6a8207",
+      "line": 589
+     }
+    ],
+    "507": [
+     {
+      "method": "check",
+      "actual": "da8523de6bd219db",
+      "expected": "8c47dd4a030d63d7",
+      "line": 599
+     }
+    ],
+    "550": [
+     {
+      "method": "check",
+      "actual": "4d2fc6fcc5b3c6c8",
+      "expected": "ea5b7212bd152d86",
+      "line": 644
+     }
+    ]
+   },
+   "assertions": 24,
+   "expectedAssertions": 24,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L394, line 459"
+   ]
+  },
   "beebox/test/core/capture/prepare/audio-concat.doctest.md": {
    "test": "beebox/test/core/capture/prepare/audio-concat.test.ts",
    "blob": "fc589a5298d58db52006b677edb309260a0aed45",
@@ -28355,6 +28954,302 @@
    },
    "assertions": 4,
    "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/core/chat/husk.doctest.md": {
+   "test": "beebox/test/core/chat/husk.test.ts",
+   "blob": "9c97d25e0636b2ece06d2581106f27ea0c7ed776",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 31,
+     "kind": "check"
+    },
+    {
+     "line": 40,
+     "kind": "check"
+    },
+    {
+     "line": 49,
+     "kind": "check"
+    },
+    {
+     "line": 60,
+     "kind": "check"
+    },
+    {
+     "line": 66,
+     "kind": "check"
+    },
+    {
+     "line": 69,
+     "kind": "check"
+    },
+    {
+     "line": 80,
+     "kind": "check"
+    },
+    {
+     "line": 87,
+     "kind": "check"
+    },
+    {
+     "line": 102,
+     "kind": "check"
+    },
+    {
+     "line": 127,
+     "kind": "check"
+    },
+    {
+     "line": 150,
+     "kind": "statement"
+    },
+    {
+     "line": 162,
+     "kind": "check"
+    },
+    {
+     "line": 167,
+     "kind": "check"
+    },
+    {
+     "line": 170,
+     "kind": "check"
+    },
+    {
+     "line": 180,
+     "kind": "statement"
+    },
+    {
+     "line": 189,
+     "kind": "check"
+    },
+    {
+     "line": 197,
+     "kind": "check"
+    },
+    {
+     "line": 216,
+     "kind": "check"
+    },
+    {
+     "line": 255,
+     "kind": "statement"
+    },
+    {
+     "line": 262,
+     "kind": "statement"
+    },
+    {
+     "line": 268,
+     "kind": "check"
+    },
+    {
+     "line": 271,
+     "kind": "check"
+    },
+    {
+     "line": 285,
+     "kind": "statement"
+    },
+    {
+     "line": 308,
+     "kind": "check"
+    },
+    {
+     "line": 325,
+     "kind": "check"
+    },
+    {
+     "line": 331,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "49": "lossy actual value (strengthen in phase 3)",
+    "87": "lossy actual value (strengthen in phase 3)",
+    "162": "lossy actual value (strengthen in phase 3)",
+    "170": "lossy actual value (strengthen in phase 3)",
+    "189": "lossy actual value (strengthen in phase 3)",
+    "271": "lossy actual value (strengthen in phase 3)",
+    "331": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "31": [
+     {
+      "method": "check",
+      "actual": "a0af9f865bf637e6",
+      "expected": "5c4075797c563177",
+      "line": 37
+     }
+    ],
+    "40": [
+     {
+      "method": "checkText",
+      "actual": "6f62272bcb230f31",
+      "expected": "4387014ed973ca77",
+      "line": 40
+     }
+    ],
+    "49": [
+     {
+      "method": "checkText",
+      "actual": "0d915ec7b47966f3",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 51
+     }
+    ],
+    "60": [
+     {
+      "method": "check",
+      "actual": "6d338fb08d67dfa4",
+      "expected": "5c4075797c563177",
+      "line": 58
+     }
+    ],
+    "66": [
+     {
+      "method": "check",
+      "actual": "5a0f69da5dd6494e",
+      "expected": "5c4075797c563177",
+      "line": 67
+     }
+    ],
+    "69": [
+     {
+      "method": "check",
+      "actual": "f4ed96bb80b958da",
+      "expected": "74234e98afe7498f",
+      "line": 70
+     }
+    ],
+    "80": [
+     {
+      "method": "check",
+      "actual": "6d338fb08d67dfa4",
+      "expected": "62d8675d077a0080",
+      "line": 80
+     }
+    ],
+    "87": [
+     {
+      "method": "checkText",
+      "actual": "7c097dde05509120",
+      "expected": "391552c099c101b1",
+      "line": 89
+     }
+    ],
+    "102": [
+     {
+      "method": "checkText",
+      "actual": "9eb5bceecd14774f",
+      "expected": "ffb705a95f0298db",
+      "line": 113
+     }
+    ],
+    "127": [
+     {
+      "method": "check",
+      "actual": "99936c84a44dd92f",
+      "expected": "90af1b0a1ef047b6",
+      "line": 135
+     }
+    ],
+    "162": [
+     {
+      "method": "checkText",
+      "actual": "6ce6773209d2fb53",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 177
+     }
+    ],
+    "167": [
+     {
+      "method": "check",
+      "actual": "5abdb573e1d16ed1",
+      "expected": "74234e98afe7498f",
+      "line": 180
+     }
+    ],
+    "170": [
+     {
+      "method": "checkText",
+      "actual": "e698ff57fc8d5fa8",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 183
+     }
+    ],
+    "189": [
+     {
+      "method": "checkText",
+      "actual": "7c2ce7cfeee077a0",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 202
+     }
+    ],
+    "197": [
+     {
+      "method": "check",
+      "actual": "b8159959bde43254",
+      "expected": "cafd73f021cdcf33",
+      "line": 210
+     }
+    ],
+    "216": [
+     {
+      "method": "check",
+      "actual": "ddc7391b4c2f790e",
+      "expected": "c32e7e39925a2695",
+      "line": 234
+     }
+    ],
+    "268": [
+     {
+      "method": "check",
+      "actual": "d2c1986bd43155cc",
+      "expected": "f6ec864983eee189",
+      "line": 273
+     }
+    ],
+    "271": [
+     {
+      "method": "checkText",
+      "actual": "7c097dde05509120",
+      "expected": "a4aab3f1f08004e9",
+      "line": 276
+     }
+    ],
+    "308": [
+     {
+      "method": "checkText",
+      "actual": "5e65bcd8d811af86",
+      "expected": "fb6d4d675a7da3e0",
+      "line": 321
+     }
+    ],
+    "325": [
+     {
+      "method": "checkText",
+      "actual": "ac6dea3ad7725fde",
+      "expected": "ffbb7740590dc787",
+      "line": 335
+     }
+    ],
+    "331": [
+     {
+      "method": "checkText",
+      "actual": "38e9a1c1153cdad3",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 343
+     }
+    ]
+   },
+   "assertions": 27,
+   "expectedAssertions": 27,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
@@ -37180,6 +38075,262 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/test/core/commands/scan-import/guide-context.doctest.md": {
+   "test": "beebox/test/core/commands/scan-import/guide-context.test.ts",
+   "blob": "c74baa6e894717d2fc624530739c04ca398cd99f",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 35,
+     "kind": "check"
+    },
+    {
+     "line": 39,
+     "kind": "statement"
+    },
+    {
+     "line": 49,
+     "kind": "check"
+    },
+    {
+     "line": 55,
+     "kind": "check"
+    },
+    {
+     "line": 58,
+     "kind": "check"
+    },
+    {
+     "line": 61,
+     "kind": "check"
+    },
+    {
+     "line": 64,
+     "kind": "check"
+    },
+    {
+     "line": 67,
+     "kind": "statement"
+    },
+    {
+     "line": 73,
+     "kind": "check"
+    },
+    {
+     "line": 80,
+     "kind": "check"
+    },
+    {
+     "line": 83,
+     "kind": "statement"
+    },
+    {
+     "line": 92,
+     "kind": "check"
+    },
+    {
+     "line": 99,
+     "kind": "check"
+    },
+    {
+     "line": 102,
+     "kind": "check"
+    },
+    {
+     "line": 105,
+     "kind": "statement"
+    },
+    {
+     "line": 109,
+     "kind": "check"
+    },
+    {
+     "line": 115,
+     "kind": "statement"
+    },
+    {
+     "line": 121,
+     "kind": "check"
+    },
+    {
+     "line": 126,
+     "kind": "check"
+    },
+    {
+     "line": 129,
+     "kind": "statement"
+    },
+    {
+     "line": 139,
+     "kind": "statement"
+    },
+    {
+     "line": 148,
+     "kind": "check"
+    },
+    {
+     "line": 153,
+     "kind": "check"
+    },
+    {
+     "line": 157,
+     "kind": "check"
+    },
+    {
+     "line": 161,
+     "kind": "statement"
+    }
+   ],
+   "textOnly": {
+    "99": "lossy actual value (strengthen in phase 3)",
+    "148": "lossy actual value (strengthen in phase 3)",
+    "153": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "35": [
+     {
+      "method": "check",
+      "actual": "59d5208419a0070b",
+      "expected": "74234e98afe7498f",
+      "line": 36
+     }
+    ],
+    "49": [
+     {
+      "method": "check",
+      "actual": "fc03d5075e9e6d69",
+      "expected": "35b2896d036ebd5b",
+      "line": 52
+     }
+    ],
+    "55": [
+     {
+      "method": "check",
+      "actual": "e8b83095ebe272cc",
+      "expected": "ce8124bc1b0fbc0c",
+      "line": 55
+     }
+    ],
+    "58": [
+     {
+      "method": "check",
+      "actual": "88a9734a839af12e",
+      "expected": "9bd866e72c6684eb",
+      "line": 58
+     }
+    ],
+    "61": [
+     {
+      "method": "check",
+      "actual": "35076349abdc685b",
+      "expected": "b5bea41b6c623f7c",
+      "line": 61
+     }
+    ],
+    "64": [
+     {
+      "method": "check",
+      "actual": "1ad725916f677a5b",
+      "expected": "b5bea41b6c623f7c",
+      "line": 64
+     }
+    ],
+    "73": [
+     {
+      "method": "check",
+      "actual": "fc03d5075e9e6d69",
+      "expected": "35b2896d036ebd5b",
+      "line": 77
+     }
+    ],
+    "80": [
+     {
+      "method": "check",
+      "actual": "848d0638c98e385d",
+      "expected": "b5bea41b6c623f7c",
+      "line": 80
+     }
+    ],
+    "92": [
+     {
+      "method": "check",
+      "actual": "fce9eb163e7510f8",
+      "expected": "87f26ab27e5f423b",
+      "line": 96
+     }
+    ],
+    "99": [
+     {
+      "method": "checkText",
+      "actual": "b17b297e1cc4e4a1",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 99
+     }
+    ],
+    "102": [
+     {
+      "method": "check",
+      "actual": "2cc53759ee43e102",
+      "expected": "b5bea41b6c623f7c",
+      "line": 102
+     }
+    ],
+    "109": [
+     {
+      "method": "check",
+      "actual": "fc03d5075e9e6d69",
+      "expected": "87f26ab27e5f423b",
+      "line": 113
+     }
+    ],
+    "121": [
+     {
+      "method": "check",
+      "actual": "89d81e605bf810a7",
+      "expected": "74234e98afe7498f",
+      "line": 124
+     }
+    ],
+    "126": [
+     {
+      "method": "check",
+      "actual": "59d5208419a0070b",
+      "expected": "74234e98afe7498f",
+      "line": 127
+     }
+    ],
+    "148": [
+     {
+      "method": "checkText",
+      "actual": "560a9c264dcb9b0c",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 152
+     }
+    ],
+    "153": [
+     {
+      "method": "checkText",
+      "actual": "534d08d55ac19dd9",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 156
+     }
+    ],
+    "157": [
+     {
+      "method": "check",
+      "actual": "626b3b62ea50bf75",
+      "expected": "2ebb6c4c8fbd1c58",
+      "line": 160
+     }
+    ]
+   },
+   "assertions": 24,
+   "expectedAssertions": 24,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/test/core/commands/scan-import/helpers.doctest.md": {
    "test": "beebox/test/core/commands/scan-import/helpers.test.ts",
    "blob": "5c0ec460f8f8592c911764569584e2bc66561586",
@@ -39156,6 +40307,234 @@
    "suppressions": [],
    "problems": [],
    "changedActuals": []
+  },
+  "beebox/test/core/event-bus.doctest.md": {
+   "test": "beebox/test/core/event-bus.test.ts",
+   "blob": "f51dfd322b1b0f65d8094ef0a47552801af8c25c",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 60,
+     "kind": "check"
+    },
+    {
+     "line": 63,
+     "kind": "check"
+    },
+    {
+     "line": 75,
+     "kind": "check"
+    },
+    {
+     "line": 78,
+     "kind": "check"
+    },
+    {
+     "line": 88,
+     "kind": "check"
+    },
+    {
+     "line": 95,
+     "kind": "check"
+    },
+    {
+     "line": 116,
+     "kind": "statement"
+    },
+    {
+     "line": 121,
+     "kind": "check"
+    },
+    {
+     "line": 129,
+     "kind": "check"
+    },
+    {
+     "line": 136,
+     "kind": "check"
+    },
+    {
+     "line": 152,
+     "kind": "statement"
+    },
+    {
+     "line": 156,
+     "kind": "statement"
+    },
+    {
+     "line": 164,
+     "kind": "check"
+    },
+    {
+     "line": 173,
+     "kind": "check"
+    },
+    {
+     "line": 176,
+     "kind": "check"
+    },
+    {
+     "line": 192,
+     "kind": "check"
+    },
+    {
+     "line": 201,
+     "kind": "statement"
+    },
+    {
+     "line": 203,
+     "kind": "statement"
+    },
+    {
+     "line": 207,
+     "kind": "check"
+    },
+    {
+     "line": 224,
+     "kind": "statement"
+    },
+    {
+     "line": 232,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "60": "lossy actual value (strengthen in phase 3)",
+    "136": "lossy actual value (strengthen in phase 3)",
+    "192": "lossy actual value (strengthen in phase 3)",
+    "207": "lossy actual value (strengthen in phase 3)",
+    "232": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "60": [
+     {
+      "method": "checkText",
+      "actual": "3e10b29e79ec1eb2",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 60
+     }
+    ],
+    "63": [
+     {
+      "method": "check",
+      "actual": "3d2200f2d590cf33",
+      "expected": "ce8124bc1b0fbc0c",
+      "line": 64
+     }
+    ],
+    "75": [
+     {
+      "method": "check",
+      "actual": "32d98443eeddb4d2",
+      "expected": "b5bea41b6c623f7c",
+      "line": 74
+     }
+    ],
+    "78": [
+     {
+      "method": "check",
+      "actual": "4cd9472ba922af69",
+      "expected": "b5bea41b6c623f7c",
+      "line": 77
+     }
+    ],
+    "88": [
+     {
+      "method": "check",
+      "actual": "160e7579aef2f5c8",
+      "expected": "6f035f90745d24db",
+      "line": 98
+     }
+    ],
+    "95": [
+     {
+      "method": "check",
+      "actual": "73294474bb9cfdc9",
+      "expected": "0e63995d1fba5653",
+      "line": 103
+     }
+    ],
+    "121": [
+     {
+      "method": "check",
+      "actual": "e02070ea325d10e9",
+      "expected": "3b0ece4b0947ccb3",
+      "line": 137
+     }
+    ],
+    "129": [
+     {
+      "method": "check",
+      "actual": "2172311045ca0ed4",
+      "expected": "4135cc9c1085ed39",
+      "line": 143
+     }
+    ],
+    "136": [
+     {
+      "method": "checkText",
+      "actual": "4791aa6d11c2da5c",
+      "expected": "98089e6d36f78e97",
+      "line": 150
+     }
+    ],
+    "164": [
+     {
+      "method": "check",
+      "actual": "160e7579aef2f5c8",
+      "expected": "5825b35c6e6280cd",
+      "line": 183
+     }
+    ],
+    "173": [
+     {
+      "method": "check",
+      "actual": "73294474bb9cfdc9",
+      "expected": "5870386d1be250fa",
+      "line": 194
+     }
+    ],
+    "176": [
+     {
+      "method": "check",
+      "actual": "8b437d940dd0c02c",
+      "expected": "6cc786f8e0446f14",
+      "line": 199
+     }
+    ],
+    "192": [
+     {
+      "method": "checkText",
+      "actual": "2b9b2e2751aeb5d2",
+      "expected": "cc11310c456c3690",
+      "line": 221
+     }
+    ],
+    "207": [
+     {
+      "method": "checkText",
+      "actual": "356a6880fffca4bd",
+      "expected": "98089e6d36f78e97",
+      "line": 233
+     }
+    ],
+    "232": [
+     {
+      "method": "checkText",
+      "actual": "396ee0b3c75393b5",
+      "expected": "98089e6d36f78e97",
+      "line": 261
+     }
+    ]
+   },
+   "assertions": 22,
+   "expectedAssertions": 22,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L60, line 60"
+   ]
   },
   "beebox/test/core/external/ref.doctest.md": {
    "test": "beebox/test/core/external/ref.test.ts",
@@ -42794,6 +44173,310 @@
    },
    "assertions": 32,
    "expectedAssertions": 32,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/core/last-audio-pending.doctest.md": {
+   "test": "beebox/test/core/last-audio-pending.test.ts",
+   "blob": "89c38e182741b71cbd61f17ea0f38acf439ea468",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 58,
+     "kind": "check"
+    },
+    {
+     "line": 84,
+     "kind": "check"
+    },
+    {
+     "line": 99,
+     "kind": "check"
+    },
+    {
+     "line": 112,
+     "kind": "check"
+    },
+    {
+     "line": 133,
+     "kind": "check"
+    },
+    {
+     "line": 149,
+     "kind": "check"
+    },
+    {
+     "line": 165,
+     "kind": "check"
+    },
+    {
+     "line": 186,
+     "kind": "check"
+    },
+    {
+     "line": 208,
+     "kind": "check"
+    },
+    {
+     "line": 228,
+     "kind": "check"
+    },
+    {
+     "line": 247,
+     "kind": "check"
+    },
+    {
+     "line": 271,
+     "kind": "check"
+    },
+    {
+     "line": 301,
+     "kind": "check"
+    },
+    {
+     "line": 329,
+     "kind": "check"
+    },
+    {
+     "line": 360,
+     "kind": "check"
+    },
+    {
+     "line": 383,
+     "kind": "check"
+    },
+    {
+     "line": 460,
+     "kind": "check"
+    },
+    {
+     "line": 539,
+     "kind": "check"
+    },
+    {
+     "line": 596,
+     "kind": "check"
+    },
+    {
+     "line": 636,
+     "kind": "check"
+    },
+    {
+     "line": 649,
+     "kind": "check"
+    },
+    {
+     "line": 657,
+     "kind": "check"
+    },
+    {
+     "line": 673,
+     "kind": "check"
+    },
+    {
+     "line": 684,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "58": [
+     {
+      "method": "checkText",
+      "actual": "bd408b6ee4ff2611",
+      "expected": "d3297622e7f273db",
+      "line": 75
+     }
+    ],
+    "84": [
+     {
+      "method": "check",
+      "actual": "7200868ea57bf880",
+      "expected": "492bd0204b74443b",
+      "line": 88
+     }
+    ],
+    "99": [
+     {
+      "method": "checkText",
+      "actual": "0fa752f2a3c113d1",
+      "expected": "40a91778ae22f794",
+      "line": 105
+     }
+    ],
+    "112": [
+     {
+      "method": "check",
+      "actual": "7200868ea57bf880",
+      "expected": "53b773b65438e16d",
+      "line": 117
+     }
+    ],
+    "133": [
+     {
+      "method": "checkText",
+      "actual": "9158566d8c2849f8",
+      "expected": "a2e0f7c831ddbd09",
+      "line": 141
+     }
+    ],
+    "149": [
+     {
+      "method": "check",
+      "actual": "7200868ea57bf880",
+      "expected": "30a0924a3360be68",
+      "line": 152
+     }
+    ],
+    "165": [
+     {
+      "method": "checkText",
+      "actual": "31c7303423feef66",
+      "expected": "a0cebf8ce6aa4562",
+      "line": 173
+     }
+    ],
+    "186": [
+     {
+      "method": "checkText",
+      "actual": "709cb39ab2ff181a",
+      "expected": "cbc75e78d9865cd0",
+      "line": 193
+     }
+    ],
+    "208": [
+     {
+      "method": "checkText",
+      "actual": "f51f2116c37ae9ae",
+      "expected": "63f4e90668485b4b",
+      "line": 222
+     }
+    ],
+    "228": [
+     {
+      "method": "check",
+      "actual": "8f6872b0668968e8",
+      "expected": "26d228663f13a885",
+      "line": 242
+     }
+    ],
+    "247": [
+     {
+      "method": "checkText",
+      "actual": "f51f2116c37ae9ae",
+      "expected": "988e7d217b01a907",
+      "line": 266
+     }
+    ],
+    "271": [
+     {
+      "method": "checkText",
+      "actual": "ccdfd6351e2dfaf9",
+      "expected": "adcfe81cabc75275",
+      "line": 301
+     }
+    ],
+    "301": [
+     {
+      "method": "checkText",
+      "actual": "ce34417c7cc8b2a8",
+      "expected": "842a87bc6a4f94ff",
+      "line": 324
+     }
+    ],
+    "329": [
+     {
+      "method": "checkText",
+      "actual": "0a69740267fe23f9",
+      "expected": "2ea1bda0623d4f5c",
+      "line": 358
+     }
+    ],
+    "360": [
+     {
+      "method": "check",
+      "actual": "8f6872b0668968e8",
+      "expected": "26d228663f13a885",
+      "line": 382
+     }
+    ],
+    "383": [
+     {
+      "method": "checkText",
+      "actual": "addeeb84a20855c3",
+      "expected": "0505028b49e44841",
+      "line": 456
+     }
+    ],
+    "460": [
+     {
+      "method": "checkText",
+      "actual": "addeeb84a20855c3",
+      "expected": "3e4b97424a9a2f7a",
+      "line": 541
+     }
+    ],
+    "539": [
+     {
+      "method": "checkText",
+      "actual": "addeeb84a20855c3",
+      "expected": "579e115b9a921b66",
+      "line": 603
+     }
+    ],
+    "596": [
+     {
+      "method": "checkText",
+      "actual": "7570b2486d11161b",
+      "expected": "32176453e21cd873",
+      "line": 645
+     }
+    ],
+    "636": [
+     {
+      "method": "checkText",
+      "actual": "d1d5f03773a8a88f",
+      "expected": "4a4d4dd05f145fec",
+      "line": 662
+     }
+    ],
+    "649": [
+     {
+      "method": "check",
+      "actual": "1f3e649acb3c28ee",
+      "expected": "49ae7042d06b83b1",
+      "line": 672
+     }
+    ],
+    "657": [
+     {
+      "method": "checkText",
+      "actual": "4ebd594ecfb99147",
+      "expected": "26b7ee2a12430b39",
+      "line": 684
+     }
+    ],
+    "673": [
+     {
+      "method": "checkText",
+      "actual": "5937db9c78c71d02",
+      "expected": "25236183a520b650",
+      "line": 700
+     }
+    ],
+    "684": [
+     {
+      "method": "checkText",
+      "actual": "c3d49c7fcf7cbcbf",
+      "expected": "73c26e7fad30dbeb",
+      "line": 712
+     }
+    ]
+   },
+   "assertions": 46,
+   "expectedAssertions": 46,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
@@ -47149,6 +48832,191 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/test/core/mobile/pairing.store-concurrency.doctest.md": {
+   "test": "beebox/test/core/mobile/pairing.store-concurrency.test.ts",
+   "blob": "a06fa030a89d50697259fecd42d170d248adac5a",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 35,
+     "kind": "statement"
+    },
+    {
+     "line": 40,
+     "kind": "check"
+    },
+    {
+     "line": 48,
+     "kind": "check"
+    },
+    {
+     "line": 51,
+     "kind": "check"
+    },
+    {
+     "line": 62,
+     "kind": "statement"
+    },
+    {
+     "line": 67,
+     "kind": "statement"
+    },
+    {
+     "line": 73,
+     "kind": "check"
+    },
+    {
+     "line": 81,
+     "kind": "check"
+    },
+    {
+     "line": 92,
+     "kind": "check"
+    },
+    {
+     "line": 95,
+     "kind": "check"
+    },
+    {
+     "line": 98,
+     "kind": "check"
+    },
+    {
+     "line": 115,
+     "kind": "statement"
+    },
+    {
+     "line": 120,
+     "kind": "check"
+    },
+    {
+     "line": 140,
+     "kind": "statement"
+    },
+    {
+     "line": 145,
+     "kind": "check"
+    },
+    {
+     "line": 152,
+     "kind": "check"
+    },
+    {
+     "line": 168,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "73": "lossy actual value (strengthen in phase 3)",
+    "92": "lossy actual value (strengthen in phase 3)",
+    "95": "typed check failed on the run's value",
+    "98": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "40": [
+     {
+      "method": "check",
+      "actual": "01af218d069a4c05",
+      "expected": "92d36d0365c33c46",
+      "line": 51
+     }
+    ],
+    "48": [
+     {
+      "method": "check",
+      "actual": "9b7e1c0d1b40ccfa",
+      "expected": "b5bea41b6c623f7c",
+      "line": 56
+     }
+    ],
+    "51": [
+     {
+      "method": "check",
+      "actual": "f0f358ea0abe6058",
+      "expected": "74234e98afe7498f",
+      "line": 59
+     }
+    ],
+    "73": [
+     {
+      "method": "checkText",
+      "actual": "9a22c2dd831ca4f3",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 82
+     }
+    ],
+    "81": [
+     {
+      "method": "check",
+      "actual": "d4e71558652de276",
+      "expected": "74234e98afe7498f",
+      "line": 87
+     }
+    ],
+    "92": [
+     {
+      "method": "checkText",
+      "actual": "b95bf5585f637200",
+      "expected": "391552c099c101b1",
+      "line": 96
+     }
+    ],
+    "95": [
+     {
+      "method": "checkText",
+      "actual": "a4d2d651b536ecd8",
+      "expected": "b08eab77f8e1fded",
+      "line": 99
+     }
+    ],
+    "98": [
+     {
+      "method": "checkText",
+      "actual": "db0f1eb8980a83e4",
+      "expected": "98089e6d36f78e97",
+      "line": 102
+     }
+    ],
+    "120": [
+     {
+      "method": "checkText",
+      "actual": "1a0e2225225591ad",
+      "expected": "94d74a0243154ad0",
+      "line": 132
+     }
+    ],
+    "145": [
+     {
+      "method": "check",
+      "actual": "9150a40c91dcad02",
+      "expected": "fcbcf165908dd18a",
+      "line": 156
+     }
+    ],
+    "152": [
+     {
+      "method": "check",
+      "actual": "009d1ba2bb7c4c86",
+      "expected": "fcbcf165908dd18a",
+      "line": 162
+     }
+    ],
+    "168": [
+     {
+      "method": "checkText",
+      "actual": "0ab621c887cc6af0",
+      "expected": "1157262117681fb4",
+      "line": 189
+     }
+    ]
+   },
+   "assertions": 16,
+   "expectedAssertions": 16,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/test/core/model-capabilities.doctest.md": {
    "test": "beebox/test/core/model-capabilities.test.ts",
    "blob": "0418a531ea9ea642f29d35f2a3f8eb1d5137e3d9",
@@ -50739,6 +52607,130 @@
       "actual": "3c91e0c491368468",
       "expected": "9f3becba6e4b1583",
       "line": 82
+     }
+    ]
+   },
+   "assertions": 18,
+   "expectedAssertions": 18,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/core/pending-browser-request.doctest.md": {
+   "test": "beebox/test/core/pending-browser-request.test.ts",
+   "blob": "ad4ccbbb7275b8f8d9a0acebc71f51d843d165f8",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 26,
+     "kind": "check"
+    },
+    {
+     "line": 49,
+     "kind": "check"
+    },
+    {
+     "line": 63,
+     "kind": "check"
+    },
+    {
+     "line": 79,
+     "kind": "check"
+    },
+    {
+     "line": 100,
+     "kind": "check"
+    },
+    {
+     "line": 115,
+     "kind": "check"
+    },
+    {
+     "line": 128,
+     "kind": "check"
+    },
+    {
+     "line": 140,
+     "kind": "check"
+    },
+    {
+     "line": 157,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "26": [
+     {
+      "method": "checkText",
+      "actual": "bd408b6ee4ff2611",
+      "expected": "3eb5fb6f2a42377b",
+      "line": 33
+     }
+    ],
+    "49": [
+     {
+      "method": "check",
+      "actual": "7200868ea57bf880",
+      "expected": "5078ffbcbcb0badb",
+      "line": 50
+     }
+    ],
+    "63": [
+     {
+      "method": "checkText",
+      "actual": "0fa752f2a3c113d1",
+      "expected": "784fa90dab312476",
+      "line": 66
+     }
+    ],
+    "79": [
+     {
+      "method": "checkText",
+      "actual": "31d07bb269758f4c",
+      "expected": "59424cf2adb92fda",
+      "line": 84
+     }
+    ],
+    "100": [
+     {
+      "method": "check",
+      "actual": "7200868ea57bf880",
+      "expected": "492bd0204b74443b",
+      "line": 100
+     }
+    ],
+    "115": [
+     {
+      "method": "checkText",
+      "actual": "0fa752f2a3c113d1",
+      "expected": "40a91778ae22f794",
+      "line": 117
+     }
+    ],
+    "128": [
+     {
+      "method": "check",
+      "actual": "7200868ea57bf880",
+      "expected": "6bd4a7008a99a3d1",
+      "line": 129
+     }
+    ],
+    "140": [
+     {
+      "method": "checkText",
+      "actual": "aad93d59b645ea34",
+      "expected": "a8cfe00244f5658f",
+      "line": 139
+     }
+    ],
+    "157": [
+     {
+      "method": "checkText",
+      "actual": "dedebd349336e66b",
+      "expected": "15dc4beeb4735398",
+      "line": 161
      }
     ]
    },
@@ -57374,6 +59366,400 @@
    },
    "assertions": 19,
    "expectedAssertions": 19,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/core/schedule/health.doctest.md": {
+   "test": "beebox/test/core/schedule/health.test.ts",
+   "blob": "23f6b0cf4b9b3af885210d6d1f438f0a03544350",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 76,
+     "kind": "check"
+    },
+    {
+     "line": 86,
+     "kind": "check"
+    },
+    {
+     "line": 97,
+     "kind": "check"
+    },
+    {
+     "line": 116,
+     "kind": "check"
+    },
+    {
+     "line": 130,
+     "kind": "check"
+    },
+    {
+     "line": 147,
+     "kind": "check"
+    },
+    {
+     "line": 157,
+     "kind": "check"
+    },
+    {
+     "line": 161,
+     "kind": "check"
+    },
+    {
+     "line": 168,
+     "kind": "check"
+    },
+    {
+     "line": 176,
+     "kind": "check"
+    },
+    {
+     "line": 183,
+     "kind": "check"
+    },
+    {
+     "line": 191,
+     "kind": "check"
+    },
+    {
+     "line": 194,
+     "kind": "check"
+    },
+    {
+     "line": 205,
+     "kind": "check"
+    },
+    {
+     "line": 209,
+     "kind": "check"
+    },
+    {
+     "line": 212,
+     "kind": "check"
+    },
+    {
+     "line": 219,
+     "kind": "check"
+    },
+    {
+     "line": 231,
+     "kind": "check"
+    },
+    {
+     "line": 250,
+     "kind": "statement"
+    },
+    {
+     "line": 254,
+     "kind": "check"
+    },
+    {
+     "line": 257,
+     "kind": "check"
+    },
+    {
+     "line": 260,
+     "kind": "check"
+    },
+    {
+     "line": 267,
+     "kind": "check"
+    },
+    {
+     "line": 279,
+     "kind": "check"
+    },
+    {
+     "line": 303,
+     "kind": "check"
+    },
+    {
+     "line": 308,
+     "kind": "check"
+    },
+    {
+     "line": 316,
+     "kind": "check"
+    },
+    {
+     "line": 319,
+     "kind": "check"
+    },
+    {
+     "line": 332,
+     "kind": "check"
+    },
+    {
+     "line": 357,
+     "kind": "check"
+    },
+    {
+     "line": 377,
+     "kind": "check"
+    },
+    {
+     "line": 389,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "319": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "76": [
+     {
+      "method": "check",
+      "actual": "8e82c86d4af6ce40",
+      "expected": "c48b5b1a9776c846",
+      "line": 77
+     }
+    ],
+    "86": [
+     {
+      "method": "checkText",
+      "actual": "466ef808910fa584",
+      "expected": "7d5377cb7ef58fba",
+      "line": 89
+     }
+    ],
+    "97": [
+     {
+      "method": "check",
+      "actual": "e7aa3c19667bf7f4",
+      "expected": "0dacd702cef167a4",
+      "line": 109
+     }
+    ],
+    "116": [
+     {
+      "method": "check",
+      "actual": "59b7eb0e5cf919e2",
+      "expected": "decce60d05be2499",
+      "line": 119
+     }
+    ],
+    "130": [
+     {
+      "method": "check",
+      "actual": "6a81827e8fab1a8c",
+      "expected": "8869243ff6d1434b",
+      "line": 135
+     }
+    ],
+    "147": [
+     {
+      "method": "checkText",
+      "actual": "4365492210e9219a",
+      "expected": "806e26cc2b717369",
+      "line": 157
+     }
+    ],
+    "157": [
+     {
+      "method": "check",
+      "actual": "f960ffea504bb84f",
+      "expected": "c48b5b1a9776c846",
+      "line": 166
+     }
+    ],
+    "161": [
+     {
+      "method": "check",
+      "actual": "4d8aadd5da8eafb3",
+      "expected": "18a967b63e9530f0",
+      "line": 169
+     }
+    ],
+    "168": [
+     {
+      "method": "check",
+      "actual": "0e544e1eb53890b5",
+      "expected": "18a967b63e9530f0",
+      "line": 175
+     }
+    ],
+    "176": [
+     {
+      "method": "check",
+      "actual": "6e398c8a0e30f7bb",
+      "expected": "c48b5b1a9776c846",
+      "line": 182
+     }
+    ],
+    "183": [
+     {
+      "method": "check",
+      "actual": "225736124cba6fc2",
+      "expected": "c48b5b1a9776c846",
+      "line": 188
+     }
+    ],
+    "191": [
+     {
+      "method": "check",
+      "actual": "01898a31d2b5d61e",
+      "expected": "18a967b63e9530f0",
+      "line": 195
+     }
+    ],
+    "194": [
+     {
+      "method": "check",
+      "actual": "049172880648ce08",
+      "expected": "c48b5b1a9776c846",
+      "line": 198
+     }
+    ],
+    "205": [
+     {
+      "method": "checkText",
+      "actual": "4ea1c75b6a9c0c25",
+      "expected": "f693b9deb860600f",
+      "line": 211
+     }
+    ],
+    "209": [
+     {
+      "method": "checkText",
+      "actual": "bd9b04b6700649ba",
+      "expected": "f693b9deb860600f",
+      "line": 214
+     }
+    ],
+    "212": [
+     {
+      "method": "checkText",
+      "actual": "9c2e0bc5ad9cb72b",
+      "expected": "678b52599c7217d7",
+      "line": 221
+     }
+    ],
+    "219": [
+     {
+      "method": "checkText",
+      "actual": "df52a3c8b387f9fc",
+      "expected": "a04a295460902fb6",
+      "line": 228
+     }
+    ],
+    "231": [
+     {
+      "method": "checkText",
+      "actual": "b3ef308a5e497713",
+      "expected": "3d00b4ee4fa941d4",
+      "line": 245
+     }
+    ],
+    "254": [
+     {
+      "method": "checkText",
+      "actual": "90f6d5f0fef2d224",
+      "expected": "f072cbec3bf88418",
+      "line": 262
+     }
+    ],
+    "257": [
+     {
+      "method": "checkText",
+      "actual": "a9f6110fb05edbd6",
+      "expected": "72f6e229de32a6ac",
+      "line": 265
+     }
+    ],
+    "260": [
+     {
+      "method": "checkText",
+      "actual": "67863dcd2b82a309",
+      "expected": "dfe8f969366a7b3a",
+      "line": 268
+     }
+    ],
+    "267": [
+     {
+      "method": "checkText",
+      "actual": "63476c521a2fe901",
+      "expected": "f072cbec3bf88418",
+      "line": 278
+     }
+    ],
+    "279": [
+     {
+      "method": "checkText",
+      "actual": "5aeda93efa5e5ead",
+      "expected": "3b46a7b07e952775",
+      "line": 298
+     }
+    ],
+    "303": [
+     {
+      "method": "check",
+      "actual": "c000f3e67e4f5857",
+      "expected": "42427893456df7cb",
+      "line": 315
+     }
+    ],
+    "308": [
+     {
+      "method": "check",
+      "actual": "9ea12647322d5ff1",
+      "expected": "f693b9deb860600f",
+      "line": 321
+     }
+    ],
+    "316": [
+     {
+      "method": "check",
+      "actual": "6284acd77152251f",
+      "expected": "dcbd7de98677eb83",
+      "line": 327
+     }
+    ],
+    "319": [
+     {
+      "method": "checkText",
+      "actual": "507939b57bb8c047",
+      "expected": "98089e6d36f78e97",
+      "line": 330
+     }
+    ],
+    "332": [
+     {
+      "method": "checkText",
+      "actual": "22bf9a2e1f224b88",
+      "expected": "2f9b67ddc6cfb8e5",
+      "line": 358
+     }
+    ],
+    "357": [
+     {
+      "method": "checkText",
+      "actual": "2f3502e60133f524",
+      "expected": "fd7444f976f67516",
+      "line": 373
+     }
+    ],
+    "377": [
+     {
+      "method": "checkText",
+      "actual": "874b698c21c893ad",
+      "expected": "754233227d7fc86c",
+      "line": 387
+     }
+    ],
+    "389": [
+     {
+      "method": "check",
+      "actual": "409535750e1a7018",
+      "expected": "71aba7d2c59bad2e",
+      "line": 396
+     }
+    ]
+   },
+   "assertions": 48,
+   "expectedAssertions": 48,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
@@ -77549,6 +79935,346 @@
    },
    "assertions": 15,
    "expectedAssertions": 15,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/field-test/run/operator.doctest.md": {
+   "test": "beebox/test/field-test/run/operator.test.ts",
+   "blob": "796f5f26f5c0144955234e88872153732405f792",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 63,
+     "kind": "statement"
+    },
+    {
+     "line": 65,
+     "kind": "check"
+    },
+    {
+     "line": 69,
+     "kind": "check"
+    },
+    {
+     "line": 78,
+     "kind": "check"
+    },
+    {
+     "line": 91,
+     "kind": "check"
+    },
+    {
+     "line": 108,
+     "kind": "statement"
+    },
+    {
+     "line": 111,
+     "kind": "statement"
+    },
+    {
+     "line": 124,
+     "kind": "check"
+    },
+    {
+     "line": 133,
+     "kind": "check"
+    },
+    {
+     "line": 147,
+     "kind": "check"
+    },
+    {
+     "line": 151,
+     "kind": "check"
+    },
+    {
+     "line": 175,
+     "kind": "check"
+    },
+    {
+     "line": 178,
+     "kind": "check"
+    },
+    {
+     "line": 185,
+     "kind": "check"
+    },
+    {
+     "line": 196,
+     "kind": "check"
+    },
+    {
+     "line": 202,
+     "kind": "throws"
+    },
+    {
+     "line": 218,
+     "kind": "check"
+    },
+    {
+     "line": 240,
+     "kind": "check"
+    },
+    {
+     "line": 250,
+     "kind": "check"
+    },
+    {
+     "line": 255,
+     "kind": "check"
+    },
+    {
+     "line": 261,
+     "kind": "statement"
+    },
+    {
+     "line": 269,
+     "kind": "statement"
+    },
+    {
+     "line": 285,
+     "kind": "check"
+    },
+    {
+     "line": 292,
+     "kind": "throws"
+    },
+    {
+     "line": 295,
+     "kind": "statement"
+    },
+    {
+     "line": 303,
+     "kind": "check"
+    },
+    {
+     "line": 320,
+     "kind": "statement"
+    },
+    {
+     "line": 326,
+     "kind": "check"
+    },
+    {
+     "line": 343,
+     "kind": "check"
+    },
+    {
+     "line": 346,
+     "kind": "check"
+    },
+    {
+     "line": 356,
+     "kind": "statement"
+    },
+    {
+     "line": 359,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "65": "lossy actual value (strengthen in phase 3)",
+    "147": "lossy actual value (strengthen in phase 3)",
+    "250": "typed check failed on the run's value"
+   },
+   "awaited": [],
+   "checks": {
+    "65": [
+     {
+      "method": "checkText",
+      "actual": "8d1c398c6abd5137",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 67
+     }
+    ],
+    "69": [
+     {
+      "method": "check",
+      "actual": "0af1ac186bd40ba7",
+      "expected": "f94a36bba2755425",
+      "line": 74
+     }
+    ],
+    "78": [
+     {
+      "method": "check",
+      "actual": "e8b3c590bc744797",
+      "expected": "879179cfeee5d9f0",
+      "line": 86
+     }
+    ],
+    "91": [
+     {
+      "method": "check",
+      "actual": "db35f4f2980d9671",
+      "expected": "879179cfeee5d9f0",
+      "line": 101
+     }
+    ],
+    "124": [
+     {
+      "method": "check",
+      "actual": "daddbfe4d721fa48",
+      "expected": "d764e5dcda741adf",
+      "line": 144
+     }
+    ],
+    "133": [
+     {
+      "method": "check",
+      "actual": "18479c38b5985302",
+      "expected": "6994c564ae9d09bc",
+      "line": 156
+     }
+    ],
+    "147": [
+     {
+      "method": "checkText",
+      "actual": "b212195da1487e1b",
+      "expected": "536549599ec6c3b8",
+      "line": 164
+     }
+    ],
+    "151": [
+     {
+      "method": "check",
+      "actual": "26bca1b0c6e82e62",
+      "expected": "eb7c58805215fb65",
+      "line": 181
+     }
+    ],
+    "175": [
+     {
+      "method": "check",
+      "actual": "38c6aa50dc661a7a",
+      "expected": "5c1dffa4dd32de50",
+      "line": 189
+     }
+    ],
+    "178": [
+     {
+      "method": "check",
+      "actual": "a2bfcdc242b98589",
+      "expected": "4522921f3a99df60",
+      "line": 192
+     }
+    ],
+    "185": [
+     {
+      "method": "check",
+      "actual": "7de5b6e46a598cbf",
+      "expected": "34ae59d2d75f3d97",
+      "line": 200
+     }
+    ],
+    "196": [
+     {
+      "method": "check",
+      "actual": "03d741b72dd4a473",
+      "expected": "d5a76e787a1c98a1",
+      "line": 209
+     }
+    ],
+    "202": [
+     {
+      "method": "checkThrows",
+      "actual": "8df0ec89fb6c1d91",
+      "expected": "082e3e2e035c7154",
+      "line": 213
+     }
+    ],
+    "218": [
+     {
+      "method": "check",
+      "actual": "f523222341488160",
+      "expected": "242dbbf670c011d5",
+      "line": 236
+     }
+    ],
+    "240": [
+     {
+      "method": "check",
+      "actual": "a6c68a77aed3f688",
+      "expected": "4445968e4af4eba0",
+      "line": 250
+     }
+    ],
+    "250": [
+     {
+      "method": "checkText",
+      "actual": "4230c51067c8d3aa",
+      "expected": "15da8af7c6216f5c",
+      "line": 253
+     }
+    ],
+    "255": [
+     {
+      "method": "check",
+      "actual": "18453715e56cf1bf",
+      "expected": "9232234dbcc306f4",
+      "line": 264
+     }
+    ],
+    "285": [
+     {
+      "method": "check",
+      "actual": "b4bd5c18a8d2d3b1",
+      "expected": "97efd2068bba1672",
+      "line": 296
+     }
+    ],
+    "292": [
+     {
+      "method": "checkThrows",
+      "actual": "fc9ed6a580a6dd85",
+      "expected": "082e3e2e035c7154",
+      "line": 299
+     }
+    ],
+    "303": [
+     {
+      "method": "check",
+      "actual": "80796578d97d75d4",
+      "expected": "0e1ceea0571403d3",
+      "line": 324
+     }
+    ],
+    "326": [
+     {
+      "method": "check",
+      "actual": "7f561483dea0c577",
+      "expected": "7b359dc3f83d2202",
+      "line": 333
+     }
+    ],
+    "343": [
+     {
+      "method": "check",
+      "actual": "f163a1e8a28d1d8a",
+      "expected": "8b6306f9006ef352",
+      "line": 351
+     }
+    ],
+    "346": [
+     {
+      "method": "check",
+      "actual": "574f61a06c31df8a",
+      "expected": "e472e10bbae0368e",
+      "line": 354
+     }
+    ],
+    "359": [
+     {
+      "method": "check",
+      "actual": "0085d9e7228c93f2",
+      "expected": "9c589a557a64103f",
+      "line": 378
+     }
+    ]
+   },
+   "assertions": 31,
+   "expectedAssertions": 31,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
@@ -106273,6 +108999,337 @@
     "at doctest:L329, line 338"
    ]
   },
+  "beebox/test/webapp/mobile-cookie.doctest.md": {
+   "test": "beebox/test/webapp/mobile-cookie.test.ts",
+   "blob": "4555fc7a3011c1a1c1aa5826d96469bd7b459cf5",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 44,
+     "kind": "statement"
+    },
+    {
+     "line": 49,
+     "kind": "statement"
+    },
+    {
+     "line": 53,
+     "kind": "check"
+    },
+    {
+     "line": 67,
+     "kind": "check"
+    },
+    {
+     "line": 75,
+     "kind": "check"
+    },
+    {
+     "line": 83,
+     "kind": "check"
+    },
+    {
+     "line": 86,
+     "kind": "check"
+    },
+    {
+     "line": 98,
+     "kind": "check"
+    },
+    {
+     "line": 101,
+     "kind": "check"
+    },
+    {
+     "line": 121,
+     "kind": "statement"
+    },
+    {
+     "line": 126,
+     "kind": "check"
+    },
+    {
+     "line": 130,
+     "kind": "check"
+    },
+    {
+     "line": 140,
+     "kind": "check"
+    },
+    {
+     "line": 143,
+     "kind": "check"
+    },
+    {
+     "line": 159,
+     "kind": "check"
+    },
+    {
+     "line": 169,
+     "kind": "check"
+    },
+    {
+     "line": 179,
+     "kind": "check"
+    },
+    {
+     "line": 194,
+     "kind": "statement"
+    },
+    {
+     "line": 197,
+     "kind": "check"
+    },
+    {
+     "line": 200,
+     "kind": "check"
+    },
+    {
+     "line": 207,
+     "kind": "check"
+    },
+    {
+     "line": 210,
+     "kind": "check"
+    },
+    {
+     "line": 213,
+     "kind": "statement"
+    },
+    {
+     "line": 222,
+     "kind": "check"
+    },
+    {
+     "line": 233,
+     "kind": "check"
+    },
+    {
+     "line": 246,
+     "kind": "check"
+    },
+    {
+     "line": 261,
+     "kind": "check"
+    },
+    {
+     "line": 264,
+     "kind": "check"
+    },
+    {
+     "line": 274,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "75": "lossy actual value (strengthen in phase 3)",
+    "159": "lossy actual value (strengthen in phase 3)",
+    "169": "lossy actual value (strengthen in phase 3)",
+    "207": "lossy actual value (strengthen in phase 3)",
+    "222": "lossy actual value (strengthen in phase 3)",
+    "274": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "53": [
+     {
+      "method": "check",
+      "actual": "2f7461c9a44b2fae",
+      "expected": "fc56dbc6d4652b31",
+      "line": 68
+     }
+    ],
+    "67": [
+     {
+      "method": "check",
+      "actual": "b321bf1978184348",
+      "expected": "5b4c8afc14b91868",
+      "line": 76
+     }
+    ],
+    "75": [
+     {
+      "method": "checkText",
+      "actual": "c683b15ad3c9baf3",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 82
+     }
+    ],
+    "83": [
+     {
+      "method": "check",
+      "actual": "bac19853ffe02b13",
+      "expected": "dcaadad1cfce4377",
+      "line": 87
+     }
+    ],
+    "86": [
+     {
+      "method": "check",
+      "actual": "c7f26f1bed91add2",
+      "expected": "dcaadad1cfce4377",
+      "line": 90
+     }
+    ],
+    "98": [
+     {
+      "method": "check",
+      "actual": "0ee91ab7a9322978",
+      "expected": "b5bea41b6c623f7c",
+      "line": 103
+     }
+    ],
+    "101": [
+     {
+      "method": "check",
+      "actual": "62e89e385ebeb32e",
+      "expected": "dcaadad1cfce4377",
+      "line": 106
+     }
+    ],
+    "126": [
+     {
+      "method": "check",
+      "actual": "001066469ab35039",
+      "expected": "b0aa24d18dcd63a9",
+      "line": 137
+     }
+    ],
+    "130": [
+     {
+      "method": "check",
+      "actual": "bb5b6147b6eb9fcd",
+      "expected": "29783c5f8721a579",
+      "line": 146
+     }
+    ],
+    "140": [
+     {
+      "method": "check",
+      "actual": "c5a4237e99c3b52f",
+      "expected": "74234e98afe7498f",
+      "line": 156
+     }
+    ],
+    "143": [
+     {
+      "method": "check",
+      "actual": "c73e4a7e164cde54",
+      "expected": "74234e98afe7498f",
+      "line": 159
+     }
+    ],
+    "159": [
+     {
+      "method": "checkText",
+      "actual": "e45640e35d9362d5",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 176
+     }
+    ],
+    "169": [
+     {
+      "method": "checkText",
+      "actual": "415090be5b50fa32",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 184
+     }
+    ],
+    "179": [
+     {
+      "method": "check",
+      "actual": "11f05e68d3086e73",
+      "expected": "74234e98afe7498f",
+      "line": 189
+     }
+    ],
+    "197": [
+     {
+      "method": "check",
+      "actual": "18a6c942ad27d872",
+      "expected": "74234e98afe7498f",
+      "line": 209
+     }
+    ],
+    "200": [
+     {
+      "method": "check",
+      "actual": "5eed4f3093fd62a4",
+      "expected": "fcbcf165908dd18a",
+      "line": 212
+     }
+    ],
+    "207": [
+     {
+      "method": "checkText",
+      "actual": "7a0f0d320bcb139e",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 217
+     }
+    ],
+    "210": [
+     {
+      "method": "check",
+      "actual": "5eed4f3093fd62a4",
+      "expected": "b5bea41b6c623f7c",
+      "line": 220
+     }
+    ],
+    "222": [
+     {
+      "method": "checkText",
+      "actual": "940b4020d03d6533",
+      "expected": "98089e6d36f78e97",
+      "line": 235
+     }
+    ],
+    "233": [
+     {
+      "method": "check",
+      "actual": "04aa54390304160a",
+      "expected": "c55b535f17be825c",
+      "line": 245
+     }
+    ],
+    "246": [
+     {
+      "method": "check",
+      "actual": "c7097b1526339b1c",
+      "expected": "c55b535f17be825c",
+      "line": 255
+     }
+    ],
+    "261": [
+     {
+      "method": "check",
+      "actual": "7fce21cdb4f23412",
+      "expected": "b5bea41b6c623f7c",
+      "line": 264
+     }
+    ],
+    "264": [
+     {
+      "method": "check",
+      "actual": "f548573b21015acb",
+      "expected": "3fb022999fdff03f",
+      "line": 269
+     }
+    ],
+    "274": [
+     {
+      "method": "checkText",
+      "actual": "a38fe204b011b904",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 275
+     }
+    ]
+   },
+   "assertions": 26,
+   "expectedAssertions": 26,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/test/webapp/routes/actions.doctest.md": {
    "test": "beebox/test/webapp/routes/actions.test.ts",
    "blob": "c90dbc5b4488a13d9b1ce2ce1fad5d34aff9674f",
@@ -110534,6 +113591,136 @@
    },
    "assertions": 4,
    "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/webapp/routes/chat/helpers.mobile-sender.doctest.md": {
+   "test": "beebox/test/webapp/routes/chat/helpers.mobile-sender.test.ts",
+   "blob": "b6a58f9970f9e8ede15938261cf615fff826616b",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 35,
+     "kind": "statement"
+    },
+    {
+     "line": 38,
+     "kind": "check"
+    },
+    {
+     "line": 43,
+     "kind": "check"
+    },
+    {
+     "line": 52,
+     "kind": "check"
+    },
+    {
+     "line": 61,
+     "kind": "check"
+    },
+    {
+     "line": 65,
+     "kind": "check"
+    },
+    {
+     "line": 76,
+     "kind": "check"
+    },
+    {
+     "line": 88,
+     "kind": "check"
+    },
+    {
+     "line": 98,
+     "kind": "check"
+    },
+    {
+     "line": 101,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "38": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "38": [
+     {
+      "method": "checkText",
+      "actual": "4d480133ed8fb361",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 51
+     }
+    ],
+    "43": [
+     {
+      "method": "check",
+      "actual": "0a367b92cf0b037d",
+      "expected": "b919f88bb9d7dedf",
+      "line": 55
+     }
+    ],
+    "52": [
+     {
+      "method": "check",
+      "actual": "cd8324be999bf9a0",
+      "expected": "8af18470808c99e6",
+      "line": 65
+     }
+    ],
+    "61": [
+     {
+      "method": "check",
+      "actual": "00c989d6aad06468",
+      "expected": "83c6db16dce588da",
+      "line": 72
+     }
+    ],
+    "65": [
+     {
+      "method": "check",
+      "actual": "fb555caf0faf2085",
+      "expected": "bd9a5558762da502",
+      "line": 75
+     }
+    ],
+    "76": [
+     {
+      "method": "check",
+      "actual": "f25b60a7d8ca6b95",
+      "expected": "1a89b1b5e5169bd7",
+      "line": 86
+     }
+    ],
+    "88": [
+     {
+      "method": "check",
+      "actual": "14ab1223e814dfa8",
+      "expected": "74234e98afe7498f",
+      "line": 99
+     }
+    ],
+    "98": [
+     {
+      "method": "check",
+      "actual": "ea9825d279320d5b",
+      "expected": "74234e98afe7498f",
+      "line": 105
+     }
+    ],
+    "101": [
+     {
+      "method": "check",
+      "actual": "7c28c7ad33ad1e7b",
+      "expected": "74234e98afe7498f",
+      "line": 108
+     }
+    ]
+   },
+   "assertions": 10,
+   "expectedAssertions": 10,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
@@ -118296,6 +121483,120 @@
    "suppressions": [],
    "problems": [],
    "changedActuals": []
+  },
+  "beebox/test/webapp/trpc/routers/chat.reload-loses-in-flight.doctest.md": {
+   "test": "beebox/test/webapp/trpc/routers/chat.reload-loses-in-flight.test.ts",
+   "blob": "7529e67c77af4a8c95bd788c0dce369520d677a3",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 73,
+     "kind": "statement"
+    },
+    {
+     "line": 80,
+     "kind": "statement"
+    },
+    {
+     "line": 85,
+     "kind": "check"
+    },
+    {
+     "line": 102,
+     "kind": "check"
+    },
+    {
+     "line": 112,
+     "kind": "check"
+    },
+    {
+     "line": 124,
+     "kind": "check"
+    },
+    {
+     "line": 152,
+     "kind": "check"
+    },
+    {
+     "line": 161,
+     "kind": "check"
+    },
+    {
+     "line": 181,
+     "kind": "statement"
+    },
+    {
+     "line": 188,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "85": [
+     {
+      "method": "checkText",
+      "actual": "dbad5ce2a38364ef",
+      "expected": "ee6ee9c3892897b3",
+      "line": 108
+     }
+    ],
+    "102": [
+     {
+      "method": "checkText",
+      "actual": "e75b4cab9a42fafe",
+      "expected": "26a450261ab6a5b4",
+      "line": 116
+     }
+    ],
+    "112": [
+     {
+      "method": "checkText",
+      "actual": "65fb1d5070a187dc",
+      "expected": "41f15b77e03402e6",
+      "line": 123
+     }
+    ],
+    "124": [
+     {
+      "method": "checkText",
+      "actual": "72f59af8636390a5",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 134
+     }
+    ],
+    "152": [
+     {
+      "method": "checkText",
+      "actual": "11faca025b1a331d",
+      "expected": "c446f9449a5ac043",
+      "line": 160
+     }
+    ],
+    "161": [
+     {
+      "method": "checkText",
+      "actual": "14fdb35cf493e725",
+      "expected": "391552c099c101b1",
+      "line": 176
+     }
+    ],
+    "188": [
+     {
+      "method": "checkText",
+      "actual": "42d281848452ee1b",
+      "expected": "3c319d1b983f7427",
+      "line": 194
+     }
+    ]
+   },
+   "assertions": 8,
+   "expectedAssertions": 8,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L188, line 194"
+   ]
   },
   "beebox/test/webapp/trpc/routers/chat.reserved-features.doctest.md": {
    "test": "beebox/test/webapp/trpc/routers/chat.reserved-features.test.ts",
