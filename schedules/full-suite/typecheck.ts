@@ -40,10 +40,12 @@ async function packagesWithScript(dir: string): Promise<string[]> {
 export async function typecheckAll(dir: string): Promise<Typecheck> {
   // Each package's script prepares what its program needs (beebox builds its
   // export declarations first), so a failure here is the code's, not the
-  // checkout's: it stays open until a landing fixes it.
+  // checkout's: it stays open until a landing fixes it. No `--silent`: beebox's
+  // script runs two scripts by pattern, and pnpm's silent reporter then drops
+  // their output, so the alert would carry no errors.
   const failures: string[] = [];
   for (const pkg of await packagesWithScript(dir)) {
-    const result = await execa("pnpm", ["--silent", "typecheck"], { cwd: path.join(dir, pkg), reject: false, all: true });
+    const result = await execa("pnpm", ["typecheck"], { cwd: path.join(dir, pkg), reject: false, all: true });
     if (result.exitCode !== 0) failures.push(`## ${pkg === "." ? "(root)" : pkg}\n${result.all ?? ""}`);
   }
   return { ok: failures.length === 0, output: failures.join("\n\n") };
