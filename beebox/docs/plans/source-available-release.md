@@ -174,7 +174,7 @@ history decision. **No history surgery needed.** The repeatable gate is
 - **What.** Replace real personal identifiers in tracked files with the
   boxholder/`example-names` convention.
 - **Why.** `beebox/AGENTS.md:103` requires generic shared text; these
-  violate it: `test/schemas/personality-boxholder.doctest.md:20` (moved to `beebox/test/schemas.personality-boxholder.doctest.md`) (real name as
+  violate it: `test/schemas/personality-boxholder.doctest.md:20` (moved to `beebox/test/schemas.personality-boxholder.test.ts`) (real name as
   test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the real
   name), `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) (real email).
 - **Direction.** Swap to a roster name from `docs/example-names.md`. The

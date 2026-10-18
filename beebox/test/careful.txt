@@ -15,5 +15,5 @@
 # The field-test files run the real `bbx init` and `bbx serve`. They pass alone
 # and at 4 parallel copies but time out at 10, on tap's 300 s file limit and
 # the hub's 30 s readiness wait. No failures since 2026-09-11.
-test/field-test/run.doctest.md
-test/field-test/run.lifecycle.doctest.md
+test/field-test/run.test.ts
+test/field-test/run.lifecycle.test.ts

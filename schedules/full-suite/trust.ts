@@ -22,7 +22,7 @@ import { LEDGER_SOURCE } from "./lib.js";
  * failures are deferred to a later run on a healthy host rather than triaged.
  *
  * The evidence for the number: during the load event,
- * `test/core/box/file-watcher.doctest.md` ran at 16–195× its healthy median
+ * `test/core/box/file-watcher.test.ts` ran at 16–195× its healthy median
  * (28s–332s against 1.7s) while failing its 5s `fs.watch` delivery budget, and
  * `test/frontend/trpc-directory-resolution.test.ts` ran at 13× while blowing
  * its own 15s per-child timeout. Healthy runs cluster well under 2×; 3 keeps a

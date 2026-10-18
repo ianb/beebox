@@ -502,8 +502,8 @@ Use existing doctest tiers; no new framework. Extend
 `test/frontend/lib/view-url.doctest.md`,
 `test/frontend/workspace-pane-navigation.doctest.md`,
 `test/frontend/workspace-panes.doctest.md`,
-`test/shared/system-card-paths.doctest.md`, and
-`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.doctest.md`) for their respective decisions.
+`test/shared/system-card-paths.test.ts`, and
+`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.test.ts`) for their respective decisions.
 Add focused `test/frontend/history-card-state.doctest.md` and
 `test/frontend/interface-route-consolidation.doctest.md` for state/legacy routes,
 old overlay entries, and explicit chat-about behavior. Test the real adapters;

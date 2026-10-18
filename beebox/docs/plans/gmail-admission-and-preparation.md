@@ -81,7 +81,7 @@ filing returned no-match. Preserve this distinction in instructions and output.
 - `beebox/src/core/triage/evidence/core.ts` starts format preparation; the `.eml`
   branch records `mime-unparsed`. Gmail `mime.ts:154` extracts from an API MIME
   tree, not raw RFC822. No raw MIME parser dependency was found in the workspace.
-- `beebox/test/webapp/trpc/routers/chat.model-policy.doctest.md:93` constructs
+- `beebox/test/webapp/trpc/routers/chat.model-policy.test.ts:93` constructs
   `makeTestServer()` without a fake; line 120 calls `reserveSession`.
   `core/chat/session/registry/warm.ts:85` starts `void prewarmBackend`.
   This is a concrete accidental live-backend path in a metadata test.

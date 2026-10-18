@@ -34,9 +34,16 @@ const WORKER_TIMEOUT_MS = 30 * 60 * 1000;
 /** Commands a worker must not run (the brief forbids them). */
 const RULE_BREAKS: readonly RegExp[] = [
   /\bpnpm (?:install|i|add|remove)\b/,
-  /\b(?:kill|killall|pkill)\b/,
   /--no-verify/,
-  /\brm\b/,
+];
+/**
+ * A command word where the shell would run it: at the start, after a
+ * separator, or after a runner (`xargs`, `-exec`, `sudo`, `sh -c '`). A
+ * name inside a pattern or a code string (`grep "rm\b"`) is not a command.
+ */
+const COMMAND_BREAKS: readonly RegExp[] = [
+  /(?:^|[\n&(;|]|\bxargs(?:\s+-\S+)*|-exec|\bsudo|\s-l?c\s+["']?)\s*rm(?=\s|$|;)/m,
+  /(?:^|[\n&(;|]|\bxargs(?:\s+-\S+)*|-exec|\bsudo|\s-l?c\s+["']?)\s*(?:kill|killall|pkill)(?=\s|$|;)/m,
 ];
 /**
  * git as a command word (not `.git` or `git-lock.test.ts`). It may only
@@ -51,7 +58,7 @@ const HEREDOC = /<<-?\s*(["']?)(\w+)\1[^\n]*\n[\S\s]*?\n\s*\2(?=\n|$)/g;
 export function forbidden(fullCommand: string): boolean {
   // An edit script's text names git or rm freely; only the shell part counts.
   const command = fullCommand.replaceAll(HEREDOC, "<<heredoc");
-  if (RULE_BREAKS.some((re) => re.test(command))) return true;
+  if ([...RULE_BREAKS, ...COMMAND_BREAKS].some((re) => re.test(command))) return true;
   return [...command.matchAll(GIT)].length !== [...command.matchAll(GIT_READ)].length;
 }
 

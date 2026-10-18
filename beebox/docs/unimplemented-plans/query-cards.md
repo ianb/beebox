@@ -358,7 +358,7 @@ Both run (`pnpm knowledge-audit run --box <absolute-path-to-test-box>
 - **Test posture**: doctests named per chunk above — the resolver
   doctest is the design tool for chunk 2 (selection semantics, anchoring,
   caps, group-by buckets, self-exclusion each get an example);
-  schema-validation doctests extend `test/schemas/view-card.doctest.md` (moved to `beebox/test/schemas.view-card.doctest.md`);
+  schema-validation doctests extend `test/schemas/view-card.doctest.md` (moved to `beebox/test/schemas.view-card.test.ts`);
   the question-renderer doctest covers pending/answered. Done-when: all
   new doctests green, landmark doctests untouched and green, full suite
   green.

@@ -28,7 +28,7 @@ const result = spawnSync(
 console.log(result.stdout); // "a"
 ```
 
-The injected procedure runner in `beebox/test/core/handle.doctest.md` receives
+The injected procedure runner in `beebox/test/core/handle.test.ts` receives
 the `triageItems` array before environment serialization, so those tests do not
 exercise the failing live boundary.
 

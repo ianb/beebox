@@ -1,0 +1,73 @@
+// # Rendering a box's mark
+//
+// `renderBoxIcon` (`core/box/box-icon.ts`) turns a box's root-landmark symbol
+// into a PNG for the surfaces that need a real raster — an installed app's icon,
+// a notification. It renders **only** bundled Twemoji artwork: the route that
+// serves it is reachable unauthenticated on a standalone server (the box auth
+// hook waves through asset extensions), so it must never turn box files into
+// bytes it hands out.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { renderBoxIcon } from "../../../src/core/box/icon.js";
+import assert from "node:assert/strict";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+
+const render = (box: TmpBox, size?: number) => renderBoxIcon({ boxRoot: box.root, slug: "kitchen", size: size ?? 192 });
+
+/** Colour, so we know it drew artwork rather than a monochrome text glyph. */
+async function describe(png: Buffer) {
+  const sharp = (await import("sharp")).default;
+  const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true });
+  let coloured = 0;
+  for (let i = 0; i < data.length; i += info.channels) {
+    if (data[i] !== data[i + 1] || data[i + 1] !== data[i + 2]) coloured++;
+  }
+  return `${info.width}x${info.height} ${coloured > 0 ? "colour" : "monochrome"}`;
+}
+
+// ## An emoji symbol renders, in colour, at the size asked for
+//
+// Colour is the point: rendering the emoji as SVG *text* produced monochrome line
+// art, and nothing at all on a server with no emoji font.
+void test("Colour is the point:", async (t) => {
+  // doctest:L35
+  const box = await makeTmpBox();
+  await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Kitchen\n---\n");
+  const icon = await render(box);
+  assert.ok(icon);
+  t.check(await describe(icon.png), "192x192 colour");
+
+  // The ETag covers the source and the size, so two sizes are not the same entity
+  // and a card edit changes it.
+
+  // doctest:L47
+  await t.checkText((await render(box, 192))?.etag === (await render(box, 180))?.etag, "false");
+});
+
+// ## An image symbol does not render here
+//
+// It is the box's own file. The caller answers with the app's own icon instead,
+// which is what such a box showed before any of this existed — handing the file
+// to an unauthenticated caller to improve on that is not a trade worth making.
+void test("It is the box's own file.", async (t) => {
+  // doctest:L58
+  const box = await makeTmpBox();
+  await box.write("_content/art/pan.png", "not really a png, and never read");
+  await box.write("_content/Box.landmark.card", "---\nsymbol:\n  src: /_content/art/pan.png\nnavigation:\n  label: Kitchen\n---\n");
+  t.check(await render(box), null);
+});
+
+// ## A symbol with no artwork is an ordinary null
+//
+// A word, a letter, or an emoji newer than the bundled set — the caller falls
+// back to the app's own icon rather than failing the request.
+void test("A word, a letter, or an emoji newer than the bundled set — the caller falls b...", async (t) => {
+  // doctest:L71
+  const box = await makeTmpBox();
+  await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: Kitchen\nnavigation:\n  label: Kitchen\n---\n");
+  t.check([await render(box), await render(await makeTmpBox())], [
+    null,
+    null,
+  ]);
+});

@@ -1225,7 +1225,7 @@ See §1.3 (full request/response/errors).
   | box device store | `src/core/mobile/pairing.ts` — `registerDevicePush`, `pruneDevicePush`, `listMobileDevices` |
 - **Fixtures:** `test/mobile-contract/fixtures/push-token/`, run through `PushTokenBody` by
   `src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.test.ts`, posted at the route by
-  `test/webapp/routes/pairing.push-token.doctest.md`, and matched against the request iOS builds by
+  `test/webapp/routes/pairing.push-token.test.ts`, and matched against the request iOS builds by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
   Admin Notifications section shows (no device listed under Phones).
@@ -1272,7 +1272,7 @@ See §1.3 (full request/response/errors).
 - **Fixtures:** `test/mobile-contract/fixtures/apns-payload/`, run through `buildApnsRequest` by
   the box and read through `NotificationLoudness` / `NotificationTap` by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`. The same test runs the cases of
-  `test/core/notification/target.doctest.md` against the Swift target mirror.
+  `test/core/notification/target.test.ts` against the Swift target mirror.
 - **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
 
 ### 5.11 Quick chat — `quickChat.submit`, `choose`, `retry`, `discard`, `home`
@@ -1308,7 +1308,7 @@ See §1.3 (full request/response/errors).
   `src/core/chat/routing/quick-chat-record.ts` (`quickChatViewSchema`) and
   `src/webapp/trpc/routers/quick-chat.ts` (inputs, `quickChatHomeSchema`).
 - **Fixtures:** `test/mobile-contract/fixtures/quick-chat/`, parsed field for field by
-  `test/webapp/trpc/routers/quick-chat.contract-fixtures.doctest.md` and by
+  `test/webapp/trpc/routers/quick-chat.contract-fixtures.test.ts` and by
   `ios-app/BeeBoxTests/QuickChatAPITests.swift`, which also checks the request bodies
   against `submit-request.json`, `choose-request.json`, `retry-request.json`, and
   `discard-request.json`. `view-sending-page-no-note.json` is a Clerk page with no note.

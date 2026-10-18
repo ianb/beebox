@@ -74,9 +74,9 @@ const config: KnipConfig = {
         "lint-staged",
         // Frontend dep, reached from test/frontend/*.doctest.md.
         "@ianbicking/canvas-loop",
-        // Not dependencies: test/core/views/markdown-check.doctest.md passes
+        // Not dependencies: test/core/views/markdown-check.test.ts passes
         // view source importing these to the checker as a string, and
-        // test/dev/layout/move/mention-annotate.pipeline.doctest.md shows an
+        // test/dev/layout/move/mention-annotate.pipeline.test.ts shows an
         // `import x from "pkg/src/a.ts"` line as expected output. The doctest
         // compiler lifts import statements by regex and cannot tell fixture
         // text from the fence's own imports.
@@ -89,10 +89,10 @@ const config: KnipConfig = {
       // spawned subprocess evaluates, so the specifier is relative to the
       // package root rather than to the .md file. The edge is real; only
       // knip's resolution of it from this location fails. The last three are
-      // test/core/chat/session/deliver-user-message.doctest.md's child script.
+      // test/core/chat/session/deliver-user-message.test.ts's child script.
       //
       // `./old.js` and `./new.js` are the same fixture-string case as the
-      // markdown libraries above: test/dev/layout/move/ts-edit.doctest.md
+      // markdown libraries above: test/dev/layout/move/ts-edit.test.ts
       // feeds source text containing those specifiers to `rewriteTsFile`.
       ignoreUnresolved: [
         "./src/webapp/auth-capabilities.ts",

@@ -160,7 +160,7 @@ imported by all three current copies.
 
 **First implementation chunk.** Wire the existing OpenAI implementation through
 `ctx.openaiAudio`, delete the inline branch, unify the two default constants.
-No new backend, no config, no behavior change — `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.doctest.md`)
+No new backend, no config, no behavior change — `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.test.ts`)
 must pass unchanged.
 
 ### Track 2 — the backend vocabulary and its config
@@ -435,7 +435,7 @@ written.
 - **The empty-body guard needs the byte floor to be a constant a doctest can
   assert against**, not an inline literal.
 - **Route behavior** goes in a route doctest via `makeTestServer()` and the
-  existing fake, extending `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.doctest.md`) rather than
+  existing fake, extending `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.test.ts`) rather than
   starting a tier.
 - **No new test tier and no new mock.** The `TtsService` fake already exists
   (`openai-audio.ts:62-79`) and gains a `backend`/`stylable` field. Worth saying
@@ -559,14 +559,14 @@ What the measurement changed:
 
 Tests named while designing, per `docs/testing.md`:
 
-- `test/core/tts-config.doctest.md` (moved to `beebox/test/core/tts/config.doctest.md`) — defaults, ENOENT, unknown backend bubbles,
+- `test/core/tts-config.doctest.md` (moved to `beebox/test/core/tts/config.test.ts`) — defaults, ENOENT, unknown backend bubbles,
   merge-on-update.
-- `test/core/tts-style-delivery.doctest.md` (moved to `beebox/test/core/tts/style.doctest.md`) — `deliverStyle` across all three
+- `test/core/tts-style-delivery.doctest.md` (moved to `beebox/test/core/tts/style.test.ts`) — `deliverStyle` across all three
   kinds, with and without instructions.
 - `test/core/tts-wav-wrapper.doctest.md` (moved to `beebox/test/core/tts/wav.doctest.md`) — header fields for a known PCM buffer.
-- `test/services/service-tts.doctest.md` (moved to `beebox/test/services/tts.doctest.md`) — extends the existing fake test with
+- `test/services/service-tts.doctest.md` (moved to `beebox/test/services/tts.test.ts`) — extends the existing fake test with
   `backend`/`stylable`, and asserts the empty-body throw.
-- `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.doctest.md`) — extended: backend selection honored,
+- `test/webapp/routes/chat-tts.doctest.md` (moved to `beebox/test/webapp/routes/chat/tts-mock.test.ts`) — extended: backend selection honored,
   content type follows the backend, missing-key error names the secret.
 
 **Done-when:** those five pass, `pnpm test:changed` is green, and a real Gemini

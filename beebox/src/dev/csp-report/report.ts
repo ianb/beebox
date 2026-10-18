@@ -265,7 +265,7 @@ const GUIDANCE_HTML = `
 <ul>
   <li><strong>Legitimate consumer</strong> (a new external image host, API, or embed origin) →
       add the specific allowlist entry in <code>src/lib/csp.ts</code> (and update its
-      <code>test/lib/csp.doctest.md</code>).</li>
+      <code>test/lib/csp.test.ts</code>).</li>
   <li><strong>Real bug or unexpected exfiltration</strong> → flag it for investigation. Do <strong>not</strong>
       harden while any violation is unresolved.</li>
   <li><strong>Known case:</strong> a figure using p5's opt-in <code>eval</code>/WASM features reports a

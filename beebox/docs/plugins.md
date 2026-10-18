@@ -170,7 +170,7 @@ replacement, and the README's Migration section names the script to run.
 
 ## Conventions
 
-`test/plugins.doctest.md` loops every registered plugin and checks the rules
+`test/plugins.test.ts` loops every registered plugin and checks the rules
 marked (checked). The rest are convention only.
 
 - **name**: equals the directory under `src/plugins/`, kebab-case (checked).

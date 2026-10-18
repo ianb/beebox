@@ -315,7 +315,7 @@ history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
 | Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat/router.ts`) |
 | App-bar landmark / folder menus | `src/frontend/src/components/AppNav/PlacePill.tsx` + the bar's chrome slots |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |
-| Doctest coverage | `test/core/landmark/resolve.schema.doctest.md` (schema validation, expand semantics, dedup, order) |
+| Doctest coverage | `test/core/landmark/resolve.schema.test.ts` (schema validation, expand semantics, dedup, order) |
 
 The expand evaluator runs server-side at fetch time so the wire response is a fully-resolved list of links (no client-side glob or field lookup).
 

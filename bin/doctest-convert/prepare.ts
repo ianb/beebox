@@ -19,7 +19,7 @@
 
 import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { z } from "zod";
 import { checkSpans, checksByMarker, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
@@ -159,15 +159,23 @@ const PATH_LISTS: readonly { file: string; base: string }[] = [
  * Point path-keyed lists at the converted files, and report other tracked
  * files that still name a converted doctest by path.
  */
-export function repoint(converted: readonly string[], log: (s: string) => void): void {
+/**
+ * Point references at the converted files; with `back`, point them at the
+ * doctests again (after `revert`).
+ */
+export function repoint(converted: readonly string[], opts: { log: (s: string) => void; back?: boolean }): void {
+  const { log } = opts;
+  const swap = ({ from, to }: { from: string; to: string }) => (opts.back === true ? { from: to, to: from } : { from, to });
   if (converted.length === 0) return;
   for (const list of PATH_LISTS) {
     const path = join(REPO, list.file);
     const before = readFileSync(path, "utf8");
     let after = before;
     for (const d of converted) {
-      const from = relative(join(REPO, list.base), join(REPO, d));
-      const to = relative(join(REPO, list.base), join(REPO, testOf(d)));
+      const { from, to } = swap({
+        from: relative(join(REPO, list.base), join(REPO, d)),
+        to: relative(join(REPO, list.base), join(REPO, testOf(d))),
+      });
       // Whole entries only: a JSON string, or a line of its own.
       after = after
         .replaceAll(JSON.stringify(from), JSON.stringify(to))
@@ -177,27 +185,29 @@ export function repoint(converted: readonly string[], log: (s: string) => void):
     }
     if (after !== before) {
       writeFileSync(path, after);
-      log(`  ${list.file}: pointed at the converted files`);
+      log(`  ${list.file}: pointed at the ${opts.back === true ? "doctests" : "converted files"}`);
     }
   }
   const lists = new Set(PATH_LISTS.map((l) => l.file));
   const rewritten = new Set<string>();
   for (const d of converted) {
-    for (const { from, to } of pathForms(d)) {
-      for (const f of mentions(from)) {
-        // A test names a path as data (a fixture, an input), not as a reference.
-        if (lists.has(f) || HISTORY.some((h) => f.startsWith(h)) || /\.(?:test\.ts|doctest\.md)$/.test(f)) continue;
-        const path = join(REPO, f);
-        const before = readFileSync(path, "utf8");
-        const after = replacePath(before, { from, to });
-        if (after !== before) {
-          writeFileSync(path, after);
-          rewritten.add(f);
-        }
+    const named = swap({ from: d, to: testOf(d) }).from;
+    for (const f of mentions(basename(named))) {
+      // A test names a path as data (a fixture, an input), not as a reference.
+      if (lists.has(f) || HISTORY.some((h) => f.startsWith(h)) || /\.(?:test\.ts|doctest\.md)$/.test(f)) continue;
+      const path = join(REPO, f);
+      // A Markdown link names the file relative to the one that links it.
+      const fromHere = relative(dirname(path), join(REPO, d));
+      const forms = [...pathForms(d), { from: fromHere, to: testOf(fromHere) }].map(swap).toSorted((x, y) => y.from.length - x.from.length);
+      const before = readFileSync(path, "utf8");
+      const after = forms.reduce((text, form) => replacePath(text, form), before);
+      if (after !== before) {
+        writeFileSync(path, after);
+        rewritten.add(f);
       }
     }
   }
-  for (const f of rewritten) log(`  ${f}: references pointed at the converted files`);
+  for (const f of rewritten) log(`  ${f}: references pointed at the ${opts.back === true ? "doctests" : "converted files"}`);
 }
 
 /** Records of what was: their references to a doctest stay as written. */
@@ -295,7 +305,7 @@ export function prepare(dir: string, log: (s: string) => void): StateFile {
       converted.push(doctest);
     }
     save(state);
-    repoint(converted, log);
+    repoint(converted, { log });
     return state;
   } finally {
     rmSync(w.tmp, { recursive: true, force: true });

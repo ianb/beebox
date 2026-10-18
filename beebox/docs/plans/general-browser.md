@@ -378,7 +378,7 @@ same reason.
 from every page and inherits the current workstream lens. The corpus is fetched
 once per lens and filtered in the browser — a few thousand paths is nothing to
 filter locally, and a round trip per keystroke would feel worse than the surface
-it replaces. Covered by `workstreams-app/test/file-index.doctest.md` (moved to `beebox/test/dev/doc-graph-data/document-lifecycle.file-index.doctest.md`). Port the
+it replaces. Covered by `workstreams-app/test/file-index.doctest.md` (moved to `beebox/test/dev/doc-graph-data/document-lifecycle.file-index.test.ts`). Port the
 affordances that work, in React:
 - Quick-open over every browsable path (`renderDocQuickOpen`, `router-docs.ts:519`).
 - A sidebar grouped by area, with path and recently-edited sorts

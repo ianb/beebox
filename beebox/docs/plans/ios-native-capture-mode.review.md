@@ -386,7 +386,7 @@ recording cleanly), which is worth stating as the rationale.
   still exercise it with the fake service keyed on an `.m4a` filename.)
 - **tRPC `resumableSessions` removal blast radius** — exactly two usages
   (`useCaptureResume.ts:39`, `trpc/routers/capture.ts:37`) plus one doctest
-  (`test/webapp/capture-resumable-sessions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/capture.resumable-sessions.doctest.md`)); `pendingSessions` is
+  (`test/webapp/capture-resumable-sessions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/capture.resumable-sessions.test.ts`)); `pendingSessions` is
   a fully independent consumer chain (`useCaptureBubbles.ts`). The plan's
   remove-one-keep-the-other split is correct and cheap.
 - **Count-based filename collision premise** — real

@@ -5,7 +5,7 @@
  * name → export mapping, which would be a second place for a verb's name to
  * live and a second place to get it wrong. `entry/surface-build.ts` fails
  * loudly when the surface table names a verb that is absent here, and
- * `test/cli/entry.surface.doctest.md` fails when a verb here is absent from
+ * `test/cli/entry.surface.test.ts` fails when a verb here is absent from
  * the table — so a new command cannot be registered without being
  * classified.
  */

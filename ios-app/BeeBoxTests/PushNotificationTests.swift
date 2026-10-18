@@ -319,7 +319,7 @@ final class PushNotificationTests: XCTestCase {
         XCTAssertEqual(NotificationLoudness(userInfo: ["loudness": "shout"]), .quiet)
     }
 
-    // MARK: - Target to URL (mirrors beebox/test/core/notification/target.doctest.md)
+    // MARK: - Target to URL (mirrors beebox/test/core/notification/target.test.ts)
 
     private func render(_ value: String) -> String? {
         NotificationTarget(value).map { "/family/" + $0.boxPath(notificationID: "n7Qx") }

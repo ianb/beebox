@@ -22,7 +22,7 @@ Boxholder's framing (2026-08-26): the new speed is great; improve, don't revert.
 4. Codex plugin installer re-pointed the user's global marketplace at the
    full-suite temp checkout; every codex box's place menu dead, hourly; the
    installer cannot self-repair (`2026-08-26-codex-plugin-installer-hijacks-global-marketplace`, in flight).
-5. `test/field-test/run.doctest.md` red on main after `a6d93a90` — careful tier
+5. `test/field-test/run.test.ts` red on main after `a6d93a90` — careful tier
    never runs pre-merge; selection cannot see an on-disk config dependency.
    Caught by the hourly run in 30 min (the intended trade).
 6. Second hourly bisect blamed the next landing because the baseline had moved.

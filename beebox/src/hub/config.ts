@@ -177,7 +177,7 @@ export async function canonicalBoxKey(resolvedPath: string): Promise<string> {
  * async (it reads the file from disk), so making this one check async too
  * doesn't change the function's shape -- it stays the one place that
  * validates `hub.json`, which is what keeps this module's doctests
- * (`test/hub/config.doctest.md`) meaningful as pure-ish validation
+ * (`test/hub/config.test.ts`) meaningful as pure-ish validation
  * tests rather than needing supervisor/process machinery.
  */
 export async function loadHubConfig(configPath: string): Promise<HubConfig> {

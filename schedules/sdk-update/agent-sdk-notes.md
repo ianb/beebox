@@ -516,7 +516,7 @@ background processes and sandboxed commands. Nothing for beebox.
   filed. The changed behavior may be gated on something the SDK's priority field
   does not carry; on what beebox sends, nothing changed.
   `pnpm -C beebox test`: **12,720 pass, 4 fail, 2 skipped**. All four failures
-  are `test/core/pdf/extract.integration.doctest.md`, which runs the real
+  are `test/core/pdf/extract.integration.test.ts`, which runs the real
   `uvx docling` subprocess and times out at 300s on this machine, alone as well
   as in the suite. It touches neither the Agent SDK nor Codex, so it is not
   this bump's.
@@ -1759,7 +1759,7 @@ The rest of 0.3.259 and 2.1.259:
   `issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md`,
   because a gate that says "do not ship" for an inconclusive run is a gate whose
   verdicts get discounted. `pnpm -C beebox test` came back **8,524 pass, 6
-  fail**, of which `test/hub/hub-scan-token.doctest.md` (moved to `beebox/test/hub/server.scan-token.doctest.md`) hit a 303-second timeout
+  fail**, of which `test/hub/hub-scan-token.doctest.md` (moved to `beebox/test/hub/server.scan-token.test.ts`) hit a 303-second timeout
   under load and passes in 3s on its own, and
   `test/dev/launch-session.doctest.md` fails **reproducibly** — but it fails
   identically at the previous `0.3.252` pin (checked by setting the bump aside,
@@ -2477,8 +2477,8 @@ missing version.
 - **BeeBox applicability:** Nothing assessable on either channel.
 - **Action:** Applied 2026-08-25 on the settled path (~71h old) — it was the
   only version past the two-day window. `pnpm -C beebox test`: 7,866 pass,
-  27 fail, all 27 in `test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.doctest.md`) and
-  `test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.doctest.md`) and **pre-existing** — confirmed
+  27 fail, all 27 in `test/webapp/login-redirect.doctest.md` (moved to `beebox/test/webapp/base-prefix.login-redirect.test.ts`) and
+  `test/webapp/mobile-spa-fallback.doctest.md` (moved to `beebox/test/webapp/server-root.spa-fallback.test.ts`) and **pre-existing** — confirmed
   by re-running both files at the previous `0.3.240` pin, where they fail
   identically. They exercise `src/webapp/base-prefix.ts`, which imports nothing
   from the SDK. `sdk-steering-probe`: all four steering behaviors pass.
@@ -2985,7 +2985,7 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
 
 ### Validation note — the 0.3.228 test failure did not reproduce
 
-On 2026-08-14 a bump to `0.3.228` was reverted: `test/core/box/file-watcher.doctest.md`
+On 2026-08-14 a bump to `0.3.228` was reverted: `test/core/box/file-watcher.test.ts`
 hit tap's 300s timeout twice under it (3 reported failures = that file plus its
 cascade), while the suite was clean at `0.3.227`. That looked like a possible
 regression and was reported as suggestive-but-unproven.

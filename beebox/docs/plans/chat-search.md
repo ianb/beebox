@@ -401,7 +401,7 @@ Done-when, as tests:
   metadata failure → Claude-only + warning.
 - `chat-search query` doctest: fixture index → match ordering, per-chat
   dedupe, recency tiebreak, snippet generation. **Delivered inside
-  `test/core/chat-search/refresh.doctest.md`** (same fixture box, assertions
+  `test/core/chat-search/refresh.test.ts`** (same fixture box, assertions
   on `searchChats` results), not as a separate file.
 - `chat.search` router doctest: input validation, result shape, stale flag.
   **Still future** — the result shape and stale flag are covered at the

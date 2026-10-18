@@ -1,0 +1,256 @@
+// # TTS service: streamed speech and the guard against silent failure
+//
+// `TtsService` (`src/services/tts.ts`) is one interface over several speech
+// backends. `streamSpeech` resolves once the clip's head has arrived and hands
+// over the rest as a stream (`docs/plans/tts-streamed-playback.md`). These cover
+// what the real implementations share: a clip too short to be audio is an error,
+// not a result.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { eventually } from "agent-doctest/check";
+import { collectAudio, createTtsService } from "../../src/services/tts.js";
+import assert from "node:assert/strict";
+import { z } from "zod";
+
+// ## Gemini: one key, one host, style beside the text
+//
+// Gemini speech goes to Google's Interactions API with the box's `gemini` key —
+// its only route (`src/core/tts/resolve.ts` says why OpenRouter is not one).
+// These tests stand in for the network with a recording `fetch`, so what Google
+// would receive is visible.
+/** The parts of a recorded Interactions request the checks below read. */
+const InteractionRequest = z.object({
+  model: z.string(),
+  stream: z.boolean(),
+  store: z.boolean(),
+  input: z.array(z.object({ content: z.array(z.unknown()) })),
+  generation_config: z.object({ speech_config: z.array(z.object({ voice: z.string() })) }),
+});
+
+/** An MP3-looking buffer of `bytes` bytes: a frame header, padded. */
+const mp3Head = (bytes: number) => Buffer.concat([Buffer.from([0xff, 0xf3, 0x84, 0xc4]), Buffer.alloc(bytes - 4)]);
+
+/** A `fetch` that records each request and answers with `respond()`. */
+function recordingFetch(respond: () => Response) {
+  const calls: Array<{ url: string; headers: Record<string, string>; body: unknown }> = [];
+  const fetch = async (input: string | URL | Request) => {
+    const req = input instanceof Request ? input : new Request(input);
+    calls.push({ url: req.url, headers: Object.fromEntries(req.headers), body: await req.json() });
+    return respond();
+  };
+  return { calls, fetch };
+}
+
+// Half a second of 24 kHz 16-bit silence: enough MP3 to pass the head check.
+const pcm = Buffer.alloc(24000);
+
+const delta = (part: Buffer) => `event: step.delta\ndata: ${JSON.stringify({ event_type: "step.delta", delta: { type: "audio", data: part.toString("base64") } })}\n\n`;
+
+/** A streamed Interactions answer carrying `audio` as two SSE delta events. */
+function interactionStream(audio: Buffer) {
+  const half = audio.length / 2;
+  return new Response(delta(audio.subarray(0, half)) + delta(audio.subarray(half)) + "event: done\ndata: [DONE]\n\n", {
+    headers: { "Content-Type": "text/event-stream" },
+  });
+}
+
+/**
+ * A response body that sends `first`, then waits for the test to call
+ * `release(last)` (or `fail()`) before it sends the rest. Records whether the
+ * consumer cancelled it.
+ */
+function heldBody(first: string | Uint8Array) {
+  const encoder = new TextEncoder();
+  const state = { cancelled: false };
+  let controllerRef: ReadableStreamDefaultController<Uint8Array> | undefined;
+  const body = new ReadableStream({
+    start(controller) {
+      controllerRef = controller;
+      controller.enqueue(typeof first === "string" ? encoder.encode(first) : first);
+    },
+    cancel() { state.cancelled = true; },
+  });
+  return {
+    body,
+    state,
+    release(last: string | Uint8Array) {
+      assert.ok(controllerRef, "the stream has started");
+      controllerRef.enqueue(typeof last === "string" ? encoder.encode(last) : last);
+      controllerRef.close();
+    },
+  };
+}
+
+// The request sends the key in Google's own header, puts style in the
+// `speech_metadata` annotation beside the verbatim text, asks for a stream, and
+// asks Google not to store the request. The streamed PCM comes back as MP3,
+// encoded on the way, starting with an MPEG audio frame.
+void test("The request sends the key in Google's own header, puts style in the speechmet...", async (t) => {
+  // doctest:L96
+  const direct = recordingFetch(() => interactionStream(pcm));
+  const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: direct.fetch });
+  const audio = await tts.streamSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
+  const out = await collectAudio(audio);
+  const call = direct.calls[0];
+  const requestBody = InteractionRequest.parse(call?.body);
+  t.check(
+    ({
+      url: call?.url,
+      key: call?.headers["x-goog-api-key"],
+      authorization: call?.headers.authorization ?? "(none)",
+      model: requestBody.model,
+      stream: requestBody.stream,
+      store: requestBody.store,
+      content: requestBody.input[0]?.content[0],
+      voice: requestBody.generation_config.speech_config[0]?.voice,
+      stylable: tts.stylable,
+      contentType: audio.contentType,
+      frameSync: out[0] === 0xff && ((out[1] ?? 0) & 0xe0) === 0xe0,
+    }),
+    {
+    url: "https://generativelanguage.googleapis.com/v1beta/interactions",
+    key: "AIza-test",
+    authorization: "(none)",
+    model: "gemini-3.8-flash-lite-tts",
+    stream: true,
+    store: false,
+    content: {
+      type: "text",
+      text: "The delivery is late.",
+      annotations: [
+        {
+          type: "speech_metadata",
+          style: "Speak warmly.",
+        },
+      ],
+    },
+    voice: "Kore",
+    stylable: true,
+    contentType: "audio/mpeg",
+    frameSync: true,
+  },
+  );
+});
+
+// Gemini has been observed answering HTTP 200 with a zero-length body. A clip
+// that short reaches the browser as silence, which the boxholder blames on their
+// speakers rather than on the backend — so `streamSpeech` rejects before anything
+// is sent, instead of handing over an empty stream. A stream that carries no
+// audio — events of a shape we do not know, or a completed interaction with
+// nothing in it — is the same silent-200 failure and throws the same error.
+void test("Gemini has been observed answering HTTP 200 with a zero-length body.", async (t) => {
+  // doctest:L138
+  const empty = recordingFetch(() => new Response("event: done\ndata: [DONE]\n\n"));
+  const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: empty.fetch });
+  await t.checkThrows(async () => (await tts.streamSpeech("Hello there.")), "EmptyTtsResponseError: TTS backend \"gemini\" returned 0 bytes — too short to be speech");
+});
+
+// ## A long rate-limit wait fails at once; a short one is retried
+//
+// ky honors `Retry-After` in full. A free-tier Gemini key over its daily quota
+// answered 429 with a wait of about 26 minutes, and every clip then sat silent
+// until the 90 s stream deadline. A clip is useless by then, so a 429 asking for
+// more than two seconds fails at once, after one request, with the provider's
+// status for the route to report.
+void test("ky honors Retry-After in full.", async (t) => {
+  // doctest:L153
+  const quota = recordingFetch(() =>
+    Response.json({ error: { message: "Rate limit exceeded (limit: 10 requests per day on Free Tier)" } }, {
+      status: 429,
+      statusText: "Too Many Requests",
+      headers: { "Retry-After": "1572" },
+    }));
+  const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: quota.fetch });
+  const started = Date.now();
+  const failure = await tts.streamSpeech("Hello there.").catch((e) => e);
+  t.check(({ error: failure.name, status: failure.response.status, requests: quota.calls.length, fast: Date.now() - started < 1000 }), {
+    error: "HTTPError",
+    status: 429,
+    requests: 1,
+    fast: true,
+  });
+});
+
+// A short wait is still worth it: the retry speaks the clip.
+void test("A short wait is still worth it:", async (t) => {
+  // doctest:L169
+  let answered = 0;
+  const brief = recordingFetch(() => {
+    answered += 1;
+    return answered === 1
+      ? new Response("{}", { status: 429, headers: { "Retry-After": "0" } })
+      : interactionStream(pcm);
+  });
+  const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: brief.fetch });
+  const out = await tts.streamSpeech("Hello there.");
+  t.check(({ requests: brief.calls.length, contentType: out.contentType }), {
+    requests: 2,
+    contentType: "audio/mpeg",
+  });
+});
+
+// ## The head arrives before the provider finishes
+//
+// The point of streaming: `streamSpeech` resolves on the first plausible audio,
+// while the provider is still sending. For Gemini, the first half second of PCM
+// is held back from the rest until the test releases it; the head is already in
+// hand by then.
+void test("The point of streaming:", async (t) => {
+  // doctest:L190
+  const held = heldBody(delta(pcm));
+  const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: async () => new Response(held.body) });
+  const audio = await tts.streamSpeech("The delivery is late.");
+  const headFirst = { headBytes: audio.head.length >= 512, providerStillOpen: !held.state.cancelled };
+  held.release(delta(pcm) + "event: done\ndata: [DONE]\n\n");
+  const total = (await collectAudio(audio)).length;
+  t.check(({ ...headFirst, moreAfterHead: total > audio.head.length }), {
+    headBytes: true,
+    providerStillOpen: true,
+    moreAfterHead: true,
+  });
+});
+
+// OpenAI already answers MP3, so its body passes through unchanged, and its head
+// also arrives before the body ends.
+void test("OpenAI already answers MP3, so its body passes through unchanged, and its hea...", async (t) => {
+  // doctest:L204
+  const first = mp3Head(604);
+  const held = heldBody(first);
+  const tts = createTtsService({ backend: "openai", apiKey: "sk-test", fetch: async () => new Response(held.body) });
+  const audio = await tts.streamSpeech("The delivery is late.");
+  const headIsFirstChunk = audio.head.equals(first);
+  held.release(Buffer.alloc(300, 1));
+  t.check(({ headIsFirstChunk, total: (await collectAudio(audio)).length }), {
+    headIsFirstChunk: true,
+    total: 904,
+  });
+});
+
+// ## A failure after the head comes out of the rest
+//
+// Once the head is handed over, the route has started its response. A provider
+// error after that cannot reject `streamSpeech`; it surfaces while reading
+// `rest`, for the route to end the response with.
+void test("Once the head is handed over, the route has started its response.", async (t) => {
+  // doctest:L221
+  const held = heldBody(delta(pcm));
+  const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: async () => new Response(held.body) });
+  const audio = await tts.streamSpeech("The delivery is late.");
+  held.release("event: error\ndata: {\"event_type\":\"error\",\"error\":{\"message\":\"backend overloaded\"}}\n\n");
+  await t.checkThrows(async () => (await collectAudio(audio)), "InteractionStreamError: Gemini stream failed: backend overloaded");
+});
+
+// ## Stopping early cancels the provider
+//
+// A consumer that stops reading (the route, when the browser leaves) stops the
+// provider's response, so no audio is generated for nobody.
+void test("A consumer that stops reading (the route, when the browser leaves) stops the...", async (t) => {
+  // doctest:L235
+  const held = heldBody(mp3Head(700));
+  const tts = createTtsService({ backend: "openai", apiKey: "sk-test", fetch: async () => new Response(held.body) });
+  const audio = await tts.streamSpeech("The delivery is late.");
+  audio.cancel();
+  await eventually(() => held.state.cancelled === true, { label: "provider body cancelled" });
+  t.check(held.state.cancelled, true);
+});

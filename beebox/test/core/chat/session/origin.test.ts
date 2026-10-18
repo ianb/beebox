@@ -1,0 +1,119 @@
+// # `localOrigin` — which machine holds a chat's transcript
+//
+// A transcript lives in one engine store on one machine. `localOrigin()` names
+// that machine so a husk can record it (`docs/implemented-plans/chat-session-identity.md`,
+// Track 2): a stable UUID minted once at `~/.local/share/beebox/origin-id`, plus the
+// current hostname as a display label. The hostname is never the id — a laptop
+// renames itself when its network location changes.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import * as os from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
+import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { localOrigin, readOrCreateOriginId } from "../../../../src/core/chat/session/origin.js";
+
+// ## the first read mints the id; later reads return the same one
+//
+// `BBX_ORIGIN_ID_FILE` points the helper somewhere other than the real per-user
+// state dir — nothing else about the behaviour changes.
+void test("BBXORIGINIDFILE points the helper somewhere other than the real per-user stat...", async (t) => {
+  t.teardown(async () => {
+    try {
+      delete process.env["BBX_ORIGIN_ID_FILE"];
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L22
+  const box = await makeTmpBox();
+  process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
+
+  // doctest:L25
+  const first = await localOrigin();
+  t.check(/^[\da-f-]{36}$/.test(first.id), true);
+
+  // doctest:L29
+  await t.checkText(first.name === os.hostname(), "true");
+
+  // doctest:L32
+  const onDisk = (await readFile(box.path("origin-id"), "utf-8")).trim();
+  await t.checkText(onDisk === first.id, "true");
+
+  // doctest:L36
+  const second = await localOrigin();
+  await t.checkText(second.id === first.id, "true");
+});
+
+// ## two first runs at once converge on one id
+//
+// Nothing serializes the very first read: a boot and a chat send can both find no
+// file and both mint. Creation is exclusive, so one of them wins and the other
+// reads the winner's id — the alternative (each writing its own) would leave the
+// two halves of one machine stamping husks with different origins.
+//
+// `readOrCreateOriginId` rather than `localOrigin` because the memo would hand
+// the second caller the first one's promise, and the race would never happen.
+void test("Nothing serializes the very first read:", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L57
+  const box = await makeTmpBox();
+  const idFile = box.path("state/origin-id");
+  const [a, b] = await Promise.all([readOrCreateOriginId(idFile), readOrCreateOriginId(idFile)]);
+
+  // doctest:L61
+  await t.checkText(a === b, "true");
+
+  // doctest:L64
+  await t.checkText(a === (await readFile(idFile, "utf-8")).trim(), "true");
+});
+
+// ## an existing id is read, never replaced
+void test("an existing id is read, never replaced", async (t) => {
+  t.teardown(async () => {
+    try {
+      delete process.env["BBX_ORIGIN_ID_FILE"];
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L75
+  const box = await makeTmpBox();
+  await writeFile(box.path("origin-id"), "b0d1e2f3-4567-4890-abcd-ef0123456789\n");
+  process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
+
+  // doctest:L79
+  t.check((await localOrigin()).id, "b0d1e2f3-4567-4890-abcd-ef0123456789");
+});
+
+// ## a corrupt file is an error, not a fresh identity
+//
+// A missing file is the ordinary first-run case. A file that holds something
+// other than a UUID was edited or truncated by something else, and quietly
+// replacing it would re-origin every session this machine holds — every one of
+// them would start reading as if it had run elsewhere.
+void test("A missing file is the ordinary first-run case.", async (t) => {
+  t.teardown(async () => {
+    try {
+      delete process.env["BBX_ORIGIN_ID_FILE"];
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L96
+  const box = await makeTmpBox();
+  await writeFile(box.path("origin-id"), "not-a-uuid\n");
+  process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
+
+  // doctest:L100
+  await t.checkThrows(async () => (await localOrigin()), "CorruptOriginIdError");
+});

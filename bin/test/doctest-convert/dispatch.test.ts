@@ -28,6 +28,14 @@ void test("git may only read; file names that contain git are not git", async (t
       "rm beebox/test/lib/env.test.ts",
       "python3 - <<'EOF'\ns = s.replace('git status', 'git diff')  # rm\nEOF",
       "python3 - <<'EOF'\nprint(1)\nEOF\ngit commit -am x",
+      "grep -n \"rm\\\\b\\\\|Fixtures\" a.test.ts | head -20",
+      "perl -i -ne 'print unless /^import \\{ mkdtemp, rm \\} from/' a.test.ts",
+      "node x.mts; rm -f ./x.mts",
+      "find . -name '*.tmp' -exec rm {} +",
+      "ls | xargs -0 rm",
+      "/bin/zsh -lc 'rm a.ts'",
+      "cd beebox && pkill -f tap",
+      "node --import tsx bin/doctest-convert.ts check beebox/test/lib/term.test.ts",
     ].map((c) => [c, forbidden(c)]),
   );
   t.check(verdicts, {
@@ -41,6 +49,14 @@ void test("git may only read; file names that contain git are not git", async (t
     "rm beebox/test/lib/env.test.ts": true,
     "python3 - <<'EOF'\ns = s.replace('git status', 'git diff')  # rm\nEOF": false,
     "python3 - <<'EOF'\nprint(1)\nEOF\ngit commit -am x": true,
+    "grep -n \"rm\\\\b\\\\|Fixtures\" a.test.ts | head -20": false,
+    "perl -i -ne 'print unless /^import \\{ mkdtemp, rm \\} from/' a.test.ts": false,
+    "node x.mts; rm -f ./x.mts": true,
+    "find . -name '*.tmp' -exec rm {} +": true,
+    "ls | xargs -0 rm": true,
+    "/bin/zsh -lc 'rm a.ts'": true,
+    "cd beebox && pkill -f tap": true,
+    "node --import tsx bin/doctest-convert.ts check beebox/test/lib/term.test.ts": false,
   });
 });
 

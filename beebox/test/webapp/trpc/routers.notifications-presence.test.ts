@@ -1,0 +1,208 @@
+// # notifications and presence routers
+//
+// `notifications.recent` and `notifications.get` read the notification log for
+// the Admin "Recent" list and the `chat:new` banner. `notifications.send` and
+// `notifications.channels` are `bbx notify`'s server side: a box-spawned shell has
+// no APNs or VAPID keys, so it asks the server, which has them. `presence.heartbeat` is the
+// open tab's report that a person is using it; the server keeps
+// `.beebox/presence.json` current from those heartbeats, and `livePresence` (what
+// `notifyBoxholder` reads) sees the count.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import * as os from "node:os";
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { trpcContext } from "../../helpers/trpc-context.js";
+import { appRouter } from "../../../src/webapp/trpc/routers.js";
+import { notifyBoxholder } from "../../../src/core/notify-boxholder.js";
+import { livePresence } from "../../../src/core/notification/presence.js";
+import { boxSlug } from "../../../src/lib/box-slug.js";
+import { addSubscription } from "../../../src/core/push-subscriptions.js";
+import { pairFakePushDevice } from "../../../src/core/mobile/pairing.js";
+import { createFakePush } from "../../../src/services/push.js";
+import { createFakeApns } from "../../../src/services/apns.js";
+import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
+import { TRPCError } from "@trpc/server";
+
+const storeDir = path.join(os.tmpdir(), `bbx-notifications-router-${process.pid}-${Date.now()}`);
+process.env.BBX_PUSH_STORE_DIR = storeDir;
+for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID"]) delete process.env[name];
+
+const box = await makeTmpBox({ git: true });
+
+function caller(over: Partial<TrpcContext>) {
+  const ctx: TrpcContext = trpcContext({
+    boxRoot: box.root,
+    boxSlug: "alpha",
+    isAuthenticatedOwner: true,
+    ...over,
+  });
+  return appRouter.createCaller(ctx);
+}
+
+async function attempt(fn: () => Promise<unknown>) {
+  try {
+    return await fn();
+  } catch (e) {
+    return `THREW:${e instanceof TRPCError ? e.code : String(e)}`;
+  }
+}
+
+// ## recent: intents with their deliveries, newest first
+//
+// The box has no channel configured, so each channel is logged `no-audience`.
+void test("The box has no channel configured, so each channel is logged no-audience.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      await fs.rm(storeDir, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L58
+  await notifyBoxholder(box.root, {
+    intent: { title: "Field trip form due", body: "Sign by Friday.", target: { kind: "dashboard" }, loudness: "loud", source: "doctest" },
+  });
+  const second = await notifyBoxholder(box.root, {
+    intent: { title: "Talk about the trip?", body: "", target: { kind: "chat-new" }, loudness: "quiet", source: "doctest" },
+  });
+  const recent = await caller({}).notifications.recent({ days: 3 });
+  await t.checkText(recent.map((n) => `${n.intent.title}: ${n.deliveries.map((d) => `${d.channel} ${d.status} ${d.detail}`).join(", ")}`).join("\n"), `Talk about the trip?: apns skipped no-audience, web-push skipped no-audience
+Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
+
+  // ## get: one intent by id; null for an unknown id
+  //
+  // A `chat:new` tap carries the id, and the chat page shows the intent. An id the
+  // log no longer has (rotated away) is null, not an error.
+
+  // doctest:L77
+  const got = await caller({}).notifications.get({ id: second.id });
+  t.check([got?.intent.title, got?.intent.target], [
+    "Talk about the trip?",
+    "chat:new",
+  ]);
+
+  // doctest:L81
+  t.check(await caller({}).notifications.get({ id: "no-such-id" }), null);
+
+  // ## Both routers need an authenticated request
+
+  // doctest:L88
+  t.check(await attempt(() => caller({ authed: false }).notifications.recent({})), "THREW:UNAUTHORIZED");
+
+  // doctest:L91
+  t.check(await attempt(() => caller({ authed: false }).presence.heartbeat({ sessionId: "tab-aaaaaaaa" })), "THREW:UNAUTHORIZED");
+
+  // ## heartbeat: each tab counts once, and the file reflects it
+
+  // doctest:L98
+  await caller({}).presence.heartbeat({ sessionId: "tab-aaaaaaaa" });
+  await caller({}).presence.heartbeat({ sessionId: "tab-bbbbbbbb" });
+  await caller({}).presence.heartbeat({ sessionId: "tab-aaaaaaaa" });
+  t.check(await livePresence(box.root), {
+    activeWeb: 2,
+  });
+
+  // A malformed session id is rejected:
+
+  // doctest:L108
+  t.check(await attempt(() => caller({}).presence.heartbeat({ sessionId: "x" })), "THREW:BAD_REQUEST");
+
+  // ## send and channels: the box's agent or its owner, on the server's services
+  //
+  // The server's channel services arrive through the context's `services.notify`
+  // (production leaves it unset and builds them from the server's keys). This box
+  // now has a paired phone and a subscribed browser, and the server holds fakes for
+  // both.
+
+  // doctest:L120
+  await pairFakePushDevice(box.root, { label: "test phone" });
+  await addSubscription({
+    boxSlug: await boxSlug(box.root),
+    subscription: { endpoint: "https://push.example/phone", keys: { p256dh: "p", auth: "a" } },
+    now: new Date(),
+  });
+  const notify = { apns: createFakeApns(), push: createFakePush() };
+  const agent = caller({ actor: "agent", user: null, isOwner: false, isAuthenticatedOwner: false, services: { notify } });
+
+  // doctest:L129
+  t.check(await agent.notifications.channels(), {
+    reach: {
+      apns: true,
+      webPush: true,
+    },
+    configured: {
+      apns: true,
+      webPush: true,
+    },
+  });
+
+  // A send runs `notifyBoxholder` in the server process, so the delivery goes out
+  // on the server's services and lands in the log like any other:
+
+  // doctest:L137
+  const sent = await agent.notifications.send({
+    intent: { title: "Pick up Sam", body: "At 3.", target: "chat:new", loudness: "loud", source: "bbx notify" },
+  });
+  t.check([sent.deliveries, notify.apns.sent.length, notify.push.sent.length], [
+    [
+      {
+        channel: "apns",
+        status: "sent",
+      },
+      {
+        channel: "web-push",
+        status: "sent",
+      },
+    ],
+    1,
+    1,
+  ]);
+
+  // doctest:L143
+  t.check((await caller({}).notifications.get({ id: sent.id }))?.intent.source, "bbx notify");
+
+  // `channel` restricts the send to one channel, as `bbx notify --channel` does:
+
+  // doctest:L150
+  const one = await agent.notifications.send({
+    intent: { title: "Only the phone", body: "", target: "dashboard", loudness: "loud", source: "bbx notify" },
+    channel: "apns",
+  });
+  t.check(one.deliveries, [
+    {
+      channel: "apns",
+      status: "sent",
+    },
+  ]);
+
+  // The signed-in owner may send too. A member who is not the owner, a paired
+  // device acting for nobody, and an open-access request are refused: reaching the
+  // boxholder's phone is the box's voice. An unauthenticated request never gets
+  // that far.
+
+  // doctest:L164
+  const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "doctest" } as const;
+  await t.checkText((await caller({ services: { notify } }).notifications.send({ intent })).deliveries.length, "2");
+
+  // doctest:L168
+  t.check(
+    [
+      await attempt(() => caller({ user: { email: "member@example.org", name: "Member" }, isOwner: false, isAuthenticatedOwner: false }).notifications.send({ intent })),
+      await attempt(() => caller({ actor: "device", isOwner: false, isAuthenticatedOwner: false }).notifications.channels()),
+      await attempt(() => caller({ actor: "open", isAuthenticatedOwner: false }).notifications.send({ intent })),
+      await attempt(() => caller({ actor: "none", authed: false, isOwner: false, isAuthenticatedOwner: false }).notifications.send({ intent })),
+      await attempt(() => caller({ actor: "none", authed: false, isOwner: false, isAuthenticatedOwner: false }).notifications.channels()),
+    ].join(" "),
+    "THREW:FORBIDDEN THREW:FORBIDDEN THREW:FORBIDDEN THREW:UNAUTHORIZED THREW:UNAUTHORIZED",
+  );
+
+  // A target the log could not hold is refused at the boundary, before anything is
+  // logged or sent:
+
+  // doctest:L182
+  t.check(await attempt(() => agent.notifications.send({ intent: { ...intent, target: "card:../outside.card" } })), "THREW:BAD_REQUEST");
+});

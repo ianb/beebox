@@ -1028,14 +1028,14 @@ freshly-captured asset is *not* annexed until `bbx mv` files it.
 **Test posture.** Per `docs/testing.md`, tests come first as a design
 tool. Named up front:
 
-- `test/lib/annex-pointer.doctest.md` — pure tier: real pointer, real
+- `test/lib/annex-pointer.test.ts` — pure tier: real pointer, real
   JPEG, empty file, text file starting with `/`.
-- `test/core/commands/attachments-unignore.doctest.md` (moved to `beebox/test/core/attachments-gitignore.doctest.md`) — filesystem
+- `test/core/commands/attachments-unignore.doctest.md` (moved to `beebox/test/core/attachments-gitignore.test.ts`) — filesystem
   tier (`makeTmpBox()`): asset annexed, card in git, manifest removed,
   re-run idempotent.
 - `test/webapp/routes/attach-absent.doctest.md` — route tier
   (`makeTestServer()`): 409-with-key for a pointer, 200 for content.
-- `test/core/install-validation-hooks.doctest.md` — extend the existing
+- `test/core/install-validation-hooks.test.ts` — extend the existing
   coverage to assert the generated hook calls `git annex pre-commit`
   and no longer calls `bbx attachments verify`.
 - `test/core/capture/staging-not-annexed.doctest.md` — filesystem tier:

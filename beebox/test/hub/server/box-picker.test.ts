@@ -1,0 +1,148 @@
+// # Hub box picker: serves the SPA at `/`, with a minimal ACL-filtered fallback (Track D, chunk D3)
+//
+// `GET /` on the hub serves the SPA (its `/` route renders the styled
+// box-selection page and fetches the accessible-box list from `/api/boxes`). When
+// the frontend bundle isn't built it falls back to a minimal server-rendered list,
+// filtered through the SAME fail-closed `allowedEmails` predicate a box uses for
+// its own ACL (`canAccessBox`, `src/webapp/box-access.ts`), not a copy of it. When
+// hub auth is off, every configured box is listed unconditionally (same "open"
+// semantics a standalone box gets with the `openAccess` construction option).
+// Either way the route is auth-gated: an unauthenticated navigation redirects to
+// login.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { registerBoxPicker } from "../../../src/hub/server/box-picker.js";
+import { signSession, COOKIE_NAME } from "../../../src/webapp/auth.js";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import Fastify from "fastify";
+import fastifyCookie from "@fastify/cookie";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-picker-doctest";
+
+const boxA = await makeTmpBox();
+await boxA.write("_config/box.json", JSON.stringify({ allowedEmails: ["alice@example.com"] }));
+const boxB = await makeTmpBox();
+await boxB.write("_config/box.json", JSON.stringify({ allowedEmails: ["bob@example.com"] }));
+
+const boxes = [
+  { slug: "box-a", boxRoot: boxA.root },
+  { slug: "box-b", boxRoot: boxB.root },
+];
+
+// A path with no index.html forces the minimal-list fallback, which is where the
+// ACL filtering lives; the SPA-served case gets a real index.html below.
+const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-doctest");
+
+async function startPicker(frontendDist: string, openAccess: boolean) {
+  const app = Fastify({ logger: false });
+  // The box picker reads `request.server.openAccess` (the in-process seam that
+  // replaced the BBX_ALLOW_UNAUTHENTICATED env opt-out); decorate it here as the
+  // real hub does in createHubServer.
+  app.decorate("openAccess", openAccess);
+  await app.register(fastifyCookie);
+  registerBoxPicker(app, { boxes, frontendDist });
+  await app.ready();
+  return app;
+}
+
+// ## Frontend built: `/` serves the SPA (box list comes from /api/boxes, not the HTML)
+void test("Frontend built: `/` serves the SPA (box list comes from /api/boxes, not the HTML)", async (t) => {
+  t.teardown(async () => {
+    try {
+      await spaApp.close();
+      await fs.promises.rm(distDir, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L55
+  delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+  delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  // "Hub auth off" is now the explicit openAccess construction option.
+  const distDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "picker-dist-"));
+  await fs.promises.writeFile(path.join(distDir, "index.html"), "<!doctype html><html><body><div id=\"root\"></div></body></html>");
+  const spaApp = await startPicker(distDir, true);
+  const spaRes = await spaApp.inject({ method: "GET", url: "/" });
+  t.check(spaRes.statusCode, 200);
+
+  // doctest:L65
+  await t.checkText(spaRes.body.includes("id=\"root\""), "true");
+});
+
+// ## Hub auth off, no frontend build: every configured box is listed, no session needed
+void test("Hub auth off, no frontend build: every configured box is listed, no session needed", async (t) => {
+  t.teardown(async () => {
+    try {
+      await openApp.close();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L77
+  delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+  delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  const openApp = await startPicker(NO_FRONTEND, true);
+  const openRes = await openApp.inject({ method: "GET", url: "/" });
+  t.check(openRes.statusCode, 200);
+
+  // doctest:L84
+  await t.checkText(openRes.body.includes("href=\"/box-a/\"") && openRes.body.includes("href=\"/box-b/\""), "true");
+});
+
+// ## Hub auth on, no session: redirected to login
+void test("Hub auth on, no session: redirected to login", async (t) => {
+  t.teardown(async () => {
+    try {
+      delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+      delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+      delete process.env.BBX_SESSION_SECRET;
+      await gatedApp.close();
+      await boxA.cleanup();
+      await boxB.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L95
+  // Auth is required by default now (openAccess is false for this picker).
+  process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-doctest";
+  // Paired secret: an ID-without-secret half-config is now a loud
+  // MissingOAuthClientSecretError wherever auth routes register.
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-box-picker-doctest";
+  const gatedApp = await startPicker(NO_FRONTEND, false);
+  const noSessionRes = await gatedApp.inject({ method: "GET", url: "/" });
+  t.check(noSessionRes.statusCode, 302);
+
+  // doctest:L105
+  t.check(noSessionRes.headers.location, "/auth/login?returnTo=%2F");
+
+  // ## Hub auth on, session for alice@example.com: only box-a is listed (fallback)
+
+  // doctest:L112
+  const aliceCookie = signSession({ email: "alice@example.com", name: "Alice" });
+  const aliceRes = await gatedApp.inject({ method: "GET", url: "/", headers: { cookie: `${COOKIE_NAME}=${aliceCookie}` } });
+  t.check(aliceRes.statusCode, 200);
+
+  // doctest:L117
+  await t.checkText(aliceRes.body.includes("href=\"/box-a/\""), "true");
+
+  // doctest:L120
+  await t.checkText(aliceRes.body.includes("href=\"/box-b/\""), "false");
+
+  // ## A session for an email on neither box's allowedEmails sees an empty list
+
+  // doctest:L127
+  const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
+  const strangerRes = await gatedApp.inject({ method: "GET", url: "/", headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` } });
+  t.check(strangerRes.statusCode, 200);
+
+  // doctest:L132
+  await t.checkText(strangerRes.body.includes("href=\"/box-a/\"") || strangerRes.body.includes("href=\"/box-b/\""), "false");
+
+  // doctest:L135
+  await t.checkText(strangerRes.body.includes("No boxes available"), "true");
+});

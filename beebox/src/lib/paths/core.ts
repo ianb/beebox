@@ -31,7 +31,7 @@ export class UnknownBoxDirsKeyError extends Error {
  * Standard directory names in a Bee Box, derived from the single
  * `BOX_LAYOUT` spec in `box-layout-spec.ts`. That file is also the source
  * for `docs/box-layout.md`'s tables (checked by
- * `test/lib/paths/box-layout-spec.doctest.md`) and the in-box agent guide
+ * `test/lib/paths/box-layout-spec.test.ts`) and the in-box agent guide
  * (`src/core/agent-guide/guide/box-shape.ts`) — add, remove, or rename a directory
  * there, not here.
  */

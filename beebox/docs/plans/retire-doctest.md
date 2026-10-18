@@ -840,6 +840,27 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     rules. Track 6 removes it in one step.
 - **First implementation chunk:** none beyond track 3. This track repeats
   that chunk per directory.
+- **Progress (2026-10-18):**
+  - Small roots landed (98 files); `src/frontend/test` landed (195 of 200).
+  - beebox `test/`: `prepare` converted 801. 488 verified with no worker;
+    Haiku workers brought the total to 782 in three passes. Luna reviewed
+    every worker diff: one finding, rejected (a `\[...]` regex rewrite that
+    matches the same text). 14 verified files went back to doctests because
+    the commit blocklist matches their fixture names and a common English word
+    (some inside expected values); that needs a boxholder decision.
+  - Left as doctests for hand work: 8 files over `max-lines` 600, 6 with
+    other lint findings, the 3 `manual/` tests, `scripts/knip-doctest-imports`,
+    `services/claude-chat/codex-chat.failure-reporting`, 4 whose test file
+    already exists, and 3 that `layout-check` flags once they are TypeScript
+    (two import `typescript` outside `src/lib/typescript/`; one uses a tour
+    helper from outside `test/tours/`). `verify` does not run `layout-check`
+    yet; the commit hook caught these.
+  - Driver changes from this round: `revert` now points references back at
+    the doctest (before, `prepare`'s repoint stayed, so `test:manual` named
+    missing files); `rm`/`kill` are forbidden only in command position, so
+    `grep "rm\b"` no longer rejects a batch; `verify` accepts the repo's
+    existing markdoc `import-x/no-named-as-default-member` suppression (the
+    module is CommonJS; `src/core/body-markdoc-lint.ts:32` has the same line).
 
 ### Track 5 — phase 3: strengthen assertions
 

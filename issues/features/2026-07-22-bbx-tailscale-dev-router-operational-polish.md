@@ -20,7 +20,7 @@ serve mapping bound to the OLD name. Result cascade: hitting the new name →
 `tailscale serve reset` → "no connection" until re-run. And `bbx tailscale stop`
 CANNOT remove the stale mapping, because `tailscale serve … off` only addresses
 the node's CURRENT hostname (the exact pre-rename case the unit tests model at
-`test/services/tailscale-setup.doctest.md` "Stop scans EVERY host"). The recorded
+`test/services/tailscale-setup.test.ts` "Stop scans EVERY host"). The recorded
 exposure intent also still points at the dead `dnsName`.
 - **Fix:** `bbx tailscale status` should detect `recorded dnsName ≠ Self.DNSName`
   and flag it loudly ("your machine was renamed; the exposure points at a dead

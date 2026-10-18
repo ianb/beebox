@@ -507,9 +507,9 @@ clone on September 9; the live test box was not reset.
 ## What will hold this after it ships
 
 Use the existing tiers in [testing](../testing.md). Implemented test files include:
-`test/shared/system-card-paths.doctest.md`,
-`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.doctest.md`),
-`test/core/migrations/canonical-interface-cards.doctest.md` (moved to `beebox/test/core/migration-run.canonical-interface-cards.doctest.md`), and
+`test/shared/system-card-paths.test.ts`,
+`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.test.ts`),
+`test/core/migrations/canonical-interface-cards.doctest.md` (moved to `beebox/test/core/migration-run.canonical-interface-cards.test.ts`), and
 `test/frontend/browse-card-state.doctest.md`.
 
 Index tests must use a real temporary Git repository with deliberately different
@@ -611,7 +611,7 @@ wording is retained as acceptance criteria, not an unstarted implementation list
 | Requirement group | Status | Evidence |
 |---|---|---|
 | A: canonical identity, inferred type, notes, path rejection | MET | `src/shared/system-card-paths.ts:4`, `src/schemas/dashboard.ts:9`, `src/frontend/src/components/system-cards/SystemCardBoundary.tsx:11` and sibling schemas/renderers |
-| B: index/HEAD protection, old-box transition, missing-only bootstrap and completion guard | MET | `src/core/system-cards.ts:83`, `src/core/system-cards.ts:96`, `src/core/migration-run.ts:114`, `test/core/migrations/canonical-interface-cards.doctest.md` (moved to `beebox/test/core/migration-run.canonical-interface-cards.doctest.md`) |
+| B: index/HEAD protection, old-box transition, missing-only bootstrap and completion guard | MET | `src/core/system-cards.ts:83`, `src/core/system-cards.ts:96`, `src/core/migration-run.ts:114`, `test/core/migrations/canonical-interface-cards.doctest.md` (moved to `beebox/test/core/migration-run.canonical-interface-cards.test.ts`) |
 | C: ordinary Dashboard/Settings targets, compatibility entry, recipient and safe context | MET | `src/frontend/src/renderers/system-cards.tsx:12`, `src/frontend/src/router.tsx:106`, `src/frontend/src/lib/system-card-navigation.ts:26` |
 | D: one Browse target, nested state, history and visible attention | MET | `src/frontend/src/lib/browse-card-state.ts:47`, `src/frontend/src/renderers/browse.tsx:14`, `src/frontend/src/components/chat/workspace/WorkspaceProvider.tsx:128`, `src/frontend/src/components/chat/workspace/WorkspaceCanvas.tsx:50` |
 | E: guidance/audits and removal of replaced routed adapters | MET | `docs/box/interface-cards.md`, `src/dev/knowledge-audits.yaml:9`, `src/frontend/src/router.tsx:153`; BrowsePageWrapper removed from `src/frontend/src/app-shell.tsx` |

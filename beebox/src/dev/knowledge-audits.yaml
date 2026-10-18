@@ -7280,7 +7280,7 @@ tests:
     tags: [chat, points-at-ui]
     notes: >
       The plan's audit 2. The dump is the fixture output from
-      test/core/chat/ui-dump.doctest.md, so the audit and the real format can't
+      test/core/chat/ui-dump.test.ts, so the audit and the real format can't
       drift apart silently.
 
   - id: points-at-ui-reveal-not-operate

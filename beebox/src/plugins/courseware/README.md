@@ -108,7 +108,7 @@ export const dependencies = ["**/*.concept-map.card"];
 
 After the commit, the next `bbx wakeup` or chat start mirrors the skill into
 `.claude/skills/courseware/`, and `bbx validate` runs the lint hook. The
-doctest `test/plugins/courseware/plugin.setup.doctest.md` writes these exact files
+doctest `test/plugins/courseware/plugin.setup.test.ts` writes these exact files
 into a temp box and validates one card of each type, so this section is what
 loads.
 

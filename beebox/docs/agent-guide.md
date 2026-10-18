@@ -183,9 +183,9 @@ allowance with the first line of the largest uncited passage, the row that is
 missing or unknown, or the leaked line. Coverage is switched on per section,
 as each section is binned; until then the section's text is unchecked.
 
-`test/core/agent-guide/lint.doctest.md` runs the linter on a bare box (budget
+`test/core/agent-guide/lint.test.ts` runs the linter on a bare box (budget
 asserted) and on a box with a box-local schema, a guide card, a procedure,
-and an edited personality card (budget reported). `test/core/agent-guide/ledger-schema.doctest.md`
+and an edited personality card (budget reported). `test/core/agent-guide/ledger-schema.test.ts`
 fails when the ledger does not parse, when a row names an audit that does not
 exist, when the registry, the rendered headings, and `section()` disagree, or
 when a listed referrer no longer names its handle.

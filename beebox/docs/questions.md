@@ -170,7 +170,7 @@ same `bbx finalize` call site as the pending-question notification sweep
   header badge is the channel-independent surface).
 - Time comes from `getBoxTime`/`getBoxTimeISO` (`BBX_TIME`-honoring), never
   `new Date()`, so the sweep is doctestable with frozen time
-  (`test/core/question-aging.doctest.md`).
+  (`test/core/question-aging.test.ts`).
 
 ## The answer round-trip
 
