@@ -29,19 +29,7 @@ function render(text: string): string {
 void test("A marked word renders with the dotted-underline span, tag never shown raw", async (t) => {
   // doctest:L31
   const out = render('<speech stt="deepgram" local-time="14:23">they\'re all <unsure>cloud</unsure> code in different ways</speech>');
-  await t.checkText(out.includes("<unsure>"), "false");
-
-  // doctest:L35
-  await t.checkText(out.includes("</unsure>"), "false");
-
-  // doctest:L38
-  await t.checkText(out.includes('stt="deepgram"'), "false");
-
-  // doctest:L41
-  await t.checkText(out.includes("decoration-dotted"), "true");
-
-  // doctest:L44
-  await t.checkText(out.includes(">cloud</span>"), "true");
+  await t.checkText(out, "<span>they&#x27;re all </span><span class=\"bbx-chat-user-unsure underline decoration-dotted decoration-white/40 underline-offset-2\">cloud</span><span> code in different ways</span>");
 });
 
 // ## A multi-word span (Track 3's hysteresis/bridge rework) renders as ONE run
@@ -53,13 +41,7 @@ void test("A marked word renders with the dotted-underline span, tag never shown
 void test("markUnsureWords now wraps whole PHRASE SPANS, not single words — the regex's...", async (t) => {
   // doctest:L56
   const spanOut = render('<speech stt="deepgram">they said <unsure>the cloud, right</unsure> away</speech>');
-  await t.checkText((spanOut.match(/decoration-dotted/g) ?? []).length, "1");
-
-  // doctest:L60
-  await t.checkText(spanOut.includes(">the cloud, right</span>"), "true");
-
-  // doctest:L63
-  await t.checkText(spanOut.includes("<unsure"), "false");
+  await t.checkText(spanOut, "<span>they said </span><span class=\"bbx-chat-user-unsure underline decoration-dotted decoration-white/40 underline-offset-2\">the cloud, right</span><span> away</span>");
 });
 
 // ## A send tag with more attributes still renders as the pill
@@ -70,13 +52,7 @@ void test("markUnsureWords now wraps whole PHRASE SPANS, not single words — th
 void test("When live dictation heard a send command that the HQ text did not reproduce,...", async (t) => {
   // doctest:L74
   const liveOut = render('<speech stt="whisper-llm-mini">something more like that <send-message phrase="Send message." heard="live" /></speech>');
-  await t.checkText(liveOut.includes("&lt;send-message"), "false");
-
-  // doctest:L78
-  await t.checkText((liveOut.match(/bbx-chat-user-token/g) ?? []).length, "1");
-
-  // doctest:L81
-  await t.checkText(liveOut.includes("Send message.</span>"), "true");
+  await t.checkText(liveOut, "<span>something more like that </span><span class=\"bbx-chat-user-token inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium\"><svg class=\"w-3 h-3\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5\"></path></svg>Send message.</span>");
 });
 
 // ## No marks at all — message renders unchanged, no pill machinery kicks in
@@ -92,10 +68,7 @@ void test("A message with no <unsure>/<send-message>/<user-selection> tags takes
 void test("Multiple marks in one message — each word wraps independently", async (t) => {
   // doctest:L98
   const multiOut = render("<speech stt=\"deepgram\">that one <unsure>not</unsure> that <unsure>one</unsure> thing</speech>");
-  await t.checkText((multiOut.match(/decoration-dotted/g) ?? []).length, "2");
-
-  // doctest:L102
-  await t.checkText(multiOut.includes("<unsure"), "false");
+  await t.checkText(multiOut, "<span>that one </span><span class=\"bbx-chat-user-unsure underline decoration-dotted decoration-white/40 underline-offset-2\">not</span><span> that </span><span class=\"bbx-chat-user-unsure underline decoration-dotted decoration-white/40 underline-offset-2\">one</span><span> thing</span>");
 });
 
 // ## A message with no `stt` attribute (no confidence data captured) is unaffected

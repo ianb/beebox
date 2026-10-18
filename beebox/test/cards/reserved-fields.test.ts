@@ -47,7 +47,6 @@ void test("Built-in schemas declare no reserved name outside the pending list", 
 //
 // The message says what to write instead.
 void test("The message says what to write instead.", async (t) => {
-  // doctest:L52
   const widget = cardSchema("widget", {
     fields: {
       title: z.string().optional(),
@@ -56,13 +55,22 @@ void test("The message says what to write instead.", async (t) => {
       weight: z.number(),
     },
   });
-  t.check(reservedFieldProblems(widget).map((p) => p.field).join(", "), "title, status, created");
+  t.check(reservedFieldProblems(widget), [
+    {
+      field: "title",
+      message: "`title` is a global field every card already has; redeclare it only to require it (`title: z.string()`)",
+    },
+    {
+      field: "status",
+      message: "`status` is a reserved field name: record the specific fact instead: a named boolean per state (`archived: true`), a specifically named enum (`operating: open | closed`), the presence of the result, or an error field",
+    },
+    {
+      field: "created",
+      message: "`created` is a reserved field name: git records when a card was written; a media capture time belongs on the media reference",
+    },
+  ]);
 
-  // doctest:L63
-  t.check(reservedFieldProblems(widget)[0]?.message, "`title` is a global field every card already has; redeclare it only to require it (`title: z.string()`)");
 
-  // doctest:L66
-  t.check(reservedFieldProblems(widget)[1]?.message.startsWith("`status` is a reserved field name: record the specific fact instead"), true);
 });
 
 // ## Declaring `title` as required is allowed, and the title leads the frontmatter
@@ -79,8 +87,15 @@ void test("The one allowed redeclaration makes the global title required.", asyn
 
   // doctest:L83
   // Anything other than a required string is still shadowing.
-  const titleAs = (decl: z.ZodType) => reservedFieldProblems(cardSchema("t", { fields: { title: decl } })).length;
-  t.check([z.string(), z.string().optional(), z.string().default("Untitled"), z.string().nullable(), z.number()].map(titleAs).join(","), "0,1,1,1,1");
+  const shadowed = { field: "title", message: "`title` is a global field every card already has; redeclare it only to require it (`title: z.string()`)" };
+  const titleAs = (decl: z.ZodType) => reservedFieldProblems(cardSchema("t", { fields: { title: decl } }));
+  t.check([z.string(), z.string().optional(), z.string().default("Untitled"), z.string().nullable(), z.number()].map(titleAs), [
+    [],
+    [shadowed],
+    [shadowed],
+    [shadowed],
+    [shadowed],
+  ]);
 
   // doctest:L88
   const schemas = new Map([["note-fixture", note]]);

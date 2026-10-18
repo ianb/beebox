@@ -56,10 +56,18 @@ void test("Note:", async (t) => {
     selections: [],
   });
   const plan = planRestore(emptyDraft, e);
-  t.check(plan.text, "look at [image1]");
-
-  // doctest:L55
-  await t.checkText(plan.images.length, "1");
+  t.check(plan, {
+    text: "look at [image1]",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+      },
+    ],
+    files: [],
+    selections: [],
+  });
 
   // ## planRestore: keyword control tags never reach the composer
   //
@@ -75,7 +83,12 @@ void test("Note:", async (t) => {
     selections: [],
     diarized: false,
   });
-  t.check(planRestore(emptyDraft, tagged).text, "remember the milk");
+  t.check(planRestore(emptyDraft, tagged), {
+    text: "remember the milk",
+    images: [],
+    files: [],
+    selections: [],
+  });
 
   // doctest:L76
   const allTags = [
@@ -87,7 +100,12 @@ void test("Note:", async (t) => {
     '<erase-message phrase="Clear &quot;this&quot; message" />',
   ].join(" ");
   const swept = createVoiceEmission({ text: `keep this ${allTags}`, selections: [], diarized: false });
-  t.check(planRestore(emptyDraft, swept).text, "keep this");
+  t.check(planRestore(emptyDraft, swept), {
+    text: "keep this",
+    images: [],
+    files: [],
+    selections: [],
+  });
 
   // Only voice emissions strip — the keyword pipeline is the only thing that
   // puts a tag into voice text. A TYPED message restores verbatim, so someone
@@ -100,7 +118,12 @@ void test("Note:", async (t) => {
     files: [],
     selections: [],
   });
-  t.check(planRestore(emptyDraft, typed).text, "the composer leaked <erase-message phrase=\"Clear message\" /> today");
+  t.check(planRestore(emptyDraft, typed), {
+    text: "the composer leaked <erase-message phrase=\"Clear message\" /> today",
+    images: [],
+    files: [],
+    selections: [],
+  });
 });
 
 // ## planRestore: text already typed appends after a newline instead of clobbering it
@@ -109,8 +132,12 @@ void test("planRestore: text already typed appends after a newline instead of cl
   const typedOverDraft = { ...emptyDraft, text: "meanwhile" };
   const voice = createVoiceEmission({ text: "add milk to the list", selections: [], diarized: false });
   const plan2 = planRestore(typedOverDraft, voice);
-  await t.checkText(plan2.text, `meanwhile
-add milk to the list`);
+  t.check(plan2, {
+    text: "meanwhile\nadd milk to the list",
+    images: [],
+    files: [],
+    selections: [],
+  });
 
   // ## planRestore: attachments/selections always re-added regardless of composer text
 
@@ -118,10 +145,24 @@ add milk to the list`);
   const sel = [{ id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" }];
   const e2 = createTypedEmission({ text: "note: [selection1]", images: [], files: [{ id: 1, path: "_tmp/report.pdf" }], selections: sel });
   const plan3 = planRestore(typedOverDraft, e2);
-  await t.checkText(plan3.files.length, "1");
-
-  // doctest:L124
-  await t.checkText(plan3.selections.length, "1");
+  t.check(plan3, {
+    text: "meanwhile\nnote: [selection1]",
+    images: [],
+    files: [
+      {
+        id: 1,
+        path: "_tmp/report.pdf",
+      },
+    ],
+    selections: [
+      {
+        id: 1,
+        ref: "/_content/notes/Bread.doc.card",
+        text: "let it rise",
+        position: "body",
+      },
+    ],
+  });
 });
 
 // ## applyRestorePlan: restored ids are reserved, so new items can't collide
@@ -144,17 +185,63 @@ void test("The send that got rejected already reset() the store, dropping the id
     selections: [{ id: 3, ref: "/x.card", text: "t", position: "body", anchor: null, spokenWords: null }],
   });
   applyRestorePlan(store.editor, planRestore(store.get(), failed));
-  await t.checkText(store.get().text, `was typing
-see [image1] and [image2]`);
-
-  // doctest:L152
-  t.check(store.get().images.map((i) => i.id).join(","), "1,2");
+  t.check(store.get(), {
+    text: "was typing\nsee [image1] and [image2]",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "data:image/png;base64,aGk=",
+        byteLength: 3,
+        original: {
+          status: "failed",
+          message: "Original not uploaded — the agent sees the reduced copy only",
+        },
+      },
+      {
+        id: 2,
+        mimeType: "image/png",
+        dataBase64: "aG8=",
+        objectUrl: "data:image/png;base64,aG8=",
+        byteLength: 3,
+        original: {
+          status: "failed",
+          message: "Original not uploaded — the agent sees the reduced copy only",
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 0,
+        mimetype: "application/octet-stream",
+        state: {
+          status: "uploaded",
+          path: "_tmp/report.pdf",
+        },
+      },
+    ],
+    selections: [
+      {
+        id: 3,
+        ref: "/x.card",
+        text: "t",
+        position: "body",
+        anchor: null,
+        spokenWords: null,
+      },
+    ],
+    uploadBatch: null,
+  });
 
   // doctest:L155
   t.check(
     // Fresh ids start past the restored ones — no [image1]/[file1]/[selection3] duplicates.
-    [store.editor.nextImageId(), store.editor.nextFileId(), store.editor.nextSelectionId()].join(","),
-    "3,2,4",
+    [store.editor.nextImageId(), store.editor.nextFileId(), store.editor.nextSelectionId()],
+    [3, 2, 4],
   );
 });
 
@@ -177,14 +264,35 @@ void test("A rejected send hands its images back through the emission, which car
     files: [], selections: [],
   });
   applyRestorePlan(store.editor, planRestore(emptyDraft, e));
-  t.check(store.get().images.map((image) => image.original), [
-    {
-      status: "uploaded",
-      path: "_tmp/a.jpg",
-    },
-    {
-      status: "failed",
-      message: "Original not uploaded — the agent sees the reduced copy only",
-    },
-  ]);
+  t.check(store.get(), {
+    text: "receipt [image#1] and [image#2]",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/jpeg",
+        dataBase64: "AA",
+        objectUrl: "data:image/jpeg;base64,AA",
+        byteLength: 1,
+        original: {
+          status: "uploaded",
+          path: "_tmp/a.jpg",
+        },
+      },
+      {
+        id: 2,
+        mimeType: "image/png",
+        dataBase64: "BB",
+        objectUrl: "data:image/png;base64,BB",
+        byteLength: 1,
+        original: {
+          status: "failed",
+          message: "Original not uploaded — the agent sees the reduced copy only",
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 });

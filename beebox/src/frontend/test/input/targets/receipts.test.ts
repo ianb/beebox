@@ -15,7 +15,11 @@ void test("Settle resolves the matching expectation", async (t) => {
   const p = expectReceipt("msg-1");
   settleReceipt({ disposition: "sent", emissionId: "msg-1", deduplicated: false });
   const r = await p;
-  t.check(r.disposition, "sent");
+  t.check(r, {
+    disposition: "sent",
+    emissionId: "msg-1",
+    deduplicated: false,
+  });
 
   // doctest:L21
   t.check(pendingReceiptCount(), 0);
@@ -40,7 +44,10 @@ void test("Distinct sends settle independently", async (t) => {
 
   // doctest:L44
   settleReceipt({ disposition: "queued", emissionId: "msg-b" });
-  t.check((await b).disposition, "queued");
+  t.check(await b, {
+    disposition: "queued",
+    emissionId: "msg-b",
+  });
 
   // doctest:L48
   t.check(pendingReceiptCount(), 1);
@@ -48,7 +55,11 @@ void test("Distinct sends settle independently", async (t) => {
   // doctest:L51
   settleReceipt({ disposition: "rejected", emissionId: "msg-a", reason: "network" });
   const ra = await a;
-  await t.checkText(ra.disposition === "rejected" && ra.reason === "network", "true");
+  t.check(ra, {
+    disposition: "rejected",
+    emissionId: "msg-a",
+    reason: "network",
+  });
 });
 
 // ## Duplicate expectations share the real outcome
@@ -64,9 +75,17 @@ void test("A repeated dispatch can register the same persisted emission ID befor
 
   // doctest:L69
   settleReceipt({ disposition: "sent", emissionId: "msg-dup", deduplicated: false });
-  t.check([(await first).disposition, (await second).disposition], [
-    "sent",
-    "sent",
+  t.check([await first, await second], [
+    {
+      disposition: "sent",
+      emissionId: "msg-dup",
+      deduplicated: false,
+    },
+    {
+      disposition: "sent",
+      emissionId: "msg-dup",
+      deduplicated: false,
+    },
   ]);
 
   // doctest:L73

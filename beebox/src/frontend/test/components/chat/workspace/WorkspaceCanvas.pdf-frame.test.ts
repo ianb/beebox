@@ -14,7 +14,6 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import * as React from "react";
-import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PdfFrame } from "../../../../src/components/PdfFrame.js";
 import { registerFileType } from "../../../../src/file-type-registry.js";
@@ -35,28 +34,26 @@ function render(props: React.ComponentProps<typeof PdfFrame>) {
 
 const base = { src: "/test/api/files/inbox/Handbook.attach/source.pdf", title: "Handbook", downloadName: "source.pdf" };
 
+const SRC = "/test/api/files/inbox/Handbook.attach/source.pdf";
+const DOWNLOAD_LINK = `<a href="${SRC}" target="_blank" rel="noopener noreferrer" download="source.pdf" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-warm-300 rounded hover:bg-warm-50 text-warm-700"><span>Download</span></a>`;
+// Open-in-new-tab is a labelled icon link (icon-only controls need a name).
+const OPEN_LINK = `<a href="${SRC}" target="_blank" rel="noopener noreferrer" aria-label="Open source.pdf in a new tab" title="Open source.pdf in a new tab" class="w-7 h-7 bg-transparent hover:bg-warm-200 text-warm-500 hover:text-warm-700 rounded-full inline-flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"></path></svg></a>`;
+const TOOLBAR = `<div class="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-200 bg-warm-50"><span class="text-warm-700 text-sm truncate flex-1 min-w-0" title="Handbook">Handbook</span>${DOWNLOAD_LINK}${OPEN_LINK}</div>`;
+const FALLBACK = `<div class="p-4 flex flex-col items-start gap-3 bg-warm-50"><p class="text-warm-600 text-sm">This PDF can’t be displayed here. Open it in a new tab or download it.</p><div class="flex items-center gap-2">${DOWNLOAD_LINK}${OPEN_LINK}</div></div>`;
+
+/** The frame: a wrapper, an optional toolbar, and the `<object>` with its fallback children. */
+function frame(parts: { wrapperClass: string; toolbar: string; objectClass: string }): string {
+  return `<div class="${parts.wrapperClass}">${parts.toolbar}<object data="${SRC}" type="application/pdf" title="Handbook" class="${parts.objectClass}">${FALLBACK}</object></div>`;
+}
+
+const pageFrame = frame({ wrapperClass: "flex flex-col", toolbar: TOOLBAR, objectClass: "w-full h-[80vh]" });
+
 // ## The frame, the fallback, and the download link
+//
+// Both affordances appear twice, once in the toolbar and once in the fallback, so
+// a viewer who only ever sees the fallback still gets them.
 void test("The frame, the fallback, and the download link", async (t) => {
-  // doctest:L41
-  const html = render({ ...base, mode: "page" });
-
-  // doctest:L43
-  await t.checkText(html.includes('<object data="/test/api/files/inbox/Handbook.attach/source.pdf" type="application/pdf"'), "true");
-
-  // doctest:L46
-  await t.checkText(
-    // Open-in-new-tab is a labelled icon link (icon-only controls need a name).
-    html.includes('aria-label="Open source.pdf in a new tab"'),
-    "true",
-  );
-});
-
-// Both affordances appear twice — once in the toolbar, once in the fallback — so a
-// viewer who only ever sees the fallback still gets them:
-void test("Both affordances appear twice — once in the toolbar, once in the fallback — s...", async (t) => {
-  // doctest:L55
-  const html = render({ ...base, mode: "page" });
-  t.check(html.split('download="source.pdf"').length - 1, 2);
+  t.check(render({ ...base, mode: "page" }), pageFrame);
 });
 
 // ## Height comes from the surface
@@ -67,23 +64,22 @@ void test("Both affordances appear twice — once in the toolbar, once in the fa
 // space, which is why FileView's companion wrapper is itself a column.
 void test("page owns the viewport, so it takes a viewport-relative height.", async (t) => {
   // doctest:L68
-  await t.checkText(render({ ...base, mode: "page" }).includes("h-[80vh]"), "true");
+  t.check(render({ ...base, mode: "page" }), pageFrame);
 
   // doctest:L71
-  await t.checkText(render({ ...base, mode: "chat" }).includes("h-80"), "true");
+  t.check(render({ ...base, mode: "chat" }), frame({ wrapperClass: "flex flex-col", toolbar: TOOLBAR, objectClass: "w-full h-80" }));
 
   // doctest:L74
   // The companion frame claims the remainder of a column that has a height —
   // and falls back to a viewport floor when its ancestors are content-sized,
   // which is what the browse detail panel and the chat sidebar actually give it.
-  const companion = render({ ...base, mode: "companion" });
-  t.check([companion.includes("h-full min-h-0"), companion.includes("flex-1 min-h-[70vh]"), companion.includes("h-[80vh]")].join(" "), "true true false");
+  t.check(render({ ...base, mode: "companion" }), frame({ wrapperClass: "flex flex-col h-full min-h-0", toolbar: TOOLBAR, objectClass: "w-full flex-1 min-h-[70vh]" }));
 });
 
 // An omitted `mode` behaves like `page`, the surface a bare PDF path lands on:
 void test("An omitted mode behaves like page, the surface a bare PDF path lands on:", async (t) => {
   // doctest:L85
-  await t.checkText(render(base) === render({ ...base, mode: "page" }), "true");
+  t.check(render(base), pageFrame);
 });
 
 // ## Workspace supplies the file actions
@@ -93,22 +89,10 @@ void test("An omitted mode behaves like page, the surface a bare PDF path lands 
 // height floor. Unsupported viewers still receive the fallback links.
 void test("The tab already names the file and its menu supplies Open/Download.", async (t) => {
   // doctest:L96
-  const pane = render({ ...base, mode: "companion", workspacePdf: true });
-  const beforeObject = pane.split("<object")[0];
-  assert.ok(beforeObject !== undefined);
-  await t.checkText(beforeObject.includes("Handbook"), "false");
-
-  // doctest:L102
-  t.check(pane.split('download="source.pdf"').length - 1, 1);
-
-  // doctest:L105
-  await t.checkText(pane.includes("min-h-[70vh]"), "false");
-
-  // doctest:L108
-  await t.checkText(pane.includes("w-full h-full flex-1 min-h-0"), "true");
-
-  // doctest:L111
-  await t.checkText(pane.includes("This PDF can’t be displayed here.") && pane.includes('aria-label="Open source.pdf in a new tab"'), "true");
+  t.check(
+    render({ ...base, mode: "companion", workspacePdf: true }),
+    frame({ wrapperClass: "flex flex-col h-full min-h-0", toolbar: "", objectClass: "w-full h-full flex-1 min-h-0" }),
+  );
 });
 
 // Old view names fall back to the preferred renderer, just as in FileView. An

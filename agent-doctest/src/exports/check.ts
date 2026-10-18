@@ -9,7 +9,10 @@
 export {
   any,
   anything,
+  instanceOf,
+  is,
   isoDate,
+  not,
   notAllowed,
   oneOf,
   optional,

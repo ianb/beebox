@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -51,30 +52,34 @@ void test("Drive IDs are case-sensitive and may contain characters outside the c
   t.check(isControlAddress(encoded), true);
 
   // doctest:L54
-  await t.checkText(driveControlId("unmount", "Folder_A-1") === driveControlId("unmount", "folder_a-1"), "false");
+  t.check(driveControlId("unmount", "Folder_A-1"), not(driveControlId("unmount", "folder_a-1")));
 });
+
+const BUTTON_BASE = "inline-flex items-center justify-center font-medium transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed";
+const SPINNER = '<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+const GHOST = "bg-transparent text-warm-700 hover:bg-warm-100 rounded px-2.5 py-1 text-sm gap-1";
+const DANGER = "bg-danger text-white hover:bg-danger-dark rounded px-2.5 py-1 text-sm gap-1";
+const QUESTION = '<span class="text-warm-900 text-sm">Stop mirroring? Children stay where they are.</span>';
+// The ID of "folder-1", encoded.
+const ID = "mzxwyzdfoiwtc";
 
 // ## Step one is a single button that commits to nothing
 void test("Step one is a single button that commits to nothing", async (t) => {
   // doctest:L61
-  const idle = render({ confirming: false });
-  await t.checkText(idle.includes(">Unmount<"), "true");
-
-  // doctest:L65
-  await t.checkText(idle.includes("Yes, unmount"), "false");
+  t.check(
+    render({ confirming: false }),
+    `<button id="bbx-settings-drive-unmount-id-${ID}" type="button" class="${BUTTON_BASE} ${GHOST}"><span>Unmount</span></button>`,
+  );
 });
 
 // ## Step two says what will happen, and offers a way back
 void test("Step two says what will happen, and offers a way back", async (t) => {
   // doctest:L72
-  const asked = render({ confirming: true });
-  await t.checkText(asked.includes("Stop mirroring? Children stay where they are."), "true");
-
-  // doctest:L76
-  await t.checkText(asked.includes("Yes, unmount"), "true");
-
-  // doctest:L79
-  await t.checkText(asked.includes(">Cancel<"), "true");
+  t.check(
+    render({ confirming: true }),
+    `${QUESTION}<button id="bbx-settings-drive-confirm-id-${ID}" type="button" class="${BUTTON_BASE} ${DANGER}"><span>Yes, unmount</span></button>`
+      + `<button id="bbx-settings-drive-cancel-id-${ID}" type="button" class="${BUTTON_BASE} ${GHOST}"><span>Cancel</span></button>`,
+  );
 
   // ## A running unmount says so rather than looking untouched
   //
@@ -83,9 +88,9 @@ void test("Step two says what will happen, and offers a way back", async (t) => 
   // already out.
 
   // doctest:L90
-  const running = render({ confirming: true, busy: true, pending: true });
-  await t.checkText(running.includes("Unmounting…"), "true");
-
-  // doctest:L94
-  await t.checkText(running.includes("disabled"), "true");
+  t.check(
+    render({ confirming: true, busy: true, pending: true }),
+    `${QUESTION}<button id="bbx-settings-drive-confirm-id-${ID}" type="button" disabled="" aria-busy="true" class="${BUTTON_BASE} ${DANGER}">${SPINNER}<span>Unmounting…</span></button>`
+      + `<button id="bbx-settings-drive-cancel-id-${ID}" type="button" disabled="" class="${BUTTON_BASE} ${GHOST}"><span>Cancel</span></button>`,
+  );
 });

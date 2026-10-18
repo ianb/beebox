@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { buildMultipartForm } from "../../src/lib/multipart.js";
 
 // ## File part + field part, in order
@@ -29,23 +30,23 @@ void test("File part + field part, in order", async (t) => {
     "Content-Disposition: form-data; name=\"model\"\r\n\r\n" +
     "whisper-1\r\n" +
     `--${boundary}--\r\n`;
-  await t.checkText(body.toString("utf-8") === expected, "true");
+  t.check(body.toString("utf-8"), expected);
 
   // Boundary is a fresh random token each call, prefixed `----FormBoundary`:
 
   // doctest:L39
-  t.check(/^-{4}FormBoundary[\da-z]+$/.test(boundary), true);
+  t.check(boundary, any(String).matches(/^-{4}FormBoundary[\da-z]+$/));
 
   // doctest:L42
   const second = buildMultipartForm([]);
-  await t.checkText(second.boundary === boundary, "false");
+  t.check(second.boundary, not(boundary));
 });
 
 // ## No parts — just the closing boundary
 void test("No parts — just the closing boundary", async (t) => {
   // doctest:L50
   const empty = buildMultipartForm([]);
-  await t.checkText(empty.body.toString("utf-8") === `--${empty.boundary}--\r\n`, "true");
+  t.check(empty.body.toString("utf-8"), `--${empty.boundary}--\r\n`);
 });
 
 // ## Field-only parts (no file) preserve given order
@@ -63,5 +64,5 @@ void test("Field-only parts (no file) preserve given order", async (t) => {
     "Content-Disposition: form-data; name=\"b\"\r\n\r\n" +
     "2\r\n" +
     `--${fieldsBoundary}--\r\n`;
-  await t.checkText(fieldsBody.toString("utf-8") === fieldsExpected, "true");
+  t.check(fieldsBody.toString("utf-8"), fieldsExpected);
 });

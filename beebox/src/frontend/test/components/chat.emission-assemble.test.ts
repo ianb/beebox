@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not, str } from "agent-doctest/check";
 import { assembleChatMessage } from "../../src/input/targets/chat-assemble.js";
 import { createTypedEmission, createVoiceEmission } from "../../src/input/emission.js";
 import { buildSpeechMessage } from "../../src/components/chat/InteractiveChat-helpers.js";
@@ -25,10 +26,10 @@ void test("Historical builder:", async (t) => {
   t.check(out.message, "<typed local-time=\"14:23\">hello there</typed>");
 
   // doctest:L29
-  await t.checkText(out.messageId === e.id, "true");
+  t.check(out.messageId, e.id);
 
   // doctest:L32
-  await t.checkText(out.images.length, "0");
+  t.check(out.images, []);
 });
 
 // ## Site 1 — typed send: selections fold, files block, images ride
@@ -179,7 +180,7 @@ void test("Historical builder: (line 155)", async (t) => {
 
   // doctest:L169
   const legacy = buildSpeechMessage({ text: "add that to the list", diarized: true, selections: sel, attrs: " local-time=\"14:23\"" });
-  await t.checkText(out.message.replace(` message-id="${e.id}"`, "").replace(' stt="live"', "") === legacy, "true");
+  t.check(out.message.replace(` message-id="${e.id}"`, "").replace(' stt="live"', ""), legacy);
 });
 
 // ## Sites 3+4 — desktop/mobile stop-and-send: now fold selections (chunk 5, DECIDED)
@@ -568,7 +569,15 @@ void test("null/undefined (a service that never captured confidence — Voxtral,
   t.check(resolveEmissionWords([{ word: "hi" }, { word: "there" }]), undefined);
 
   // doctest:L541
-  t.check(resolveEmissionWords([{ word: "hi" }, { word: "there", confidence: 0.9 }])?.length, 2);
+  t.check(resolveEmissionWords([{ word: "hi" }, { word: "there", confidence: 0.9 }]), [
+    {
+      word: "hi",
+    },
+    {
+      word: "there",
+      confidence: 0.9,
+    },
+  ]);
 });
 
 // ## Site 2 — keyword voice send: inline `<unsure>` marks on live text
@@ -697,7 +706,8 @@ void test("Emission ids are distinct per creation (the dedup key)", async (t) =>
   // doctest:L675
   const a = createTypedEmission({ text: "x", images: [], files: [], selections: [] });
   const b = createTypedEmission({ text: "x", images: [], files: [], selections: [] });
-  await t.checkText(a.id !== b.id && a.id.startsWith("msg-"), "true");
+  t.check(a.id, str`msg-${any(String)}`);
+  t.check(b.id, not(a.id));
 });
 
 // ## An inline image's original file is listed like a file

@@ -43,30 +43,11 @@ function renderFace(state: VoiceChipFaceState) {
   return renderToStaticMarkup(React.createElement(VoiceChipFace, state));
 }
 
-/** The floor glyph's flow path — the arrow between the two marks. */
-const TURNS = "M10 5h6l-2-2M16 11h-6l2 2";
-const YOU_HOLD_FLOOR = "M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5";
-/** The speaker segment: sound waves when aloud, written lines when in text. */
-const ALOUD = "M31.5 6a3 3 0 0 1 0 4";
-const IN_TEXT = "M30 4h10M30 8h7M30 12h10";
-
 // ## Taking turns, answering aloud
 void test("Taking turns, answering aloud", async (t) => {
   // doctest:L56
   const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
-  t.check([face.includes(TURNS), face.includes(YOU_HOLD_FLOOR), face.includes(ALOUD), face.includes(IN_TEXT)], [
-    true,
-    false,
-    true,
-    false,
-  ]);
-
-  // Nothing is conveyed by dimming any more — the old face wrapped the mic in an
-  // `opacity-40` span to mean "narration off", which is a brightness difference with
-  // nothing to compare it against.
-
-  // doctest:L66
-  await t.checkText(face.includes("opacity-40"), "false");
+  t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>");
 });
 
 // ## The box answers in writing
@@ -76,22 +57,14 @@ void test("Taking turns, answering aloud", async (t) => {
 void test("Written lines, not a slashed speaker:", async (t) => {
   // doctest:L76
   const face = renderFace({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
-  t.check([face.includes(IN_TEXT), face.includes(ALOUD), face.includes('data-voice-muted="true"')], [
-    true,
-    false,
-    true,
-  ]);
+  t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"true\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M30 4h10M30 8h7M30 12h10\"></path></svg></span>");
 });
 
 // ## You hold the floor
 void test("You hold the floor", async (t) => {
   // doctest:L84
   const face = renderFace({ muted: false, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false });
-  t.check([face.includes(YOU_HOLD_FLOOR), face.includes(TURNS), face.includes('data-voice-narration="true"')], [
-    true,
-    false,
-    true,
-  ]);
+  t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"true\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>");
 });
 
 // ## The two axes combine, and the name says both in words
@@ -125,21 +98,10 @@ void test("The glyphs carry it with participants, arrows, and output marks; the 
 void test("The word is worth about 70px, which at phone width is most of the place label...", async (t) => {
   // doctest:L112
   const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false });
-  t.check([face.includes("transcribing…"), face.includes("hidden sm:inline"), face.includes("sm:hidden")], [
-    true,
-    true,
-    true,
-  ]);
+  t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg><span aria-hidden=\"true\" class=\"sm:hidden w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse\"></span><span class=\"hidden sm:inline text-xs opacity-80\">transcribing…</span></span>");
 
-  // Nothing of it survives when no transcription is in flight — neither the word nor
-  // the pulse.
-
-  // doctest:L121
   const idle = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
-  t.check([idle.includes("transcribing…"), idle.includes("animate-pulse")], [
-    false,
-    false,
-  ]);
+  t.check(idle, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>");
 
   // doctest:L127
   t.check(voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false }), "Voice — taking turns, answers aloud, transcribing");
@@ -169,72 +131,17 @@ void test("Every dictated message gets the HQ pass (docs/plans/hq-always.md), so
 void test("The group works with both arrow states and both channels.", async (t) => {
   // doctest:L146
   const combinations = [false, true].flatMap(diarizationEnabled => [false, true].flatMap(narrationEnabled => [false, true].map(muted => {
-    const face = renderFace({ muted, narrationEnabled, diarizationEnabled, hqInFlight: false });
-    return [
-      (face.match(/<svg /g) ?? []).length,
-      (face.match(/<rect /g) ?? []).length,
-      (face.match(/r="2.2"/g) ?? []).length,
-      face.includes(narrationEnabled ? YOU_HOLD_FLOOR : TURNS),
-      face.includes(muted ? IN_TEXT : ALOUD),
-    ];
+    return renderFace({ muted, narrationEnabled, diarizationEnabled, hqInFlight: false });
   })));
   t.check(combinations, [
-    [
-      1,
-      1,
-      1,
-      true,
-      true,
-    ],
-    [
-      1,
-      1,
-      1,
-      true,
-      true,
-    ],
-    [
-      1,
-      1,
-      1,
-      true,
-      true,
-    ],
-    [
-      1,
-      1,
-      1,
-      true,
-      true,
-    ],
-    [
-      1,
-      1,
-      2,
-      true,
-      true,
-    ],
-    [
-      1,
-      1,
-      2,
-      true,
-      true,
-    ],
-    [
-      1,
-      1,
-      2,
-      true,
-      true,
-    ],
-    [
-      1,
-      1,
-      2,
-      true,
-      true,
-    ],
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>",
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"true\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M30 4h10M30 8h7M30 12h10\"></path></svg></span>",
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"true\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>",
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"true\" data-voice-narration=\"true\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M30 4h10M30 8h7M30 12h10\"></path></svg></span>",
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"true\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><g transform=\"translate(0 2) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><g transform=\"translate(4.5 -1) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>",
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"true\" data-voice-narration=\"false\" data-voice-diarization=\"true\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><g transform=\"translate(0 2) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><g transform=\"translate(4.5 -1) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M30 4h10M30 8h7M30 12h10\"></path></svg></span>",
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"true\" data-voice-diarization=\"true\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><g transform=\"translate(0 2) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><g transform=\"translate(4.5 -1) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g></g><path d=\"M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>",
+    "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"true\" data-voice-narration=\"true\" data-voice-diarization=\"true\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><g transform=\"translate(0 2) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><g transform=\"translate(4.5 -1) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g></g><path d=\"M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M30 4h10M30 8h7M30 12h10\"></path></svg></span>",
   ]);
 
   // doctest:L159

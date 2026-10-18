@@ -37,36 +37,28 @@ const Garnish = ({ amount, unit, children }: { amount?: string; unit?: string; c
 
 // ## Without `tags`, the authored tag and its attributes stay visible
 void test("Without `tags`, the authored tag and its attributes stay visible", async (t) => {
-  // doctest:L40
-  const plain = render('Top with {% garnish amount="2" unit="cups" %}flour{% /garnish %}.');
-  await t.checkText(plain.includes("garnish amount=&quot;2&quot; unit=&quot;cups&quot;") && plain.includes("flour"), "true");
+  t.check(render('Top with {% garnish amount="2" unit="cups" %}flour{% /garnish %}.'), "<div class=\"bbx-paragraph\">Top with <span><code class=\"text-warm-500 text-xs\">{% garnish amount=&quot;2&quot; unit=&quot;cups&quot; %}</code>flour</span>.</div>");
 });
 
 // ## With `tags` and `components`, the component renders and no authored tag text remains
 void test("With `tags` and `components`, the component renders and no authored tag text remains", async (t) => {
-  // doctest:L48
-  const scoped = render('Top with {% garnish amount="2" unit="cups" %}flour{% /garnish %}.', {
+  t.check(render('Top with {% garnish amount="2" unit="cups" %}flour{% /garnish %}.', {
     tags: { garnish },
     components: { Garnish },
-  });
-  await t.checkText(scoped.includes('<b class="garnish">[2 cups] flour</b>') && !scoped.includes("{%"), "true");
+  }), "<div class=\"bbx-paragraph\">Top with <b class=\"garnish\">[2 cups] flour</b>.</div>");
 });
 
 // ## A block tag keeps its attribute values visible
 void test("A block tag keeps its attribute values visible", async (t) => {
-  // doctest:L59
-  const block = render('{% plating ref="x.recipe.card" %}\nBody\n{% /plating %}');
-  await t.checkText(block.includes("plating ref=&quot;x.recipe.card&quot;"), "true");
+  t.check(render('{% plating ref="x.recipe.card" %}\nBody\n{% /plating %}'), "<div><code class=\"text-warm-500 text-xs\">{% plating ref=&quot;x.recipe.card&quot; %}</code><div class=\"bbx-paragraph\">Body</div></div>");
 });
 
 // ## A variable attribute prints as authored
 void test("A variable attribute prints as authored", async (t) => {
-  // doctest:L67
-  await t.checkText(render("{% garnish amount=$n %}x{% /garnish %}").includes("{% garnish amount=$n %}"), "true");
+  t.check(render("{% garnish amount=$n %}x{% /garnish %}"), "<div class=\"bbx-paragraph\"><span><code class=\"text-warm-500 text-xs\">{% garnish amount=$n %}</code>x</span></div>");
 });
 
 // ## A tag named after an Object.prototype key is still unknown
 void test("A tag named after an Object.prototype key is still unknown", async (t) => {
-  // doctest:L74
-  await t.checkText(render('{% toString amount="2" %}flour{% /toString %}').includes("toString amount=&quot;2&quot;"), "true");
+  t.check(render('{% toString amount="2" %}flour{% /toString %}'), "<div class=\"bbx-paragraph\"><span><code class=\"text-warm-500 text-xs\">{% toString amount=&quot;2&quot; %}</code>flour</span></div>");
 });

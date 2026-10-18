@@ -33,17 +33,14 @@ tap.teardown(async () => {
 void test("A body within the limit lands whole.", async (t) => {
   // doctest:L26
   const result = await hashStreamToFile({ source: body("hello ", "world"), destPath: join(dir, "ok.bin"), maxBytes: 100 });
-  await t.checkText(result.sha256 === sha256("hello world"), "true");
-
-  // doctest:L30
-  await t.checkText(result.size, "11");
+  t.check(result, { sha256: sha256("hello world"), size: 11 });
 });
 
 // A body exactly at the limit is allowed; one byte more is refused with
 // `StreamByteLimitError`, and the file is removed:
 void test("A body exactly at the limit is allowed; one byte more is refused with StreamB...", async (t) => {
   // doctest:L38
-  t.check(await hashStreamToFile({ source: body("12345"), destPath: join(dir, "exact.bin"), maxBytes: 5 }).then((r) => r.size), 5);
+  t.check(await hashStreamToFile({ source: body("12345"), destPath: join(dir, "exact.bin"), maxBytes: 5 }), { size: 5, sha256: sha256("12345") });
 
   // doctest:L41
   await t.checkThrows(async () => (await hashStreamToFile({ source: body("123456"), destPath: join(dir, "over.bin"), maxBytes: 5 })), "StreamByteLimitError: Stream exceeded the 5-byte limit");

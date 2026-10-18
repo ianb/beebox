@@ -34,7 +34,6 @@ void test("One expired-age question and one fresh: only the fresh one is announc
       t.error(error);
     }
   });
-  // doctest:L30
   const box = await makeTmpBox({ git: true });
   await box.seed(".beebox/box.json", JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: NOW.toISOString() }));
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: { endpoint: "https://push.example/f1", keys: { p256dh: "p", auth: "a" } }, now: NOW });
@@ -43,17 +42,21 @@ void test("One expired-age question and one fresh: only the fresh one is announc
   box.commitAll("seed questions");
   process.env.BBX_TIME = NOW.toISOString();
 
-  // doctest:L38
   const lines: string[] = [];
   const origLog = console.log;
   console.log = (...args) => { lines.push(args.join(" ")); };
   await finalizeQuestions(box.root, { push: createFakePush() });
   console.log = origLog;
-  await t.checkText(lines.join("\n"), `  Question aging: 0 nudged, 1 expired
-  Question alert: 1 new question(s)`);
+  t.check(lines, ["  Question aging: 0 nudged, 1 expired", "  Question alert: 1 new question(s)"]);
 
-  // doctest:L48
-  await t.checkText((await box.read("_bookkeeping/questions/Old.question.card")).includes("expired-at:"), "true");
+  await t.checkText(await box.read("_bookkeeping/questions/Old.question.card"), `---
+type: question
+prompt: Still want the old thing?
+input:
+  type: text
+asked-at: 2026-05-30T11:59:00.000Z
+expired-at: 2026-06-29T12:00:00.000Z
+---`);
 
   // doctest:L51
   const sent = (await readRecent(box.root, { days: 1, now: NOW })).filter((n) => n.intent.source === "question-alert");

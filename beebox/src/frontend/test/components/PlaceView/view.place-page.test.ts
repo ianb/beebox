@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -134,11 +135,11 @@ void test("A curated link whose card is gone keeps its row, struck through, so t
     ],
     groups: [{ label: "Every receipt card here", count: 0, children: [] }],
   }) }, startedLending);
+  t.check(html, any(String).includes('aria-expanded="true"'));
   t.check(
     ({
       sections: sections(html),
       struck: html.match(/<s>([^<]*)<\/s>/)?.[1],
-      groupOpen: html.includes('aria-expanded="true"'),
       text: text(html),
     }),
     {
@@ -148,7 +149,6 @@ void test("A curated link whose card is gone keeps its row, struck through, so t
       "group",
     ],
     struck: "Gone",
-    groupOpen: true,
     text: "Start here Lending list Pinned Gone Missing Every receipt card here 0 None yet",
   },
   );
@@ -172,13 +172,13 @@ void test("\"Also here\" lists 10 cards; the rest show as one count that opens t
   t.check(
     ({
       moreButtons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].map((m) => m[1]),
-      plainMore: text(html).includes("+59 more"),
+      text: text(html),
     }),
     {
     moreButtons: [
       "+20 more",
     ],
-    plainMore: true,
+    text: "Every loan card here 60 Loan +59 more Also here 30 Card 0 Card 1 Card 2 Card 3 Card 4 Card 5 Card 6 Card 7 Card 8 Card 9 +20 more",
   },
   );
 });
@@ -193,9 +193,9 @@ void test("The page knows the server's \"Also here\" group by its alsoHere mark,
     openers: [],
     groups: [{ label: "Also here", count: 30, children: [{ ref: "_content/lending/Loan.doc.card", label: null, title: "Loan", exists: true, source: "expand" }] }],
   }) });
-  t.check(({ buttons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].length, plainMore: text(html).includes("+29 more") }), {
-    buttons: 0,
-    plainMore: true,
+  t.check(({ buttons: [...html.matchAll(/<button[^>]*>([^<]*more)<\/button>/g)].map((m) => m[1]), text: text(html) }), {
+    buttons: [],
+    text: "Also here 30 Loan +29 more",
   });
 });
 
@@ -243,10 +243,13 @@ void test("Beside a started chat in the place, the openers are offered", async (
 // and enable again once the turn ends.
 void test("While that chat is busy with a turn, the openers wait:", async (t) => {
   // doctest:L213
-  const count = (html: string) => (html.match(/<button[^>]*disabled=""/g) ?? []).length;
-  t.check([count(await render({ payload: payload() }, { ...startedLending, busy: true })), count(await render({ payload: payload() }, startedLending))], [
-    2,
-    0,
+  const disabled = (html: string) => html.match(/<button[^>]*disabled=""/g) ?? [];
+  t.check([disabled(await render({ payload: payload() }, { ...startedLending, busy: true })), disabled(await render({ payload: payload() }, startedLending))], [
+    [
+      '<button type="button" disabled=""',
+      '<button type="button" disabled=""',
+    ],
+    [],
   ]);
 });
 
@@ -284,12 +287,12 @@ void test("In a pane or on its own page the card header already names the place;
   // doctest:L246
   t.check(
     ({
-      pane: text(await render({ payload: payload({ openers: [] }) })).startsWith("No cards"),
-      embed: text(await render({ payload: payload({ openers: [] }), heading: true })).slice(0, 10),
+      pane: text(await render({ payload: payload({ openers: [] }) })),
+      embed: text(await render({ payload: payload({ openers: [] }), heading: true })),
     }),
     {
-    pane: true,
-    embed: "🤝 Lending",
+    pane: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card.",
+    embed: "🤝 Lending No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card.",
   },
   );
 });

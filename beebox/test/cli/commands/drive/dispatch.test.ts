@@ -13,7 +13,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed as printed2 } from "agent-doctest/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../../helpers/test-route-server.js";
@@ -26,7 +25,6 @@ import { dispatchDrive, localDriveService } from "../../../../src/cli/commands/d
 import {
   reportRefusal,
   runCredentialedVerb,
-  type VerbRefusal,
 } from "../../../../src/cli/lib/credentialed-verb.js";
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -105,12 +103,6 @@ function inspectVerb(boxRoot: string, url: string) {
   });
 }
 
-/** "KIND | fix | message" — the three things a relayed refusal has to carry. */
-function refusalLine(result: { ok: boolean; error?: VerbRefusal }): string {
-  if (result.ok || result.error === undefined) return "no refusal";
-  return `${result.error.kind} | ${result.error.fix} | ${result.error.message}`;
-}
-
 async function captureLogs(fn: () => Promise<void>): Promise<string> {
   const lines: string[] = [];
   const log = console.log;
@@ -132,7 +124,6 @@ async function captureLogs(fn: () => Promise<void>): Promise<string> {
 // three env vars a box spawn hands it, and the credentialed work happens in the
 // server process (here, against an injected fake Drive).
 void test("No token file is involved anywhere in this block:", async (t) => {
-  const out = printed2();
   t.teardown(async () => {
     try {
       restoreEnv();
@@ -141,7 +132,6 @@ void test("No token file is involved anywhere in this block:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L135
   const ctx = await makeTestServer({ openAccess: false, services: { drive: recipesDrive() } });
   const serverUrl = await ctx.server.listen({ port: 0, host: "127.0.0.1" });
   setEnv({
@@ -151,86 +141,126 @@ void test("No token file is involved anywhere in this block:", async (t) => {
     BBX_AGENT_TOKEN: getOrCreateAgentToken(ctx.boxRoot),
   });
 
-  // doctest:L144
   const mounted = await mountVerb(ctx.boxRoot, {
     url: "https://drive.google.com/drive/folders/folder-1",
     dir: "_content/drive/recipes",
   });
-  await t.checkText(out.with(mounted.ok ? { cardPath: mounted.value.cardPath, name: mounted.value.name } : mounted.error), "{ cardPath: \"_content/drive/recipes/Recipes.gfolder.card\", name: \"Recipes\" }");
+  t.check(mounted, {
+    ok: true,
+    value: {
+      cardPath: "_content/drive/recipes/Recipes.gfolder.card",
+      name: "Recipes",
+      created: ["_content/drive/recipes/Budget_2026.attach/Sheet1.json", "_content/drive/recipes/Budget_2026.gsheet.card"],
+      updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+      pushed: [],
+      failures: [],
+      notes: [],
+      scheduleHint: null,
+    },
+  });
 
   // The card is a real card in the box, written by the server, indistinguishable
   // from one the settings page made.
 
-  // doctest:L156
-  await t.checkText(out.with((await ctx.read("_content/drive/recipes/Recipes.gfolder.card")).includes("drive:\n  id: folder-1")), "true");
+  await t.checkText(await ctx.read("_content/drive/recipes/Recipes.gfolder.card"), `---
+drive:
+  id: folder-1
+  link: https://drive.google.com/file/d/folder-1/view
+title: Recipes
+last-sync: «date»
+---`);
 
   // The commit says who asked. The bearer is what the auth wall accepted, so the
   // context resolved this request as the agent, and the git log answers "who mounted
   // this" without a second record of it.
 
-  // doctest:L165
-  await t.checkText(out.with((await getLog(ctx.boxRoot, 1))[0]?.trailers?.["Triggered-By"]), "agent");
+  t.check((await getLog(ctx.boxRoot, 1))[0]?.trailers, { "Triggered-By": "agent" });
 
   // `inspect` is the verification step the incident lacked — the agent can now
   // resolve an id to a name, and see that a card already claims it.
 
-  // doctest:L173
   const seen = await inspectVerb(ctx.boxRoot, "https://drive.google.com/file/d/sheet-1/view");
-  await t.checkText(out.with(seen.ok ? { name: seen.value.name, cardType: seen.value.cardType, claimedBy: seen.value.claimedBy } : seen.error), "{ name: \"Budget 2026\", cardType: \"gsheet\", claimedBy: [\"_content/drive/recipes/Budget_2026.gsheet.card\"] }");
+  t.check(seen, {
+    ok: true,
+    value: {
+      id: "sheet-1",
+      name: "Budget 2026",
+      mimeType: "application/vnd.google-apps.spreadsheet",
+      modifiedTime: "2026-09-14T10:00:00Z",
+      owner: "test@example.com",
+      webViewLink: "https://drive.google.com/file/d/sheet-1/view",
+      cardType: "gsheet",
+      claimedBy: ["_content/drive/recipes/Budget_2026.gsheet.card"],
+      details: { tabs: [{ title: "Sheet1", gid: 0 }], comments: 0 },
+    },
+  });
 
   // `--json` prints exactly one object — the procedure's own return value — so the
   // agent never parses prose.
 
-  // doctest:L182
   const json = await captureLogs(() => runCredentialedVerb({
     json: true,
     run: () => inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1"),
     print: () => { throw new Error("--json must not print the human form"); },
   }));
-  await t.checkText(out.with(JSON.parse(json).name), "Recipes");
+  t.check(JSON.parse(json), {
+    id: "folder-1",
+    name: "Recipes",
+    mimeType: "application/vnd.google-apps.folder",
+    modifiedTime: "2026-09-14T10:00:00Z",
+    owner: "test@example.com",
+    webViewLink: "https://drive.google.com/file/d/folder-1/view",
+    cardType: null,
+    claimedBy: ["_content/drive/recipes/Recipes.gfolder.card"],
+    details: null,
+  });
 
   // A refusal the server raised comes back with its own code and the party who can
   // act on it. A bad URL is the caller's.
 
-  // doctest:L195
-  await t.checkText(
-    out.with(refusalLine(await mountVerb(ctx.boxRoot, { url: "https://example.com/nope", dir: "_content/drive/x" })))
-    ,
-    "BAD_REQUEST | caller | Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID",
-  );
+  t.check(await mountVerb(ctx.boxRoot, { url: "https://example.com/nope", dir: "_content/drive/x" }), {
+    ok: false,
+    error: { kind: "BAD_REQUEST", message: "Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID", fix: "caller" },
+  });
 
   // Under `--json` that refusal is one object too, carrying `fix` as a field rather
   // than as a sentence.
 
-  // doctest:L203
   const refused = await mountVerb(ctx.boxRoot, { url: "https://example.com/nope", dir: "_content/drive/x" });
   const printed = await captureLogs(async () => { if (!refused.ok) reportRefusal(refused.error, true); });
-  const { kind, fix } = JSON.parse(printed);
-  await t.checkText(out.with(({ kind, fix })), "{ kind: \"BAD_REQUEST\", fix: \"caller\" }");
+  t.check(JSON.parse(printed), { kind: "BAD_REQUEST", message: "Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID", fix: "caller" });
 
   // For a person the same refusal says who can fix it in words.
 
-  // doctest:L213
   const forHumans = await captureLogs(async () => { if (!refused.ok) reportRefusal(refused.error, false); });
-  await t.checkText(out.with(forHumans.split("\n")[1]), "Who can fix it: the caller — adjust the command and run it again.");
+  await t.checkText(forHumans, `Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID
+Who can fix it: the caller — adjust the command and run it again.`);
 
   // ## A missing env var refuses by name, and never falls back to a local credential
   //
   // The refusal points at the spawn site, not at Drive. Guessing a URL would reach
   // whichever box happened to answer there, so there is no fallback.
 
-  // doctest:L224
   const folderUrl = "https://drive.google.com/drive/folders/folder-1";
   setEnv({ BBX_AGENT_TOKEN: undefined });
-  await t.checkText(out.with(refusalLine(await inspectVerb(ctx.boxRoot, folderUrl)).split(".")[0]), "BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_AGENT_TOKEN is not set");
+  t.check(await inspectVerb(ctx.boxRoot, folderUrl), {
+    ok: false,
+    error: {
+      kind: "BOX_UNREACHABLE",
+      message: "Cannot reach this box's server: BBX_AGENT_TOKEN is not set. This command asks the server to do the credentialed work, and that needs the box environment (BBX_SERVER_URL, BBX_BOX_NAME, BBX_AGENT_TOKEN). Run it from a box-spawned shell, or run it on the server host with the box service's environment.",
+      fix: "machine",
+    },
+  });
 
-  // doctest:L229
   setEnv({ BBX_AGENT_TOKEN: getOrCreateAgentToken(ctx.boxRoot), BBX_SERVER_URL: undefined });
-  await t.checkText(
-    out.with(refusalLine(await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1")).split(".")[0])
-    ,
-    "BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_SERVER_URL is not set",
-  );
+  t.check(await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1"), {
+    ok: false,
+    error: {
+      kind: "BOX_UNREACHABLE",
+      message: "Cannot reach this box's server: BBX_SERVER_URL is not set. This command asks the server to do the credentialed work, and that needs the box environment (BBX_SERVER_URL, BBX_BOX_NAME, BBX_AGENT_TOKEN). Run it from a box-spawned shell, or run it on the server host with the box service's environment.",
+      fix: "machine",
+    },
+  });
 
   // ## The `tooling` profile takes the in-process path
   //
@@ -240,30 +270,50 @@ void test("No token file is involved anywhere in this block:", async (t) => {
   // switched off, and the refusal now tells the agent it may turn it on, because the
   // boxholder said so (2026-09-14).
 
-  // doctest:L243
   setEnv({ BBX_SPAWN_PROFILE: "tooling", BBX_SERVER_URL: serverUrl });
-  await t.checkText(
-    out.with(refusalLine(await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1")))
-    ,
-    "FORBIDDEN | boxholder | Drive is not enabled for this box. Set `googleServices.drive: true` in `_config/box.json` (you may do this when the boxholder asks for Drive), or enable it in box settings.",
-  );
+  t.check(await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1"), {
+    ok: false,
+    error: {
+      kind: "FORBIDDEN",
+      message: "Drive is not enabled for this box. Set `googleServices.drive: true` in `_config/box.json` (you may do this when the boxholder asks for Drive), or enable it in box settings.",
+      fix: "boxholder",
+    },
+  });
 
   // With Drive switched on and no token file this process can read, it is the auth
   // gap — a different sentence, still the boxholder's, and the one that would have
   // been true for the agent all along had the agent been on this path.
 
-  // doctest:L253
   await mkdir(join(ctx.boxRoot, "_config"), { recursive: true });
   await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({ googleServices: { drive: true } }));
   const gap = await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1");
-  await t.checkText(out.with(gap.ok ? "unexpectedly succeeded" : { kind: gap.error.kind, fix: gap.error.fix }), "{ kind: \"PRECONDITION_FAILED\", fix: \"boxholder\" }");
+  t.check(gap, {
+    ok: false,
+    error: {
+      kind: "PRECONDITION_FAILED",
+      message: "Google auth unavailable: No secret named \"google-oauth-client-id\" exists on this machine. It can be declared (bbx secrets declare google-oauth-client-id), but only the boxholder can supply its value.",
+      fix: "boxholder",
+    },
+  });
 
   // An unset or misspelled marker is NOT the tooling profile: it delegates, which is
   // what makes a spawn site that forgets the marker fail closed rather than reach
   // for a credential.
 
-  // doctest:L265
   setEnv({ BBX_SPAWN_PROFILE: undefined });
   const unset = await inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1");
-  await t.checkText(out.with(unset.ok ? { name: unset.value.name } : unset.error), "{ name: \"Recipes\" }");
+  t.check(unset, {
+    ok: true,
+    value: {
+      id: "folder-1",
+      name: "Recipes",
+      mimeType: "application/vnd.google-apps.folder",
+      modifiedTime: "2026-09-14T10:00:00Z",
+      owner: "test@example.com",
+      webViewLink: "https://drive.google.com/file/d/folder-1/view",
+      cardType: null,
+      claimedBy: ["_content/drive/recipes/Recipes.gfolder.card"],
+      details: null,
+    },
+  });
 });

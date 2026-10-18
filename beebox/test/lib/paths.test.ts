@@ -4,21 +4,12 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { parseCardName, isCardFile, findBoxRoot } from "../../src/lib/paths/core.js";
+import { instanceOf } from "agent-doctest/check";
 import { PreV3ShapeError } from "../../src/lib/box-shape-errors.js";
+import { parseCardName, isCardFile, findBoxRoot } from "../../src/lib/paths/core.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-
-/** Whether `findBoxRoot(dir)` throws the migration-pointing pre-v3 error. */
-async function findBoxRootThrowsPreV3(dir: string): Promise<boolean> {
-  try {
-    await findBoxRoot(dir);
-    return false;
-  } catch (e) {
-    return e instanceof PreV3ShapeError;
-  }
-}
 
 // ## Card filenames
 //
@@ -74,7 +65,7 @@ void test("A v3 box (makeTmpBox's default scaffold) resolves normally:", async (
   });
   // doctest:L75
   const v3Box = await makeTmpBox();
-  await t.checkText((await findBoxRoot(v3Box.root)) === v3Box.root, "true");
+  t.check(await findBoxRoot(v3Box.root), v3Box.root);
 });
 
 // A directory with NO marker anywhere above it still returns `null` — ordinary
@@ -103,7 +94,8 @@ void test("A directory with NO marker anywhere above it still returns null — o
   const v2ContentRoot = join(bareDir.root, "v2-content");
   await mkdir(join(v2ContentRoot, ".beebox"), { recursive: true });
   await writeFile(join(v2ContentRoot, ".beebox", "box.json"), JSON.stringify({ shapeVersion: 2 }));
-  t.check(await findBoxRootThrowsPreV3(v2ContentRoot), true);
+  await t.checkThrows(() => findBoxRoot(v2ContentRoot), "PreV3ShapeError");
+  t.check(await findBoxRoot(v2ContentRoot).catch((e: unknown) => e), instanceOf(PreV3ShapeError));
 
   // A marker with NO `shapeVersion` field at all (predates the field entirely)
   // throws the same way:
@@ -112,5 +104,6 @@ void test("A directory with NO marker anywhere above it still returns null — o
   const noVersionRoot = join(bareDir.root, "no-version");
   await mkdir(join(noVersionRoot, ".beebox"), { recursive: true });
   await writeFile(join(noVersionRoot, ".beebox", "box.json"), JSON.stringify({}));
-  t.check(await findBoxRootThrowsPreV3(noVersionRoot), true);
+  await t.checkThrows(() => findBoxRoot(noVersionRoot), "PreV3ShapeError");
+  t.check(await findBoxRoot(noVersionRoot).catch((e: unknown) => e), instanceOf(PreV3ShapeError));
 });

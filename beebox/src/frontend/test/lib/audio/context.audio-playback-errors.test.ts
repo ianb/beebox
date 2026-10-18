@@ -37,19 +37,17 @@ Object.defineProperty(globalThis, "Audio", { value: RejectingAudio, configurable
 // ## A rejected play is a failed segment
 void test("A rejected play is a failed segment", async (t) => {
   // doctest:L40
-  const playbackErrors = [];
+  const playbackErrors: unknown[][] = [];
   const originalConsoleError = console.error;
   console.error = (...args) => playbackErrors.push(args);
   const playback = playAudioBlob(new Uint8Array([1, 2, 3]).buffer);
-  const result = await playback.finished.then(
-    () => "resolved as success",
-    (error) => `${error.name}: ${error.message}`,
-  );
+  await t.checkThrows(() => playback.finished, "Error: mock browser rejected playback");
   console.error = originalConsoleError;
-  t.check(result, "Error: mock browser rejected playback");
-
-  // doctest:L52
-  await t.checkText(playbackErrors.length, "1");
+  t.check(playbackErrors, [
+    [
+      "[audio] operation=blob play() rejected Error: mock browser rejected playback",
+    ],
+  ]);
 });
 
 // ## Forwarded diagnostics carry browser media state

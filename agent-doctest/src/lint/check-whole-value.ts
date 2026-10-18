@@ -28,8 +28,21 @@ function calleeIs(node: Node, name: string): boolean {
   return object.type === "Identifier" && property.type === "Identifier" && `${object.name}.${property.name}` === name;
 }
 
+/**
+ * The expression under wrappers that do not change what it computes:
+ * `x?.includes(y)` (a chain), `await x.has(y)`, and TypeScript's `x!` and
+ * `x as T`, which reach ESLint as `TSNonNullExpression` and `TSAsExpression`.
+ */
+function unwrap(node: Node): Node {
+  if (node.type === "ChainExpression" || node.type === "AwaitExpression") return unwrap(node.type === "ChainExpression" ? node.expression : node.argument);
+  const ts = node as { type: string; expression?: Node };
+  if ((ts.type === "TSNonNullExpression" || ts.type === "TSAsExpression") && ts.expression !== undefined) return unwrap(ts.expression);
+  return node;
+}
+
 /** The message id for a lossy actual argument, or null when it is a whole value. */
-function lossy(arg: Expression): string | null {
+function lossy(wrapped: Expression): string | null {
+  const arg = unwrap(wrapped);
   if (arg.type === "BinaryExpression" && COMPARISONS.has(arg.operator)) return "comparison";
   if (arg.type === "UnaryExpression" && arg.operator === "!") return "boolean";
   // `a.includes(x) && a.includes(y)`: a boolean made from lossy parts.
@@ -47,7 +60,7 @@ const rule: Rule.RuleModule = {
     type: "suggestion",
     docs: { description: "Require t.check to compare whole values, not lengths, JSON strings, or booleans" },
     messages: {
-      comparison: "Check the values, not a comparison: write `t.check(a, b)` instead of `t.check(a === b, true)`.",
+      comparison: "Check the values, not a comparison: write `t.check(a, b)` instead of `t.check(a === b, true)`, or `t.check(a, is(b))` when `a` must be the same object as `b`.",
       boolean: "Check the value itself, not a boolean made from it.",
       json: "Check the value, not its JSON: `t.check(x, {...})` ignores key order and reports each differing path.",
       size: "Check the collection itself, not its size: a failure then shows which items differ.",

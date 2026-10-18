@@ -36,7 +36,7 @@ void test("Initial state synchronization is read-only", async (t) => {
   const statePosts: string[] = [];
   const shell: NativeShellWindow = { beeboxNativePost: (_channel, payload) => statePosts.push(payload) };
   postNativeLocationState(false, shell);
-  await t.checkText(statePosts[0], "{\"enabled\":false}");
+  t.check(statePosts, ['{"enabled":false}']);
 });
 
 // ## Toggle on captures before enabling

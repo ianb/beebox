@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate } from "agent-doctest/check";
 import {
   initRepo, isRepo, getStatus, stageFiles, stageAll,
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,
@@ -18,6 +18,18 @@ import { makeTmpBox } from "../helpers/test-helpers.js";
 import { rename } from "node:fs/promises";
 import { writeFile as writeFileFs, rm as rmFs } from "node:fs/promises";
 import { join as joinPath } from "node:path";
+
+// Commit hashes and dates change each run; the shape is fixed.
+const sha = any(String).matches(/^[\da-f]{40}$/);
+// The init commit's file counts follow whatever box init writes.
+const initStat = {
+  added: any(Number).int(),
+  modified: 0,
+  deleted: 0,
+  renamed: 0,
+  insertions: any(Number).int(),
+  deletions: 0,
+};
 
 // ## stageAll skips oversized blobs (housekeeping guard)
 //
@@ -64,17 +76,11 @@ void test("A freshly initialized repo has no commits and a clean status:", async
   t.check(await getCurrentBranch(box.root), "main");
 
   // doctest:L51
-  const status = await getStatus(box.root);
-  t.check(status.clean, true);
-
-  // doctest:L55
-  await t.checkText(status.staged.length, "0");
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 });
 
 // ## Staging and status
 void test("Staging and status", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -85,18 +91,11 @@ void test("Staging and status", async (t) => {
   // doctest:L66
   const box = await makeTmpBox({ git: true });
   await box.write("file.txt", "hello");
-  const s1 = await getStatus(box.root);
-  print(`untracked: ${s1.untracked.length}`);
-  print(`clean: ${s1.clean}`);
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: ["file.txt"], clean: false });
 
   // doctest:L72
   await stageFiles(box.root, ["file.txt"]);
-  const s2 = await getStatus(box.root);
-  print(`staged: ${s2.staged.length}`);
-  await t.checkText(out.with(print(`clean: ${s2.clean}`)), `untracked: 1
-clean: false
-staged: 1
-clean: false`);
+  t.check(await getStatus(box.root), { staged: ["file.txt"], modified: [], untracked: [], clean: false });
 });
 
 // ## Stage all
@@ -113,14 +112,11 @@ void test("Stage all", async (t) => {
   await box.write("a.txt", "a");
   await box.write("b.txt", "b");
   await stageAll(box.root);
-  const status = await getStatus(box.root);
-  await t.checkText(status.staged.length, "2");
+  t.check(await getStatus(box.root), { staged: ["a.txt", "b.txt"], modified: [], untracked: [], clean: false });
 });
 
 // ## Commit and log
 void test("Commit and log", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -133,20 +129,17 @@ void test("Commit and log", async (t) => {
   await box.write("file.txt", "content");
   await stageAll(box.root);
   const hash = await commit(box.root, { message: "Add file" });
-  print(`hash length: ${hash.length}`);
+  t.check(hash, sha);
 
   // doctest:L112
-  const log = await getLog(box.root);
-  print(`entries: ${log.length}`);
-  await t.checkText(out.with(print(`subject: ${log[0]?.subject}`)), `hash length: 40
-entries: 2
-subject: Add file`);
+  t.check(await getLog(box.root), [
+    { hash: sha, date: isoDate(), subject: "Add file", body: undefined, trailers: undefined },
+    { hash: sha, date: isoDate(), subject: "init", body: undefined, trailers: undefined },
+  ]);
 });
 
 // ## Commit with trailers
 void test("Commit with trailers", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -164,12 +157,17 @@ void test("Commit with trailers", async (t) => {
   });
 
   // doctest:L136
-  const log = await getLog(box.root);
-  print(`subject: ${log[0]?.subject}`);
-  print(`Step: ${log[0]?.trailers?.Step}`);
-  await t.checkText(out.with(print(`Session: ${log[0]?.trailers?.Session}`)), `subject: Do work
-Step: fetch
-Session: abc-123`);
+  t.check(await getLog(box.root), [
+    {
+      hash: sha,
+      date: isoDate(),
+      subject: "Do work",
+      body: `Step: fetch
+Session: abc-123`,
+      trailers: { Step: "fetch", Session: "abc-123" },
+    },
+    { hash: sha, date: isoDate(), subject: "init", body: undefined, trailers: undefined },
+  ]);
 });
 
 // ## getLogPaginated with multi-value trailers
@@ -191,19 +189,27 @@ void test("getLogPaginated with multi-value trailers", async (t) => {
   });
 
   // doctest:L161
-  const entries = await getLogPaginated({ boxRoot: box.root });
-  t.check(entries[0]?.subject, "Multi-trailer");
+  t.check(await getLogPaginated({ boxRoot: box.root }), [
+    {
+      hash: sha,
+      date: isoDate(),
+      subject: "Multi-trailer",
+      body: "Tag: a",
+      trailers: { Tag: "a" },
+      fileStat: { added: 1, modified: 0, deleted: 0, renamed: 0, insertions: 1, deletions: 0 },
+    },
+    { hash: sha, date: isoDate(), subject: "init", body: undefined, trailers: undefined, fileStat: initStat },
+  ]);
 
   // doctest:L167
   // Pagination: offset skips entries
-  const skipped = await getLogPaginated({ boxRoot: box.root, offset: 1 });
-  t.check(skipped[0]?.subject, "init");
+  t.check(await getLogPaginated({ boxRoot: box.root, offset: 1 }), [
+    { hash: sha, date: isoDate(), subject: "init", body: undefined, trailers: undefined, fileStat: initStat },
+  ]);
 });
 
 // ## getDiff
 void test("getDiff", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -220,16 +226,28 @@ void test("getDiff", async (t) => {
   // doctest:L185
   // Modify the file
   await box.write("file.txt", "modified");
-  const diff = await getDiff(box.root);
-  print(`has minus: ${diff.includes("-original")}`);
-  await t.checkText(out.with(print(`has plus: ${diff.includes("+modified")}`)), `has minus: true
-has plus: true`);
+  t.checkText(await getDiff(box.root), `diff --git a/file.txt b/file.txt
+index 94f3610..d84012f 100644
+--- a/file.txt
++++ b/file.txt
+@@ -1 +1 @@
+-original
+\\ No newline at end of file
++modified
+\\ No newline at end of file`);
 
   // doctest:L196
   // Staged diff
   await stageAll(box.root);
-  const stagedDiff = await getDiff(box.root, true);
-  await t.checkText(out.with(stagedDiff.includes("+modified")), "true");
+  t.checkText(await getDiff(box.root, true), `diff --git a/file.txt b/file.txt
+index 94f3610..d84012f 100644
+--- a/file.txt
++++ b/file.txt
+@@ -1 +1 @@
+-original
+\\ No newline at end of file
++modified
+\\ No newline at end of file`);
 });
 
 // ## getCommitDiff
@@ -248,8 +266,14 @@ void test("getCommitDiff", async (t) => {
   const hash = await commit(box.root, { message: "Add file" });
 
   // doctest:L215
-  const diff = await getCommitDiff(box.root, hash);
-  await t.checkText(diff.includes("+content"), "true");
+  t.checkText(await getCommitDiff(box.root, hash), `diff --git a/file.txt b/file.txt
+new file mode 100644
+index 0000000..6b584e8
+--- /dev/null
++++ b/file.txt
+@@ -0,0 +1 @@
++content
+\\ No newline at end of file`);
 });
 
 // ## getHead
@@ -263,8 +287,7 @@ void test("getHead", async (t) => {
   });
   // doctest:L227
   const box = await makeTmpBox({ git: true });
-  const head = await getHead(box.root);
-  await t.checkText(head.length, "40");
+  t.check(await getHead(box.root), sha);
 });
 
 // ## Branches
@@ -302,8 +325,7 @@ void test("Tags", async (t) => {
   const box = await makeTmpBox({ git: true });
   await createTag(box.root, "v1.0");
   // Tag exists — getHead should still work
-  const head = await getHead(box.root);
-  await t.checkText(head.length, "40");
+  t.check(await getHead(box.root), sha);
 
   // doctest:L269
   // Delete the tag (no error)
@@ -313,8 +335,6 @@ void test("Tags", async (t) => {
 
 // ## Clean removes untracked files
 void test("Clean removes untracked files", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -330,14 +350,11 @@ void test("Clean removes untracked files", async (t) => {
 
   // doctest:L287
   await box.write("untracked.txt", "remove");
-  const before = await getStatus(box.root);
-  print(`untracked before: ${before.untracked.length}`);
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: ["untracked.txt"], clean: false });
 
   // doctest:L291
   await clean(box.root);
-  const after = await getStatus(box.root);
-  await t.checkText(out.with(print(`untracked after: ${after.untracked.length}`)), `untracked before: 1
-untracked after: 0`);
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 });
 
 // ## Empty log on repo with no matching commits
@@ -351,8 +368,7 @@ void test("Empty log on repo with no matching commits", async (t) => {
   });
   // doctest:L306
   const box = await makeTmpBox({ git: true });
-  const log = await getLog(box.root, 0);
-  await t.checkText(log.length, "0");
+  t.check(await getLog(box.root, 0), []);
 });
 
 void test("stageAll skips oversized blobs (housekeeping guard)", async (t) => {
@@ -376,16 +392,9 @@ void test("stageAll skips oversized blobs (housekeeping guard)", async (t) => {
   console.warn = _warn;
 
   // doctest:L340
-  const status = await getStatus(box.root);
-  await t.checkText(
-    // small.txt is staged (added); big.bin is NOT staged (left as untracked).
-    // getStatus reports repo-root-relative paths; the box root IS the repo root.
-    status.staged.includes("small.txt"),
-    "true",
-  );
-
-  // doctest:L346
-  await t.checkText(status.staged.includes("big.bin"), "false");
+  // small.txt is staged (added); big.bin is NOT staged (left as untracked).
+  // getStatus reports repo-root-relative paths; the box root IS the repo root.
+  t.check(await getStatus(box.root), { staged: ["small.txt"], modified: [], untracked: ["big.bin"], clean: false });
 });
 
 // ## stageAll stages deletions, and still catches an oversized file alongside one
@@ -421,20 +430,9 @@ void test("The size check asks git for each staged path's blob.", async (t) => {
   console.warn = _warn2;
 
   // doctest:L377
-  const dstatus = await getStatus(dbox.root);
-  await t.checkText(
-    // The deletion staged normally...
-    dstatus.staged.includes("doomed.txt"),
-    "true",
-  );
-
-  // doctest:L382
-  await t.checkText(
-    // ...and the oversized file was still caught, which is what would break if a
-    // missing blob aborted the check.
-    dstatus.staged.includes("huge.bin"),
-    "false",
-  );
+  // The deletion staged normally, and the oversized file was still caught, which
+  // is what would break if a missing blob aborted the check.
+  t.check(await getStatus(dbox.root), { staged: ["doomed.txt"], modified: [], untracked: ["huge.bin"], clean: false });
 });
 
 // ## isNothingToCommitError recognizes git's empty-commit message
@@ -458,8 +456,6 @@ void test("When the box's own auto-commit (git add -A) wins the race, an explici
 // `commitPaths`), so a concurrent mutator's unrelated staged files can't be
 // co-committed under this caller's attribution. It returns the new commit hash.
 void test("stageAndCommitPaths stages exactly paths and commits only them (via commitPat...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -475,14 +471,19 @@ void test("stageAndCommitPaths stages exactly paths and commits only them (via c
     message: "Add note",
     trailers: { "Created-By": "clerk-api" },
   });
-  print(`hash length: ${hash?.length}`);
+  t.check(hash, sha);
 
   // doctest:L424
-  const log = await getLog(box.root);
-  print(`subject: ${log[0]?.subject}`);
-  await t.checkText(out.with(print(`Created-By: ${log[0]?.trailers?.["Created-By"]}`)), `hash length: 40
-subject: Add note
-Created-By: clerk-api`);
+  t.check(await getLog(box.root), [
+    {
+      hash: sha,
+      date: isoDate(),
+      subject: "Add note",
+      body: "Created-By: clerk-api",
+      trailers: { "Created-By": "clerk-api" },
+    },
+    { hash: sha, date: isoDate(), subject: "init", body: undefined, trailers: undefined },
+  ]);
 
   // Only the named paths land — a concurrently-staged unrelated file is left
   // staged, NOT swept into this commit:
@@ -495,25 +496,25 @@ Created-By: clerk-api`);
   // doctest:L441
   await stageAndCommitPaths(box.root, { paths: ["scoped.card"], message: "Add scoped" });
   const committed = await getCommitDiff(box.root, await getHead(box.root));
-  print(`scoped in commit: ${committed.includes("scoped.card")}`);
-  print(`other in commit: ${committed.includes("other.card")}`);
-  const status = await getStatus(box.root);
-  await t.checkText(
-    out.with(// getStatus paths are repo-root-relative (repo root = package root).
-    print(`other still staged: ${status.staged.includes("other.card")}`)),
-    `scoped in commit: true
-other in commit: false
-other still staged: true`,
-  );
+  t.checkText(committed, `diff --git a/scoped.card b/scoped.card
+new file mode 100644
+index 0000000..c7ad82c
+--- /dev/null
++++ b/scoped.card
+@@ -0,0 +1 @@
++mine
+\\ No newline at end of file`);
+  // getStatus paths are repo-root-relative (repo root = package root).
+  t.check(await getStatus(box.root), { staged: ["other.card"], modified: [], untracked: [], clean: false });
 
   // Fast path — nothing to commit returns `null` instead of throwing. Both an
   // already-committed path (no changes) and an empty path list land here:
 
   // doctest:L458
-  await t.checkText(out.with(JSON.stringify(await stageAndCommitPaths(box.root, { paths: ["scoped.card"], message: "no-op" }))), "null");
+  t.check(await stageAndCommitPaths(box.root, { paths: ["scoped.card"], message: "no-op" }), null);
 
   // doctest:L461
-  await t.checkText(out.with(JSON.stringify(await stageAndCommitPaths(box.root, { paths: [], message: "empty" }))), "null");
+  t.check(await stageAndCommitPaths(box.root, { paths: [], message: "empty" }), null);
 
   // A non-ASCII path commits by its real name. Git quotes such a path in
   // `--name-only` output unless `-z` is used, and the quoted form fails as a commit
@@ -522,9 +523,15 @@ other still staged: true`,
   // doctest:L470
   await box.write("café-menu.card", "carte");
   const unicodeHash = await stageAndCommitPaths(box.root, { paths: ["café-menu.card"], message: "Add café" });
-  print(`committed: ${unicodeHash !== null}`);
-  await t.checkText(out.with(print(`in commit: ${(await getCommitDiff(box.root, await getHead(box.root))).includes("caf")}`)), `committed: true
-in commit: true`);
+  t.check(unicodeHash, sha);
+  t.checkText(await getCommitDiff(box.root, await getHead(box.root)), `diff --git "a/caf\\303\\251-menu.card" "b/caf\\303\\251-menu.card"
+new file mode 100644
+index 0000000..6b295cc
+--- /dev/null
++++ "b/caf\\303\\251-menu.card"
+@@ -0,0 +1 @@
++carte
+\\ No newline at end of file`);
 
   // A rename commits both halves. Rename detection must not collapse the staged
   // path list to only the destination and leave the source deletion behind.
@@ -534,11 +541,9 @@ in commit: true`);
   await box.commitAll("add before");
   await rename(box.path("before.card"), box.path("after.card"));
   await stageAndCommitPaths(box.root, { paths: ["before.card", "after.card"], message: "Move card" });
-  const renameStatus = await getStatus(box.root);
-  const renameDiff = await getCommitDiff(box.root, await getHead(box.root));
-  print(`clean: ${renameStatus.clean}`);
-  print(`before in commit: ${renameDiff.includes("before.card")}`);
-  await t.checkText(out.with(print(`after in commit: ${renameDiff.includes("after.card")}`)), `clean: true
-before in commit: true
-after in commit: true`);
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
+  t.checkText(await getCommitDiff(box.root, await getHead(box.root)), `diff --git a/before.card b/after.card
+similarity index 100%
+rename from before.card
+rename to after.card`);
 });

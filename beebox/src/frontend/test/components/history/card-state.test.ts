@@ -2,22 +2,23 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { anything } from "agent-doctest/check";
 import { legacyHistoryState, parseHistoryCardState, normalizeHistoryViewRouteTarget } from "../../../src/components/history/card-state.js";
 import { historyLookupFailureSearch, historyViewRedirectSearch } from "../../../src/components/history/card-state.js";
-import { parseViewUrl, type ViewState, type ViewStateValue } from "../../../src/lib/view-url.js";
+import { parseViewUrl } from "../../../src/lib/view-url.js";
 import { historySelectionMissing, resolveHistorySelection } from "../../../src/components/history/HistoryViewCard/history-selection.js";
 
 const canonical = "_config/interface/history.card";
-// The history filter object inside a view state ({} when absent).
-function filterOf(state: ViewState | null | undefined): Record<string, ViewStateValue> {
-  const filter = state?.filter;
-  return typeof filter === "object" && filter !== null && !Array.isArray(filter) ? filter : {};
-}
-
 // The complete legacy filter vocabulary becomes validated card state.
 void test("The complete legacy filter vocabulary becomes validated card state.", async (t) => {
   // doctest:L19
-  t.check(parseHistoryCardState(legacyHistoryState({ connector: "github,gmail", trigger: "procedure/docs", touchpoint: "true", feedback: "0", session: "chat-1", path: "notes/a.card" }, { commit: "abc123" })).success, true);
+  t.check(parseHistoryCardState(legacyHistoryState({ connector: "github,gmail", trigger: "procedure/docs", touchpoint: "true", feedback: "0", session: "chat-1", path: "notes/a.card" }, { commit: "abc123" })), {
+    success: true,
+    data: {
+      filter: { connectors: ["github", "gmail"], triggers: ["procedure/docs"], touchpoint: true, feedback: false, session: "chat-1", path: "notes/a.card" },
+      commit: "abc123",
+    },
+  });
 });
 
 // `workflow=` is the pre-rename spelling of `trigger=`. An old link keeps
@@ -25,21 +26,23 @@ void test("The complete legacy filter vocabulary becomes validated card state.",
 // an explicit `trigger=` wins over it.
 void test("workflow= is the pre-rename spelling of trigger=.", async (t) => {
   // doctest:L28
-  t.check(filterOf(legacyHistoryState({ workflow: "process-news,process-pages" })).triggers, [
-    "procedure/process-news",
-    "procedure/process-pages",
-  ]);
+  t.check(legacyHistoryState({ workflow: "process-news,process-pages" }), {
+    filter: { connectors: [], triggers: ["procedure/process-news", "procedure/process-pages"], touchpoint: false, feedback: false, session: null, path: null },
+  });
 
   // doctest:L31
-  t.check(filterOf(legacyHistoryState({ trigger: "command/bbx wakeup", workflow: "process-news" })).triggers, [
-    "command/bbx wakeup",
-  ]);
+  t.check(legacyHistoryState({ trigger: "command/bbx wakeup", workflow: "process-news" }), {
+    filter: { connectors: [], triggers: ["command/bbx wakeup"], touchpoint: false, feedback: false, session: null, path: null },
+  });
 });
 
 // Explicit empty and cleared-detail state remains distinct from absent state.
 void test("Explicit empty and cleared-detail state remains distinct from absent state.", async (t) => {
   // doctest:L38
-  t.check(parseHistoryCardState({ filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: null, path: null }, commit: null }).success, true);
+  t.check(parseHistoryCardState({ filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: null, path: null }, commit: null }), {
+    success: true,
+    data: { filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: null, path: null }, commit: null },
+  });
 });
 
 // A link saved before the rename carries the old axis inside its serialized
@@ -48,13 +51,10 @@ void test("Explicit empty and cleared-detail state remains distinct from absent 
 void test("A link saved before the rename carries the old axis inside its serialized state.", async (t) => {
   // doctest:L47
   const legacy = parseHistoryCardState({ filter: { connectors: [], workflows: ["process-news"], touchpoint: false, feedback: false, session: null, path: null }, commit: "abc123" });
-  t.check([legacy.success, legacy.data?.filter?.triggers, legacy.data?.commit], [
-    true,
-    [
-      "procedure/process-news",
-    ],
-    "abc123",
-  ]);
+  t.check(legacy, {
+    success: true,
+    data: { filter: { connectors: [], triggers: ["procedure/process-news"], touchpoint: false, feedback: false, session: null, path: null }, commit: "abc123" },
+  });
 });
 
 // Canonical targets normalize without a metadata lookup.
@@ -62,12 +62,18 @@ void test("Canonical targets normalize without a metadata lookup.", async (t) =>
   // doctest:L55
   let loads = 0;
   const direct = await normalizeHistoryViewRouteTarget({ path: canonical, viewer: null, params: { session: "filter-chat" }, viewState: { commit: null } }, async () => { loads++; return {}; });
-  t.check([loads, direct?.params, direct?.viewState?.commit, filterOf(direct?.viewState).session], [
-    0,
-    {},
-    null,
-    "filter-chat",
-  ]);
+  t.check({ loads, direct }, {
+    loads: 0,
+    direct: {
+      path: "_config/interface/history.card",
+      viewer: null,
+      params: {},
+      viewState: {
+        filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: "filter-chat", path: null },
+        commit: null,
+      },
+    },
+  });
 });
 
 // Authored History cards await identity and merge a legacy query per key over
@@ -85,15 +91,13 @@ void test("Authored History cards await identity and merge a legacy query per ke
   // doctest:L81
   release();
   const authored = await pending;
-  t.check(authored?.viewState?.filter, {
-    connectors: [],
-    triggers: [
-      "command/generateDocs",
-    ],
-    touchpoint: false,
-    feedback: false,
-    session: "filter-chat",
-    path: null,
+  t.check(authored, {
+    path: "saved.view.card",
+    viewer: null,
+    params: {},
+    viewState: {
+      filter: { connectors: [], triggers: ["command/generateDocs"], touchpoint: false, feedback: false, session: "filter-chat", path: null },
+    },
   });
 });
 
@@ -121,13 +125,23 @@ void test("line 112", async (t) => {
 void test("Explicit built-in History renderers still receive legacy normalization, while...", async (t) => {
   // doctest:L121
   const namedCanonical = await normalizeHistoryViewRouteTarget({ path: canonical, viewer: "History", params: { session: "filter-chat" }, viewState: null }, async () => { throw new Error("must not load"); });
-  t.check(filterOf(namedCanonical?.viewState).session, "filter-chat");
+  t.check(namedCanonical, {
+    path: "_config/interface/history.card",
+    viewer: "History",
+    params: {},
+    viewState: { filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: "filter-chat", path: null } },
+  });
 });
 
 void test("line 126", async (t) => {
   // doctest:L127
   const namedAuthored = await normalizeHistoryViewRouteTarget({ path: "saved.view.card", viewer: "View", params: { session: "filter-chat" }, viewState: null }, async () => ({ type: "view", frontmatter: { view: "history" } }));
-  t.check(filterOf(namedAuthored?.viewState).session, "filter-chat");
+  t.check(namedAuthored, {
+    path: "saved.view.card",
+    viewer: "View",
+    params: {},
+    viewState: { filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: "filter-chat", path: null } },
+  });
 });
 
 // A failed or moved authored-card lookup nests the original content query under
@@ -140,41 +154,30 @@ void test("A failed or moved authored-card lookup nests the original content que
   try { await normalizeHistoryViewRouteTarget(failed, async () => { throw new Error("moved"); }); } catch (_e) { lookupFailed = true; }
   const failureSearch = historyLookupFailureSearch(failed, { session: "filter-chat", nativeComposer: "1" });
   const retained = parseViewUrl(String(failureSearch.card));
-  t.check({ lookupFailed, hasOuterSession: "session" in failureSearch, nativeComposer: failureSearch.nativeComposer, path: retained.path, session: retained.params.session, workflow: retained.params.workflow, hasContextDir: "contextDir" in retained.params }, {
+  t.check({ lookupFailed, failureSearch, retained }, {
     lookupFailed: true,
-    hasOuterSession: false,
-    nativeComposer: "1",
-    path: "moved.view.card",
-    session: "filter-chat",
-    workflow: "docs",
-    hasContextDir: false,
+    failureSearch: { nativeComposer: "1", card: "moved.view.card?view=View&session=filter-chat&workflow=docs" },
+    retained: { path: "moved.view.card", viewer: "View", params: { session: "filter-chat", workflow: "docs" }, viewState: null },
   });
 });
 
 // The final redirect separates renderer filter state from shell state.
 void test("The final redirect separates renderer filter state from shell state.", async (t) => {
   // doctest:L149
-  await t.checkText(historyViewRedirectSearch({ path: canonical, viewer: null, params: { session: "filter", contextDir: "wrong", extra: "content" }, viewState: { filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: "filter", path: null } } }, { session: "recipient", nativeComposer: "1", contextDir: "chat" }), `{
-  "nativeComposer": "1",
-  "extra": "content",
-  "viewState": {
-    "filter": {
-      "connectors": [],
-      "triggers": [],
-      "touchpoint": false,
-      "feedback": false,
-      "session": "filter",
-      "path": null
-    }
-  }
-}`);
+  t.check(historyViewRedirectSearch({ path: canonical, viewer: null, params: { session: "filter", contextDir: "wrong", extra: "content" }, viewState: { filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: "filter", path: null } } }, { session: "recipient", nativeComposer: "1", contextDir: "chat" }), {
+    nativeComposer: "1",
+    view: undefined,
+    extra: "content",
+    viewState: { filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: "filter", path: null } },
+  });
 });
 
 // Invalid state is rejected locally, and selection follows same-mounted A to B
 // to cleared transitions. An unresolved hash remains pending for paging.
 void test("Invalid state is rejected locally, and selection follows same-mounted A to B...", async (t) => {
   // doctest:L170
-  t.check(parseHistoryCardState({ filter: { connectors: "wrong" } }).success, false);
+  // The error text is Zod's own; the contract is that parsing fails.
+  t.check(parseHistoryCardState({ filter: { connectors: "wrong" } }), { success: false, error: anything() });
 });
 
 void test("line 174", async (t) => {

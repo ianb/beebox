@@ -13,7 +13,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mount } from "../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { AppBarChromeProvider, useAppBarPlace, useAppBarPublishedPlace } from "../../src/components/app-bar-chrome.js";
@@ -38,16 +37,13 @@ function page(chat: string, browse: string | null) {
 // Browse opens over the chat. The chat's label changes; the bar still shows
 // Browse. Browse closes; the bar shows the chat's new label:
 void test("Browse opens over the chat.", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L41
+  const shown: string[] = [];
   const view = await mount(page("Kitchen", "Browse: recipes"));
-  print(view.container.textContent);
+  shown.push(view.container.textContent);
   await view.rerender(page("Kitchen chat", "Browse: recipes"));
-  print(view.container.textContent);
+  shown.push(view.container.textContent);
   await view.rerender(page("Kitchen chat", null));
-  print(view.container.textContent);
-  await t.checkText(out.with(await view.unmount()), `Browse: recipes
-Browse: recipes
-Kitchen chat`);
+  shown.push(view.container.textContent);
+  await view.unmount();
+  t.check(shown, ["Browse: recipes", "Browse: recipes", "Kitchen chat"]);
 });

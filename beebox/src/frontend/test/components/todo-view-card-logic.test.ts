@@ -215,8 +215,14 @@ void test("Items arrive flat and in locator order; each names the todo whose lis
     "_content/projects/Porch/Plan.doc.card:6",
   ]);
 
-  // doctest:L174
-  await t.checkText(new Set(sameLine.map((i) => todoKey(i))).size, "3");
+  t.check(
+    new Set(sameLine.map((i) => todoKey(i))),
+    new Set([
+      "_content/projects/Porch/Plan.doc.card:5",
+      "_content/projects/Porch/Plan.doc.card:5#2",
+      "_content/projects/Porch/Plan.doc.card:6",
+    ]),
+  );
 
   // `parent` addresses one of the two, not the line, so the nested todo hangs off
   // the todo that owns it.
@@ -250,15 +256,20 @@ void test("Only a ROOT is placed in a section.", async (t) => {
   };
 
   // doctest:L210
-  await t.checkText(buildRowSections(row).map((s) => `${s.label ?? "—"} [${s.path.join(" › ")}]: ${shape(s.nodes)}`).join("\n"), `— []: Decide the budget
-Demolition [Demolition]: Clear the deck > (Pull the old boards)
-Decking [Build › Decking]: Order lumber`);
+  t.check(buildRowSections(row).map((s) => ({ label: s.label, path: s.path, nodes: shape(s.nodes) })), [
+    { label: null, path: [], nodes: "Decide the budget" },
+    { label: "Demolition", path: ["Demolition"], nodes: "Clear the deck > (Pull the old boards)" },
+    { label: "Decking", path: ["Build", "Decking"], nodes: "Order lumber" },
+  ]);
 
   // A section whose items the filter hid entirely is not rendered as an empty
   // heading.
 
   // doctest:L221
-  t.check(buildRowSections({ ...row, items: [item(4, { text: "Decide the budget" })] }).map((s) => s.label).join(","), "");
+  t.check(
+    buildRowSections({ ...row, items: [item(4, { text: "Decide the budget" })] }).map((s) => ({ label: s.label, path: s.path, nodes: shape(s.nodes) })),
+    [{ label: null, path: [], nodes: "Decide the budget" }],
+  );
 
   // `progressOf` is the "5 of 7" a section head shows: done out of everything that
   // is not dropped. A dropped todo is neither progress nor outstanding work, so
@@ -354,15 +365,17 @@ void test("Every open matching item that carries a date, across every row, in da
   };
 
   // doctest:L315
-  await t.checkText(datedTodos(result).map((d) => `${d.date} ${d.kind} ${d.item.text} (${d.cardTitle})`).join("\n"), `2026-09-22 due Both dates (Porch plan)
-2026-09-25 start Book the skip (Porch plan)
-2026-10-02 due Order lumber (Porch plan)`);
+  t.check(datedTodos(result).map((d) => ({ date: d.date, kind: d.kind, text: d.item.text, cardTitle: d.cardTitle })), [
+    { date: "2026-09-22", kind: "due", text: "Both dates", cardTitle: "Porch plan" },
+    { date: "2026-09-25", kind: "start", text: "Book the skip", cardTitle: "Porch plan" },
+    { date: "2026-10-02", kind: "due", text: "Order lumber", cardTitle: "Porch plan" },
+  ]);
 
   // An undated box produces an empty strip, which is how the component knows not
   // to render one at all.
 
   // doctest:L326
-  await t.checkText(datedTodos({ ...result, groups: [] }).length, "0");
+  t.check(datedTodos({ ...result, groups: [] }), []);
 });
 
 // ## A long annotation truncates behind an expand control
@@ -381,10 +394,10 @@ void test("A long annotation truncates behind an expand control", async (t) => {
   t.check(clampAnnotation(short), "Tomas has the sander");
 
   // doctest:L342
-  await t.checkText(clampAnnotation(long).endsWith("…"), "true");
-
-  // doctest:L345
-  await t.checkText(clampAnnotation(long).length <= 141, "true");
+  t.check(
+    clampAnnotation(long),
+    "a note that keeps going a note that keeps going a note that keeps going a note that keeps going a note that keeps going a note that keeps go…",
+  );
 });
 
 // ## The scope line says what the query covers, not its glob
@@ -401,8 +414,8 @@ void test("The stock plate card lives in content but is installed with the glob 
       scopeDescription({ here: "recipes", glob: "recipes/**" }),
       scopeDescription({ here: "_content", glob: "projects/porch/**" }),
       scopeDescription({ here: "_content", glob: "**/*.doc.card" }),
-    ].join(" | "),
-    "the whole box | the whole box | recipes | projects/porch | **/*.doc.card",
+    ],
+    ["the whole box", "the whole box", "recipes", "projects/porch", "**/*.doc.card"],
   );
 });
 

@@ -12,7 +12,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mount } from "../../../../helpers/dom-harness.js";
 import { createElement as h, useState, type ComponentProps } from "react";
 import type { SessionEntry } from "../../../../../src/api-chat.js";
@@ -107,20 +106,21 @@ void test("The reply's first paragraph is already showing.", async (t) => {
 // shows, the highlight moves to it, and when the turn finalizes into history
 // entry `a2`, the same row keeps it.
 void test("Auto-played speech carries a stream-… id, not a message id, so the row it hig...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L111
   const playing = { ...notPlaying, isPlaying: true, playingMessageId: "stream-t2", playingSegmentIndex: 0, remainingCount: 1 };
   const { view, update } = await mountList({ ...streaming(""), speechPlayback: playing });
-  print(rows(view).join(" | "));
+  const beforeReply = rows(view);
   await update((props) => ({ ...props, streamText: "<speech>Eggs added.</speech>\n\n" }));
-  print(rows(view).join(" | "));
+  const whileStreaming = rows(view);
   const done = [...history, text({ uuid: "a2", type: "assistant", body: "<speech>Eggs added.</speech>" })];
   await update((props) => ({ ...props, messages: done, groups: groupMessages(done), totalEntries: done.length, isStreaming: false, streamText: "", snapshot: { matches: (state) => state === "idle" } }));
-  print(rows(view).join(" | "));
-  await t.checkText(out.with(await view.unmount()), `u1 | a1 (playing) | u2
-u1 | a1 | u2 | live-t2 (playing)
-u1 | a1 | u2 | a2 (playing)`);
+  const finalized = rows(view);
+  await view.unmount();
+  t.check({ beforeReply, whileStreaming, finalized }, {
+    beforeReply: ["u1", "a1 (playing)", "u2"],
+    whileStreaming: ["u1", "a1", "u2", "live-t2 (playing)"],
+    finalized: ["u1", "a1", "u2", "a2 (playing)"],
+  });
 });
 
 // ## Finalizing keeps the reply's row mounted

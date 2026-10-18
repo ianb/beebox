@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { spawn } from "node:child_process";
 import { existsSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -107,7 +108,8 @@ void test("Five processes commit five different files into one box at the same i
   // writer's commit and reported success:
 
   // doctest:L104
-  await t.checkText(outcomes.filter((o) => o.last?.startsWith("committed") && !o.last.endsWith("null")).length, "5");
+  const hash = str`committed ${any(String).matches(/^[\da-f]{40}$/)}`;
+  t.check(outcomes.map((o) => o.last), [hash, hash, hash, hash, hash]);
 
   // Attribution is intact. Each commit names exactly the file its own writer wrote,
   // and carries its own trailer — this is the part a per-operation retry could never
@@ -125,7 +127,7 @@ commit from echo / by=echo / files=echo.md`);
   // lock survived the race.
 
   // doctest:L126
-  t.check((await getStatus(box.root)).clean, true);
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 
   // doctest:L131
   t.check(existsSync(join(box.root, ".git", "index.lock")), false);
@@ -169,14 +171,14 @@ void test("The lock serializes writers that take it.", async (t) => {
   t.check(outcome.code, 1);
 
   // The message says what is actually wrong — the index is held — and it arrives
-  // bounded, not after a hang:
-
-  // doctest:L176
-  await t.checkText(outcome.out.includes("index.lock"), "true");
-
-  // Git's own words reach the caller, so a reader of a failed scheduled task sees a
-  // lock race rather than a broken task:
-
-  // doctest:L184
-  await t.checkText(outcome.out.includes("Another git process seems to be running"), "true");
+  // bounded, not after a hang. Git's own words reach the caller, so a reader of a
+  // failed scheduled task sees a lock race rather than a broken task:
+  t.checkText(outcome.out, `ready
+failed [git-contended] another process holds the git index: fatal: Unable to create '«*»/.git/index.lock': File exists.
+«blankline»
+Another git process seems to be running in this repository, e.g.
+an editor opened by 'git commit'. Please make sure all processes
+are terminated then try again. If it still fails, a git process
+may have crashed in this repository earlier:
+remove the file manually to continue.`);
 });

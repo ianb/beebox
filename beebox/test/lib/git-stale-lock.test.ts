@@ -10,15 +10,16 @@
 // actually using, because that makes the holder's commit fail.
 
 import { test } from "tap";
+import { any, str } from "agent-doctest/check";
 import "agent-doctest/tap";
 import { open, utimes, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import * as childProcess from "node:child_process";
 import { promisify } from "node:util";
 import type { Test } from "tap";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
-import { inspectIndexLock, INDEX_LOCK_STALE_MS, formatAge } from "../../src/lib/git-stale-lock.js";
+import { inspectIndexLock, INDEX_LOCK_STALE_MS, formatAge, type IndexLockStatus } from "../../src/lib/git-stale-lock.js";
 
 const execFileAsync = promisify(childProcess.execFile);
 
@@ -60,6 +61,9 @@ const STALE_LOCK = "../../src/lib/git-stale-lock.ts";
 
 const lockPathOf = (box: TmpBox) => join(box.root, ".git", "index.lock");
 
+// What the verdict reports: the lock path with symlinks (macOS /var) resolved.
+const realLockPathOf = (box: TmpBox) => join(realpathSync(box.root), ".git", "index.lock");
+
 // Write a lock file and backdate it, standing in for one a killed git left
 // behind `ageMs` ago.
 async function plantLock(box: TmpBox, ageMs: number) {
@@ -68,6 +72,16 @@ async function plantLock(box: TmpBox, ageMs: number) {
   const when = new Date(Date.now() - ageMs);
   await utimes(lockPath, when, when);
   return lockPath;
+}
+
+// A verdict for the lock `plantLock(box, plantedAgeMs)` left. The age is the
+// planted age plus however long the test took to ask.
+function verdictOf({ box, state, plantedAgeMs }: { box: TmpBox; state: IndexLockStatus["state"]; plantedAgeMs: number }) {
+  return {
+    state,
+    lockPath: realLockPathOf(box),
+    ageMs: any(Number).between(plantedAgeMs, plantedAgeMs + 60_000),
+  };
 }
 
 // ## No lock, and a lock too young to judge
@@ -84,21 +98,21 @@ void test("A repository with nothing in the way reports absent:", async (t) => {
   // doctest:L76
   const { recoverStaleIndexLock } = await withLsof(t, { modulePath: STALE_LOCK, lsof: lsofThisProcess });
   const box = await makeTmpBox({ git: true });
-  t.check((await inspectIndexLock(box.root)).state, "absent");
+  t.check(await inspectIndexLock(box.root), { state: "absent", lockPath: realLockPathOf(box), ageMs: null });
 
   // A lock that appeared moments ago is ordinary contention — some writer has the
   // index right now — and gets no verdict beyond `fresh`:
 
   // doctest:L86
   await plantLock(box, 1000);
-  t.check((await inspectIndexLock(box.root)).state, "fresh");
+  t.check(await inspectIndexLock(box.root), verdictOf({ box, state: "fresh", plantedAgeMs: 1000 }));
 
   // `recoverStaleIndexLock` leaves it exactly where it is. This is the common case
   // on a busy box, and removing here would break whoever is mid-commit:
 
   // doctest:L95
   const kept = await recoverStaleIndexLock(box.root);
-  t.check([kept.state, existsSync(lockPathOf(box))].join(" "), "fresh true");
+  t.check({ kept, lockExists: existsSync(lockPathOf(box)) }, { kept: verdictOf({ box, state: "fresh", plantedAgeMs: 1000 }), lockExists: true });
 });
 
 // ## An old, unheld lock is abandoned and gets removed
@@ -120,7 +134,7 @@ void test("Backdated well past the staleness window, with no process holding it 
 
   // doctest:L114
   const verdict = await inspectWithLsof(box.root);
-  t.check(verdict.state, "stale");
+  t.check(verdict, verdictOf({ box, state: "stale", plantedAgeMs: INDEX_LOCK_STALE_MS + 60_000 }));
 
   // Removal is announced rather than silent: a lock only becomes abandoned because
   // something was killed mid-write, which is worth a human's attention even though
@@ -134,10 +148,15 @@ void test("Backdated well past the staleness window, with no process holding it 
   console.error = realError;
 
   // doctest:L130
-  t.check([recovered.state, existsSync(lockPathOf(box))].join(" "), "stale false");
+  t.check(
+    { recovered, lockExists: existsSync(lockPathOf(box)) },
+    { recovered: verdictOf({ box, state: "stale", plantedAgeMs: INDEX_LOCK_STALE_MS + 60_000 }), lockExists: false },
+  );
 
   // doctest:L135
-  await t.checkText(logged.length === 1 && logged[0]?.includes("removed an abandoned"), "true");
+  t.check(logged, [
+    str`[git-stale-lock] removed an abandoned ${realLockPathOf(box)} (${any(String)} old, no git process held it). A git process was killed mid-write here — check for an OOM kill, a mid-commit shutdown, or a full disk.`,
+  ]);
 });
 
 // ## An old lock someone still has open is NOT removed
@@ -161,11 +180,14 @@ void test("Age alone is not enough.", async (t) => {
   // doctest:L154
   const handle = await open(lockPath, "r");
   const held = await inspectWithLsof(box.root);
-  t.check(held.state, "held");
+  t.check(held, verdictOf({ box, state: "held", plantedAgeMs: INDEX_LOCK_STALE_MS + 60 * 60_000 }));
 
   // doctest:L161
   const refused = await recoverStaleIndexLock(box.root);
-  t.check([refused.state, existsSync(lockPath)].join(" "), "held true");
+  t.check(
+    { refused, lockExists: existsSync(lockPath) },
+    { refused: verdictOf({ box, state: "held", plantedAgeMs: INDEX_LOCK_STALE_MS + 60 * 60_000 }), lockExists: true },
+  );
 
   // Once the holder lets go, the same lock is recoverable — nothing about the
   // refusal is sticky:
@@ -173,7 +195,10 @@ void test("Age alone is not enough.", async (t) => {
   // doctest:L170
   await handle.close();
   const now = await recoverStaleIndexLock(box.root);
-  t.check([now.state, existsSync(lockPath)].join(" "), "stale false");
+  t.check(
+    { now, lockExists: existsSync(lockPath) },
+    { now: verdictOf({ box, state: "stale", plantedAgeMs: INDEX_LOCK_STALE_MS + 60 * 60_000 }), lockExists: false },
+  );
 });
 
 // ## A probe that cannot answer removes nothing
@@ -195,11 +220,14 @@ void test("When the holder probe fails — here lsof killed by its timeout, whic
   const lockPath = await plantLock(box, INDEX_LOCK_STALE_MS + 60_000);
 
   // doctest:L191
-  t.check((await inspectWithLsof(box.root)).state, "unknown-holder");
+  t.check(await inspectWithLsof(box.root), verdictOf({ box, state: "unknown-holder", plantedAgeMs: INDEX_LOCK_STALE_MS + 60_000 }));
 
   // doctest:L196
   const left = await recoverStaleIndexLock(box.root);
-  t.check([left.state, existsSync(lockPath)].join(" "), "unknown-holder true");
+  t.check(
+    { left, lockExists: existsSync(lockPath) },
+    { left: verdictOf({ box, state: "unknown-holder", plantedAgeMs: INDEX_LOCK_STALE_MS + 60_000 }), lockExists: true },
+  );
 });
 
 // ## A lock being actively written survives the settle window
@@ -232,7 +260,10 @@ void test("The holder probe can miss a live git:", async (t) => {
   clearTimeout(toucher);
 
   // doctest:L226
-  t.check([verdict.state, existsSync(lockPath)].join(" "), "fresh true");
+  t.check(
+    { verdict, lockExists: existsSync(lockPath) },
+    { verdict: verdictOf({ box, state: "fresh", plantedAgeMs: 0 }), lockExists: true },
+  );
 });
 
 // ## A commit recovers through it
@@ -265,7 +296,7 @@ void test("The payoff.", async (t) => {
   console.error = realError;
 
   // doctest:L255
-  t.check([typeof hash === "string" && hash.length > 0, existsSync(lockPathOf(box))].join(" "), "true false");
+  t.check({ hash, lockExists: existsSync(lockPathOf(box)) }, { hash: any(String).matches(/^[\da-f]{40}$/), lockExists: false });
 });
 
 // ## Ages read as ages
@@ -274,7 +305,7 @@ void test("The payoff.", async (t) => {
 // scale a reader thinks in rather than as milliseconds:
 void test("The age appears in a health message and a log line, so it is rendered at the...", async (t) => {
   // doctest:L269
-  t.check([formatAge(4 * 60_000), formatAge(3 * 3_600_000), formatAge(5 * 86_400_000), formatAge(null)].join(" "), "4m 3h 5d unknown age");
+  t.check([formatAge(4 * 60_000), formatAge(3 * 3_600_000), formatAge(5 * 86_400_000), formatAge(null)], ["4m", "3h", "5d", "unknown age"]);
 });
 
 // ## Not a repository
@@ -284,5 +315,5 @@ void test("The age appears in a health message and a log line, so it is rendered
 void test("A directory with no repository has no index to lock, so there is nothing to r...", async (t) => {
   // doctest:L279
   const status = await inspectIndexLock("/");
-  t.check([status.state, String(status.lockPath)].join(" "), "absent null");
+  t.check(status, { state: "absent", lockPath: null, ageMs: null });
 });

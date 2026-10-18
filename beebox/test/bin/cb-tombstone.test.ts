@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -37,29 +38,13 @@ async function runCb(...args: string[]) {
 // No arguments, `--help`, and an attempted subcommand are indistinguishable —
 // there is no input that makes this command do work.
 void test("No arguments, --help, and an attempted subcommand are indistinguishable — the...", async (t) => {
-  // doctest:L39
   const runs = await Promise.all([runCb(), runCb("--help"), runCb("status")]);
-  t.check(runs.map((r) => r.code), [
-    1,
-    1,
-    1,
+  const stderr = "cb: renamed to bbx. This command does nothing and never forwards.\nUse 'bbx' instead (same subcommands): bbx --help\n";
+  t.check(runs, [
+    { code: 1, stdout: "", stderr },
+    { code: 1, stdout: "", stderr },
+    { code: 1, stdout: "", stderr },
   ]);
-
-  // doctest:L47
-  await t.checkText(new Set(runs.map((r) => r.stderr)).size, "1");
-
-  // The message names the rename and where to go, on stderr, and nothing is written
-  // to stdout for a caller to mistake for output:
-
-  // doctest:L55
-  const [bare] = runs;
-  await t.checkText(bare.stderr.includes("renamed to bbx"), "true");
-
-  // doctest:L59
-  await t.checkText(bare.stderr.includes("bbx --help"), "true");
-
-  // doctest:L62
-  await t.checkText(bare.stdout.length, "0");
 
   // ## It never performs the requested operation
   //
@@ -67,16 +52,14 @@ void test("No arguments, --help, and an attempted subcommand are indistinguishab
   // a fixed-output script with no reference to `bbx` as an executable, so there is
   // no path by which an old call reaches the CLI.
 
-  // doctest:L73
   const source = await fs.readFile(tombstone, "utf-8");
-  t.check(/^\s*(exec\s+)?(\S*\/)?bbx\b/m.test(source), false);
+  t.check(source, not(any(String).matches(/^\s*(exec\s+)?(\S*\/)?bbx\b/m)));
 
   // ## It ships everywhere `bbx` does
   //
   // The package `bin` map carries it, so an installed dependency gets `cb` on the
   // same path as `bbx` (`bin/` is already in the `files` allowlist).
 
-  // doctest:L84
   const pkg = JSON.parse(
     await fs.readFile(path.resolve(tombstone, "../../package.json"), "utf-8"),
   );

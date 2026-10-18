@@ -87,9 +87,23 @@ void test("The decision a status implies", async (t) => {
       { state: "transcribing", piece: 1, pieces: 1, attempt: 1, pieceSeconds: 300 },
       { state: "retrying", attempt: 1, pieceSeconds: 300, nextAttemptAt: "2026-09-10T18:00:40.000Z", failure: { kind: "transient", code: "http_408", message: "provider timed out" } },
       { state: "ready", result: READY },
-    ] satisfies VoiceHqState[]).map((hq) => decideOnStatus(hq).kind).join(","),
-    "wait,wait,wait,wait,claim",
-  );
+    ] satisfies VoiceHqState[]).map((hq) => decideOnStatus(hq)), [
+    {
+      kind: "wait",
+    },
+    {
+      kind: "wait",
+    },
+    {
+      kind: "wait",
+    },
+    {
+      kind: "wait",
+    },
+    {
+      kind: "claim",
+    },
+  ]);
 
   // doctest:L92
   t.check(decideOnStatus({ state: "failed", failure: { kind: "permanent", code: "http_401", message: "missing key" } }), {
@@ -113,8 +127,8 @@ void test("The pending bubble's status line", async (t) => {
       hqStatusLine({ kind: "status", hq: { state: "retrying", attempt: 2, pieceSeconds: 300, nextAttemptAt: "2026-09-10T18:00:40.000Z",
         failure: { kind: "transient", code: "http_408", message: "provider timed out" } } }, { uploading: false, now }),
       hqStatusLine({ kind: "unreachable" }, { uploading: true, now }),
-    ].join(" | "),
-    "Uploading audio… | Transcribing part 2 of 3 | HQ retry in 40 s — provider timed out | Box restarting — audio saved on this device",
+    ],
+    ["Uploading audio…", "Transcribing part 2 of 3", "HQ retry in 40 s — provider timed out", "Box restarting — audio saved on this device"],
   );
 });
 
@@ -128,7 +142,7 @@ void test("The waiter reads the status when it subscribes, then follows events f
   const { req, progress } = request();
   const outcome = createHqWaiter(box.deps).wait(req);
   await flush();
-  t.check(box.calls.join(","), "status");
+  t.check(box.calls, ["status"]);
 
   // doctest:L123
   box.event({ state: "transcribing", piece: 1, pieces: 1, attempt: 1, pieceSeconds: 300 });
@@ -144,10 +158,10 @@ void test("The waiter reads the status when it subscribes, then follows events f
   });
 
   // doctest:L128
-  t.check(progress.join(","), "queued,transcribing,ready");
+  t.check(progress, ["queued", "transcribing", "ready"]);
 
   // doctest:L131
-  t.check(box.calls.join(","), "status,claim,unsubscribe,budget stopped");
+  t.check(box.calls, ["status", "claim", "unsubscribe", "budget stopped"]);
 });
 
 // ## Every (re)subscribe re-queries status, so a restart's missed events are recovered
@@ -162,10 +176,24 @@ void test("The box restarted mid-wait; no event reached this tab, but the job fi
   await flush();
   box.setHq({ state: "ready", result: READY });
   box.reconnect();
-  t.check((await outcome).kind, "hq");
+  t.check(await outcome, {
+    kind: "hq",
+    result: {
+      text: "clean words",
+      diarized: false,
+      service: "mai",
+      pieces: 1,
+    },
+  });
 
   // doctest:L150
-  await t.checkText(box.calls.filter((c) => c === "status").length, "2");
+  t.check(box.calls, [
+    "status",
+    "status",
+    "claim",
+    "unsubscribe",
+    "budget stopped",
+  ]);
 });
 
 // ## The budget runs out: fall back
@@ -183,7 +211,12 @@ void test("The budget runs out: fall back", async (t) => {
   });
 
   // doctest:L165
-  await t.checkText(box.calls.includes("fallBack"), "true");
+  t.check(box.calls, [
+    "status",
+    "fallBack",
+    "unsubscribe",
+    "budget stopped",
+  ]);
 });
 
 // If HQ finished just before the fallback landed, `fallBack` answers with the
@@ -195,7 +228,15 @@ void test("If HQ finished just before the fallback landed, fallBack answers with
   const outcome = createHqWaiter(box.deps).wait(req);
   await flush();
   box.expire();
-  t.check((await outcome).kind, "hq");
+  t.check(await outcome, {
+    kind: "hq",
+    result: {
+      text: "clean words",
+      diarized: false,
+      service: "mai",
+      pieces: 1,
+    },
+  });
 });
 
 // ## "Send live text now" falls back the same way
@@ -215,7 +256,12 @@ void test("\"Send live text now\" falls back the same way", async (t) => {
   });
 
   // doctest:L195
-  await t.checkText(box.calls.includes("fallBack"), "true");
+  t.check(box.calls, [
+    "status",
+    "fallBack",
+    "unsubscribe",
+    "budget stopped",
+  ]);
 
   // A box that is unreachable when the fallback is requested still ends the wait
   // with the live text — there is nothing left to retry after the send, since a

@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not, is } from "agent-doctest/check";
 import { createEmissionStore } from "../../src/input/emission-store.js";
 import { draftAttachments } from "../../src/input/emission.js";
 
@@ -21,7 +22,14 @@ void test("setText: updater + no-op on an equal value (no notify)", async (t) =>
 
   // doctest:L22
   store.editor.setText("hello");
-  t.check(store.get().text, "hello");
+  t.check(store.get(), {
+    text: "hello",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L26
   t.check(notifications, 1);
@@ -37,7 +45,14 @@ void test("setText: updater + no-op on an equal value (no notify)", async (t) =>
 
   // doctest:L42
   store.editor.setText((prev) => prev + " world");
-  t.check(store.get().text, "hello world");
+  t.check(store.get(), {
+    text: "hello world",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L46
   t.check(notifications, 2);
@@ -49,20 +64,106 @@ void test("Images: pendingImages accounting, addImage decrements, floor at 0", a
   const store = createEmissionStore();
   store.editor.setText("check [image#1] and [image#2] out");
   store.editor.bumpPendingImages(2);
-  t.check(store.get().pendingImages, 2);
+  t.check(store.get(), {
+    text: "check [image#1] and [image#2] out",
+    images: [],
+    pendingImages: 2,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L59
   const id1 = store.editor.nextImageId();
   store.editor.addImage({ id: id1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100, original: { status: "uploading", progress: 0 } });
-  t.check(store.get().pendingImages, 1);
+  t.check(store.get(), {
+    text: "check [image#1] and [image#2] out",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:1",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+    ],
+    pendingImages: 1,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L64
   const id2 = store.editor.nextImageId();
   store.editor.addImage({ id: id2, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:2", byteLength: 100, original: { status: "uploading", progress: 0 } });
-  t.check(store.get().pendingImages, 0);
+  t.check(store.get(), {
+    text: "check [image#1] and [image#2] out",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:1",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+      {
+        id: 2,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:2",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L69
-  await t.checkText(store.get().images.length, "2");
+  t.check(store.get(), {
+    text: "check [image#1] and [image#2] out",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:1",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+      {
+        id: 2,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:2",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // A failed encode (no `addImage` call — nothing to add) is the caller's job to
   // decrement directly; the editor still floors at 0 rather than going negative
@@ -70,21 +171,96 @@ void test("Images: pendingImages accounting, addImage decrements, floor at 0", a
 
   // doctest:L78
   store.editor.bumpPendingImages(-5);
-  t.check(store.get().pendingImages, 0);
+  t.check(store.get(), {
+    text: "check [image#1] and [image#2] out",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:1",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+      {
+        id: 2,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:2",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
-  // ## removeImage strips the token — including the bounding whitespace
-  //
-  // Only the matching id's token is removed; another image's token, and the
-  // words around it, are left alone:
+});
+
+// ## removeImage strips the token — including the bounding whitespace
+//
+// Only the matching id's token is removed; another image's token, and the
+// words around it, are left alone:
+void test("removeImage strips only the matching id's token", async (t) => {
+  const store = createEmissionStore();
+  store.editor.setText("check [image#1] and [image#2] out");
+  const id1 = store.editor.nextImageId();
+  store.editor.addImage({ id: id1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100, original: { status: "uploading", progress: 0 } });
+  const id2 = store.editor.nextImageId();
+  store.editor.addImage({ id: id2, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:2", byteLength: 100, original: { status: "uploading", progress: 0 } });
 
   // doctest:L90
   store.editor.removeImage(id1);
-  t.check(store.get().text, "check and [image#2] out");
+  t.check(store.get(), {
+    text: "check and [image#2] out",
+    images: [
+      {
+        id: 2,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:2",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L94
-  t.check(store.get().images.map((i) => i.id), [
-    2,
-  ]);
+  t.check(store.get(), {
+    text: "check and [image#2] out",
+    images: [
+      {
+        id: 2,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:2",
+        byteLength: 100,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 });
 
 // ## Files: same token-strip shape, independent id sequence
@@ -94,14 +270,46 @@ void test("Files: same token-strip shape, independent id sequence", async (t) =>
   store.editor.setText("see [file#1] please");
   const fid = store.editor.nextFileId();
   store.editor.addFile({ id: fid, originalName: "report.pdf", size: 10, mimetype: "application/pdf", state: { status: "uploaded", path: "_tmp/report.pdf" } });
-  await t.checkText(store.get().files.length, "1");
+  t.check(store.get(), {
+    text: "see [file#1] please",
+    images: [],
+    pendingImages: 0,
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 10,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/report.pdf",
+        },
+      },
+    ],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L108
   store.editor.removeFile(fid);
-  t.check(store.get().text, "see please");
+  t.check(store.get(), {
+    text: "see please",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L112
-  await t.checkText(store.get().files.length, "0");
+  t.check(store.get(), {
+    text: "see please",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 });
 
 // ## Selections: same token-strip shape
@@ -111,14 +319,42 @@ void test("Selections: same token-strip shape", async (t) => {
   store.editor.setText("compare [selection#1] with the doc");
   const sid = store.editor.nextSelectionId();
   store.editor.addSelection({ id: sid, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" });
-  await t.checkText(store.get().selections.length, "1");
+  t.check(store.get(), {
+    text: "compare [selection#1] with the doc",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [
+      {
+        id: 1,
+        ref: "/_content/notes/Bread.doc.card",
+        text: "let it rise",
+        position: "body",
+      },
+    ],
+    uploadBatch: null,
+  });
 
   // doctest:L126
   store.editor.removeSelection(sid);
-  t.check(store.get().text, "compare with the doc");
+  t.check(store.get(), {
+    text: "compare with the doc",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L130
-  await t.checkText(store.get().selections.length, "0");
+  t.check(store.get(), {
+    text: "compare with the doc",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 });
 
 // ## reset("attachments"): clears images+files+pendingImages, id counters restart at 1, hands back object URLs to revoke
@@ -146,16 +382,14 @@ void test("Text is untouched by reset — the send site clears it itself (today'
   ]);
 
   // doctest:L155
-  await t.checkText(store.get().images.length, "0");
-
-  // doctest:L158
-  await t.checkText(store.get().files.length, "0");
-
-  // doctest:L161
-  t.check(store.get().pendingImages, 0);
-
-  // doctest:L164
-  t.check(store.get().text, "two photos");
+  t.check(store.get(), {
+    text: "two photos",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // Counters restart at 1 — matching today's `resetAttachments`, which resets
   // both id refs (`nextAttachmentIdRef.current = 1`,
@@ -180,7 +414,14 @@ void test("reset(\"selections\") is the independent counterpart — it never tou
   t.check(result.removedImageObjectUrls, []);
 
   // doctest:L192
-  await t.checkText(store.get().selections.length, "0");
+  t.check(store.get(), {
+    text: "",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L195
   t.check(store.editor.nextSelectionId(), 1);
@@ -249,10 +490,10 @@ void test("The keystroke-isolation invariant (components/chat/AGENTS.md) depends
   const imagesBefore = store.get().images;
   const filesBefore = store.get().files;
   store.editor.setText("hi");
-  await t.checkText(store.get().images === imagesBefore, "true");
+  t.check(store.get().images, is(imagesBefore));
 
   // doctest:L270
-  await t.checkText(store.get().files === filesBefore, "true");
+  t.check(store.get().files, is(filesBefore));
 });
 
 // ## Removal strips the pre-rename token form too
@@ -266,7 +507,14 @@ void test("A composition persisted before 2026-08-25 comes back saying [image1].
   store.editor.setText("look at [image1] here");
   store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100, original: { status: "uploading", progress: 0 } });
   store.editor.removeImage(1);
-  t.check(store.get().text, "look at here");
+  t.check(store.get(), {
+    text: "look at here",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 });
 
 // ## An image's original file has its own upload state
@@ -282,22 +530,61 @@ void test("The inline copy is what the agent sees; the original goes up beside i
   const id = store.editor.nextImageId();
   store.editor.addImage({ id, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:o", byteLength: 1, original: { status: "uploading", progress: 0 } });
   store.editor.setImageOriginal({ id, state: { status: "uploading", progress: 0.5 } });
-  t.check(store.get().images[0]?.original, {
-    status: "uploading",
-    progress: 0.5,
+  t.check(store.get(), {
+    text: "",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/jpeg",
+        dataBase64: "x",
+        objectUrl: "blob:o",
+        byteLength: 1,
+        original: {
+          status: "uploading",
+          progress: 0.5,
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
   });
 
   // doctest:L305
   store.editor.setImageOriginal({ id, state: { status: "uploaded", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" } });
-  t.check(store.get().images[0]?.original, {
-    status: "uploaded",
-    path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg",
+  t.check(store.get(), {
+    text: "",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/jpeg",
+        dataBase64: "x",
+        objectUrl: "blob:o",
+        byteLength: 1,
+        original: {
+          status: "uploaded",
+          path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg",
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
   });
 
   // doctest:L309
   store.editor.removeImage(id);
   store.editor.setImageOriginal({ id, state: { status: "failed", message: "late" } });
-  await t.checkText(store.get().images.length, "0");
+  t.check(store.get(), {
+    text: "",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 });
 
 // The emission projection carries the path only once the original landed — a
@@ -333,18 +620,34 @@ void test("The emission projection carries the path only once the original lande
 void test("Every attachment of one message uploads into the same tmp/chat/<batch>/ direc...", async (t) => {
   // doctest:L336
   const store = createEmissionStore();
-  t.check(store.get().uploadBatch, null);
+  t.check(store.get(), {
+    text: "",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L340
   const first = store.editor.uploadBatch();
-  await t.checkText(/^[\w-]{8,64}$/.test(first) && store.editor.uploadBatch() === first && store.get().uploadBatch === first, "true");
+  t.check(first, any(String).matches(/^[\w-]{8,64}$/));
+  t.check(store.editor.uploadBatch(), first);
+  t.check(store.get().uploadBatch, first);
 
   // doctest:L344
   store.editor.reset("attachments");
-  t.check(store.get().uploadBatch, null);
+  t.check(store.get(), {
+    text: "",
+    images: [],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 
   // doctest:L348
-  await t.checkText(store.editor.uploadBatch() !== first, "true");
+  t.check(store.editor.uploadBatch(), not(first));
 
   // doctest:L351
   // A restored draft brings its batch back so later uploads join it.
@@ -367,8 +670,35 @@ void test("Photos picked together encode at the same time and can finish in any 
   store.editor.bumpPendingImages(2);
   store.editor.addImage({ id: second, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:small", byteLength: 1, original: { status: "uploading", progress: 0 } });
   store.editor.addImage({ id: first, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:large", byteLength: 1, original: { status: "uploading", progress: 0 } });
-  t.check(store.get().images.map((image) => image.id), [
-    1,
-    2,
-  ]);
+  t.check(store.get(), {
+    text: "",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/jpeg",
+        dataBase64: "x",
+        objectUrl: "blob:large",
+        byteLength: 1,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+      {
+        id: 2,
+        mimeType: "image/jpeg",
+        dataBase64: "x",
+        objectUrl: "blob:small",
+        byteLength: 1,
+        original: {
+          status: "uploading",
+          progress: 0,
+        },
+      },
+    ],
+    pendingImages: 0,
+    files: [],
+    selections: [],
+    uploadBatch: null,
+  });
 });

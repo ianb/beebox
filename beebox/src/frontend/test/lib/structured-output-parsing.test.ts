@@ -160,7 +160,10 @@ void test("The same slip happens with the other kinds:", async (t) => {
 // normalize, so a kind added to `ACK_KINDS` without the pattern fails here.
 void test("The alias pattern lists the kinds by hand.", async (t) => {
   // doctest:L131
-  t.check(ACK_KINDS.filter((k) => parseAcks(`<${k.kind}/>`).length !== 1).map((k) => k.kind), []);
+  t.check(
+    ACK_KINDS.map((k) => parseAcks(`<${k.kind}/>`)),
+    ACK_KINDS.map((k) => [{ kind: k.kind }]),
+  );
 });
 
 // Only exact kind names are aliases. A longer tag that starts with a kind name
@@ -233,10 +236,10 @@ void test("Multiple callouts stack in document order.", async (t) => {
   const r = parseCallouts(
     "<callout context=\"a\">first</callout> middle <callout context=\"b\">second</callout>"
   );
-  await t.checkText(r.length, "2");
-
-  // doctest:L199
-  t.check(r.map((c) => c.context).join(","), "a,b");
+  t.check(r, [
+    { context: "a", body: "first" },
+    { context: "b", body: "second" },
+  ]);
 });
 
 // Missing context → dropped. Empty body → dropped.

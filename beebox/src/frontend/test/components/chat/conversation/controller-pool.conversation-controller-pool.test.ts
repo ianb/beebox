@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { createActor, fromPromise, fromCallback, type EventObject, type CallbackActorLogic } from "xstate";
 import { chatMachine } from "../../../../src/machines/chatMachine/machine.js";
@@ -20,8 +21,8 @@ import { settleReceipt, expectReceipt } from "../../../../src/input/targets/rece
 type StartTarget = Extract<ConversationTarget, { kind: "start" }>;
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 /** What the fixture records per POST: a stream input (no `type`) or a queued SEND event. */
-interface Sent { type?: string; messageId: string; binding?: SendBinding }
 type StreamInput = typeof streamActor extends CallbackActorLogic<EventObject, infer Input, EventObject> ? Input : never;
+interface Sent extends Partial<StreamInput> { type?: string; messageId: string; binding?: SendBinding }
 interface Loaded { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean; pending: PendingSessionEntry[] }
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 function fixture() {
@@ -82,7 +83,21 @@ void test("Two worktrees live under one browser origin during development.", asy
   };
   paper.suspend();
   chat.suspend();
-  await t.checkText(JSON.stringify(isolated), "{\"scopes\":[\"paper-cards/test1\",\"chat-everywhere/test1\",\"test1\"],\"paper\":[\"paper-message\",null],\"chat\":[\"chat-message\",null]}");
+  t.check(isolated, {
+    scopes: [
+      "paper-cards/test1",
+      "chat-everywhere/test1",
+      "test1",
+    ],
+    paper: [
+      "paper-message",
+      undefined,
+    ],
+    chat: [
+      "chat-message",
+      undefined,
+    ],
+  });
 });
 
 // ## A captured send survives navigation and inactive actors are released
@@ -96,12 +111,15 @@ void test("A captured send survives navigation and inactive actors are released"
   await tick();
   captured.send(send("captured"));
   await captured.finished();
-  const result = { destination: boundSession(f.sends[0]), original: first.getSnapshot().status, count: f.actors.length };
+  const result = { destination: boundSession(f.sends[0]), original: first.getSnapshot().status, actors: f.actors.map((actor) => actor.getSnapshot().status) };
   f.pool.suspend();
   t.check(result, {
     destination: "first",
     original: "active",
-    count: 2,
+    actors: [
+      "active",
+      "active",
+    ],
   });
 });
 
@@ -118,14 +136,37 @@ void test("An unrelated assignment cannot release a fresh conversation's follow-
   followup.send(send("followup"));
   f.pool.markReady("unrelated");
   await tick();
-  const held = f.sends.length;
+  const held = [...f.sends];
   f.pool.markReady("real-id"); // bus can arrive before the owning stream's init
   first.send({ type: "SESSION_ASSIGNED", sessionId: "real-id" });
   await followup.finished();
   const records = new StartRecords(f.storage, "test1");
   f.pool.suspend();
   t.check({ held, destination: boundSession(f.sends[1]), state: records.get("logical-new")?.state }, {
-    held: 1,
+    held: [
+      {
+        sessionInput: "new",
+        message: "test",
+        messageId: "first-start",
+        contextDir: "_content",
+        engine: "codex",
+        startup: false,
+        binding: {
+          boxSlug: "test1",
+          target: {
+            kind: "start",
+            clientConversationId: "logical-new",
+            contextDir: "_content",
+            engine: "codex",
+          },
+          attention: {
+            surface: "card",
+            focusedRef: "/_content/report.md",
+            transcript: "hidden",
+          },
+        },
+      },
+    ],
     destination: "real-id",
     state: "assigned",
   });
@@ -149,8 +190,31 @@ void test("Reload never turns a follow-up into a second fresh start", async (t) 
   followup.send(send("after-reload"));
   await followup.finished();
   restored.suspend();
-  t.check({ freshSends: f.sends.length, disposition: (await receipt).disposition }, {
-    freshSends: 1,
+  t.check({ freshSends: f.sends, disposition: (await receipt).disposition }, {
+    freshSends: [
+      {
+        sessionInput: "new",
+        message: "test",
+        messageId: "accepted-first",
+        contextDir: "_content",
+        engine: "codex",
+        startup: false,
+        binding: {
+          boxSlug: "test1",
+          target: {
+            kind: "start",
+            clientConversationId: "logical-new",
+            contextDir: "_content",
+            engine: "codex",
+          },
+          attention: {
+            surface: "card",
+            focusedRef: "/_content/report.md",
+            transcript: "hidden",
+          },
+        },
+      },
+    ],
     disposition: "rejected",
   });
 });
@@ -167,8 +231,8 @@ void test("A box switch after upload capture cannot send through the new API pre
   captured.send(send("wrong-box"));
   await captured.finished();
   f.pool.suspend();
-  t.check({ sends: f.sends.length, disposition: (await receipt).disposition }, {
-    sends: 0,
+  t.check({ sends: f.sends, disposition: (await receipt).disposition }, {
+    sends: [],
     disposition: "rejected",
   });
 });
@@ -193,12 +257,34 @@ void test("A first send during loading waits for the owning stream", async (t) =
   const captured = f.pool.capture(bind(start));
   captured.send(send("early-first"));
   await captured.finished();
-  const result = { state: actor.getSnapshot().value, starts: f.sends.length, queued: f.sends[0]?.type === "SEND" };
+  const result = { state: actor.getSnapshot().value, sends: f.sends };
   f.pool.suspend();
   t.check(result, {
     state: "streaming",
-    starts: 1,
-    queued: false,
+    sends: [
+      {
+        sessionInput: "new",
+        message: "test",
+        messageId: "early-first",
+        contextDir: "_content",
+        engine: "codex",
+        startup: false,
+        binding: {
+          boxSlug: "test1",
+          target: {
+            kind: "start",
+            clientConversationId: "logical-new",
+            contextDir: "_content",
+            engine: "codex",
+          },
+          attention: {
+            surface: "card",
+            focusedRef: "/_content/report.md",
+            transcript: "hidden",
+          },
+        },
+      },
+    ],
   });
 });
 
@@ -250,8 +336,31 @@ void test("Suspension releases a locally held follow-up without dispatch", async
   held.send(send("held-suspend"));
   f.pool.suspend();
   await held.finished();
-  t.check({ starts: f.sends.length, disposition: (await receipt).disposition }, {
-    starts: 1,
+  t.check({ starts: f.sends, disposition: (await receipt).disposition }, {
+    starts: [
+      {
+        sessionInput: "new",
+        message: "test",
+        messageId: "before-suspend",
+        contextDir: "_content",
+        engine: "codex",
+        startup: false,
+        binding: {
+          boxSlug: "test1",
+          target: {
+            kind: "start",
+            clientConversationId: "logical-new",
+            contextDir: "_content",
+            engine: "codex",
+          },
+          attention: {
+            surface: "card",
+            focusedRef: "/_content/report.md",
+            transcript: "hidden",
+          },
+        },
+      },
+    ],
     disposition: "rejected",
   });
 });
@@ -277,11 +386,14 @@ void test("Metadata failures preserve acceptance and don't crash assignment obse
   await captured.finished();
   f.pool.markReady("ready-but-not-saved");
   actor.send({ type: "SESSION_ASSIGNED", sessionId: "ready-but-not-saved" });
-  const result = { disposition: (await receipt).disposition, notices: notices.length, active: actor.getSnapshot().status };
+  const result = { disposition: (await receipt).disposition, notices, active: actor.getSnapshot().status };
   f.pool.suspend();
   t.check(result, {
     disposition: "sent",
-    notices: 2,
+    notices: [
+      "Message accepted; startup association could not be saved. Open the conversation before reloading.",
+      "Message accepted; startup association could not be saved. Open the conversation before reloading.",
+    ],
     active: "active",
   });
 });
@@ -298,8 +410,8 @@ void test("Storage failure before dispatch never submits the fresh start", async
   captured.send(send("no-attempt-record"));
   await captured.finished();
   f.pool.suspend();
-  t.check({ sends: f.sends.length, disposition: (await receipt).disposition }, {
-    sends: 0,
+  t.check({ sends: f.sends, disposition: (await receipt).disposition }, {
+    sends: [],
     disposition: "rejected",
   });
 });
@@ -314,11 +426,12 @@ void test("Effect replay preserves actors; real detach stops them", async (t) =>
   detach();
   const finalDetach = f.pool.attach();
   await tick();
-  const replayKept = f.pool.controller(session("first")) === actor && actor.getSnapshot().status === "active";
+  t.check(f.pool.controller(session("first")), is(actor));
+  const replayStatus = actor.getSnapshot().status;
   finalDetach();
   await tick();
-  t.check({ replayKept, afterUnmount: actor.getSnapshot().status }, {
-    replayKept: true,
+  t.check({ replayStatus, afterUnmount: actor.getSnapshot().status }, {
+    replayStatus: "active",
     afterUnmount: "stopped",
   });
 });
@@ -380,9 +493,32 @@ void test("Uncertain rejection releases waiters but keeps restart recovery-only"
   const saved = new StartRecords(f.storage, "test1").get("logical-new");
   assert.ok(saved);
   f.pool.suspend();
-  t.check({ state: saved.state, posted: f.sends.length, heldDisposition: (await waitingReceipt).disposition }, {
+  t.check({ state: saved.state, posted: f.sends, heldDisposition: (await waitingReceipt).disposition }, {
     state: "attempted",
-    posted: 1,
+    posted: [
+      {
+        sessionInput: "new",
+        message: "test",
+        messageId: "uncertain-first",
+        contextDir: "_content",
+        engine: "codex",
+        startup: false,
+        binding: {
+          boxSlug: "test1",
+          target: {
+            kind: "start",
+            clientConversationId: "logical-new",
+            contextDir: "_content",
+            engine: "codex",
+          },
+          attention: {
+            surface: "card",
+            focusedRef: "/_content/report.md",
+            transcript: "hidden",
+          },
+        },
+      },
+    ],
     heldDisposition: "rejected",
   });
 });
@@ -443,13 +579,36 @@ void test("Accepted startup without init has a bounded visible wait and releases
   // Release the selection; the uncertain alias wait itself must not pin this actor.
   pool.select(session("elsewhere"));
   await tick();
-  const result = { disposition: (await receipt).disposition, state: record.state, firstID: record.firstEmissionId, posted: f.sends.length, actor: actor.getSnapshot().status };
+  const result = { disposition: (await receipt).disposition, state: record.state, firstID: record.firstEmissionId, posted: f.sends, actor: actor.getSnapshot().status };
   pool.suspend();
   t.check(result, {
     disposition: "rejected",
     state: "accepted",
     firstID: "no-init-first",
-    posted: 1,
+    posted: [
+      {
+        sessionInput: "new",
+        message: "test",
+        messageId: "no-init-first",
+        contextDir: "_content",
+        engine: "codex",
+        startup: false,
+        binding: {
+          boxSlug: "test1",
+          target: {
+            kind: "start",
+            clientConversationId: "logical-new",
+            contextDir: "_content",
+            engine: "codex",
+          },
+          attention: {
+            surface: "card",
+            focusedRef: "/_content/report.md",
+            transcript: "hidden",
+          },
+        },
+      },
+    ],
     actor: "stopped",
   });
 });

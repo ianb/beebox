@@ -7,10 +7,13 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { withBoxGitLock, activeBoxGitLockCount, BOX_GIT_LOCK_WAIT_MS } from "../../src/lib/git-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../src/lib/file-lock.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { getStatus } from "../../src/lib/git/core/operations.js";
+import { realpathSync } from "node:fs";
+import * as os from "node:os";
 import { join } from "node:path";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -42,14 +45,14 @@ void test("A box is one repository with one git index, so two concurrent spans o
     order.push("second");
   });
   await Promise.all([outer, inner]);
-  t.check(order.join(" "), "first-enter first-exit second");
+  t.check(order, ["first-enter", "first-exit", "second"]);
 
   // The lock file itself lives inside the git directory, so holding it leaves
   // nothing behind in the working tree:
 
   // doctest:L45
   await withBoxGitLock(box.root, async () => "held");
-  t.check((await getStatus(box.root)).clean, true);
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 });
 
 // ## Reentrancy passes through instead of deadlocking
@@ -82,7 +85,7 @@ void test("proper-lockfile is not reentrant, so a nested acquisition would stall
       });
     });
   });
-  t.check(trace.join(" "), "outer inner innermost");
+  t.check(trace, ["outer", "inner", "innermost"]);
 
   // Nesting is checked before the in-process queue. A nested call that enqueued
   // would wait behind its own ancestor — an unbounded deadlock rather than a
@@ -128,7 +131,7 @@ void test("Two concurrent tasks in one bbx serve would otherwise both poll the f
     }),
   );
   await Promise.all(tasks);
-  t.check(log.join(" "), "a-enter a-exit b-enter b-exit c-enter c-exit");
+  t.check(log, ["a-enter", "a-exit", "b-enter", "b-exit", "c-enter", "c-exit"]);
 
   // A caller that throws does not poison the queue behind it:
 
@@ -142,7 +145,7 @@ void test("Two concurrent tasks in one bbx serve would otherwise both poll the f
   });
   await failing.catch((e) => { results.push(`caught ${e.name}`); });
   await following;
-  t.check(results.join(" | "), "caught LockHeldError | ran anyway");
+  t.check(results, ["caught LockHeldError", "ran anyway"]);
 
   // That case also proves `fn` runs exactly once. The acquire path and `fn` can
   // both reject with `LockHeldError`, and without distinguishing them a throwing
@@ -219,13 +222,9 @@ void test("This is the property that keeps the lock from ever wedging a box.", a
   // operation was not serialized:
 
   // doctest:L213
-  await t.checkText(errors.length, "1");
-
-  // doctest:L216
-  t.check(errors[0]?.includes("Proceeding WITHOUT the lock"), true);
-
-  // doctest:L219
-  t.check(errors[0]?.includes(`pid ${process.pid}`), true);
+  t.check(errors, [
+    str`[box-git-lock] could not acquire ${join(realpathSync(box.root), ".git", "beebox-index.lock")} within 300ms (held by pid ${String(process.pid)} on ${os.hostname()} since ${any(String)}). Proceeding WITHOUT the lock: this git operation is not serialized against other writers, and may fail on .git/index.lock or co-commit another writer's staged files. A holder this old is either crashed (its lock clears at the stale window) or is not one of ours — investigate what is holding the box's git index.`,
+  ]);
 
   // The shipped budget is a minute — long enough that only a writer outside our
   // control reaches it:

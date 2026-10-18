@@ -12,7 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import { any, isoDate, str } from "agent-doctest/check";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,6 +32,21 @@ process.stdin.isTTY = false;
 const dir = await mkdtemp(join(tmpdir(), "bbx-auth-cli-"));
 process.env.BBX_AUTH_FILE = join(dir, "auth.json");
 delete process.env.BBX_OWNER_EMAIL;
+
+/** The agent-session refusal for `action`; only the detection reason varies with the environment. */
+const refusal = (action: string) => str`Refusing to ${action}: this looks like an agent session (${any(String)}).
+
+The local auth file (${join(dir, "auth.json")}) is GLOBAL — it backs every local
+box on this machine, not just the box you are standing in. Changing a password
+also revokes that user's live sessions, and the old password cannot be recovered
+(it is stored only as a scrypt hash).
+
+If the person you are working for explicitly asked you to do this, re-run with
+--agent-confirmed.
+
+If you are trying to authenticate so you can test something: stop and ask them
+instead. Needing credentials you were not given is a question for a human, not
+an obstacle to work around.`;
 
 async function passwordFile(password: string) {
   const file = join(dir, `pw-${Math.random().toString(36).slice(2)}.txt`);
@@ -72,71 +87,59 @@ async function runCaptured(fn: () => unknown) {
 
 // ## Create the first (owner) user, then list
 void test("Create the first (owner) user, then list", async (t) => {
-  // doctest:L75
   const ownerPw = await passwordFile("correct horse battery");
   const created = await runCaptured(() =>
     runCreateUser({ agentConfirmed: true,  email: "Owner@Example.com", name: "Owner Person", passwordFile: ownerPw })
   );
-  t.check(created.logs.join("\n"), "Created owner owner@example.com (Owner Person).");
+  t.check(created, { logs: ["Created owner owner@example.com (Owner Person)."], errors: [], exitCode: undefined });
 
-  // doctest:L82
-  t.check(created.exitCode, undefined);
-
-  // doctest:L85
   const listed = await runCaptured(() => { runList(); });
-  t.check(listed.logs.join("\n"), str`owner	owner@example.com	Owner Person	${isoDate()}`);
+  t.check(listed, { logs: [str`owner	owner@example.com	Owner Person	${isoDate()}`], errors: [], exitCode: undefined });
 
   // ## A second `create-user` refuses — clean message, exit 1, no stack trace
 
-  // doctest:L93
   const secondPw = await passwordFile("whatever");
   const second = await runCaptured(() =>
     runCreateUser({ agentConfirmed: true,  email: "other@example.com", name: "Other", passwordFile: secondPw })
   );
-  t.check(second.exitCode, 1);
-
-  // doctest:L100
-  t.check(second.errors.join("\n"), "A user with email other@example.com already exists.");
+  t.check(second, { logs: [], errors: ["A user with email other@example.com already exists."], exitCode: 1 });
 
   // ## `add-user` creates a member; list shows both
 
-  // doctest:L107
   const memberPw = await passwordFile("s3cret-member");
   const added = await runCaptured(() =>
     runAddUser({ agentConfirmed: true,  email: "Member@Example.com", name: "Member Person", passwordFile: memberPw })
   );
-  t.check(added.logs.join("\n"), "Added member member@example.com (Member Person).");
+  t.check(added, { logs: ["Added member member@example.com (Member Person)."], errors: [], exitCode: undefined });
 
-  // doctest:L114
   const afterAdd = await runCaptured(() => { runList(); });
-  await t.checkText(afterAdd.logs.join("\n"), `owner	owner@example.com	Owner Person	«date»
-member	member@example.com	Member Person	«date»`);
+  t.check(afterAdd, {
+    logs: [
+      str`owner	owner@example.com	Owner Person	${isoDate()}`,
+      str`member	member@example.com	Member Person	${isoDate()}`,
+    ],
+    errors: [],
+    exitCode: undefined,
+  });
 
   // ## `set-password` bumps the generation
 
-  // doctest:L123
   const newPw = await passwordFile("n3w-secret");
   const changed = await runCaptured(() =>
     runSetPassword({ agentConfirmed: true,  email: "member@example.com", passwordFile: newPw })
   );
-  t.check(changed.logs.join("\n"), "Password updated for member@example.com (generation 2 — prior sessions revoked).");
+  t.check(changed, { logs: ["Password updated for member@example.com (generation 2 — prior sessions revoked)."], errors: [], exitCode: undefined });
 
   // ## `remove-user` removes a member, but refuses to remove the owner
 
-  // doctest:L134
   const removed = await runCaptured(() => runRemoveUser({ agentConfirmed: true,  email: "member@example.com" }));
-  t.check(removed.logs.join("\n"), "Removed member@example.com.");
+  t.check(removed, { logs: ["Removed member@example.com."], errors: [], exitCode: undefined });
 
-  // doctest:L138
   const afterRemove = await runCaptured(() => { runList(); });
-  t.check(afterRemove.logs.join("\n"), str`owner	owner@example.com	Owner Person	${isoDate()}`);
+  t.check(afterRemove, { logs: [str`owner	owner@example.com	Owner Person	${isoDate()}`], errors: [], exitCode: undefined });
 
-  // doctest:L142
   const removeOwner = await runCaptured(() => runRemoveUser({ agentConfirmed: true,  email: "owner@example.com" }));
-  t.check(removeOwner.exitCode, 1);
-
-  // doctest:L146
-  t.check(removeOwner.errors.join("\n"), "Refusing to remove the owner account (owner@example.com).");
+  t.check(removeOwner, { logs: [], errors: ["Refusing to remove the owner account (owner@example.com)."], exitCode: 1 });
 
   // ## Credential changes refuse to run unsupervised in an agent session
   //
@@ -149,57 +152,28 @@ member	member@example.com	Member Person	«date»`);
   // the box it was standing in. It is not — one file backs every local box — and the
   // change was irreversible.
 
-  // doctest:L162
   const guardPw = await passwordFile("does-not-matter");
   const blocked = await runCaptured(() => runSetPassword({
     email: "owner@example.com",
     passwordFile: guardPw,
   }));
-  t.check(blocked.exitCode, 1);
+  t.check(blocked, { logs: [], errors: [refusal("change a password"), "__doctest_process_exit__"], exitCode: 1 });
 
   // The refusal names the blast radius the caller probably has not checked, and
   // points at asking a human rather than working around the missing credential:
 
-  // doctest:L175
-  const message = blocked.errors.join("\n");
-  t.check(
-    {
-      saysAgent: message.includes("looks like an agent session"),
-      namesGlobalScope: message.includes("GLOBAL"),
-      saysUnrecoverable: message.includes("cannot be recovered"),
-      namesTheFlag: message.includes("--agent-confirmed"),
-      saysAsk: message.includes("stop and ask"),
-    },
-    {
-    saysAgent: true,
-    namesGlobalScope: true,
-    saysUnrecoverable: true,
-    namesTheFlag: true,
-    saysAsk: true,
-  },
-  );
-
   // The password is genuinely unchanged — the guard refuses before any write:
 
-  // doctest:L189
   const stillThere = await runCaptured(() => { runList(); });
-  await t.checkText(stillThere.logs.join("\n").includes("owner@example.com"), "true");
+  t.check(stillThere, { logs: [str`owner	owner@example.com	Owner Person	${isoDate()}`], errors: [], exitCode: undefined });
 
   // Removal is guarded the same way — it is the other irreversible one:
 
-  // doctest:L197
   const blockedRemove = await runCaptured(() => runRemoveUser({ email: "owner@example.com" }));
-  t.check({ exitCode: blockedRemove.exitCode, refused: blockedRemove.errors.join("\n").includes("agent session") }, {
-    exitCode: 1,
-    refused: true,
-  });
+  t.check(blockedRemove, { logs: [], errors: [refusal("remove an account"), "__doctest_process_exit__"], exitCode: 1 });
 
   // Read-only `list` is never gated — inspecting who exists is not a credential change:
 
-  // doctest:L205
   const listedUnguarded = await runCaptured(() => { runList(); });
-  t.check({ exitCode: listedUnguarded.exitCode ?? 0, hasOwner: listedUnguarded.logs.join("\n").includes("owner@example.com") }, {
-    exitCode: 0,
-    hasOwner: true,
-  });
+  t.check(listedUnguarded, { logs: [str`owner	owner@example.com	Owner Person	${isoDate()}`], errors: [], exitCode: undefined });
 });

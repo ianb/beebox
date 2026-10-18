@@ -14,7 +14,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -69,12 +68,12 @@ function failingTurn(model: string): string[] {
 
 // One line per rendered group: text and updates show their text, an activity
 // group shows its parts (thinking rows that would render, and tool counts).
-function describe(entries: SessionEntry[]): string {
+function describe(entries: SessionEntry[]): string[] {
   return groupIntoParts(entries).map((g) => {
     if (g.kind !== "activity") return `${g.kind}: ${g.text}`;
     const parts = g.parts.map((p) => p.type === "tools" ? `tools(${p.tools.length})` : p.text?.trim() ? `thinking(${p.text})` : "thinking(empty)");
     return `activity: ${parts.join(", ")}`;
-  }).join("\n");
+  });
 }
 
 async function historyOf(lines: string[]): Promise<SessionEntry[]> {
@@ -106,18 +105,16 @@ function liveOf(model: string, blocks: ChatMessageContent[]): SessionEntry[] {
 // Claude 5 and later do. Claude 4 and earlier return summarized reasoning in the
 // same field. Other providers' models and a missing model get no updates.
 void test("Claude 5 and later do.", async (t) => {
-  // doctest:L109
-  await t.checkText(
-    ["claude-fable-5-1", "claude-opus-5", "claude-opus-5-5", "claude-sonnet-4-6", "claude-haiku-4-5-20251001", "glm-5.3", undefined]
-      .map((model) => `${String(model)}: ${writesProgressUpdates(model)}`).join("\n"),
-    `claude-fable-5-1: true
-claude-opus-5: true
-claude-opus-5-5: true
-claude-sonnet-4-6: false
-claude-haiku-4-5-20251001: false
-glm-5.3: false
-undefined: false`,
-  );
+  const models = ["claude-fable-5-1", "claude-opus-5", "claude-opus-5-5", "claude-sonnet-4-6", "claude-haiku-4-5-20251001", "glm-5.3", undefined];
+  t.check(models.map((model) => ({ model, writes: writesProgressUpdates(model) })), [
+    { model: "claude-fable-5-1", writes: true },
+    { model: "claude-opus-5", writes: true },
+    { model: "claude-opus-5-5", writes: true },
+    { model: "claude-sonnet-4-6", writes: false },
+    { model: "claude-haiku-4-5-20251001", writes: false },
+    { model: "glm-5.3", writes: false },
+    { model: undefined, writes: false },
+  ]);
 });
 
 // ## History: the failing turn now shows both updates
@@ -126,12 +123,13 @@ undefined: false`,
 // reasoning blocks do not enter activity groups. The bare ack is
 // the only text; the chat hangs it on the user's message as a badge.
 void test("Each update is a visible line before the tool call it introduces.", async (t) => {
-  // doctest:L128
-  await t.checkText(describe(await historyOf(failingTurn("claude-fable-5-1"))), `update: I've laid out the setup.
-activity: tools(1)
-update: I've resent the summary.
-activity: tools(1)
-text: <ack kind="appended" ref="/_content/plan.doc.card"/>`);
+  t.check(describe(await historyOf(failingTurn("claude-fable-5-1"))), [
+    "update: I've laid out the setup.",
+    "activity: tools(1)",
+    "update: I've resent the summary.",
+    "activity: tools(1)",
+    'text: <ack kind="appended" ref="/_content/plan.doc.card"/>',
+  ]);
 });
 
 // ## History: an older model's reasoning stays collapsed
@@ -139,16 +137,14 @@ text: <ack kind="appended" ref="/_content/plan.doc.card"/>`);
 // Sonnet 4.6 returns summarized reasoning in the same field. That is not written
 // for the user, so it stays inside the collapsed activity group.
 void test("Sonnet 4.6 returns summarized reasoning in the same field.", async (t) => {
-  // doctest:L143
-  await t.checkText(
+  t.check(
     describe(await historyOf([
       assistantLine("claude-sonnet-4-6", update("Let me check the file first.")),
       assistantLine("claude-sonnet-4-6", bash("t3")),
       toolResultLine("t3"),
       assistantLine("claude-sonnet-4-6", text("Done.")),
     ])),
-    `activity: thinking(Let me check the file first.), tools(1)
-text: Done.`,
+    ["activity: thinking(Let me check the file first.), tools(1)", "text: Done."],
   );
 });
 
@@ -158,20 +154,15 @@ text: Done.`,
 // the stream's tool list, so it keeps its position between tool calls. An older
 // model's reasoning is not surfaced live at all.
 void test("The live turn gets the same groups as the reloaded history.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L161
   const blocks = [reasoning, update("Checking DNS."), bash("t1"), reasoning, update("Writing the plan."), bash("t2"), text("All set.")];
-  print(describe(liveOf("claude-fable-5-1", blocks)));
-  print("--");
-  await t.checkText(out2.with(print(describe(liveOf("claude-sonnet-4-6", blocks)))), `update: Checking DNS.
-activity: tools(1)
-update: Writing the plan.
-activity: tools(1)
-text: All set.
---
-activity: tools(2)
-text: All set.`);
+  t.check(describe(liveOf("claude-fable-5-1", blocks)), [
+    "update: Checking DNS.",
+    "activity: tools(1)",
+    "update: Writing the plan.",
+    "activity: tools(1)",
+    "text: All set.",
+  ]);
+  t.check(describe(liveOf("claude-sonnet-4-6", blocks)), ["activity: tools(2)", "text: All set."]);
 });
 
 // ## A no-response ack does not hide the updates
@@ -180,8 +171,6 @@ text: All set.`);
 // list. `buildDataItems` keeps it when `hasProgressUpdate` finds an update, so
 // the update still renders. An older model's reasoning does not count.
 void test("A turn whose only text is a no-response ack is normally left out of the list.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -189,12 +178,15 @@ void test("A turn whose only text is a no-response ack is normally left out of t
       t.error(error);
     }
   });
-  // doctest:L183
   const quietTurn = (model: string) => [
     assistantLine(model, update("Nothing needed; the plan already covers it.")),
     assistantLine(model, text('<ack kind="no-response"/>')),
   ];
-  print(`claude-fable-5-1: ${hasProgressUpdate(await historyOf(quietTurn("claude-fable-5-1")))}`);
-  await t.checkText(out2.with(print(`claude-sonnet-4-6: ${hasProgressUpdate(await historyOf(quietTurn("claude-sonnet-4-6")))}`)), `claude-fable-5-1: true
-claude-sonnet-4-6: false`);
+  t.check(
+    {
+      fable: hasProgressUpdate(await historyOf(quietTurn("claude-fable-5-1"))),
+      sonnet: hasProgressUpdate(await historyOf(quietTurn("claude-sonnet-4-6"))),
+    },
+    { fable: true, sonnet: false },
+  );
 });

@@ -86,10 +86,16 @@ void test("An open todo whose start has not come yet is not on the plate; the li
 // none here, so it is never the target.
 void test("On a card, the control scrolls to the first todo in the set it names.", async (t) => {
   // doctest:L93
-  await t.checkText(controlTargetSelector({ onPlate: 0 }).includes('[data-todo-plate-state="quiet"]'), "true");
+  t.check(
+    controlTargetSelector({ onPlate: 0 }),
+    "[data-todo-status=\"open\"]:not([data-todo-assigned=\"agent\"])[data-todo-plate-state=\"quiet\"]",
+  );
 
   // doctest:L96
-  await t.checkText(controlTargetSelector({ onPlate: 2 }).includes("quiet"), "false");
+  t.check(
+    controlTargetSelector({ onPlate: 2 }),
+    "[data-todo-status=\"open\"]:not([data-todo-assigned=\"agent\"])[data-todo-plate-state=\"on-plate\"], [data-todo-status=\"open\"]:not([data-todo-assigned=\"agent\"])[data-todo-plate-state=\"escalated\"]",
+  );
 });
 
 // ## A directory's line

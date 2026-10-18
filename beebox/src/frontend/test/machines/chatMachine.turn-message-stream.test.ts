@@ -15,7 +15,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { handleTurnMessage } from "../../src/machines/chatMachine/chat-actors.js";
 import type { ChatMessage } from "../../../core/chat/session/messages.js";
 import type { ChatEvent } from "../../src/machines/chat-types.js";
@@ -51,9 +50,6 @@ function runTurn(frames: ChatMessage[]): { text: string; tools: number } {
 // deltas; a final line arrives atomically. Every block must appear
 // exactly once — none dropped, none duplicated.
 void test("This is the regression.", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L54
   const { text, tools } = runTurn([
     delta("Opening narration."),
     asstText("Opening narration."),           // dup of deltas — skipped
@@ -64,14 +60,11 @@ void test("This is the regression.", async (t) => {
     asstText("![Embed B](/b.png)"),            // dup of deltas — skipped
     asstText("Final narration line."),         // atomic — kept
   ]);
-  print(`tools: ${tools}`);
-  await t.checkText(out.with(text), `tools: 2
-Opening narration.![Embed A](/a.png)![Embed B](/b.png)Final narration line.`);
+  t.check({ tools, text }, { tools: 2, text: "Opening narration.![Embed A](/a.png)![Embed B](/b.png)Final narration line." });
 });
 
 // ## Two consecutive atomic blocks both survive
 void test("Two consecutive atomic blocks both survive", async (t) => {
-  // doctest:L74
   const { text } = runTurn([
     asstText("First atomic."),
     asstText("Second atomic."),

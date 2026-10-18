@@ -48,10 +48,11 @@ void test("Reads a frontmatter params array, keeping well-formed entries and dro
   // module `select`/`trigger` written as a card type is silently ignored otherwise):
 
   // doctest:L43
-  await t.checkText(warnings.length, "3");
-
-  // doctest:L46
-  await t.checkText(warnings.some((w) => w.includes('"bad"') && w.includes('"color"')), "true");
+  t.check(warnings, [
+    'figure params: dropping param "bad" — unknown card type "color" (card params are string|number|boolean; map a module select→string, trigger is not embed-controllable)',
+    "figure params: dropping a param declaration with no string `name` [object Object]",
+    "figure params: dropping a non-object param declaration nonsense",
+  ]);
 });
 
 // A non-array (or absent) declaration yields an empty list:

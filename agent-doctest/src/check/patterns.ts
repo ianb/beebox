@@ -169,6 +169,36 @@ export function oneOf<const L extends readonly Literal[]>(...values: L): Pattern
 }
 
 /**
+ * The very value `value`, by `Object.is`: for an object, the same instance,
+ * not an equal copy. For a cache or a store whose contract is a stable
+ * reference: `t.check(store.getSnapshot(), is(first))`.
+ */
+export function is<T>(value: T): Pattern<T> {
+  const source = `is(${typeof value === "object" && value !== null ? "<reference>" : literalSource(value as Literal)})`;
+  return new Pattern<T>(source, (v) => (Object.is(v, value) ? OK : fail(`${source}: a different value or a copy`)));
+}
+
+/**
+ * Any value except `value` (by `Object.is`), or any value the pattern
+ * `value` does not match: `t.check(next.sha, not(previous.sha))`,
+ * `t.check(html, not(any(String).includes("<script")))`.
+ */
+export function not<T extends Literal>(value: T | Pattern<T>): Pattern<T> {
+  const source = `not(${value instanceof Pattern ? value.source : literalSource(value)})`;
+  const matches = (v: unknown): boolean => (value instanceof Pattern ? value.match(v).ok : Object.is(v, value));
+  return new Pattern<T>(source, (v) => (matches(v) ? fail(source) : OK));
+}
+
+/**
+ * An instance of `type` or a subclass, by `instanceof`: an error's class,
+ * which a whole check of its data does not see.
+ */
+export function instanceOf<C extends abstract new (...args: never[]) => unknown>(type: C): Pattern<InstanceType<C>> {
+  const source = `instanceOf(${type.name})`;
+  return new Pattern<InstanceType<C>>(source, (v) => (v instanceof type ? OK : fail(source)));
+}
+
+/**
  * An object property that may be absent; when present, its value must match
  * `inner`. It is not a `Pattern`, so the type checker accepts it only on a
  * property that is optional in the actual value's type.

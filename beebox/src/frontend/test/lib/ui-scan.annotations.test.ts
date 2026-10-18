@@ -159,10 +159,12 @@ function tagsWhere(predicate: (tag: string) => boolean): { site: string; tag: st
 void test("reveal is the one action that dispatches a synthetic click, and the attribute...", async (t) => {
   // doctest:L161
   const reveals = tagsWhere((tag) => tag.includes("data-bbx-reveal"));
-  await t.checkText(reveals.map((r) => r.site).toSorted().join("\n"), `components/AppNav/nav.tsx:button
-components/chat/InteractiveChat-composer/view.tsx:button
-components/chat/VoiceChip/view.tsx:button
-components/chat/everywhere/InteractiveChat/SessionChip.tsx:button`);
+  t.check(reveals.map((r) => r.site).toSorted(), [
+    "components/AppNav/nav.tsx:button",
+    "components/chat/InteractiveChat-composer/view.tsx:button",
+    "components/chat/VoiceChip/view.tsx:button",
+    "components/chat/everywhere/InteractiveChat/SessionChip.tsx:button",
+  ]);
 
   // doctest:L168
   const DISCLOSURE = /aria-expanded|aria-haspopup|role="tab"|{\.{3}ariaProps}/;
@@ -178,7 +180,7 @@ void test("The spread above is only evidence if Dropdown puts the attributes in 
   // doctest:L180
   const dropdown = SOURCES.find((f) => f.path === "components/ui/Dropdown.tsx")!;
   const ariaPropsType = /ariaProps: {[^}]*}/.exec(dropdown.text)![0];
-  await t.checkText(ariaPropsType.includes("aria-haspopup") && ariaPropsType.includes("aria-expanded"), "true");
+  t.check(ariaPropsType, 'ariaProps: { "aria-haspopup": "menu"; "aria-expanded": boolean }');
 });
 
 // ## Every id in the plan's table exists exactly once
@@ -189,23 +191,25 @@ void test("The spread above is only evidence if Dropdown puts the attributes in 
 // counterpart and is skipped here; the iOS column is Track 5's to check.
 void test("The table in docs/plans/agent-points-at-ui.md (Track 4) is the contract — the...", async (t) => {
   // doctest:L194
-  await t.checkText(TABLE_IDS.join("\n"), `bbx-nav-place
-bbx-nav-session
-bbx-nav-voice
-bbx-nav-profile
-bbx-nav-questions
-bbx-nav-todo
-bbx-nav-errors
-bbx-composer-add
-bbx-composer-input
-bbx-composer-send
-bbx-composer-input-mobile
-bbx-composer-send-mobile
-bbx-composer-mic
-bbx-composer-capture
-bbx-chat-stop-agent
-bbx-chat-stop-speech
-bbx-panel-tabs`);
+  t.check(TABLE_IDS, [
+    "bbx-nav-place",
+    "bbx-nav-session",
+    "bbx-nav-voice",
+    "bbx-nav-profile",
+    "bbx-nav-questions",
+    "bbx-nav-todo",
+    "bbx-nav-errors",
+    "bbx-composer-add",
+    "bbx-composer-input",
+    "bbx-composer-send",
+    "bbx-composer-input-mobile",
+    "bbx-composer-send-mobile",
+    "bbx-composer-mic",
+    "bbx-composer-capture",
+    "bbx-chat-stop-agent",
+    "bbx-chat-stop-speech",
+    "bbx-panel-tabs",
+  ]);
 
   // doctest:L215
   t.check(TABLE_IDS.filter((id) => countInSource(id) !== 1).map((id) => id + ": " + countInSource(id)), []);
@@ -279,11 +283,11 @@ void test("The exploded composer gallery and capture-mode gallery render reusabl
   ));
   t.check(
     ({ composerGalleryDuplicates: renderedIds(composerGallery),
-      composerSingleStateHasKeyboardIds: composerSingleState.includes('id="bbx-composer-keyboard-lock"') && composerSingleState.includes('id="bbx-composer-keyboard-close"'),
+      composerSingleStateKeyboardIds: [...composerSingleState.matchAll(/\sid="(bbx-composer-keyboard-[^"]+)"/g)].map((match) => match[1]),
       captureGalleryDuplicates: renderedIds(captureGallery) }),
     {
     composerGalleryDuplicates: [],
-    composerSingleStateHasKeyboardIds: true,
+    composerSingleStateKeyboardIds: ["bbx-composer-keyboard-lock", "bbx-composer-keyboard-close"],
     captureGalleryDuplicates: [],
   },
   );

@@ -29,7 +29,7 @@ void test("line 10", async (t) => {
   });
 
   // doctest:L17
-  t.check(parseInventoryCardState({ projection: "other" }).ok, false);
+  t.check(parseInventoryCardState({ projection: "other" }), { ok: false, error: "Invalid Storage view state. Reset the controls to continue." });
 });
 
 // Only recognized OAuth return fields, a known tab, and a known section to land
@@ -68,10 +68,10 @@ void test("Only recognized OAuth return fields, a known tab, and a known section
   });
 
   // doctest:L39
-  t.check(parseAdminCardState({ google: "maybe" }).ok, false);
+  t.check(parseAdminCardState({ google: "maybe" }), { ok: false, error: "Invalid Admin arrival state." });
 
   // doctest:L42
-  t.check(parseAdminCardState({ tab: "nowhere" }).ok, false);
+  t.check(parseAdminCardState({ tab: "nowhere" }), { ok: false, error: "Invalid Admin arrival state." });
 
   // doctest:L45
   t.check(parseAdminCardState({ section: "google-services" }), {
@@ -82,7 +82,7 @@ void test("Only recognized OAuth return fields, a known tab, and a known section
   });
 
   // doctest:L48
-  t.check(parseAdminCardState({ section: "nowhere" }).ok, false);
+  t.check(parseAdminCardState({ section: "nowhere" }), { ok: false, error: "Invalid Admin arrival state." });
 
   // doctest:L51
   t.check(clearAdminArrivalState({ google: "error", message: "Denied", reconnect: "google", tab: "host", panel: "future" }), {
@@ -128,10 +128,10 @@ void test("A hidden retained Admin card and an in-flight status request cannot c
   t.check(shouldConsumeAdminArrival({ arrival, visible: true, loading: false, alreadyProcessed: false }), true);
 
   // doctest:L83
-  await t.checkText(adminArrivalReceipt(7, arrival) === adminArrivalReceipt(7, arrival), "true");
+  t.check(adminArrivalReceipt(7, arrival), '7:{"google":"error","message":"Denied"}');
 
   // doctest:L86
-  await t.checkText(adminArrivalReceipt(8, arrival) === adminArrivalReceipt(7, arrival), "false");
+  t.check(adminArrivalReceipt(8, arrival), '8:{"google":"error","message":"Denied"}');
 
   // doctest:L89
   t.check(shouldConsumeAdminArrival({ arrival, visible: true, loading: false, alreadyProcessed: key !== null }), false);

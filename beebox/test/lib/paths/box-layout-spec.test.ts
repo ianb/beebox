@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { instanceOf } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT } from "../../../src/lib/paths/box-layout-spec.js";
 import { BOX_ROOT_VOCABULARY } from "../../../src/shared/box-root-vocabulary.js";
@@ -23,14 +24,12 @@ const boxLayoutDoc = await fs.readFile(new URL("../../../docs/box-layout.md", im
 void test("Every `BOX_DIRS` key/value comes from a spec entry, and vice versa", async (t) => {
   // doctest:L25
   const boxDirsFromSpec = Object.fromEntries(keyedEntries.map((entry) => [entry.boxDirsKey, entry.path]));
-  await t.checkText(JSON.stringify(boxDirsFromSpec) === JSON.stringify(BOX_DIRS), "true");
+  t.check(boxDirsFromSpec, BOX_DIRS);
 
   // doctest:L29
-  await t.checkText(
-    // Same key count both ways — no spec entry silently dropped, no BOX_DIRS key the spec doesn't know about.
-    keyedEntries.length === Object.keys(BOX_DIRS).length,
-    "true",
-  );
+  // Same key count both ways — no spec entry silently dropped, no BOX_DIRS key the spec doesn't know about.
+  const specKeys: string[] = keyedEntries.map((entry) => entry.boxDirsKey);
+  t.check(specKeys.toSorted(), Object.keys(BOX_DIRS).toSorted());
 });
 
 // ## Every spec'd path lives under an underscore area (or is code/agent-config)
@@ -48,13 +47,14 @@ void test("Every spec'd path lives under an underscore area (or is code/agent-co
 // An unrecognized key throws a typed error rather than returning `undefined` silently:
 void test("An unrecognized key throws a typed error rather than returning undefined sile...", async (t) => {
   // doctest:L50
-  let error: unknown;
   // The key parameter is a closed union; Reflect.apply passes a key outside it to reach the runtime guard.
-  try { Reflect.apply(boxLayoutEntry, undefined, ["not-a-real-key"]); } catch (e) { error = e; };
-  await t.checkText(error instanceof UnknownBoxDirsKeyError, "true");
-
-  // doctest:L56
-  t.check(error instanceof Error ? error.message : String(error), "No box-layout-spec entry for BOX_DIRS key \"not-a-real-key\".");
+  await t.checkThrows(
+    () => Reflect.apply(boxLayoutEntry, undefined, ["not-a-real-key"]),
+    "UnknownBoxDirsKeyError: No box-layout-spec entry for BOX_DIRS key \"not-a-real-key\".",
+  );
+  let caught: unknown;
+  try { Reflect.apply(boxLayoutEntry, undefined, ["not-a-real-key"]); } catch (e) { caught = e; }
+  t.check(caught, instanceOf(UnknownBoxDirsKeyError));
 });
 
 // ## `BOX_ROOT_VOCABULARY` covers every underscore area `BOX_LAYOUT` uses
@@ -62,7 +62,7 @@ void test("`BOX_ROOT_VOCABULARY` covers every underscore area `BOX_LAYOUT` uses"
   // doctest:L63
   const rootAreaNames = new Set<string>(keyedEntries.map((entry) => entry.path.split("/")[0] ?? "").filter((seg) => seg.startsWith("_")));
   const vocabAreaNames = new Set<string>(BOX_ROOT_VOCABULARY.filter((e) => e.kind === "area").map((e) => e.name));
-  await t.checkText([...rootAreaNames].every((name) => vocabAreaNames.has(name)), "true");
+  t.check([...rootAreaNames].filter((name) => !vocabAreaNames.has(name)), []);
 });
 
 // ## The agent guide's archive row is a rollup
@@ -72,7 +72,7 @@ void test("`BOX_ROOT_VOCABULARY` covers every underscore area `BOX_LAYOUT` uses"
 // spec entry - box-shape.ts owns collapsing the three archive entries into one row.
 void test("directoryLayoutRows looks up each row by BOXDIRS key.", async (t) => {
   // doctest:L76
-  await t.checkText(directoryLayoutRows().includes("| `_bookkeeping/archive/` | Processed/completed items |"), "true");
+  t.checkText(directoryLayoutRows(), "«*»| `_bookkeeping/archive/` | Processed/completed items |«*»");
 });
 
 // ## `docs/box-layout.md`'s tables carry the same path + description text as the spec

@@ -9,7 +9,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import assert from "node:assert/strict";
+import { any, instanceOf, is, str } from "agent-doctest/check";
 import { join } from "node:path";
 import { z } from "zod";
 import {
@@ -31,6 +32,16 @@ const progressFields = {
   status: z.enum(["open", "done"]),
   body: body(z.string()),
 };
+
+/** The error `fn` throws, or undefined when it returns. */
+function thrown(fn: () => void): unknown {
+  try {
+    fn();
+  } catch (e) {
+    return e;
+  }
+  return undefined;
+}
 
 function issue(message: string): LintIssue {
   return { type: "validation", severity: "warning", message };
@@ -82,7 +93,6 @@ function typecheckFixture(source: string): string[] {
 
 // ## `fields` merge by key
 void test("`fields` merge by key", async (t) => {
-  // doctest:L62
   const merged = extendSchema(progressBase, { fields: { mood: z.string().optional() } });
   t.check(Object.keys(merged.fields), [
     "score",
@@ -94,7 +104,6 @@ void test("`fields` merge by key", async (t) => {
 
 // A delta with no `fields` carries the base's map through:
 void test("A delta with no fields carries the base's map through:", async (t) => {
-  // doctest:L70
   t.check(Object.keys(extendSchema(progressBase, { brief: "Only a brief" }).fields), [
     "score",
     "status",
@@ -104,7 +113,6 @@ void test("A delta with no fields carries the base's map through:", async (t) =>
 
 // ## `validate` runs base then delta and concatenates
 void test("`validate` runs base then delta and concatenates", async (t) => {
-  // doctest:L77
   const schema = cardSchema("progress", extendSchema(progressBase, {
     validate: ({ fields }) => (fields["status"] === "open" ? [issue("delta: still open")] : []),
   }));
@@ -116,8 +124,7 @@ void test("`validate` runs base then delta and concatenates", async (t) => {
 
 // A delta without `validate` keeps the base's hook as-is:
 void test("A delta without validate keeps the base's hook as-is:", async (t) => {
-  // doctest:L87
-  await t.checkText(cardSchema("progress", extendSchema(progressBase, {})).validate === progressBase.validate, "true");
+  t.check(cardSchema("progress", extendSchema(progressBase, {})).validate, is(progressBase.validate));
 });
 
 // ## `superRefine` runs both, base first
@@ -126,7 +133,6 @@ void test("A delta without validate keeps the base's hook as-is:", async (t) => 
 // `frontmatterSchema.safeParse` after extension; the delta's refinement is
 // reported after it.
 void test("A card that violates the base's parse-time invariant still fails frontmatterS...", async (t) => {
-  // doctest:L98
   const schema = cardSchema("progress", extendSchema(progressBase, {
     fields: { mood: z.string().optional() },
     superRefine: (fields, ctx) => {
@@ -136,14 +142,14 @@ void test("A card that violates the base's parse-time invariant still fails fron
     },
   }));
   const result = schema.frontmatterSchema.safeParse({ type: "progress", score: 40, status: "done", mood: "grim" });
-  t.check(result.success ? "parsed" : result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`), [
-    "score: done requires score 100",
-    "mood: a done card is not grim",
+  assert(!result.success);
+  t.check(result.error.issues, [
+    { code: "custom", path: ["score"], message: "done requires score 100" },
+    { code: "custom", path: ["mood"], message: "a done card is not grim" },
   ]);
 
-  // doctest:L110
   const ok = schema.frontmatterSchema.safeParse({ type: "progress", score: 100, status: "done", mood: "fine" });
-  t.check(ok.success, true);
+  t.check(ok, { success: true, data: { type: "progress", score: 100, status: "done", mood: "fine" } });
 });
 
 // ## `summarize` runs the delta with the base's result as `base`
@@ -151,7 +157,6 @@ void test("A card that violates the base's parse-time invariant still fails fron
 // The delta sees the merged fields (`card.mood`) and the base's summary
 // (`detail`, `attrs`), and may extend or replace parts of it.
 void test("The delta sees the merged fields (card.mood) and the base's summary (detail,...", async (t) => {
-  // doctest:L121
   const schema = cardSchema("progress", extendSchema(progressBase, {
     fields: { mood: z.string().optional() },
     // `base` is the base schema's result, which may carry `detail` and `attrs`.
@@ -168,7 +173,6 @@ void test("The delta sees the merged fields (card.mood) and the base's summary (
 
 // With no base `summarize`, the delta receives the engine's summary as `base`:
 void test("With no base summarize, the delta receives the engine's summary as base:", async (t) => {
-  // doctest:L133
   const bare: CardSchemaConfig<string, typeof progressFields> = { fields: progressFields };
   const schema = cardSchema("progress", extendSchema(bare, {
     summarize: (card, base) => ({ ...base, detail: `status ${card.status}` }),
@@ -181,7 +185,6 @@ void test("With no base summarize, the delta receives the engine's summary as ba
 
 // A delta without `summarize` keeps the base's behaviour:
 void test("A delta without summarize keeps the base's behaviour:", async (t) => {
-  // doctest:L144
   const schema = cardSchema("progress", extendSchema(progressBase, { fields: { mood: z.string().optional() } }));
   t.check(schema.summarize?.({ type: "progress", score: 3, status: "open", body: "" }, sampleBase), {
     title: "T",
@@ -194,21 +197,15 @@ void test("A delta without summarize keeps the base's behaviour:", async (t) => 
 
 // ## `instructions` concatenate with a blank line
 void test("`instructions` concatenate with a blank line", async (t) => {
-  // doctest:L152
-  await t.checkText(extendSchema(progressBase, { instructions: "Delta instructions." }).instructions, `Base instructions.
-«blankline»
-Delta instructions.`);
+  t.check(extendSchema(progressBase, { instructions: "Delta instructions." }).instructions, "Base instructions.\n\nDelta instructions.");
 
-  // doctest:L157
   t.check(extendSchema(progressBase, {}).instructions, "Base instructions.");
 
-  // doctest:L160
   t.check(extendSchema({ fields: progressFields }, { instructions: "Only the delta." }).instructions, "Only the delta.");
 });
 
 // ## `description`, `brief`, `prominence`, `theme` are delta-wins; the rest is carried
 void test("`description`, `brief`, `prominence`, `theme` are delta-wins; the rest is carried", async (t) => {
-  // doctest:L167
   const merged = extendSchema(progressBase, {
     description: "Delta description",
     brief: "Delta brief",
@@ -228,7 +225,6 @@ void test("`description`, `brief`, `prominence`, `theme` are delta-wins; the res
     instructions: "Base instructions.",
   });
 
-  // doctest:L186
   const { fields: _f2, validate: _v2, superRefine: _r2, summarize: _s2, ...untouched } = extendSchema(progressBase, {});
   t.check(untouched, {
     description: "Base description",
@@ -244,18 +240,11 @@ void test("`description`, `brief`, `prominence`, `theme` are delta-wins; the res
 //
 // Box schemas run under type stripping, so the rule holds without `tsc` too.
 void test("Box schemas run under type stripping, so the rule holds without tsc too.", async (t) => {
-  // doctest:L204
-  function redeclare(): string {
-    try {
-      // Widen the base's field map so the type-level rejection does not apply; the runtime check still must.
-      const looseFields: Record<string, FieldDecl> = progressFields;
-      extendSchema({ fields: looseFields }, { fields: { score: z.string() } });
-      return "no error";
-    } catch (e) {
-      return e instanceof RedeclaredFieldError ? `${e.name}: ${e.message} (field=${e.field})` : "other";
-    }
-  }
-  t.check(redeclare(), "RedeclaredFieldError: extendSchema: delta redeclares base field \"score\" (field=score)");
+  // Widen the base's field map so the type-level rejection does not apply; the runtime check still must.
+  const looseFields: Record<string, FieldDecl> = progressFields;
+  const redeclare = () => { extendSchema({ fields: looseFields }, { fields: { score: z.string() } }); };
+  t.check(thrown(redeclare), instanceOf(RedeclaredFieldError));
+  t.check(thrown(redeclare), { name: "RedeclaredFieldError", message: "extendSchema: delta redeclares base field \"score\"", field: "score" });
 });
 
 // ## `markdocTags` union, and a redeclared tag fails
@@ -263,7 +252,6 @@ void test("Box schemas run under type stripping, so the rule holds without tsc t
 // Scoped Markdoc tags merge like fields: the delta's tags are added to the
 // base's, and a key the base already declares throws `RedeclaredTagError`.
 void test("Scoped Markdoc tags merge like fields:", async (t) => {
-  // doctest:L224
   const withBaseTag = extendSchema(progressBase, { markdocTags: { garnish: { render: "Garnish" } } });
   const extended = extendSchema(withBaseTag, { markdocTags: { plating: { render: "Plating" } } });
   t.check(Object.keys(extended.markdocTags ?? {}), [
@@ -271,16 +259,9 @@ void test("Scoped Markdoc tags merge like fields:", async (t) => {
     "plating",
   ]);
 
-  // doctest:L231
-  function redeclareTag(): string {
-    try {
-      extendSchema(withBaseTag, { markdocTags: { garnish: { render: "Other" } } });
-      return "no error";
-    } catch (e) {
-      return e instanceof RedeclaredTagError ? `${e.name} (tag=${e.tag})` : "other";
-    }
-  }
-  t.check(redeclareTag(), "RedeclaredTagError (tag=garnish)");
+  const redeclareTag = () => { extendSchema(withBaseTag, { markdocTags: { garnish: { render: "Other" } } }); };
+  t.check(thrown(redeclareTag), instanceOf(RedeclaredTagError));
+  t.check(thrown(redeclareTag), { name: "RedeclaredTagError", message: "Markdoc tag \"garnish\" is already declared; a scoped tag cannot redeclare it", tag: "garnish" });
 });
 
 // ## `cardSchema` rejects a tag the core table has, and carries the rest
@@ -288,20 +269,12 @@ void test("Scoped Markdoc tags merge like fields:", async (t) => {
 // A scoped tag cannot shadow a core tag such as `quote`. A valid declaration
 // appears on the resolved schema.
 void test("A scoped tag cannot shadow a core tag such as quote.", async (t) => {
-  // doctest:L249
-  function declareQuote(): string {
-    try {
-      cardSchema("dish", { fields: { body: body(z.string()) }, markdocTags: { quote: { render: "Q" } } });
-      return "no error";
-    } catch (e) {
-      return e instanceof RedeclaredTagError ? `${e.name} (tag=${e.tag})` : "other";
-    }
-  }
-  t.check(declareQuote(), "RedeclaredTagError (tag=quote)");
+  const declareQuote = () => { cardSchema("dish", { fields: { body: body(z.string()) }, markdocTags: { quote: { render: "Q" } } }); };
+  t.check(thrown(declareQuote), instanceOf(RedeclaredTagError));
+  t.check(thrown(declareQuote), { name: "RedeclaredTagError", message: "Markdoc tag \"quote\" is already declared; a scoped tag cannot redeclare it", tag: "quote" });
 });
 
 void test("`cardSchema` rejects a tag the core table has, and carries the rest", async (t) => {
-  // doctest:L262
   const dish = cardSchema("dish", { fields: { body: body(z.string()) }, markdocTags: { garnish: { render: "Garnish" } } });
   t.check(Object.keys(dish.markdocTags ?? {}), [
     "garnish",
@@ -315,7 +288,6 @@ void test("`cardSchema` rejects a tag the core table has, and carries the rest",
 // schema carries the added field too.
 // The doctest gave each example 120s before a still-running notice.
 void test("card.mood and card.score both type-check in the delta's summarize; a field ne...", async (t) => {
-  // doctest:L318
   t.check(
     typecheckFixture(`${FIXTURE_HEAD}
 const Progress = cardSchema("progress", extendSchema(progressBase, {
@@ -340,7 +312,6 @@ void typed;
 // ### A duplicate field key fails type checking
 // The doctest gave each example 120s before a still-running notice.
 void test("A duplicate field key fails type checking", async (t) => {
-  // doctest:L338
   t.check(
     typecheckFixture(`${FIXTURE_HEAD}
 extendSchema(progressBase, { fields: { score: z.string() } });

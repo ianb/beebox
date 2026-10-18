@@ -30,6 +30,15 @@ function render(data: FileData) {
   return renderToStaticMarkup(React.createElement(CardFacts, { data, boxSlug: "test", onNavigate: () => {} }));
 }
 
+const filedAs = (path: string, type: string): string =>
+  `<dl class="mt-4"><dt>Filed at</dt><dd>${path}</dd><dt>Card type</dt><dd>${type}</dd></dl>`;
+/** The "Found by" section for a card whose only row is its prominence. */
+const foundBy = (prominence: string, extraRows: string): string =>
+  `<div class="mt-6" data-card-section="found-by"><h3 class="text-sm font-semibold mb-2">Found by</h3><dl><dt>Prominence</dt><dd>${prominence}, the type&#x27;s default</dd>${extraRows}</dl></div>`;
+/** The "Fields" section holding one row. */
+const fieldsSection = (label: string, value: string): string =>
+  `<div class="mt-6" data-card-section="fields"><h3 class="text-sm font-semibold mb-2">Fields</h3><dl class="min-w-0 max-w-full grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm text-warm-800 bbx-card-fields"><div class="contents"><dt class="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">${label}</dt><dd class="min-w-0 max-w-full"><span class="whitespace-pre-wrap [overflow-wrap:anywhere]">${value}</span></dd></div></dl></div>`;
+
 const doc = render({
   path: "_content/projects/Porch.doc.card",
   kind: "frontmatter",
@@ -141,16 +150,10 @@ void test("A landmark's body is the place summary, and most landmarks have none.
     frontmatter: { symbol: { glyph: "🤝" }, navigation: { label: "Lending" } },
     body,
   });
-  t.check([undefined, "The stove is with Idris.\n"].map((body) => ({ fields: landmark(body).includes('data-card-section="fields"'), navigation: /Navigation/.test(landmark(body)) })), [
-    {
-      fields: true,
-      navigation: true,
-    },
-    {
-      fields: true,
-      navigation: true,
-    },
-  ]);
+  const expected = filedAs("_content/lending/Lending.landmark.card", "landmark")
+    + foundBy("background", '<dt>Symbol</dt><dd class="flex items-center gap-2"><span class="inline-flex items-center justify-center flex-shrink-0 overflow-hidden w-5 h-5 text-sm" aria-hidden="true">🤝</span><span>glyph: 🤝</span></dd>')
+    + fieldsSection("Navigation", "Lending");
+  t.check([landmark(undefined), landmark("The stove is with Idris.\n")], [expected, expected]);
 });
 
 // Other body-less types keep their fields on the front.
@@ -158,7 +161,7 @@ void test("Other body-less types keep their fields on the front.", async (t) => 
   // doctest:L142
   const bodiless: Schema = { hasBodyField: false, defaultProminence: "ordinary" };
   const question = render({ path: "_content/Q.question.card", type: "question", schema: bodiless, frontmatter: { question: "Which?" } });
-  await t.checkText(question.includes('data-card-section="fields"'), "false");
+  t.check(question, filedAs("_content/Q.question.card", "question") + foundBy("ordinary", ""));
 });
 
 // ## An empty body leaves the type fields on the front
@@ -173,9 +176,10 @@ void test("With no body text, the front shows the type fields (test/lib/card-fie
     path: "_content/projects/Porch.doc.card", type: "doc", schema: docSchema,
     frontmatter: { title: "Porch", "share-id": "porch-quotes" }, body,
   });
-  t.check([emptyDoc(undefined).includes('data-card-section="fields"'), emptyDoc("# Porch\n").includes('data-card-section="fields"'), emptyDoc("Quotes.\n").includes('data-card-section="fields"')], [
-    false,
-    false,
-    true,
+  const front = filedAs("_content/projects/Porch.doc.card", "doc") + foundBy("ordinary", "");
+  t.check([emptyDoc(undefined), emptyDoc("# Porch\n"), emptyDoc("Quotes.\n")], [
+    front,
+    front,
+    front + fieldsSection("Share id", "porch-quotes"),
   ]);
 });

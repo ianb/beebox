@@ -29,16 +29,12 @@ void test("macOS (and Windows) filesystems are case-insensitive, so Foo.doc.card
   await box2.write("Foo.doc.card", "---\ntitle: Note\n---\n");
   await box2.write("foo.record.card", "---\nname: x\n---\n");
   const errors2 = await lintAttachLayout(box2.root);
-  t.check(errors2.map((e) => e.path).toSorted(), [
-    "Foo.doc.card",
-    "foo.record.card",
+  const message =
+    'Cards in . share basename "Foo": Foo.doc.card, foo.record.card. The shared basename makes <basename>.attach/ ownership ambiguous.';
+  t.check(errors2, [
+    { path: "Foo.doc.card", rule: "basename-collision", message },
+    { path: "foo.record.card", rule: "basename-collision", message },
   ]);
-
-  // doctest:L28
-  await t.checkText(errors2.every((e) => e.rule === "basename-collision"), "true");
-
-  // doctest:L31
-  t.check(errors2[0]?.message.includes("Foo"), true);
 });
 
 // ## Different basenames (or different-case extensions) don't collide
@@ -58,7 +54,7 @@ void test("The rule is already extension-insensitive by design (comparing basena
   await box3.write("Alpha.doc.card", "---\ntitle: Note\n---\n");
   await box3.write("Beta.doc.card", "---\ntitle: Note\n---\n");
   const errors3 = await lintAttachLayout(box3.root);
-  await t.checkText(errors3.length, "0");
+  t.check(errors3, []);
 });
 
 // ## The literal `attach` name is reserved outside an attach scope
@@ -74,7 +70,12 @@ void test("The literal `attach` name is reserved outside an attach scope", async
   const box4 = await makeTmpBox();
   await box4.write("attach/placeholder.txt", "x");
   const errors4 = await lintAttachLayout(box4.root);
-  t.check(errors4.map((e) => e.rule), [
-    "literal-attach-name",
+  t.check(errors4, [
+    {
+      path: "attach",
+      rule: "literal-attach-name",
+      message:
+        'Name "attach" is reserved (collides with the attach/ virtual ref prefix). Rename or use the <basename>.attach/ convention.',
+    },
   ]);
 });

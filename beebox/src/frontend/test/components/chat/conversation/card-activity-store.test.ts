@@ -15,9 +15,15 @@ void test("line 11", async (t) => {
   const second = "_content/kitchen/Plan.doc.card";
   activity.report(first, { kind: "modified", detail: "Updated cost" });
   const cancelled = activity.capture(first);
-  t.check(activity.capture(first).cardActivity, [
-    "modified",
-  ]);
+  t.check(activity.capture(first), {
+    openCard: "_content/house/Energy.doc.card",
+    cardActivity: [
+      "modified",
+    ],
+    cardState: {
+      modified: "Updated cost",
+    },
+  });
 
   // doctest:L20
   t.check(activity.capture(second), {
@@ -28,21 +34,47 @@ void test("line 11", async (t) => {
   activity.report(second, { kind: "scrolled", detail: "0.7" });
   activity.report(first, { kind: "modified", detail: "Updated cost again" });
   activity.accepted(cancelled);
-  t.check(activity.capture(first).cardState?.modified, "Updated cost again");
+  t.check(activity.capture(first), {
+    openCard: "_content/house/Energy.doc.card",
+    cardActivity: [
+      "modified",
+    ],
+    cardState: {
+      modified: "Updated cost again",
+    },
+  });
 
-  // doctest:L29
-  await t.checkText(activity.capture(second).cardState?.scrolled, "0.7");
+  t.check(activity.capture(second), {
+    openCard: "_content/kitchen/Plan.doc.card",
+    cardActivity: [
+      "scrolled",
+    ],
+    cardState: {
+      scrolled: "0.7",
+    },
+  });
 
   // doctest:L32
   const final = activity.capture(first);
   activity.accepted(final);
-  t.check(activity.capture(first).cardActivity, undefined);
+  t.check(activity.capture(first), {
+    openCard: "_content/house/Energy.doc.card",
+  });
 
-  // doctest:L37
-  await t.checkText(activity.capture(second).cardState?.scrolled, "0.7");
+  t.check(activity.capture(second), {
+    openCard: "_content/kitchen/Plan.doc.card",
+    cardActivity: [
+      "scrolled",
+    ],
+    cardState: {
+      scrolled: "0.7",
+    },
+  });
 
   // doctest:L40
-  t.check(activity.capture("_content/house/Energy.doc.card?view=summary").cardActivity, undefined);
+  t.check(activity.capture("_content/house/Energy.doc.card?view=summary"), {
+    openCard: "_content/house/Energy.doc.card",
+  });
 
   // doctest:L43
   t.check(activity.capture(undefined), {});

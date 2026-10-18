@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FrontmatterFields } from "../../src/components/MarkdownCardView/FrontmatterFields.js";
@@ -135,36 +136,31 @@ function sectionOrder(markup: string): Array<string | undefined> {
 }
 
 void test("line 24", async (t) => {
-  // doctest:L25
-  await t.checkText(html.includes("<button") && html.includes("../Course.course.card") && html.includes("Acids and bases"), "true");
+  t.check(cells(html), "|Context|Ref|../Course.course.card|Text|Acids and bases|");
+  t.check(html, any(String).includes("<button"));
 });
 
 void test("Frontmatter todos render as todos", async (t) => {
-  // doctest:L59
   const fm = renderFields({ todos });
   t.check([...fm.matchAll(/data-todo-status="(\w+)"(?: data-todo-assigned="\w+")? data-todo-locator="([^"]*)"/g)].map((m) => `${m[2]}:${m[1]}`).join(" "), "todos[0]:open todos[2]:done");
-
-  // doctest:L63
-  await t.checkText(fm.includes("Summarize the quotes") || fm.includes('field-label">Text<'), "false");
+  t.check(cells(fm), "|Todos|Book the inspector|due Sep 15|Order lumber|");
 });
 
 // Once the card's query answers, the overdue entry says so:
 void test("Once the card's query answers, the overdue entry says so:", async (t) => {
-  // doctest:L70
-  await t.checkText(renderFields({ todos }).includes("overdue"), "false");
-
-  // doctest:L73
-  await t.checkText(renderFields({ todos }, plate).includes("overdue · "), "true");
+  t.check(cells(renderFields({ todos })), "|Todos|Book the inspector|due Sep 15|Order lumber|");
+  t.check(cells(renderFields({ todos }, plate)), "|Todos|Book the inspector|overdue · Sep 15|Order lumber|");
 });
 
 // A `todos:` value that is not a valid todo list keeps the generic rendering,
 // and only a top-level `todos` key is special:
 void test("A todos: value that is not a valid todo list keeps the generic rendering, and...", async (t) => {
-  // doctest:L81
-  await t.checkText(renderFields({ todos: [{ due: "2026-09-15" }] }).includes("data-todo-status"), "false");
-
-  // doctest:L84
-  await t.checkText(renderFields({ meta: { todos } }).includes("data-todo-status"), "false");
+  const bad = renderFields({ todos: [{ due: "2026-09-15" }] });
+  t.check(cells(bad), "|Todos|Due|2026-09-15|");
+  t.check(bad, not(any(String).includes("data-todo-status")));
+  const nested = renderFields({ meta: { todos } });
+  t.check(cells(nested), "|Meta|Todos|Text|Book the inspector|Due|2026-09-15|Text|Summarize the quotes|Assigned|agent|Status|done|Text|Order lumber|Status|done|");
+  t.check(nested, not(any(String).includes("data-todo-status")));
 });
 
 void test("Fields read as a person reads them", async (t) => {
@@ -174,10 +170,8 @@ void test("Fields read as a person reads them", async (t) => {
     lender: { name: "Idris", ref: "../people/Idris_Okafor.person.card", role: "lender" },
     quantity: { value: "1 stove", note: "missing lid" },
   });
-  t.check([cells(record), /<button[^>]*>Idris<\/button>/.test(record)], [
-    "|Back by|2026-10-20|Lender|Idris| (lender)|Quantity|1 stove| (missing lid)|",
-    true,
-  ]);
+  t.check(cells(record), "|Back by|2026-10-20|Lender|Idris| (lender)|Quantity|1 stove| (missing lid)|");
+  t.check(record, any(String).matches(/<button[^>]*>Idris<\/button>/));
 });
 
 // A `ref` beside `text` can be the evidence for the text, as in a guide's
@@ -195,37 +189,28 @@ void test("A ref beside text can be the evidence for the text, as in a guide's o
 // does.
 void test("A web address that reads as one value stays a link, as a bare URL field does.", async (t) => {
   // doctest:L131
-  t.check(
-    /<a href="https:\/\/maps\.example\/shelf"[^>]*>https:\/\/maps\.example\/shelf<\/a>/.test(renderFields({ location: { text: "https://maps.example/shelf" } }))
-    ,
-    true,
-  );
+  t.check(renderFields({ location: { text: "https://maps.example/shelf" } }), any(String).matches(/<a href="https:\/\/maps\.example\/shelf"[^>]*>https:\/\/maps\.example\/shelf<\/a>/));
 });
 
 void test("A body heading that repeats the title is hidden", async (t) => {
   // doctest:L171
   const repeated = await renderCard("# Trip Report\n\nWe drove down on Friday.\n\n{% todo %}Return the van{% /todo %}\n");
-  t.check([repeated.includes("<h1"), repeated.includes("We drove down"), /data-todo-locator="(\d+)"/.exec(repeated)?.[1]], [
-    false,
-    true,
-    "8",
-  ]);
+  t.check(repeated, not(any(String).includes("<h1")));
+  t.check(repeated, any(String).includes("We drove down"));
+  t.check(/data-todo-locator="(\d+)"/.exec(repeated)?.[1], "8");
 });
 
 // A different first heading stays:
 void test("A different first heading stays:", async (t) => {
-  // doctest:L179
-  await t.checkText((await renderCard("# Day one\n\nWe drove down on Friday.\n")).includes("Day one</h1>"), "true");
+  t.check(await renderCard("# Day one\n\nWe drove down on Friday.\n"), any(String).includes("Day one</h1>"));
 });
 
 void test("An empty bodied card shows its fields, not \"No body content\"", async (t) => {
   // doctest:L208
   const empty = await renderRecord("# Solder\n");
-  t.check([empty.includes('data-card-section="frontmatter"'), empty.includes("Tray 3"), empty.includes("No body content")], [
-    true,
-    true,
-    false,
-  ]);
+  t.check(empty, any(String).includes('data-card-section="frontmatter"'));
+  t.check(empty, any(String).includes("Tray 3"));
+  t.check(empty, not(any(String).includes("No body content")));
 });
 
 // The front reads "Location" and "With Idris", with no nested "Text" row and
@@ -262,11 +247,9 @@ void test("The front reads \"Location\" and \"With Idris\", with no nested \"Tex
 void test("With a body, the fields stay in Properties:", async (t) => {
   // doctest:L248
   const full = await renderRecord("Lead-free, 0.8mm.\n");
-  t.check([full.includes('data-card-section="frontmatter"'), full.includes("Tray 3"), full.includes("Lead-free")], [
-    false,
-    false,
-    true,
-  ]);
+  t.check(full, not(any(String).includes("data-card-section=\"frontmatter\"")));
+  t.check(full, not(any(String).includes("Tray 3")));
+  t.check(full, any(String).includes("Lead-free"));
 });
 
 void test("An embed reads title, summary line, body, then fields", async (t) => {
@@ -278,16 +261,10 @@ void test("An embed reads title, summary line, body, then fields", async (t) => 
     detail: "Tray 3 · 2 spools",
     schema: { hasBodyField: true, defaultProminence: "ordinary" },
   });
-  t.check([sectionOrder(rendered), rendered.split("Solder<").length - 1, rendered.includes("Tray 3 · 2 spools"), rendered.includes("Lead-free")], [
-    [
-      "heading",
-      "body",
-      "frontmatter",
-    ],
-    1,
-    true,
-    true,
-  ]);
+  t.check(sectionOrder(rendered), ["heading", "body", "frontmatter"]);
+  t.check(rendered, any(String).matches(/^(?:(?!Solder<)[^])*Solder<(?:(?!Solder<)[^])*$/));
+  t.check(rendered, any(String).includes("Tray 3 · 2 spools"));
+  t.check(rendered, any(String).includes("Lead-free"));
 });
 
 // A page shows the same card with its fields in Properties and no heading of

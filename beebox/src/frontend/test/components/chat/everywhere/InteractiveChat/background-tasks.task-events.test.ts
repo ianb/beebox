@@ -109,21 +109,15 @@ void test("A started event registers a task; progress merges into it; settled re
   // doctest:L91
   let tasks: LiveTask[] = [];
   tasks = applyTaskEvent(tasks, { phase: "started", taskId: "t1", description: "Generate image", status: "running" });
-  await t.checkText(tasks.length, "1");
+  t.check(tasks, [{ taskId: "t1", description: "Generate image", status: "running" }]);
 
   // doctest:L96
   tasks = applyTaskEvent(tasks, { phase: "progress", taskId: "t1", lastToolName: "Bash", elapsedMs: 3000 });
-  t.check(tasks[0], {
-    taskId: "t1",
-    description: "Generate image",
-    status: "running",
-    lastToolName: "Bash",
-    elapsedMs: 3000,
-  });
+  t.check(tasks, [{ taskId: "t1", description: "Generate image", status: "running", lastToolName: "Bash", elapsedMs: 3000 }]);
 
   // doctest:L100
   tasks = applyTaskEvent(tasks, { phase: "settled", taskId: "t1", status: "completed" });
-  await t.checkText(tasks.length, "0");
+  t.check(tasks, []);
 
   // ## Reducer — terminal status removes even without a settled phase
   //
@@ -133,7 +127,7 @@ void test("A started event registers a task; progress merges into it; settled re
   // doctest:L111
   let live = applyTaskEvent([], { phase: "started", taskId: "t9", status: "running" });
   live = applyTaskEvent(live, { phase: "updated", taskId: "t9", status: "failed" });
-  await t.checkText(live.length, "0");
+  t.check(live, []);
 
   // ## Reducer — progress for an unknown task is ignored
   //
@@ -141,5 +135,5 @@ void test("A started event registers a task; progress merges into it; settled re
   // tick for an unregistered id is a no-op (no phantom pill appears):
 
   // doctest:L123
-  await t.checkText(applyTaskEvent([], { phase: "progress", taskId: "ghost", elapsedMs: 100 }).length, "0");
+  t.check(applyTaskEvent([], { phase: "progress", taskId: "ghost", elapsedMs: 100 }), []);
 });

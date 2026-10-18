@@ -100,6 +100,9 @@ Patterns are imported from `agent-doctest/check`. Each pattern is typed:
 | `uuid()` | a UUID string |
 | `isoDate()` | an ISO date or timestamp string, or a valid `Date` |
 | `oneOf("a", "b")` | one of the listed values |
+| `not(x)`, `not(p)` | any value except `x`, or any value `p` does not match: a new id that must differ from the old one, or text that must not hold a string |
+| `is(x)` | exactly `x`: for an object, the same instance, not an equal copy |
+| `instanceOf(C)` | an instance of class `C`, such as an error's class |
 | `` str`/box/${any(String)}/notes` `` | a string with patterns inside |
 | `optional(p)` | a key that may be absent; when present it matches `p`. Accepted only on a property that is optional in the actual value's type |
 | `unordered([...])` | an array in any order, each item matched once |

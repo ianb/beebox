@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { createEmptyWorkspaceState } from "../../../src/components/chat/workspace/state-model.js";
 import type { WorkspaceState } from "../../../src/components/chat/workspace/state-types.js";
 import { createWorkspaceBrowserStoreWithStorage, type WorkspaceStorage } from "../../../src/components/chat/workspace/WorkspaceProvider/workspace-browser-store.js";
@@ -37,6 +38,35 @@ function workspaceWith(path: string): WorkspaceState {
   };
 }
 
+const EMPTY_STATE: WorkspaceState = {
+  version: 2,
+  tabs: {},
+  panes: {
+    left: { paths: [], activePath: null, display: "chat" },
+    right: { paths: [], activePath: null, display: "chat" },
+  },
+  layout: { kind: "split" },
+  lastCardPane: "left",
+  chatAnchor: "right",
+  mobileView: { kind: "chat", returnPath: null },
+  lastInteraction: { kind: "chat" },
+};
+
+/** The state after opening these cards in order on desktop; the last one is active. */
+function openedCards(cards: { path: string; label: string; at: number }[]): WorkspaceState {
+  const last = cards[cards.length - 1];
+  if (last === undefined) throw new Error("openedCards needs a card");
+  return {
+    ...EMPTY_STATE,
+    tabs: Object.fromEntries(cards.map((c) => [c.path, { target: target(c.path), label: c.label, pinned: false, lastActiveAt: c.at }])),
+    panes: {
+      left: { paths: cards.map((c) => c.path), activePath: last.path, display: "cards" },
+      right: { paths: [], activePath: null, display: "chat" },
+    },
+    lastInteraction: { kind: "card", path: last.path },
+  };
+}
+
 const legacyRaw = JSON.stringify({
   v: 1,
   activePath: "b",
@@ -55,7 +85,10 @@ void test("The API base isolates same-origin development worktrees", async (t) =
   t.check(workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-1" }), "bbx:workspace-panes:v2:paper-cards/test1:session-1");
 
   // doctest:L58
-  await t.checkText(workspaceStorageKey({ apiBase: "/other-worktree/test1/api", logicalConversationId: "session-1" }) === workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-1" }), "false");
+  t.check(
+    workspaceStorageKey({ apiBase: "/other-worktree/test1/api", logicalConversationId: "session-1" }),
+    not(workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-1" })),
+  );
 
   // Production URLs retain their box identity too.
 
@@ -68,16 +101,7 @@ void test("Version 2 round-trips complete targets and pane state", async (t) => 
   // doctest:L72
   const original = workspaceWith("notes/card.md");
   const restored = parseWorkspaceState(serializeWorkspaceState(original));
-  t.check(restored.source, "v2");
-
-  // doctest:L77
-  await t.checkText(restored.notices.length, "0");
-
-  // doctest:L80
-  t.check(restored.state.tabs["notes/card.md"]?.target.path, "notes/card.md");
-
-  // doctest:L83
-  t.check(restored.state.tabs["notes/card.md"]?.pinned, true);
+  t.check(restored, { state: original, source: "v2", notices: [] });
 
   // An entry whose registry key disagrees with its serialized target is invalid;
   // the bad payload is not rewritten or cleared by this pure parser.
@@ -86,19 +110,24 @@ void test("Version 2 round-trips complete targets and pane state", async (t) => 
   const mismatched = JSON.parse(serializeWorkspaceState(original));
   mismatched.tabs["notes/card.md"].url = "/views/other.md";
   const rejected = parseWorkspaceState(JSON.stringify(mismatched));
-  t.check(rejected.source, "empty");
-
-  // doctest:L97
-  t.check(rejected.notices.map((notice) => notice.code).join(","), "invalid-v2");
+  t.check(rejected, {
+    state: EMPTY_STATE,
+    source: "empty",
+    notices: [{ code: "invalid-v2", message: "The saved workspace could not be restored. Your current workspace is still usable." }],
+  });
 
   // Malformed JSON and a wrong version likewise fall back to an initial workspace
   // with a reportable notice rather than throwing.
 
   // doctest:L105
-  t.check(parseWorkspaceState("{").notices[0]?.code, "invalid-v2");
+  const invalidV2: ReturnType<typeof parseWorkspaceState> = {
+    state: EMPTY_STATE,
+    source: "empty",
+    notices: [{ code: "invalid-v2", message: "The saved workspace could not be restored. Your current workspace is still usable." }],
+  };
+  t.check(parseWorkspaceState("{"), invalidV2);
 
-  // doctest:L108
-  t.check(parseWorkspaceState('{"version":1}').state.version, 2);
+  t.check(parseWorkspaceState('{"version":1}'), invalidV2);
 });
 
 // ## Invariant drift is repaired at restore
@@ -111,13 +140,11 @@ void test("A structurally valid snapshot can still point at a closed active card
   const drifted = JSON.parse(serializeWorkspaceState(workspaceWith("a")));
   drifted.panes.left.activePath = "missing";
   const repaired = parseWorkspaceState(JSON.stringify(drifted));
-  t.check(repaired.source, "v2");
-
-  // doctest:L125
-  t.check(repaired.state.panes.left.activePath, "a");
-
-  // doctest:L128
-  t.check(repaired.notices[0]?.code, "repaired-v2");
+  t.check(repaired, {
+    state: workspaceWith("a"),
+    source: "v2",
+    notices: [{ code: "repaired-v2", message: "Some saved workspace entries were repaired while restoring." }],
+  });
 });
 
 // ## A proven-local legacy strip imports into the left pane
@@ -128,24 +155,32 @@ void test("A structurally valid snapshot can still point at a closed active card
 void test("The caller must establish provenance before passing a legacy value to this fu...", async (t) => {
   // doctest:L139
   const legacy = importTrustedLegacyWorkspace(legacyRaw);
-  t.check(legacy.source, "legacy");
-
-  // doctest:L143
-  t.check(legacy.state.panes.left.paths.join(","), "a,b");
-
-  // doctest:L146
-  t.check(legacy.state.panes.left.activePath, "b");
-
-  // doctest:L149
-  t.check(legacy.state.panes.right.display, "chat");
-
-  // doctest:L152
-  t.check(legacy.state.tabs.a?.pinned, true);
+  t.check(legacy, {
+    state: {
+      ...EMPTY_STATE,
+      tabs: {
+        a: { target: target("a"), label: "A", pinned: true, lastActiveAt: 1 },
+        b: { target: { path: "b", viewer: "markdown", params: {}, viewState: null }, label: "B", pinned: false, lastActiveAt: 2 },
+      },
+      panes: {
+        left: { paths: ["a", "b"], activePath: "b", display: "cards" },
+        right: { paths: [], activePath: null, display: "chat" },
+      },
+      mobileView: { kind: "card", path: "b" },
+      lastInteraction: { kind: "card", path: "b" },
+    },
+    source: "legacy",
+    notices: [],
+  });
 
   // Invalid trusted legacy data is recoverable and reportable.
 
   // doctest:L159
-  t.check(importTrustedLegacyWorkspace("not-json").notices[0]?.code, "invalid-legacy");
+  t.check(importTrustedLegacyWorkspace("not-json"), {
+    state: EMPTY_STATE,
+    source: "empty",
+    notices: [{ code: "invalid-legacy", message: "The saved card tabs could not be restored. Your current workspace is still usable." }],
+  });
 });
 
 // ## Restore precedence preserves the newest trusted state
@@ -157,8 +192,8 @@ void test("A valid v2 snapshot wins over a trusted legacy strip.", async (t) => 
     restoreWorkspaceState({
       v2Raw: serializeWorkspaceState(workspaceWith("stored")),
       trustedLegacyRaw: legacyRaw,
-    }).state.panes.left.activePath,
-    "stored",
+    }),
+    { state: workspaceWith("stored"), source: "v2", notices: [] },
   );
 
   // An old key whose provenance is unknown is not supplied to restoration. The
@@ -166,19 +201,15 @@ void test("A valid v2 snapshot wins over a trusted legacy strip.", async (t) => 
   // state it intentionally ignored.
 
   // doctest:L180
-  const empty = restoreWorkspaceState({ v2Raw: null });
-  t.check(empty.source, "empty");
-
-  // doctest:L184
-  await t.checkText(empty.notices.length, "0");
+  t.check(restoreWorkspaceState({ v2Raw: null }), { state: EMPTY_STATE, source: "empty", notices: [] });
 
   // Blocked browser storage also has a notice that does not contain stored data.
 
   // doctest:L191
-  t.check(storageUnavailableNotice(new Error("denied")).code, "storage-unavailable");
-
-  // doctest:L194
-  await t.checkText(storageUnavailableNotice(new Error("denied")).message.includes("denied"), "true");
+  t.check(storageUnavailableNotice(new Error("denied")), {
+    code: "storage-unavailable",
+    message: "Workspace persistence is unavailable (denied). This workspace will remain usable until reload.",
+  });
 });
 
 // ## The browser store has an injected persistence boundary
@@ -210,28 +241,32 @@ void test("The store writes each transition synchronously.", async (t) => {
 
   // doctest:L226
   const assignedKey = workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-42" });
-  t.check(parseWorkspaceState(values.get(assignedKey) ?? null).state.panes.left.activePath, "draft");
+  t.check(parseWorkspaceState(values.get(assignedKey) ?? null).state, openedCards([{ path: "draft", label: "Draft", at: 1 }]));
 
   // doctest:L230
   const provisionalKey = workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "provisional-17" });
   values.set(provisionalKey, serializeWorkspaceState(workspaceWith("stale-provisional")));
   store.dispatch({ type: "openCard", target: target("after-assignment"), label: "After assignment", at: 2, viewport: "desktop" });
-  t.check(parseWorkspaceState(values.get(assignedKey) ?? null).state.tabs["after-assignment"]?.label, "After assignment");
-
-  // doctest:L236
-  t.check(parseWorkspaceState(values.get(assignedKey) ?? null).state.tabs["stale-provisional"], undefined);
+  // The stale provisional snapshot does not leak into the assigned key.
+  t.check(parseWorkspaceState(values.get(assignedKey) ?? null).state, openedCards([
+    { path: "draft", label: "Draft", at: 1 },
+    { path: "after-assignment", label: "After assignment", at: 2 },
+  ]));
 
   // Selecting another conversation persists the old one and loads the selected
   // snapshot. Selecting it again restores the assigned workspace.
 
   // doctest:L244
   store.select("session-other");
-  t.check(store.get().panes.left.activePath, null);
+  t.check(store.get(), EMPTY_STATE);
 
   // doctest:L248
   store.dispatch({ type: "openCard", target: target("other"), label: "Other", at: 2, viewport: "desktop" });
   store.select("session-42");
-  t.check(store.get().panes.left.activePath, "after-assignment");
+  t.check(store.get(), openedCards([
+    { path: "draft", label: "Draft", at: 1 },
+    { path: "after-assignment", label: "After assignment", at: 2 },
+  ]));
 });
 
 // A rejected write leaves the current conversation's in-memory workspace in place
@@ -250,26 +285,24 @@ void test("A rejected write leaves the current conversation's in-memory workspac
   const rejectedStore = createWorkspaceBrowserStoreWithStorage({ apiBase: "/paper-cards/test1/api", boxSlug: "test1--paper-cards", storage: rejectedStorage });
   rejectedStore.select("first");
   rejectedStore.dispatch({ type: "openCard", target: target("still-here"), label: "Still here", at: 1, viewport: "desktop" });
-  t.check(rejectedStore.get().panes.left.activePath, "still-here");
+  const stillHere = openedCards([{ path: "still-here", label: "Still here", at: 1 }]);
+  t.check(rejectedStore.get(), stillHere);
 
   // doctest:L273
-  t.check(rejectedStore.getNotice()?.includes("write denied"), true);
+  t.check(rejectedStore.getNotice(), "Workspace persistence is unavailable (write denied). This workspace will remain usable until reload.");
 
   // doctest:L276
   rejectReads = true;
   rejectedStore.select("second");
-  t.check(rejectedStore.get().panes.left.activePath, null);
+  t.check(rejectedStore.get(), EMPTY_STATE);
 
   // doctest:L281
-  t.check(rejectedStore.getNotice()?.includes("read denied"), true);
+  t.check(rejectedStore.getNotice(), "Workspace persistence is unavailable (read denied). This workspace will remain usable until reload.");
 
   // doctest:L284
   rejectedStore.dispatch({ type: "openCard", target: target("second-only"), label: "Second only", at: 2, viewport: "desktop" });
   rejectedStore.select("first");
-  t.check(rejectedStore.get().panes.left.activePath, "still-here");
-
-  // doctest:L289
-  t.check(rejectedStore.get().tabs["second-only"], undefined);
+  t.check(rejectedStore.get(), stillHere);
 });
 
 // ## Selecting a conversation with nothing saved makes it an arrival candidate
