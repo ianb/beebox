@@ -512,6 +512,29 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   - Golden tests on 10 fixture doctests covering each census feature.
   - A run over all 1,092 files in a scratch copy, reporting files that fail
     to generate, typecheck, pass, or lint, and lint findings by rule.
+- **Result (2026-10-18, converter at d2da6ab1f, scratch worktree).** All
+  1,094 doctests (four hand-converted ones excluded) convert.
+  - **Runtime:** 1,091 pass with tap's assertion count equal to the
+    manifest's. The other three: two `test/manual/` files need real
+    services and fail as doctests too; `codex-chat.failure-reporting`
+    checks that a stack names its own `.doctest` file, so a worker must
+    change that expected text (an exception to "checks are not edited").
+  - **Typecheck:** 3 errors in 2 programs. `test/exports.test.ts` needs
+    `build:declarations` first (the doctest script builds them); a frontend
+    test that imports a backend route hits a DOM/Node `ReadableStream`
+    clash; one file has unused callback parameters.
+  - **Lint:** 569 files (52%) are clean. 2,043 findings remain in the
+    others, almost all in the doctests' own code, which no lint checked
+    before: literal error messages (275), `as` casts (112), unused
+    variables (124), `max-params` (143), `max-lines` (51 files). 261 files
+    have only one or two findings.
+  - **Zero-model path:** the 569 clean files need no worker. The converter
+    fixes that got there from 18 clean files: one-line expected text as a
+    quoted string, setup imports hoisted, `import "agent-doctest/tap"` for
+    types, root `teardown`, fresh generated names.
+  - **Counted by assertion totals, not exit codes:** tap's junit output
+    reported a file that failed to load as one skipped test. The driver's
+    runtime fidelity must compare counts.
 
 ### Track V — destination validation (phase 1 gate)
 
