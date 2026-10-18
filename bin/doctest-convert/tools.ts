@@ -158,3 +158,8 @@ export function doctestsUnder(dir: string): string[] {
   const r = run({ cmd: "git", args: ["ls-files", "--cached", "--others", "--exclude-standard", "--", `${base}/**/*.doctest.md`, `${base}/*.doctest.md`], cwd: "." });
   return [...new Set(r.stdout.split("\n").filter((f) => f !== "" && existsSync(join(REPO, f))))].toSorted();
 }
+
+/** Whether git tracks the repo-relative file. */
+export function isTracked(file: string): boolean {
+  return run({ cmd: "git", args: ["ls-files", "--error-unmatch", "--", file], cwd: "." }).status === 0;
+}

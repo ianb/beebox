@@ -20,7 +20,7 @@ import { z } from "zod";
 import { checkSpans, checksByMarker } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { find, loadAll, save, type FileState, type StateFile } from "./state.ts";
-import { blobOf, convert, doctestsUnder, eslint, REPO, typecheck } from "./tools.ts";
+import { blobOf, convert, doctestsUnder, eslint, isTracked, REPO, typecheck } from "./tools.ts";
 
 const TYPECHECK_ROUNDS = 6;
 const LINT_ROUNDS = 3;
@@ -146,7 +146,12 @@ function testsIn(source: string): number {
 /** Convert the doctests under `dir` that have no conversion, or whose source changed since. */
 export function prepare(dir: string, log: (s: string) => void): StateFile {
   const all = loadAll();
-  const doctests = doctestsUnder(dir).filter((d) => find(all, d)?.file.blob !== blobOf(d));
+  const changed = doctestsUnder(dir).filter((d) => find(all, d)?.file.blob !== blobOf(d));
+  // A tracked test file the driver did not write is someone's own test:
+  // never overwrite it. (An untracked one is a stopped run's output.)
+  const taken = changed.filter((d) => find(all, d) === null && isTracked(testOf(d)));
+  for (const d of taken) log(`${d}: skipped, ${testOf(d)} already exists; merge the two by hand`);
+  const doctests = changed.filter((d) => !taken.includes(d));
   const state: StateFile = all.get(dir.replace(/\/$/, "")) ?? { dir: dir.replace(/\/$/, ""), files: {} };
   if (doctests.length === 0) {
     log(`${dir}: nothing to convert`);

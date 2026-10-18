@@ -6,9 +6,11 @@
  * value (first argument) is listed for review.
  *
  * Arguments are compared as token sequences, so whitespace, comments, quote
- * style, and trailing commas do not count as changes.
+ * style, and trailing commas do not count as changes. The state file keeps
+ * a hash of each; git history has the text.
  */
 
+import { createHash } from "node:crypto";
 import ts from "typescript";
 
 const CHECK_METHODS = new Set(["check", "checkText", "checkThrows"]);
@@ -16,9 +18,9 @@ const MARKER = /\/\/ doctest:L(\d+)\b/g;
 
 export interface CheckCall {
   method: string;
-  /** The first argument, as canonical tokens. */
+  /** A hash of the first argument's canonical tokens. */
   actual: string;
-  /** The last argument, as canonical tokens. */
+  /** A hash of the last argument's canonical tokens. */
   expected: string;
   /** 1-based line of the call in the file. */
   line: number;
@@ -41,6 +43,10 @@ export function canonical(node: ts.Node, file: ts.SourceFile): string {
   };
   visit(node);
   return tokens.filter((tok, i) => !(tok === "," && [")", "]", "}"].includes(tokens[i + 1] ?? ""))).join(" ");
+}
+
+function digest(text: string): string {
+  return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
 /** Marker lines in source order, with the file line each sits on. */
@@ -75,7 +81,7 @@ export function checkSpans(source: string, fileName: string): CheckSpan[] {
           marker: marks.findLast((m) => m.line <= start)?.marker ?? 0,
           start,
           end: lineOf(node.getEnd()),
-          call: { method: node.expression.name.text, actual: canonical(first, file), expected: canonical(last, file), line: start },
+          call: { method: node.expression.name.text, actual: digest(canonical(first, file)), expected: digest(canonical(last, file)), line: start },
         });
       }
     }
@@ -125,8 +131,8 @@ export function compareChecks(opts: { before: ChecksByMarker; source: string; fi
       const n = now[i];
       if (n === undefined) continue;
       if (n.method !== w.method) problems.push(`${where}: t.${w.method} became t.${n.method} (line ${n.line})`);
-      if (n.expected !== w.expected) problems.push(`${where}: expected value changed (line ${n.line}): ${w.expected} → ${n.expected}`);
-      if (n.actual !== w.actual) changedActuals.push(`${where} (line ${n.line}): ${w.actual} → ${n.actual}`);
+      if (n.expected !== w.expected) problems.push(`${where}: expected value changed (line ${n.line})`);
+      if (n.actual !== w.actual) changedActuals.push(`${where}, line ${n.line}`);
     }
   }
   return { problems, changedActuals };
