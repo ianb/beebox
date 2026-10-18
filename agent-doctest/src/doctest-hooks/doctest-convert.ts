@@ -22,7 +22,7 @@
 import { bracketBalance, type CodeBlock, parseCodeBlocks, parseExamples, type Example, type ThrowsExample } from "./doctest-parse.ts";
 import { parseFenceInfo, type FenceInfo } from "./doctest-info.ts";
 import { doctestOracle } from "./doctest-load.ts";
-import { oracleSplit, rewriteImports, splitExpression, typeOnlyImports } from "./doctest-split.ts";
+import { oracleSplit, rewriteImports, splitExpression, splitStaticImports, typeOnlyImports } from "./doctest-split.ts";
 import { blockDeclarations, declaresName } from "./doctest-runtime.ts";
 import { nextTemplateState } from "./doctest-parse.ts";
 
@@ -112,8 +112,12 @@ function indent(code: string, by: string): string[] {
   return out;
 }
 
-/** Text as a template literal: backslashes, backticks, and `${` escaped. */
-function templateLiteral(text: string): string {
+/**
+ * Expected text as a string literal: a quoted string when it is one line,
+ * else a template literal with backslashes, backticks, and `${` escaped.
+ */
+function textLiteral(text: string): string {
+  if (!text.includes("\n")) return JSON.stringify(text);
   return `\`${text.replaceAll("\\", "\\\\").replaceAll("`", "\\`").replaceAll("${", "\\${")}\``;
 }
 
@@ -210,7 +214,7 @@ function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: Rea
   return {
     marker,
     setup,
-    code: call({ prefix: `await ${ctx.tName}.checkText`, expr: actual, arg: templateLiteral(ex.expected) }),
+    code: call({ prefix: `await ${ctx.tName}.checkText`, expr: actual, arg: textLiteral(ex.expected) }),
     entry: { line: ctx.md, kind: "check", expected: ex.expected },
   };
 }
@@ -251,6 +255,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const examples: ManifestExample[] = [];
 
   const setupLines: string[] = [];
+  const setupImports: string[] = [];
   const typeImports = new Set<string>();
   const afters: string[] = [];
   const tests: OpenTest[] = [];
@@ -261,7 +266,11 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   for (const { block, info, prose, heading } of blocks) {
     const content = block.content;
     if (info.kind === "setup") {
-      setupLines.push(...prose, content, "");
+      // Static imports go to the top of the file, where lint wants them.
+      const { imports: hoisted, rest } = splitStaticImports(content);
+      setupImports.push(...hoisted);
+      if (rest.trim() !== "") setupLines.push(...prose, rest.replace(/^\n+/, ""), "");
+      else setupLines.push(...prose);
       continue;
     }
     if (info.kind === "teardown") {
@@ -358,7 +367,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   if (testLines.some((l) => l.trim().endsWith(`= ${printedName}();`))) helpers.push(tapImport("printed", printedName));
   const imports = [`import ${afters.length > 0 ? `${rootName}, ` : ""}{ ${tapImport("test", testName)} } from "tap";`];
   if (helpers.length > 0) imports.push(`import { ${helpers.join(", ")} } from "agent-doctest/check";`);
-  imports.push(...typeImports);
+  imports.push(...setupImports, ...typeImports);
 
   const parts = [title.join("\n"), imports.join("\n"), setupLines.join("\n").trimEnd(), afters.join("\n").trimEnd(), testLines.join("\n").trimEnd(), trailing.join("\n")]
     .filter((p) => p.trim() !== "");

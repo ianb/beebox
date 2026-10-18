@@ -30,5 +30,5 @@ void test("The test the cleanup belongs to.", async (t) => {
   });
   // doctest:L16
   const handle = { open: true };
-  await t.checkText(handle.open, `true`);
+  await t.checkText(handle.open, "true");
 });

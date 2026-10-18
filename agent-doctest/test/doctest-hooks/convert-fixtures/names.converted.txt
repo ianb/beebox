@@ -20,7 +20,7 @@ tapRoot.teardown(async () => {
 // The doctest gave each example 120s before a still-running notice.
 void test("line 14", async (tap) => {
   // doctest:L15
-  await tap.checkText(t.label, `mine`);
+  await tap.checkText(t.label, "mine");
 });
 
 // An example import becomes a dynamic import in place, and a type-only import moves to module level:
@@ -29,7 +29,7 @@ void test("An example import becomes a dynamic import in place, and a type-only 
   const { basename } = await import("node:path");
 
   const parsed: ParsedPath | null = null;
-  await tap.checkText(basename("/a/b.txt"), `b.txt`);
+  await tap.checkText(basename("/a/b.txt"), "b.txt");
 });
 
 // A try block's value, which needs the esbuild split:
@@ -43,6 +43,6 @@ void test("A try block's value, which needs the esbuild split:", async (tap) => 
       return e instanceof SyntaxError;
     }
     })(),
-    `true`,
+    "true",
   );
 });

@@ -190,6 +190,34 @@ export function rewriteImports(expression: string): string {
   return lines.join("\n");
 }
 
+/**
+ * Split module-level code into its static import statements and the rest.
+ * Only imports at column 0 outside a template literal count; the rest keeps
+ * its lines in order. Moving the imports first changes nothing at run time:
+ * static imports are hoisted.
+ */
+export function splitStaticImports(code: string): { imports: string[]; rest: string } {
+  const lines = code.split("\n");
+  const imports: string[] = [];
+  const rest: string[] = [];
+  let inTemplate = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (inTemplate || !/^import[\s"'*{]/.test(line)) {
+      rest.push(line);
+      inTemplate = nextTemplateState(inTemplate, line);
+      continue;
+    }
+    let end = i;
+    while (end < lines.length - 1 && !importEnds(lines[end] ?? "")) end++;
+    const statement = lines.slice(i, end + 1).join("\n");
+    if (IMPORT_RE.test(statement) || BARE_IMPORT_RE.test(statement)) imports.push(statement);
+    else rest.push(...lines.slice(i, end + 1));
+    i = end;
+  }
+  return { imports, rest: rest.join("\n") };
+}
+
 /** One name a type-only import binds, in an example block. */
 export interface TypeImport {
   /** 0-based line within the code of the name this import binds. */
