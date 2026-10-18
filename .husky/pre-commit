@@ -60,6 +60,11 @@ echo "[pre-commit] .: pnpm path-leak-check"
 echo "[pre-commit] .: pnpm commit-blocklist-check"
 (cd "$REPO_DIR" && pnpm commit-blocklist-check)
 
+# Testing cutover (plan retire-doctest, track 1b): no new .doctest.md files.
+# Before the docs-only exit, since a doctest is a .md file.
+echo "[pre-commit] .: no new doctests"
+(cd "$REPO_DIR" && node --import tsx bin/no-new-doctests.ts)
+
 # Mobile-contract tripwire (pre-commit half): records a pending violation when a
 # contract-surface anchor file is staged without a docs/mobile-contract.md
 # update, so the commit-msg hook can enforce the Contract-Unchanged: override.

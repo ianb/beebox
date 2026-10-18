@@ -1,7 +1,7 @@
 {
   // Typecheck-only. This package has no build step and never emits: its
   // `exports` map serves the TypeScript sources directly (`"./check":
-  // "./src/tap-check/check.ts"`), and there is no `build` script. The tsconfig used to
+  // "./src/tap-check/text/compare.ts"`), and there is no `build` script. The tsconfig used to
   // carry `outDir`/`rootDir`/`declaration` anyway, describing an emit nobody
   // ran.
   //
@@ -30,6 +30,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["eslint.config.ts", "src/**/*"],
+  "include": ["eslint.config.ts", "src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -294,8 +294,11 @@ const enabledRules: Linter.RulesRecord = {
   "unicorn/no-unreadable-iife": "error",
   // Drop useless empty args on collection constructors (new Set([]) → new Set())
   "unicorn/no-useless-collection-argument": "error",
-  // Don't pass undefined explicitly when it's the default
-  "unicorn/no-useless-undefined": "error",
+  // Don't write undefined where it's already the default (`return undefined`,
+  // `let x = undefined`). Arguments are exempt — boxholder decision
+  // 2026-10-18: an explicit `undefined` argument can be the value that
+  // matters, as in `t.check(result, undefined)`, which the rule flagged.
+  "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   // Drop unnecessary .0 fractions — 1.0 → 1
   "unicorn/no-zero-fractions": "error",
   // Disabled: conflicts with prettier's numeric separator formatting
@@ -664,6 +667,25 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
       rules: { "single-export/single-export": "off" },
     },
     {
+      // The error/* rules are off in tests — boxholder decision 2026-10-18.
+      // A test throws a plain Error on purpose: as the input the code under
+      // test receives, from a fake that simulates a failure or must not be
+      // called, or as a guard that narrows setup. A custom error class for
+      // each adds nothing; converted doctests had 297 such lines.
+      //
+      // max-lines is 600 in tests, not 300 — boxholder decision 2026-10-18:
+      // a test file holds a setup and many examples, so it runs longer than
+      // the module it tests, though past some length it still needs a split.
+      // Of 1,094 converted doctests, 73 were over 300 lines and 8 over 600.
+      files: ["**/test/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
+      rules: {
+        "error/no-generic-error": "off",
+        "error/require-custom-error": "off",
+        "error/no-literal-error-message": "off",
+        "max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
+      },
+    },
+    {
       // Type-aware rules. projectService builds a TS program per project,
       // which adds roughly 1.5s to a single-file lint run (the per-edit hook)
       // and ~2s to a full-tree run — keep this entry small. Scoped to src/
@@ -755,7 +777,7 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
         // reachable to begin with. Burned down 2026-07-10: ~200 sites fixed
         // across beebox (backend + frontend), beebox-clerk, and
         // agent-doctest; 3 sites kept a justified single-line disable comment
-        // (agent-doctest/src/tap-check/check.ts and
+        // (agent-doctest/src/tap-check/text/compare.ts and
         // beebox frontend useSSRMachine.ts, router.tsx) where the
         // condition is genuinely defensive against a case the type system
         // can't see (e.g. a cast at a parse/runtime boundary).

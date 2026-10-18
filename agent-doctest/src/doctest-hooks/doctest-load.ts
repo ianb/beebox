@@ -46,7 +46,10 @@ function nearestMd(lineMap: LineMap, generatedLine: number): number {
  * (see doctest-split.ts `oracleSplit`) and the module is regenerated; only
  * if that fails too is the error reported, placed on the markdown line.
  */
-function transformTestModule(markdown: string, opts: { filePath: string; typecheck?: boolean }): { mod: GeneratedModule; code: string } {
+function transformTestModule(
+  markdown: string,
+  opts: { filePath: string; typecheck?: boolean },
+): { mod: GeneratedModule; code: string; oracle: ReadonlySet<number> } {
   const { filePath, typecheck = false } = opts;
   const oracle = new Set<number>();
   const mdLines = markdown.split("\n");
@@ -75,8 +78,18 @@ function transformTestModule(markdown: string, opts: { filePath: string; typeche
         hints: parseErrorHints({ problem: failure.text, text: mdLines[line - 1] ?? "", prevExpectedGap }),
       }));
     }
-    return { mod, code };
+    return { mod, code, oracle };
   }
+}
+
+/**
+ * The markdown lines of the examples whose statement/expression split comes
+ * from esbuild, exactly as the loader computes them. Throws
+ * DoctestSyntaxError where the loader would. The converter uses this so a
+ * converted test splits each example as the doctest run did.
+ */
+export function doctestOracle(markdown: string, filePath: string): ReadonlySet<number> {
+  return transformTestModule(markdown, { filePath }).oracle;
 }
 
 /** The body module tap runs: the transformed test module, mapped back to the markdown. */

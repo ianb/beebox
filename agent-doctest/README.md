@@ -1,5 +1,13 @@
 # agent-doctest
 
+> **Testing cutover (since 2026-10-18).** Write new tests as `.test.ts` files that
+> use `t.check` ([reference](../beebox/docs/testing/check.md)). Do not create `.doctest.md` files;
+> pre-commit rejects them. Existing doctests are being converted (plan
+> [retire-doctest](../beebox/docs/plans/retire-doctest.md)). If your change affects an existing doctest, edit
+> it in place; the conversion picks up your edit. If git reports a
+> modify/delete conflict on a doctest that was converted, convert your
+> version with `node agent-doctest/bin/doctest-to-ts.mjs <file>`.
+
 Write tests as executable markdown. Each fenced code block becomes a [tap](https://node-tap.org/) test case. Prose between blocks is documentation.
 
 ## Why

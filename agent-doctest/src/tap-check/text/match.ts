@@ -6,8 +6,8 @@
  * produced showing exactly where things diverge (see diff.ts).
  */
 
-import { buildDiff } from "./diff.js";
-import { compileWildcards } from "./wildcards.js";
+import { buildDiff } from "../diff.js";
+import { compileWildcards } from "../wildcards.js";
 
 /** Extractions: an array of positional captures with named properties. */
 export type Extractions = string[] & Record<string, string>;

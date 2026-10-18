@@ -1,0 +1,73 @@
+// # Collisions
+//
+// Setup declares `t`, and an example declares `tap`, `out`, and `printed`: the
+// converter's own names must not collide with them.
+
+import tap3, { test as tapTest2 } from "tap";
+import "agent-doctest/tap";
+import { printed as printed2 } from "agent-doctest/check";
+import type { Stats } from "node:fs";
+
+const t = 1;
+
+// Setup that declares `test` and `tapTest`, and a block comment holding an import:
+const test = 1;
+const tapTest = 2;
+/*
+import "./not-a-real-module.ts";
+*/
+
+tap3.teardown(async () => {
+  try {
+
+    const stats: Stats | null = null;
+    void stats;
+  } catch (error) {
+    console.error("teardown failed:", error);
+    process.exitCode = 1;
+  }
+});
+
+void tapTest2("line 16", async (tap2) => {
+  const out2 = printed2();
+  const print = out2.print;
+  // doctest:L17
+  const tap = 2;
+  const out = 3;
+  const printed = 4;
+  print("x");
+  await tap2.checkText(out2.with(tap + out + printed + t), `x
+10`);
+});
+
+// A comma expression in a throws example is one expression:
+void tapTest2("A comma expression in a throws example is one expression:", async (tap2) => {
+  // doctest:L29
+  await tap2.checkThrows(async () => ((() => { throw new Error("boom"); })(), 1), "Error");
+});
+
+void tapTest2("line 43", async (tap2) => {
+  // doctest:L44
+  await tap2.checkText(test + tapTest, "3");
+});
+
+// `print` passed along rather than called:
+void tapTest2("print passed along rather than called:", async (tap2) => {
+  const out2 = printed2();
+  const print = out2.print;
+  // doctest:L51
+  const p = print;
+  p("x");
+  await tap2.checkText(out2.with(1), `x
+1`);
+});
+
+// A `//` inside a string is not a comment that hides a `print` after it:
+void tapTest2("A // inside a string is not a comment that hides a print after it:", async (tap2) => {
+  const out2 = printed2();
+  const print = out2.print;
+  // doctest:L61
+  const url = "http://example.com"; print("y");
+  await tap2.checkText(out2.with(url), `y
+http://example.com`);
+});

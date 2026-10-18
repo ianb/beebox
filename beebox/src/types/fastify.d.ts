@@ -11,6 +11,10 @@
  * process can differ.
  */
 import "fastify";
+// The cookie plugin's reply methods. The backend program loads them through
+// server/app.ts; the frontend's test program (src/frontend/tsconfig.test.json)
+// includes this file for tests that import backend routes, and needs them too.
+import "@fastify/cookie";
 
 declare module "fastify" {
   interface FastifyInstance {

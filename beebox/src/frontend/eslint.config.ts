@@ -6,6 +6,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+import agentDoctest from "agent-doctest/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
 // docs/plans/clerk-contract-and-import-boundary.md Track 2, and the paths
@@ -227,6 +228,19 @@ export default [
           allow: [{ from: "package", name: "Redirect", package: "@tanstack/router-core" }],
         },
       ],
+    },
+  },
+  {
+    // Tests compare whole values with t.check (../../docs/testing/check.md),
+    // as in ../../eslint.config.ts. agent-doctest resolves from beebox's
+    // node_modules, as it does for these tests' tap preloads; declaring it
+    // here would make pnpm install a second set of its tap peers.
+    files: ["test/**/*.{ts,tsx}"],
+    plugins: { "agent-doctest": agentDoctest },
+    rules: {
+      "agent-doctest/check-whole-value": "error",
+      "agent-doctest/no-voided-check": "error",
+      "agent-doctest/no-tap-assert": "error",
     },
   },
 ];

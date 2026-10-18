@@ -9,7 +9,7 @@
     "build:frontend": "vite build --config src/frontend/vite.config.ts",
     "typecheck": "pnpm run '/^typecheck:(backend|frontend)$/'",
     "typecheck:backend": "tsc --noEmit",
-    "typecheck:frontend": "tsc --noEmit -p src/frontend/tsconfig.json",
+    "typecheck:frontend": "tsc --noEmit -p src/frontend/tsconfig.test.json",
     "typecheck:doctest": "doctest-typecheck --project tsconfig.json 'test/server/**/*.doctest.md' 'test/router/**/*.doctest.md' 'test/shared/**/*.doctest.md' --project src/frontend/tsconfig.json 'test/frontend/**/*.doctest.md'",
     "lint": "pnpm run '/^lint:(backend|frontend|router)$/'",
     "lint:backend": "eslint src/ test/",

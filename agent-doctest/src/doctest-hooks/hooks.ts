@@ -18,7 +18,10 @@ import { fileURLToPath } from "node:url";
 // main thread, which runs under `--import=tsx`). Its own relative imports
 // must therefore name the real `.ts` extension so Node's native loader can
 // find them — which is why this package's tsconfig sets
-// `allowImportingTsExtensions`.
+// `allowImportingTsExtensions`. The same thread strips types without tsx, so
+// nothing reachable from here may use parameter properties or enums. Code
+// that needs check/ or tap-check/ (the converter, src/convert/) imports this
+// module; this module never imports it.
 import { tsxOnlyFallback } from "./resolve-rules.ts";
 import { loadDoctestBody, doctestEntrySource, BODY_QUERY } from "./doctest-load.ts";
 
@@ -32,8 +35,14 @@ export {
   generateTestModule,
   type GeneratedModule,
 } from "./doctest-generate.ts";
-export { generateTestSource, generateTypecheckModule } from "./doctest-load.ts";
+export { generateTestSource, generateTypecheckModule, doctestOracle } from "./doctest-load.ts";
 export { DoctestSyntaxError } from "./doctest-errors.ts";
+// For the doctest-to-ts converter (src/convert/), which reads doctests the
+// way the loader does. The loader never imports the converter.
+export { bracketBalance, nextTemplateState } from "./doctest-parse.ts";
+export { parseFenceInfo, type FenceInfo } from "./doctest-info.ts";
+export { oracleSplit, rewriteImports, splitExpression, splitStaticImports, typeOnlyImports } from "./doctest-split.ts";
+export { blockDeclarations, declaresName } from "./doctest-runtime.ts";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
 //

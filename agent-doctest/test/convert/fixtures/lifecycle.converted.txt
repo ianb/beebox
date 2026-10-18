@@ -1,0 +1,35 @@
+// # Lifecycle
+
+import tap, { test } from "tap";
+import "agent-doctest/tap";
+
+tap.teardown(async () => {
+  try {
+    console.log("all done");
+  } catch (error) {
+    console.error("teardown failed:", error);
+    process.exitCode = 1;
+  }
+});
+
+// The test the cleanup belongs to.
+void test("The test the cleanup belongs to.", async (t) => {
+  // A cleanup before its test attaches to the next test.
+  t.teardown(async () => {
+    try {
+      console.log("cleanup one");
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  t.teardown(async () => {
+    try {
+      handle.open = false;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L16
+  const handle = { open: true };
+  await t.checkText(handle.open, "true");
+});

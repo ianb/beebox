@@ -3,7 +3,10 @@
  * whole-text matcher (match.ts) and the line-level diff (diff.ts).
  */
 
-import { invariant } from "./invariant.js";
+/** Should-never-happen assertion: throws when `cond` is falsy. */
+function invariant(cond: unknown, msg: string): asserts cond {
+  if (!cond) throw new Error(`Invariant violated: ${msg}`);
+}
 
 /** Typed wildcard patterns — known type names map to regex fragments. */
 export const WILDCARD_TYPES: Record<string, string> = {

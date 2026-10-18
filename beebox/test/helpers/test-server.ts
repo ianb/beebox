@@ -8,7 +8,7 @@
  *   const ctx = await createTestServer();
  *   try {
  *     const res = await ctx.server.inject({ method: "GET", url: "/test/api/status" });
- *     t.equal(res.statusCode, 200);
+ *     t.check(res.statusCode, 200);
  *   } finally {
  *     await ctx.cleanup();
  *   }

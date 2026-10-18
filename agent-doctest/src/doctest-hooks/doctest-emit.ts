@@ -103,7 +103,7 @@ export function emitExamples(examples: Array<Example | ThrowsExample>, ctx: Emit
       const check = JSON.stringify({ expected: ex.expected, label: `line ${exprMd}: ${exprFirst}` });
       out.push(...wrapped(split.expr, {
         md: exprMd,
-        prefix: `${indent}await __doctest_t.check(__doctest_withPrints(__doctest_prints, `,
+        prefix: `${indent}await __doctest_t.checkText(__doctest_withPrints(__doctest_prints, `,
         suffix: `), { check: ${check}, diagnostic: ${diagnostic} });`,
       }));
     }

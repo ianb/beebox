@@ -4,6 +4,7 @@
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
+import "agent-doctest/tap";
 import { Markdown } from "../../../src/components/Markdown/body.js";
 import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
 
@@ -24,16 +25,21 @@ test("a fenced block copies its text and confirms", async (t) => {
   });
   const view = await mount(render());
   const buttons = [...view.container.querySelectorAll("button")];
-  t.equal(buttons.length, 1, "one button, on the fence; the blockquote has none");
+  const state = (button: HTMLButtonElement) => ({
+    inside: button.closest("pre")?.tagName,
+    text: button.textContent,
+    type: button.getAttribute("type"),
+    live: button.getAttribute("aria-live"),
+  });
+  // One button, on the fence; the blockquote has none.
+  t.check(buttons.map(state), [{ inside: "PRE", text: "Copy", type: "button", live: "polite" }]);
   const [button] = buttons;
   if (button === undefined) return;
-  t.equal(button.closest("pre")?.tagName, "PRE", "the button sits in the code block");
-  t.equal(button.textContent, "Copy");
-  t.equal(button.getAttribute("type"), "button");
   await view.act(() => { button.click(); });
   await view.act(() => Promise.resolve());
-  t.same(copied, ["Hi Sam,\n\nLunch on Friday?\n"]);
-  t.equal(button.textContent, "Copied");
-  t.equal(button.getAttribute("aria-live"), "polite");
+  t.check({ copied, button: state(button) }, {
+    copied: ["Hi Sam,\n\nLunch on Friday?\n"],
+    button: { inside: "PRE", text: "Copied", type: "button", live: "polite" },
+  });
   await view.unmount();
 });

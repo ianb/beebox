@@ -9,7 +9,7 @@
 
 import { realpathSync } from "node:fs";
 import os from "node:os";
-import { alignLines } from "./diff.js";
+import { alignLines } from "../diff.js";
 import { matchExtractions } from "./match.js";
 
 const DAY_MS = 86_400_000;

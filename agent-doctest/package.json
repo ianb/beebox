@@ -4,10 +4,12 @@
   "description": "Markdown doctest runner for tap — write tests as executable documentation",
   "type": "module",
   "bin": {
-    "doctest-typecheck": "./bin/doctest-typecheck.mjs"
+    "doctest-typecheck": "./bin/doctest-typecheck.mjs",
+    "doctest-to-ts": "./bin/doctest-to-ts.mjs"
   },
   "exports": {
-    "./check": "./src/tap-check/check.ts",
+    "./check": "./src/exports/check.ts",
+    "./eslint": "./src/exports/eslint.ts",
     "./tap": "./src/tap-check/tap.ts",
     "./loader": "./src/doctest-loader.ts",
     "./hooks": "./src/doctest-hooks/hooks.ts",
