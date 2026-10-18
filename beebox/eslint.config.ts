@@ -332,7 +332,8 @@ export default [
     // Tests compare whole values with t.check (docs/testing/check.md). These
     // rules flag the lossy shapes agents write (a length, a JSON string, a
     // boolean, a comparison) and a `void` that drops a check's promise.
-    files: ["test/**/*.ts", "src/frontend/test/**/*.{ts,tsx}"],
+    // src/frontend/eslint.config.ts sets the same rules for the frontend's tests.
+    files: ["test/**/*.ts"],
     plugins: { "agent-doctest": agentDoctest },
     rules: {
       "agent-doctest/check-whole-value": "error",

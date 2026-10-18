@@ -1,0 +1,20 @@
+{
+  // What `typecheck` checks: the app (tsconfig.json) plus the frontend's tap
+  // tests and helpers under test/. The tests run under tsx with the root
+  // tsconfig, but are typed as frontend code: DOM libs, JSX, and the same
+  // path aliases. tsconfig.json stays the app's own config for Vite and
+  // editors.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": [
+    "eslint.config.ts",
+    "src",
+    "test/**/*.ts",
+    "test/**/*.tsx",
+    "../shared/**/*",
+    "../schemas/*/list-entry.tsx",
+    "../plugins/*/view.tsx",
+    "../types/markdown-it-footnote.d.ts",
+    "../types/view-widgets.d.ts"
+  ]
+}

@@ -1,8 +1,24 @@
 import { test } from "tap";
-import { check, inspect, CheckError, registerSerializer, type Extractions, type CheckResult } from "../../../src/tap-check/text/compare.js";
+import { check, inspect, CheckError, registerSerializer, type Extractions, type CheckResult, type PrintFn } from "../../../src/tap-check/text/compare.js";
 import "../../../src/tap-check/tap.js";
 import os from "node:os";
 import { suggestExpected } from "../../../src/tap-check/text/suggest.js";
+
+/** The extractions of a synchronous check; fails if the check was async. */
+function extracted(r: Extractions | Promise<Extractions>): Extractions {
+  if (r instanceof Promise) throw new Error("expected a synchronous check");
+  return r;
+}
+
+/** The result of a synchronous inspect(); fails if it was async. */
+function syncResult(r: CheckResult | Promise<CheckResult>): CheckResult {
+  if (r instanceof Promise) throw new Error("expected a synchronous inspect");
+  return r;
+}
+
+function messageOf(first: unknown): string {
+  return typeof first === "string" ? first : "";
+}
 
 function failed(r: CheckResult | Promise<CheckResult>): CheckResult & { pass: false } {
   const result = r as CheckResult;
@@ -147,25 +163,25 @@ test("check awaits promise and serializes result", async (t) => {
 // ── Function support ──
 
 test("function return value becomes actual", async (t) => {
-  t.checkText((_print) => "computed", "computed");
+  t.checkText((_print: PrintFn) => "computed", "computed");
 });
 
 test("function with print() captures output", async (t) => {
-  t.checkText((print) => {
+  t.checkText((print: PrintFn) => {
     print("line 1");
     print("line 2");
   }, "line 1\nline 2");
 });
 
 test("print() output + return value combined", async (t) => {
-  t.checkText((print) => {
+  t.checkText((print: PrintFn) => {
     print("side effect");
     return "result";
   }, "side effect\nresult");
 });
 
 test("print() with serialized return value", async (t) => {
-  t.checkText((print) => {
+  t.checkText((print: PrintFn) => {
     print("created file");
     return { status: "ok" };
   }, `created file
@@ -175,7 +191,7 @@ test("print() with serialized return value", async (t) => {
 });
 
 test("async function with print()", async (t) => {
-  await t.checkText(async (print) => {
+  await t.checkText(async (print: PrintFn) => {
     print("starting");
     await Promise.resolve();
     print("done");
@@ -256,7 +272,7 @@ test("inspect on objects shows JSON diff", async (t) => {
 });
 
 test("inspect with printer function", async (t) => {
-  const r = inspect((print) => {
+  const r = inspect((print: PrintFn) => {
     print("did something");
     return "result";
   }, "did something\nwrong");
@@ -265,7 +281,7 @@ test("inspect with printer function", async (t) => {
 });
 
 test("inspect with async function", async (t) => {
-  const r = await inspect(async (_print) => "async value", "async value") as CheckResult;
+  const r = await inspect(async (_print: PrintFn) => "async value", "async value") as CheckResult;
   t.equal(r.pass, true);
   t.equal(r.actual, "async value");
 });
@@ -277,43 +293,43 @@ test("«*» matches anything", async (t) => {
 });
 
 test("«*» extractions are positional", async (t) => {
-  const ext = t.checkText("a X b Y c", "a «*» b «*» c");
+  const ext = extracted(t.checkText("a X b Y c", "a «*» b «*» c"));
   t.equal(ext[0], "X");
   t.equal(ext[1], "Y");
   t.equal(ext.length, 2);
 });
 
 test("«*» matches empty string", async (t) => {
-  const ext = t.checkText("ab", "a«*»b");
+  const ext = extracted(t.checkText("ab", "a«*»b"));
   t.equal(ext[0], "");
 });
 
 test("«*» matches across newlines", async (t) => {
-  const ext = t.checkText("start\nmiddle\nend", "start«*»end");
+  const ext = extracted(t.checkText("start\nmiddle\nend", "start«*»end"));
   t.equal(ext[0], "\nmiddle\n");
 });
 
 // ── Named extractions ──
 
 test("«name» without =type is anonymous (positional only)", async (t) => {
-  const ext = t.checkText("commit abc123 done", "commit «hash» done");
+  const ext = extracted(t.checkText("commit abc123 done", "commit «hash» done"));
   t.equal(ext.hash, undefined);
   t.equal(ext[0], "abc123");
 });
 
 test("«name=*» captures with name", async (t) => {
-  const ext = t.checkText("commit abc123 done", "commit «hash=*» done");
+  const ext = extracted(t.checkText("commit abc123 done", "commit «hash=*» done"));
   t.equal(ext.hash, "abc123");
   t.equal(ext[0], "abc123");
 });
 
 test("«name=*» captures anything with name", async (t) => {
-  const ext = t.checkText("id: xyz", "id: «val=*»");
+  const ext = extracted(t.checkText("id: xyz", "id: «val=*»"));
   t.equal(ext.val, "xyz");
 });
 
 test("duplicate names use first match", async (t) => {
-  const ext = t.checkText("a X b Y c", "a «thing=*» b «thing=*» c");
+  const ext = extracted(t.checkText("a X b Y c", "a «thing=*» b «thing=*» c"));
   t.equal(ext.thing, "X", "named access gets first match");
   t.equal(ext[0], "X");
   t.equal(ext[1], "Y");
@@ -322,12 +338,12 @@ test("duplicate names use first match", async (t) => {
 // ── Typed matchers ──
 
 test("«date» matches ISO datetime", async (t) => {
-  const ext = t.checkText("created 2026-03-02T20:00:00Z", "created «date»");
+  const ext = extracted(t.checkText("created 2026-03-02T20:00:00Z", "created «date»"));
   t.equal(ext.date, "2026-03-02T20:00:00Z");
 });
 
 test("«date» matches date-only", async (t) => {
-  const ext = t.checkText("on 2026-03-02", "on «date»");
+  const ext = extracted(t.checkText("on 2026-03-02", "on «date»"));
   t.equal(ext.date, "2026-03-02");
 });
 
@@ -337,49 +353,49 @@ test("«date» rejects non-dates", async (t) => {
 });
 
 test("«uuid» matches UUIDs", async (t) => {
-  const ext = t.checkText("id: 550e8400-e29b-41d4-a716-446655440000", "id: «uuid»");
+  const ext = extracted(t.checkText("id: 550e8400-e29b-41d4-a716-446655440000", "id: «uuid»"));
   t.equal(ext.uuid, "550e8400-e29b-41d4-a716-446655440000");
 });
 
 test("«int» matches integers", async (t) => {
-  const ext = t.checkText("count: 42", "count: «int»");
+  const ext = extracted(t.checkText("count: 42", "count: «int»"));
   t.equal(ext.int, "42");
 });
 
 test("«int» matches negative integers", async (t) => {
-  const ext = t.checkText("offset: -5", "offset: «int»");
+  const ext = extracted(t.checkText("offset: -5", "offset: «int»"));
   t.equal(ext.int, "-5");
 });
 
 test("«number» matches decimals", async (t) => {
-  const ext = t.checkText("pi: 3.14", "pi: «number»");
+  const ext = extracted(t.checkText("pi: 3.14", "pi: «number»"));
   t.equal(ext.number, "3.14");
 });
 
 test("«number» matches scientific notation", async (t) => {
-  const ext = t.checkText("tiny: 1.5e-10", "tiny: «number»");
+  const ext = extracted(t.checkText("tiny: 1.5e-10", "tiny: «number»"));
   t.equal(ext.number, "1.5e-10");
 });
 
 test("«string» matches double-quoted strings", async (t) => {
-  const ext = t.checkText('name: "Alice"', "name: «string»");
+  const ext = extracted(t.checkText('name: "Alice"', "name: «string»"));
   t.equal(ext.string, '"Alice"');
 });
 
 test("«string» matches single-quoted strings", async (t) => {
-  const ext = t.checkText("name: 'Bob'", "name: «string»");
+  const ext = extracted(t.checkText("name: 'Bob'", "name: «string»"));
   t.equal(ext.string, "'Bob'");
 });
 
 test("«string» handles escaped quotes", async (t) => {
-  const ext = t.checkText('say: "he said \\"hi\\""', "say: «string»");
+  const ext = extracted(t.checkText('say: "he said \\"hi\\""', "say: «string»"));
   t.equal(ext.string, '"he said \\"hi\\""');
 });
 
 // ── Named + typed ──
 
 test("«name=date» captures typed with custom name", async (t) => {
-  const ext = t.checkText("from 2026-01-01 to 2026-12-31", "from «start=date» to «end=date»");
+  const ext = extracted(t.checkText("from 2026-01-01 to 2026-12-31", "from «start=date» to «end=date»"));
   t.equal(ext.start, "2026-01-01");
   t.equal(ext.end, "2026-12-31");
   t.equal(ext[0], "2026-01-01");
@@ -387,7 +403,7 @@ test("«name=date» captures typed with custom name", async (t) => {
 });
 
 test("«count=int» captures integer with custom name", async (t) => {
-  const ext = t.checkText("items: 5, pages: 2", "items: «items=int», pages: «pages=int»");
+  const ext = extracted(t.checkText("items: 5, pages: 2", "items: «items=int», pages: «pages=int»"));
   t.equal(ext.items, "5");
   t.equal(ext.pages, "2");
 });
@@ -409,7 +425,7 @@ test("standalone check() returns extractions", async (t) => {
 // ── No wildcards returns empty extractions ──
 
 test("no wildcards returns empty extractions", async (t) => {
-  const ext = t.checkText("hello", "hello");
+  const ext = extracted(t.checkText("hello", "hello"));
   t.equal(ext.length, 0);
 });
 
@@ -561,10 +577,10 @@ test("literal: arrays, single quotes, trailing commas", async (t) => {
 });
 
 test("literal: wildcards in value position, bare or quoted", async (t) => {
-  const ext = t.checkText(
+  const ext = extracted(t.checkText(
     { id: "550e8400-e29b-41d4-a716-446655440000", at: "2026-09-28T10:00:00Z", n: 3 },
     `{ id: «uuid», at: "«date»", n: «int» }`,
-  );
+  ));
   t.equal(ext.uuid, "550e8400-e29b-41d4-a716-446655440000");
   t.equal(ext.int, "3");
   t.checkText([1, 2, 3], "[1, «*»]");
@@ -620,8 +636,8 @@ test("hint: none for an ordinary mismatch", async (t) => {
 test("t.checkText() names the test point with the label, pass or fail", async (t) => {
   const calls: [string, string, Record<string, unknown> | undefined][] = [];
   const fake = Object.create(t) as typeof t;
-  fake.pass = (msg?: string) => (calls.push(["pass", msg ?? "", undefined]), true);
-  fake.fail = (msg?: string, extra?: Record<string, unknown>) => (calls.push(["fail", msg ?? "", extra]), false);
+  fake.pass = (...args: Parameters<typeof t.pass>) => (calls.push(["pass", messageOf(args[0]), undefined]), true);
+  fake.fail = (...args: Parameters<typeof t.fail>) => (calls.push(["fail", messageOf(args[0]), typeof args[0] === "string" ? args[1] : args[0]]), false);
   fake.checkText("a", { expected: "a", label: "line 3: x" });
   fake.checkText("a", { expected: "b", label: "line 7: y" });
   fake.checkText("a", "b");
@@ -632,9 +648,9 @@ test("t.checkText() names the test point with the label, pass or fail", async (t
 
 test("B1: a literal's key order follows the actual value; pretty JSON keeps its own", async (t) => {
   const actual = { kind: "box", targetBox: "test1", targetWorktree: "main" };
-  t.ok(inspect(actual, '{ kind: "box", targetWorktree: "main", targetBox: "test1" }').pass, "literal in another order");
-  t.ok(inspect(actual, '{"kind":"box","targetWorktree":"main","targetBox":"test1"}').pass, "compact JSON in another order");
+  t.ok(syncResult(inspect(actual, '{ kind: "box", targetWorktree: "main", targetBox: "test1" }')).pass, "literal in another order");
+  t.ok(syncResult(inspect(actual, '{"kind":"box","targetWorktree":"main","targetBox":"test1"}')).pass, "compact JSON in another order");
   const pretty = '{\n  "kind": "box",\n  "targetWorktree": "main",\n  "targetBox": "test1"\n}';
-  t.notOk(inspect(actual, pretty).pass, "pretty JSON in another order still fails: it is compared as written");
-  t.notOk(inspect(actual, '{ kind: "box", targetWorktree: "other", targetBox: "test1" }').pass, "a different value still fails");
+  t.notOk(syncResult(inspect(actual, pretty)).pass, "pretty JSON in another order still fails: it is compared as written");
+  t.notOk(syncResult(inspect(actual, '{ kind: "box", targetWorktree: "other", targetBox: "test1" }')).pass, "a different value still fails");
 });

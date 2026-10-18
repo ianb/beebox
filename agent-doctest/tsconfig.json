@@ -30,6 +30,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["eslint.config.ts", "src/**/*", "test/check/**/*", "test/lint/**/*", "test/observe/**/*"],
+  "include": ["eslint.config.ts", "src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

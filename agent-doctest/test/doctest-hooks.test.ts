@@ -16,6 +16,13 @@ import {
   resolve,
 } from "../src/doctest-hooks/hooks.js";
 
+/** Index an array, failing loudly (instead of typing as possibly undefined) when out of range. */
+function at<T>(items: readonly T[], index: number): T {
+  const item = items[index];
+  if (item === undefined) throw new Error(`no item at index ${index} (length ${items.length})`);
+  return item;
+}
+
 test("parseCodeBlocks extracts fenced code blocks", async (t) => {
   const md = `# Title
 
@@ -33,11 +40,11 @@ foo("bar")
 
   const blocks = parseCodeBlocks(md);
   t.equal(blocks.length, 2);
-  t.equal(blocks[0].info, "ts setup");
-  t.equal(blocks[0].content, 'import { foo } from "./foo.js";');
-  t.equal(blocks[1].info, "");
-  t.ok(blocks[1].content.includes("foo(\"bar\")"));
-  t.ok(blocks[1].content.includes("=> baz"));
+  t.equal(at(blocks, 0).info, "ts setup");
+  t.equal(at(blocks, 0).content, 'import { foo } from "./foo.js";');
+  t.equal(at(blocks, 1).info, "");
+  t.ok(at(blocks, 1).content.includes("foo(\"bar\")"));
+  t.ok(at(blocks, 1).content.includes("=> baz"));
 });
 
 test("parseCodeBlocks tracks line numbers", async (t) => {
@@ -49,7 +56,7 @@ content
 
   const blocks = parseCodeBlocks(md);
   t.equal(blocks.length, 1);
-  t.equal(blocks[0].line, 3, "content starts on line 3 (1-based)");
+  t.equal(at(blocks, 0).line, 3, "content starts on line 3 (1-based)");
 });
 
 test("parseExample: single-line result", async (t) => {
@@ -85,40 +92,40 @@ test("parseExample: multi-line expression", async (t) => {
 test("parseExamples: multiple single-line examples in one block", async (t) => {
   const examples = parseExamples('foo("a")\n=> 1\n\nfoo("b")\n=> 2\n\nfoo("c")\n=> 3');
   t.equal(examples.length, 3);
-  t.equal(examples[0].expression, 'foo("a")');
-  t.equal(examples[0].expected, "1");
-  t.equal(examples[1].expression, 'foo("b")');
-  t.equal(examples[1].expected, "2");
-  t.equal(examples[2].expression, 'foo("c")');
-  t.equal(examples[2].expected, "3");
+  t.equal(at(examples, 0).expression, 'foo("a")');
+  t.equal(at(examples, 0).expected, "1");
+  t.equal(at(examples, 1).expression, 'foo("b")');
+  t.equal(at(examples, 1).expected, "2");
+  t.equal(at(examples, 2).expression, 'foo("c")');
+  t.equal(at(examples, 2).expected, "3");
 });
 
 test("parseExamples: mixed single and multi-line", async (t) => {
   const examples = parseExamples('quick()\n=> yes\n\nslow()\n=>\nline 1\nline 2');
   t.equal(examples.length, 2);
-  t.equal(examples[0].expected, "yes");
-  t.equal(examples[1].expected, "line 1\nline 2");
+  t.equal(at(examples, 0).expected, "yes");
+  t.equal(at(examples, 1).expected, "line 1\nline 2");
 });
 
 test("parseExamples: multi-line ends at blank line", async (t) => {
   const examples = parseExamples('a()\n=>\nfoo\nbar\n\nb()\n=> baz');
   t.equal(examples.length, 2);
-  t.equal(examples[0].expected, "foo\nbar");
-  t.equal(examples[1].expected, "baz");
+  t.equal(at(examples, 0).expected, "foo\nbar");
+  t.equal(at(examples, 1).expected, "baz");
 });
 
 test("parseExamples: tracks lineOffset", async (t) => {
   const examples = parseExamples('foo()\n=> 1\n\nbar()\n=> 2');
-  t.equal(examples[0].lineOffset, 0);
-  t.equal(examples[1].lineOffset, 3);
+  t.equal(at(examples, 0).lineOffset, 0);
+  t.equal(at(examples, 1).lineOffset, 3);
 });
 
 test("parseExamples: blank lines and arrows inside a template literal are content, not boundaries", async (t) => {
   const expr = 'const s = `first\n\n=> not an arrow\nlast`';
   const examples = parseExamples(`${expr}\ns.length > 0\n=> true`);
   t.equal(examples.length, 1);
-  t.equal(examples[0].expression, `${expr}\ns.length > 0`);
-  t.equal(examples[0].expected, "true");
+  t.equal(at(examples, 0).expression, `${expr}\ns.length > 0`);
+  t.equal(at(examples, 0).expected, "true");
 });
 
 test("generateTestSource: template-literal content is emitted verbatim (no injected indent)", async (t) => {
@@ -135,8 +142,8 @@ test("parseExamples: backticks inside quoted strings or line comments don't open
   // beebox's reactor.doctest.md and once broke the whole file.
   const examples = parseExamples('desc.includes("```xml")\n=> true\n\nfoo() // don`t count `these`\n=> 1');
   t.equal(examples.length, 2);
-  t.equal(examples[0].expression, 'desc.includes("```xml")');
-  t.equal(examples[1].expected, "1");
+  t.equal(at(examples, 0).expression, 'desc.includes("```xml")');
+  t.equal(at(examples, 1).expected, "1");
 });
 
 test("generateTestSource: a semicolon at a template-literal line end is not a statement boundary", async (t) => {
@@ -537,11 +544,11 @@ test("parseExample: throws with error name and message", async (t) => {
 test("parseExamples: throws mixed with normal assertions", async (t) => {
   const examples = parseExamples('good()\n=> 42\n\nbad()\n=> throws Error\n\nalso()\n=> fine');
   t.equal(examples.length, 3);
-  t.equal(examples[0].expected, "42");
-  t.equal((examples[0] as { throws?: boolean }).throws, undefined);
-  t.equal(examples[1].expected, "Error");
-  t.equal((examples[1] as { throws?: boolean }).throws, true);
-  t.equal(examples[2].expected, "fine");
+  t.equal(at(examples, 0).expected, "42");
+  t.equal((at(examples, 0) as { throws?: boolean }).throws, undefined);
+  t.equal(at(examples, 1).expected, "Error");
+  t.equal((at(examples, 1) as { throws?: boolean }).throws, true);
+  t.equal(at(examples, 2).expected, "fine");
   t.equal((examples[2] as { throws?: boolean }).throws, undefined);
 });
 
