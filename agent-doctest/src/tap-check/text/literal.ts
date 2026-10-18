@@ -14,7 +14,7 @@
  * inside a quoted string needs nothing, since JSON.stringify keeps `«»` as is.
  */
 
-import { parseWildcardToken } from "./wildcards.js";
+import { parseWildcardToken } from "../wildcards.js";
 
 // Private-use code points: JSON.stringify leaves them unescaped and real
 // expected text does not contain them.

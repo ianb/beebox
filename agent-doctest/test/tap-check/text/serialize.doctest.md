@@ -3,7 +3,7 @@
 `serialize()` converts any value to a string for comparison in `check()`. It tries registered serializers first, then falls back to sensible defaults.
 
 ```ts setup
-import { serialize } from "../../src/tap-check/check.js";
+import { serialize } from "../../../src/tap-check/text/compare.js";
 ```
 
 Strings pass through unchanged:

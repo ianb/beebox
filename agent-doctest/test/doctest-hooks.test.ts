@@ -142,7 +142,7 @@ test("parseExamples: backticks inside quoted strings or line comments don't open
 test("generateTestSource: a semicolon at a template-literal line end is not a statement boundary", async (t) => {
   const md = '```\nconst s = `content;\nmore`;\ns.includes(";")\n=> true\n```\n';
   const source = generateTestSource(md, "/test.doctest.md");
-  t.ok(source.includes('__doctest_t.check(__doctest_withPrints(__doctest_prints, s.includes(";")\n'),
+  t.ok(source.includes('__doctest_t.checkText(__doctest_withPrints(__doctest_prints, s.includes(";")\n'),
     "the check expression is the line after the literal closes");
 });
 

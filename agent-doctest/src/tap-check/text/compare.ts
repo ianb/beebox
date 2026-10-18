@@ -10,7 +10,7 @@
  * for structural equality.
  */
 
-import { buildDiff } from "./diff.js";
+import { buildDiff } from "../diff.js";
 import { normalizeLiteral } from "./literal.js";
 import { matchExtractions, emptyExtractions, type Extractions } from "./match.js";
 import { serialize, serializeWithSource } from "./serialize.js";

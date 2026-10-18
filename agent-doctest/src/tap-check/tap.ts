@@ -1,8 +1,8 @@
 /**
- * Tap integration for check().
+ * Tap integration: `t.check`, `t.checkText`, and `t.checkThrows`.
  *
- * Adds t.check() and t.checkThrows() to all tap tests via prototype patching.
- * Loaded automatically via `--import` in .taprc node-arg.
+ * Adds the methods to all tap tests via prototype patching. Loaded
+ * automatically via `--import` in .taprc node-arg.
  *
  * Resolves @tapjs/core from the consuming project's node_modules
  * (via process.cwd()) to avoid the dual-package singleton problem
@@ -18,7 +18,9 @@
  */
 
 import { TestBase, type Extra } from "@tapjs/core";
-import { inspect, type CheckOptions, type CheckResult, type Extractions } from "./check.js";
+import { inspect, type CheckOptions, type CheckResult, type Extractions } from "./text/compare.js";
+import { NO_EXPECTED, checkValue } from "../check/compare/report.js";
+import type { Expected } from "../check/expected.js";
 
 type DoctestDiagnostic = Pick<Extra, "at" | "source">;
 
@@ -45,15 +47,44 @@ function isDoctestCheckOptions(value: string | CheckOptions | DoctestCheckOption
   return typeof value === "object" && "check" in value;
 }
 
+/** A promise of the result when `actual` is promise-like; the result itself otherwise. */
+type Settled<T, R> = T extends PromiseLike<unknown> ? Promise<R> : R;
+
+/** A promise or other thenable: its value is awaited before it is checked. */
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return typeof value === "object" && value !== null && typeof (value as { then?: unknown }).then === "function";
+}
+
 declare module "@tapjs/core" {
   interface TestBase {
-    check(
+    /**
+     * Compare the whole of `actual` with `expected`. Matching is exact: an
+     * extra, missing, or different key fails. Patterns (`any(String)`,
+     * `uuid()`, `[others]`, ...) stand in for values that vary;
+     * `capture(pattern)` keeps the matched value for a later check.
+     *
+     * With no `expected`, the check fails and prints a suggested value.
+     */
+    // NoInfer: `T` comes from `actual` alone. Inferring it from `expected` too
+    // would widen it to fit a wrong expected value instead of reporting it.
+    check<T>(actual: T, expected?: NoInfer<Expected<Awaited<T>>>): Settled<T, void>;
+    /**
+     * Compare `actual`'s serialized text with `expected` text, which may
+     * hold `«»` wildcards. For command output and other text; use `check`
+     * for values.
+     */
+    checkText(
       actual: unknown,
       expected: string | CheckOptions | DoctestCheckOptions,
     ): Extractions | Promise<Extractions>;
+    /**
+     * Assert that `fn` throws (or rejects). `expected` is `"Name"` to check
+     * the error's name, or `"Name: message"` to check both; the message may
+     * hold `«»` wildcards.
+     */
     checkThrows(
       fn: () => unknown,
-      options: DoctestThrowsOptions,
+      expected: string | DoctestThrowsOptions,
     ): Extractions | Promise<Extractions>;
   }
 }
@@ -89,7 +120,7 @@ function report(
   t: InstanceType<typeof TestBase>,
   { result, diagnostic = {}, label }: DoctestCheckResult,
 ): Extractions {
-  (t as { currentAssert: unknown }).currentAssert = (t as { check: unknown }).check;
+  (t as { currentAssert: unknown }).currentAssert = (t as { checkText: unknown }).checkText;
 
   // A label names the test point, pass or fail ("line 42: s.toUpperCase()").
   if (result.pass) {
@@ -107,7 +138,27 @@ function report(
   return result.extractions;
 }
 
-TestBase.prototype.check = function tapCheck(
+TestBase.prototype.check = function tapCheckValue(this: InstanceType<typeof TestBase>, ...args: unknown[]): unknown {
+  const [actual, ...rest] = args;
+  const expected = rest.length === 0 ? NO_EXPECTED : rest[0];
+  const run = (value: unknown): void => {
+    (this as { currentAssert: unknown }).currentAssert = (this as { check: unknown }).check;
+    const outcome = checkValue(value, expected);
+    if (outcome.pass) {
+      this.pass("");
+      return;
+    }
+    const extra: Record<string, unknown> = {};
+    if (outcome.mismatches !== undefined) extra.mismatches = literalBlock(outcome.mismatches);
+    if (outcome.diff !== undefined) extra.diff = literalBlock(outcome.diff);
+    extra.suggested = literalBlock(outcome.suggested);
+    if (outcome.generalized !== undefined) extra.generalized = literalBlock(outcome.generalized);
+    this.fail(outcome.message, extra);
+  };
+  return isThenable(actual) ? Promise.resolve(actual).then(run) : run(actual);
+} as TestBase["check"];
+
+TestBase.prototype.checkText = function tapCheckText(
   actual: unknown,
   expected: string | CheckOptions | DoctestCheckOptions,
 ): Extractions | Promise<Extractions> {
@@ -138,8 +189,13 @@ TestBase.prototype.check = function tapCheck(
  */
 TestBase.prototype.checkThrows = function tapCheckThrows(
   fn: () => unknown,
-  { expected, mode, diagnostic, label: pointName }: DoctestThrowsOptions,
+  options: string | DoctestThrowsOptions,
 ): Extractions | Promise<Extractions> {
+  // A plain string is the expected error: "Name" checks the name, and
+  // "Name: message" checks both (as a doctest's `=> throws` line does).
+  const { expected, mode, diagnostic, label: pointName }: DoctestThrowsOptions = typeof options === "string"
+    ? { expected: options, mode: options.includes(": ") ? "full" : "name" }
+    : options;
   (this as { currentAssert: unknown }).currentAssert = (this as { checkThrows: unknown }).checkThrows;
 
   const finish = (caught: unknown, threw: boolean): Extractions => {
@@ -175,8 +231,8 @@ TestBase.prototype.checkThrows = function tapCheckThrows(
   } catch (e: unknown) {
     return finish(e, true);
   }
-  if (returned instanceof Promise) {
-    return returned.then(
+  if (isThenable(returned)) {
+    return Promise.resolve(returned).then(
       () => finish(null, false),
       (e: unknown) => finish(e, true),
     );

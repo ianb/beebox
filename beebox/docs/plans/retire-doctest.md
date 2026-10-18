@@ -231,7 +231,6 @@ counted 51,762 prose lines and 110,201 code lines, so the result is roughly
 - **check:** `t.check(actual, expected?)`, a method on tap's test object.
   - It compares the whole value against a typed expected value.
   - It reports a failure and the test continues.
-  - It returns the captures.
   - It replaces the prototype overload of today's `t.check` (`tap.ts`).
 - **checkText:** `t.checkText(actual, text)`. This is the doctest `=>`
   semantics: serialize to text, then match with `«»` wildcards. Today's
@@ -252,8 +251,13 @@ counted 51,762 prose lines and 110,201 code lines, so the result is roughly
 - **`[others]`:** a symbol key in an expected object. Its value is the
   pattern that every key not listed must match. `notAllowed()` is the default,
   written out.
-- **capture:** `pattern.as("name")` records the matched actual value. `check`
-  returns `{ name: value }`, typed from the pattern.
+- **capture:** `capture(pattern)` is a handle that matches like `pattern` and
+  keeps the matched value as `.value`, typed from the pattern.
+  - It replaced `.as("name")` during track 1. Returning captures by name
+    needed a generic expected type, and that type broke the type checker's
+    own excess-property check on nested keys.
+  - A handle keeps the expected parameter non-generic, so a misspelled key
+    is reported at any depth as `'z' does not exist`.
 - **suggestion:** the TypeScript literal printed on failure, or when
   `expected` is omitted. It is built from the actual value.
 - **fidelity manifest:** per doctest, the list of its executable examples
@@ -322,8 +326,11 @@ Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion
   - Methods: `t.check`, `t.checkText`, `t.checkThrows`.
   - Patterns and markers: `any`, `anything`, `uuid`, `isoDate`, `oneOf`,
     `optional`, `str`, `others`, `notAllowed`.
-  - Refinements and capture: `.as`, `.startsWith`, `.endsWith`, `.includes`,
-    `.matches`, `.int`, `.between`, `.positive`.
+  - Refinements: `.startsWith`, `.endsWith`, `.includes`, `.matches`,
+    `.int`, `.between`, `.positive`, `.closeTo`.
+  - Capture: `capture(pattern)` and its `.value`.
+  - Collections: `unordered([...])`. It was added from the generative
+    review: a multiset match that keeps multiplicity.
 - **First implementation chunk:**
   - Patterns, matcher (with the value boundary above), diff, suggestion, and
     the three tap methods, with `agent-doctest/test/check.test.ts`.
@@ -496,7 +503,7 @@ Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion
          checks (the phase 2 worker task).
        - T6: strengthen a converted file's `checkText` and weak assertions
          (the phase 3 worker task).
-       - T7: create a record, capture its id with `.as`, then check a list
+       - T7: create a record, capture its id with `capture()`, then check a list
          that must contain it.
      - Scored per run:
        - whether it passes;
