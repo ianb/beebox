@@ -70,8 +70,8 @@ declare module "@tapjs/core" {
     check<T>(actual: T, expected?: NoInfer<Expected<Awaited<T>>>): Settled<T, void>;
     /**
      * Compare `actual`'s serialized text with `expected` text, which may
-     * hold `«»` wildcards. For command output and other text; use `check`
-     * for values.
+     * hold `«»` wildcards. A string's trailing newlines are not compared.
+     * For command output and other text; use `check` for values.
      */
     checkText(
       actual: unknown,
@@ -158,6 +158,11 @@ TestBase.prototype.check = function tapCheckValue(this: InstanceType<typeof Test
   return isThenable(actual) ? Promise.resolve(actual).then(run) : run(actual);
 } as TestBase["check"];
 
+/** A string's trailing newlines, which expected text in a doctest cannot hold, are not compared. */
+function trimEnd(value: unknown): unknown {
+  return typeof value === "string" ? value.replace(/\n+$/, "") : value;
+}
+
 TestBase.prototype.checkText = function tapCheckText(
   actual: unknown,
   expected: string | CheckOptions | DoctestCheckOptions,
@@ -165,7 +170,9 @@ TestBase.prototype.checkText = function tapCheckText(
   const check = isDoctestCheckOptions(expected) ? expected.check : expected;
   const diagnostic = isDoctestCheckOptions(expected) ? expected.diagnostic : undefined;
   const label = typeof check === "object" ? check.label : undefined;
-  const result = inspect(actual, check);
+  const result = actual instanceof Promise
+    ? actual.then((value) => inspect(trimEnd(value), check))
+    : inspect(trimEnd(actual), check);
 
   if (result instanceof Promise) {
     return result.then((resolved) => report(this, {

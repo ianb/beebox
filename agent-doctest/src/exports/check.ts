@@ -36,3 +36,5 @@ export {
   type Extractions,
 } from "../tap-check/text/compare.js";
 export { runCommand, tsxCommand, CommandStartError, type CommandOptions, type CommandResult } from "../observe/command.js";
+export { eventually, type EventuallyOptions } from "../observe/eventually.js";
+export { printed, type Printed } from "../observe/printed.js";

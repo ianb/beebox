@@ -34,6 +34,7 @@ export {
 } from "./doctest-generate.ts";
 export { generateTestSource, generateTypecheckModule } from "./doctest-load.ts";
 export { DoctestSyntaxError } from "./doctest-errors.ts";
+export { convertDoctest, ConvertError, type Conversion, type Manifest, type ManifestExample } from "./doctest-convert.ts";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
 //
