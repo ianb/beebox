@@ -2,6 +2,10 @@
  * Lock files for the conversion driver: created exclusively, holding the
  * owner's pid and what it works on. A lock whose owner is gone is stale and
  * is taken over, so a killed driver does not block the next one.
+ *
+ * Accepted gap: two drivers that take over the same stale lock at the same
+ * moment can both succeed. That needs a crashed driver and two dispatches
+ * started together; an OS-level lock would close it.
  */
 
 import { spawnSync } from "node:child_process";
@@ -17,7 +21,7 @@ export type LockInfo = z.infer<typeof LockSchema>;
 const WAIT_STEP_MS = 1000;
 const WAIT_LIMIT_MS = 2 * 60 * 60 * 1000;
 
-function isAlive(pid: number): boolean {
+export function isAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;

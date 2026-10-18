@@ -23,7 +23,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writ
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { BatchInUseError, NothingToDispatchError, SlotBusyError, ToolOutputError } from "./errors.ts";
-import { readLock, stateLockPath, tryLock, withLock } from "./locks.ts";
+import { isAlive, readLock, stateLockPath, tryLock, withLock } from "./locks.ts";
 import { REPO } from "./tools.ts";
 import { select, verify, type Selected } from "./verify.ts";
 import { loadAll, STATE_DIR, writeProgress } from "./state.ts";
@@ -88,7 +88,11 @@ function claimSlot(tests: readonly string[]): { slot: string; release: () => voi
   const slots = Array.from({ length: SLOT_COUNT }, (_, i) => join(slotsDir(), `slot-${i + 1}`)).filter((s) => existsSync(s));
   for (const slot of slots) {
     if (!tryLock(`${slot}.lock`, tests)) continue;
-    const held = slots.filter((o) => o !== slot).flatMap((o) => readLock(`${o}.lock`)?.files ?? []);
+    // A reservation whose owner has exited holds nothing.
+    const held = slots
+      .filter((o) => o !== slot)
+      .map((o) => readLock(`${o}.lock`))
+      .flatMap((l) => (l !== null && isAlive(l.pid) ? l.files : []));
     const overlap = tests.filter((t) => held.includes(t));
     if (overlap.length > 0) {
       rmSync(`${slot}.lock`, { force: true });
