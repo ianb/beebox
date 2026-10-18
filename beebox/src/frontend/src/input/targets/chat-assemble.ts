@@ -3,7 +3,7 @@
  * payload (docs/implemented-plans/input-extraction.md, chunk 1). Replaces the five
  * scattered payload builders (typed handleSend, keyword-voice submit, the
  * desktop/mobile stop-and-send buttons, recovered dictation), whose exact
- * output strings are pinned by test/frontend/emission-assemble.doctest.md.
+ * output strings are pinned by src/frontend/test/components/chat.emission-assemble.test.ts.
  *
  * Assembly lives with the target, not the input (design decision recorded
  * in docs/plans/input-widget.md): the `<typed>`/`<speech>` wrapper rules

@@ -15,7 +15,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { loadSessionHistory, sessionHistoryReadStats } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
 import type { SessionLogSlice } from "../../../../src/cli/lib/session.js";

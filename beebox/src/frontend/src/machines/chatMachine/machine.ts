@@ -347,7 +347,7 @@ export const chatMachine = setup({
         // already running is authoritative: waitForTranscriptEntry
         // (core/chat/session/transcript-sync.ts) holds `result`/`done` until
         // the turn is durable, and onDone swaps messages in + clears streamText
-        // atomically. See test/frontend/chat-machine-finalize.doctest.md.
+        // atomically. See src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts.
         REFRESH: { actions: () => logFsm("refresh-ignored-refreshing") },
         SEND: { actions: { type: "queueSend", params: { from: "refreshing" } } },
       },

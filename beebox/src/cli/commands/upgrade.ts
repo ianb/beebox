@@ -81,7 +81,7 @@ class InstalledVersionMissingError extends Error {
 
 /**
  * Identifies which external command a `CommandRunner` call is for — lets a
- * fake runner (doctests) selectively fail one step while passing the rest
+ * fake runner (tests) selectively fail one step while passing the rest
  * through, or fail the FIRST call and succeed a later retried one
  * (`pnpm-install` runs again, as `pnpm-install-restore`, during revert).
  *
@@ -118,10 +118,10 @@ export interface RunCommandResult {
 
 /** Every external process `bbx upgrade` spawns (pnpm, git-reset aside, and
  *  the box's own `bbx`) goes through this single injection point — the seam
- *  doctests use to simulate a step failing without a real network or a real
+ *  tests use to simulate a step failing without a real network or a real
  *  built engine, while everything else (the git snapshot/reset, the actual
  *  files on disk) stays real. `git reset --hard` itself is NOT run through
- *  this — it's the one operation whose real effect the revert-path doctest
+ *  this — it's the one operation whose real effect the revert-path test
  *  needs to observe, so it always goes through `resetHard` (git.ts)
  *  directly. */
 export type CommandRunner = (args: RunCommandArgs) => Promise<RunCommandResult>;
@@ -229,7 +229,7 @@ export interface UpgradeOptions {
 
 export interface UpgradeDeps {
   runCommand?: CommandRunner;
-  /** Override the box-root lookup start path — for doctests that can't `cd` the process. */
+  /** Override the box-root lookup start path — for tests that can't `cd` the process. */
   startPath?: string;
 }
 
@@ -280,7 +280,7 @@ function failingPluginHealthRows(health: RunCommandResult): string[] {
 
 /**
  * Run the full upgrade. Exported (rather than inlined in `.action()`) so
- * doctests can call it directly with a fake `runCommand` and inspect the
+ * tests can call it directly with a fake `runCommand` and inspect the
  * real filesystem/git effects. See the module doc comment for the step list
  * and the old/new engine handoff.
  */

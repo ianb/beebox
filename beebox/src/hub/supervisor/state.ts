@@ -41,7 +41,7 @@ type PersistedState = z.infer<typeof stateFileSchema>;
 export interface HubStateOptions {
   /** The loaded hub config's path — `hub-state.json` is written beside it. */
   configPath: string;
-  /** Injectable clock (defaults to `Date.now`) so a lazy hub and its doctests
+  /** Injectable clock (defaults to `Date.now`) so a lazy hub and its tests
    *  share one time source. */
   now?: () => number;
 }

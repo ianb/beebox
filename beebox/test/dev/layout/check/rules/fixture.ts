@@ -1,5 +1,5 @@
 /**
- * Build a `PackageLayout` by hand for rule doctests. Paths are relative to
+ * Build a `PackageLayout` by hand for rule tests. Paths are relative to
  * the package root `pkg`; `imports` lists resolved targets (also relative to
  * `pkg`), with `type:` marking a type-only edge and a bare name marking an
  * external package. Directories are derived from the file paths.
@@ -118,7 +118,7 @@ export function layout(spec: FixtureSpec): PackageLayout {
   };
 }
 
-/** Findings as `rule path` lines, sorted, for compact doctest output. */
+/** Findings as `rule path` lines, sorted, for compact test output. */
 export function summary(findings: Array<{ rule: string; path: string }>): string {
   return findings.map((f) => `${f.rule} ${f.path}`).toSorted().join("\n");
 }

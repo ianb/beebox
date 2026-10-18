@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import { syncConnector, addDays, loadConnectorActivity } from "../../../../src/connector-activity/core.js";

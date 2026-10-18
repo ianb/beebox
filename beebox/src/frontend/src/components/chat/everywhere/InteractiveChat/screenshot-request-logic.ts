@@ -3,7 +3,7 @@
  * session matching, expiry, capture-outcome→answer mapping, and the FIFO +
  * indicators reducer. Split from `screenshot-request-handler.ts` (the React hook
  * + network/DOM side) so this half imports nothing browser-coupled and the
- * decisions are doctestable under the Node tier — same split as
+ * decisions are testable under the Node tier — same split as
  * `background-tasks.ts` (pure) vs `BackgroundTasks.tsx` (view).
  */
 

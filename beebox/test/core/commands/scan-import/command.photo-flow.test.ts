@@ -13,14 +13,14 @@ import { createFakeScanVision } from "../../../../src/services/scan-vision.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { parseCardText } from "../../../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../../../src/schemas.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import assert from "node:assert/strict";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import Sharp from "sharp";
 import { z } from "zod";
 import type { ScanPageAnalysis } from "../../../../src/core/describe-images/gemini.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import type { FakeScanVisionService } from "../../../../src/services/scan-vision.js";
 import { isRecord } from "../../../../src/shared/is-record.js";
 

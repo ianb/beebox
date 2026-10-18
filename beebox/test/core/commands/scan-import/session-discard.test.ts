@@ -24,8 +24,8 @@ import { runPdfMode } from "../../../../src/core/commands/scan-import/pdf.js";
 import { runPhotoMode } from "../../../../src/core/commands/scan-import/command.js";
 import { createFakeScanVision } from "../../../../src/services/scan-vision.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { textPdf } from "../../../helpers/pdf-fixtures.js";
 
 async function refuseCommits(box: TmpBox) {

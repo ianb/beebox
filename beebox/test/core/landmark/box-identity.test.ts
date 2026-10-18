@@ -9,8 +9,8 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { readBoxIdentity } from "../../../src/core/landmark/box-identity.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 
 const identity = (box: TmpBox) => readBoxIdentity({ boxRoot: box.root, slug: "kitchen-box" });
 

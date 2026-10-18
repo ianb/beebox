@@ -1024,6 +1024,27 @@ Decided with the boxholder on 2026-10-18, after the generative review:
 - **First implementation chunk:** the runner-config edits, plus the
   selection, ledger, and tiers branches with their `bin/` tests.
 
+- **Progress (2026-10-18): done.** The last doctest (`scripts/knip-doctest-imports`)
+  went with the script it tested. Four agents took one area each; the
+  helpers were renamed after (`test-helpers.ts`, `test-route-server.ts`).
+  Decisions made on the way:
+  - No staged-test typecheck in the hook: each package's typecheck program
+    already includes its tests (`bin/test-roots.ts`).
+  - The full-suite schedule's doctest typecheck became a full typecheck
+    (`schedules/full-suite/typecheck.ts`): `pnpm typecheck` at the root and
+    in every workspace package with the script, a held condition as before.
+    A commit's hook typechecks only the packages it touches.
+  - beebox `typecheck:backend` builds the export declarations first:
+    `test/exports.test.ts` imports `beebox/cards` through `dist/*.d.ts`,
+    which only `typecheck:doctest` used to build.
+  - `bin/test-graph-fixture.ts` resolves its temp root's real path; the old
+    doctest plugin had hidden that esbuild reports importers by real path
+    (issue filed for a symlinked checkout).
+  - The `// doctest:L<n>` markers stay in the tests for track 5, which reads
+    them against the conversion record in git history.
+  - Temp boxes keep the `bbx-doctest-` prefix: tests, the sweep, and issues
+    name it.
+
 ## Could this be simpler?
 
 - **The simplest version:** stop new doctests and leave the rest (the rule

@@ -20,7 +20,7 @@ import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { defaultSpawnChild, type ChildProc } from "../../src/hub/supervisor/child-spawn.js";
 import { waitForHttp } from "../../src/hub/child-process-utils.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const delay = () => new Promise((resolve) => setTimeout(resolve, 25));
 

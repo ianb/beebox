@@ -9,7 +9,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { syncBoxGuidance } from "../../../src/core/box/guidance-sync/core.js";
 import { ensureInstructionMapInclude } from "../../../src/core/maps/finalize/core.js";
 import { ensureAgentContext } from "../../../src/core/docs-gen/generate/agents-md.js";

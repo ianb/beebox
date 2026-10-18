@@ -10,7 +10,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { pluginLintIssues } from "../../../../src/core/card-lint/core/plugin-lint.js";
 import type { PluginDefinition } from "../../../../src/cards/plugin-definition.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 const fixturePlugin = (lintCards: NonNullable<PluginDefinition["lintCards"]>): PluginDefinition => ({
   name: "courseware",

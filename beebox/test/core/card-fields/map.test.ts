@@ -12,7 +12,7 @@ import { parse, stringify } from "yaml";
 import { parseFieldMap, fieldMapPlanner } from "../../../src/core/card-fields/map.js";
 import { applyFieldEdits } from "../../../src/core/card-fields/field-edits.js";
 import { applyFieldMap } from "../../../src/core/card-fields/apply.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const map = parseFieldMap(parse(`
 types:

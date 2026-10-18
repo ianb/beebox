@@ -15,7 +15,7 @@ import {
   seedFeaturesForNewChat,
 } from "../../../src/core/landmark/features.js";
 import type { LandmarkNavigationData } from "../../../src/schemas/landmark.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## readLandmarkFeatures — read from a navigation role
 void test("readLandmarkFeatures — read from a navigation role", async (t) => {

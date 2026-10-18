@@ -13,7 +13,7 @@ import { utimes } from "node:fs/promises";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import assert from "node:assert/strict";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { expandLabel } from "../../../../src/core/landmark/expand-label.js";
 

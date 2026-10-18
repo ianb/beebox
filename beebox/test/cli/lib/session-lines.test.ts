@@ -12,7 +12,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { readTranscriptLines } from "../../../src/cli/lib/session-lines.js";
 import { MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session-oversize.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { errnoCode } from "../../../src/shared/error-guards.js";
 
 function turn({ uuid, text, imageData }: { uuid: string; text: string; imageData?: string | undefined }) {

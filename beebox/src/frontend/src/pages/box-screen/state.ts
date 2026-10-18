@@ -1,6 +1,6 @@
 /**
  * The web box screen's page state (docs/plans/box-screen.md, track 2), as pure
- * functions so each row face and the reload path are doctested without a
+ * functions so each row face and the reload path are tested without a
  * browser.
  *
  * A new thought is kept in browser storage as `unsent` — its id and text —

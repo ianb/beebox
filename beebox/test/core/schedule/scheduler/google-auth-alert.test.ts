@@ -12,7 +12,7 @@ import "agent-doctest/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp } from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { refreshGoogleAuth } from "../../../../src/core/schedule/scheduler/google-auth-alert.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import { saveGoogleTokens, markGoogleAuthDead } from "../../../../src/google/token-store.js";

@@ -15,7 +15,7 @@
  * `bbx chat retranscribe`; it is never delivered as a later message.
  *
  * This module is the decision logic plus a waiter over injected IO, so the
- * doctest drives it with a fake status source; `await-hq.ts` wires the real
+ * test drives it with a fake status source; `await-hq.ts` wires the real
  * tRPC calls, event stream and sleep-immune budget.
  */
 

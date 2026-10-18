@@ -219,7 +219,7 @@ export interface RenderItemContext {
  * object's identity, so it must keep identity across streamed tokens. A hook
  * with its own `useMemo`: built inline in `MessageListInner`, the compiler
  * memoized it together with the row list, which changes per token, and every
- * row re-rendered per token (`test/…/messages.streaming-renders.doctest.md`).
+ * row re-rendered per token (`test/…/messages.streaming-renders.test.ts`).
  */
 export function useRenderItemContext(fields: RenderItemContext): RenderItemContext {
   const { debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive } = fields;

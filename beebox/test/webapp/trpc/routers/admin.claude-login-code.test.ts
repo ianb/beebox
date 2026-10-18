@@ -11,7 +11,7 @@ import "agent-doctest/tap";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeClaudeCli } from "../../../../src/services/claude-cli.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 
 void test("line 17", async (t) => {

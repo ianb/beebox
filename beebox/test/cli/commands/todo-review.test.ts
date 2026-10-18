@@ -25,7 +25,7 @@ import { unreviewedTodosCheck } from "../../../src/webapp/trpc/routers/health/ch
 import { runHousekeeping } from "../../../src/cli/commands/wakeup/housekeeping.js";
 import { installProcedures, installSchedules } from "../../../src/core/box/structure/defaults.js";
 import { loadProcedureDefinition } from "../../../src/core/procedure/engine/parse.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const CARD = "store/Porch.doc.card";
 

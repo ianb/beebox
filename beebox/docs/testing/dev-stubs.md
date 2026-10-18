@@ -7,7 +7,7 @@ can be checked by hand in a browser.
 
 Some frontend bugs only manifest against real layout and measurement — scroll
 behavior, virtualization, streaming-driven reflow — and can't be reproduced in a
-doctest. For these, drive the running app with `bin/browse` (see
+test. For these, drive the running app with `bin/browse` (see
 `.claude/skills/browse/SKILL.md`, monorepo root) and use a dev stub to make the
 input deterministic instead of depending on a live agent response.
 

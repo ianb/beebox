@@ -12,7 +12,7 @@ export type FileKind = "declaration" | "test" | "module" | "data";
 
 const TYPESCRIPT_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
 const PLAIN_JS_EXTENSIONS = [".js", ".mjs", ".cjs"];
-const TEST_SUFFIXES = [".doctest.md", ".test.ts", ".tour.ts"];
+const TEST_SUFFIXES = [".test.ts", ".tour.ts"];
 
 const DECLARATION_SUFFIXES = [".d.ts", ".d.mts", ".d.cts"];
 
@@ -27,7 +27,7 @@ function isTypeScriptFile(path: string): boolean {
 }
 
 /**
- * A declaration file -> declaration; doctest/test/tour -> test; a TypeScript
+ * A declaration file -> declaration; test/tour -> test; a TypeScript
  * extension -> module; a plain `.js`/`.mjs`/`.cjs` -> module only when
  * `isSourceRoot` says the file sits in `src/` or a source root (a top-level
  * directory holding TypeScript); such a file elsewhere is a static asset

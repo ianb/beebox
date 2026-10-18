@@ -27,22 +27,19 @@ async function withFixture(files: Record<string, string>, fn: (g: TestGraph) => 
   }
 }
 
-test("a doctest's transitive imports all become edges", async () => {
+test("a test's transitive imports all become edges", async () => {
   await withFixture(
     {
-      "test/a.doctest.md": [
-        "# a", "", "```ts setup", 'import { top } from "../src/top.js";', "```", "",
-        "```ts", "top()", "=> 1", "```", "",
-      ].join("\n"),
+      "test/a.test.ts": ['import { top } from "../src/top.js";', "top();"].join("\n"),
       "src/top.ts": 'import { deep } from "./deep.js";\nexport const top = () => deep();\n',
       "src/deep.ts": "export const deep = () => 1;\n",
       "src/unrelated.ts": "export const unrelated = 2;\n",
     },
     (graph) => {
-      assert.deepEqual(depsOf(graph, "test/a.doctest.md"), [
+      assert.deepEqual(depsOf(graph, "test/a.test.ts"), [
         "src/deep.ts",
         "src/top.ts",
-        "test/a.doctest.md",
+        "test/a.test.ts",
       ]);
       // The file nothing imports is absent from the universe: that is what
       // makes "no test imports this" a state the selector can detect.
@@ -54,14 +51,11 @@ test("a doctest's transitive imports all become edges", async () => {
 test("a NodeNext .js specifier resolves to its .tsx sibling", async () => {
   await withFixture(
     {
-      "test/a.doctest.md": [
-        "# a", "", "```ts setup", 'import { widget } from "../src/widget.js";', "```", "",
-        "```ts", "widget()", "=> 1", "```", "",
-      ].join("\n"),
+      "test/a.test.ts": ['import { widget } from "../src/widget.js";', "widget();"].join("\n"),
       "src/widget.tsx": "export const widget = () => 1;\n",
     },
     (graph) => {
-      assert.deepEqual(depsOf(graph, "test/a.doctest.md"), ["src/widget.tsx", "test/a.doctest.md"]);
+      assert.deepEqual(depsOf(graph, "test/a.test.ts"), ["src/widget.tsx", "test/a.test.ts"]);
     },
   );
 });
@@ -72,14 +66,11 @@ test("a directory is never mistaken for a module — the index file wins", async
   // This is the same directory-index shape as the loader's known TSX flake.
   await withFixture(
     {
-      "test/a.doctest.md": [
-        "# a", "", "```ts setup", 'import { client } from "../src/trpc";', "```", "",
-        "```ts", "client()", "=> 1", "```", "",
-      ].join("\n"),
+      "test/a.test.ts": ['import { client } from "../src/trpc";', "client();"].join("\n"),
       "src/trpc/index.ts": "export const client = () => 1;\n",
     },
     (graph) => {
-      assert.deepEqual(depsOf(graph, "test/a.doctest.md"), ["src/trpc/index.ts", "test/a.doctest.md"]);
+      assert.deepEqual(depsOf(graph, "test/a.test.ts"), ["src/trpc/index.ts", "test/a.test.ts"]);
       assert.equal(graph.unresolved.size, 0);
     },
   );
@@ -90,10 +81,7 @@ test("an ambiguous specifier yields BOTH candidates as edges", async () => {
   // edge, which is a shipped regression. Both must appear.
   await withFixture(
     {
-      "test/a.doctest.md": [
-        "# a", "", "```ts setup", 'import { pick } from "../src/pick.js";', "```", "",
-        "```ts", "pick()", "=> 1", "```", "",
-      ].join("\n"),
+      "test/a.test.ts": ['import { pick } from "../src/pick.js";', "pick();"].join("\n"),
       "src/pick.ts": "export const pick = () => 1;\n",
       "src/pick.tsx": "export const pick = () => 2;\n",
     },
@@ -104,10 +92,10 @@ test("an ambiguous specifier yields BOTH candidates as edges", async () => {
       // `implicatedTests` selected nothing) — a change to the extra candidate
       // would have looked understood and run almost nothing. Assert BOTH, and
       // assert implication, which is what actually gets used.
-      assert.deepEqual(depsOf(graph, "test/a.doctest.md"), [
+      assert.deepEqual(depsOf(graph, "test/a.test.ts"), [
         "src/pick.ts",
         "src/pick.tsx",
-        "test/a.doctest.md",
+        "test/a.test.ts",
       ]);
       assert.ok(graph.universe.has("pkg/src/pick.ts"));
       assert.ok(graph.universe.has("pkg/src/pick.tsx"));
@@ -118,23 +106,17 @@ test("an ambiguous specifier yields BOTH candidates as edges", async () => {
 test("a dangling import marks its entrypoint unresolved without failing the build", async () => {
   await withFixture(
     {
-      "test/broken.doctest.md": [
-        "# broken", "", "```ts setup", 'import { gone } from "../src/gone.js";', "```", "",
-        "```ts", "gone()", "=> 1", "```", "",
-      ].join("\n"),
-      "test/fine.doctest.md": [
-        "# fine", "", "```ts setup", 'import { ok } from "../src/ok.js";', "```", "",
-        "```ts", "ok()", "=> 1", "```", "",
-      ].join("\n"),
+      "test/broken.test.ts": ['import { gone } from "../src/gone.js";', "gone();"].join("\n"),
+      "test/fine.test.ts": ['import { ok } from "../src/ok.js";', "ok();"].join("\n"),
       "src/ok.ts": "export const ok = () => 1;\n",
     },
     (graph) => {
       assert.ok(
-        graph.unresolved.has("pkg/test/broken.doctest.md"),
-        `expected broken.doctest.md unresolved, got ${[...graph.unresolved].join(", ")}`,
+        graph.unresolved.has("pkg/test/broken.test.ts"),
+        `expected broken.test.ts unresolved, got ${[...graph.unresolved].join(", ")}`,
       );
       // One broken import must not disable selection for everything else.
-      assert.equal(graph.unresolved.has("pkg/test/fine.doctest.md"), false);
+      assert.equal(graph.unresolved.has("pkg/test/fine.test.ts"), false);
     },
   );
 });
@@ -142,14 +124,11 @@ test("a dangling import marks its entrypoint unresolved without failing the buil
 test("the @shared alias resolves, and only the configured prefix does", async () => {
   await withFixture(
     {
-      "test/a.doctest.md": [
-        "# a", "", "```ts setup", 'import { s } from "@shared/thing.js";', "```", "",
-        "```ts", "s()", "=> 1", "```", "",
-      ].join("\n"),
+      "test/a.test.ts": ['import { s } from "@shared/thing.js";', "s();"].join("\n"),
       "src/shared/thing.ts": "export const s = () => 1;\n",
     },
     (graph) => {
-      assert.deepEqual(depsOf(graph, "test/a.doctest.md"), ["src/shared/thing.ts", "test/a.doctest.md"]);
+      assert.deepEqual(depsOf(graph, "test/a.test.ts"), ["src/shared/thing.ts", "test/a.test.ts"]);
     },
   );
 });
@@ -172,18 +151,18 @@ test("paths outside beebox cannot make a change unaccounted", () => {
   );
 });
 
-test("prose markdown is out of scope, but a .doctest.md is not", () => {
+test("prose markdown is out of scope, but a test file is not", () => {
   // Load-bearing: counting prose drops the accounted rate from 63% to 27%.
-  // Safe only because no doctest reads the repo's own prose — doc-check does,
+  // Safe only because no test reads the repo's own prose — doc-check does,
   // and it is a pre-commit hook outside tap.
   assert.deepEqual(
     scopedChanges([
       "beebox/docs/testing.md",
       "beebox/docs/security-overview.md",
       "beebox/src/services/AGENTS.md",
-      "beebox/test/core/box.doctest.md",
+      "beebox/test/core/box.test.ts",
     ]),
-    ["beebox/test/core/box.doctest.md"],
+    ["beebox/test/core/box.test.ts"],
   );
 });
 
@@ -194,11 +173,11 @@ test("dependency manifests stay in scope", () => {
 test("test/manual is excluded, mirroring .taprc", async () => {
   await withFixture(
     {
-      "test/a.doctest.md": ["# a", "", "```ts", "1", "=> 1", "```", ""].join("\n"),
-      "test/manual/slow.doctest.md": ["# slow", "", "```ts", "1", "=> 1", "```", ""].join("\n"),
+      "test/a.test.ts": "export const a = 1;\n",
+      "test/manual/slow.test.ts": "export const slow = 1;\n",
     },
     (graph) => {
-      assert.deepEqual([...graph.tests.keys()], ["pkg/test/a.doctest.md"]);
+      assert.deepEqual([...graph.tests.keys()], ["pkg/test/a.test.ts"]);
     },
   );
 });

@@ -20,7 +20,7 @@ import { listSecrets } from "../../../../src/core/secrets/lifecycle.js";
 import { resolveSecret } from "../../../../src/core/secrets/resolve.js";
 import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js";
 import { getBoxTimeISO } from "../../../../src/lib/time.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 
 const storeDir = await mkdtemp(join(tmpdir(), "bbx-cf-publish-"));

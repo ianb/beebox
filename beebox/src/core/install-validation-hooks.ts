@@ -48,7 +48,7 @@ import { withDocId } from "./docs-gen/shared.js";
  * means the hooks don't depend on the user's PATH. First match wins:
  *
  *  1. `BBX_HOOK_BIN` — an explicit absolute path. Field-test boxes and
- *     doctests that run a real hook right after install pin their own
+ *     tests that run a real hook right after install pin their own
  *     checkout's `bbx` with it.
  *  2. The engine the box depends on (`resolveBoxEngineBbx`: the real path of
  *     `<box>/node_modules/beebox`, plus `bin/bbx`). Commit-time validation

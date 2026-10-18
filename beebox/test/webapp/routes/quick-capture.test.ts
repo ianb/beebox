@@ -6,7 +6,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { z } from "zod";
-import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import type { QuickCaptureDeclaration } from "../../../src/shared/quick-capture.js";
 import type { CaptureRecord } from "../../../src/core/quick-capture/store.js";
 import { buildMultipartForm, type MultipartPart } from "../../../src/lib/multipart.js";

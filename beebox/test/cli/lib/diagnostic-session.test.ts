@@ -13,7 +13,7 @@ import {
   resolveDiagnosticEngine,
   validateCodexSessionMode,
 } from "../../../src/cli/lib/diagnostic-session.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("line 18", async (t) => {
   // doctest:L19

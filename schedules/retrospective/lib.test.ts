@@ -53,8 +53,8 @@ test("isEscapedBug: production provenance or a bug label; the bugs category alon
   assert.equal(isEscapedBug(bug({ rel: "features/a.md", discoveredIn: "worktree-x — reproduced locally" })), false);
 });
 
-test("isPreventionPath: tests, doctests, checks, lint rules", () => {
-  for (const file of ["beebox/test/a.ts", "bin/test/x.doctest.md", "schedules/foo/lib.test.ts", "schedules/manual-tests/check",
+test("isPreventionPath: tests, checks, lint rules", () => {
+  for (const file of ["beebox/test/a.ts", "bin/test/x.test.ts", "schedules/foo/lib.test.ts", "schedules/manual-tests/check",
     "bin/path-leak-check.ts", "personal-vibe-check/rules/no-x.ts", "security/opengrep/rules/a.yaml"]) {
     assert.equal(isPreventionPath(file), true, file);
   }

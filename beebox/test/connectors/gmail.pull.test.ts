@@ -13,7 +13,7 @@ import { trackGmailThread } from "../../src/connectors/gmail/track.js";
 import { findTrackedGmailThreads } from "../../src/connectors/gmail/tracking.js";
 import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake/core.js";
 import type { GmailMessage } from "../../src/services/google-gmail-types.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 function message(opts: {
   id: string;

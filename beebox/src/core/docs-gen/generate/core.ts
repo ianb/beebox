@@ -257,7 +257,7 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
  * pre-existing dirty path that generation also rewrote stays uncommitted too;
  * the next housekeeping commit picks it up.
  *
- * Exported (rather than only reachable through `generateDocs`) so doctests
+ * Exported (rather than only reachable through `generateDocs`) so tests
  * can exercise the sync commit directly against a minimal fixture, without
  * also going through `installValidationHooks` + a real, executable
  * `.git/hooks/pre-commit` that shells out to a `bbx` binary — an unrelated

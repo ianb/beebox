@@ -13,7 +13,7 @@ import "agent-doctest/tap";
 import { utimes } from "node:fs/promises";
 import { prunedSubtree } from "../../../src/core/landmark/prominence-index.js";
 import { getParseCount, resetParseCount } from "../../../src/core/landmark/prominence-cache.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 /** Sort ProminenceEntry[] into a stable, readable string for comparison. */
 function fmt(entries: { boxPath: string; level: string; kind: string }[]): string {

@@ -89,7 +89,7 @@ function enqueue(ctx: Ctx, opts: { recordingId: string; payload: VoiceOpPayload 
 }
 
 /**
- * Build one queue instance. Exported for the doctest, which injects an
+ * Build one queue instance. Exported for the test, which injects an
  * in-memory `VoiceStagingStorage` and a fake `send` instead of touching
  * IndexedDB or the network; the app's own singleton (below) is the only
  * caller in production.
@@ -133,7 +133,7 @@ let singleton: VoiceStagingQueue | null = null;
 
 /**
  * IndexedDB when it's usable, in-memory when it isn't or is missing (private
- * browsing, blocked site data, plain Node under a doctest). Opening the
+ * browsing, blocked site data, plain Node under a test). Opening the
  * database is itself lazy (`voice-staging-storage.ts`), so choosing this
  * synchronously costs nothing; the state layer's `downgradeToInMemory` covers
  * the case where the first real use throws. `persistent` reflects the choice
@@ -191,7 +191,7 @@ let drainerWired = false;
  * Merely importing this module already starts the singleton and its first
  * drain pass (the module-load call at the bottom of this file); this
  * additionally wires the `online`/`visibilitychange` re-triggers, which need
- * real browser globals a doctest doesn't have. Idempotent.
+ * real browser globals a test doesn't have. Idempotent.
  */
 export function startVoiceStagingDrainer(): void {
   getSingleton();

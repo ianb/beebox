@@ -20,7 +20,7 @@ import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { CONFIG_RELATIVE_PATH } from "../../../../src/webapp/box-config-write.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { Services } from "../../../../src/services/container.js";

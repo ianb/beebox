@@ -7,7 +7,7 @@
  * Pure on purpose (principle 10) — no Drive calls, no filesystem. Shortcuts
  * are followed by the caller before the listing gets here, and the probe of an
  * absent child (trashed? moved out? unreadable?) is the caller's `getFile`.
- * Everything in between is decided here, so the doctest tests the plan rather
+ * Everything in between is decided here, so the test tests the plan rather
  * than a sequence of mocked side effects.
  */
 

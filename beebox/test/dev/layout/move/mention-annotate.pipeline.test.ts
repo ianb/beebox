@@ -1,7 +1,7 @@
 // # `--annotate-from-git`: annotating old-path mentions left alone by rewrite
 //
-// Same fixture style as `git-renames.pipeline.doctest.md` and
-// `mention-rewrite.pipeline.doctest.md`: a real temp git repo, moves composed
+// Same fixture style as `git-renames.pipeline.test.ts` and
+// `mention-rewrite.pipeline.test.ts`: a real temp git repo, moves composed
 // from git's own rename detection between a base commit and `HEAD`, then
 // `computeMentionAnnotate` over it. Unlike `--mentions-from-git`, this mode
 // never rewrites the old path — it appends a `(moved to \`...\`)` note after it.
@@ -93,7 +93,7 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   // ## A fenced code block is skipped entirely, so the runnable example stays intact
   //
   // Uses a `~~~` fence for the fixture's own inner block so it doesn't collide
-  // with this doctest's own ` ``` ` delimiters.
+  // with this test's own ` ``` ` delimiters.
 
   // doctest:L98
   await write("docs/fenced.md", "Prose mentions pkg/src/a.ts here.\n~~~ts\nimport x from \"pkg/src/a.ts\";\n~~~\n");

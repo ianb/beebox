@@ -12,7 +12,7 @@ import { applyMark, markPlace, type MarkResult } from "../../src/core/place-mark
 import { saveLocation, type StoredLocation } from "../../src/core/location-store.js";
 import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 18 };
 const stored = (fix: { lat: number; lng: number; accuracy: number }, capturedAt: string): StoredLocation => ({ ...fix, capturedAt, source: "web" });

@@ -12,7 +12,7 @@ import "agent-doctest/tap";
 import { z } from "zod";
 import { cardSchema, cardRef, opaqueContentRef, collectInlineRefs } from "../../src/exports/cards.js";
 import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## buildJobDescription does not inline an opaque ref, but does inline a cardRef
 //

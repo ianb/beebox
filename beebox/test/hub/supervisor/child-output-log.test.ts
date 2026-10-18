@@ -14,7 +14,7 @@ import "agent-doctest/tap";
 import { PassThrough } from "node:stream";
 import { setTimeout as delay } from "node:timers/promises";
 import { forwardChildOutput } from "../../../src/hub/supervisor/child-output-log.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## stdout and stderr both land in the log, line-buffered
 //

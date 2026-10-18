@@ -12,7 +12,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { gcProcedureRuns } from "../../../src/core/procedure/gc.js";
 import { MAX_RUNS_PER_PROCEDURE } from "../../../src/core/procedure/run-expiry.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { getLog } from "../../../src/lib/git/core/operations.js";
 import { utimes } from "node:fs/promises";
 

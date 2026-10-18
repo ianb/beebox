@@ -1,6 +1,6 @@
 import t from "tap";
 import { rename, writeFile } from "node:fs/promises";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { pairedSuccessor, resolveMovedCardPath, type NameStatusRecord } from "../../src/core/moved-card-forwarding.js";
 
 const D = (path: string): NameStatusRecord => ({ status: "D", paths: [path] });

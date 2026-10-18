@@ -12,7 +12,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { runHealthChecks, type HealthCheck } from "../../../../../../src/webapp/trpc/routers/health/router.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../../../../src/services/claude-cli.js";
-import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 
 const claudeCheck = (checks: HealthCheck[]) => checks.find((c) => c.name === "claude-credentials");
 

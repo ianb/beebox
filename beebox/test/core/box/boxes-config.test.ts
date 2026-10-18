@@ -15,7 +15,7 @@ import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadBoxesConfig, BoxesConfigParseError } from "../../../src/core/box/boxes-config.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 async function tryLoad(configPath: string): Promise<unknown> {
   try {

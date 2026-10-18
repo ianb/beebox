@@ -19,7 +19,7 @@ import type { InstructionEvaluation } from "../../../src/core/procedure/engine-v
 import { evaluateInstructions } from "../../../src/core/procedure/engine-validate-model.js";
 import { createFakeAgent } from "../fake-agent.js";
 import type { FakeAgent } from "../fake-agent.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { modelTier, providerOf } from "../../../src/shared/agent-models.js";
 
 /** Narrows an evaluation to one outcome so its fields can be read. */

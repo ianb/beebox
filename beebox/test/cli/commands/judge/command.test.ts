@@ -16,7 +16,7 @@ import * as path from "node:path";
 import { runJudge, type JudgeOptions } from "../../../../src/cli/commands/judge/command.js";
 import { createFakeJev, type JevService } from "../../../../src/services/jev.js";
 import { JevError } from "../../../../src/services/jev-wire.js";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 
 const TRIP = `---
 questions:

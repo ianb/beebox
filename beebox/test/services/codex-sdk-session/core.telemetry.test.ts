@@ -14,7 +14,7 @@ import { codexSdkConfig, type CodexSdkSessionOptions } from "../../../src/servic
 import { codexCliArgs } from "../../../src/services/codex-binary.js";
 import { clearBoxConfigCache } from "../../../src/core/box/config.js";
 import * as auth from "../../../src/core/agent/auth-preflight.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 async function setTelemetry(boxRoot: string, value: unknown) {
   await mkdir(join(boxRoot, "_config"), { recursive: true });

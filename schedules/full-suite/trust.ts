@@ -139,7 +139,7 @@ export function runIsUntrusted(slowdown: { factor: number | null }): boolean {
 // ─── alert conditions ─────────────────────────────────────────────────────
 
 /** What the run found, as `bin/schedules` sees it. */
-export type AlertKind = "deferred" | "environment" | "flakes" | "red-unattributed" | "red-blamed" | "doctest-typecheck";
+export type AlertKind = "deferred" | "environment" | "flakes" | "red-unattributed" | "red-blamed" | "typecheck";
 
 /**
  * The condition key an alert raises under. It names the standing condition,

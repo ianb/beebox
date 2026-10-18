@@ -18,7 +18,7 @@ import {
   containedSessionCwd,
 } from "../../../src/core/chat/session/transcript-paths.js";
 import type { SessionLogSlice } from "../../../src/cli/lib/session-retention.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import * as path from "node:path";
 import * as os from "node:os";
 

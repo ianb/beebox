@@ -1,9 +1,9 @@
 /**
  * argv parsing, stdin/TTY token + folder resolution, and process-facing
  * dispatch for the `configure` subcommand. Kept separate from `configure.ts`
- * so the core logic stays free of process globals and directly doctestable;
+ * so the core logic stays free of process globals and directly testable;
  * this file owns everything that touches `process.stdin`/`process.argv`.
- * The interactive (TTY) prompt paths aren't exercised by doctests — see the
+ * The interactive (TTY) prompt paths aren't exercised by tests — see the
  * comment on `promptToken` — but the non-TTY fail-closed path
  * (`requireFolderFlag`) and the argv/flag parsers are plain functions and
  * are covered directly.
@@ -213,7 +213,7 @@ interface MutedReadline {
 }
 
 /** The exact prompt/ack text `promptToken` writes to stderr. Exported as
- * constants (rather than inlined) so a doctest can assert on the literal
+ * constants (rather than inlined) so a test can assert on the literal
  * wording without needing a real TTY — the interactive read itself is only
  * verified manually (see the comment on `promptToken`). */
 export const TOKEN_PROMPT_TEXT = "Paste the scan token (input is hidden): ";
@@ -230,10 +230,10 @@ export const TOKEN_RECEIVED_ACK = "token received";
  * was just a real, working, entirely invisible prompt). STDERR also keeps
  * a piped-stdout workflow's stdout clean. A short ack after a successful
  * read confirms the paste registered, since nothing echoed while typing/
- * pasting. Not exercised by doctests: it needs a real TTY (manually
+ * pasting. Not exercised by tests: it needs a real TTY (manually
  * verified via `script -q /dev/null`), and `readPipedToken` below covers
  * the same token-consumption logic that `configure()` actually depends on;
- * `TOKEN_PROMPT_TEXT`/`TOKEN_RECEIVED_ACK` above are what doctests can and
+ * `TOKEN_PROMPT_TEXT`/`TOKEN_RECEIVED_ACK` above are what tests can and
  * do assert on. */
 async function promptToken(): Promise<string> {
   process.stderr.write(TOKEN_PROMPT_TEXT);

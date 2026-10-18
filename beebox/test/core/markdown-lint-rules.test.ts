@@ -4,7 +4,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { lint as markdownlint } from "markdownlint/promise";
 import { noBrokenInternalLinks, noLegacyViewLinks } from "../../src/core/markdown-lint-rules.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 

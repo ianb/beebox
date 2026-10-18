@@ -15,8 +15,8 @@ import "agent-doctest/tap";
 import { executeMove } from "../../../../src/core/commands/move/command.js";
 import { extractBodyLinks } from "../../../../src/core/body-refs.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 
 async function mv(box: TmpBox, args: Record<string, unknown>) {
   const { ctx } = createCollectorContext(box.root);

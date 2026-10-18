@@ -11,7 +11,7 @@
  * no chat composer to receive a selection.
  *
  * The rules a click follows are here as plain functions so they are
- * doctestable without a DOM (`src/frontend/test/components/todo/actions.test.ts`).
+ * testable without a DOM (`src/frontend/test/components/todo/actions.test.ts`).
  */
 
 import { createContext } from "react";

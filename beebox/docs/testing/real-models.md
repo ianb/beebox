@@ -7,7 +7,7 @@ check behavior that a fake cannot show.
 
 Many features depend on what a model actually returns: a Jev judgment's
 probabilities, a small model's classification, a transcription. Service fakes
-(`BBX_JEV_FAKE`, the doctest service fakes) keep the test suite fast and
+(`BBX_JEV_FAKE`, the test service fakes) keep the test suite fast and
 deterministic, but they cannot tell you how the real service behaves. For that,
 call the real thing.
 
@@ -16,7 +16,7 @@ answered. Do not assume they are off limits. Check what is available, then
 decide. Jev and the small models cost fractions of a cent per call, so an
 experiment of dozens or hundreds of calls needs no permission.
 
-Real calls do not belong in committed doctests: they are slow, cost money on
+Real calls do not belong in committed tests: they are slow, cost money on
 every run, and change their answers. Use them for experiments, calibration, and
 one-off verification, and record what you learned in the plan, issue, or test
 data.

@@ -370,7 +370,7 @@ A Markdown commit fails on a broken reference, a live-area orphan, a duplicate i
 
 ### Doctest framework
 Markdown files whose fenced TypeScript examples run as TAP tests; the default test form.
-- **Where:** `agent-doctest/`, `.claude/skills/doctest/SKILL.md`, `beebox/docs/testing/doctests.md`.
+- **Where:** `agent-doctest/`, the `doctest` skill, and the doctests testing page (the skill and page were replaced by `.claude/skills/tests/SKILL.md` and `beebox/docs/testing/check.md` on 2026-10-18).
 - **Since:** 2026-03-03 aa13e9c98; package 2026-03-09 1739e4c9e; agent-first TAP output 2026-06-09 3aecb4c05 ("the consumers of test runs are agents reading through a pipe"); usability pass 2026-09-28 46a02a09f.
 - **Relieved:** tests an agent can read and write without a harness; "docs that can't go stale".
 - **Exposed:** volume and run time; the full suite became too slow and too often red for reasons unrelated to the branch; flakes from fixed sleeps.

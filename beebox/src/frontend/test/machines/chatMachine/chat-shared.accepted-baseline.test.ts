@@ -23,7 +23,7 @@ import "agent-doctest/tap";
 import { readAcceptedMessages } from "../../../../core/chat/session/accepted-messages.js";
 import { reconcilePending } from "../../../src/machines/chatMachine/chat-shared.js";
 import { createEventBus } from "../../../../core/event-bus/core.js";
-import { makeTmpBox } from "../../../../../test/helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../test/helpers/test-helpers.js";
 import type { SessionContentBlock } from "../../../src/api-chat.js";
 
 const SESSION = "11111111-1111-4111-8111-111111111111";

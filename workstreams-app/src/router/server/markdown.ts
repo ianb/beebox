@@ -29,7 +29,7 @@ function unescapeHtml(s: string): string {
 // plain `<pre>` when the fence has no language token. Re-run each block through
 // highlight.js (already a dep) so code gets syntax colors. Un-tagged blocks
 // default to `defaultLang` (ts — the language we write nearly everywhere, and
-// what the doctests are even when their continue/cleanup fences omit it).
+// what the tests are even when their continue/cleanup fences omit it).
 function highlightCodeBlocks(html: string, defaultLang: string): string {
   // One rest parameter rather than (match, lang, body): String.replace hands the
   // callback a variable arity, and the house limit is two positional parameters.

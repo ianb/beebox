@@ -6,7 +6,7 @@ import Fastify from "fastify";
 import { router, publicProcedure } from "../../../src/webapp/trpc/procedures.js";
 import { registerBoxAdmission, boxRequestsAreIdle } from "../../../src/webapp/server/box-admission.js";
 import { acquireBoxWork, closeBoxMaintenance, boxWorkEnvironment } from "../../../src/lib/box-maintenance/admission.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import { connect } from "node:net";
 

@@ -11,7 +11,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { readFile, rm } from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { join } from "node:path";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";

@@ -7,8 +7,8 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { executeDismiss } from "../../../src/core/commands/dismiss.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 
 async function dismiss(box: TmpBox, args: Record<string, unknown>) {
   const { ctx } = createCollectorContext(box.root);

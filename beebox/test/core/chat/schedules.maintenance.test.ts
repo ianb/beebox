@@ -4,7 +4,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { ChatScheduleManager, loadChatSchedules } from "../../../src/core/chat/schedules/core.js";
 import { closeBoxMaintenance } from "../../../src/lib/box-maintenance/admission.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("line 9", async (t) => {
   t.teardown(async () => {

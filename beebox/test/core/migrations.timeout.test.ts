@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { strict as assert } from "node:assert";
 import type { Agent, AgentInvokeOptions, StructuredAgentResult } from "../../src/core/agent/invoke/core.js";
 import { errnoCode } from "../../src/shared/error-guards.js";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 import { runMigrationProcess } from "../../src/core/migration-process.js";

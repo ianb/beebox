@@ -26,7 +26,7 @@ import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/session.js";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-auth-doctest";
 

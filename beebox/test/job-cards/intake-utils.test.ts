@@ -5,7 +5,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import assert from "node:assert/strict";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createOrAppendIntakeJob } from "../../src/job-cards/intake-utils.js";
 
 // ## Creating a new job

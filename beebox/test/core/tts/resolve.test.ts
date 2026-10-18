@@ -15,7 +15,7 @@ import { resolveTtsService } from "../../../src/core/tts/resolve.js";
 import { updateTtsConfig } from "../../../src/core/tts/config.js";
 import { grantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../src/lib/box-slug.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 /** A fresh secret store and a box set to speak with Gemini, holding `grants`. */
 async function geminiBox(grants: Array<"gemini" | "openrouter">) {

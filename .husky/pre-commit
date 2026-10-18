@@ -60,11 +60,6 @@ echo "[pre-commit] .: pnpm path-leak-check"
 echo "[pre-commit] .: pnpm commit-blocklist-check"
 (cd "$REPO_DIR" && pnpm commit-blocklist-check)
 
-# Testing cutover (plan retire-doctest, track 1b): no new .doctest.md files.
-# Before the docs-only exit, since a doctest is a .md file.
-echo "[pre-commit] .: no new doctests"
-(cd "$REPO_DIR" && node --import tsx bin/no-new-doctests.ts)
-
 # Mobile-contract tripwire (pre-commit half): records a pending violation when a
 # contract-surface anchor file is staged without a docs/mobile-contract.md
 # update, so the commit-msg hook can enforce the Contract-Unchanged: override.
@@ -114,24 +109,12 @@ elif git -C "$REPO_DIR" diff --cached --name-only -- beebox/src | grep -q .; the
 fi
 
 # Source file layout (beebox/docs/plans/file-layout.md): every package root
-# must stay at zero findings. Runs before the docs-only exit because a
-# doctest is a `.md` file. The whole repo scans in a few seconds; there is no
+# must stay at zero findings. The whole repo scans in a few seconds; there is no
 # changed-files mode, since a change in one directory can create a finding in
 # another. Also runs on deletions: removing a file can leave a registry stale.
 layout_staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMRD)"
-if echo "$layout_staged" | grep -qE '\.(ts|tsx|mts|cts|js|mjs|cjs)$|\.doctest\.md$|(^|/)package\.json$'; then
+if echo "$layout_staged" | grep -qE '\.(ts|tsx|mts|cts|js|mjs|cjs)$|(^|/)package\.json$'; then
   run_in beebox pnpm --silent layout-check
-fi
-
-# Staged doctests typecheck through their package's `typecheck:doctest`
-# (bin/doctest-typecheck-staged.ts). Before the docs-only exit: a doctest is a
-# `.md` file. Only the staged doctests are checked, about 2.5s per tsconfig;
-# `pnpm test:changed` and the hourly full suite catch a source change that
-# breaks a doctest left unstaged. Like the typecheck below, it reads the
-# working tree, so a partially staged doctest is checked as it is on disk.
-if echo "$staged" | grep -q '\.doctest\.md$'; then
-  echo "[pre-commit] .: doctest typecheck (staged doctests)"
-  (cd "$REPO_DIR" && node --import tsx bin/doctest-typecheck-staged.ts)
 fi
 
 # Docs-only commits need nothing further — typecheck/lint add nothing.

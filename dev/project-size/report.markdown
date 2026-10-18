@@ -15,15 +15,14 @@ change.
   against {{tests.lines}} lines of tests. Plans and reports alone are the
   biggest docs category. This is what agent-driven development looks like:
   every change is planned, reviewed, and written down.
-- **Tests are doctests.** {{doctest.percent}}% of test lines are Markdown
-  doctests. Counting only the code inside their fences, tests are about
-  {{tests.codeOnly.percentOfCode}}% the size of the product code.
+- **Tests are large.** Tests are about {{tests.percentOfCode}}% the size of
+  the product code.
 
 ```dataset byCategory
 ```
 
 Code includes comments, and this codebase comments heavily — `tokei` puts
-roughly one line in four of TypeScript as comment. A file that is a doctest,
+roughly one line in four of TypeScript as comment. A file that
 is named `*.test.*`, or lives under a `test/` directory counts only as a test,
 never as code.
 
@@ -60,17 +59,11 @@ is the place to judge whether that is right.
 
 ## Tests
 
-Doctests mix prose with fenced code. About {{doctest.prose.percent}}% of their
-lines are prose — explanation between examples — and the rest is code and
-expected output: {{doctest.code.lines}} lines inside fences against
-{{doctest.prose.lines}} of prose.
-
 ```dataset testsByKind
 ```
 
-The {{testts.files}} `*.test.ts` files ({{testts.lines}} lines) are the
-exception, and almost all of them are outside `beebox`. Most should become
-doctests; see `issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md`.
+The {{testts.files}} `*.test.ts` files ({{testts.lines}} lines) hold the
+tests, by package below.
 
 ```dataset testTsByPackage
 ```

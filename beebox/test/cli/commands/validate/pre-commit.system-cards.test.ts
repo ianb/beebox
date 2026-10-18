@@ -4,7 +4,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
 import { rm } from "node:fs/promises";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { checkSystemCards, checkStagedSystemCards, seedSystemCards } from "../../../../src/core/system-cards.js";
 import { SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION } from "../../../../src/shared/system-card-paths.js";
 import { MANIFEST_PATH } from "../../../../src/core/migrations.js";

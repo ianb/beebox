@@ -15,7 +15,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { runCommand } from "../../../src/core/command-runner.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createCommand } from "../../../src/cli/commands/create.js";
 
 // ## `bbx create` template argument help

@@ -9,7 +9,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { any, str } from "agent-doctest/check";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";

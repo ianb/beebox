@@ -31,7 +31,7 @@ app exists.
 | Voice: HQ server transcription upload | done (Float32 WAV verified against all HQ paths; `issues/closed/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`) | planned (Track 4, 16 kHz mono 16-bit PCM WAV) |
 | Location share via bridge | done | planned (Track 5, + geolocation permission handoff) |
 | External links → system browser | done (Safari hand-off) | planned (Track 1, Custom Tabs) |
-| Shared golden-fixture contract tests | done (`docs/implemented-plans/mobile-parity-sync.md` step 3 — TS doctest + iOS `MobileContractFixtureDecodeTests`/`SpeechKeywordsTests`) | planned (Track 6) |
+| Shared golden-fixture contract tests | done (`docs/implemented-plans/mobile-parity-sync.md` step 3 — TS test + iOS `MobileContractFixtureDecodeTests`/`SpeechKeywordsTests`) | planned (Track 6) |
 | Headless CI build + unit tests | n/a — needs macOS/Xcode | planned (Track 6 / open question; Linux-friendly) |
 | Per-box local device lock | done (`docs/implemented-plans/ios-per-box-device-lock.md`; physical-device acceptance remains) | planned (`issues/features/2026-07-20-android-per-box-device-lock-parity.md`) |
 | Capture mode | done (`docs/plans/ios-native-capture-mode.md`; recorder silent-stop tracked in `issues/bugs/`) | not planned |

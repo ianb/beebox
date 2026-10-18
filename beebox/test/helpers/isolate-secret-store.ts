@@ -10,7 +10,7 @@
  * a real credential store. Isolation has to be the process default, not a
  * convention each new test remembers.
  *
- * A test that sets `BBX_SECRETS_FILE` itself (most of the secrets doctests, so
+ * A test that sets `BBX_SECRETS_FILE` itself (most of the secrets tests, so
  * they can point two reads at different stores) keeps its own path.
  */
 
@@ -24,9 +24,9 @@ if (process.env["BBX_SECRETS_FILE"] === undefined) {
 
 /**
  * And away from the providers: storing a value fires a verification probe at
- * the real API (`src/core/secrets/probe-registry.ts`), so a doctest that saves
+ * the real API (`src/core/secrets/probe-registry.ts`), so a test that saves
  * a placeholder `mistral` key would otherwise send it to api.mistral.ai. The
- * probe doctest injects its own `fetch` and never relies on this.
+ * probe test injects its own `fetch` and never relies on this.
  */
 if (process.env["BBX_SECRET_PROBES"] === undefined) {
   process.env["BBX_SECRET_PROBES"] = "off";

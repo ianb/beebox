@@ -163,7 +163,7 @@ const LOCK_FILE_NAME = "beebox-index.lock";
  * missed, and which reached {@link enqueue} first was decided by which
  * subprocess happened to exit first — reordering the queue relative to the
  * order the callers were created (reproduced ~1 round in 30, and far more
- * often on a loaded machine; it is why `git-lock.doctest.md`'s FIFO case
+ * often on a loaded machine; it is why `test/lib/git-lock.test.ts`'s FIFO case
  * flaked). Sharing one promise means every caller resumes from the same
  * `await` in the order it attached.
  */

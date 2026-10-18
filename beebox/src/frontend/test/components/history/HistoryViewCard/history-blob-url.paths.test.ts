@@ -7,7 +7,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
-import { makeTestServer } from "../../../../../../test/helpers/doctest-server.js";
+import { makeTestServer } from "../../../../../../test/helpers/test-route-server.js";
 import { buildHistoryBlobUrl } from "../../../../src/components/history/HistoryViewCard/history-blob-url.js";
 
 const server = await makeTestServer();

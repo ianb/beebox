@@ -5,7 +5,7 @@
  * (carrying an effective `prominence`), plain files, and subdirectories
  * (carrying a `DirectorySummary`-like rollup and optional landmark
  * identity), decide what leads the listing and what folds behind the "N
- * more" disclosure. Reached by a doctest, never through the page
+ * more" disclosure. Reached by a test, never through the page
  * (`docs/engineering-principles.md` #10).
  *
  * - **lead**: entry-point cards, then primary cards, then subdirectories

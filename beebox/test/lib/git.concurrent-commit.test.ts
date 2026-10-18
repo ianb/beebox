@@ -12,7 +12,7 @@ import { spawn } from "node:child_process";
 import { existsSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { simpleGit } from "simple-git";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { getStatus } from "../../src/lib/git/core/operations.js";
 
 const PACKAGE_ROOT = join(import.meta.dirname, "../..");

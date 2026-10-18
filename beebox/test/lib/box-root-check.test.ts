@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir } from "node:fs/promises";
 import { checkBoxRoot } from "../../src/lib/box-root-check.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // A box with only vocabulary entries — areas, npm namespace, agent identity —
 // reports nothing:

@@ -7,7 +7,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { prepareItem } from "../../../../src/core/triage/evidence/core.js";
 import { runJevTriage } from "../../../../src/core/triage/auto/core.js";
 import { TriageBudgetError } from "../../../../src/core/triage/judge.js";

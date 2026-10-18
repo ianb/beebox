@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { planRetireMemo, type PlannedWrite } from "../../../src/scripts/migrate/retire-memo/plan.js";
 import { runRetireMemo } from "../../../src/scripts/migrate/retire-memo/run.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 /** Plan a box given as path → text; `files` adds non-text files. */
 function plan(texts: Record<string, string>, files?: string[]) {

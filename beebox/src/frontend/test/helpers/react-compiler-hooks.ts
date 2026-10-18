@@ -1,6 +1,6 @@
 /**
  * Node load hook: compile frontend modules with the React Compiler, as the
- * Vite build does, so a doctest renders with the memoization a browser runs.
+ * Vite build does, so a test renders with the memoization a browser runs.
  * `.taprc` registers it for every test process; it touches only frontend
  * modules. Output is cached by content hash, because compiling the chat tree
  * costs seconds per process.
@@ -14,7 +14,7 @@ import { transform } from "esbuild";
 
 const BEEBOX_SRC = fileURLToPath(new URL("../../../", import.meta.url));
 const FRONTEND_SRC = `${BEEBOX_SRC}frontend/src/`;
-const CACHE_DIR = fileURLToPath(new URL("../../node_modules/.cache/react-compiler-doctests/", import.meta.url));
+const CACHE_DIR = fileURLToPath(new URL("../../node_modules/.cache/react-compiler-tests/", import.meta.url));
 
 export class CompilerOutputError extends Error {
   constructor(path: string) {

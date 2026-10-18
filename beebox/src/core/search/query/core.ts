@@ -104,7 +104,7 @@ export interface SearchBoxOptions {
   rebuild?: boolean;
   onProgress?: OpenSearchIndexOptions["onProgress"];
   /**
-   * Injected embeddings service (doctests pass the fake). When absent,
+   * Injected embeddings service (tests pass the fake). When absent,
    * searchBox resolves the box's key itself and builds the real service when
    * one is configured.
    */

@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { observeAssignedSession } from "../../../../src/core/chat/session/deliver-user-message.js";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";

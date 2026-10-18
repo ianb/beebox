@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createAgent } from "../../../src/core/agent/invoke/core.js";
 import { clearBoxConfigCache } from "../../../src/core/box/config.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 async function setEngine(boxRoot: string, agentEngine: unknown): Promise<void> {
   const configDir = path.join(boxRoot, "_config");

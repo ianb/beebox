@@ -15,7 +15,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { installValidationHooks } from "../../src/core/install-validation-hooks.js";
 import { z } from "zod";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 
 const settingsSchema = z.object({
   hooks: z.object({

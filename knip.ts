@@ -1,5 +1,4 @@
 import type { KnipConfig } from "knip";
-import { doctestImports } from "./beebox/src/scripts/knip-doctest-imports.js";
 
 /**
  * Knip runs from the MONOREPO ROOT, not from beebox.
@@ -13,17 +12,15 @@ import { doctestImports } from "./beebox/src/scripts/knip-doctest-imports.js";
  *
  * One run also means the workspaces can see each other: bin/ imports
  * beebox/src by relative path, the frontend imports src/shared via
- * @shared/*, and beebox's doctests exercise frontend machines. Analyzed
+ * @shared/*, and beebox's tests exercise frontend machines. Analyzed
  * separately, each side reads the others' live code as dead.
  */
 const config: KnipConfig = {
   workspaces: {
     // Monorepo tooling: bin/ (the dev router, hooks, generators) and dev/.
     ".": {
-      // bin/test doctests are consumers the same way beebox's are: an export
-      // reached only from one is used.
-      entry: ["bin/*.ts", "bin/**/*.test.ts", "bin/test/**/*.doctest.md"],
-      project: ["bin/**/*.ts", "bin/test/**/*.doctest.md"],
+      entry: ["bin/*.ts", "bin/**/*.test.ts"],
+      project: ["bin/**/*.ts"],
       // Invoked through bin/browse, a shell script knip does not read.
       ignoreDependencies: ["agent-browser"],
     },
@@ -46,9 +43,8 @@ const config: KnipConfig = {
         // its Vite config names.
         //
         // The suite is a consumer too: an export reached only from a test is
-        // used. Doctests are markdown — see `compilers` below.
+        // used.
         "test/**/*.ts",
-        "test/**/*.doctest.md",
         "src/scripts/**/*.ts",
       ],
       project: [
@@ -56,7 +52,6 @@ const config: KnipConfig = {
         "!src/frontend/**",
         "!src/schemas/*/list-entry.tsx",
         "test/**/*.ts",
-        "test/**/*.doctest.md",
         "src/scripts/**/*.ts",
       ],
       ignoreDependencies: [
@@ -72,36 +67,7 @@ const config: KnipConfig = {
         // Its config block lives in beebox/package.json, but the runner
         // is the monorepo-root .husky/pre-commit — knip sees neither end.
         "lint-staged",
-        // Frontend dep, reached from test/frontend/*.doctest.md.
-        "@ianbicking/canvas-loop",
-        // Not dependencies: test/core/views/markdown-check.test.ts passes
-        // view source importing these to the checker as a string, and
-        // test/dev/layout/move/mention-annotate.pipeline.test.ts shows an
-        // `import x from "pkg/src/a.ts"` line as expected output. The doctest
-        // compiler lifts import statements by regex and cannot tell fixture
-        // text from the fence's own imports.
-        "react-markdown",
-        "remark-parse",
         "markdown-it",
-        "pkg",
-      ],
-      // Three doctests import modules from inside a template literal that a
-      // spawned subprocess evaluates, so the specifier is relative to the
-      // package root rather than to the .md file. The edge is real; only
-      // knip's resolution of it from this location fails. The last three are
-      // test/core/chat/session/deliver-user-message.test.ts's child script.
-      //
-      // `./old.js` and `./new.js` are the same fixture-string case as the
-      // markdown libraries above: test/dev/layout/move/ts-edit.test.ts
-      // feeds source text containing those specifiers to `rewriteTsFile`.
-      ignoreUnresolved: [
-        "./src/webapp/auth-capabilities.ts",
-        "./src/webapp/box-config-write.ts",
-        "./src/core/chat/session/deliver-user-message.ts",
-        "./src/core/chat/session/registry/core.ts",
-        "./src/services/claude-chat/core.ts",
-        "./old.js",
-        "./new.js",
       ],
     },
     "beebox/src/frontend": {
@@ -111,11 +77,10 @@ const config: KnipConfig = {
         // beebox/src/scripts/build-deploy-page.ts, which names it by path.
         "src/deploy-page/poll.ts",
         // The suite is a consumer too: an export reached only from a test is
-        // used. Doctests are markdown — see the root `compilers` config.
+        // used.
         "test/**/*.ts",
-        "test/**/*.doctest.md",
       ],
-      project: ["src/**/*.{ts,tsx,css}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}", "test/**/*.doctest.md"],
+      project: ["src/**/*.{ts,tsx,css}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;
@@ -171,9 +136,6 @@ const config: KnipConfig = {
   // the graph cannot show. Carried at the declaration, naming the consumer, so
   // the exemption is auditable there rather than as a list in this file.
   tags: ["-public"],
-  // Doctests are markdown; knip parses TypeScript. Without this every export
-  // whose only consumer is a doctest reads as dead. See the module's header.
-  compilers: { md: doctestImports },
 };
 
 export default config;

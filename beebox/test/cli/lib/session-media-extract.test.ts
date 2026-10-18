@@ -20,7 +20,7 @@ import { findTranscriptLineByUuid } from "../../../src/cli/lib/session-line-scan
 import { extractSessionMedia } from "../../../src/cli/lib/session-media-extract.js";
 import type { ExtractResult, ExtractedMedia } from "../../../src/cli/lib/session-media-extract.js";
 import assert from "node:assert/strict";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // A payload big enough to trip the strip threshold, whose plaintext we can
 // check on the way back out.

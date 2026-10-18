@@ -1,25 +1,16 @@
 {
   "name": "agent-doctest",
   "version": "0.1.0",
-  "description": "Markdown doctest runner for tap — write tests as executable documentation",
+  "description": "t.check assertions and lint rules for tap tests",
   "type": "module",
-  "bin": {
-    "doctest-typecheck": "./bin/doctest-typecheck.mjs",
-    "doctest-to-ts": "./bin/doctest-to-ts.mjs"
-  },
   "exports": {
     "./check": "./src/exports/check.ts",
     "./eslint": "./src/exports/eslint.ts",
-    "./tap": "./src/tap-check/tap.ts",
-    "./loader": "./src/doctest-loader.ts",
-    "./hooks": "./src/doctest-hooks/hooks.ts",
-    "./resolve-rules": "./src/doctest-hooks/resolve-rules.ts",
-    "./typecheck": "./src/typecheck/check.ts"
+    "./tap": "./src/tap-check/tap.ts"
   },
   "scripts": {
     "test": "tap",
     "typecheck": "tsc --noEmit",
-    "typecheck:doctest": "node bin/doctest-typecheck.mjs --project tsconfig.json 'test/**/*.doctest.md'",
     "lint": "eslint src/"
   },
   "dependencies": {
@@ -41,7 +32,6 @@
     "tap": ">=21.0.0"
   },
   "files": [
-    "bin/",
     "src/",
     "docs/"
   ],

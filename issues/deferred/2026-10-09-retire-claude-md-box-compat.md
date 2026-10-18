@@ -115,7 +115,7 @@ The migration itself:
   `agents-md-2026-10` entry in `src/core/migrations.ts` at
   `src/scripts/migrate/retired.ts` and delete the script and its two doctests
   (`test/scripts/migrate/agents-md*.doctest.md`) in the same change.
-- `test/helpers/doctest-helpers.ts` `makeTmpBox`'s `legacyInstructions`
+- `test/helpers/test-helpers.ts` `makeTmpBox`'s `legacyInstructions`
   option and the doctests that use it (`grep -rn legacyInstructions test`).
 
 Keep: `CLAUDE_MD` and `.claude/CLAUDE.md` in the ancestor exclude list

@@ -15,8 +15,8 @@ import { readRecent } from "../../../src/core/notification/log.js";
 import { checkRequiredConnectors } from "../../../src/core/schedule/promotion.js";
 import { parseScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { syncConnector } from "../../../src/connector-activity/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 import { invariant } from "../../../src/shared/invariant.js";
 
 // Hermetic: no engine-availability store, no Google grant, every channel fake.

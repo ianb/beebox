@@ -2,7 +2,7 @@
  * What a tap test process started from the monorepo root reports (preloaded
  * by `bin/tap-root-guard.ts` through the root `.taprc`). The root is not a
  * test root: each package's `.taprc` carries the loaders and helpers its tests
- * need (the doctest loader, home isolation). Run from the root, a doctest failed with a bare `not ok` or
+ * need (the test loader, home isolation). Run from the root, a test failed with a bare `not ok` or
  * "Unknown file extension .md", and agents read that as a broken install —
  * test subjects went on to delete node_modules. This reports the failure as
  * a TAP result that names the package and the command to run instead.

@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import type { Result } from "../../../src/shared/result.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 import { procedureOutcome } from "../../../src/core/commands/procedure.js";

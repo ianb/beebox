@@ -16,8 +16,8 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { makeTestServer } from "../helpers/doctest-server.js";
-import { bodyField } from "../helpers/doctest-helpers.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
+import { bodyField } from "../helpers/test-helpers.js";
 import { invalidateBoxSchemas } from "../../src/schemas.js";
 
 async function writeSchema(file: string, content: string): Promise<void> {

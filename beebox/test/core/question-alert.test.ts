@@ -14,7 +14,7 @@ import { strict as assert } from "node:assert";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { checkPendingQuestionsAndNotify } from "../../src/core/question-alert.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";

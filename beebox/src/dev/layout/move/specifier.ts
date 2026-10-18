@@ -3,7 +3,7 @@
  * extension style (`.js` stays `.js`, extensionless stays extensionless) and
  * `./` prefix for a relative specifier, and recomputes within the alias root
  * (or falls back to relative) for an aliased one. Reused by both `.ts` files
- * (AST-located edits, `ts-edit.ts`) and doctest fences (`doctest-edit.ts`).
+ * (AST-located edits, `ts-edit.ts`).
  */
 import * as posixPath from "node:path/posix";
 import { baseOf, isWithin } from "../graph.js";

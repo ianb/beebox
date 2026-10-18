@@ -14,7 +14,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { handleCreateAfterSuccess } from "../../../src/cli/tick-utils.js";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 
 function makeScript(overrides: Partial<ParsedScheduledScript>): ParsedScheduledScript {
   return {

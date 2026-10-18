@@ -103,7 +103,7 @@ declare global {
 // crashed on import under a non-browser evaluation (it took down the since-
 // removed `bbx render`). No such consumer exists today, but the guard is one
 // cheap line and re-arming the landmine costs an incident — anything that ever
-// imports this file outside a browser (a component doctest, a static emitter)
+// imports this file outside a browser (a component test, a static emitter)
 // hits it again. Mirrors the guard on `__bbxViewWidgets` (view-widgets/index.tsx).
 if (typeof window !== "undefined" && !window.__bbxReact) {
   window.__bbxReact = React;

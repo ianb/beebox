@@ -45,7 +45,7 @@ Packages in this monorepo include:
   [`beebox/docs/install/agent.md`](beebox/docs/install/agent.md)
   is for the AI assistant doing the install on someone's behalf.
 - **beebox-clerk/** — Chrome extension that talks to a hosted box.
-- **agent-doctest/** — doctest framework, extracted for reuse.
+- **agent-doctest/** — the `t.check` plugin for tap and its lint rules, extracted for reuse.
 - **personal-vibe-check/** — shared ESLint/TS/Prettier preset.
 - **browse/** — worktree-aware wrapper around the `agent-browser` CLI.
 

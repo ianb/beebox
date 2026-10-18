@@ -1,7 +1,7 @@
 /**
- * Shared helpers for route-based doctests.
+ * Shared helpers for route-based tests.
  *
- * Wraps createTestServer with a doctest-friendly API where
+ * Wraps createTestServer with a test-friendly API where
  * inject() returns a plain string ("statusCode\njsonBody")
  * so check() works directly without custom serializers.
  */
@@ -102,7 +102,7 @@ export interface TestServer {
   seed(relativePath: string, content: string): Promise<void>;
   /**
    * Write a view `.tsx` into the box's code directory (`<boxRoot>/src/views/`,
-   * where `resolveViewsDir`/`boxCodePaths` look). Doctests use this instead of
+   * where `resolveViewsDir`/`boxCodePaths` look). Tests use this instead of
    * a hand-joined path so they don't hardcode a layout.
    */
   seedView(relativePath: string, content: string): Promise<void>;

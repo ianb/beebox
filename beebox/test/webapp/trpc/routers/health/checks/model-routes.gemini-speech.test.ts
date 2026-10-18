@@ -18,7 +18,7 @@ import { updateTtsConfig } from "../../../../../../src/core/tts/config.js";
 import { grantSecret, setSecret } from "../../../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../../../src/lib/box-slug.js";
 import type { TtsBackend } from "../../../../../../src/shared/tts-backends.js";
-import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 
 /** A fresh secret store and a box with the given voice backend and grants. */
 async function boxWith({ backend, grants }: { backend: TtsBackend; grants: ("gemini" | "openrouter")[] }) {

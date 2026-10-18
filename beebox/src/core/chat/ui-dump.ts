@@ -3,7 +3,7 @@
  * prints for the agent.
  *
  * Pure — it takes the payload and returns the string, so the format is a
- * doctest rather than something you have to run a browser to see. The shape is
+ * test rather than something you have to run a browser to see. The shape is
  * fixed by `docs/plans/agent-points-at-ui.md` (Track 3, "The dump format"): a
  * header naming the surface, the URL and the scan time; what the scan could
  * and could not see; how much it left out; the controls grouped by the landmark

@@ -12,8 +12,8 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed as printed2 } from "agent-doctest/check";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
-import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
-import { bodyField } from "../../../helpers/doctest-helpers.js";
+import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
+import { bodyField } from "../../../helpers/test-helpers.js";
 import type { UiScanEntry, UiScanPayload } from "../../../../src/shared/ui-scan/core.js";
 
 /** A syntactically-valid (but not pending) request id — real ids are UUIDs. */

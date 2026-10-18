@@ -68,7 +68,7 @@ const BOUNDARY_PATTERNS = [
 ];
 // src/shared/ is bundler-safe, so a raw `../shared/…` bundles nothing harmful —
 // but the convention is the @shared alias. Banned raw EXCEPT for modules that
-// run OUTSIDE Vite where @shared can't resolve: the tap/tsx DOCTEST runner uses
+// run OUTSIDE Vite where @shared can't resolve: the tap/tsx test runner uses
 // the ROOT tsconfig (no @shared path), and the view-widgets esbuild bundle
 // externalizes packages and can't resolve the alias.
 // Those files — proven by the 2026-07-12 probe — must import shared by raw
@@ -109,10 +109,10 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/audio/speech-parsing/parse.ts",
   "src/machines/chatMachine/chat-shared.ts",
   "src/exports/view-widgets.tsx",
-  // Transitively loaded by the tap/tsx doctest runner via input/emission +
+  // Transitively loaded by the tap/tsx test runner via input/emission +
   // input/voice-intent (root tsconfig, no @shared resolution).
   "src/components/chat/InteractiveChat-helpers.ts",
-  // Loaded outside Vite by their own doctests (root tsconfig, no @shared
+  // Loaded outside Vite by their own tests (root tsconfig, no @shared
   // resolution): each imports @shared/is-record by raw relative path.
   "src/input/emission-persist.ts",
   "src/lib/dictation-draft.ts",
@@ -120,13 +120,13 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/location-share.ts",
   "src/components/chat/everywhere/InteractiveChat/native-emission.ts",
   "src/machines/chatMachine/chat-actors.ts",
-  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/todo-model by raw relative path.
   "src/components/todo-view-card-logic.ts",
-  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/invariant by raw relative path.
   "src/components/history/HistoryViewCard/CommitDetail-diff.ts",
-  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/result by raw relative path.
   "src/lib/ui-scan/resolve.ts",
 ];

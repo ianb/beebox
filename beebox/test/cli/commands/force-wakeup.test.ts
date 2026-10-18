@@ -15,7 +15,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import assert from "node:assert/strict";
-import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
+import { makeTestServer, TEST_SLUG } from "../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { forceWakeup, forceWakeupLines } from "../../../src/cli/commands/force-wakeup.js";
 import type { WakeupRunner, WakeupRunResult } from "../../../src/core/wakeup-runner.js";

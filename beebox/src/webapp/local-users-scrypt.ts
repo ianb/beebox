@@ -34,7 +34,7 @@ export interface StoredScrypt {
 /**
  * Current scrypt cost parameters for new/rehashed passwords. Test-only seam (the
  * `BBX_TIME` precedent — principle #10): `BBX_AUTH_SCRYPT_N` lowers the work factor
- * so the pure-function doctest stays fast. Inert unless set (real deployments
+ * so the pure-function test stays fast. Inert unless set (real deployments
  * hash at full strength); any invalid value falls back to the production factor
  * (fail toward strong hashing, never toward weak).
  */

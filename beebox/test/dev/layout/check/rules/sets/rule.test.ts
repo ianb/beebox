@@ -239,7 +239,7 @@ registry pkg/src/routes/chat.ts`);
 // identifier is bound by an import from *another file in this package* counts
 // as self-registration into that file's registry — the fixture always builds
 // `ImportEdge.names` as `[]`, so each case below edits the returned layout's
-// module imports directly (as the tests-rule doctest does).
+// module imports directly (as the tests-rule test does).
 //
 // `builtins.ts` calls `registerTemplate`, imported from `./templates-registry.js`
 // inside this package: a finding. `serializers.ts` calls `registerSerializer`,

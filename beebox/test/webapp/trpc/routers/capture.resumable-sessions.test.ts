@@ -9,8 +9,8 @@ import "agent-doctest/tap";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createStagingSession, addPhoto, setStagingState, listStagingSessions } from "../../../../src/core/capture/staging-store/core.js";
 import { selectResumableCaptures } from "../../../../src/core/capture/pending.js";
 

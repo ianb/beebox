@@ -18,7 +18,7 @@ import {
   describeElapsed,
   formatLocalTime,
 } from "../../src/core/session-context.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // The invalid-timezone example exercises the warn-and-fall-back path;
 // silence the documented console.warn so it doesn't pollute test output.

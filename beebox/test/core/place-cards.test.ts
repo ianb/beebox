@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const place = (name: string, extra: string) => `---\nname: ${name}\n${extra}---\nbody\n`;
 

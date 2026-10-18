@@ -109,7 +109,6 @@ export function isPreventionPath(file: string): boolean {
   return (
     /(^|\/)tests?\//u.test(file) ||
     /\.(test|spec)\.[cm]?[jt]sx?$/u.test(file) ||
-    file.endsWith(".doctest.md") ||
     /^schedules\/[^/]+\/check$/u.test(file) ||
     /^bin\/[^/]*-check\.ts$/u.test(file) ||
     file.startsWith("personal-vibe-check/rules/") ||

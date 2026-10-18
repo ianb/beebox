@@ -36,7 +36,7 @@ import {
   probeSecret,
 } from "../../../src/core/secrets/probe-registry.js";
 import { resolveSecret } from "../../../src/core/secrets/resolve.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { FetchLike } from "../../../src/core/secrets/probe-registry.js";
 import { invariant } from "../../../src/shared/invariant.js";
 

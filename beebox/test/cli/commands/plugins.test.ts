@@ -11,7 +11,7 @@ import "agent-doctest/tap";
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import type { PluginListing } from "../../../src/core/plugins/active.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 

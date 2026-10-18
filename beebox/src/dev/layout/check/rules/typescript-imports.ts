@@ -2,8 +2,7 @@
  * Rule typescript-imports (`docs/implemented-plans/typescript-7.md`, Track C): only
  * `src/lib/typescript/` imports `typescript`, `@typescript/native`, or a
  * subpath of either, type-only imports included. It is the one TypeScript 7
- * boundary, in the beebox package only. Doctests (`*.doctest.md`) are exempt:
- * three stay on the 6.0 `typescript` package.
+ * boundary, in the beebox package only.
  */
 import type { Finding, LayoutRule, PackageLayout } from "../../model.js";
 import { isWithin } from "../../graph.js";
@@ -22,14 +21,14 @@ function byPathThenMessage(a: Finding, b: Finding): number {
 }
 
 export const typescriptImportsRule: LayoutRule = {
-  description: "only src/lib/typescript/ imports typescript or @typescript/native (doctests excepted)",
+  description: "only src/lib/typescript/ imports typescript or @typescript/native",
   check(layout: PackageLayout): Finding[] {
     if (layout.root !== PACKAGE_ROOT) return [];
     const boundary = `${layout.sourceRoot}/lib/typescript`;
     const findings: Finding[] = [];
     for (const file of layout.files.values()) {
       if (file.kind !== "module" && file.kind !== "test") continue;
-      if (isWithin(file.path, boundary) || file.path.endsWith(".doctest.md")) continue;
+      if (isWithin(file.path, boundary)) continue;
       for (const edge of file.imports) {
         if (!edge.external || !isTypeScriptSpecifier(edge.specifier)) continue;
         findings.push({

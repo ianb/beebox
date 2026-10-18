@@ -19,7 +19,7 @@ import {
 } from "../../../src/core/search/contains-state.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import type { LoadCardContext } from "../../../src/core/card-io.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const ctx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),

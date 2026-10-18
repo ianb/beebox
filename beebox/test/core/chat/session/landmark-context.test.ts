@@ -8,7 +8,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { rm, symlink } from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { buildLandmarkBoxContext } from "../../../../src/core/chat/session/landmark-context.js";
 
 // Each include arrives. The root file's own text does not: Claude Code loads it

@@ -16,7 +16,7 @@ import {
   chunkTexts,
 } from "../../src/services/openai-embeddings.js";
 import { getOpenAiEmbeddingsKey } from "../../src/core/search/embeddings-key.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## Response validation: every malformed shape is a typed EmbeddingsError
 //

@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { clearBoxConfigCache, loadBoxConfig, loadBoxConfigResult } from "../../../../src/core/box/config.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { execFileSync } from "node:child_process";
 

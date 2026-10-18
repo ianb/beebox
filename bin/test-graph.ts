@@ -16,9 +16,8 @@
  */
 
 import { build, type Metafile, type BuildFailure, type Plugin, type PluginBuild } from "esbuild";
-import { readFileSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
-import { candidateFiles, isRelative } from "../agent-doctest/src/doctest-hooks/resolve-rules.ts";
+import { candidateFiles, isRelative } from "./lib/resolve-rules.ts";
 import {
   cacheFile,
   changedBetween,
@@ -55,7 +54,7 @@ export interface GraphConfig {
 /**
  * Exactly one alias, deliberately: `beebox/tsconfig.json` maps only
  * `@shared/*`, and its comment says the frontend's other aliases "stay
- * unresolvable on purpose — a frontend module reaching for those in a doctest
+ * unresolvable on purpose — a frontend module reaching for those in a test
  * is a boundary violation, not a config gap".
  */
 const BBX_BOX_ALIASES: Record<string, string> = {
@@ -81,33 +80,6 @@ interface GraphInternals {
   /** absolute paths of files with an import that resolved to nothing */
   brokenImporters: Set<string>;
   ambiguousEdges: number;
-}
-
-function doctestPlugin(generateTestSource: (md: string, path: string) => string): Plugin {
-  return {
-    name: "doctest",
-    setup(builder: PluginBuild): void {
-      builder.onResolve({ filter: /\.doctest\.md$/ }, (args: { path: string; importer: string }) => ({
-        path: args.importer ? resolve(dirname(args.importer), args.path) : args.path,
-        namespace: "file",
-      }));
-      builder.onLoad({ filter: /\.doctest\.md$/ }, (args: { path: string }) => {
-        const markdown = readFileSync(args.path, "utf-8");
-        try {
-          return {
-            contents: generateTestSource(markdown, args.path),
-            loader: "ts",
-            resolveDir: dirname(args.path),
-          };
-        } catch (e) {
-          // A doctest that will not transform cannot be graphed. Surface it as
-          // a build error so its entrypoint lands in `unresolved` and is
-          // always run, rather than silently graphing as having no imports.
-          return { errors: [{ text: `doctest transform failed: ${String(e)}` }] };
-        }
-      });
-    },
-  };
 }
 
 function resolutionPlugin(internals: GraphInternals, config: GraphConfig): Plugin {
@@ -154,31 +126,7 @@ function isBuildFailure(e: unknown): e is BuildFailure {
   return typeof e === "object" && e !== null && "errors" in e;
 }
 
-/** The one thing this module needs from `agent-doctest`'s hooks module. */
-interface DoctestHooks {
-  generateTestSource: (md: string, path: string) => string;
-}
-
-function isDoctestHooks(module: unknown): module is DoctestHooks {
-  if (typeof module !== "object" || module === null) return false;
-  return "generateTestSource" in module && typeof module.generateTestSource === "function";
-}
-
-/** The doctest hooks module loaded, but without the transform the graph needs. */
-class DoctestHooksUnavailableError extends Error {
-  constructor(readonly path: string) {
-    super(`no generateTestSource export in ${path}`);
-    this.name = "DoctestHooksUnavailableError";
-  }
-}
-
-
 export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
-  const hooksPath = join(REPO_ROOT, "agent-doctest/src/doctest-hooks/hooks.ts");
-  const hooks: unknown = await import(hooksPath);
-  if (!isDoctestHooks(hooks)) throw new DoctestHooksUnavailableError(hooksPath);
-  const { generateTestSource } = hooks;
-
   const entrypoints = config.entrypoints;
   const internals: GraphInternals = {
     extraEdges: new Map(),
@@ -205,13 +153,13 @@ export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
       jsx: "automatic",
       resolveExtensions: [".ts", ".tsx", ".mjs", ".js", ".jsx", ".json"],
       loader: { ".css": "empty", ".svg": "empty", ".png": "empty" },
-      plugins: [doctestPlugin(generateTestSource), resolutionPlugin(internals, config)],
+      plugins: [resolutionPlugin(internals, config)],
     });
     metafile = result.metafile;
   } catch (e) {
     if (!isBuildFailure(e)) throw e;
-    // Something the plugin's fail-open did not cover (a doctest that will not
-    // transform, say). No metafile means no graph, so every entrypoint is
+    // Something the plugin's fail-open did not cover (an unreadable entrypoint,
+    // say). No metafile means no graph, so every entrypoint is
     // unresolved and every caller runs everything. The safe direction.
     hardFailure = true;
     metafile = undefined;

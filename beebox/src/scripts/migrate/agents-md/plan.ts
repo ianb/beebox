@@ -1,7 +1,7 @@
 /**
  * `agents-md-2026-10`: rename every box `CLAUDE.md` to `AGENTS.md`, with its
  * template-ledger entry and parked update. The whole decision, as a pure
- * function of what the runner scanned, so a doctest reaches every state with
+ * function of what the runner scanned, so a test reaches every state with
  * no box on disk; `run.ts` is the IO around it
  * (docs/implemented-plans/box-agents-md.md, Track B).
  *

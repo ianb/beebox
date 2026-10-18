@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { join } from "node:path";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
 import { createGmailConnector } from "../../../src/connectors/gmail/connector.js";

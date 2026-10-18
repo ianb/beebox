@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
 import { useColor } from "../../src/cli/commands/validate/report.js";
 import { mkdir, writeFile } from "node:fs/promises";

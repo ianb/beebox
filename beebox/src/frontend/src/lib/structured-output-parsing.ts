@@ -82,7 +82,7 @@ function parseAttrs(raw: string): Map<string, string> {
  * Markdown code is left alone: a fenced block or an inline code span showing
  * `<created>` is an example, not an ack.
  */
-// Lists every `ACK_KINDS` kind; the doctest checks that each one normalizes.
+// Lists every `ACK_KINDS` kind; the test checks that each one normalizes.
 const ACK_KIND_ALIAS_RE =
   /<(created|appended|edited|todo-added|todo-completed|no-response)(?=[\s/>])([^>]*?)(?:\/\s*>|>(?:([\S\s]*?)<\/\1\s*>)?)/gi;
 

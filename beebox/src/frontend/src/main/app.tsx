@@ -51,7 +51,7 @@ markFirstLoad(FIRST_LOAD_MARKS.entry);
  * Wires up the built-in file-type list UI (`file-types/builtins.ts`).
  * Imported dynamically, not statically: `file-types/builtins.tsx` has a
  * Vite-only `@schemas/*.list-entry` alias import (see its header) that does
- * not resolve outside Vite, so a static import here would break any doctest
+ * not resolve outside Vite, so a static import here would break any test
  * that reaches this module. `installRenderers` (`renderers.ts`) has no such
  * alias and is imported statically above; the layout check no longer
  * misclassifies a registry-declaring module as a private two-file unit

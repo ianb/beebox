@@ -21,7 +21,7 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { runAgentsMd } from "../../../src/scripts/migrate/agents-md/run.js";
 import { syncBoxGuidance } from "../../../src/core/box/guidance-sync/core.js";
 import { generateDocs, generatedDocsAreCurrent } from "../../../src/core/docs-gen/generate/core.js";

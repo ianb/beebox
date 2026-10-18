@@ -22,7 +22,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 
 /** A fake `ChildProc`: just enough surface for `Supervisor.launch()` to use

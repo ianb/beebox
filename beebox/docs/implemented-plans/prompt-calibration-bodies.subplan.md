@@ -251,7 +251,7 @@ landed. These edits are applied locally:
 | Keep tool output useful | Root guidance fixes introduced/relevant diagnostics and records pre-existing out-of-scope noise once for focused cleanup. |
 | Close resolved issues | The finish agent starts with supplied and branch-added candidates; concrete sibling links or evidence of a missing issue justify expanding the search. |
 | Make rules discoverable | Debug, context, and codehealth consolidate repeated rule summaries, preserving unique obligations in their relevant sections. |
-| Teach doctest syntax when needed | The path rule becomes a pointer to the consolidated [syntax reference](../../../agent-doctest/docs/syntax.md), also linked from the doctest skill and beebox guidance. The generator stays unchanged. |
+| Teach doctest syntax when needed | The path rule becomes a pointer to the consolidated syntax reference (`agent-doctest/docs/syntax.md`, removed with the doctest format), also linked from the doctest skill and beebox guidance. The generator stays unchanged. |
 
 This is dev-repo guidance and a documentation-map label, not a change to
 box-agent prompts or the audit harness. It does not require box knowledge-audit runs. At that checkpoint, the four larger editorial proposals remained future work;

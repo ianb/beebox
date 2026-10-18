@@ -17,7 +17,7 @@ import {
   type DriveTransientState,
 } from "../../../src/connectors/google-drive/state.js";
 import { updateTransientState } from "../../../src/transient-state.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 function fileState(lastModified: string): ReturnType<typeof emptyFileState> {
   const s = emptyFileState();

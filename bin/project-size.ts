@@ -35,7 +35,7 @@ type Category =
   | "lockfiles"
   | "binary";
 
-type TestKind = "doctest (markdown)" | "*.test.ts code" | "test helper code" | "test fixtures & data";
+type TestKind = "*.test.ts code" | "test helper code" | "test fixtures & data";
 
 interface Column {
   key: string;
@@ -67,7 +67,7 @@ const LOCKFILES = new Set(["pnpm-lock.yaml", "package-lock.json"]);
 
 function isTestPath(file: string): boolean {
   const base = path.basename(file);
-  return file.endsWith(".doctest.md") || base.includes(".test.") || `/${file}`.includes("/test/") || `/${file}`.includes("/tests/");
+  return base.includes(".test.") || `/${file}`.includes("/test/") || `/${file}`.includes("/tests/");
 }
 
 function categorize(file: string): Category {
@@ -87,7 +87,6 @@ function categorize(file: string): Category {
 }
 
 function testKind(file: string): TestKind {
-  if (file.endsWith(".md")) return "doctest (markdown)";
   if (path.basename(file).includes(".test.")) return "*.test.ts code";
   if (CODE_EXTENSIONS.has(path.extname(file))) return "test helper code";
   return "test fixtures & data";
@@ -100,24 +99,6 @@ function countLines(file: string): number | null {
   let lines = 0;
   for (const line of data.toString("utf8").split("\n")) if (line.trim() !== "") lines += 1;
   return lines;
-}
-
-/** A doctest's non-blank lines, split into fenced code (fence markers included) and the prose around it. */
-function splitDoctest(file: string): { code: number; prose: number } {
-  let inFence = false;
-  let code = 0;
-  let prose = 0;
-  for (const line of fs.readFileSync(path.join(repoRoot, file), "utf8").split("\n")) {
-    if (line.trim() === "") continue;
-    if (/^\s*```/.test(line)) {
-      inFence = !inFence;
-      code += 1;
-      continue;
-    }
-    if (inFence) code += 1;
-    else prose += 1;
-  }
-  return { code, prose };
 }
 
 /**
@@ -174,7 +155,6 @@ function collect(): Snapshot {
   const byLanguage = new Map<string, { files: number; lines: number }>();
   const byPackage = new Map<string, Map<string, number>>();
   const testFilesByPackage = new Map<string, number>();
-  const doctestSplit = { code: 0, prose: 0 };
   const repoTree = newBranch();
   const beeboxTree = newBranch();
 
@@ -191,11 +171,6 @@ function collect(): Snapshot {
     if (category === "tests") {
       bump(byTestKind, { key: testKind(file), lines });
       if (path.basename(file).includes(".test.")) testFilesByPackage.set(pkg, (testFilesByPackage.get(pkg) ?? 0) + 1);
-      if (file.endsWith(".md")) {
-        const split = splitDoctest(file);
-        doctestSplit.code += split.code;
-        doctestSplit.prose += split.prose;
-      }
     }
     if (category === "code") bump(byLanguage, { key: path.extname(file), lines });
     const treeCat = treeCategory(category);
@@ -221,16 +196,9 @@ function collect(): Snapshot {
     "tests.lines": testLines,
     "tests.files": get(byCategory, "tests").files,
     "docs.lines": docsLines,
-    "doctest.lines": get(byTestKind, "doctest (markdown)").lines,
-    "doctest.files": get(byTestKind, "doctest (markdown)").files,
     "testts.files": get(byTestKind, "*.test.ts code").files,
     "testts.lines": get(byTestKind, "*.test.ts code").lines,
-    "doctest.percent": testLines === 0 ? 0 : Math.round((100 * get(byTestKind, "doctest (markdown)").lines) / testLines),
-    "doctest.code.lines": doctestSplit.code,
-    "doctest.prose.lines": doctestSplit.prose,
-    "doctest.prose.percent": doctestSplit.code + doctestSplit.prose === 0 ? 0 : Math.round((100 * doctestSplit.prose) / (doctestSplit.code + doctestSplit.prose)),
-    "tests.codeOnly.lines": testLines - doctestSplit.prose,
-    "tests.codeOnly.percentOfCode": get(byCategory, "code").lines === 0 ? 0 : Math.round((100 * (testLines - doctestSplit.prose)) / get(byCategory, "code").lines),
+    "tests.percentOfCode": get(byCategory, "code").lines === 0 ? 0 : Math.round((100 * testLines) / get(byCategory, "code").lines),
   };
 
   const countRows = <K extends string>(map: Map<K, { files: number; lines: number }>, label: string) =>
@@ -272,13 +240,9 @@ function collect(): Snapshot {
       bar: "total",
     },
     testsByKind: {
-      title: "Tests by kind (doctests split into fenced code and prose)",
+      title: "Tests by kind",
       columns: filesAndLines({ key: "kind", label: "Kind" }),
-      rows: [
-        { kind: "doctest code (inside fences)", files: get(byTestKind, "doctest (markdown)").files, lines: doctestSplit.code },
-        { kind: "doctest prose", files: 0, lines: doctestSplit.prose },
-        ...countRows(byTestKind, "kind").filter((row) => row.kind !== "doctest (markdown)"),
-      ],
+      rows: countRows(byTestKind, "kind"),
       bar: "lines",
     },
     testTsByPackage: {

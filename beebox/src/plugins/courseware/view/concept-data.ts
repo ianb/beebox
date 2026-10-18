@@ -3,7 +3,7 @@
  * `concepts` frontmatter into typed nodes, plus the kind/edge style metadata.
  *
  * No graph-lib import here on purpose: `view.tsx` decides the empty state from
- * this module alone, and the doctest exercises the parse without React Flow.
+ * this module alone, and the test exercises the parse without React Flow.
  * The plugin may not import engine internals, so the record guard is local.
  */
 

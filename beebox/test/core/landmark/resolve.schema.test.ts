@@ -20,7 +20,7 @@ import {
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { findDestination } from "../../../src/core/landmark/destination.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const card = (title: string) => `---\ntitle: ${title}\n---\n`;
 

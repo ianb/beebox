@@ -1,5 +1,5 @@
 /**
- * Child process for the bounded-parse regression doctest: parses a session log
+ * Child process for the bounded-parse regression test: parses a session log
  * under a small `--max-old-space-size` cap and reports what it retained.
  *
  * Runs in its own process on purpose — the point of the test is that a heap
@@ -20,7 +20,7 @@ if (logPath === undefined || sliceJson === undefined) {
 }
 
 // Parse boundary: the slice arrives as argv text from the test that spawned us.
-// eslint-disable-next-line no-restricted-syntax -- parse boundary: argv JSON is untyped; the only producer is the doctest
+// eslint-disable-next-line no-restricted-syntax -- parse boundary: argv JSON is untyped; the only producer is the test
 const slice = JSON.parse(sliceJson) as SessionLogSlice;
 
 const gc = globalThis.gc;

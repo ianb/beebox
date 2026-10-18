@@ -7,7 +7,7 @@ import "agent-doctest/tap";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { access, unlink } from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
 import {
   createFakeGoogleDrive,

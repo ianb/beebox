@@ -22,7 +22,7 @@ import {
 } from "../../../src/core/capture/staging-store/core.js";
 import { cleanupStagingSession } from "../../../src/core/capture/staging-teardown.js";
 import { addFileStreamed } from "../../../src/core/capture/staging-stream.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 function errorName(e: unknown): string {
   return e instanceof Error ? e.name : String(e);

@@ -59,10 +59,7 @@ function shape(graph: TestGraph): unknown {
 }
 
 const CACHE_FILES = {
-  "test/a.doctest.md": [
-    "# a", "", "```ts setup", 'import { top } from "../src/top.js";', "```", "",
-    "```ts", "top()", "=> 1", "```", "",
-  ].join("\n"),
+  "test/a.test.ts": ['import { top } from "../src/top.js";', "top();"].join("\n"),
   "src/top.ts": "export const top = () => 1;\n",
 };
 
@@ -89,10 +86,10 @@ test("a new test entrypoint invalidates the cache", async () => {
   // re-globbed entrypoint list can notice it.
   await withCache(CACHE_FILES, async ({ build, write }) => {
     await build();
-    write("test/b.doctest.md", ["# b", "", "```ts", "1", "=> 1", "```", ""].join("\n"));
+    write("test/b.test.ts", "export const b = 1;\n");
     const rebuilt = await build();
     assert.equal(rebuilt.cached, false);
-    assert.ok(rebuilt.tests.has("pkg/test/b.doctest.md"));
+    assert.ok(rebuilt.tests.has("pkg/test/b.test.ts"));
   });
 });
 
@@ -124,7 +121,7 @@ test("a file saved DURING the build is not cached against the old edges", async 
   // set, which is only possible for a universe an earlier run established.
   await withCache(CACHE_FILES, async ({ build, touch }) => {
     await build();
-    touch("test/a.doctest.md"); // force the next call to rebuild
+    touch("test/a.test.ts"); // force the next call to rebuild
     // Fires as soon as the event loop turns, well inside the esbuild pass.
     setTimeout(() => touch("src/top.ts"), 0);
     assert.equal((await build()).cached, false);
@@ -173,7 +170,7 @@ test("the key covers the config inputs, not just the graph's files", () => {
     for (const expected of [
       join(packageRoot, "tsconfig.json"),
       join(packageRoot, ".taprc"),
-      join(REPO_ROOT, "agent-doctest/package.json"),
+      join(REPO_ROOT, "bin/lib/resolve-rules.ts"),
       join(REPO_ROOT, "node_modules/esbuild/package.json"),
       join(REPO_ROOT, "bin/test-graph.ts"),
     ]) {

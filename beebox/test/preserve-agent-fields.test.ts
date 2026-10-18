@@ -7,7 +7,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { preserveAgentFields } from "../src/preserve-agent-fields.js";
-import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { makeTmpBox } from "./helpers/test-helpers.js";
 
 const TEMPLATED = "---\nthread-id: t1\nsubject: Pricing\nstatus: new\n---\n";
 

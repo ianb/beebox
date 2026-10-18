@@ -10,7 +10,7 @@ import "agent-doctest/tap";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { addUser, createFirstUser, getLocalUser, verifyPassword } from "../../../../src/webapp/local-users.js";
 import { mintAuthInvite, mintAuthPasswordReset } from "../../../../src/webapp/auth-capabilities.js";
 import { loginThrottle } from "../../../../src/webapp/routes/auth/login-throttle.js";

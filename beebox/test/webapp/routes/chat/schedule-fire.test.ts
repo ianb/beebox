@@ -20,7 +20,7 @@ import { createFakeChatBackend } from "../../../../src/services/claude-chat/core
 import { createEventBus } from "../../../../src/core/event-bus/core.js";
 import { setMostActive } from "../../../../src/core/chat/session/history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { waitForRuns, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

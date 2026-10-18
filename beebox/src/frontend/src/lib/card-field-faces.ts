@@ -19,7 +19,7 @@
 import { blankLeadingTitleHeading } from "@shared/leading-title-heading";
 import type { RendererProps } from "../file-type-registry";
 
-/** Mirrors the keys of `GLOBAL_CARD_FIELDS`; a doctest holds the two sets equal. */
+/** Mirrors the keys of `GLOBAL_CARD_FIELDS`; a test holds the two sets equal. */
 export const COMMON_FIELDS = ["title", "contains", "contains-evidence", "todos", "symbol", "prominence", "theme"] as const;
 type CommonField = (typeof COMMON_FIELDS)[number];
 

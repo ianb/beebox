@@ -11,7 +11,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { compileBriefing } from "../src/schemas/briefing.js";
 import { compileBriefings as compileBoxBriefings } from "../src/core/docs-gen/compile/core.js";
-import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { makeTmpBox } from "./helpers/test-helpers.js";
 import { readFile } from "node:fs/promises";
 
 // ## Frontmatter `key-people` compile to Key Person lines

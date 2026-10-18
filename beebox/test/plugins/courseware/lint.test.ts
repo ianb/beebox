@@ -15,7 +15,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { cardSchema, type CardSchema } from "../../../src/exports/cards.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
 import type { LoadCardContext } from "../../../src/core/card-io.js";
 import courseware from "../../../src/plugins/courseware/plugin.js";

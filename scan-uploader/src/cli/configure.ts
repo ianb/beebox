@@ -3,7 +3,7 @@
  * folder, and disposition, this parses the server URL + box, writes (or
  * updates) the uploader config, writes the token file, and verifies the new
  * token against the server. Deliberately free of process globals
- * (stdin/TTY/argv) so it's directly doctestable; `configure-cli.ts` owns
+ * (stdin/TTY/argv) so it's directly testable; `configure-cli.ts` owns
  * argv parsing and interactive prompting and calls into this.
  */
 
@@ -37,7 +37,7 @@ export interface ConfigureResult {
   readonly name: string;
   /** Non-fatal notes for the CLI to print — today, a contract-version drift
    * the verification call revealed. Returned rather than logged because this
-   * module deliberately avoids process globals to stay doctestable. */
+   * module deliberately avoids process globals to stay testable. */
   readonly warnings: readonly string[];
 }
 

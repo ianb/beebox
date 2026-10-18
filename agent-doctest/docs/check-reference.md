@@ -1,34 +1,32 @@
-# check() — String-comparison testing primitive
+# checkText: string comparison
 
-`check(actual, expected)` is a testing assertion that compares values as strings. Everything becomes text before comparison. This makes tests readable, diff-friendly, and natural for testing rendered output, serialized data, and side effects.
-
-It coexists with tap's `t.equal()`/`t.same()` — use `check()` when you care about "does this look right as text?", use tap for structural equality.
+`t.checkText(actual, expected)` compares values as strings. Everything becomes text before comparison. Use it for rendered output, command output, and side effects. To compare a value, use `t.check` ([guide](../../beebox/docs/testing/check.md)).
 
 ## Setup
 
-Import `tap-check.js` to add `t.check()` to all tap test objects. It patches `TestBase.prototype` via declaration merging and routes failures through `t.fail()` for clean YAML diagnostics:
+Import `agent-doctest/tap` to add `t.checkText()` to all tap test objects. It patches `TestBase.prototype` via declaration merging and routes failures through `t.fail()` for clean YAML diagnostics:
 
 ```ts
 import { test } from "tap";
 import "agent-doctest/tap";
 
 test("example", async (t) => {
-  t.check(someValue, "expected output");
+  t.checkText(someValue, "expected output");
 });
 ```
 
-The import is needed for TypeScript types. At runtime, `t.check()` is also loaded automatically via `.taprc`'s `--import` node-arg.
+The import is needed for TypeScript types. At runtime, `agent-doctest/tap` is also loaded by `.taprc`'s `--import` node-arg.
 
 ## Basic usage
 
 Pass any value and the expected string:
 
 ```ts
-t.check(safeFilename("Hello World!"), "Hello_World");
+t.checkText(safeFilename("Hello World!"), "Hello_World");
 
-t.check(42, "42");
+t.checkText(42, "42");
 
-t.check({ name: "Alice", age: 30 }, `{
+t.checkText({ name: "Alice", age: 30 }, `{
   "name": "Alice",
   "age": 30
 }`);
@@ -48,7 +46,7 @@ not ok 1 - check failed
   found: hello_world
   wanted: Hello_World
   source: |
-      t.check(result, "Hello_World");
+      t.checkText(result, "Hello_World");
       ----^
   ...
 ```
@@ -67,10 +65,10 @@ Multi-line mismatches get a line-by-line diff:
 
 ## Promises
 
-When `actual` is a Promise, `check()` returns a Promise. Await it:
+When `actual` is a Promise, `t.checkText()` returns a Promise. Await it:
 
 ```ts
-await t.check(getStatus(boxRoot), `{
+await t.checkText(getStatus(boxRoot), `{
   "staged": [],
   "modified": [],
   "untracked": [],
@@ -83,7 +81,7 @@ await t.check(getStatus(boxRoot), `{
 When `actual` is a function, it receives a `print` callback as its first argument. Printed lines become part of the "actual" string, followed by the serialized return value (if non-void):
 
 ```ts
-t.check((print) => {
+t.checkText((print) => {
   writeFileSync("test.txt", "hello");
   print("wrote: test.txt");
   return readFileSync("test.txt", "utf-8");
@@ -98,7 +96,7 @@ This is the pattern for testing side effects — the function does something, `p
 Async functions work too:
 
 ```ts
-await t.check(async (print) => {
+await t.checkText(async (print) => {
   await writeCard(boxRoot, "inbox/test.card", content);
   print("created: inbox/test.card");
   return await getStatus(boxRoot);
@@ -120,9 +118,9 @@ Wildcards in the expected string match variable text. There are two syntaxes:
 Use `«»` delimiters with typed matchers and extractions:
 
 ```ts
-t.check(timestamp, "created «date»");           // matches ISO date
-t.check(record, '{"id": «uuid», "count": «int»}');  // typed fields
-t.check(logLine, "commit «hash=*» by «author=*»");  // named captures
+t.checkText(timestamp, "created «date»");           // matches ISO date
+t.checkText(record, '{"id": «uuid», "count": «int»}');  // typed fields
+t.checkText(logLine, "commit «hash=*» by «author=*»");  // named captures
 ```
 
 | Pattern | Matches | Name |
@@ -142,10 +140,10 @@ When a token matches a known type (`date`, `uuid`, `int`, `number`, `string`), t
 
 ## Extractions
 
-All wildcards capture the text they match. `check()` and `t.check()` return an extractions object with positional and named access:
+All wildcards capture the text they match. `checkText()` and `t.checkText()` return an extractions object with positional and named access:
 
 ```ts
-const ext = t.check(logLine, "commit «hash=*» at «date»");
+const ext = t.checkText(logLine, "commit «hash=*» at «date»");
 ext[0]     // "abc123"       — positional
 ext[1]     // "2026-03-02"   — positional
 ext.hash   // "abc123"       — named (via =*)
@@ -156,17 +154,17 @@ ext.length // 2
 Named captures via `«name=type»`:
 
 ```ts
-const ext = t.check(range, "from «start=date» to «end=date»");
+const ext = t.checkText(range, "from «start=date» to «end=date»");
 ext.start  // "2026-01-01"
 ext.end    // "2026-12-31"
 ```
 
 When no wildcards are present, returns an empty array (length 0).
 
-Async check returns a promise of extractions:
+Async `checkText` returns a promise of extractions:
 
 ```ts
-const ext = await t.check(asyncValue, "count: «int»");
+const ext = await t.checkText(asyncValue, "count: «int»");
 ext.int  // "42"
 ```
 
@@ -185,7 +183,7 @@ Wildcards work well for skipping fields in JSON objects. The only requirement is
 
 ```ts
 // Skip volatile fields, check the ones you care about:
-t.check(body.briefs[0], `{«*»
+t.checkText(body.briefs[0], `{«*»
   "relativePath": "box/output/briefs/2026-03-01_test.news-brief.card",
   "title": "Test Brief",
   "date": "2026-03-01",«*»
@@ -239,8 +237,8 @@ registerSerializer((value) => {
 });
 
 // Now tests read naturally:
-t.check(await getStatus(boxRoot), "git: clean");
-t.check(await getStatus(boxRoot), "git: modified: box/inbox/test.card");
+t.checkText(await getStatus(boxRoot), "git: clean");
+t.checkText(await getStatus(boxRoot), "git: modified: box/inbox/test.card");
 ```
 
 Return `null` from a serializer to pass through to the next one.
@@ -253,10 +251,10 @@ For route tests, `test/helpers/check-serializers.ts` registers a serializer for 
 import "./helpers/check-serializers.js";
 
 // Check status + body in one assertion:
-t.check(res, `200\n{\n  "success": true\n}`);
+t.checkText(res, `200\n{\n  "success": true\n}`);
 
 // With wildcards for volatile fields:
-t.check(res, `200\n«*»"items": []«*»`);
+t.checkText(res, `200\n«*»"items": []«*»`);
 ```
 
 ## Options
@@ -264,7 +262,7 @@ t.check(res, `200\n«*»"items": []«*»`);
 Pass a `CheckOptions` object as the second argument instead of a string:
 
 ```ts
-t.check(messyOutput, {
+t.checkText(messyOutput, {
   expected: "hello world",
   normalizeWhitespace: true,  // collapse whitespace runs, trim
   label: "greeting output",   // appears in error messages
@@ -295,18 +293,18 @@ r.extractions;  // [] (empty on failure)
 
 Useful for testing the diff format itself, or for programmatic comparison where you don't want assertion failures.
 
-## Standalone check()
+## Standalone checkText()
 
-The standalone `check()` (from `check.js`, not `tap-check.js`) throws `CheckError` on mismatch instead of calling `t.fail()`. Returns extractions on success:
+The standalone `checkText()` (from `agent-doctest/check`) throws `CheckError` on mismatch instead of calling `t.fail()`. Returns extractions on success:
 
 ```ts
-import { check, CheckError } from "agent-doctest/check";
+import { checkText, CheckError } from "agent-doctest/check";
 
-const ext = check(result, "id: «uuid»");
+const ext = checkText(result, "id: «uuid»");
 ext.uuid;  // the matched UUID
 
 try {
-  check(result, "expected");
+  checkText(result, "expected");
 } catch (err) {
   if (err instanceof CheckError) {
     err.diff;    // visual diff string
@@ -321,11 +319,11 @@ try {
 ```ts
 // Tap integration (preferred in tests)
 import "agent-doctest/tap";
-t.check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
+t.checkText(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
 
 // Standalone (throws on mismatch, returns extractions on match)
-import { check } from "agent-doctest/check";
-check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
+import { checkText } from "agent-doctest/check";
+checkText(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
 
 // Non-throwing
 import { inspect } from "agent-doctest/check";

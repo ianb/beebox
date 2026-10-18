@@ -12,7 +12,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { resolveSessionModel } from "../../../../src/core/chat/session/model.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 

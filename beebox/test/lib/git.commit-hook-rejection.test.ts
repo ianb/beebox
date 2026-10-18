@@ -15,7 +15,7 @@ import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
 import { chmod, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { commit, stageAll } from "../../src/lib/git/core/operations.js";
 
 function git(box: TmpBox, ...args: string[]) {

@@ -7,9 +7,6 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { errorMessage } from "../../../../shared/error-guards.js";
-import { isRecord } from "../../../../shared/is-record.js";
-import { invariant } from "../../../../shared/invariant.js";
 import { isWithin } from "../../graph.js";
 import type { Finding, ImportEdge, LayoutFile, ModuleFile, PackageLayout, TestFile } from "../../model.js";
 import { classifyFile, listPackageFiles } from "./files.js";
@@ -17,34 +14,6 @@ import { extractModuleFacts, parseSourceFile, type RawImportEdge } from "../impo
 import { extractRegistries } from "./registries.js";
 import { type Aliases, loadAliases, resolveImport } from "../resolve.js";
 import { buildEntriesFromFiles, buildEntriesOf, scanEnclosingSurfaces, scanPublicSurfaces } from "./surfaces.js";
-
-// Loaded via a dynamic import behind a non-literal specifier, not a static
-// `import ... from "agent-doctest/hooks"`: that file's own relative imports
-// use real `.ts` extensions (it is Node's ESM loader hook, resolved outside
-// tsx's extension-probing — see its header comment), which only typechecks
-// under `allowImportingTsExtensions`. Our tsconfig doesn't set that, and a
-// static import would pull doctest-hooks.ts into this program and fail with
-// TS5097. `bin/test-graph.ts` resolves the same package the same way.
-interface DoctestHooks {
-  generateTestSource: (markdown: string, path: string) => string;
-}
-
-function hasGenerateTestSource(module: unknown): module is DoctestHooks {
-  return isRecord(module) && typeof module["generateTestSource"] === "function";
-}
-
-let doctestHooksPromise: Promise<DoctestHooks> | null = null;
-
-function loadDoctestHooks(): Promise<DoctestHooks> {
-  if (doctestHooksPromise === null) {
-    const specifier: string = "agent-doctest/hooks";
-    doctestHooksPromise = import(specifier).then((module: unknown) => {
-      invariant(hasGenerateTestSource(module), "agent-doctest/hooks has no generateTestSource export");
-      return module;
-    });
-  }
-  return doctestHooksPromise;
-}
 
 function resolveEdges(params: {
   rawEdges: RawImportEdge[];
@@ -126,43 +95,12 @@ function importsFromSource(params: {
   return resolved.edges;
 }
 
-async function buildDoctestFile(params: {
+function buildTestFile(params: {
   path: string;
   repoRoot: string;
   aliases: Aliases;
   findings: Finding[];
-}): Promise<TestFile> {
-  const markdown = readFileSync(join(params.repoRoot, params.path), "utf8");
-  let generated: string;
-  try {
-    const hooks = await loadDoctestHooks();
-    generated = hooks.generateTestSource(markdown, params.path);
-  } catch (error) {
-    params.findings.push({
-      rule: "scan",
-      path: params.path,
-      message: `doctest failed to generate: ${errorMessage(error)}`,
-    });
-    return { kind: "test", path: params.path, imports: [] };
-  }
-  const imports = importsFromSource({
-    path: params.path,
-    sourceText: generated,
-    fileName: `${params.path}.ts`,
-    repoRoot: params.repoRoot,
-    aliases: params.aliases,
-    findings: params.findings,
-  });
-  return { kind: "test", path: params.path, imports };
-}
-
-async function buildTestFile(params: {
-  path: string;
-  repoRoot: string;
-  aliases: Aliases;
-  findings: Finding[];
-}): Promise<TestFile> {
-  if (params.path.endsWith(".doctest.md")) return buildDoctestFile(params);
+}): TestFile {
   const sourceText = readFileSync(join(params.repoRoot, params.path), "utf8");
   const imports = importsFromSource({
     path: params.path,
@@ -194,7 +132,7 @@ export async function scanPackage(params: { repoRoot: string; packageRoot: strin
     if (kind === "declaration" || kind === "data") {
       files.set(path, { kind, path });
     } else if (kind === "test") {
-      files.set(path, await buildTestFile({ path, repoRoot: params.repoRoot, aliases, findings: scanFindings }));
+      files.set(path, buildTestFile({ path, repoRoot: params.repoRoot, aliases, findings: scanFindings }));
     } else {
       files.set(path, buildModuleFile({ path, repoRoot: params.repoRoot, aliases, findings: scanFindings }));
     }

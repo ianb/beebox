@@ -13,7 +13,7 @@ import { EventEmitter } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { sendReadiness } from "../../../../../src/core/chat/session/run/start-refusal.js";
-import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../helpers/test-helpers.js";
 
 /** A box whose default is an added OpenRouter model, with no OpenRouter key. */
 async function keylessBox() {

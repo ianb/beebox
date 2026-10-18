@@ -16,7 +16,7 @@ import {
   loadHistoryEntries,
   updateFeaturesForSession,
 } from "../../../../src/core/chat/session/history.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { FeatureStore } from "../../../../src/core/chat/session/run/features.js";
 import { resolveRecordedChatEngine } from "../../../../src/core/chat/session/engine.js";
 import { reserveChatSession, ChatReservationStore } from "../../../../src/core/chat/session/reserve.js";

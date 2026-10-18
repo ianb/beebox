@@ -2,7 +2,7 @@
  * The chat reviewer — one tool-less LLM pass per session span, producing a
  * title, a one-sentence `contains`, and the running account.
  *
- * Behind an interface so the run pipeline is doctestable with a scripted fake
+ * Behind an interface so the run pipeline is testable with a scripted fake
  * (the project's standard real + fake service split, as `RetroObserver` does).
  *
  * The pass is incremental: the model receives the account it wrote last time

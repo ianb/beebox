@@ -18,7 +18,7 @@ import {
   loadRunningScripts,
 } from "../../../src/core/schedule/state.js";
 import { loadRunningProcedures } from "../../../src/core/schedule/running-procedures.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import * as fs from "node:fs/promises";
 import { utimes } from "node:fs/promises";
 

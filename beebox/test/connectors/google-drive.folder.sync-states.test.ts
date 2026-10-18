@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../src/services/google-drive/core.js";
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive/connector.js";

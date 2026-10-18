@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import { findInboundCardRefs } from "../../src/core/find-inbound-card-refs.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## Read failures accompany the references that could be scanned
 void test("Read failures accompany the references that could be scanned", async (t) => {

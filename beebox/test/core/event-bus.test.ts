@@ -18,7 +18,7 @@ import Database from "better-sqlite3";
 import { join } from "node:path";
 import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
 import { eventSchemas, isBusEventName } from "../../src/core/event-bus/schemas.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const TS = "2026-07-09T00:00:00.000Z";
 

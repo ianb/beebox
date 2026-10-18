@@ -1,7 +1,7 @@
 /**
  * The in-memory model the layout check reads. The scanner (`scan/`) builds a
  * `PackageLayout` from disk; every rule (`rules/`) is a pure function of one.
- * Rules never touch the filesystem, so their doctests build layouts by hand
+ * Rules never touch the filesystem, so their tests build layouts by hand
  * (`test/dev/layout/check/rules/fixture.ts`).
  *
  * All paths are repo-relative POSIX paths with no trailing slash
@@ -68,9 +68,9 @@ export interface ModuleFile {
 
 export interface TestFile {
   kind: "test";
-  /** `*.doctest.md`, `*.test.ts`, `*.tour.ts`. */
+  /** `*.test.ts`, `*.tour.ts`. */
   path: string;
-  /** From the doctest's generated source, or the `.ts` file itself. */
+  /** Imports of the `.ts` file. */
   imports: ImportEdge[];
 }
 
@@ -153,7 +153,7 @@ export interface PackageLayout {
    * of `publicSurfaces` (a nested package's export built by its parent).
    */
   enclosingSurfaces: PublicSurface[];
-  /** Problems the scanner hit (unresolved import, doctest that will not generate). */
+  /** Problems the scanner hit (unresolved import). */
   scanFindings: Finding[];
 }
 

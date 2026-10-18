@@ -12,7 +12,7 @@ import { any, str } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
   createStagingSession,

@@ -10,9 +10,9 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 
 function contextFor(box: TmpBox) {

@@ -20,7 +20,7 @@ import {
   createSearchIndex,
   type SearchIndex,
 } from "../../../src/core/search/store/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { toError } from "../../../src/shared/error-guards.js";
 
 async function find(db: SearchIndex, term: string): Promise<string> {

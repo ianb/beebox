@@ -63,7 +63,7 @@ function byScoreThenRecency(a: ChatSearchHit, b: ChatSearchHit): number {
 
 /**
  * Fold raw chunk hits into one hit per chat, keeping the best-scoring chunk.
- * Pure — exported for doctests.
+ * Pure — exported for tests.
  */
 function dedupeBySession(hits: ChatSearchHit[]): ChatSearchHit[] {
   const best = new Map<string, ChatSearchHit>();

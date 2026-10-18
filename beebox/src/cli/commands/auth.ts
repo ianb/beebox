@@ -7,7 +7,7 @@
  * token — running as the file's owner already is the authority.
  *
  * Password input has two paths: `--password-file <path>` (non-interactive —
- * required for scripts/CI/doctests, trailing newline stripped) or an
+ * required for scripts/CI/tests, trailing newline stripped) or an
  * interactive no-echo TTY prompt (raw-mode keystroke capture, no readline
  * private-API reliance) with confirmation on account-creating commands.
  *

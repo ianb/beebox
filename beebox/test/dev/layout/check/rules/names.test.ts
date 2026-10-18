@@ -179,13 +179,13 @@ void test("Equal (router/router.ts) and prefixed (router/router-core.ts) both co
       "src/router/router-core.ts": {},
       "src/router/router.ts": {},
       "src/top-level.ts": {},
-      "test/core/chat/session/history.doctest.md": { test: [] },
-      "test/router/router-core.doctest.md": { test: [] },
+      "test/core/chat/session/history.test.ts": { test: [] },
+      "test/router/router-core.test.ts": { test: [] },
     },
   });
   await t.checkText(summary(check(repeated)), `repeated-name pkg/src/router/router-core.ts
 repeated-name pkg/src/router/router.ts
-repeated-name pkg/test/router/router-core.doctest.md`);
+repeated-name pkg/test/router/router-core.test.ts`);
 
   // doctest:L202
   t.check(check(repeated).find((f) => f.path === "pkg/src/router/router.ts")?.message, "name it by what it does; router/router repeats the directory");

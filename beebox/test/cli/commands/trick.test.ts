@@ -11,7 +11,7 @@ import { mkdir, writeFile, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 

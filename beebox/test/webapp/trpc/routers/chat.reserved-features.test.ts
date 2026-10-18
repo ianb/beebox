@@ -10,7 +10,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { appendHistory, getFeaturesForSession, updateFeaturesForSession } from "../../../../src/core/chat/session/history.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";

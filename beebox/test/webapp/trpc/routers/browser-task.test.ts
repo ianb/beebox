@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createBrowserTaskTemplate } from "../../../../src/schemas/browser-task.js";
 

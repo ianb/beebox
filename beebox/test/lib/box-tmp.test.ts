@@ -10,7 +10,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import { boxTmpDir, ensureBoxTmpDir } from "../../src/lib/box-tmp.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## ensureBoxTmpDir creates the dir and returns its path
 void test("ensureBoxTmpDir creates the dir and returns its path", async (t) => {

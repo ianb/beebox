@@ -32,7 +32,7 @@
  *
  * This module does not import the real actor (it pulls in the audio worklet
  * and the network): `realtime-transcription-live.ts` provides it, and a
- * doctest provides a fake.
+ * test provides a fake.
  */
 
 import { setup, assign, emit, enqueueActions, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";

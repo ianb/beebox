@@ -17,8 +17,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveRequestIdentity, isDiagnosticBypassRequest, type DiagRequest } from "../../src/webapp/auth.js";
 import { assertOpenAccessNotListening, startServer } from "../../src/webapp/server/app.js";
-import { makeTestServer } from "../helpers/doctest-server.js";
-import { bodyField } from "../helpers/doctest-helpers.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
+import { bodyField } from "../helpers/test-helpers.js";
 
 const ORIGINAL_DIAG_KEY = process.env.BBX_DIAG_API_KEY;
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;

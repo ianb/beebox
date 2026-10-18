@@ -8,7 +8,7 @@
  * `voice-recording-status` on the event bus after each one.
  *
  * Every wait is sleep-immune (`startAwakeTimeout`) and reached through an
- * injectable `clock` seam so a doctest can advance retries without a real
+ * injectable `clock` seam so a test can advance retries without a real
  * wall-clock wait; production callers omit it and get the real thing
  * (engineering principle #10). A module-scope in-flight set guards against
  * two concurrent runs of the same recording in this process, mirroring
@@ -65,7 +65,7 @@ function realWait(ms: number): Promise<void> {
   });
 }
 
-/** The piece-transcription call, injectable so a doctest can script failures without a real HQ service. */
+/** The piece-transcription call, injectable so a test can script failures without a real HQ service. */
 export type TranscribePieceFn = (
   params: { audioBuffer: Buffer; filename: string; boxRoot: string },
   opts: { service: HqTranscriptionService },

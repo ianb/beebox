@@ -12,7 +12,7 @@
  * queue + the ephemeral "shared with the agent" indicator rows; the popup and
  * indicator components (`ScreenshotConsentPopup.tsx`) are the view. Pure
  * decisions (exact-session match, expiry, outcome→answer mapping, queue reducer)
- * are exported for the doctest; the DOM capture/upload can't run under Node.
+ * are exported for the test; the DOM capture/upload can't run under Node.
  */
 
 import { useCallback, useEffect, useReducer } from "react";

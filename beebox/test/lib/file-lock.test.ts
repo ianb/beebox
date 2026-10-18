@@ -21,7 +21,7 @@ import {
   LOCK_STALE_MS,
   LockHeldError,
 } from "../../src/lib/file-lock.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { spawn } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";

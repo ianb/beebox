@@ -122,7 +122,7 @@ from within the connector.
 
 ## Known limitations
 
-- **Push path is lightly exercised.** Local `.ics` edits and locally-created events are detected (content hash) and pushed back to Google. The failure and retry behavior is covered by doctests against the fake service, but the path has little real-world mileage and scheduled auto-sync is disabled by default.
+- **Push path is lightly exercised.** Local `.ics` edits and locally-created events are detected (content hash) and pushed back to Google. The failure and retry behavior is covered by tests against the fake service, but the path has little real-world mileage and scheduled auto-sync is disabled by default.
 - **Conflicts resolve remote-wins.** When an event changed both locally and in Google since the last pull, Google's version overwrites the local file and the edit is discarded (recorded as such in the commit). A *failed* push is not a conflict and never discards the edit.
 - **Slug collisions.** Two events with the same slug currently get a numeric suffix; revisit if it becomes noisy.
 - **Recurring event edits.** Editing a single occurrence of a recurring series in Google Calendar (creating an `EXDATE` or override) is fetched, but the local representation is whatever Google returns in the series — no separate per-occurrence file.

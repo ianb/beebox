@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as path from "node:path";
 import { resolveAuditBox } from "../../../src/dev/lib/audit-box.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("line 13", async (t) => {
   t.teardown(async () => {

@@ -30,7 +30,7 @@ import {
 import { setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { loadSecretStore, mutateSecretStore, secretsLogDir } from "../../../src/core/secrets/store.js";
 import { getBoxTimeISO } from "../../../src/lib/time.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 async function readLog(iso: string) {
   const lines = (await readFile(accessLogSegmentPath(iso), "utf-8")).trim().split("\n");

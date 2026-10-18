@@ -6,8 +6,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTestServer } from "../../../../helpers/doctest-server.js";
-import { bodyField } from "../../../../helpers/doctest-helpers.js";
+import { makeTestServer } from "../../../../helpers/test-route-server.js";
+import { bodyField } from "../../../../helpers/test-helpers.js";
 import { mkdtempSync, writeFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";

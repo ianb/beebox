@@ -1,6 +1,6 @@
 /**
  * The real, process-spawning implementation of `LaunchctlRunner`
- * (`schedule.ts`). Isolated here so `schedule.ts` and its doctests never
+ * (`schedule.ts`). Isolated here so `schedule.ts` and its tests never
  * need to actually invoke `launchctl` — tests inject a fake runner instead.
  */
 

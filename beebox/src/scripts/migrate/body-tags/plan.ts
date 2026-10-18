@@ -1,7 +1,7 @@
 /**
  * `body-tags-2026-10`: rewrite the four retired type-specific Markdoc tags
  * (`image`, `silence`, `purpose`, `correction`) into plain card shapes. The
- * whole decision, as a pure function of the cards' text, so a doctest reaches
+ * whole decision, as a pure function of the cards' text, so a test reaches
  * every case with no box on disk; `run.ts` is the IO around it
  * (docs/implemented-plans/retire-type-specific-core-tags.md, Track 4).
  *

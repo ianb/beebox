@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { folderInstructionNotes } from "../../src/core/folder-instructions.js";
 
 const box = await makeTmpBox({ git: "none" });

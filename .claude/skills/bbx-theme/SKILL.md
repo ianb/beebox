@@ -12,7 +12,7 @@ During exploration and implementation for feedback:
 
 - Edit the theme, open it with `bin/browse`, inspect desktop and phone, and show
   a labeled exhibit. Fix obvious rendering and readability defects directly.
-- Do not run doctests, tours, change-selected suites, typecheck/lint sweeps,
+- Do not run tests, tours, change-selected suites, typecheck/lint sweeps,
   knowledge audits, or formal cross-model reviews before showing the result.
 - Do not introduce a plan/review gate for ordinary theme styling. Use existing
   theme machinery; raise actual architecture changes separately if needed.

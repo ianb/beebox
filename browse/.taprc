@@ -3,7 +3,6 @@ plugin:
 node-arg:
   - --import=tsx
   - --import=agent-doctest/tap
-  - --import=agent-doctest/loader
 include:
   # t.check tests only, `browse`'s own and its `agent-browser-typed` sub-package's:
   # that package has no test/typecheck/lint scripts of its own

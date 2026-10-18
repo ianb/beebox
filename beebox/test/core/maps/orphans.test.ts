@@ -12,8 +12,8 @@ import { printed } from "agent-doctest/check";
 import { findOrphanMaps, pruneOrphanMaps } from "../../../src/core/maps/orphans.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 import { lstat, symlink } from "node:fs/promises";
 import { join } from "node:path";
 

@@ -13,11 +13,11 @@ import "agent-doctest/tap";
 import { any, str, printed } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import type { TestServer } from "../../../helpers/doctest-server.js";
+import type { TestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { ChatSessionStatus } from "../../../../src/webapp/trpc/routers/chat/control-procedures.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 

@@ -11,7 +11,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { makeTestServer, type TestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
 import { StagingSessionSchema, type StagingSession } from "../../../src/core/capture/staging-schema.js";
 import { readStagingSession, writeStagingSession, sealStagingSession, setStagingState } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";

@@ -20,7 +20,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { getBoxShape, getBoxShapeIfPresent, resolveBoxRoot, requireBoxRoot, BoxShapeError } from "../../src/lib/box-shape.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 /** What `getBoxShape(root)` rejects with: "BoxShapeError mentioning [phrases]" when every phrase is in the message. */
 const rejection = async (boxRoot: string, phrases: string[]) => {

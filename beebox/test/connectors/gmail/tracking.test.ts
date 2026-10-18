@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { createEmailThreadTemplate } from "../../../src/schemas/email-thread.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";

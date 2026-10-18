@@ -64,23 +64,14 @@ const ORPHAN_EXEMPT_PREFIXES = [
   "docs/user-stories/catalog/",
 ];
 
-// Every tracked .md in the monorepo (repo-relative POSIX paths), excluding
-// doctest fixtures (their example links aren't real references, and their
-// basenames aren't link targets).
+// Every tracked .md in the monorepo (repo-relative POSIX paths).
 function trackedMarkdownFiles(): string[] {
-  return trackedMarkdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md"));
-}
-
-// Same set, but keeping .doctest.md fixtures: they're public tracked markdown
-// too, so the private-issues link scan (unlike the reference/orphan checks,
-// which treat doctest example links as non-real references) must not exempt
-// them — a private-issues link in doctest prose is a real leak.
-function trackedMarkdownFilesIncludingDoctests(): string[] {
   const stdout = execFileSync("git", ["ls-files", "-z", "*.md"], { cwd: MONO_ROOT, encoding: "utf8" });
   return stdout.split("\0").filter((p) => p.length > 0 && fs.existsSync(path.join(MONO_ROOT, p)));
 }
 
-function markdownFilesIncludingDoctests(): string[] {
+// Tracked and untracked-but-not-ignored .md files.
+function allMarkdownFiles(): string[] {
   const stdout = execFileSync(
     "git",
     ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "*.md"],
@@ -96,7 +87,7 @@ function markdownFilesIncludingDoctests(): string[] {
 const AGENT_DOCS_PREFIX = SITE_DOCS_PREFIX;
 
 function markdownFiles(): string[] {
-  return markdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md") && !p.startsWith(AGENT_DOCS_PREFIX));
+  return allMarkdownFiles().filter((p) => !p.startsWith(AGENT_DOCS_PREFIX));
 }
 
 // Agent instructions live in AGENTS.md, which Claude Code and Codex both read.
@@ -107,7 +98,7 @@ function markdownFiles(): string[] {
 const CLAUDE_INSTRUCTION_BASENAMES = new Set(["CLAUDE.md", "CLAUDE.local.md"]);
 
 function claudeMdProblems(): string[] {
-  return markdownFilesIncludingDoctests()
+  return allMarkdownFiles()
     .filter((p) => CLAUDE_INSTRUCTION_BASENAMES.has(path.posix.basename(p)))
     .map((p) => `${p}: move its content into an AGENTS.md — a CLAUDE.md or CLAUDE.local.md makes Claude Code ignore AGENTS.md files`);
 }
@@ -157,15 +148,14 @@ function issuesUniquenessProblems(tracked: string[]): string[] {
 }
 
 // HARD invariant, lexical and independent of filesystem resolution: a
-// tracked (public) file — including doctest fixtures — must never link into
+// tracked (public) file must never link into
 // private-issues/ — see src/dev/doc-check/private-link.ts and
 // docs/implemented-plans/private-issues-shadow-repo.md section I. Deliberately not fed
 // through --fix: these are never a heal-by-basename case, they must stay a
-// hard error. Scans its own file list (rather than taking `tracked`) because
-// it must cover .doctest.md, unlike every other check here.
+// hard error.
 function privateLinkProblems(): string[] {
   const problems: string[] = [];
-  for (const rel of trackedMarkdownFilesIncludingDoctests()) {
+  for (const rel of trackedMarkdownFiles()) {
     if (GENERATED_NO_SCAN.has(rel)) continue; // reflects other files' text verbatim, not real links
     const content = fs.readFileSync(path.join(MONO_ROOT, rel), "utf8");
     for (const v of findPrivateLinkViolations(rel, content)) {
@@ -275,7 +265,7 @@ function schemaProblems(tracked: string[]): string[] {
 // pages (see site-reference-links.ts).
 function siteReferenceProblems(): string[] {
   const sitePath = (rel: string): string => rel.slice(SITE_DOCS_PREFIX.length);
-  const siteDocs = markdownFilesIncludingDoctests().filter((p) => p.startsWith(SITE_DOCS_PREFIX));
+  const siteDocs = allMarkdownFiles().filter((p) => p.startsWith(SITE_DOCS_PREFIX));
   const referencePaths = new Set([
     ...engineDocEntries().map((e) => referencePublishPath(e.doc.filename)),
     ...siteDocs.map(sitePath).filter((p) => p.startsWith("reference/")),

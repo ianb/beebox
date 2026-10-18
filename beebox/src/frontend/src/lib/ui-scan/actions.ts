@@ -3,7 +3,7 @@
  *
  * The dispatch is written against {@link ControlTarget} — the four things an
  * action needs from an element — rather than `HTMLElement`, for the same reason
- * the scan walks `ScanElement`: the frontend doctests run under plain Node with
+ * the scan walks `ScanElement`: the frontend tests run under plain Node with
  * no jsdom, and a dispatch written against the DOM would be untestable here.
  * `ControlPointer` supplies the live-element implementation.
  *

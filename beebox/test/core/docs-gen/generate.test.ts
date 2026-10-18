@@ -16,7 +16,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { rm } from "node:fs/promises";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { commitTemplateSyncChanges, generateDocs } from "../../../src/core/docs-gen/generate/core.js";
 import { isTemplateManagedPath } from "../../../src/core/install-template-file.js";
 import { getStatus, getLog } from "../../../src/lib/git/core/operations.js";

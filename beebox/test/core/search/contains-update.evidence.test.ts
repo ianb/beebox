@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { setDerivedContains } from "../../../src/core/search/contains-update.js";
 import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";

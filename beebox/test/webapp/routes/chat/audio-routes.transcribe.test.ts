@@ -12,8 +12,8 @@ import "agent-doctest/tap";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
-import { bodyField } from "../../../helpers/doctest-helpers.js";
+import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
+import { bodyField } from "../../../helpers/test-helpers.js";
 import { buildMultipartForm } from "../../../../src/lib/multipart.js";
 
 async function postClip(ctx: TestServer) {

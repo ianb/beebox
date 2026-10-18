@@ -26,7 +26,7 @@ import { getOpenAiThinkingKey } from "../../../src/core/openai-thinking-key.js";
 import { getOpenAiEmbeddingsKey } from "../../../src/core/search/embeddings-key.js";
 import { grantSecret, revokeSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../src/lib/box-slug.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 async function useTempStore() {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));

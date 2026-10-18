@@ -14,7 +14,7 @@ import { printed } from "agent-doctest/check";
 import { runCollection } from "../../../src/core/collection/run/core.js";
 import { todoCollection, TodoParamsSchema, type DerivedTodo, type TodoParams, type TodoReduction } from "../../../src/core/todo/collection.js";
 import type { CollectionQuery, CollectionResult } from "../../../src/core/collection/types.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { formatTodoLocation } from "../../../src/core/todo/collect-types.js";
 
 const box = await makeTmpBox();

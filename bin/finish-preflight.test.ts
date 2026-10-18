@@ -34,20 +34,19 @@ const NO_SKIP = { value: false, reason: "the merge of main brought code in" };
 /** Every package in these tests has the full script trio unless stated. */
 const allScripts = (): ((pkg: string, script: string) => boolean) => () => true;
 
-test("docsOnly is an iff over every path, and a .doctest.md is not a doc", () => {
+test("docsOnly is an iff over every path", () => {
   assert.equal(isDocsOnly(["beebox/docs/testing.md", "docs/x.md"]), true);
   assert.equal(isDocsOnly(["beebox/docs/a.md", "beebox/src/x.ts"]), false);
-  assert.equal(isDocsOnly(["beebox/docs/a.doctest.md"]), false);
-  // Any non-doctest .md counts, wherever it lives; doc assets under docs/ too.
+  // Any .md counts, wherever it lives; doc assets under docs/ too.
   assert.equal(isDocsOnly(["AGENTS.md"]), true);
   assert.equal(isDocsOnly(["issues/features/x.md", "README.md", "beebox/docs/architecture/images/a.png"]), true);
   assert.equal(isDocsOnly(["site/docs-manifest.yaml"]), false);
   assert.equal(isDocsOnly([]), false);
 });
 
-test("codeChanged ignores docs and tests, and a .doctest.md is a test", () => {
+test("codeChanged ignores docs and tests", () => {
   assert.equal(hasCodeChange(["beebox/docs/a.md", "bin/x.test.ts"]), false);
-  assert.equal(hasCodeChange(["beebox/test/core/box.doctest.md"]), false);
+  assert.equal(hasCodeChange(["beebox/test/core/box.test.ts"]), false);
   assert.equal(hasCodeChange(["beebox/src/core/box.ts"]), true);
   assert.equal(hasCodeChange(["issues/bugs/x.md", "bin/doctor.ts"]), true);
 });

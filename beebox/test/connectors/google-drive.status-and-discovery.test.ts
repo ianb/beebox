@@ -7,7 +7,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { join } from "node:path";
 import { rm } from "node:fs/promises";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleDrive } from "../../src/services/google-drive/core.js";
 import type { FakeGoogleDriveOptions } from "../../src/services/google-drive/core.js";

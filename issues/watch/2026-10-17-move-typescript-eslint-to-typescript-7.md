@@ -21,7 +21,9 @@ the old JavaScript compiler API stay on the `typescript` name, which points at
 - **`agent-doctest`'s `doctest-typecheck`** (`agent-doctest/src/typecheck/check.ts`)
   and the three doctests that import `typescript`. The boxholder decided not
   to port it (2026-10-17). If the doctest tier is removed, this item goes
-  with it.
+  with it. Done 2026-10-18: retire-doctest track 6 removed `doctest-typecheck`,
+  and the two tests that imported `typescript` now go through
+  `beebox/src/lib/typescript/`.
 
 While these stay on 6.0, typed lint can see a different diagnostic than the
 7.0 typecheck on rare code. On this tree at 2026-10-17, `tsc6` and 7.0
@@ -38,6 +40,5 @@ release whose `typescript` peer range includes 7.x.
 - Change each `typescript` alias to the 7.x package, then remove
   `@typescript/native` or make it the same version.
 - Rename the `unstable/` imports in `beebox/src/lib/typescript/`.
-- Port `doctest-typecheck` to the same module, if doctests still exist.
 - Move existing boxes' `typescript` devDependency (new boxes already scaffold
   7.x). This is a change on boxholders' machines, so it needs its own decision.

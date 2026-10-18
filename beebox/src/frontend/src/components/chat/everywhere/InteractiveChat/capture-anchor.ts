@@ -19,7 +19,7 @@
  * position: the position also moves when the bubble leaves and the blank
  * space under it passes to the message above, and the scroller's "at bottom"
  * measures above that blank space, so neither tells a reader's scroll apart.
- * Pure, so the decisions are doctested; `use-capture-anchor.ts` does the DOM part.
+ * Pure, so the decisions are tested; `use-capture-anchor.ts` does the DOM part.
  */
 
 

@@ -11,7 +11,7 @@ import { loadBoxModel, loadEnabledEngines, clearBoxConfigCache } from "../../src
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession, loadCurrentModel, loadCurrentModelForEngine, saveCurrentModel } from "../../src/core/chat/session/state.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import type { AgentEngine } from "../../src/shared/agent-models.js";
 
 // Ids rotate; tiers do not. Examples name a model by engine and tier and read

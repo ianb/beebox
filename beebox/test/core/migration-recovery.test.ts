@@ -9,7 +9,7 @@ import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile, chmod } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import {
   captureMigrationSnapshot,
   changedMigrationPaths,

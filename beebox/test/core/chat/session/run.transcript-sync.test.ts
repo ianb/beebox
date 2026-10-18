@@ -26,7 +26,7 @@ import { createFakeChatBackend } from "../../../../src/services/claude-chat/core
 import { waitForTranscriptEntry } from "../../../../src/core/chat/session/run/transcript-sync.js";
 import { resolveSessionLogPath } from "../../../../src/core/chat/session/history.js";
 import { getSessionDir } from "../../../../src/core/chat/session/transcript-paths.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { tick, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 
 const FINAL_UUID = "00000000-0000-4000-8000-000000000001";

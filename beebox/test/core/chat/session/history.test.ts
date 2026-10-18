@@ -26,7 +26,7 @@ import {
 } from "../../../../src/core/chat/session/history.js";
 import { getSessionDir, getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { resolveChatEngine } from "../../../../src/core/chat/session/engine.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 // `getLastSessionForDirectory` skips entries whose JSONL doesn't exist
 // on disk (the "ghost" check guards against resuming sessions the SDK

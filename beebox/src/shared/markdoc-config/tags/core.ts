@@ -66,7 +66,7 @@ import { unknownTag } from "./unknown-tag.js";
 import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
-// module under Node's ESM loader (used by the doctest runner); the frontend
+// module under Node's ESM loader (used by the test runner); the frontend
 // bundler tolerates them but the backend/test path does not. Destructure off
 // the default import instead — same pattern, and same lint exception, as
 // `body-refs.ts` / `markdoc/emit.ts`.

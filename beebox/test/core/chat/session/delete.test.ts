@@ -15,7 +15,7 @@ import { emptyReviewState, emptySessionState, loadReviewState, saveReviewState }
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { ChatScheduleManager } from "../../../../src/core/chat/schedules/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 async function missing(target: string): Promise<boolean> {
   try { await access(target); return false; } catch (_error) { return true; }

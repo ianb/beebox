@@ -6,7 +6,7 @@
  * Drive call. That is the whole promise of the `gfolder` view (plan Track 4):
  * it shows **box state**, not a live listing, so a child says "synced" only
  * because its own card says so. Keeping the mapping here rather than inside
- * the renderer is what lets a doctest pin it without a DOM.
+ * the renderer is what lets a test pin it without a DOM.
  */
 
 import type { BadgeTone } from "../components/ui/Badge";

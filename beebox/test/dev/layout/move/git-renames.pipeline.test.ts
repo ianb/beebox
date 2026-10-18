@@ -1,7 +1,7 @@
 // # `--mentions-from-git`: mapping composed from git rename detection, then mention rewrite
 //
-// Same fixture style as `apply.pipeline.doctest.md` and
-// `mention-rewrite.pipeline.doctest.md`, but the moves come from
+// Same fixture style as `apply.pipeline.test.ts` and
+// `mention-rewrite.pipeline.test.ts`, but the moves come from
 // `computeRenamesFromGit` (git's own rename detection between two commits)
 // instead of a hand-written move list — the mode `layout-move
 // --mentions-from-git <base>` uses for files that moved before the move tool's

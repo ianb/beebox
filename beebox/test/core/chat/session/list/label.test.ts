@@ -20,7 +20,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolveSessionLabel } from "../../../../../src/core/chat/session/list/label.js";
 import { labelSource, type ChatSessionEntry } from "../../../../../src/core/chat/session/list/core.js";
-import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../helpers/test-helpers.js";
 
 /** The features snapshot the composer prepends to a session's first message. */
 const ENVELOPE = '<chat-app narration="off" prose="on" ' +

@@ -15,7 +15,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { tick } from "../../../helpers/chat-session-spawner-helpers.js";
 
 // ## The failure propagates, and the session goes back to idle

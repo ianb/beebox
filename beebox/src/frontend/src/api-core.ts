@@ -78,7 +78,7 @@ export function getApiBase(): string {
  *
  * `apiBase` is a parameter rather than calling `getApiBase()` internally so
  * this stays a pure, unit-testable string builder — `getApiBase()` reads
- * `window.location`, which doesn't exist under the plain-Node doctest
+ * `window.location`, which doesn't exist under the plain-Node test
  * runner. Call sites pass `getApiBase()` (or an already-computed local).
  */
 export function apiRawFileUrl(apiBase: string, path: string): string {

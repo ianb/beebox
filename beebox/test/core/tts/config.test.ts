@@ -9,7 +9,7 @@ import "agent-doctest/tap";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { loadTtsConfig, updateTtsConfig } from "../../../src/core/tts/config.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## A box that never chose keeps sounding the same
 //

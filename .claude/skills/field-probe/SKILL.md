@@ -1,6 +1,6 @@
 ---
 name: field-probe
-description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures and timing, by deploying bounded instrumentation and having the boxholder run it. When a browser or doctest can reproduce the bug locally, use a local loop instead (beebox/docs/testing.md, "Reproducing a bug").
+description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures and timing, by deploying bounded instrumentation and having the boxholder run it. When a browser or test can reproduce the bug locally, use a local loop instead (beebox/docs/testing.md, "Reproducing a bug").
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 

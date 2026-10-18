@@ -7,7 +7,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { any, eventually } from "agent-doctest/check";
-import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
 import { createFakeTts, createTtsService, type TtsService } from "../../../../src/services/tts.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 

@@ -13,7 +13,7 @@ import { boxSlug } from "../../src/lib/box-slug.js";
 import { addSubscription, endpointsForBox } from "../../src/core/push-subscriptions.js";
 import { sendPush } from "../../src/core/send-push.js";
 import { createFakePush } from "../../src/services/push.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";

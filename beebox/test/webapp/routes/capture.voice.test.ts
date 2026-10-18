@@ -6,7 +6,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { any, str } from "agent-doctest/check";
 import { z } from "zod";
-import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import { StagingSessionSchema, type StagingSession, type StagingVoice } from "../../../src/core/capture/staging-schema.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 

@@ -10,7 +10,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../../helpers/test-route-server.js";
 import { TEST_SLUG } from "../../../../helpers/test-server.js";
 import { getSessionLogPath } from "../../../../../src/core/chat/session/transcript-paths.js";
 

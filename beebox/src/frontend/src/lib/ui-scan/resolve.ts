@@ -18,7 +18,7 @@
  * one would ring a box the user cannot see.
  */
 
-// Raw relative (not `@shared/…`): loaded outside Vite by its own doctest, which
+// Raw relative (not `@shared/…`): loaded outside Vite by its own test, which
 // runs under the root tsconfig where the alias does not resolve.
 import { err, ok, type Result } from "../../../../shared/result.js";
 import { isControlAddress } from "../../../../shared/ui-scan/control-address.js";
@@ -64,7 +64,7 @@ export function resolveControl<E>(id: string, lookup: ElementLookup<E>): Result<
  *
  * `isVisible` is supplied by the caller rather than imported so this module
  * stays free of the DOM (and of `ScanElement`): `ControlPointer` passes the
- * live-element predicate from `live-dom.ts`, a doctest passes a fixture one.
+ * live-element predicate from `live-dom.ts`, a test passes a fixture one.
  * Both end up at the same `visibility.ts` rules the scan walks with, which is
  * the point — a control the dump never listed must not be one a pointer rings.
  */

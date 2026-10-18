@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox, type TmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";
 import { generateSkills, skillConflicts } from "../../../../../src/core/box/guidance-sync/skills/core.js";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";

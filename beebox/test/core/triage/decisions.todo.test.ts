@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import { simpleGit } from "simple-git";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { prepareItem } from "../../../src/core/triage/evidence/core.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { compileTriageInstructions } from "../../../src/core/triage/instructions.js";

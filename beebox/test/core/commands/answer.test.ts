@@ -11,8 +11,8 @@ import { any, str } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { executeAnswer } from "../../../src/core/commands/answer.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 import { execSync } from "node:child_process";
 
 const QUESTIONS = "_bookkeeping/questions";

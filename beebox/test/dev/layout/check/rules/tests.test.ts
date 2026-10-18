@@ -17,8 +17,8 @@ void test("Clean: a single module named by two facets", async (t) => {
   const clean1 = layout({
     files: {
       "src/core/chat/session/history.ts": {},
-      "test/core/chat/session/history.doctest.md": { test: ["src/core/chat/session/history.ts"] },
-      "test/core/chat/session/history.archive.doctest.md": { test: ["src/core/chat/session/history.ts"] },
+      "test/core/chat/session/history.test.ts": { test: ["src/core/chat/session/history.ts"] },
+      "test/core/chat/session/history.archive.test.ts": { test: ["src/core/chat/session/history.ts"] },
     },
   });
   await t.checkText(summary(testsRule.check(clean1)) === "", "true");
@@ -30,7 +30,7 @@ void test("Clean: a test named for a subdirectory, not a module", async (t) => {
   const clean2 = layout({
     files: {
       "src/core/chat/session/history.ts": {},
-      "test/core/chat/session.lifecycle.doctest.md": { test: [] },
+      "test/core/chat/session.lifecycle.test.ts": { test: [] },
     },
   });
   await t.checkText(summary(testsRule.check(clean2)) === "", "true");
@@ -38,7 +38,7 @@ void test("Clean: a test named for a subdirectory, not a module", async (t) => {
 
 // ## Clean: a named test importing collaborators from elsewhere and a type
 //
-// Naming no longer counts imports: `agent.doctest.md` names `agent.ts` in its
+// Naming no longer counts imports: `agent.test.ts` names `agent.ts` in its
 // own mirror, so importing a value from another area and a type from `shared`
 // is unrelated to placement.
 void test("Naming no longer counts imports:", async (t) => {
@@ -48,7 +48,7 @@ void test("Naming no longer counts imports:", async (t) => {
       "src/core/agent/agent.ts": {},
       "src/core/other/fake.ts": {},
       "src/shared/types.ts": {},
-      "test/core/agent/agent.doctest.md": {
+      "test/core/agent/agent.test.ts": {
         test: ["src/core/agent/agent.ts", "src/core/other/fake.ts", "type:src/shared/types.ts"],
       },
     },
@@ -76,7 +76,7 @@ void test("Finding: `test-placement` — a test outside the test root", async (t
   const outsideRoot = layout({
     files: {
       "src/core/x.ts": {},
-      "core/loose.doctest.md": { test: [] },
+      "core/loose.test.ts": { test: [] },
     },
   });
   const outsideRootFindings = testsRule.check(outsideRoot);
@@ -92,7 +92,7 @@ void test("Finding: `test-naming` — a flattened prefix name", async (t) => {
   const flattened = layout({
     files: {
       "src/core/chat/session/archive.ts": {},
-      "test/core/chat-session-archive.doctest.md": { test: ["src/core/chat/session/archive.ts"] },
+      "test/core/chat-session-archive.test.ts": { test: ["src/core/chat/session/archive.ts"] },
     },
   });
   const flattenedFindings = testsRule.check(flattened);
@@ -102,7 +102,7 @@ void test("Finding: `test-naming` — a flattened prefix name", async (t) => {
   t.check(flattenedFindings[0]?.rule, "test-naming");
 
   // doctest:L110
-  t.check(flattenedFindings[0]?.message, "chat-session-archive.doctest.md names no module or directory in pkg/src/core; name it subject.facet.ext after the module or directory it tests");
+  t.check(flattenedFindings[0]?.message, "chat-session-archive.test.ts names no module or directory in pkg/src/core; name it subject.facet.ext after the module or directory it tests");
 });
 
 // ## Finding: `test-structure` — the group's top directory has a source counterpart
@@ -115,7 +115,7 @@ void test("test/core/misc is not an exact mirror, and its top segment below test
   const misplacedGroup = layout({
     files: {
       "src/core/thing.ts": {},
-      "test/core/misc/x.doctest.md": { test: [] },
+      "test/core/misc/x.test.ts": { test: [] },
     },
   });
   const misplacedGroupFindings = testsRule.check(misplacedGroup);
@@ -155,12 +155,12 @@ void test("test/frontend has no source counterpart (src/frontend is a nested pac
   // doctest:L164
   const nestedNonMirror = layout({
     files: {
-      "test/frontend/lib/x.doctest.md": { test: ["src/frontend/src/lib/docling.ts"] },
+      "test/frontend/lib/x.test.ts": { test: ["src/frontend/src/lib/docling.ts"] },
     },
     nestedPackages: ["src/frontend"],
   });
   const nestedNonMirrorFindings = testsRule.check(nestedNonMirror);
-  t.check(summary(nestedNonMirrorFindings), "test-structure pkg/test/frontend/lib/x.doctest.md");
+  t.check(summary(nestedNonMirrorFindings), "test-structure pkg/test/frontend/lib/x.test.ts");
 
   // doctest:L174
   t.check(nestedNonMirrorFindings[0]?.message, "pkg/test/frontend mirrors the nested package pkg/src/frontend; its tests belong in pkg/src/frontend/test");
@@ -171,7 +171,7 @@ void test("Finding: a non-mirror group named after a nested package", async (t) 
   const extraRootGroup = layout({
     files: {
       "scripts/migrate/file.ts": {},
-      "test/scripts/migrate/file.doctest.md": { test: ["scripts/migrate/file.ts"] },
+      "test/scripts/migrate/file.test.ts": { test: ["scripts/migrate/file.ts"] },
     },
     extraSourceRoots: ["scripts"],
   });
@@ -186,7 +186,7 @@ void test("Finding: `support-placement` — a helper placed above its only users
     files: {
       "src/core/agent/agent.ts": {},
       "test/core/helper.ts": {},
-      "test/core/agent/agent.doctest.md": {
+      "test/core/agent/agent.test.ts": {
         test: ["src/core/agent/agent.ts", "test/core/helper.ts"],
       },
     },

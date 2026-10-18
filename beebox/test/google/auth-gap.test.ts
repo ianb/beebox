@@ -18,7 +18,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { explainGoogleAuthGap } from "../../src/google/auth-gap.js";
 import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "google-auth-gap-"));
 

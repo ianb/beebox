@@ -14,7 +14,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, writeFile, appendFile, mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {

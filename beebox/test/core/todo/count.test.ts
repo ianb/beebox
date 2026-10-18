@@ -11,7 +11,7 @@ import "agent-doctest/tap";
 import { countOnPlateTodos } from "../../../src/core/todo/count.js";
 import { runTodoQuery } from "../../../src/core/todo/query.js";
 import { isBoxholderTodo, TODO_AGENT } from "../../../src/shared/todo-model.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 /** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
 async function collectTodos(boxRoot: string) {

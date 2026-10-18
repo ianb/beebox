@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import assert from "node:assert/strict";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";

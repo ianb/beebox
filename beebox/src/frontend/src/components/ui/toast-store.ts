@@ -13,8 +13,8 @@
  * in `ToastViewport`; the viewport owns its own `role="alert"` landmark.
  *
  * Framework-free (no React/DOM import) so the store logic — dedupe counter,
- * auto-expiry, dismiss — is doctestable headlessly; timers are injected via
- * `schedule` so a doctest fires expiry deterministically instead of waiting.
+ * auto-expiry, dismiss — is testable headlessly; timers are injected via
+ * `schedule` so a test fires expiry deterministically instead of waiting.
  */
 
 /** Default auto-expiry for an error toast. */
@@ -64,7 +64,7 @@ export interface ToastStoreOptions {
   /** Auto-expiry in ms (default 10s). */
   ttlMs?: number;
   /**
-   * Timer seam (default `setTimeout`/`clearTimeout`). Injected in doctests so
+   * Timer seam (default `setTimeout`/`clearTimeout`). Injected in tests so
    * expiry is driven deterministically. Returns a cancel function. Must defer
    * the callback (never invoke it synchronously) — like `setTimeout`, arming
    * an expiry that fires within the same tick would re-enter mid-mutation.

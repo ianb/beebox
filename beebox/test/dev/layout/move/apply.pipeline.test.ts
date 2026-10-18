@@ -2,7 +2,7 @@
 //
 // End-to-end coverage of `edges.ts`, `apply.ts`, and `mentions.ts` together
 // against a real temp git repo, the same fixture style as
-// `test/dev/layout/scan/package/scan.doctest.md`.
+// `test/dev/layout/scan/package/scan.test.ts`.
 
 import { test } from "tap";
 import "agent-doctest/tap";
@@ -44,11 +44,8 @@ await write("pkg/src/a.ts", 'import { helper } from "./helper.js";\nexport const
 // An importer in another directory, unaffected by the move itself but whose
 // specifier to the moved file must be recomputed.
 await write("pkg/src/other/importer.ts", 'import { a } from "../a.js";\nexport const value = a;\n');
-// A doctest importer.
-await write(
-  "pkg/test/x.doctest.md",
-  '# X\n\n```ts setup\nimport { a } from "../src/a.js";\n```\n\n```ts\na\n=> 1\n```\n',
-);
+// A test importer.
+await write("pkg/test/x.test.ts", 'import { a } from "../src/a.js";\nexport const value = a;\n');
 // An aliased import whose target moves but stays under the alias root.
 await write("pkg/src/shared/thing.ts", "export const thing = 1;\n");
 await write("pkg/src/webapp/user.ts", 'import { thing } from "@shared/thing";\nexport const value = thing;\n');
@@ -70,8 +67,8 @@ const roots = scanRoots(repoRoot);
 const sources = await collectSources({ repoRoot, roots });
 const { byImporter, edgeCount } = collectRewrites({ sources, moveMap });
 
-// ## Only the affected edges are collected: the moved file's own import, the distant importer's, the doctest's, the alias importer's, and the non-package importer's
-void test("Only the affected edges are collected: the moved file's own import, the distant importer's, the doctest's, the alias importer's, and the non-package importer's", async (t) => {
+// ## Only the affected edges are collected: the moved file's own import, the distant importer's, the test's, the alias importer's, and the non-package importer's
+void test("Only the affected edges are collected: the moved file's own import, the distant importer's, the test's, the alias importer's, and the non-package importer's", async (t) => {
   // doctest:L76
   t.check(edgeCount, 5);
 
@@ -80,7 +77,7 @@ void test("Only the affected edges are collected: the moved file's own import, t
     "pkg/src/other/importer.ts",
     "pkg/src/sub/a.ts",
     "pkg/src/webapp/user.ts",
-    "pkg/test/x.doctest.md",
+    "pkg/test/x.test.ts",
     "schedules/x/run.ts",
   ]);
 });
@@ -101,7 +98,7 @@ void test("Applying moves the files and rewrites every collected specifier", asy
   await t.checkText((await read("pkg/src/webapp/user.ts")).includes('from "@shared/moved/thing"'), "true");
 
   // doctest:L98
-  await t.checkText((await read("pkg/test/x.doctest.md")).includes('from "../src/sub/a.js"'), "true");
+  await t.checkText((await read("pkg/test/x.test.ts")).includes('from "../src/sub/a.js"'), "true");
 
   // doctest:L101
   await t.checkText((await read("schedules/x/run.ts")).includes('from "../../pkg/src/sub/a.js"'), "true");

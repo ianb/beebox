@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
 import { execSync } from "node:child_process";
 
 // ## Keeping a visible box awake

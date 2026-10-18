@@ -37,7 +37,7 @@ export function encodeProjectDir(cwd: string): string {
 
 /**
  * Root of Claude Code's per-project transcript storage. Honors the
- * `BBX_CLAUDE_PROJECTS_DIR` env override so doctests (and unusual
+ * `BBX_CLAUDE_PROJECTS_DIR` env override so tests (and unusual
  * installs) can point session discovery at a fixture directory instead
  * of the real `~/.claude/projects`.
  */

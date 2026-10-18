@@ -10,7 +10,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { InjectOptions } from "fastify";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
 import { createFirstUser, listUsers } from "../../../src/webapp/local-users.js";
 import { mintAuthInvite } from "../../../src/webapp/auth-capabilities.js";
 import { loginThrottle } from "../../../src/webapp/routes/auth/login-throttle.js";

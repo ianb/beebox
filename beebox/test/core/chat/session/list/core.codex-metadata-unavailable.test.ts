@@ -13,7 +13,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox, type TmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";
 import { loadDeadHusks, listSessionEntries } from "../../../../../src/core/chat/session/list/core.js";
 import { getSessionLogPath } from "../../../../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../../../../src/core/chat/session/origin.js";

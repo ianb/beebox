@@ -10,7 +10,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { legacyExpositionRulesChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/legacy-exposition-rules.js";
-import { makeTmpBox } from "../../../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../../helpers/test-helpers.js";
 
 // ## Cards with a non-empty `rules` array, one warning each
 //

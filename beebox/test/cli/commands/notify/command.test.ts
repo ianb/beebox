@@ -13,7 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { notifySource, runNotify, type NotifyCliOptions } from "../../../../src/cli/commands/notify/command.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
 import type { NotifyServices } from "../../../../src/core/notify-boxholder.js";
 import { addSubscription } from "../../../../src/core/push-subscriptions.js";
@@ -22,7 +22,7 @@ import { readRecent } from "../../../../src/core/notification/log.js";
 import { writePresence } from "../../../../src/core/notification/presence.js";
 import { pairFakePushDevice } from "../../../../src/core/mobile/pairing.js";
 import { createFakeApns } from "../../../../src/services/apns.js";
-import { makeTestServer, TEST_SLUG } from "../../../helpers/doctest-server.js";
+import { makeTestServer, TEST_SLUG } from "../../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-notify-cli-${process.pid}-${Date.now()}`);

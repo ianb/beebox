@@ -14,8 +14,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTestServer } from "../helpers/doctest-server.js";
-import { bodyField } from "../helpers/doctest-helpers.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
+import { bodyField } from "../helpers/test-helpers.js";
 
 process.env.BBX_DIAG_API_KEY = "test-diag-key";
 

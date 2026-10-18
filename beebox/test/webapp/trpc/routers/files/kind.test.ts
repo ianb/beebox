@@ -7,7 +7,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../../helpers/trpc-context.js";
 import type { TrpcContext } from "../../../../../src/webapp/trpc/context.js";
 import { filesRouter } from "../../../../../src/webapp/trpc/routers/files/router.js";

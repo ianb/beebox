@@ -1,13 +1,13 @@
 /**
  * Runs `parseSessionLog` in a child process (`parse-session-log-child.ts`)
  * under a hard V8 heap cap, for the session-retention and oversize-lines
- * doctests.
+ * tests.
  *
  * A cap only discriminates when the bounded and unbounded parses sit far
  * apart next to it: when a run near the cap dies depends on GC timing, and
  * tsx alone holds ~25-45 MB. The oversize-lines fixture's bounded parse
  * flaked at 64 MB under load while its unbounded parse survived 96 MB, so
- * that doctest uses a backstop cap and asserts on `retainedMb` instead: the
+ * that test uses a backstop cap and asserts on `retainedMb` instead: the
  * heap held after a forced GC with the parse result still live, minus the
  * same measurement before the parse. That number is deterministic.
  */

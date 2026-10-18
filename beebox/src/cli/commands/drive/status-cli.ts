@@ -22,7 +22,7 @@ const DRIVE_KIND_LABEL: Record<DriveCardKind, string> = {
   link: "link (pointer, nothing copied)",
 };
 
-/** Print the live Drive-card working set. Exported for filesystem doctests. */
+/** Print the live Drive-card working set. Exported for filesystem tests. */
 export async function runDriveStatus(boxRoot: string): Promise<void> {
   const { liveCards, duplicates, unreadable } = await findDriveCardTracking(boxRoot);
 

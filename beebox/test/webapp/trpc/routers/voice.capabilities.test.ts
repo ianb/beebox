@@ -14,7 +14,7 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { silentEventBus, trpcContext } from "../../../helpers/trpc-context.js";
 
 const noBus: TrpcContext["eventBus"] = silentEventBus;

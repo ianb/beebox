@@ -37,7 +37,7 @@ function ago(at: number, now: number): string {
  * ONE authoritative copy per issue; when two worktrees have touched the same
  * one it shows the copy it treats as authoritative, not necessarily this row's.
  *
- * Exported for the doctest: a `Link` cannot render outside the router, and this
+ * Exported for the test: a `Link` cannot render outside the router, and this
  * decision is worth testing without one.
  */
 export function recentRowTarget(file: RecentFile): { to: "/browse" | "/issues"; search: Record<string, string> } {

@@ -1,6 +1,6 @@
 // # `computeMentionRewrite`: end-to-end mention rewriting over a real temp git repo
 //
-// Same fixture style as `apply.pipeline.doctest.md`, exercising `mention-rewrite.ts`
+// Same fixture style as `apply.pipeline.test.ts`, exercising `mention-rewrite.ts`
 // directly rather than through the CLI (pure computation — nothing here writes
 // to disk; the CLI decides whether to persist `fileEdits`, so this is exactly
 // what a `--dry-run` would compute too).

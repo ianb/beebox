@@ -51,7 +51,6 @@ const FROZEN_ANNOTATE_PREFIXES = ["beebox/docs/reports/", "beebox/docs/user-stor
 const GENERATED_NO_ANNOTATE = new Set(["beebox/docs/doc-graph.md", "beebox/docs/prompts.md"]);
 
 function isExcludedFromAnnotate(path: string): boolean {
-  if (path.endsWith(".doctest.md")) return true;
   if (GENERATED_NO_ANNOTATE.has(path)) return true;
   return FROZEN_ANNOTATE_PREFIXES.some((prefix) => path.startsWith(prefix));
 }

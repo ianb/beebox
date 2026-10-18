@@ -1,6 +1,6 @@
 # Example names
 
-Canonical, deliberately-fictional names for use in docs, tests, doctests, and
+Canonical, deliberately-fictional names for use in docs, tests, and
 schema examples. Every name here was invented for illustration — none refers to
 a real person, place, or box. Because their provenance is known, they are safe
 to reuse everywhere and safe to keep in a public repository.

@@ -13,7 +13,7 @@ import {
   isBoxRelativeCardPath,
   boxRelativePathSchema,
 } from "../../../src/core/landmark/nearest.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## nearestDirFromDirs (pure matching)
 //

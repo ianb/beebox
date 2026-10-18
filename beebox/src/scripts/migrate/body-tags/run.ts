@@ -135,7 +135,7 @@ export async function runBodyTags({ boxRoot, mode }: { boxRoot: string; mode: Ru
   return { code: 0, lines };
 }
 
-// CLI entry — only when run directly, not when imported by a doctest.
+// CLI entry — only when run directly, not when imported by a test.
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   const boxRoot = args.find((a) => !a.startsWith("--"));

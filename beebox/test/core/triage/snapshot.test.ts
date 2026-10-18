@@ -7,7 +7,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { judgeItem } from "../../../src/core/triage/judge.js";
 import { serializeTriageRequest } from "../../../src/core/triage/request.js";

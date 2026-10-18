@@ -16,7 +16,7 @@ so.
 
 **License.** GPLv3 covers Bee Box, the Chrome extension, and the browse
 wrapper. Two parts of the same source code are MIT-licensed for standalone
-reuse: the doctest framework and the shared lint preset. The engine is
+reuse: the `t.check` test plugin and the shared lint preset. The engine is
 internally tracked as version 0.1.0.
 
 **How updates work.** There is only one continuously updated version of the

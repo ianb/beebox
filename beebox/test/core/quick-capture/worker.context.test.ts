@@ -6,7 +6,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, rename } from "node:fs/promises";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import type { QuickChatChat } from "../../../src/core/chat/routing/quick-chat-submit/submit.js";
 import type { QuickChatRecord } from "../../../src/core/chat/routing/quick-chat-record.js";

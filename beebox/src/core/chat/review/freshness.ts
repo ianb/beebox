@@ -9,7 +9,7 @@
  *
  * The decision is a pure function over the noul's probability; the Jev call
  * is behind an interface with a fake (`services/jev.ts` `createFakeJev`), so
- * the run pipeline stays doctestable.
+ * the run pipeline stays testable.
  */
 
 import { appendJevDebug, resolveJudgeService } from "../../judgment/service.js";

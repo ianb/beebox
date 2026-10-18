@@ -25,9 +25,9 @@ import { join } from "node:path";
 import { TRPCError } from "@trpc/server";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
-import { makeTestServer, type TestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
 
 const FIXTURES_DIR = join(import.meta.dirname, "..", "..", "..", "mobile-contract", "fixtures", "debug-log-submit");
 

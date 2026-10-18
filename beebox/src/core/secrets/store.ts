@@ -182,7 +182,7 @@ function homeSecretsFilePath(): string {
 function isTestProcess(): boolean {
   if (process.env.TAP === "1" || process.env.NODE_TEST_CONTEXT !== undefined) return true;
   const entry = process.argv[1] ?? "";
-  return /\.test\.[cm]?[jt]sx?$|\.doctest\.md$/.test(entry);
+  return /\.test\.[cm]?[jt]sx?$/.test(entry);
 }
 
 /**
@@ -195,7 +195,7 @@ function isTestProcess(): boolean {
  * set, and `main`'s box inherits the shell and `.env`, so an operator who
  * pointed it at the real file would otherwise have opened that file to the
  * browse identity. Isolation is asserted by whoever built the environment —
- * the dev router for a worktree box (`router-worktree-start.ts`), a doctest
+ * the dev router for a worktree box (`router-worktree-start.ts`), a test
  * for its tmp store — with `BBX_SECRETS_STORE_ISOLATED=1`, and even then only
  * counts when the override really is a different file from the default.
  */

@@ -15,7 +15,7 @@ import { once } from "node:events";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { defaultHubConfigPath } from "../../../src/hub/config.js";
 import { pathToFileURL } from "node:url";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { runMaintenance } from "../../../src/cli/commands/maintenance.js";
 import { boxMaintenanceStatus } from "../../../src/lib/box-maintenance/admission.js";
 

@@ -56,9 +56,6 @@ void test("A TypeScript extension is always a module; a declaration file, test s
   // doctest:L37
   t.check(classifyFile("pkg/src/foo.d.cts", true), "declaration");
 
-  // doctest:L40
-  t.check(classifyFile("test/foo.doctest.md", false), "test");
-
   // doctest:L43
   t.check(classifyFile("test/foo.test.ts", false), "test");
 

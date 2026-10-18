@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { huskTranscriptPath } from "../../../src/core/chat/husk-transcript.js";
 
 const session = "0198f0b0-3333-7333-8333-333333333333";

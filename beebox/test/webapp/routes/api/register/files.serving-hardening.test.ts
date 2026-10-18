@@ -17,7 +17,7 @@ import { any, str } from "agent-doctest/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import net from "node:net";
-import { makeTestServer, TEST_SLUG } from "../../../../helpers/doctest-server.js";
+import { makeTestServer, TEST_SLUG } from "../../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../../helpers/trpc-context.js";
 import { statusRouter } from "../../../../../src/webapp/trpc/routers/status.js";
 

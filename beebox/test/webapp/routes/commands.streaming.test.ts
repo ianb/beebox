@@ -6,7 +6,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
-import { makeTmpBox, bodyField } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, bodyField } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { executeCommandStreaming, type OutputLine } from "../../../src/webapp/routes/commands.js";
 

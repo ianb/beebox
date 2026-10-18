@@ -144,7 +144,7 @@ export interface RunHealthChecksOptions {
    * itself, so the dashboard and `/api/health` escalate the same way.
    */
   scheduleHealth?: BoxScheduleHealth | undefined;
-  /** Installed plugins for the plugin checks; defaults to the registry. A doctest seam. */
+  /** Installed plugins for the plugin checks; defaults to the registry. A test seam. */
   plugins?: ReadonlyArray<PluginDefinition> | undefined;
 }
 

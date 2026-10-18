@@ -20,7 +20,7 @@ import type { ResolveSecretOptions } from "../../../src/core/secrets/resolve.js"
 import { invariant } from "../../../src/shared/invariant.js";
 import { grantSecret, setSecret, declareSecret, removeSecret } from "../../../src/core/secrets/lifecycle.js";
 import { accessLogSegmentPath } from "../../../src/core/secrets/access-log.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 function secretsFile(): string {
   const file = process.env.BBX_SECRETS_FILE;

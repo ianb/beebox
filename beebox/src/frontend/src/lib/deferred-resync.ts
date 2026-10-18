@@ -13,8 +13,8 @@
  *
  * Visibility is read through the small {@link VisibilityAdapter} seam rather
  * than the global `document` directly, so callers (and this module's own
- * doctest) can inject a fake tab-visibility timeline instead of stubbing
- * `document` — the codebase's frontend doctests run under plain Node, not
+ * test) can inject a fake tab-visibility timeline instead of stubbing
+ * `document` — the codebase's frontend tests run under plain Node, not
  * jsdom, so there is no real `document` to stub. The default adapter treats a
  * missing `document` (SSR, a non-browser evaluation) as always-visible, same
  * as `alwaysVisible: true`.

@@ -24,7 +24,7 @@ import {
 } from "./request.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 
-// Re-exported for callers (chat-audio-routes, doctests) that post-process
+// Re-exported for callers (chat-audio-routes, tests) that post-process
 // Voxtral output without going through transcribeAudioVoxtral.
 export {
   joinSegmentTexts,

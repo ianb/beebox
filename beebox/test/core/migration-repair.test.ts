@@ -8,7 +8,7 @@ import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
 import type { Agent } from "../../src/core/agent/invoke/core.js";
 import { createFakeAgent } from "./fake-agent.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { captureMigrationSnapshot } from "../../src/core/migration-recovery.js";
 import { repairMigration, finishMigrationRepair, migrationQuestions } from "../../src/core/migration-repair.js";
 

@@ -17,7 +17,7 @@
  * on, which is a wrong finding about the app.
  *
  * The walk is over {@link ScanElement} rather than `Element` so it can be
- * exercised without a DOM (the frontend doctests run under plain Node);
+ * exercised without a DOM (the frontend tests run under plain Node);
  * `live-dom.ts` adapts the real document to it. Visibility itself lives in
  * `visibility.ts`, shared with the resolver so the two cannot disagree.
  */

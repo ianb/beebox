@@ -17,7 +17,7 @@ import {
   getEngineVersionReport,
 } from "../../src/core/engine-version.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 async function realEngineVersion() {
   const raw = await fs.readFile(path.join(PACKAGE_ROOT, "package.json"), "utf-8");

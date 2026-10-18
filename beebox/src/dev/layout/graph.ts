@@ -13,9 +13,9 @@ export function baseOf(path: string): string {
   return path.slice(path.lastIndexOf("/") + 1);
 }
 
-const COMPOUND_SUFFIXES = [".doctest.md", ".test.ts", ".tour.ts", ".d.ts"];
+const COMPOUND_SUFFIXES = [".test.ts", ".tour.ts", ".d.ts"];
 
-/** File name without its extension: `history.archive.doctest.md` → `history.archive`. */
+/** File name without its extension: `history.archive.test.ts` → `history.archive`. */
 export function stemOf(path: string): string {
   const base = baseOf(path);
   for (const suffix of COMPOUND_SUFFIXES) {

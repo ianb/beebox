@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { simpleGit } from "simple-git";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { parseGitRenameRecords, resolveMovedCardPath } from "../../src/core/moved-card-forwarding.js";
 import { fileExists } from "../../src/lib/file-exists.js";
 

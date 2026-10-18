@@ -14,7 +14,7 @@ import { getSessionLogPath } from "../../../../../src/core/chat/session/transcri
 import { assertFixturePathInBox, ensureAuditPackageDocs } from "../../../../../src/dev/lib/test-runner/runner/fixtures.js";
 import { extractBehavior, loadTests } from "../../../../../src/dev/lib/test-runner/runner/run-test.js";
 import { runChecks } from "../../../../../src/dev/lib/audit-checks.js";
-import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../helpers/test-helpers.js";
 
 function raw(uuid: string) {
   return {

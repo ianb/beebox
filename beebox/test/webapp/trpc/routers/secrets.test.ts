@@ -23,7 +23,7 @@ import { boxSlug } from "../../../../src/lib/box-slug.js";
 import { accessLogSegmentPath } from "../../../../src/core/secrets/access-log.js";
 import { getBoxTimeISO } from "../../../../src/lib/time.js";
 import { mayRevealSecretInBrowser } from "../../../../src/shared/secret-reveal.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string, opts?: { isOwner?: boolean; isAuthenticatedOwner?: boolean }) {

@@ -10,7 +10,7 @@ import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { GENERATE_MARKER } from "../../src/core/docs-gen/generate/core.js";
@@ -133,7 +133,7 @@ void test("This runs against every box on every deploy, so the quiet path has to
 // box carries is wrong. Dropping the marker stands in for the version bump the
 // deploy stamp gives on the real path. The stale skill carries its DOCID marker,
 // as every file the engine wrote does; a `SKILL.md` without one is the
-// boxholder's and is left alone (`test/core/box/guidance-sync/skills/core.doctest.md`).
+// boxholder's and is left alone (`test/core/box/guidance-sync/skills/core.test.ts`).
 void test("What the deploy step exists for:", async (t) => {
   t.teardown(async () => {
     try {

@@ -22,7 +22,7 @@ import "agent-doctest/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
 import { signSession, verifySession, resolveRequestIdentity, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { createFirstUser, addUser, setPassword, removeUser } from "../../src/webapp/local-users.js";
 import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";

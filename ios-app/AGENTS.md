@@ -84,7 +84,7 @@ the test source's `#filePath`; run them from this checkout and keep the relative
 `ios-app/` + `beebox/` layout intact.
 
 Bridge and server changes also need the corresponding beebox checks. At a
-minimum, run the directly affected doctest(s), then the normal checks required
+minimum, run the directly affected test(s), then the normal checks required
 by the beebox pre-commit hook. The broad test command is:
 
 ```sh

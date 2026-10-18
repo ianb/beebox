@@ -11,7 +11,7 @@ import "agent-doctest/tap";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
 import {
   createMobilePairingTicket,
   devicePushRegistrations,

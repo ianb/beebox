@@ -28,7 +28,7 @@ function refusal(boxRoot: string): string | null {
   return null;
 }
 
-/** The command's logic with `boxRoot` given, returning the exit code: the seam its doctest drives. */
+/** The command's logic with `boxRoot` given, returning the exit code: the seam its test drives. */
 export async function runRegisterFakePush(boxRoot: string, opts: { label: string }): Promise<number> {
   const label = opts.label.trim();
   if (label === "") {

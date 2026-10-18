@@ -13,7 +13,7 @@
  * ({@link isNodeVisible}). Same predicate, two directions.
  *
  * Written against structural views rather than `Element` for the same reason
- * the rest of the directory is: the frontend doctests run under plain Node with
+ * the rest of the directory is: the frontend tests run under plain Node with
  * no jsdom. `live-dom.ts` adapts the real document.
  */
 

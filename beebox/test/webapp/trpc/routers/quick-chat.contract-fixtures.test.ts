@@ -22,7 +22,7 @@ import {
   quickChatChooseInput, quickChatDiscardInput, quickChatHomeSchema, quickChatRetryInput, quickChatSubmitInput,
 } from "../../../../src/webapp/trpc/routers/quick-chat.js";
 import { z } from "zod";
-import { makeTestServer, type InjectResult } from "../../../helpers/doctest-server.js";
+import { makeTestServer, type InjectResult } from "../../../helpers/test-route-server.js";
 
 const DIR = "test/mobile-contract/fixtures/quick-chat";
 async function fixture(name: string): Promise<object> {

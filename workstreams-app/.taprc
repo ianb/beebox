@@ -3,7 +3,6 @@ plugin:
 node-arg:
   - --import=tsx
   - --import=agent-doctest/tap
-  - --import=agent-doctest/loader
 include:
   # t.check tests only. The router's `node:test` files are NOT listed here: tap does
   # not run that runner's files, and listing them made it report "no tests
@@ -15,7 +14,7 @@ include:
 reporter: tap
 color: false
 disable-coverage: true
-# Per-file timeout. recency.doctest.md spins up several throwaway git repos
+# Per-file timeout. recency.test.ts spins up several throwaway git repos
 # and scans them across ~7 headings; solo it finishes in ~30s, but under a
 # loaded machine (see beebox/.taprc for the same phenomenon measured
 # there) that inflated past the previous 60s default and intermittently timed

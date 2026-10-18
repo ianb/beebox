@@ -3,7 +3,7 @@
  * `reduceGesture(state, event) → { state, actions }`. The controller feeds it
  * semantic events (points already container-centered; velocity/displacement
  * measured) and executes the returned {@link GestureAction}s. Every transition
- * lives here so the machine is doctestable without a DOM. Modes: `idle`,
+ * lives here so the machine is testable without a DOM. Modes: `idle`,
  * `pending` (down, unclassified), `dismissing`, `swiping`, `panning`,
  * `pinching`, `settling`. See `src/frontend/test/lib/lightbox-gesture-controller/lightbox-gesture-reducer.test.ts`.
  *

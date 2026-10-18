@@ -91,7 +91,7 @@ keyboard (initial: closed)
 
 The current React view still owns `typingMode` and `typingLocked` and renders
 the mobile typing row when `typingMode || isTranscribing`. The keyboard region
-therefore records the intended transitions and has doctest coverage, but the
+therefore records the intended transitions and has test coverage, but the
 view has not yet been wired to read it.
 
 ### Tests

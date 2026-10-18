@@ -6,7 +6,7 @@
  * docs/plans/top-nav-ia.md); until then — and on every non-chat page, which
  * never publishes — the bar derives the place from the route alone. That
  * fallback is this module: a pure pathname → `{ label, dir }` map, so it can
- * be doctested without a router.
+ * be tested without a router.
  *
  * `dir` is the box-relative directory the place sits in (`""` = box root,
  * `null` = the route has no directory at all). It's what the pill hands to

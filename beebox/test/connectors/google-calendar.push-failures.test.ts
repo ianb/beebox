@@ -6,7 +6,7 @@ import { after, test } from "tap";
 import "agent-doctest/tap";
 import { join } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleCalendar } from "../../src/services/google-calendar/core.js";
 import type { CalendarEvent, GoogleCalendarService } from "../../src/services/google-calendar/core.js";

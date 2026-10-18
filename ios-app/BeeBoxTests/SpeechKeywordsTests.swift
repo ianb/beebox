@@ -385,7 +385,7 @@ final class SpeechKeywordsTests: XCTestCase {
 /// Decodes the web→native golden fixtures (receipt, location result) through the
 /// real `ChatWebView.dictionaryPayload(from:)` seam — crossing the JSON-string
 /// neutral transport exactly as the web layer posts them. Shares the fixtures
-/// under `beebox/test/mobile-contract/fixtures/` with the TS doctest.
+/// under `beebox/test/mobile-contract/fixtures/` with the TS test.
 final class MobileContractFixtureDecodeTests: XCTestCase {
     func testConversationBindingFixtures() throws {
         for (name, fixture) in try MobileContractFixtures.load("composer-binding") {
@@ -519,7 +519,7 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
     }
 
     /// Native is the *encoder* for the barge-in command (contract §4.9), so the
-    /// fixture pins what this app puts on the wire; the web doctest checks its
+    /// fixture pins what this app puts on the wire; the web test checks its
     /// decoder against the same file. The rejected fixtures exist for the web
     /// side — native has no way to emit them — so they are only asserted to be
     /// unlike what we send.

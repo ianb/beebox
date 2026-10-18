@@ -7,7 +7,7 @@ import "agent-doctest/tap";
 import { appendFile, mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState } from "../../../../src/core/chat/review/state.js";

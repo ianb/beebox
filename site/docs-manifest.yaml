@@ -210,13 +210,13 @@
   publish: dev/testing.md
   description: "Testing philosophy and the verification instruments, one per question about the system."
 
-- source: beebox/docs/testing/doctests.md
-  publish: dev/testing/doctests.md
-  description: "Doctests: executable markdown, the default test form, with service fakes."
+- source: beebox/docs/testing/check.md
+  publish: dev/testing/check.md
+  description: "Tests with t.check: whole-value comparison, patterns, helpers, and service fakes."
 
 - source: beebox/docs/testing/tap-tests.md
   publish: dev/testing/tap-tests.md
-  description: "TAP tests for what a doctest cannot test without circularity."
+  description: "The tap runner: how it is set up and why it fails the way it does."
 
 - source: beebox/docs/testing/session-critiques.md
   publish: dev/testing/session-critiques.md

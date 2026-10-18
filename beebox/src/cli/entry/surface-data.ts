@@ -25,7 +25,7 @@
 export type Audience = "agent" | "engine";
 
 /**
- * How the agent-surface doctest exercises a verb. Exactly one arm, so an entry
+ * How the agent-surface test exercises a verb. Exactly one arm, so an entry
  * cannot silently have neither — a verb with no safe invocation has to say why
  * rather than just omit the field.
  */

@@ -46,7 +46,7 @@ function embedHash(text: string): string {
  * Every manifest entry whose whole-card doc needs a (re-)embed: not skipped,
  * with a non-empty sidecar `containsText`, whose whole-card doc id is actually
  * indexed, and whose recorded `embeddedHash` doesn't match the current
- * embedder + text. Pure — exported for doctests and reused to recompute
+ * embedder + text. Pure — exported for tests and reused to recompute
  * readiness after the pass.
  */
 function computePendingEmbeds({

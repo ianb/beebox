@@ -13,7 +13,7 @@ import "agent-doctest/tap";
 import { filingPlan, isWordless, nextKickAt, FILING_WAITING_ERROR, type FilingDoc } from "../../../src/core/quick-capture/filing.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import type { CaptureRecord } from "../../../src/core/quick-capture/store.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
 import { processCapture } from "../../../src/core/quick-capture/worker.js";
 import { readCapture } from "../../../src/core/quick-capture/store.js";

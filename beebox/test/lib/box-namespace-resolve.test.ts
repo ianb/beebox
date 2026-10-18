@@ -23,7 +23,7 @@ import {
   resolveBoxNamespacePathOnDisk,
   verifyBoxNamespaceOnDisk,
 } from "../../src/lib/box-namespace-resolve.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 /** Compact rendering of a result for string-comparison assertions below. */
 function describe(result: BoxNamespaceResult): string {

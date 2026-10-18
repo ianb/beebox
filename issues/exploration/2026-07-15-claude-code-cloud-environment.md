@@ -91,7 +91,7 @@ there — and must **no-op cleanly outside the cloud** (guard on
 The full `install → typecheck → lint → test` chain runs from the **repo alone**
 — no external box, no network at test time (verified against the test setup):
 
-- **Tests are self-contained.** `makeTmpBox()` (`beebox/test/helpers/doctest-helpers.ts:39`)
+- **Tests are self-contained.** `makeTmpBox()` (`beebox/test/helpers/test-helpers.ts:39`)
   builds throwaway boxes in the OS tmpdir; route doctests boot Fastify against
   tmp git repos; agents/services are faked (`test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`),
   `src/services/`). The scenario loader that defaults to `~/src/boxes/scenarios`

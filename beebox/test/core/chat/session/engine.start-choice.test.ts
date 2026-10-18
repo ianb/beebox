@@ -18,7 +18,7 @@ import { resolveChatEngine, resolveStartEngine, resolveRecordedChatEngine } from
 import { reserveChatSession, ChatReservationStore } from "../../../../src/core/chat/session/reserve.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

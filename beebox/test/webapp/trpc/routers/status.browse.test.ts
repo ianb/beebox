@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";

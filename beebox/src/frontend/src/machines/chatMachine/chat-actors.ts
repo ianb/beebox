@@ -23,7 +23,7 @@ import {
   type PendingSessionEntry,
 } from "../../api";
 import { trpcClient } from "../../lib/trpc/client";
-// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx test
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
 import { isRecord } from "../../../../shared/is-record.js";
 import { settleReceipt } from "../../input/targets/receipts";

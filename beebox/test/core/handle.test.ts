@@ -21,7 +21,7 @@ import {
 } from "../../src/core/handle.js";
 import { formatHandleInconclusiveLine } from "../../src/shared/inconclusive.js";
 import { createCollectorContext } from "../../src/core/command-runner.js";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 
 // A landmark card for `_content/<dir>/` whose triage destination has the given
 // extra YAML lines (a `procedure:` block, or nothing).

@@ -20,8 +20,8 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
-import { bodyField } from "../../../helpers/doctest-helpers.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
+import { bodyField } from "../../../helpers/test-helpers.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
 

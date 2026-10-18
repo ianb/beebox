@@ -17,7 +17,7 @@ import { dirname } from "node:path";
 import { once } from "node:events";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import type { ChatReviewer, TitleArgs } from "../../../../src/core/chat/review/reviewer.js";
 import { appendSessionManifest } from "../../../../src/core/agent/manifest.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";

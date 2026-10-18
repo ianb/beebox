@@ -5,8 +5,8 @@ import "agent-doctest/tap";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import Sharp from "sharp";
-import { makeTestServer } from "../../../../helpers/doctest-server.js";
-import { bodyField } from "../../../../helpers/doctest-helpers.js";
+import { makeTestServer } from "../../../../helpers/test-route-server.js";
+import { bodyField } from "../../../../helpers/test-helpers.js";
 
 const server = await makeTestServer();
 const jpeg = await Sharp({

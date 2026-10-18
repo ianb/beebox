@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-18T02:34:06Z
-Total documents: 543
+Generated: 2026-10-18T20:01:26Z
+Total documents: 544
 
 ## Issues
 
@@ -85,6 +85,7 @@ These documents are not referenced by any other document.
 - **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (104 lines) · plan review
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
+- **docs/plans/retire-doctest.md** — "Retire doctest: TypeScript tests with a typed check()" (1242 lines) · proposal · partial
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines) · proposal · partial
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines) · plan review
@@ -267,6 +268,7 @@ Referenced by:
 - docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per AGENTS.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/public-site.md:31 (mention) — - Root `AGENTS.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/publish-sites-admin.md:111 (mention) — AGENTS.md             # lazy pointer to installed box-docs/publishing.md
+- docs/plans/retire-doctest.md:108 (mention) — the boxholder (repo `AGENTS.md`, "Do not disable or weaken lint rules").
 - docs/plans/scan-vision-claude.md:494 (mention) — | Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
 - docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
 - docs/plans/worktree-control-surface.md:144 (mention) — (`:236-242`), runs the workspace install (`:252`), generates the Codex AGENTS.md
@@ -462,7 +464,7 @@ Referenced by:
 References:
 - → docs/architecture/spirit.md (link)
 - → docs/design/README.md (link)
-- → ../agent-doctest/docs/syntax.md (link)
+- → docs/testing/check.md (link)
 - → docs/testing.md (link)
 - → docs/server/deploying.md (link)
 - → docs/cards/format.md (link)
@@ -1343,6 +1345,7 @@ Referenced by:
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Validate at boundaries.** Manifests, candidate destinations, slug pointers, and hostname configuration remain strict
 - docs/plans/publish-sites-admin.md:38 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
+- docs/plans/retire-doctest.md:94 (mention) — - **Principle 8, "One way to do each thing"** (`beebox/docs/engineering-principles.md:95`).
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-retry-and-document-route.md:31 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
 - docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
@@ -1497,7 +1500,7 @@ References:
 - → docs/mobile-parity.md (link)
 - → docs/scan-upload-contract.md (link)
 - → deploy/README.md (link)
-- → ../agent-doctest/docs/syntax.md (link)
+- → docs/testing/check.md (link)
 - → docs/glossary.md (link)
 - → docs/example-names.md (link)
 - → ../ACKNOWLEDGEMENTS.md (link)
@@ -2009,7 +2012,7 @@ Referenced by:
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
-- docs/testing/doctests.md:121 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
+- docs/testing/check.md:219 (link) — ([secrets](../secrets.md)): `setSecret` and `grantSecret`
 - docs/testing/real-models.md:31 (link) — the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
@@ -2157,7 +2160,7 @@ References:
 Title: "Testing" | 121 lines | current reference
 
 Referenced by:
-- AGENTS.md:19 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
+- AGENTS.md:19 (link) — - Write tests as `.test.ts` files that use `t.check` ([reference](docs/testing/check.md)). The [testing guide](docs/test
 - docs/README.md:11 (link) — (see [testing](testing.md) and `testing/`) keeps its parent file flat and
 - docs/box-work.md:77 (link) — this (`makeTmpBox()` and the test preloads; see [testing](testing.md)); prefer
 - docs/development.md:17 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
@@ -2216,15 +2219,16 @@ Referenced by:
 - docs/plans/ios-companion-app.md:216 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:36 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
+- docs/plans/retire-doctest.md:418 (mention) — - `beebox/docs/testing.md`, replacing line 21;
 - docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/plans/tts-backend-selection.md:560 (mention) — Tests named while designing, per `docs/testing.md`:
 - docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
 - docs/unimplemented-plans/publish-pages-superseded.md:277 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
-- ../.claude/skills/bbx-plan/TEMPLATE.md:177 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
+- ../.claude/skills/bbx-plan/TEMPLATE.md:177 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the test for each
 - ../.claude/skills/cross-model/SKILL.md:31 (mention) — branches, parsing, money, or security gets none (`docs/testing.md`). A new
-- ../.claude/skills/doctest/SKILL.md:10 (link) — right instrument at all: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
 - ../.claude/skills/field-probe/SKILL.md:3 (mention) — description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures
 - ../.claude/skills/field-probe/SKILL.md:13 (link) — end. It is the field arm of [reproducing a bug](../../../beebox/docs/testing.md#reproducing-a-bug):
+- ../.claude/skills/tests/SKILL.md:10 (link) — instrument fits a change: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
 - ../dev/devprocess-talk/inventory.md:821 (mention) — | Craft skills bbx-debug, bbx-frontend, bbx-guide-testing | 2026-06-20 | 2026-10-07 19e261eb9 | "Current models debug an
 - ../dev/devprocess-talk/reports/sweep-quality.md:11 (mention) — - **Lives in:** `agent-doctest/` (src, `docs/syntax.md`, `docs/check-reference.md`, `docs/getting-started.md`); `.claude
 - ../dev/skills-review-2026-10.md:34 (mention) — | bbx-guide-testing | 79 | 1 | 2 | 10-06 | merge with doctest; it duplicates the table in `beebox/docs/testing.md` and i
@@ -2244,8 +2248,8 @@ Referenced by:
 - ../research/external-skills-harvest.md:292 (mention) — - [x] **X1 — reconcile bbx-plan's test posture with `docs/testing.md`. DONE →
 
 References:
+- → docs/testing/check.md (link)
 - → docs/development/workflow.md (link)
-- → docs/testing/doctests.md (link)
 - → docs/testing/tap-tests.md (link)
 - → docs/testing/real-models.md (link)
 - → docs/testing/knowledge-audits.md (link)
@@ -4753,7 +4757,6 @@ References:
 - → docs/testing/knowledge-audits.md (mention)
 - → docs/development/maintenance.md (mention)
 - → docs/mobile-contract.md (mention)
-- → docs/testing/doctests.md (mention)
 - → docs/testing/tap-tests.md (mention)
 - → docs/testing/session-critiques.md (mention)
 - → docs/testing/dev-stubs.md (mention)
@@ -4857,6 +4860,7 @@ References:
 Title: "Doctest usability" | 855 lines | shipped history | implemented
 
 Referenced by:
+- docs/plans/retire-doctest.md:111 (mention) — - `beebox/docs/implemented-plans/doctest-usability.md:95-97`: *"The doctest
 - ../issues/closed/exploration/2026-09-27-doctest-usability-review.md:13 (mention) — Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doct
 - ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:49 (link) — The [doctest usability review](../../beebox/docs/implemented-plans/doctest-usability.md)
 
@@ -4956,7 +4960,7 @@ Title: "Make the shared dev router safely exposable over Tailscale" | 566 lines 
 Referenced by:
 - docs/implemented-plans/expose-dev-router.review.md:4 (mention) — `expose-dev-router.md`, 2026-07-21. **Verdict: unsafe as written — do not
 - docs/install/docker.md:297 (mention) — router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
-- ../bin/docs/router-operations.md:147 (link) — Background: [router exposure design](../../beebox/docs/implemented-plans/expose-dev-router.md).
+- ../bin/docs/router-operations.md:156 (link) — Background: [router exposure design](../../beebox/docs/implemented-plans/expose-dev-router.md).
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:59 (mention) — - **Lives in:** `bin/docs/router-operations.md` "Authentication and exposure"; `beebox/docs/implemented-plans/expose-dev
 - ../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md:11 (mention) — `expose-dev-router` plan (`beebox/docs/implemented-plans/expose-dev-router.md`),
 - ../issues/closed/features/2026-07-21-expose-dev-checkout-over-tailscale.md:13 (mention) — (`beebox/docs/implemented-plans/expose-dev-router.md`): the shared
@@ -5047,7 +5051,6 @@ References:
 - → docs/engineering-principles.md (mention)
 - → docs/module-map.md (mention)
 - → docs/implemented-plans/doc-structure.md (mention)
-- → docs/testing/doctests.md (mention)
 - → src/connectors/AGENTS.md (mention)
 - → src/services/AGENTS.md (mention)
 - → src/hub/AGENTS.md (mention)
@@ -5104,7 +5107,6 @@ Title: "DOM doctests for frontend effects, events, and render counts" | 383 line
 References:
 - → ../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md (frontmatter)
 - → ../issues/closed/code-quality/2026-10-08-chat-message-list-rerenders-per-token.md (frontmatter)
-- → docs/testing/doctests.md (mention)
 - → docs/testing.md (mention)
 - → AGENTS.md (mention)
 
@@ -5979,7 +5981,6 @@ References:
 - → docs/reports/prompt-calibration-pilot-2026-09-12.md (link)
 - → docs/chat/schedules.md (mention)
 - → ../.claude/skills/cross-model/SKILL.md (link)
-- → ../agent-doctest/docs/syntax.md (link)
 - → docs/guides.md (link)
 
 #### docs/implemented-plans/prompt-calibration.md
@@ -6590,7 +6591,7 @@ References:
 Title: "Search section results open at their heading" | 377 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:15 (mention) — > `beebox/docs/plans/search-section-destination.md`. gdoc hits stay card-level.
+- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:15 (mention) — > `beebox/docs/implemented-plans/search-section-destination.md`. gdoc hits stay card-level.
 
 References:
 - → ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md (frontmatter)
@@ -7026,6 +7027,7 @@ References:
 Title: "Move the repo to TypeScript 7, except typescript-eslint" | 407 lines | shipped history | implemented
 
 Referenced by:
+- docs/plans/retire-doctest.md:46 (mention) — move (`beebox/docs/implemented-plans/typescript-7.md`) left
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:12 (mention) — **Closed:** implemented on branch worktree-ts7 (plan `beebox/docs/implemented-plans/typescript-7.md`). The repo uses Typ
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:171 (link) — [TypeScript 7 plan](../../../beebox/docs/implemented-plans/typescript-7.md). The tools that
 - ../issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md:11 (link) — The [TypeScript 7 plan](../../beebox/docs/implemented-plans/typescript-7.md) moves every
@@ -7372,9 +7374,6 @@ Referenced by:
 - docs/media.md:12 (link) — | [Image orientation](media/image-orientation.md) | The invariant that an image at rest is upright with no EXIF orientat
 - docs/plans/asset-annex.md:643 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
 - ../issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md:19 (mention) — what's normalized vs. left: `docs/media/image-orientation.md`.
-
-References:
-- → ../beebox/test/shared/image-orientation.doctest.md (link)
 
 #### docs/media/image-transforms.md
 
@@ -8617,6 +8616,7 @@ Referenced by:
 - docs/plans/asset-annex.md:1080 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
+- docs/plans/retire-doctest.md:1012 (mention) — `CONTRIBUTING.md:28,56`, and `README.md:48`.
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - docs/reports/plan-directory-migration-history-2026-09-13.md:5 (link) — locations. Use the [current plan conventions](../plans/README.md) when working
@@ -8630,6 +8630,23 @@ References:
 - → ../.claude/agents/finish.md (link)
 - → docs/README.md (link)
 - → docs/reports/plan-directory-migration-history-2026-09-13.md (link)
+
+#### docs/plans/retire-doctest.md **[ORPHAN]**
+
+Title: "Retire doctest: TypeScript tests with a typed check()" | 1242 lines | proposal | partial
+
+References:
+- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (frontmatter)
+- → ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md (frontmatter)
+- → docs/implemented-plans/typescript-7.md (mention)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
+- → docs/implemented-plans/doctest-usability.md (mention)
+- → docs/testing.md (mention)
+- → docs/testing/check.md (mention)
+- → docs/testing/tap-tests.md (mention)
+- → src/services/AGENTS.md (mention)
+- → docs/plans/README.md (mention)
 
 #### docs/plans/route-splitting.md
 
@@ -9326,6 +9343,26 @@ References:
 
 ### docs/testing/
 
+#### docs/testing/check.md
+
+Title: "Tests with `t.check`" | 284 lines | current reference
+
+Referenced by:
+- AGENTS.md:19 (link) — - Write tests as `.test.ts` files that use `t.check` ([reference](docs/testing/check.md)). The [testing guide](docs/test
+- docs/guides.md:55 (link) — | Test syntax (`t.check`) | [check](testing/check.md) |
+- docs/plans/retire-doctest.md:425 (mention) — - **New file:** `beebox/docs/testing/check.md`, the reference for
+- docs/testing.md:21 (link) — - **`.test.ts` with `t.check` is the test form** ([reference](testing/check.md)). Each check compares a whole value, and
+- docs/testing/tap-tests.md:4 (mention) — `t.check`](check.md). This page covers how the runner is set up.
+- docs/testing/tours.md:35 (link) — [tests](check.md); "does the app boot at all" is the
+- ../.claude/skills/tests/SKILL.md:8 (link) — The reference is [testing with t.check](../../../beebox/docs/testing/check.md):
+- ../AGENTS.md:12 (link) — - **Tests:** `.test.ts` files with `t.check` ([reference](beebox/docs/testing/check.md)); [agent-doctest/README.md](agen
+- ../bin/AGENTS.md:9 (link) — ([reference](../beebox/docs/testing/check.md)) under `bin/test/`, mirroring the
+- ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, the `doctest` skill, and the doctests testing page (the skill and page were replaced by `
+
+References:
+- → src/services/AGENTS.md (mention)
+- → docs/secrets.md (link)
+
 #### docs/testing/dev-stubs.md
 
 Title: "Dev stubs" | 64 lines | current reference
@@ -9339,25 +9376,6 @@ Referenced by:
 References:
 - → docs/chat/composer.md (link)
 - → docs/chat/scroll.md (link)
-
-#### docs/testing/doctests.md
-
-Title: "Doctests" | 195 lines | current reference
-
-Referenced by:
-- docs/implemented-plans/doc-structure.md:295 (mention) — doctests.md            does this function, route, or box operation behave?
-- docs/implemented-plans/file-layout.md:130 (mention) — - `docs/testing/doctests.md:20`: *"Create `test/<area>/<name>.doctest.md`
-- docs/implemented-plans/frontend-dom-harness.md:40 (mention) — | A. DOM harness + compiler load hook | ~170 (3 helper files, `.taprc`, `package.json`) | — | ~60 (`docs/testing/doctest
-- docs/testing.md:43 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
-- docs/testing/tours.md:35 (link) — [doctests](doctests.md); "does the app boot at all" is the
-- ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, `.claude/skills/doctest/SKILL.md`, `beebox/docs/testing/doctests.md`.
-- ../dev/devprocess-talk/reports/sweep-quality.md:11 (mention) — - **Lives in:** `agent-doctest/` (src, `docs/syntax.md`, `docs/check-reference.md`, `docs/getting-started.md`); `.claude
-- ../issues/closed/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:33 (mention) — `beebox/docs/testing/doctests.md`, the agent-doctest docs, the finish skill or
-
-References:
-- → ../agent-doctest/docs/syntax.md (link)
-- → src/services/AGENTS.md (mention)
-- → docs/secrets.md (mention)
 
 #### docs/testing/field-testing.md
 
@@ -9452,11 +9470,15 @@ Referenced by:
 
 #### docs/testing/tap-tests.md
 
-Title: "TAP tests" | 45 lines | current reference
+Title: "The tap runner" | 45 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:299 (mention) — tap-tests.md           what a doctest cannot test without circularity
-- docs/testing.md:44 (link) — | [TAP tests](testing/tap-tests.md) | Does the test infrastructure itself work? What a doctest cannot test without circu
+- docs/plans/retire-doctest.md:1009 (mention) — - `docs/testing/tap-tests.md`.
+- docs/testing.md:44 (link) — | [The tap runner](testing/tap-tests.md) | How is the test runner set up, and why does it fail the way it does? | merge
+
+References:
+- → docs/testing/check.md (mention)
 
 #### docs/testing/tours.md
 
@@ -9483,7 +9505,7 @@ Referenced by:
 
 References:
 - → docs/testing/smoke.md (link)
-- → docs/testing/doctests.md (link)
+- → docs/testing/check.md (link)
 - → docs/testing/dev-stubs.md (link)
 - → docs/implemented-plans/agent-browsing-owner.md (mention)
 
@@ -10016,8 +10038,9 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:41 (mention) — - `src/services/AGENTS.md`: *"if a library or function touches external
 - docs/implemented-plans/web-push-notifications.md:203 (mention) — `src/services/AGENTS.md`): `sendNotification(subscription, payload)` →
 - docs/plans/asset-offbox-storage.md:255 (mention) — `src/services/AGENTS.md`.
+- docs/plans/retire-doctest.md:1011 (mention) — `scan-uploader/AGENTS.md`, `src/services/AGENTS.md:44,78,87`,
 - docs/plans/scan-vision-claude.md:361 (mention) — `src/services/AGENTS.md` named-params + describe rules.
-- docs/testing/doctests.md:78 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s
+- docs/testing/check.md:196 (mention) — in-memory fakes. The service layer is documented in `src/services/AGENTS.md`.
 - src/connectors/AGENTS.md:15 (mention) — See `src/services/AGENTS.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patt
 
 ### test/fixtures/theme-tour/

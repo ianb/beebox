@@ -1,5 +1,5 @@
 /**
- * Read-only fake `TailscaleDeps` for the status state machine's doctests. It
+ * Read-only fake `TailscaleDeps` for the status state machine's tests. It
  * scripts the two `tailscale ... --json` subcommands, a single `/auth/me`-style
  * probe, and the non-loopback address list — with no tailnet.
  *
@@ -11,7 +11,7 @@
  *     so a test can never silently pass against a command the fake never modeled.
  *
  * The stateful serve simulator that models `tailscale serve` MUTATIONS
- * (`--bg`/`… off`, foreground funnel) lives in the setup doctest itself, since
+ * (`--bg`/`… off`, foreground funnel) lives in the setup test itself, since
  * only setup/stop issue writes.
  */
 
@@ -44,7 +44,7 @@ export interface FakeTailscaleOptions {
   networkAddresses?: string[];
 }
 
-/** Thrown when a doctest drives the fake with a `tailscale` command it never
+/** Thrown when a test drives the fake with a `tailscale` command it never
  *  modeled — a modeling gap must fail loudly, never pass as a no-op exit 0. */
 class UnexpectedTailscaleCommandError extends Error {
   constructor(readonly command: string) {

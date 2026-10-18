@@ -15,7 +15,7 @@ to make code pass, noisy output treated as a bug, the pre-commit hooks, and the
 rule that nothing learned on a real box reaches this repository unscrubbed.
 
 **[Testing](testing.md)** has the philosophy and one page per verification
-instrument: doctests with typed fakes for every external service, the smoke
+instrument: tests with typed fakes for every external service, the smoke
 walk that boots a real box before a merge, browser tours, field tests, and
 the two that test agents rather than code, knowledge audits and session
 critiques.

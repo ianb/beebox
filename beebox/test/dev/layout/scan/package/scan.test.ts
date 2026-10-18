@@ -2,7 +2,7 @@
 //
 // `scanPackage` wires the sibling modules together into one `PackageLayout`
 // read from disk: listing, AST parsing and resolution, registry extraction,
-// doctest imports, and public surfaces.
+// and public surfaces.
 
 import { test } from "tap";
 import "agent-doctest/tap";
@@ -43,10 +43,7 @@ await write(
   "pkg/src/a.ts",
   "import { b } from \"./b.js\";\nimport { missing } from \"./missing.js\";\nimport { defineRegistry } from \"./shared/registry.js\";\n\nexport const registry = defineRegistry<number>({\n  directory: \"./commands\",\n  ordered: false,\n  members: [b],\n});\n\nexport const a = 1;\n",
 );
-await write(
-  "pkg/test/x.doctest.md",
-  "# X\n\n```ts setup\nimport { a } from \"../src/a.js\";\n```\n\n```ts\na\n=> 1\n```\n",
-);
+await write("pkg/test/x.test.ts", "import { a } from \"../src/a.js\";\nexport const value = a;\n");
 
 const layout = await scanPackage({ repoRoot, packageRoot: "pkg" });
 
@@ -56,7 +53,7 @@ void test("Files are classified and their facts recorded", async (t) => {
   t.check(layout.files.get("pkg/src/a.ts")?.kind, "module");
 
   // doctest:L59
-  t.check(layout.files.get("pkg/test/x.doctest.md")?.kind, "test");
+  t.check(layout.files.get("pkg/test/x.test.ts")?.kind, "test");
 });
 
 // `scripts/` holds TypeScript and is an extra source root; `public/` holds
@@ -115,11 +112,11 @@ void test("An unresolved import is a scan finding", async (t) => {
   ]);
 });
 
-// ## A doctest's setup imports are resolved relative to its own directory
-void test("A doctest's setup imports are resolved relative to its own directory", async (t) => {
+// ## A test's imports are resolved relative to its own directory
+void test("A test's imports are resolved relative to its own directory", async (t) => {
   // doctest:L95
-  const doctestFile = layout.files.get("pkg/test/x.doctest.md");
-  t.check(importsOf(doctestFile).find((i) => i.specifier === "../src/a.js")?.target, "pkg/src/a.ts");
+  const testFile = layout.files.get("pkg/test/x.test.ts");
+  t.check(importsOf(testFile).find((i) => i.specifier === "../src/a.js")?.target, "pkg/src/a.ts");
 });
 
 // ## Public surfaces come from `package.json` `exports` and the build entry

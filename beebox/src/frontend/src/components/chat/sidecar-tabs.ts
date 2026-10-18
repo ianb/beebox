@@ -5,7 +5,7 @@
  * A reducer rather than a bag of setState calls, because three of the decisions
  * here are the kind that go wrong quietly — where a newly pinned tab lands,
  * which tab an open evicts, and which tab takes over when the active one
- * closes. As a pure function they are reachable by a doctest
+ * closes. As a pure function they are reachable by a test
  * (`src/frontend/test/components/chat/sidecar-tabs.test.ts`); inside a component they would not
  * be.
  *
