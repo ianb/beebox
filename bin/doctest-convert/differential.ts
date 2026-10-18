@@ -31,6 +31,11 @@ interface Probe {
   where: string;
   text: string;
   expected: unknown;
+  /**
+   * For a doctest that checked `JSON.stringify(x)`: rebuilds that text from
+   * `x`, which is what the typed check compares.
+   */
+  textOf?: (value: unknown) => unknown;
 }
 
 interface Mutant {
@@ -172,9 +177,10 @@ function typedPasses(value: unknown, expected: unknown): { pass: boolean; messag
 async function differential(actualIn: unknown, probe: Probe): Promise<void> {
   const isPromise = actualIn instanceof Promise;
   const actual = isPromise ? await actualIn : actualIn;
-  await probe.t.checkText(actual, probe.text);
+  const textOf = probe.textOf ?? ((v: unknown): unknown => v);
+  await probe.t.checkText(textOf(actual), probe.text);
   if (OUT === undefined) return;
-  const textPass = await textPasses(actual, probe.text);
+  const textPass = await textPasses(textOf(actual), probe.text);
   const typed = typedPasses(actual, probe.expected);
   const looser: Array<{ op: string; path: string }> = [];
   let stricter = 0;
@@ -182,13 +188,13 @@ async function differential(actualIn: unknown, probe: Probe): Promise<void> {
   if (textPass && typed.pass) {
     for (const m of mutants(actual)) {
       tried++;
-      const textFails = !(await textPasses(m.value, probe.text));
+      const textFails = !(await textPasses(textOf(m.value), probe.text));
       const typedFails = !typedPasses(m.value, probe.expected).pass;
       if (textFails && !typedFails) looser.push({ op: m.op, path: m.path });
       if (!textFails && typedFails) stricter++;
     }
   }
-  const record = { where: probe.where, isPromise, textPass, typedPass: typed.pass, typedMessage: typed.message, tried, looser, stricter };
+  const record = { where: probe.where, unwrapped: probe.textOf !== undefined, isPromise, textPass, typedPass: typed.pass, typedMessage: typed.message, tried, looser, stricter };
   appendFileSync(OUT, `${JSON.stringify(record)}\n`);
 }
 

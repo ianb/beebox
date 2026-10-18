@@ -3,7 +3,7 @@
 // decided later by typecheck and the run.
 
 import { test } from "tap";
-import { upgradeExpected } from "../../src/convert/upgrade.js";
+import { unwrapStringify, upgradeExpected } from "../../src/convert/upgrade.js";
 
 const literal = (text: string): string => {
   const u = upgradeExpected(text);
@@ -44,4 +44,14 @@ void test("what stays a text check", async (t) => {
   t.check(literal("{ «key»: 1 }"), "TEXT: structure that is not a literal");
   t.check(literal("Map(1) { 'a' => 1 }"), "TEXT: structure that is not a literal");
   t.check(literal("x «blankline» y"), "TEXT: wildcard type not expressible");
+});
+
+void test("JSON.stringify(x) as the checked expression unwraps to x", async (t) => {
+  t.check(unwrapStringify("JSON.stringify(user)"), { inner: "user", textOf: "(v) => JSON.stringify(v)" });
+  t.check(unwrapStringify("JSON.stringify(f(a, [b, c]), null, 2)"), { inner: "f(a, [b, c])", textOf: "(v) => JSON.stringify(v, null, 2)" });
+  t.check(unwrapStringify('JSON.stringify(s.split(","))'), { inner: 's.split(",")', textOf: "(v) => JSON.stringify(v)" });
+  // A replacer changes the text; a call that continues past the parens is not the whole expression.
+  t.check(unwrapStringify("JSON.stringify(x, ['a'])"), null);
+  t.check(unwrapStringify("JSON.stringify(x).length"), null);
+  t.check(unwrapStringify("JSON.stringify(a) + JSON.stringify(b)"), null);
 });

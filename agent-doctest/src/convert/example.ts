@@ -5,7 +5,7 @@
  */
 
 import { type Example, type ThrowsExample, nextTemplateState, oracleSplit, rewriteImports, splitExpression } from "../doctest-hooks/hooks.ts";
-import { upgradeExpected } from "./upgrade.ts";
+import { unwrapStringify, upgradeExpected } from "./upgrade.ts";
 
 /** One example of the doctest, as the manifest records it. */
 export interface ManifestExample {
@@ -16,6 +16,8 @@ export interface ManifestExample {
   expected: string | null;
   /** For a check emitted as `t.check`: its expected value's source. */
   typed?: string;
+  /** For a typed check of `x` where the doctest checked `JSON.stringify(x)`: `x`. */
+  typedActual?: string;
   /** For a check kept as `t.checkText` under `upgrade`: why. */
   textReason?: string;
 }
@@ -134,11 +136,15 @@ export function emitExample(ex: Example | ThrowsExample, ctx: EmitContext): { ma
   if (upgrade.kind === "text") return textCheck(upgrade.reason);
   if ([...upgrade.patterns].some((p) => ctx.taken.has(p))) return textCheck("pattern name taken");
   for (const p of upgrade.patterns) ctx.patterns.add(p);
-  const entry = { ...text.entry, typed: upgrade.literal };
+  // A doctest that checked JSON.stringify(x) as text checks x itself.
+  const unwrapped = unwrapStringify(split.expr);
+  const actual = unwrapped?.inner ?? split.expr;
+  const entry = { ...text.entry, typed: upgrade.literal, ...(unwrapped ? { typedActual: actual } : {}) };
   if (options.differential === true) {
-    const probe = `{ t: ${ctx.tName}, where: ${JSON.stringify(`${options.filePath}:${ctx.md}`)}, text: ${textLiteral(expected)}, expected: ${upgrade.literal} }`;
-    return { ...text, entry, code: call({ prefix: "await __doctestDifferential", expr: split.expr, arg: probe }) };
+    const textOf = unwrapped ? `, textOf: ${unwrapped.textOf}` : "";
+    const probe = `{ t: ${ctx.tName}, where: ${JSON.stringify(`${options.filePath}:${ctx.md}`)}, text: ${textLiteral(expected)}, expected: ${upgrade.literal}${textOf} }`;
+    return { ...text, entry, code: call({ prefix: "await __doctestDifferential", expr: actual, arg: probe }) };
   }
   const awaitIt = options.awaited?.has(ctx.md) === true ? "await " : "";
-  return { ...text, entry, code: call({ prefix: `${awaitIt}${ctx.tName}.check`, expr: split.expr, arg: upgrade.literal }) };
+  return { ...text, entry, code: call({ prefix: `${awaitIt}${ctx.tName}.check`, expr: actual, arg: upgrade.literal }) };
 }

@@ -120,6 +120,16 @@ t.check(await createNote("Draft"), { id: noteId, title: "Draft" });
 t.check(await listNotes(), [{ id: noteId.value, title: "Draft" }]);
 ```
 
+`capture` is also how to use a value after checking it. Check the whole
+value with captures in it, rather than `t.ok(device)` followed by an
+`if (!device) return`:
+
+```ts
+const deviceId = capture(any(String));
+t.check(await redeemTicket(token), { deviceId, label: "phone" });
+await revokeDevice(deviceId.value);
+```
+
 ## Text and errors
 
 `t.checkText(actual, text)` compares the value's text. The text may hold

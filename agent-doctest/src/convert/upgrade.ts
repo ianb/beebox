@@ -154,3 +154,51 @@ export function upgradeExpected(text: string): Upgrade {
   if (value === UNEXPRESSIBLE) return { kind: "text", reason: "wildcard type not expressible" };
   return { kind: "typed", literal: render(value), patterns };
 }
+
+/** Where each top-level argument of a call's argument list ends; quotes and brackets are skipped. */
+function topLevelArgs(args: string): string[] | null {
+  const out: string[] = [];
+  let depth = 0;
+  let quote: string | null = null;
+  let start = 0;
+  for (let i = 0; i < args.length; i++) {
+    const c = args[i] ?? "";
+    if (quote !== null) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") quote = c;
+    else if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) depth--;
+    else if (c === "," && depth === 0) {
+      out.push(args.slice(start, i).trim());
+      start = i + 1;
+    }
+    if (depth < 0) return null;
+  }
+  if (quote !== null || depth !== 0) return null;
+  out.push(args.slice(start).trim());
+  return out;
+}
+
+/**
+ * `JSON.stringify(x)` or `JSON.stringify(x, null, n)` as the checked
+ * expression: the typed check compares `x` itself, and `textOf` rebuilds the
+ * text the doctest compared (for the differential test). Null for anything
+ * else, including a replacer.
+ */
+export function unwrapStringify(expr: string): { inner: string; textOf: string } | null {
+  const s = expr.trim();
+  const prefix = "JSON.stringify(";
+  if (!s.startsWith(prefix) || !s.endsWith(")")) return null;
+  const args = topLevelArgs(s.slice(prefix.length, -1));
+  if (args === null) return null;
+  const [inner, replacer, indent] = args;
+  if (inner === undefined || inner === "") return null;
+  if (args.length === 1) return { inner, textOf: "(v) => JSON.stringify(v)" };
+  if (args.length === 3 && replacer === "null" && /^\d+$/.test(indent ?? "")) {
+    return { inner, textOf: `(v) => JSON.stringify(v, null, ${indent ?? ""})` };
+  }
+  return null;
+}
