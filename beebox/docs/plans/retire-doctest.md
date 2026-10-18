@@ -516,6 +516,17 @@ Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion
       available.
     - Any task a model fails is assigned to the other model or to manual
       work in phase 2, with the reason recorded.
+- **Generative reviews before and after.** These go beyond the adversarial
+  reviews in the implementation order: the other model family is asked to
+  add to the directions being considered.
+  - **Before phase 1:** asked to propose additions and alternatives for the
+    `t.check` API, the pattern vocabulary, the trial tasks, and the
+    conversion approach, with the reason for each. Its proposals go into the
+    trials as variants where they are cheap to test.
+  - **After the trial rounds:** given the trial report and asked what the
+    results suggest that the plan has not considered. This happens before
+    the boxholder's phase 1 gate review.
+  - Each review's answer and its adjudication are recorded in `TRIALS.md`.
 - **Evidence location.**
   - The summary, a table per round, goes in `bin/doctest-convert/TRIALS.md`
     and is tracked.
@@ -863,8 +874,10 @@ for a `.test.ts` for `contentHash`. It lands run, in track 6.
       (Jane Street, matklad) and porting the three hand-converted tests.
    2. Track 2's converter and its golden fixtures, which the differential
       test needs.
-   3. Track V: the differential test, the mistake corpus, then the usability
-      trial rounds, with API and doc fixes between rounds.
+   3. Track V: the generative review before phase 1, then the differential
+      test, the mistake corpus, and the usability trial rounds, with API and
+      doc fixes between rounds. Then the generative review after the
+      trials.
    4. Track 2's full report over all 1,092 files. Open question 1 is
       settled here.
    5. Boxholder review of the trial report: the phase 1 gate.
