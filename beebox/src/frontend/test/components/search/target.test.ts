@@ -8,19 +8,19 @@ const path = "_content/Friends.doc.card";
 
 test("a section hit carries its section path", (t) => {
   const hit = { path, kind: "doc", fragment: "/Reconnecting with friends/Where things stand" };
-  t.same(searchResultTarget(hit), { path, viewer: null, params: {}, viewState: null, fragment: hit.fragment });
+  t.check(searchResultTarget(hit), { path, viewer: null, params: {}, viewState: null, fragment: hit.fragment });
   t.end();
 });
 
 test("a card hit opens at the top", (t) => {
   const target = searchResultTarget({ path, kind: "doc", fragment: "" });
-  t.notOk("fragment" in target);
+  t.check(target, { path, viewer: null, params: {}, viewState: null });
   t.end();
 });
 
 test("a gdoc section hit has no section destination", (t) => {
   const hit = { path: "_content/drive/Notes.gdoc.card", kind: "gdoc", fragment: "/Agenda" };
-  t.equal(sectionDestination(hit), null);
-  t.notOk("fragment" in searchResultTarget(hit));
+  t.check(sectionDestination(hit), null);
+  t.check(searchResultTarget(hit), { path: hit.path, viewer: null, params: {}, viewState: null });
   t.end();
 });

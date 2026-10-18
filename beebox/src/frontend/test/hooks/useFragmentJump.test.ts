@@ -54,7 +54,7 @@ async function render(fragment: string | null, source: string): Promise<{ view: 
   // No gc timer: an idle one keeps the test process alive.
   const queryClient = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   const controller = h(Controller, { initial: { fragment, source } });
-  const routeTree = createRootRoute({ component: () => h(BoxSlugProvider, { boxSlug: "test1", children: controller }) });
+  const routeTree = createRootRoute({ staticData: { title: null }, component: () => h(BoxSlugProvider, { boxSlug: "test1", children: controller }) });
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
   const view = await mount(h(QueryClientProvider, { client: queryClient }, h(RouterProvider, { router })));
@@ -69,40 +69,40 @@ const isRoot = (el: Element | undefined) => el?.hasAttribute(FRAGMENT_ROOT_ATTRI
 test("the repeated title heading and the title section", async (t) => {
   scrolled = [];
   const { view, rerender } = await render("/Weekly plan/Weekly plan", body);
-  t.equal(view.container.querySelectorAll("h1").length, 0, "CardBody blanked the title heading");
-  t.equal(headingText(scrolled.at(-1)), "Weekly plan", "the repeat");
-  t.equal(scrolled.at(-1)?.tagName, "H2");
+  t.check([...view.container.querySelectorAll("h1")], []); // CardBody blanked the title heading
+  t.check(headingText(scrolled.at(-1)), "Weekly plan"); // the repeat
+  t.check(scrolled.at(-1)?.tagName, "H2");
   await rerender(at("/Weekly plan"));
-  t.ok(isRoot(scrolled.at(-1)), "the title section is the top of the body");
+  t.check(isRoot(scrolled.at(-1)), true); // the title section is the top of the body
   await view.unmount();
 });
 
 test("repeats, markup, and a fenced # line", async (t) => {
   scrolled = [];
   const { view, rerender } = await render("/install deps/Notes", body);
-  t.equal(scrolled.at(-1)?.getAttribute("data-line"), "17", "the second Notes, by line");
+  t.check(scrolled.at(-1)?.getAttribute("data-line"), "17"); // the second Notes, by line
   await rerender(at("/install deps/Where **things** stand [now](x.card)"));
-  t.equal(headingText(scrolled.at(-1)), "Where things stand now");
+  t.check(headingText(scrolled.at(-1)), "Where things stand now");
   await rerender(at("/install deps"));
-  t.equal(scrolled.at(-1)?.getAttribute("data-line"), "9", "the heading above the fence");
+  t.check(scrolled.at(-1)?.getAttribute("data-line"), "9"); // the heading above the fence
   await rerender(at("notes-1"));
-  t.equal(scrolled.at(-1)?.getAttribute("data-line"), "17", "an element id");
+  t.check(scrolled.at(-1)?.getAttribute("data-line"), "17"); // an element id
   await view.unmount();
 });
 
 test("a missing section shows the miss; a live edit does not re-jump", async (t) => {
   scrolled = [];
   const { view, rerender } = await render("/Weekly plan/Gone", body);
-  t.equal(scrolled.length, 0);
-  t.equal(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
+  t.check(scrolled.map((el) => el.tagName), []);
+  t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
   await rerender(at("/Weekly plan/Notes"));
-  t.equal(scrolled.length, 1);
-  t.equal(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "false");
+  t.check(scrolled.map((el) => el.tagName), ["H2"]);
+  t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "false");
   await rerender({ fragment: "/Weekly plan/Notes", source: body + "\nmore text\n" });
-  t.equal(scrolled.length, 1, "same fragment, new body: no scroll");
+  t.check(scrolled.map((el) => el.tagName), ["H2"]); // same fragment, new body: no scroll
   await rerender(at(null));
   await rerender(at("/Weekly plan/Notes"));
-  t.equal(scrolled.length, 2, "cleared, then picked again: jumps again");
+  t.check(scrolled.map((el) => el.tagName), ["H2", "H2"]); // cleared, then picked again: jumps again
   await view.unmount();
 });
 
@@ -110,8 +110,8 @@ test("an embedded root's headings are not the host's", (t) => {
   const root = document.createElement("div");
   root.setAttribute(FRAGMENT_ROOT_ATTRIBUTE, "");
   root.innerHTML = `<div ${FRAGMENT_ROOT_ATTRIBUTE}><h2 id="a" data-line="3">embedded</h2></div><p>x</p>`;
-  t.same(resolveFragment(root, { fragment: "a", source: "x", atDeadline: false }), { kind: "pending" });
-  t.same(resolveFragment(root, { fragment: "/B", source: "text\n\n## B\nbody\n", atDeadline: false }), { kind: "pending" }, "no owned headings yet");
+  t.check(resolveFragment(root, { fragment: "a", source: "x", atDeadline: false }), { kind: "pending" });
+  t.check(resolveFragment(root, { fragment: "/B", source: "text\n\n## B\nbody\n", atDeadline: false }), { kind: "pending" }); // no owned headings yet
   t.end();
 });
 
@@ -119,17 +119,17 @@ test("a body that opens with a blank line jumps to its first heading, not the to
   scrolled = [];
   const source = ["", "## Status", "", filler, "", "## Next", "", filler].join("\n");
   const { view } = await render("/Status", source);
-  t.equal(scrolled.at(-1)?.tagName, "H2", "the heading, not the root above it");
-  t.equal(headingText(scrolled.at(-1)), "Status");
+  t.check(scrolled.at(-1)?.tagName, "H2"); // the heading, not the root above it
+  t.check(headingText(scrolled.at(-1)), "Status");
   await view.unmount();
 });
 
 test("an edit that adds the missing section clears the notice without scrolling", async (t) => {
   scrolled = [];
   const { view, rerender } = await render("/install deps/Later", body);
-  t.equal(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
+  t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
   await rerender({ fragment: "/install deps/Later", source: `${body}\n## Later\n\n${filler}\n` });
-  t.equal(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "false", "notice cleared");
-  t.equal(scrolled.length, 0, "the reader is not moved");
+  t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "false"); // notice cleared
+  t.check(scrolled.map((el) => el.tagName), []); // the reader is not moved
   await view.unmount();
 });
