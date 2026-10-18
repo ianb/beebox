@@ -81,6 +81,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var termSource: DispatchSourceSignal?
 
+    override init() {
+        MacLog.setFileSink { line in AppLogFile.shared.append(line) }
+        super.init()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         // SIGTERM (launchd, `kill`) stops the VM cleanly, then exits. It does
@@ -92,6 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         source.setEventHandler { [weak self] in self?.stopAndExit() }
         source.resume()
         termSource = source
+        appLog("launch version=\(BundleConfig.version) hosting=\(hosting.enabled ? "on" : "off") boxes=\(boxStore.boxes.count) watched=\(uploadFolders.folders.count)")
         hosting.startIfEnabled()
         if !uploadFolders.folders.isEmpty { UploadNotifications.requestPermission() }
         uploadTriggers.start()
