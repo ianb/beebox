@@ -145,8 +145,15 @@ function lintLoop(w: Work, log: (s: string) => void): void {
   }
 }
 
-/** Path-keyed lists that name a doctest; prepare points them at its test file. */
-const PATH_LISTS = ["bin/retired-product-name-allowlist.json"];
+/**
+ * Path-keyed lists that name a doctest, each with the directory its paths
+ * are relative to; prepare points them at the test files.
+ */
+const PATH_LISTS: readonly { file: string; base: string }[] = [
+  { file: "bin/retired-product-name-allowlist.json", base: "" },
+  // One path per line, relative to beebox/: the files the careful tier runs.
+  { file: "beebox/test/careful.txt", base: "beebox" },
+];
 
 /**
  * Point path-keyed lists at the converted files, and report other tracked
@@ -155,17 +162,27 @@ const PATH_LISTS = ["bin/retired-product-name-allowlist.json"];
 function repoint(converted: readonly string[], log: (s: string) => void): void {
   if (converted.length === 0) return;
   for (const list of PATH_LISTS) {
-    const path = join(REPO, list);
+    const path = join(REPO, list.file);
     const before = readFileSync(path, "utf8");
     let after = before;
-    for (const d of converted) after = after.replaceAll(JSON.stringify(d), JSON.stringify(testOf(d)));
+    for (const d of converted) {
+      const from = relative(join(REPO, list.base), join(REPO, d));
+      const to = relative(join(REPO, list.base), join(REPO, testOf(d)));
+      // Whole entries only: a JSON string, or a line of its own.
+      after = after
+        .replaceAll(JSON.stringify(from), JSON.stringify(to))
+        .split("\n")
+        .map((line) => (line === from ? to : line))
+        .join("\n");
+    }
     if (after !== before) {
       writeFileSync(path, after);
-      log(`  ${list}: pointed at the converted files`);
+      log(`  ${list.file}: pointed at the converted files`);
     }
   }
+  const lists = new Set(PATH_LISTS.map((l) => l.file));
   for (const d of converted) {
-    for (const f of mentions(d)) if (!f.startsWith("bin/doctest-convert/") && !PATH_LISTS.includes(f)) log(`  ${f} names ${d}`);
+    for (const f of mentions(d)) if (!f.startsWith("bin/doctest-convert/") && !lists.has(f)) log(`  ${f} names ${d}`);
   }
 }
 
