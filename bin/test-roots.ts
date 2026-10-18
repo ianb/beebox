@@ -16,8 +16,12 @@ export interface TestRoot {
   dir: string;
   /** Repo-relative package directory whose tap config runs the tests. */
   runFrom: string;
-  /** Package directory and `pnpm` script whose program typechecks the tests. */
-  typecheck: { dir: string; script: string };
+  /**
+   * Package directory and `pnpm` script whose program typechecks the tests.
+   * `printsFrom` is the directory the script's compiler runs in, which its
+   * diagnostic paths are relative to, when that is not `dir`.
+   */
+  typecheck: { dir: string; script: string; printsFrom?: string };
   /**
    * Directory whose eslint config lints the tests. Run eslint from here: a
    * frontend test linted from beebox/ is ignored with only a warning.
@@ -26,7 +30,7 @@ export interface TestRoot {
 }
 
 export const TEST_ROOTS: readonly TestRoot[] = [
-  { dir: "beebox/src/frontend/test/", runFrom: "beebox", typecheck: { dir: "beebox", script: "typecheck:frontend" }, lintFrom: "beebox/src/frontend" },
+  { dir: "beebox/src/frontend/test/", runFrom: "beebox", typecheck: { dir: "beebox", script: "typecheck:frontend", printsFrom: "beebox/src/frontend" }, lintFrom: "beebox/src/frontend" },
   { dir: "beebox/test/", runFrom: "beebox", typecheck: { dir: "beebox", script: "typecheck:backend" }, lintFrom: "beebox" },
   // Root tooling tests run under beebox's tap config, with its home and
   // secret isolation (bin/AGENTS.md, "Tests for bin/ tooling").

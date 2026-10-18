@@ -2,7 +2,7 @@
 
 import { rootOf, type TestRoot } from "../test-roots.ts";
 import { NoTestRootError } from "./errors.ts";
-import { tap, type TapResult } from "./tools.ts";
+import { tap, type Program, type TapResult } from "./tools.ts";
 
 export function rootFor(file: string): TestRoot {
   const root = rootOf(file);
@@ -23,8 +23,8 @@ export function byRoot<K>(files: readonly string[], key: (root: TestRoot) => K):
 }
 
 /** Each distinct typecheck program, once. */
-export function programsOf(files: readonly string[]): { dir: string; script: string }[] {
-  const seen = new Map<string, { dir: string; script: string }>();
+export function programsOf(files: readonly string[]): Program[] {
+  const seen = new Map<string, Program>();
   for (const f of files) {
     const { typecheck: p } = rootFor(f);
     seen.set(`${p.dir}\0${p.script}`, p);

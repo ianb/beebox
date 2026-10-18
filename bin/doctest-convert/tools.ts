@@ -48,11 +48,19 @@ function back(dir: string, file: string): string {
   return normalize(relative(REPO, resolve(REPO, dir, file)));
 }
 
-/** Run doctest-to-ts on repo-relative doctests. Returns the failure lines it printed. */
+/**
+ * Run doctest-to-ts on repo-relative doctests. Returns the failure lines it
+ * printed; throws unless it ran to its summary line (exit 0, or 1 when some
+ * file failed to convert).
+ */
 export function convert(doctests: readonly string[], flags: readonly string[]): string[] {
   if (doctests.length === 0) return [];
   const r = run({ cmd: "node", args: ["agent-doctest/bin/doctest-to-ts.mjs", "--force", ...flags, ...doctests], cwd: "." });
-  return r.stdout.split("\n").filter((l) => l.startsWith("FAIL "));
+  const lines = r.stdout.split("\n");
+  const failed = lines.filter((l) => l.startsWith("FAIL "));
+  const summary = `converted ${doctests.length - failed.length} of ${doctests.length}`;
+  if ((r.status !== 0 && r.status !== 1) || !lines.includes(summary)) throw new ToolOutputError({ what: ["doctest-to-ts"], output: r.stdout + r.stderr });
+  return failed;
 }
 
 export interface TapResult {
@@ -123,8 +131,14 @@ export interface TypeErrorAt {
   message: string;
 }
 
-/** Errors from a package's typecheck script, with repo-relative files. */
-export function typecheck(program: { dir: string; script: string }): TypeErrorAt[] {
+export interface Program {
+  dir: string;
+  script: string;
+  printsFrom?: string;
+}
+
+/** Errors from a package's typecheck script, with repo-relative files. Throws when the script fails without one. */
+export function typecheck(program: Program): TypeErrorAt[] {
   // A stale incremental build info hid new errors once
   // (issues/bugs/2026-10-18-incremental-typecheck-missed-new-include.md).
   for (const cache of [join(REPO, program.dir, "node_modules/.cache/tsc"), join(REPO, program.dir, "src/frontend/node_modules/.cache/tsc")]) {
@@ -133,15 +147,12 @@ export function typecheck(program: { dir: string; script: string }): TypeErrorAt
   }
   const r = run({ cmd: "pnpm", args: ["-s", "run", program.script], cwd: program.dir });
   const errors: TypeErrorAt[] = [];
-  // A script that runs in a subdirectory (beebox's typecheck:frontend) prints
-  // paths relative to it; a path that does not resolve from the package
-  // directory is tried from there.
-  for (const m of r.stdout.matchAll(/^(?:\S+: )?(\S[^\n(]*)\((\d+),\d+\): error (TS\d+): (.*)$/gm)) {
-    const printed = m[1] ?? "";
-    const file = existsSync(resolve(REPO, program.dir, printed)) ? back(program.dir, printed) : back(join(program.dir, "src/frontend"), printed);
+  for (const m of r.stdout.matchAll(/^(\S[^\n(]*)\((\d+),\d+\): error (TS\d+): (.*)$/gm)) {
+    const file = back(program.printsFrom ?? program.dir, m[1] ?? "");
     errors.push({ file, line: Number(m[2]), code: m[3] ?? "", message: (m[4] ?? "").slice(0, 200) });
   }
-  if (r.status !== 0 && errors.length === 0) throw new ToolOutputError({ what: [program.dir, program.script], output: r.stdout + r.stderr });
+  // A signal, or a failure with no diagnostic, is a crash, not a result.
+  if (r.status === null || (r.status !== 0 && errors.length === 0)) throw new ToolOutputError({ what: [program.dir, program.script], output: r.stdout + r.stderr });
   return errors;
 }
 
@@ -159,7 +170,12 @@ export function doctestsUnder(dir: string): string[] {
   return [...new Set(r.stdout.split("\n").filter((f) => f !== "" && existsSync(join(REPO, f))))].toSorted();
 }
 
-/** Whether git tracks the repo-relative file. */
-export function isTracked(file: string): boolean {
-  return run({ cmd: "git", args: ["ls-files", "--error-unmatch", "--", file], cwd: "." }).status === 0;
+/**
+ * Whether git tracks the file and it has no uncommitted change. Only such a
+ * doctest is converted: its recorded blob is then in history, so deleting
+ * it loses nothing.
+ */
+export function isCommitted(file: string): boolean {
+  if (run({ cmd: "git", args: ["ls-files", "--error-unmatch", "--", file], cwd: "." }).status !== 0) return false;
+  return run({ cmd: "git", args: ["diff", "--quiet", "HEAD", "--", file], cwd: "." }).status === 0;
 }

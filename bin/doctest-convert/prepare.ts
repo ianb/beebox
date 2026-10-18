@@ -20,7 +20,7 @@ import { z } from "zod";
 import { checkSpans, checksByMarker } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { find, loadAll, save, type FileState, type StateFile } from "./state.ts";
-import { blobOf, convert, doctestsUnder, eslint, isTracked, REPO, typecheck } from "./tools.ts";
+import { blobOf, convert, doctestsUnder, eslint, isCommitted, REPO, typecheck } from "./tools.ts";
 
 const TYPECHECK_ROUNDS = 6;
 const LINT_ROUNDS = 3;
@@ -56,6 +56,8 @@ function writeOptions(w: Work): string[] {
   const aw = join(w.tmp, "awaited.json");
   writeFileSync(to, JSON.stringify(Object.fromEntries([...w.textOnly].map(([d, m]) => [d, Object.fromEntries(m)]))));
   writeFileSync(aw, JSON.stringify(Object.fromEntries([...w.awaited].map(([d, s]) => [d, [...s]]))));
+  // A manifest left from an earlier round must not stand in for this one's.
+  rmSync(join(w.tmp, "manifests"), { recursive: true, force: true });
   return ["--upgrade", "--text-only", to, "--awaited", aw, "--manifest-dir", join(w.tmp, "manifests")];
 }
 
@@ -147,11 +149,16 @@ function testsIn(source: string): number {
 export function prepare(dir: string, log: (s: string) => void): StateFile {
   const all = loadAll();
   const changed = doctestsUnder(dir).filter((d) => find(all, d)?.file.blob !== blobOf(d));
-  // A tracked test file the driver did not write is someone's own test:
-  // never overwrite it. (An untracked one is a stopped run's output.)
-  const taken = changed.filter((d) => find(all, d) === null && isTracked(testOf(d)));
-  for (const d of taken) log(`${d}: skipped, ${testOf(d)} already exists; merge the two by hand`);
-  const doctests = changed.filter((d) => !taken.includes(d));
+  const skip = new Map<string, string>();
+  for (const d of changed) {
+    // A test file the driver did not record is someone's own, or a stopped
+    // run's output: never overwrite it.
+    if (find(all, d) === null && existsSync(join(REPO, testOf(d)))) skip.set(d, `${testOf(d)} already exists; merge the two by hand, or delete it if a stopped run wrote it`);
+    // The state records the doctest's blob; only a committed one is in history.
+    else if (!isCommitted(d)) skip.set(d, "it has uncommitted changes; commit them first");
+  }
+  for (const [d, why] of skip) log(`${d}: skipped, ${why}`);
+  const doctests = changed.filter((d) => !skip.has(d));
   const state: StateFile = all.get(dir.replace(/\/$/, "")) ?? { dir: dir.replace(/\/$/, ""), files: {} };
   if (doctests.length === 0) {
     log(`${dir}: nothing to convert`);
@@ -190,11 +197,14 @@ export function prepare(dir: string, log: (s: string) => void): StateFile {
         changedActuals: [],
       };
       // Another state file may hold an older conversion of this doctest.
-      for (const other of all.values()) if (other !== state) Reflect.deleteProperty(other.files, doctest);
+      for (const other of all.values()) {
+        if (other !== state && Reflect.deleteProperty(other.files, doctest)) save(other);
+      }
       state.files[doctest] = entry;
+      // The entry is on disk before the doctest goes.
+      save(state);
       unlinkSync(join(REPO, doctest));
     }
-    for (const other of all.values()) if (other !== state) save(other);
     save(state);
     return state;
   } finally {

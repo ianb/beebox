@@ -43,3 +43,11 @@ void test("an expected value, a method, or a marker cannot change", async (t) =>
   ]);
   t.check(compare(converted.replace("  t.check(list, [1, 2]);\n", "")).problems, ["at doctest:L5: 1 checks became 0"]);
 });
+
+void test("a tagged template compares by its raw spelling", async (t) => {
+  const before = 'void test("a", async (t) => {\n  // doctest:L5\n  t.check(x, String.raw`a\\nb`);\n});';
+  const after = before.replace(String.raw`a\nb`, "a\nb");
+  t.check(compareChecks({ before: checksByMarker(before, "x.test.ts"), source: after, fileName: "x.test.ts", markerLines: [5] }).problems, [
+    "at doctest:L5: expected value changed (line 3)",
+  ]);
+});

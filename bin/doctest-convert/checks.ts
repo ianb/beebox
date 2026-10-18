@@ -38,7 +38,9 @@ export function canonical(node: ts.Node, file: ts.SourceFile): string {
       for (const c of children) visit(c);
       return;
     }
-    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) tokens.push(JSON.stringify(n.text));
+    // A tag sees a template's raw spelling, so only an untagged one compares by value.
+    const tagged = ts.isNoSubstitutionTemplateLiteral(n) && ts.isTaggedTemplateExpression(n.parent);
+    if (ts.isStringLiteral(n) || (ts.isNoSubstitutionTemplateLiteral(n) && !tagged)) tokens.push(JSON.stringify(n.text));
     else tokens.push(n.getText(file));
   };
   visit(node);
