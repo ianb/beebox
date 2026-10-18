@@ -45,6 +45,9 @@ importers:
       agent-browser:
         specifier: ^0.27.0
         version: 0.27.0
+      agent-doctest:
+        specifier: workspace:*
+        version: link:agent-doctest
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
