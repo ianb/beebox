@@ -54,6 +54,7 @@ void test("no-tap-assert flags tap's own asserts", async (t) => {
     invalid: [
       { code: "t.equal(a, 1);", errors: [{ messageId: "tapAssert", data: { method: "equal", replacement: "check" } }] },
       { code: "tap.same(list, []);", errors: [{ messageId: "tapAssert", data: { method: "same", replacement: "check" } }] },
+      { code: "t.matchOnlyStrict(x, {});", errors: [{ messageId: "tapAssert", data: { method: "matchOnlyStrict", replacement: "check" } }] },
       { code: "t.ok(x);", errors: [{ messageId: "tapAssert", data: { method: "ok", replacement: "check" } }] },
       { code: "await t.rejects(p);", errors: [{ messageId: "tapAssert", data: { method: "rejects", replacement: "checkThrows" } }] },
     ],

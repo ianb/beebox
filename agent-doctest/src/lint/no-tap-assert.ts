@@ -13,7 +13,7 @@ import { TEST_OBJECTS } from "./check-call.js";
 const REPLACEMENT: Readonly<Record<string, string>> = {
   equal: "check", not: "check", same: "check", notSame: "check", strictSame: "check", strictNotSame: "check",
   ok: "check", notOk: "check", match: "check", notMatch: "check", matchOnly: "check", matchStrict: "check",
-  notMatchOnly: "check", notMatchStrict: "check", has: "check", notHas: "check", hasStrict: "check",
+  notMatchOnly: "check", notMatchStrict: "check", matchOnlyStrict: "check", notMatchOnlyStrict: "check", has: "check", notHas: "check", hasStrict: "check",
   notHasStrict: "check", hasProp: "check", hasProps: "check", hasOwnProp: "check", hasOwnProps: "check",
   hasOwnPropsOnly: "check", type: "check", resolveMatch: "check",
   throws: "checkThrows", rejects: "checkThrows",
