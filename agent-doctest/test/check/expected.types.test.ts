@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "../../src/tap-check/tap.js";
-import { any, capture, isoDate, oneOf, optional, others, str, unordered, uuid } from "../../src/exports/check.js";
+import { any, capture, containing, isoDate, oneOf, optional, others, str, unordered, uuid } from "../../src/exports/check.js";
 
 const ID = "0b9c6f0e-6c43-4c8e-9a52-0d6a7c1d2e3f";
 
@@ -23,12 +23,20 @@ void test("expected values that compile", async (t) => {
   t.check({ ...session, createdBy: "x@example.com" }, { deviceId: str`${uuid()}`, createdBy: capture(any(String).startsWith("x")), exp: 1, status: oneOf("open", "closed"), note: optional(any(String)) });
   t.check(session, { deviceId: ID, createdBy: null, exp: 1, status: "open", [others]: any(String) });
   t.check([session], unordered([{ deviceId: ID, createdBy: null, exp: 1, status: "open" }]));
+  t.check([session], containing([{ deviceId: ID, createdBy: null, exp: 1, status: "open" }]));
   t.check({ at: new Date(0) }, { at: isoDate() });
   t.check({ at: new Date(0) }, { at: "1970-01-01T00:00:00.000Z" });
 });
 
 // Type-only: these checks would fail at run time, so the test is skipped.
 void test("expected values that must not compile", { skip: "type errors only" }, async (t) => {
+  // An item key the element type does not have.
+  // @ts-expect-error -- 'extra' does not exist
+  t.check([session], containing([{ deviceId: ID, createdBy: null, exp: 1, status: "open", extra: 1 }]));
+  // @ts-expect-error -- 'extra' does not exist
+  t.check([session], unordered([{ deviceId: ID, createdBy: null, exp: 1, status: "open", extra: 1 }]));
+  // @ts-expect-error -- a number where the element is a string
+  t.check(["a"], unordered([1]));
   // A misspelled key.
   // @ts-expect-error 'deviceID' does not exist
   t.check(session, { deviceID: ID, createdBy: null, exp: 1, status: "open" });

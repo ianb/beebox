@@ -99,6 +99,7 @@ Patterns are imported from `agent-doctest/check`. Each pattern is typed:
 | `` str`/box/${any(String)}/notes` `` | a string with patterns inside |
 | `optional(p)` | a key that may be absent; when present it matches `p`. Accepted only on a property that is optional in the actual value's type |
 | `unordered([...])` | an array in any order, each item matched once |
+| `containing([...])` | an array that holds these items, in any order, among others |
 | `[others]: p` | in an object: every key not listed must match `p` |
 | `capture(p)` | matches `p` and keeps the value as `.value` |
 | `anything()` | any value; refused as the whole expected value |

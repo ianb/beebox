@@ -23,7 +23,7 @@ export {
   Capture,
   capture,
 } from "../check/patterns.js";
-export { unordered, Unordered, type Expected } from "../check/expected.js";
+export { containing, unordered, Unordered, type Expected } from "../check/expected.js";
 export { checkValue, NO_EXPECTED, type CheckValueOutcome } from "../check/compare/report.js";
 export {
   check as checkText,

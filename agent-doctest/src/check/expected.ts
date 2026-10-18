@@ -9,15 +9,31 @@ import type { Optional, Pattern, others } from "./patterns.js";
 
 /**
  * An unordered collection: every expected item matches exactly one actual
- * item, and no actual item is left over. Built by `unordered([...])`.
+ * item. Built by `unordered([...])`, where no actual item may be left over,
+ * or `containing([...])`, where leftover actual items are allowed.
  */
 export class Unordered<out I> {
-  constructor(readonly items: readonly I[]) {}
+  constructor(
+    readonly items: readonly I[],
+    readonly allowsOthers: boolean,
+  ) {}
 }
 
-/** Match an array regardless of order, keeping multiplicity. */
-export function unordered<const I>(items: readonly I[]): Unordered<I> {
-  return new Unordered(items);
+/**
+ * Match an array regardless of order, keeping multiplicity. `I` comes only
+ * from where the call stands (`NoInfer`), so an item is checked against the
+ * actual element type, extra keys included.
+ */
+export function unordered<I>(items: readonly NoInfer<I>[]): Unordered<I> {
+  return new Unordered(items, false);
+}
+
+/**
+ * Match an array that holds these items, in any order, among others: the
+ * array counterpart of `[others]`. Prefer the whole array when it is known.
+ */
+export function containing<I>(items: readonly NoInfer<I>[]): Unordered<I> {
+  return new Unordered(items, true);
 }
 
 type Primitive = string | number | bigint | boolean | symbol | null | undefined;

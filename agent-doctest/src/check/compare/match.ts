@@ -16,7 +16,8 @@
  * - An `Error` compares `name`, `message`, and its own enumerable data.
  * - An unlisted key fails unless the expected object has `[others]`.
  * - Arrays, `Map`s (entry order) and `Set`s (member order) compare by
- *   position; `unordered([...])` compares an array as a multiset.
+ *   position; `unordered([...])` compares an array as a multiset, and
+ *   `containing([...])` as a sub-multiset.
  * - A `Date` matches an equal `Date` or its ISO string.
  * - Functions, promises, `WeakMap` and `WeakSet` cannot be compared.
  */
@@ -282,6 +283,7 @@ class Walker {
   private unordered({ actual, expected, path }: At<Unordered<unknown>>): Node {
     if (!Array.isArray(actual)) return this.typeMismatch({ actual, expected, path }, "an array");
     const items = expected.items;
+    const name = expected.allowsOthers ? "containing" : "unordered";
     const fits = items.map((item) => actual.map((a, j) => {
       const trial = new Walker();
       trial.walk({ actual: a, expected: item, path: `${path}[${j}]` });
@@ -293,8 +295,12 @@ class Walker {
     const matchedExpected = new Set<number>();
     for (const [j, a] of actual.entries()) {
       const i = pairOfActual[j];
+      if (i === undefined && expected.allowsOthers) {
+        shown.push(a);
+        continue;
+      }
       if (i === undefined) {
-        this.miss({ path: `${path}[${j}]`, expected: "", actual: a, problem: "unordered: no expected item matches this actual item" });
+        this.miss({ path: `${path}[${j}]`, expected: "", actual: a, problem: `${name}: no expected item matches this actual item` });
         suggested.push(this.propose(a, `${path}[${j}]`));
         continue;
       }
@@ -305,10 +311,10 @@ class Walker {
     }
     for (const [i, item] of items.entries()) {
       if (matchedExpected.has(i)) continue;
-      this.miss({ path, expected: source(expectedView(item)), problem: "unordered: no actual item matches this expected item" });
+      this.miss({ path, expected: source(expectedView(item)), problem: `${name}: no actual item matches this expected item` });
       shown.push(expectedView(item));
     }
-    return { shown, suggested: new Call("unordered", suggested) };
+    return { shown, suggested: new Call(name, suggested) };
   }
 }
 

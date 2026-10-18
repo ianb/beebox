@@ -11,6 +11,7 @@ import {
   anything,
   capture,
   checkValue,
+  containing,
   NO_EXPECTED,
   isoDate,
   notAllowed,
@@ -267,6 +268,21 @@ unordered([
   1,
   4,
 ])`);
+});
+
+void test("containing: these items among others", async (t) => {
+  t.ok(passes([3, 1, 2], containing([1, 3])));
+  t.ok(passes([{ id: "b" }, { id: "a" }], containing([{ id: "a" }])));
+  t.ok(passes([], containing([])));
+  // Multiplicity still counts.
+  t.notOk(passes([1], containing([1, 1])));
+  t.notOk(passes("1", containing(["1"])));
+  t.checkText(report([1, 4], containing([2])), `check failed: 1 mismatch
+mismatches:
+$: containing: no actual item matches this expected item
+  expected: 2
+suggested:
+containing([])`);
 });
 
 void test("a suggestion keeps the patterns that matched", async (t) => {

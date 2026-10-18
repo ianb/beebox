@@ -1,8 +1,9 @@
 /**
- * `t.check` compares whole values. A check of a length, a JSON string, a
- * boolean, or a comparison throws the value away: on failure it says
- * "expected 4, got 3" and nothing about what is in the list. This rule
- * flags those shapes as the actual argument and names the whole-value form.
+ * `t.check` compares whole values. A check of a length, a boolean, or a
+ * comparison throws the value away: on failure it says "expected 4, got 3"
+ * and nothing about what is in the list. A JSON string keeps the value but
+ * fails as one long string, and its key order counts. This rule flags those
+ * shapes as the actual argument and names the whole-value form.
  *
  * When one field really is the whole contract, keep the check and add
  * `// eslint-disable-next-line agent-doctest/check-whole-value -- <why>`.
@@ -46,9 +47,10 @@ const rule: Rule.RuleModule = {
     messages: {
       comparison: "Check the values, not a comparison: write `t.check(a, b)` instead of `t.check(a === b, true)`.",
       boolean: "Check the value itself, not a boolean made from it.",
-      json: "Check the value, not its JSON: `t.check(x, {...})` compares objects and shows a structured diff.",
+      json: "Check the value, not its JSON: `t.check(x, {...})` ignores key order and reports each differing path.",
       size: "Check the collection itself, not its size: a failure then shows which items differ.",
-      predicate: "Check the whole value, not a true/false test of it: a failure then shows what the value is.",
+      predicate:
+        "Check the whole value, not a true/false test of it: a failure then shows what the value is. For an array that holds an item among others, use `t.check(list, containing([item]))`.",
     },
     schema: [],
   },
