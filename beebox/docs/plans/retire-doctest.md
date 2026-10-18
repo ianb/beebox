@@ -799,3 +799,21 @@ for a `.test.ts` for `contentHash`. It lands run, in track 6.
 - **Transition state:** both formats run together. This state is designed,
   and it can stop at any landed directory.
 - **Phase 2** is independent, and it can stop at any directory.
+
+**Boxholder check-ins:**
+1. After track 2's report over all 1,092 files. The boxholder decides any
+   lint rule question (open question 1).
+2. After the pilot and calibration. The boxholder reads the example
+   directories and the Haiku/Luna results, and approves the converted style.
+3. After the first phase-1 landing on main.
+4. Before track 6 removes doctest.
+
+Between check-ins 3 and 4, landings proceed. Each landing posts a
+one-paragraph summary: the files, any fidelity rejections, and any batch
+moved to a stronger model.
+
+**Stop and re-plan when:**
+- more than 1 file in 10 in a batch fails fidelity, which points to a
+  converter bug;
+- workers in one class of files keep needing retries;
+- a third fix to the same problem fails.
