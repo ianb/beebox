@@ -41,3 +41,12 @@ second`;
   await t.checkText(s, `first
 second`);
 });
+
+// A brace inside multi-line template text does not move the next check's marker:
+void test("A brace inside multi-line template text does not move the next check's marker:", async (t) => {
+  // doctest:L45
+  const script = `function f() {
+  return 1;
+`;
+  t.check(script.length, 27);
+});

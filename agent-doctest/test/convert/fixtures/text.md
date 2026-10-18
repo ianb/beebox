@@ -38,3 +38,13 @@ s
 => first
 second
 ```
+
+A brace inside multi-line template text does not move the next check's marker:
+
+```ts
+const script = `function f() {
+  return 1;
+`;
+script.length
+=> 27
+```

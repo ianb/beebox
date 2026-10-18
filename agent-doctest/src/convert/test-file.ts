@@ -281,7 +281,15 @@ export function convertDoctest(markdown: string, opts: ConvertOptions): Conversi
         deferred = [];
         depth = 0;
       }
-      if (code !== "") body.push(code);
+      if (code !== "") {
+        // A check ends any statement before it, so every pending marker,
+        // this example's included, goes above the check. (The bracket count
+        // is line-based, and braces inside multi-line template text can
+        // leave it open.)
+        body.push(...deferred, code);
+        deferred = [];
+        depth = 0;
+      }
     }
     body.push(...deferred);
     testLines.push(...test.prose);
