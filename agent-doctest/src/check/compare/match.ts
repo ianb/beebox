@@ -23,6 +23,7 @@
  */
 
 import { Unordered } from "../expected.js";
+import { REORDERED_PROBLEM, missingKeyProblem, notEqualProblem, sameItemsReordered } from "./hints.js";
 import { Capture, ISO_DATE_RE, Optional, Pattern, UUID_RE, others } from "../patterns.js";
 import { Call, OTHERS_KEY, Source, render } from "./render.js";
 import { dataOf, expectedView, hasKey, hiddenStateProblem, isPlainData, isUncomparable, view } from "./data.js";
@@ -157,7 +158,7 @@ class Walker {
     if (typeof expected === "string" && actual instanceof Date && !Number.isNaN(actual.getTime()) && actual.toISOString() === expected) {
       return { shown: actual, suggested: expected };
     }
-    this.miss({ path, expected: source(expected), actual, problem: "not equal" });
+    this.miss({ path, expected: source(expected), actual, problem: notEqualProblem(actual, expected) });
     return { shown: expected, suggested: view(actual) };
   }
 
@@ -187,6 +188,7 @@ class Walker {
   private items({ actual, expected, path }: { actual: readonly unknown[]; expected: readonly unknown[]; path: string }): { shown: unknown[]; suggested: unknown[] } {
     const shown: unknown[] = [];
     const suggested: unknown[] = [];
+    if (sameItemsReordered(actual, expected)) this.miss({ path, expected: "", problem: REORDERED_PROBLEM });
     const length = Math.max(actual.length, expected.length);
     for (let i = 0; i < length; i++) {
       const at = `${path}[${i}]`;
@@ -273,7 +275,8 @@ class Walker {
         suggested[k] = expectedView(v);
         continue;
       }
-      this.miss({ path: childPath(path, k), expected: source(expectedView(v)), problem: "missing key" });
+      const unlisted = Object.keys(data).filter((key) => !hasKey(listed, key));
+      this.miss({ path: childPath(path, k), expected: source(expectedView(v)), problem: missingKeyProblem(k, unlisted) });
       shown[k] = expectedView(v);
     }
     if (rest instanceof Pattern) suggested[OTHERS_KEY] = new Source(rest.source);

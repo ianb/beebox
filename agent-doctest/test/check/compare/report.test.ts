@@ -444,3 +444,15 @@ void test("t.check through tap awaits a promise", async (t) => {
   await t.check(Promise.resolve([{ id: ID }]), [{ id: first }]);
   t.equal(first.value, ID);
 });
+
+void test("mismatches name the likely fix", async (t) => {
+  // A misspelled key: the missing key names the near-miss the actual has.
+  t.match(report({ name: "bo" }, { nmae: "bo" }), /\$\.nmae: missing key; the actual has "name": is one of them misspelled\?/);
+  // Doctest wildcards are literal text in t.check.
+  t.match(report("count: 7", "count: «int»"), /t\.check does not read «» wildcards/);
+  // A Date against a short date names what a Date matches.
+  t.match(report(new Date("2026-10-18T00:00:00.000Z"), "2026-10-18"), /a Date matches its full ISO string \("2026-10-18T00:00:00\.000Z"\)/);
+  // The right items in another order point at unordered().
+  t.match(report(["new", "trial"], ["trial", "new"]), /\$: the same items in another order; if order does not matter, write unordered/);
+  t.notMatch(report(["a", "b"], ["b", "c"]), /another order/);
+});

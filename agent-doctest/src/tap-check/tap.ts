@@ -155,8 +155,25 @@ TestBase.prototype.check = function tapCheckValue(this: InstanceType<typeof Test
     if (outcome.generalized !== undefined) extra.generalized = literalBlock(outcome.generalized);
     this.fail(outcome.message, extra);
   };
-  return isThenable(actual) ? Promise.resolve(actual).then(run) : run(actual);
+  return isThenable(actual) ? held(this, Promise.resolve(actual).then(run)) : run(actual);
 } as TestBase["check"];
+
+/**
+ * Keep the test open until a check's promise settles, even when the caller
+ * forgot to await it: otherwise the check could run after the test ended
+ * and its failure would be lost. Lint cannot catch the missing `await` in
+ * tests (the type-aware rules cover src/ only). The test waits on a copy
+ * that never rejects; the returned promise still rejects for the caller.
+ */
+function ignore(): void {
+  // A settled outcome is all the waiter needs.
+}
+
+function held<T>(t: TestBase, promise: Promise<T>): Promise<T> {
+  const settled: Promise<void> = promise.then(ignore, ignore);
+  void t.waitOn(settled);
+  return promise;
+}
 
 /** A string's trailing newlines, which expected text in a doctest cannot hold, are not compared. */
 function trimEnd(value: unknown): unknown {
@@ -175,11 +192,11 @@ TestBase.prototype.checkText = function tapCheckText(
     : inspect(trimEnd(actual), check);
 
   if (result instanceof Promise) {
-    return result.then((resolved) => report(this, {
+    return held(this, result.then((resolved) => report(this, {
       result: resolved,
       label,
       ...(diagnostic ? { diagnostic } : {}),
-    }));
+    })));
   }
 
   return report(this, { result, label, ...(diagnostic ? { diagnostic } : {}) });
@@ -239,10 +256,10 @@ TestBase.prototype.checkThrows = function tapCheckThrows(
     return finish(e, true);
   }
   if (isThenable(returned)) {
-    return Promise.resolve(returned).then(
+    return held(this, Promise.resolve(returned).then(
       () => finish(null, false),
       (e: unknown) => finish(e, true),
-    );
+    ));
   }
   return finish(null, false);
 };
