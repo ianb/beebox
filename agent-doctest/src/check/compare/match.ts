@@ -284,6 +284,7 @@ class Walker {
     if (!Array.isArray(actual)) return this.typeMismatch({ actual, expected, path }, "an array");
     const items = expected.items;
     const name = expected.allowsOthers ? "containing" : "unordered";
+    const missesBefore = this.mismatches.length;
     const fits = items.map((item) => actual.map((a, j) => {
       const trial = new Walker();
       trial.walk({ actual: a, expected: item, path: `${path}[${j}]` });
@@ -317,6 +318,9 @@ class Walker {
       this.miss({ path, expected: source(expectedView(item)), problem: `${name}: no actual item matches this expected item` });
       shown.push(expectedView(item));
     }
+    // A failed containing() with nothing to keep suggests the actual empty
+    // array, never containing([]), which matches any array.
+    if (expected.allowsOthers && suggested.length === 0 && this.mismatches.length > missesBefore) return { shown, suggested };
     return { shown, suggested: new Call(name, suggested) };
   }
 }

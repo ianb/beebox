@@ -277,6 +277,8 @@ void test("containing: these items among others", async (t) => {
   // Multiplicity still counts.
   t.notOk(passes([1], containing([1, 1])));
   t.notOk(passes("1", containing(["1"])));
+  // Nothing to keep: the suggestion is the empty array itself, not containing([]).
+  t.match(report([], containing([2])), /suggested:\n\[\]$/);
   t.checkText(report([1, 4], containing([2])), `check failed: 1 mismatch
 mismatches:
 $: containing: no actual item matches this expected item

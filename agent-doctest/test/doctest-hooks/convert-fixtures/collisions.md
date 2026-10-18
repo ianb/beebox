@@ -29,3 +29,28 @@ A comma expression in a throws example is one expression:
 (() => { throw new Error("boom"); })(), 1
 => throws Error
 ```
+
+Setup that declares `test` and `tapTest`, and a block comment holding an import:
+
+```ts setup
+const test = 1;
+const tapTest = 2;
+/*
+import "./not-a-real-module.ts";
+*/
+```
+
+```ts
+test + tapTest
+=> 3
+```
+
+`print` passed along rather than called:
+
+```ts
+const p = print;
+p("x");
+1
+=> x
+1
+```

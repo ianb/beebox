@@ -219,6 +219,11 @@ function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: Rea
   };
 }
 
+/** Code with its line comments and one-line string literals blanked out, to find names it uses. */
+function withoutStringsAndComments(code: string): string {
+  return code.replace(/\/\/.*$/gm, "").replace(/"(?:[^\n"\\]|\\.)*"|'(?:[^\n'\\]|\\.)*'|`(?:[^\\`]|\\.)*`/g, '""');
+}
+
 /** A name the runtime binds unless setup declares it; the converted file must bind it the same way. */
 function uses(code: string, name: string): boolean {
   return new RegExp(String.raw`(?<![\w$.])${name.replace("$", String.raw`\$`)}\b`).test(code);
@@ -231,8 +236,6 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const { blocks, trailing, title } = classify(markdown);
   const setupText = blocks.filter((b) => b.info.kind === "setup").map((b) => b.block.content).join("\n");
   const setupDeclares = (name: string): boolean => declaresName(setupText, name);
-  // tap's `test` and `after` are imported under another name when setup already uses the name.
-  const testName = setupDeclares("test") ? "tapTest" : "test";
   const tapImport = (name: string, local: string): string => (name === local ? name : `${name} as ${local}`);
   // Names the converter introduces must not collide with a name the
   // doctest's own code declares in any block.
@@ -246,6 +249,8 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   };
   // Each test is its own scope, so one name serves every test that prints.
   const outName = fresh("out");
+  // tap's `test` is imported under another name when setup already uses the name.
+  const testName = setupDeclares("test") ? fresh("tapTest") : "test";
   const tName = setupDeclares("t") ? fresh("tap") : "t";
   // A teardown block registers on tap's root test, as the runtime did. tap's
   // exported after() would wait for the root test to end, which a server the
@@ -321,7 +326,9 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const testLines: string[] = [];
   for (const test of tests) {
     const text = [...test.body.map(textOf), ...test.teardowns.map((c) => c.code)].join("\n");
-    const out = !setupDeclares("print") && /(?<![\w$.])print\s*\(/.test(text) ? outName : null;
+    // The runtime binds print in every test; binding it only where the code
+    // names it keeps unused bindings out of the file.
+    const out = !setupDeclares("print") && uses(withoutStringsAndComments(text), "print") ? outName : null;
     const body: string[] = [];
     if (out !== null) body.push(`const ${out} = ${printedName}();`, `const print = ${out}.print;`);
     for (const { prose, code } of test.teardowns) {

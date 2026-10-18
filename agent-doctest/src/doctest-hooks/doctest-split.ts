@@ -191,6 +191,18 @@ export function rewriteImports(expression: string): string {
 }
 
 /**
+ * Whether a `/* … *\/` comment is still open after this line. Approximate:
+ * a comment marker inside a string counts too, which can only keep an
+ * import in place, never move one out of a comment.
+ */
+function blockCommentOpenAfter(open: boolean, line: string): boolean {
+  const lastOpen = line.lastIndexOf("/*");
+  const lastClose = line.lastIndexOf("*/");
+  if (open) return lastClose === -1 || lastOpen > lastClose;
+  return lastOpen !== -1 && lastOpen > lastClose;
+}
+
+/**
  * Split module-level code into its static import statements and the rest.
  * Only imports at column 0 outside a template literal count; the rest keeps
  * its lines in order. Moving the imports first changes nothing at run time:
@@ -201,11 +213,13 @@ export function splitStaticImports(code: string): { imports: string[]; rest: str
   const imports: string[] = [];
   const rest: string[] = [];
   let inTemplate = false;
+  let inComment = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    if (inTemplate || !/^import[\s"'*{]/.test(line)) {
+    if (inTemplate || inComment || !/^import[\s"'*{]/.test(line)) {
       rest.push(line);
       inTemplate = nextTemplateState(inTemplate, line);
+      inComment = blockCommentOpenAfter(inComment, line);
       continue;
     }
     let end = i;
