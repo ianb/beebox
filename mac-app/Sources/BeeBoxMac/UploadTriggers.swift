@@ -119,7 +119,7 @@ enum UploadNotifications {
         if !notice.newlyRejected.isEmpty {
             lines.append("\(notice.boxLabel) refused \(notice.newlyRejected.joined(separator: ", ")); \(notice.newlyRejected.count == 1 ? "it stays" : "they stay") in \(notice.folderName).")
         }
-        content.title = "Bee Box"
+        content.title = "Bee Box Desktop"
         content.body = lines.joined(separator: " ")
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request) { error in

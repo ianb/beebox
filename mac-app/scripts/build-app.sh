@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build BeeBox.app: the release binary, Sparkle.framework, the bundled Linux
+# Build "Bee Box Desktop.app": the release binary, Sparkle.framework, the app icon, the bundled Linux
 # kernel, and an Info.plist that pins the beebox image to the app's version.
 #
 # Environment:
@@ -35,12 +35,16 @@ scripts/fetch-sparkle.sh
 swift build -c release --arch arm64
 BIN_DIR="$(swift build -c release --arch arm64 --show-bin-path)"
 
-APP=build/BeeBox.app
-rm -rf "$APP"
+APP="build/Bee Box Desktop.app"
+rm -rf "$APP" build/BeeBox.app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
 cp "$BIN_DIR/BeeBoxMac" "$APP/Contents/MacOS/BeeBoxMac"
 ditto "$BIN_DIR/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 scripts/fetch-kernel.sh "$APP/Contents/Resources/vmlinux"
+
+# The icon: the iOS app's paper cube on a macOS icon plate (scripts/make-art.swift).
+swift scripts/make-art.swift ../ios-app/BeeBox/Assets.xcassets/AppIcon.appiconset/appicon-1024.png build/art
+iconutil -c icns -o "$APP/Contents/Resources/AppIcon.icns" build/art/AppIcon.iconset
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -48,8 +52,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
-	<key>CFBundleName</key><string>Bee Box</string>
-	<key>CFBundleDisplayName</key><string>Bee Box</string>
+	<key>CFBundleName</key><string>Bee Box Desktop</string>
+	<key>CFBundleDisplayName</key><string>Bee Box Desktop</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
 	<key>CFBundleExecutable</key><string>BeeBoxMac</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>CFBundleShortVersionString</key><string>${VERSION}</string>
