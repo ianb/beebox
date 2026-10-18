@@ -124,6 +124,17 @@ export function eslint(lintFrom: string, files: readonly string[]): Map<string, 
   return new Map(results.data.map((res) => [relative(REPO, res.filePath), res.messages]));
 }
 
+/**
+ * Apply eslint's layout fixes (quotes, spacing): they change how code is
+ * written, never what it does. Throws when eslint does not finish.
+ */
+export function eslintLayoutFix(lintFrom: string, files: readonly string[]): void {
+  if (files.length === 0) return;
+  const r = run({ cmd: "pnpm", args: ["-s", "exec", "eslint", "--no-cache", "--fix", "--fix-type", "layout", "-f", "json", ...files.map((f) => from(lintFrom, f))], cwd: lintFrom });
+  // Exit 1 means findings remain, which workers fix; 2 is a crash.
+  if (r.status !== 0 && r.status !== 1) throw new ToolOutputError({ what: ["eslint --fix from", lintFrom], output: r.stdout + r.stderr });
+}
+
 export interface TypeErrorAt {
   file: string;
   line: number;

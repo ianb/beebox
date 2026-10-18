@@ -11,6 +11,8 @@
  *    as text. Repeat until typecheck adds nothing.
  * 4. Lint; a `check-whole-value` finding on a typed check keeps it as text
  *    for phase 3 to strengthen.
+ * 5. Apply eslint's layout fixes (quotes, spacing), which workers would
+ *    otherwise make by hand.
  */
 
 import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync, existsSync } from "node:fs";
@@ -20,7 +22,7 @@ import { z } from "zod";
 import { checkSpans, checksByMarker } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { find, loadAll, save, type FileState, type StateFile } from "./state.ts";
-import { blobOf, convert, doctestsUnder, eslint, isCommitted, REPO, typecheck } from "./tools.ts";
+import { blobOf, convert, doctestsUnder, eslint, eslintLayoutFix, isCommitted, REPO, typecheck } from "./tools.ts";
 
 const TYPECHECK_ROUNDS = 6;
 const LINT_ROUNDS = 3;
@@ -177,6 +179,8 @@ export function prepare(dir: string, log: (s: string) => void): StateFile {
     lintLoop(w, log);
     const failed = convert(doctests, writeOptions(w));
     for (const f of failed) log(`  ${f}`);
+    log("5. layout fixes");
+    for (const [lintFrom, group] of byRoot(doctests.map(testOf), (r) => r.lintFrom)) eslintLayoutFix(lintFrom, group);
     for (const doctest of doctests) {
       const manifest = manifestOf(w, doctest);
       const test = testOf(doctest);
