@@ -66,6 +66,23 @@ to `container build` itself: it recreates the builder from the 2 GB default
 otherwise. Keep VM state under `<worktree>/scratch/`, not the session
 scratchpad.
 
+## Logs
+
+Every event goes to the unified log (subsystem `run.beebox.mac`) and to
+`~/Library/Application Support/Bee Box/logs/app.log` (about 2 MB, then
+`app.log.1`): launch, Preferences shown and closed (with the window's state),
+pairing results, watched-folder sweeps that sent or failed something, folder
+problems appearing and clearing, scan token mint and revoke (by name), Photos
+and notification permission states, hosting and VM start and stop. Tokens,
+pairing links, and file contents are never logged.
+
+```sh
+tail -50 ~/Library/"Application Support/Bee Box"/logs/app.log
+log show --last 1h --predicate 'subsystem == "run.beebox.mac"'
+```
+
+The box this app runs writes its server log beside it, `logs/box-<name>.log`.
+
 ## Entitlements
 
 `BeeBoxMac.entitlements` holds `com.apple.security.virtualization` (the VM)
