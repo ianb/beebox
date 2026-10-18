@@ -139,7 +139,7 @@ binary content-type parser is registered anywhere.
 `src/webapp/server.ts:94-98` (moved to `beebox/src/webapp/server/app.ts`) registers only `@fastify/multipart`; the sole
 `addContentTypeParser` in the codebase is scoped to CSP report types
 (`src/webapp/routes/api-csp-report.ts:87-99`). Every capture upload test sends
-multipart (`test/webapp/routes/capture-routes.doctest.md:32-34` (moved to `beebox/test/webapp/routes/capture.doctest.md`)).
+multipart (`test/webapp/routes/capture-routes.doctest.md:32-34` (moved to `beebox/test/webapp/routes/capture.test.ts`)).
 **Issue:** Fastify rejects a POST whose content type has no registered parser
 with 415 before the handler runs. A native `URLSessionUploadTask` sending
 `Content-Type: image/jpeg` (or `application/octet-stream`) never reaches

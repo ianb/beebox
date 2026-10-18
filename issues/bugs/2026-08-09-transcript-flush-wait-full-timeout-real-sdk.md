@@ -8,7 +8,7 @@ labels: [manual-tests]
 priority: normal
 ---
 
-`test/manual/chat-queue-real.doctest.md` (real `claude` SDK process, not the
+`test/manual/chat-queue-real.test.ts` (real `claude` SDK process, not the
 fake backend) logged the durability-gate warning from
 `beebox/src/core/chat/session/run/transcript-sync.ts` on **both** of its two
 turns:

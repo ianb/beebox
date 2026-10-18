@@ -6,7 +6,7 @@
  *   check's method and expected value are as the converter wrote them;
  * - runtime fidelity holds: it passes, with the doctest's own tap
  *   assertion count (counts, not exit codes: a file that fails to load
- *   reports as one skipped test);
+ *   reports as one skipped test); a `test/manual/` file is not run;
  * - eslint, run from its root's `lintFrom`, reports nothing;
  * - its package's tap config includes it (`tap list`);
  * - its root's typecheck program reports no error in it;
@@ -20,7 +20,7 @@ import { join } from "node:path";
 import { addedSuppressions, compareChecks, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { loadAll, save, type FileState, type StateFile } from "./state.ts";
-import { eslint, REPO, tapList, typecheck } from "./tools.ts";
+import { eslint, REPO, tapList, typecheck, type TapResult } from "./tools.ts";
 
 const MAX_LINT_LINES = 20;
 
@@ -49,9 +49,11 @@ export function select(paths: readonly string[]): Selected[] {
   return out;
 }
 
-function runtimeProblems(file: FileState, got: { failures: number; assertions: number } | undefined): string[] {
+function runtimeProblems(file: FileState, got: TapResult | undefined): string[] {
   if (got === undefined) return ["did not run"];
   if (got.failures > 0) return [`${got.failures} failing`];
+  // Leaf counts when the entry has one: splitting a test adds a subtest, not a check.
+  if (typeof file.leafAssertions === "number") return got.leafAssertions === file.leafAssertions ? [] : [`${got.leafAssertions} assertions, want ${file.leafAssertions}`];
   const want = file.assertions ?? file.expectedAssertions;
   return got.assertions === want ? [] : [`${got.assertions} assertions, want ${want}`];
 }
@@ -79,10 +81,17 @@ function checkStatic(selected: readonly Selected[], add: Add): void {
   }
 }
 
+/**
+ * A manual test calls real services and is left out of the package's tap
+ * config on purpose (`beebox/package.json` `test:manual` runs it), so it is
+ * not run here; static fidelity, lint, and typecheck still apply.
+ */
+const isManual = (test: string): boolean => /(?:^|\/)test\/manual\//.test(test);
+
 function checkRuntime(selected: readonly Selected[], add: Add): void {
-  const tests = selected.map((s) => s.file.test);
+  const tests = selected.map((s) => s.file.test).filter((t) => !isManual(t));
   const results = runAll(tests, {});
-  for (const s of selected) for (const p of runtimeProblems(s.file, results.get(s.file.test))) add(s.file.test, `run: ${p}`);
+  for (const s of selected) if (!isManual(s.file.test)) for (const p of runtimeProblems(s.file, results.get(s.file.test))) add(s.file.test, `run: ${p}`);
   // Run by name above; the package's own suite must also pick it up.
   for (const [runFrom, group] of byRoot(tests, (r) => r.runFrom)) {
     const listed = tapList(runFrom);

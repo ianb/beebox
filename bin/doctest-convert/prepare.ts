@@ -24,7 +24,7 @@ import { z } from "zod";
 import { checkSpans, checksByMarker, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { find, loadAll, save, type FileState, type StateFile } from "./state.ts";
-import { blobOf, convert, doctestsUnder, eslint, eslintLayoutFix, isCommitted, mentions, REPO, typecheck } from "./tools.ts";
+import { blobOf, convert, doctestsUnder, eslint, eslintLayoutFix, isCommitted, mentions, REPO, storeBlob, typecheck } from "./tools.ts";
 
 const TYPECHECK_ROUNDS = 6;
 const LINT_ROUNDS = 3;
@@ -239,18 +239,27 @@ function testsIn(source: string): number {
   return [...source.matchAll(/^void (?:test|tapTest\d*)\(/gm)].length;
 }
 
-/** Convert the doctests under `dir` that have no conversion, or whose source changed since. */
-export function prepare(dir: string, log: (s: string) => void): StateFile {
-  const all = loadAll();
-  const changed = doctestsUnder(dir).filter((d) => find(all, d)?.file.blob !== blobOf(d));
+/** The changed doctests prepare leaves alone, with the reason. */
+function skipped(changed: readonly string[], opts: { all: ReturnType<typeof loadAll>; uncommitted: boolean }): Map<string, string> {
+  const { all, uncommitted } = opts;
   const skip = new Map<string, string>();
   for (const d of changed) {
     // A test file the driver did not record is someone's own, or a stopped
     // run's output: never overwrite it.
     if (find(all, d) === null && existsSync(join(REPO, testOf(d)))) skip.set(d, `${testOf(d)} already exists; merge the two by hand, or delete it if a stopped run wrote it`);
-    // The state records the doctest's blob; only a committed one is in history.
-    else if (!isCommitted(d)) skip.set(d, "it has uncommitted changes; commit them first");
+    // The state records the doctest's blob; only a committed one is in
+    // history, unless `uncommitted` writes it to the object store.
+    else if (!uncommitted && !isCommitted(d)) skip.set(d, "it has uncommitted changes; commit them first, or pass --uncommitted");
   }
+  return skip;
+}
+
+/** Convert the doctests under `dir` that have no conversion, or whose source changed since. */
+export function prepare(dir: string, opts: { log: (s: string) => void; uncommitted?: boolean }): StateFile {
+  const { log } = opts;
+  const all = loadAll();
+  const changed = doctestsUnder(dir).filter((d) => find(all, d)?.file.blob !== blobOf(d));
+  const skip = skipped(changed, { all, uncommitted: opts.uncommitted === true });
   for (const [d, why] of skip) log(`${d}: skipped, ${why}`);
   const doctests = changed.filter((d) => !skip.has(d));
   const state: StateFile = all.get(dir.replace(/\/$/, "")) ?? { dir: dir.replace(/\/$/, ""), files: {} };
@@ -282,13 +291,14 @@ export function prepare(dir: string, log: (s: string) => void): StateFile {
       const before = baseline.get(doctest);
       const entry: FileState = {
         test,
-        blob: blobOf(doctest),
+        blob: opts.uncommitted === true ? storeBlob(doctest) : blobOf(doctest),
         status: "converted",
         examples: manifest.examples.map((e) => ({ line: e.line, kind: e.kind })),
         textOnly: Object.fromEntries([...(w.textOnly.get(doctest) ?? new Map<number, string>())].map(([l, r]) => [String(l), r])),
         awaited: [...(w.awaited.get(doctest) ?? [])].toSorted((a, b) => a - b),
         checks: checksByMarker(source, test),
         assertions: before !== undefined && before.failures === 0 ? before.assertions : null,
+        leafAssertions: before !== undefined && before.failures === 0 ? before.leafAssertions : null,
         expectedAssertions: manifest.examples.filter((e) => e.kind !== "statement").length + testsIn(source),
         suppressions: suppressionsIn(source),
         problems: before === undefined ? ["the doctest did not run before conversion"] : before.failures > 0 ? [`the doctest had ${before.failures} failures before conversion`] : [],

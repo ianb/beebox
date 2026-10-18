@@ -29,7 +29,7 @@ docs, or make both ids.
 ## 2026-09-01 manual-test failure
 
 The weekly manual suite failed on the stale half of this same migration.
-`test/manual/field-test-inject-email.doctest.md:88-91` still asserts
+`test/manual/field-test-inject-email.test.ts:88-91` still asserts
 `.beebox/chat-model.json` exists after `seedFieldBox`. It never does: as this
 issue's body already says, `seedFieldBox` (`src/field-test/run-seed.ts:87-94` (moved to `beebox/src/field-test/run/seed.ts`))
 writes `agentModel` into `config/box.json` instead. The assertion just never
@@ -56,7 +56,7 @@ isolation.
 
 The assertion was repointed at `agentModel` since last week (it now reads
 `JSON.parse(await readFile(join(box.boxRoot, "config/box.json"), "utf8")))`,
-`test/manual/field-test-inject-email.doctest.md:91`), but the literal path
+`test/manual/field-test-inject-email.test.ts:91`), but the literal path
 string dropped the leading underscore. The box's config directory is
 `_config`, not `config` — `getBoxDir(boxRoot, "config")` resolves to `_config`
 per `boxDirsKey: "config"` / `path: "_config"` in

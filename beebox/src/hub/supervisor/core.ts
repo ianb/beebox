@@ -32,7 +32,7 @@ import { runtimeStatus, type BoxRunStatus, type BoxRuntimeStatus, type LaunchTim
 
 // `buildChildEnv` (env allowlist) and the child-spawn primitives moved to
 // sibling files to keep this one under the 300-line cap; `buildChildEnv` is
-// re-exported here so existing importers (`test/hub/supervisor.doctest.md`)
+// re-exported here so existing importers (`test/hub/supervisor.test.ts`)
 // don't need to change their import path. Box-path resolution is
 // `requireBoxRoot` (`../lib/box-shape.js`) — the one resolver.
 export { buildChildEnv };
@@ -91,7 +91,7 @@ export interface SupervisorOptions {
   checkReady?: CheckReadyFn;
   /** Injectable clock (defaults to `Date.now`), shared with `HubState`, so
    *  doctests can drive idle/keep-set ordering deterministically instead of
-   *  waiting out real timers. See `test/hub/supervisor.doctest.md`. */
+   *  waiting out real timers. See `test/hub/supervisor.test.ts`. */
   now?: () => number;
   /**
    * First crash-loop retry delay, defaulting to {@link BASE_BACKOFF_MS}.

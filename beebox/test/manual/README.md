@@ -1,6 +1,6 @@
 # Manual tests
 
-Executable doctests in this directory are **excluded from `pnpm test`**. They
+Tests (`.test.ts`) in this directory are **excluded from `pnpm test`**. They
 run real processes, make network calls, or deliberately wait on wall-clock
 deadlines that are too slow or expensive for every normal run.
 
@@ -14,7 +14,7 @@ than executable tests.
 
 ```bash
 pnpm test:manual                                  # run all
-pnpm exec tap -j1 test/manual/chat-queue-real.doctest.md     # one file
+pnpm exec tap -j1 test/manual/chat-queue-real.test.ts     # one file
 ```
 
 The weekly run is one of the repo's schedules — `bin/schedules install` (once

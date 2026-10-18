@@ -428,7 +428,7 @@ Implementation completed the tracks below with these deliberate boundaries:
 ## Rollout shape
 
 - **Test posture:** tests come first for each substantial boundary.
-  - `test/connectors/gmail-tracking.doctest.md` (moved to `beebox/test/connectors/gmail/tracking.doctest.md`) covers live-card discovery,
+  - `test/connectors/gmail-tracking.doctest.md` (moved to `beebox/test/connectors/gmail/tracking.test.ts`, with its rules, history discovery, and `gws` sections in `beebox/test/connectors/gmail/tracking.rules-and-discovery.test.ts`) covers live-card discovery,
     explicit and concurrent tracking, deletion, tracked-only refresh, history
     expiry, resumable bounds, config validation, rolling budgets, pending
     summaries, and the read-only `gws` gate.

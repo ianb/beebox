@@ -1,0 +1,522 @@
+// # Google Drive Connector — mirrored folders
+//
+// A `.gfolder.card` mirrors a Drive folder into **the directory the card sits
+// in**. These tests cover the decision core first (`planFolderSync` — pure, no
+// Drive, no disk), then the same behaviours end to end through the connector and
+// the fake Drive service.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { initBox } from "../../src/core/box/structure/core.js";
+import {
+  createFakeGoogleDrive,
+  type DriveFile,
+  type FakeDocument,
+  type FakeSpreadsheet,
+} from "../../src/services/google-drive/core.js";
+import { createGoogleDriveConnector } from "../../src/connectors/google-drive/connector.js";
+import {
+  MAX_FOLDER_DEPTH,
+  MAX_FOLDERS_PER_PASS,
+  mountEntries,
+  planFolderSync,
+  type MountEntry,
+  type ResolvedChild,
+} from "../../src/connectors/google-drive/folder-plan.js";
+import { extractDriveFileId } from "../../src/connectors/google-drive/types.js";
+import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
+
+// Importing the connector registers the docs/sheets handlers, which is what
+// makes a Doc or Sheet child "syncable" rather than pointer-only.
+
+const FOLDER_MIME = "application/vnd.google-apps.folder";
+
+const SHEET_MIME = "application/vnd.google-apps.spreadsheet";
+
+const DOC_MIME = "application/vnd.google-apps.document";
+
+function child(opts: { id: string; name: string; mimeType: string; via?: string }): ResolvedChild {
+  return {
+    id: opts.id,
+    name: opts.name,
+    mimeType: opts.mimeType,
+    viaShortcutId: opts.via ?? null,
+  };
+}
+
+/** planFolderSync's inputs, with the empty-box defaults filled in. */
+function planInput(opts: {
+  children: ResolvedChild[];
+  entries?: MountEntry[];
+  claimed?: string[];
+  restorable?: string[];
+  visited?: string[];
+  depth?: number;
+  foldersSoFar?: number;
+}) {
+  return {
+    children: opts.children,
+    entries: opts.entries ?? [],
+    claimed: new Set(opts.claimed),
+    restorable: new Set(opts.restorable),
+    visitedFolders: new Set(opts.visited),
+    depth: opts.depth ?? 0,
+    foldersSoFar: opts.foldersSoFar ?? 0,
+  };
+}
+
+function driveFile(opts: {
+  id: string;
+  name: string;
+  mimeType: string;
+  parent?: string;
+  trashed?: boolean;
+  targetId?: string;
+}): DriveFile {
+  return {
+    id: opts.id,
+    name: opts.name,
+    mimeType: opts.mimeType,
+    modifiedTime: "2026-08-26T10:00:00Z",
+    trashed: opts.trashed ?? false,
+    owners: [{ emailAddress: "test@example.com" }],
+    ...(opts.parent === undefined ? {} : { parents: [opts.parent] }),
+    ...(opts.targetId === undefined
+      ? {}
+      : { shortcutDetails: { targetId: opts.targetId, targetMimeType: SHEET_MIME } }),
+    webViewLink: `https://drive.google.com/file/d/${opts.id}/view`,
+  };
+}
+
+function spreadsheetFor(opts: { id: string; name: string }): FakeSpreadsheet {
+  return {
+    metadata: {
+      spreadsheetId: opts.id,
+      properties: { title: opts.name },
+      sheets: [{ properties: { sheetId: 0, title: "Sheet1" } }],
+    },
+    sheets: new Map([["Sheet1", [["Name"], ["Alice"]]]]),
+  };
+}
+
+function documentFor(opts: { id: string; name: string }): FakeDocument {
+  return {
+    structure: {
+      documentId: opts.id,
+      title: opts.name,
+      revisionId: "rev-1",
+      body: { content: [] },
+      inlineObjects: {},
+      footnotes: {},
+    },
+    exports: new Map([["text/markdown", `# ${opts.name}\n`]]),
+    comments: [],
+  };
+}
+
+function cardsIn(listing: string, dir: string): string[] {
+  return listing.split("\n").filter((p) => p.startsWith(dir) && p.endsWith(".card"));
+}
+
+// ## The plan — syncable children become cards, everything else becomes a pointer
+//
+// A Doc and a Sheet have handlers, so they are mirrored as synced cards. A PDF
+// has none: the box records that it exists and where, and copies nothing.
+void test("A Doc and a Sheet have handlers, so they are mirrored as synced cards.", async (t) => {
+  // doctest:L127
+  const plan = planFolderSync(planInput({
+    children: [
+      child({ id: "doc-1", name: "Trip Notes", mimeType: DOC_MIME }),
+      child({ id: "sheet-1", name: "Budget 2026", mimeType: SHEET_MIME }),
+      child({ id: "pdf-1", name: "Signed Lease.pdf", mimeType: "application/pdf" }),
+    ],
+  }));
+  t.check(plan.createFiles, [
+    {
+      driveId: "doc-1",
+      name: "Trip Notes",
+      cardType: "gdoc",
+      cardPath: "Trip_Notes.gdoc.card",
+    },
+    {
+      driveId: "sheet-1",
+      name: "Budget 2026",
+      cardType: "gsheet",
+      cardPath: "Budget_2026.gsheet.card",
+    },
+  ]);
+
+  // doctest:L137
+  t.check(plan.createLinks, [
+    {
+      driveId: "pdf-1",
+      name: "Signed Lease.pdf",
+      mimeType: "application/pdf",
+      cardPath: "Signed_Leasepdf.glink.card",
+    },
+  ]);
+
+  // A child that already has a card here, or anywhere in the box, is left to the
+  // box-wide card pass — the mirror only fills gaps.
+
+  // doctest:L145
+  const held = planFolderSync(planInput({
+    children: [
+      child({ id: "sheet-1", name: "Budget 2026", mimeType: SHEET_MIME }),
+      child({ id: "pdf-1", name: "Signed Lease.pdf", mimeType: "application/pdf" }),
+    ],
+    entries: [{ driveId: "sheet-1", kind: "file", cardPath: "Budget_2026.gsheet.card" }],
+    claimed: ["sheet-1", "pdf-1"],
+  }));
+  t.check({ files: held.createFiles.length, links: held.createLinks.length }, {
+    files: 0,
+    links: 0,
+  });
+});
+
+// ## The plan — a subfolder is a subdirectory with its own mount card
+void test("The plan — a subfolder is a subdirectory with its own mount card", async (t) => {
+  // doctest:L160
+  const plan = planFolderSync(planInput({
+    children: [child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME })],
+  }));
+  t.check(plan.subfolders, [
+    {
+      driveId: "folder-2",
+      name: "Desserts",
+      cardPath: "Desserts/Desserts.gfolder.card",
+      create: true,
+      enter: true,
+    },
+  ]);
+
+  // An already-mirrored subfolder keeps the card it has, and is still descended
+  // into (that is how its own children stay current).
+
+  // doctest:L171
+  const existing = planFolderSync(planInput({
+    children: [child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME })],
+    entries: [{ driveId: "folder-2", kind: "folder", cardPath: "sweets/Sweets.gfolder.card" }],
+    claimed: ["folder-2"],
+  }));
+  t.check(existing.subfolders, [
+    {
+      driveId: "folder-2",
+      name: "Desserts",
+      cardPath: "sweets/Sweets.gfolder.card",
+      create: false,
+      enter: true,
+    },
+  ]);
+});
+
+// ## The plan — cycles and caps refuse to descend, and say which
+//
+// A folder already entered on this pass is a cycle (a shortcut pointing back at
+// an ancestor is the usual way). It is logged, not treated as a failure.
+void test("A folder already entered on this pass is a cycle (a shortcut pointing back at...", async (t) => {
+  // doctest:L186
+  const cycle = planFolderSync(planInput({
+    children: [child({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME, via: "shortcut-1" })],
+    claimed: ["folder-1"],
+    visited: ["folder-1"],
+  }));
+  t.check({ subfolders: cycle.subfolders, refusals: cycle.refusals }, {
+    subfolders: [],
+    refusals: [
+      {
+        reason: "cycle",
+        message: "Folder folder-1 (\"Recipes\") already mirrored on this pass (via shortcut shortcut-1) — cycle, not descended",
+      },
+    ],
+  });
+
+  // The depth cap and the per-pass folder cap both leave the child's card in place
+  // — membership is still recorded — but stop the walk there.
+
+  // doctest:L199
+  const deep = planFolderSync(planInput({
+    children: [child({ id: "folder-9", name: "Deep", mimeType: FOLDER_MIME })],
+    depth: MAX_FOLDER_DEPTH,
+  }));
+  t.check(
+    {
+      subfolder: deep.subfolders[0],
+      reason: deep.refusals[0]?.reason,
+      message: deep.refusals[0]?.message,
+    },
+    {
+    subfolder: {
+      driveId: "folder-9",
+      name: "Deep",
+      cardPath: "Deep/Deep.gfolder.card",
+      create: true,
+      enter: false,
+    },
+    reason: "depth-cap",
+    message: "Folder folder-9 (\"Deep\") is deeper than the 8-level mirror depth cap — not descended",
+  },
+  );
+
+  // doctest:L210
+  const wide = planFolderSync(planInput({
+    children: [child({ id: "folder-9", name: "Deep", mimeType: FOLDER_MIME })],
+    foldersSoFar: MAX_FOLDERS_PER_PASS,
+  }));
+  t.check({ reason: wide.refusals[0]?.reason, enter: wide.subfolders[0]?.enter }, {
+    reason: "folder-cap",
+    enter: false,
+  });
+});
+
+// ## The plan — one resolved ID listed twice is mirrored once
+//
+// Two shortcuts to one Doc, or a subfolder plus a shortcut to it, both resolve to
+// the same target. Carding each occurrence would put two cards on one Drive ID,
+// which the connector then refuses to sync at all — so the first wins and the
+// rest are named.
+void test("Two shortcuts to one Doc, or a subfolder plus a shortcut to it, both resolve...", async (t) => {
+  // doctest:L226
+  const plan = planFolderSync(planInput({
+    children: [
+      child({ id: "doc-1", name: "Trip Notes", mimeType: DOC_MIME }),
+      child({ id: "doc-1", name: "Trip Notes (shortcut)", mimeType: DOC_MIME, via: "shortcut-1" }),
+      child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME }),
+      child({ id: "folder-2", name: "Sweets", mimeType: FOLDER_MIME, via: "shortcut-2" }),
+    ],
+  }));
+  t.check(
+    {
+      files: plan.createFiles.map((a) => a.cardPath),
+      subfolders: plan.subfolders.map((a) => a.cardPath),
+      duplicates: plan.duplicates,
+    },
+    {
+    files: [
+      "Trip_Notes.gdoc.card",
+    ],
+    subfolders: [
+      "Desserts/Desserts.gfolder.card",
+    ],
+    duplicates: [
+      "Drive item doc-1 (\"Trip Notes (shortcut)\") is listed twice in this folder — mirrored once",
+      "Drive item folder-2 (\"Sweets\") is listed twice in this folder — mirrored once",
+    ],
+  },
+  );
+});
+
+// ## The plan — a connector-made tombstone is re-created when Drive lists it again
+//
+// A tombstone in `_bookkeeping/trash/` claims its Drive ID, which is what stops a mirror
+// re-creating a card someone deleted. But the connector makes tombstones too, when
+// Drive says a child was trashed — and if that file is restored on Drive the card
+// must come back. `restorable` is the set of IDs whose only claim is one of the
+// connector's own tombstones.
+void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what stops a...", async (t) => {
+  // doctest:L251
+  const blocked = planFolderSync(planInput({
+    children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
+    claimed: ["sheet-1"],
+  }));
+  t.check(blocked.createFiles, []);
+
+  // doctest:L258
+  const restored = planFolderSync(planInput({
+    children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
+    claimed: ["sheet-1"],
+    restorable: ["sheet-1"],
+  }));
+  t.check(restored.createFiles.map((a) => a.cardPath), [
+    "Budget.gsheet.card",
+  ]);
+
+  // A restored subfolder comes back the same way, and a restored pointer too.
+
+  // doctest:L270
+  const folder = planFolderSync(planInput({
+    children: [child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME })],
+    claimed: ["folder-2"],
+    restorable: ["folder-2"],
+  }));
+  t.check(folder.subfolders.map((a) => ({ path: a.cardPath, create: a.create })), [
+    {
+      path: "Desserts/Desserts.gfolder.card",
+      create: true,
+    },
+  ]);
+
+  // doctest:L278
+  const pointer = planFolderSync(planInput({
+    children: [child({ id: "pdf-1", name: "Scan.pdf", mimeType: "application/pdf" })],
+    claimed: ["pdf-1"],
+    restorable: ["pdf-1"],
+  }));
+  t.check(pointer.createLinks.map((a) => a.cardPath), [
+    "Scanpdf.glink.card",
+  ]);
+});
+
+// ## The plan — a card whose Drive ID left the listing is absent, not doomed
+//
+// The plan only reports it; whether it was trashed, moved out, or unreadable is
+// a `getFile` the caller makes.
+void test("The plan only reports it; whether it was trashed, moved out, or unreadable is...", async (t) => {
+  // doctest:L293
+  const plan = planFolderSync(planInput({
+    children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
+    entries: [
+      { driveId: "sheet-1", kind: "file", cardPath: "Budget.gsheet.card" },
+      { driveId: "pdf-9", kind: "link", cardPath: "Old_Scan.glink.card" },
+      { driveId: "folder-9", kind: "folder", cardPath: "Gone/Gone.gfolder.card" },
+    ],
+  }));
+  t.check(plan.absent, [
+    {
+      driveId: "pdf-9",
+      cardPath: "Old_Scan.glink.card",
+      kind: "link",
+    },
+    {
+      driveId: "folder-9",
+      cardPath: "Gone/Gone.gfolder.card",
+      kind: "folder",
+    },
+  ]);
+
+  // `mountEntries` is what builds that list: the mount's own children, plus the
+  // folder cards one level down (a subfolder's card lives inside its directory, so
+  // membership has to reach there to notice it went away). The mount's own card is
+  // never its own child.
+
+  // doctest:L311
+  const liveCards = [
+    { driveId: "folder-1", kind: "folder" as const, absPath: "/_content/recipes/Recipes.gfolder.card", relPath: "", content: "" },
+    { driveId: "sheet-1", kind: "file" as const, absPath: "/_content/recipes/Budget.gsheet.card", relPath: "", content: "" },
+    { driveId: "folder-2", kind: "folder" as const, absPath: "/_content/recipes/Desserts/Desserts.gfolder.card", relPath: "", content: "" },
+    { driveId: "sheet-2", kind: "file" as const, absPath: "/_content/recipes/Desserts/Cookies.gsheet.card", relPath: "", content: "" },
+    { driveId: "sheet-3", kind: "file" as const, absPath: "/_content/elsewhere/Other.gsheet.card", relPath: "", content: "" },
+  ];
+  t.check(
+    mountEntries({
+      liveCards,
+      mountDir: "/_content/recipes",
+      folderCardPath: "/_content/recipes/Recipes.gfolder.card",
+    }),
+    [
+    {
+      driveId: "sheet-1",
+      kind: "file",
+      cardPath: "Budget.gsheet.card",
+    },
+    {
+      driveId: "folder-2",
+      kind: "folder",
+      cardPath: "Desserts/Desserts.gfolder.card",
+    },
+  ],
+  );
+});
+
+// ## Folder URLs parse
+//
+// A Drive folder URL has no `/d/` segment, so before this it only resolved by
+// accident when someone pasted a bare ID.
+void test("A Drive folder URL has no /d/ segment, so before this it only resolved by acc...", async (t) => {
+  // doctest:L332
+  t.check(
+    extractDriveFileId("https://drive.google.com/drive/folders/1AbCfolderID")
+    ,
+    "1AbCfolderID",
+  );
+
+  // doctest:L335
+  t.check(
+    extractDriveFileId("https://drive.google.com/drive/u/0/folders/1AbCfolderID?usp=sharing")
+    ,
+    "1AbCfolderID",
+  );
+});
+
+// ## End to end — a mount discovers its children and points at the rest
+void test("End to end — a mount discovers its children and points at the rest", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L342
+  const box = await makeTmpBox({ git: true });
+  await initBox(box.root);
+  await box.seed(
+    "_content/drive/recipes/Recipes.gfolder.card",
+    createGfolderTemplate({ driveId: "folder-1" }),
+  );
+  box.commitAll("mount the Recipes folder");
+
+  // doctest:L350
+  const drive = createFakeGoogleDrive({
+    files: [
+      driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
+      driveFile({ id: "doc-1", name: "Sourdough", mimeType: DOC_MIME, parent: "folder-1" }),
+      driveFile({ id: "sheet-1", name: "Bake Times", mimeType: SHEET_MIME, parent: "folder-1" }),
+      driveFile({ id: "pdf-1", name: "Scan 2024.pdf", mimeType: "application/pdf", parent: "folder-1" }),
+    ],
+    documents: new Map([["doc-1", documentFor({ id: "doc-1", name: "Sourdough" })]]),
+    spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
+  });
+
+  // doctest:L361
+  const connector = createGoogleDriveConnector(box.root, drive);
+  const result = await connector.sync();
+  t.check({ success: result.success, error: result.error ?? null }, {
+    success: true,
+    error: null,
+  });
+
+  // doctest:L366
+  t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
+    "_content/drive/recipes/Bake_Times.gsheet.card",
+    "_content/drive/recipes/Recipes.gfolder.card",
+    "_content/drive/recipes/Scan_2024pdf.glink.card",
+    "_content/drive/recipes/Sourdough.gdoc.card",
+  ]);
+
+  // The pointer carries what the item is and where — and an empty body, because
+  // the purpose notes are the boxholder's to write. (The card name comes from
+  // `safeFilename`, which drops the dot in `Scan 2024.pdf`.)
+
+  // doctest:L375
+  await t.checkText(await box.read("_content/drive/recipes/Scan_2024pdf.glink.card"), `---
+drive:
+  id: pdf-1
+  link: https://drive.google.com/file/d/pdf-1/view
+  mime: application/pdf
+title: Scan 2024.pdf
+origin: mirror
+---`);
+
+  // The folder card is re-stamped with the Drive name, link, and the last outcome.
+
+  // doctest:L389
+  const folderCard = await box.read("_content/drive/recipes/Recipes.gfolder.card");
+  await t.checkText(folderCard.replace(/last-sync: .*/, "last-sync: «stamped»"), `---
+drive:
+  id: folder-1
+  link: https://drive.google.com/file/d/folder-1/view
+title: Recipes
+last-sync: «stamped»
+---`);
+
+  // A second pass with nothing changed creates nothing and rewrites no pointer.
+
+  // doctest:L403
+  const again = await connector.sync();
+  t.check({ success: again.success, created: again.created }, {
+    success: true,
+    created: [],
+  });
+});

@@ -859,7 +859,7 @@ JSX text contents are masked does not select its importers.
   "beebox" && !selectorFailed ? "test:changed" : "test";"*). Only the hourly
   full run on `main` would catch a failure that the filter skipped. Since
   2026-10-09, almost every hourly run has been red: 15 of 68 runs since
-  2026-10-05 failed `test/hub/supervisor.doctest.md`, and 12 failed
+  2026-10-05 failed `test/hub/supervisor.test.ts`, and 12 failed
   `test/scripts/release.manifest.test.ts`. A new failure there would be
   hard to see among the old ones.
 

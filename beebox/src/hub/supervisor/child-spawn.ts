@@ -31,7 +31,7 @@ export interface ChildSpawnParams {
 /**
  * Injectable child-process spawner. Real `execa` by default; tests override
  * it to simulate a child that never becomes ready, deterministically and
- * without a real process -- see `test/hub/supervisor.doctest.md`'s restart
+ * without a real process -- see `test/hub/supervisor.test.ts`'s restart
  * race coverage.
  */
 export type SpawnChildFn = (params: ChildSpawnParams) => ChildProc;
@@ -52,7 +52,7 @@ export function defaultSpawnChild(params: ChildSpawnParams): ChildProc {
 /** Injectable readiness probe -- real `waitForHttp` by default; tests
  *  override it to fail immediately instead of waiting out
  *  `READY_TIMEOUT_MS` for real, so the restart race in
- *  `test/hub/supervisor.doctest.md` runs in milliseconds. */
+ *  `test/hub/supervisor.test.ts` runs in milliseconds. */
 export type CheckReadyFn = (params: { port: number; label: string }) => Promise<void>;
 
 const READY_TIMEOUT_MS = 30_000;

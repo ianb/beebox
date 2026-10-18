@@ -30,6 +30,8 @@ const FileStateSchema = z.object({
   checks: z.record(z.string(), z.array(CheckCallSchema)),
   /** tap's assertion count for the converted file, or null when it failed or did not run. */
   assertions: z.number().nullable(),
+  /** The doctest's assertions not counting subtests, so a split test still compares; absent in older entries. */
+  leafAssertions: z.number().nullable().optional(),
   /** Checks and throws in the manifest plus tests in the file: the count a faithful conversion gives. */
   expectedAssertions: z.number(),
   /** The `eslint-disable` directives in the converted file; a worker may not add or widen one. */

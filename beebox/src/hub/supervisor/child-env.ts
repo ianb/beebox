@@ -100,7 +100,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
  * `sourceEnv` (normally the hub's own `process.env`), plus `hubExtras`
  * (currently just `BBX_HUB_SECRET`)
  * layered on top. Pure and exported so it can be pinning-tested directly
- * without spawning anything real -- see `test/hub/supervisor.doctest.md`.
+ * without spawning anything real -- see `test/hub/supervisor.test.ts`.
  */
 export function buildChildEnv(params: {
   sourceEnv: NodeJS.ProcessEnv;

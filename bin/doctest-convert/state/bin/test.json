@@ -1,0 +1,246 @@
+{
+ "dir": "bin/test",
+ "files": {
+  "bin/test/lib/launch-session.doctest.md": {
+   "test": "bin/test/lib/launch-session.test.ts",
+   "blob": "3b3ae12931bb896b6a25907491d913aaddc9ec51",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 122,
+     "kind": "check"
+    },
+    {
+     "line": 154,
+     "kind": "check"
+    },
+    {
+     "line": 174,
+     "kind": "check"
+    },
+    {
+     "line": 196,
+     "kind": "check"
+    },
+    {
+     "line": 209,
+     "kind": "check"
+    },
+    {
+     "line": 221,
+     "kind": "check"
+    },
+    {
+     "line": 239,
+     "kind": "check"
+    },
+    {
+     "line": 246,
+     "kind": "check"
+    },
+    {
+     "line": 255,
+     "kind": "check"
+    },
+    {
+     "line": 271,
+     "kind": "statement"
+    },
+    {
+     "line": 278,
+     "kind": "statement"
+    },
+    {
+     "line": 290,
+     "kind": "check"
+    },
+    {
+     "line": 300,
+     "kind": "check"
+    },
+    {
+     "line": 309,
+     "kind": "check"
+    },
+    {
+     "line": 333,
+     "kind": "check"
+    },
+    {
+     "line": 339,
+     "kind": "check"
+    },
+    {
+     "line": 353,
+     "kind": "check"
+    },
+    {
+     "line": 375,
+     "kind": "check"
+    },
+    {
+     "line": 401,
+     "kind": "check"
+    },
+    {
+     "line": 427,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "122": [
+     {
+      "method": "check",
+      "actual": "343200fb89dbb962",
+      "expected": "d4321cac078990c4",
+      "line": 136
+     }
+    ],
+    "154": [
+     {
+      "method": "check",
+      "actual": "92e5ab1f2f469bac",
+      "expected": "b9f3d0065994e57c",
+      "line": 192
+     }
+    ],
+    "174": [
+     {
+      "method": "check",
+      "actual": "a0ac7d561f932789",
+      "expected": "98ae0f8a93280b4e",
+      "line": 204
+     }
+    ],
+    "196": [
+     {
+      "method": "check",
+      "actual": "6d5628096e6656ed",
+      "expected": "b62d6f20fc953466",
+      "line": 231
+     }
+    ],
+    "209": [
+     {
+      "method": "check",
+      "actual": "60ecb82be63ae5ca",
+      "expected": "3281fbc907d32a6e",
+      "line": 250
+     }
+    ],
+    "221": [
+     {
+      "method": "check",
+      "actual": "4d96d743241bec8d",
+      "expected": "bc67e0a3d055692a",
+      "line": 264
+     }
+    ],
+    "239": [
+     {
+      "method": "check",
+      "actual": "0da2b83a66d681ef",
+      "expected": "98ae0f8a93280b4e",
+      "line": 289
+     }
+    ],
+    "246": [
+     {
+      "method": "check",
+      "actual": "70bcfcd71a65b87c",
+      "expected": "b62d6f20fc953466",
+      "line": 303
+     }
+    ],
+    "255": [
+     {
+      "method": "check",
+      "actual": "a68f525cafefcd08",
+      "expected": "b5bea41b6c623f7c",
+      "line": 322
+     }
+    ],
+    "290": [
+     {
+      "method": "check",
+      "actual": "015ff76f1882b662",
+      "expected": "e03eb5e9c554ddf2",
+      "line": 359
+     }
+    ],
+    "300": [
+     {
+      "method": "check",
+      "actual": "80c484e82cbd23f4",
+      "expected": "e5bdce0959387c4f",
+      "line": 372
+     }
+    ],
+    "309": [
+     {
+      "method": "check",
+      "actual": "40cdcb50c23a4afc",
+      "expected": "452dd5d404536bd9",
+      "line": 401
+     }
+    ],
+    "333": [
+     {
+      "method": "check",
+      "actual": "1fbcfeae657bcbc6",
+      "expected": "af3f5db41a53eee3",
+      "line": 411
+     }
+    ],
+    "339": [
+     {
+      "method": "check",
+      "actual": "31cb4ed47e8069d0",
+      "expected": "978d2b4eb4004481",
+      "line": 428
+     }
+    ],
+    "353": [
+     {
+      "method": "check",
+      "actual": "e6908360eaea249a",
+      "expected": "148a1bd9511b4794",
+      "line": 448
+     }
+    ],
+    "375": [
+     {
+      "method": "check",
+      "actual": "1bdc99beccf09430",
+      "expected": "01fe9f6d2254752f",
+      "line": 481
+     }
+    ],
+    "401": [
+     {
+      "method": "check",
+      "actual": "675026f75d97db38",
+      "expected": "289c847bd4b7f601",
+      "line": 506
+     }
+    ],
+    "427": [
+     {
+      "method": "check",
+      "actual": "69b269b27de31d46",
+      "expected": "ae25b2bea7544302",
+      "line": 533
+     }
+    ]
+   },
+   "assertions": 19,
+   "leafAssertions": 36,
+   "expectedAssertions": 19,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  }
+ }
+}
