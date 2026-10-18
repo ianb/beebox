@@ -8,14 +8,15 @@
  *   assertion count (counts, not exit codes: a file that fails to load
  *   reports as one skipped test);
  * - eslint, run from its root's `lintFrom`, reports nothing;
- * - its root's typecheck program reports no error in it.
+ * - its root's typecheck program reports no error in it;
+ * - it has no `eslint-disable` comment the converter did not write.
  *
  * Checks whose actual value changed are listed for the batch review.
  */
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { compareChecks } from "./checks.ts";
+import { compareChecks, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { loadAll, save, type FileState, type StateFile } from "./state.ts";
 import { eslint, REPO, typecheck } from "./tools.ts";
@@ -62,9 +63,12 @@ export function verify(selected: readonly Selected[], opts: { save: boolean }): 
       add(s.file.test, "the test file is missing");
       continue;
     }
+    const source = readFileSync(path, "utf8");
+    // A lint rule changes only with the boxholder's permission (AGENTS.md).
+    if (suppressionsIn(source) > s.file.suppressions) add(s.file.test, "an eslint-disable comment was added");
     const report = compareChecks({
       before: s.file.checks,
-      source: readFileSync(path, "utf8"),
+      source,
       fileName: s.file.test,
       markerLines: s.file.examples.map((e) => e.line),
     });

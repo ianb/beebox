@@ -51,6 +51,11 @@ function digest(text: string): string {
   return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
+/** The number of `eslint-disable` comments in a file. */
+export function suppressionsIn(source: string): number {
+  return [...source.matchAll(/eslint-disable/g)].length;
+}
+
 /** Marker lines in source order, with the file line each sits on. */
 export function markers(source: string): { marker: number; line: number }[] {
   const out: { marker: number; line: number }[] = [];

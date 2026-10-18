@@ -32,6 +32,8 @@ const FileStateSchema = z.object({
   assertions: z.number().nullable(),
   /** Checks and throws in the manifest plus tests in the file: the count a faithful conversion gives. */
   expectedAssertions: z.number(),
+  /** `eslint-disable` comments in the converted file; a worker may not add one. */
+  suppressions: z.number(),
   /** What the last prepare or verify found wrong; empty when it passed. */
   problems: z.array(z.string()),
   /** Checks whose actual value a worker changed, for review. */

@@ -122,6 +122,7 @@ export function brief(tests: readonly string[]): string {
     `  node --import tsx bin/doctest-convert.ts check ${tests.join(" ")}`,
     "It reports each file's remaining problems; \"verified N of N\" means done.",
     "",
+    "Do not add eslint-disable comments: fix the code, or leave the finding and say why.",
     "Do not run git, pnpm install, rm, kill, or pkill, and do not start subagents.",
   ].join("\n");
 }

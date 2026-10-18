@@ -21,7 +21,7 @@ import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync, existsSyn
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { z } from "zod";
-import { checkSpans, checksByMarker } from "./checks.ts";
+import { checkSpans, checksByMarker, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { find, loadAll, save, type FileState, type StateFile } from "./state.ts";
 import { blobOf, convert, doctestsUnder, eslint, eslintLayoutFix, isCommitted, REPO, typecheck } from "./tools.ts";
@@ -199,6 +199,7 @@ export function prepare(dir: string, log: (s: string) => void): StateFile {
         checks: checksByMarker(source, test),
         assertions: before !== undefined && before.failures === 0 ? before.assertions : null,
         expectedAssertions: manifest.examples.filter((e) => e.kind !== "statement").length + testsIn(source),
+        suppressions: suppressionsIn(source),
         problems: before === undefined ? ["the doctest did not run before conversion"] : before.failures > 0 ? [`the doctest had ${before.failures} failures before conversion`] : [],
         changedActuals: [],
       };
