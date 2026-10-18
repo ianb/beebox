@@ -13,7 +13,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -81,8 +80,6 @@ void test("The OpenRouter key alone routes through OpenRouter", async (t) => {
 // This is the case the decision is about. The OpenRouter key is granted and
 // usable, and it is not used — the box keeps the provider it already had.
 void test("This is the case the decision is about.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L78
   await useTempStore();
   const box = await makeTmpBox();
@@ -94,9 +91,8 @@ void test("This is the case the decision is about.", async (t) => {
 
   // doctest:L85
   const both = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: "placeholder-openai-key" });
-  print(`route: ${JSON.stringify(both)}`);
-  await t.checkText(out.with(print(`openrouter key is genuinely available: ${await getOpenRouterKey(box.root, { purpose: "embeddings", observe: false })}`)), `route: {"via":"direct","apiKey":"placeholder-openai-key"}
-openrouter key is genuinely available: placeholder-openrouter-key`);
+  t.check(both, { via: "direct", apiKey: "placeholder-openai-key" });
+  t.check(await getOpenRouterKey(box.root, { purpose: "embeddings", observe: false }), "placeholder-openrouter-key");
 });
 
 // ## An ungranted OpenRouter key is not a route

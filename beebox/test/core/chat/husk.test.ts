@@ -13,6 +13,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { mkdir, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -20,6 +21,19 @@ import { ensureChatHusk, reconcileChatHusks } from "../../../src/core/chat/husk.
 import { findChatHuskEntry, listChatHusks } from "../../../src/core/chat/husk-read.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../../src/core/chat/session/origin.js";
+
+const { id, name } = await localOrigin();
+
+/** A husk entry as the listing reads it: stamped with this machine's origin. */
+const stamped = (husk: { path: string | ReturnType<typeof str>; session: string; contextDir?: string }) => ({
+  ...husk,
+  engine: "claude" as const,
+  origin: id,
+  originName: name,
+});
+
+/** A husk path named for today (the reconcile pass dates the file by the clock). */
+const today = (short: string) => str`_content/chat/web/${any(String).matches(/^\d{4}-\d{2}-\d{2}$/)}_${short}.chat.card`;
 
 // ## ensure creates the husk, named by date + short session id
 //
@@ -37,18 +51,13 @@ void test("The session field carries the association; there is no activity state
   t.check(path, "_content/chat/web/2026-07-02_59fc20dd.chat.card");
 
   // doctest:L40
-  await t.checkText(await box.read(path), `---
+  t.checkText(await box.read(path), `---
 session: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869
 context-dir: _content/projects
 engine: claude
-origin: «*»
-origin-name: «*»
+origin: ${id}
+origin-name: ${name}
 ---`);
-
-  // doctest:L49
-  const card = await box.read(path);
-  const { id, name } = await localOrigin();
-  await t.checkText(card.includes(`origin: ${id}`) && card.includes(`origin-name: ${name}`), "true");
 
   // ## ensure is idempotent on the `session` field
   //
@@ -64,7 +73,10 @@ origin-name: «*»
   );
 
   // doctest:L66
-  t.check((await findChatHuskEntry(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869"))?.path ?? null, "_content/chat/web/2026-07-02_59fc20dd.chat.card");
+  t.check(
+    await findChatHuskEntry(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869"),
+    stamped({ path: "_content/chat/web/2026-07-02_59fc20dd.chat.card", session: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869", contextDir: "_content/projects" }),
+  );
 
   // doctest:L69
   t.check(await findChatHuskEntry(box.root, "00000000-0000-4000-8000-000000000000"), null);
@@ -86,7 +98,9 @@ origin-name: «*»
   );
 
   // doctest:L87
-  await t.checkText((await listChatHusks(box.root)).length, "1");
+  t.check(await listChatHusks(box.root), [
+    stamped({ path: "_content/chat/web/Planning the trip.chat.card", session: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869", contextDir: "_content/projects" }),
+  ]);
 });
 
 // ## the snippet title strips every wrapper, not just `<chat-app>`
@@ -110,11 +124,11 @@ void test("A stored user message is wrapped twice over:", async (t) => {
     message: { role: "user", content: [{ type: "text", text: '<chat-app narration="off" prose="on" local-time="Sunday 2026-08-23 10:29 CDT (morning)" channel="web-desktop"/>\nPlease reply with just the word ok.' }] },
   }) + "\n");
   const titledHusk = await ensureChatHusk(box.root, { sessionId: titled, date: new Date("2026-08-23T12:00:00Z") });
-  await t.checkText(await box.read(titledHusk), `---
+  t.checkText(await box.read(titledHusk), `---
 session: cccc1111-2222-3333-4444-555566667777
 engine: claude
-origin: «*»
-origin-name: «*»
+origin: ${id}
+origin-name: ${name}
 first-message: Please reply with just the word ok.
 ---`);
 
@@ -131,19 +145,13 @@ first-message: Please reply with just the word ok.
     message: { role: "user", content: [{ type: "text", text: '<chat-app narration="off" channel="web-desktop"/>\n<typed user="Rosa Okafor" user-email="rosa@example.com">where did I put the drawer key?</typed>' }] },
   }) + "\n");
   const webHusk = await ensureChatHusk(box.root, { sessionId: web, date: new Date("2026-08-23T12:00:00Z") });
-  const card = await box.read(webHusk);
-  t.check(
-    {
-      firstMessage: card.split("\n").find((l) => l.startsWith("first-message:")),
-      hasTitle: card.includes("title:"),
-      leaksEmail: card.includes("rosa@example.com"),
-    },
-    {
-    firstMessage: "first-message: where did I put the drawer key?",
-    hasTitle: false,
-    leaksEmail: false,
-  },
-  );
+  t.checkText(await box.read(webHusk), `---
+session: dddd1111-2222-3333-4444-555566667777
+engine: claude
+origin: ${id}
+origin-name: ${name}
+first-message: where did I put the drawer key?
+---`);
 });
 
 // ## reconcile husks every history entry, skipping ghosts
@@ -173,14 +181,19 @@ void test("Transcript discovery honors BBXCLAUDEPROJECTSDIR; a history entry who
 
   // doctest:L162
   await reconcileChatHusks(box.root);
-  const huskPath = (await findChatHuskEntry(box.root, live))?.path ?? null;
-  await t.checkText(huskPath !== null, "true");
+  const liveHusk = await findChatHuskEntry(box.root, live);
+  t.check(liveHusk, stamped({ path: today("aaaa1111"), session: live }));
 
   // doctest:L167
   t.check(await findChatHuskEntry(box.root, ghost), null);
 
   // doctest:L170
-  await t.checkText((await readFsFile(box.path(huskPath ?? ""), "utf-8")).includes(`session: ${live}`), "true");
+  t.checkText(await readFsFile(box.path(liveHusk?.path ?? ""), "utf-8"), `---
+session: ${live}
+engine: claude
+origin: ${id}
+origin-name: ${name}
+---`);
 
   // It re-runs on every boot rather than once behind a marker, so a session
   // that never got its husk — the assignment-time write is best-effort, and the
@@ -199,7 +212,7 @@ void test("Transcript discovery honors BBXCLAUDEPROJECTSDIR; a history entry who
 
   // doctest:L189
   await reconcileChatHusks(box.root);
-  await t.checkText((await findChatHuskEntry(box.root, late)) !== null, "true");
+  t.check(await findChatHuskEntry(box.root, late), stamped({ path: today("cccc1111"), session: late }));
 
   // An already-husked session is left exactly as it was — no duplicate card.
 
@@ -207,7 +220,9 @@ void test("Transcript discovery honors BBXCLAUDEPROJECTSDIR; a history entry who
   const before = await listChatHusks(box.root);
   await reconcileChatHusks(box.root);
   const again = await listChatHusks(box.root);
-  t.check(`${before.length} then ${again.length}`, "2 then 2");
+  const both = [stamped({ path: today("aaaa1111"), session: live }), stamped({ path: today("cccc1111"), session: late })];
+  t.check(before, both);
+  t.check(again, both);
 });
 
 // ## listChatHusks enumerates the cards — they ARE the session list
@@ -231,17 +246,9 @@ title: Planning the garden
 `);
   await box.write("_content/chat/web/broken.chat.card", "no frontmatter here\n");
   const husks = await listChatHusks(box.root);
-  t.check(husks.map((h) => ({ session: h.session.slice(0, 8), title: h.title ?? null, contextDir: h.contextDir ?? null })), [
-    {
-      session: "aaaa1111",
-      title: null,
-      contextDir: "_content/projects",
-    },
-    {
-      session: "bbbb2222",
-      title: "Planning the garden",
-      contextDir: null,
-    },
+  t.check(husks, [
+    stamped({ path: "_content/chat/web/2026-07-01_aaaa1111.chat.card", session: "aaaa1111-0000-0000-0000-000000000000", contextDir: "_content/projects" }),
+    { path: "_content/chat/web/renamed-topic_bbbb2222.chat.card", session: "bbbb2222-0000-0000-0000-000000000000", title: "Planning the garden" },
   ]);
 });
 
@@ -270,10 +277,14 @@ void test("Two husks claiming one session is no longer created — ensure is ide
   console.warn = original;
 
   // doctest:L268
-  t.check(warnings.join("\n"), "chat-husk: 2 husks claim session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869 (_content/chat/web/2026-07-02_59fc20dd.chat.card, _content/chat/web/Copied.chat.card) — keep one and `bbx trash` the others");
+  t.check(warnings, ["chat-husk: 2 husks claim session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869 (_content/chat/web/2026-07-02_59fc20dd.chat.card, _content/chat/web/Copied.chat.card) — keep one and `bbx trash` the others"]);
 
   // doctest:L271
-  await t.checkText((await listChatHusks(box.root)).length, "3");
+  t.check(await listChatHusks(box.root), [
+    { path: "_content/chat/web/2026-07-02_59fc20dd.chat.card", session: dup },
+    { path: "_content/chat/web/2026-07-03_aaaa9999.chat.card", session: "aaaa9999-fe6d-45cb-8f37-f1508a5a0869" },
+    { path: "_content/chat/web/Copied.chat.card", session: dup },
+  ]);
 });
 
 // ## reconcile backfills provenance for husks written before it existed
@@ -318,11 +329,11 @@ title: Old trip
 
   await reconcileChatHusks(box.root);
   // doctest:L308
-  await t.checkText(await box.read("_content/chat/web/Kitchen redo.chat.card"), `---
+  t.checkText(await box.read("_content/chat/web/Kitchen redo.chat.card"), `---
 session: eeee1111-2222-3333-4444-555566667777
 title: Kitchen redo
-origin: «*»
-origin-name: «*»
+origin: ${id}
+origin-name: ${name}
 engine: claude
 ---
 Decided on the tile in this chat.`);
@@ -332,13 +343,13 @@ Decided on the tile in this chat.`);
   // chat look like it lives somewhere it doesn't.
 
   // doctest:L325
-  await t.checkText(await box.read("_content/chat/web/Old trip.chat.card"), `---
+  t.checkText(await box.read("_content/chat/web/Old trip.chat.card"), `---
 session: ffff1111-2222-3333-4444-555566667777
 title: Old trip
 ---`);
 
   // doctest:L331
-  const stamped = await box.read("_content/chat/web/Kitchen redo.chat.card");
+  const kitchen = await box.read("_content/chat/web/Kitchen redo.chat.card");
   await reconcileChatHusks(box.root);
-  await t.checkText((await box.read("_content/chat/web/Kitchen redo.chat.card")) === stamped, "true");
+  t.check(await box.read("_content/chat/web/Kitchen redo.chat.card"), kitchen);
 });

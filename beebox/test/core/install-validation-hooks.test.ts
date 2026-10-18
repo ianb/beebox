@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -52,78 +53,32 @@ void test("Fresh install — writes both files", async (t) => {
 
   // The settings file has a single PostToolUse entry with the bbx path embedded:
 
-  // doctest:L58
   const settings = await readSettings(box);
-  await t.checkText(settings.hooks.PostToolUse.length, "1");
-
-  // doctest:L62
-  t.check(settings.hooks.PostToolUse[0]?.matcher, "Edit|Write|MultiEdit");
-
-  // doctest:L65
-  t.check(settings.hooks.PostToolUse[0]?.hooks[0]?.command.endsWith(" validate --hook"), true);
-
-  // The pre-commit hook is executable and includes the manager marker:
-
-  // doctest:L72
-  const hookPath = path.join(box.root, ".git/hooks/pre-commit");
-  const hookBody = await fs.readFile(hookPath, "utf-8");
-  await t.checkText(hookBody.includes("# beebox validation hook (managed)"), "true");
-
-  // doctest:L77
-  const stat = await fs.stat(hookPath);
-  await t.checkText((stat.mode & 0o111) !== 0, "true");
-
-  // ### git-annex runs before the `bbx` fallback
-  //
-  // `git annex init` declines to install its own pre-commit hook when one already
-  // exists — ours does — so this line is the only thing that runs annex at commit
-  // time. Its *position* is the load-bearing part: the hook `exit 0`s when `bbx` is
-  // not resolvable, so an annex call placed below that would silently vanish on
-  // exactly the under-provisioned machine most likely to be missing git-annex too,
-  // and assets would quietly enter git history as raw bytes.
-
-  // doctest:L92
-  const annexAt = hookBody.indexOf("git annex pre-commit");
-  const bbxFallbackExitAt = hookBody.indexOf("skipping card validation");
-  await t.checkText(annexAt !== -1 && bbxFallbackExitAt !== -1 && annexAt < bbxFallbackExitAt, "true");
-
-  // The annex block is gated on whether **this repo** is annexed, not on whether
-  // git-annex is installed. A box still on the manifest model must keep committing
-  // normally — requiring annex unconditionally would break every unmigrated box at
-  // its next commit, which is a rollout foot-gun rather than a safety property.
-  // Once a repo is annexed, a missing binary is fatal:
-
-  // doctest:L105
-  const gatedOnRepo = hookBody.includes('if [ -d "$(git rev-parse --git-common-dir)/annex" ]');
-  const fatalWhenAnnexed = hookBody.includes("this repo uses git-annex but git-annex is not installed");
-  t.check(`${gatedOnRepo} ${fatalWhenAnnexed}`, "true true");
-
-  // The three `bbx` invocations the hook used to make — `validate --staged`,
-  // `validate --links`, and `attachments check-unlisted` — are one. Each paid the
-  // full CLI startup floor for a fraction of a second of work, and commit duration
-  // is also git-lock hold duration for a box (see `docs/plans/commit-performance.md`).
-  // The manifest-era `bbx attachments verify` call is gone too — git-annex is the
-  // integrity mechanism now:
-
-  // doctest:L119
-  const bbxCalls = hookBody.split("\n").filter((l) => l.startsWith('"$BBX" '));
-  t.check(bbxCalls, [
-    "\"$BBX\" validate --pre-commit",
+  t.check(settings.hooks.PostToolUse, [
+    { matcher: "Edit|Write|MultiEdit", hooks: [{ command: any(String).endsWith(" validate --hook") }] },
   ]);
 
-  // doctest:L128
-  t.check(
-    [
-      hookBody.includes("attachments verify"),
-      hookBody.includes("attachments check-unlisted"),
-      hookBody.includes("validate --links"),
-    ],
-    [
-    false,
-    false,
-    false,
-  ],
-  );
+  // The pre-commit hook is executable and carries the manager marker. git-annex runs
+  // before the `bbx` fallback: `git annex init` declines to install its own pre-commit
+  // hook when one already exists, so this line is the only thing that runs annex at
+  // commit time, and the hook `exit 0`s when `bbx` is not resolvable. An annex call
+  // placed below that would vanish on the under-provisioned machine most likely to be
+  // missing git-annex too. The annex block is gated on whether this repo is annexed;
+  // once it is, a missing binary is fatal. One `bbx` invocation does the whole
+  // commit-time suite (it used to be several, each paying the CLI startup floor while
+  // holding the git lock), and no manifest-era `attachments verify` call remains.
+  const hookPath = path.join(box.root, ".git/hooks/pre-commit");
+  const hookBody = await fs.readFile(hookPath, "utf-8");
+  // The hook is a 50-line shell script with explanatory comments; whole-text equality would
+  // break on any comment edit, so each rule above gets its own narrow check.
+  t.check(hookBody, any(String).includes("# beebox validation hook (managed)"));
+  t.check(hookBody, any(String).matches(/git annex pre-commit[\S\s]*skipping card validation/));
+  t.check(hookBody, any(String).includes('if [ -d "$(git rev-parse --git-common-dir)/annex" ]').includes("this repo uses git-annex but git-annex is not installed"));
+  t.check(hookBody.split("\n").filter((l) => l.startsWith('"$BBX" ')), ['"$BBX" validate --pre-commit']);
+  t.check(hookBody, not(any(String).includes("attachments verify")));
+  t.check(hookBody, not(any(String).includes("attachments check-unlisted")));
+  t.check(hookBody, not(any(String).includes("validate --links")));
+  t.check((await fs.stat(hookPath)).mode & 0o111, 0o111);
 });
 
 // ## Which `bbx` gets stamped — the engine the box depends on
@@ -155,16 +110,8 @@ void test("When the box has an installed engine (nodemodules/beebox), the hooks 
   const expected = JSON.stringify(path.join(await fs.realpath(engine), "bin", "bbx"));
   const preCommit = await fs.readFile(path.join(box.root, ".git/hooks/pre-commit"), "utf-8");
   const settings = await readSettings(box);
-  t.check(
-    [
-      preCommit.includes(`BBX=${expected}\n`),
-      settings.hooks.PostToolUse[0]?.hooks[0]?.command === `${expected} validate --hook`,
-    ],
-    [
-    true,
-    true,
-  ],
-  );
+  t.check(preCommit, any(String).includes(`BBX=${expected}\n`));
+  t.check(settings.hooks.PostToolUse[0]?.hooks, [{ command: `${expected} validate --hook` }]);
 });
 
 // ## Idempotent — second run changes nothing
@@ -184,10 +131,9 @@ void test("Rename migration — replaces the retired managed hook", async (t) =>
   await fs.writeFile(hookPath, "#!/bin/sh\n# callback-box validation hook (managed)\nexit 0\n");
   await installValidationHooks(box.root);
   const migrated = await fs.readFile(hookPath, "utf8");
-  t.check([migrated.includes("# beebox validation hook (managed)"), migrated.includes("/bin/bbx")], [
-    true,
-    true,
-  ]);
+  const fresh = await makeBox();
+  await installValidationHooks(fresh.root);
+  t.check(migrated, await fs.readFile(path.join(fresh.root, ".git/hooks/pre-commit"), "utf8"));
 });
 
 // The post-commit migration removes the retired URL-check block instead of
@@ -216,18 +162,12 @@ BBX_URLCHECK="/stale/bin/bbx"
   );
   await installValidationHooks(box.root);
   const migrated = await fs.readFile(postPath, "utf8");
-  t.check(
-    [
-      migrated.includes("echo foreign-hook"),
-      migrated.includes("callback-box url-check (managed)"),
-      migrated.includes("beebox url-check (managed)"),
-    ],
-    [
-    true,
-    false,
-    true,
-  ],
-  );
+  // The foreign hook stays, both retired blocks are gone, and the stale block is replaced by a
+  // current one: the text after the foreign hook is the block a fresh install writes.
+  const fresh = await makeBox();
+  await installValidationHooks(fresh.root);
+  const freshPost = await fs.readFile(path.join(fresh.root, ".git/hooks/post-commit"), "utf8");
+  t.check(migrated, `#!/bin/sh\necho foreign-hook\n\n\n\n${freshPost.slice(freshPost.indexOf("# >>> beebox url-check (managed) >>>"))}`);
 });
 
 // ## Merge — preserves unrelated settings keys
@@ -249,20 +189,14 @@ void test("Existing user settings under unrelated top-level keys are preserved v
   await installValidationHooks(box.root);
 
   // doctest:L260
-  const settings = await readSettings(box);
-  t.check(settings.permissions, {
-    allow: [
-      "Bash(npm test)",
-    ],
+  // The validation hook was added alongside the preserved keys.
+  t.check(await readSettings(box), {
+    permissions: { allow: ["Bash(npm test)"] },
+    model: "custom-model",
+    hooks: {
+      PostToolUse: [{ matcher: "Edit|Write|MultiEdit", hooks: [{ command: any(String).endsWith(" validate --hook") }] }],
+    },
   });
-
-  // doctest:L264
-  t.check(settings.model, "custom-model");
-
-  // The validation hook was added alongside:
-
-  // doctest:L271
-  t.check(settings.hooks.PostToolUse[0]?.matcher, "Edit|Write|MultiEdit");
 });
 
 // ## Merge — preserves unrelated PostToolUse entries
@@ -288,13 +222,11 @@ void test("A user-installed PostToolUse hook for a different matcher (or differe
 
   // doctest:L295
   const settings = await readSettings(box);
-  await t.checkText(settings.hooks.PostToolUse.length, "2");
-
   // User's entry is still there, untouched:
-
-  // doctest:L303
-  const userEntry = settings.hooks.PostToolUse.find((e) => e.matcher === "Bash");
-  t.check(userEntry?.hooks[0]?.command, "/usr/bin/true");
+  t.check(settings.hooks.PostToolUse, [
+    { matcher: "Bash", hooks: [{ command: "/usr/bin/true" }] },
+    { matcher: "Edit|Write|MultiEdit", hooks: [{ command: any(String).endsWith(" validate --hook") }] },
+  ]);
 });
 
 // ## Bbx path drift — updates command when beebox moves
@@ -323,10 +255,9 @@ void test("If the existing settings file references a stale bbx path (the old va
 
   // doctest:L331
   const settings = await readSettings(box);
-  await t.checkText(settings.hooks.PostToolUse.length, "1");
-
-  // doctest:L335
-  t.check(settings.hooks.PostToolUse[0]?.hooks[0]?.command.endsWith(" validate --hook"), true);
+  t.check(settings.hooks.PostToolUse, [
+    { matcher: "Edit|Write|MultiEdit", hooks: [{ command: any(String).endsWith(" validate --hook") }] },
+  ]);
 });
 
 // ## Not a git repo — skips pre-commit install silently
@@ -345,7 +276,7 @@ void test("If .git/ does not exist (a non-box directory, or a fixture that skipp
   // No phantom `.git/` directory was created:
 
   // doctest:L357
-  t.check(await fs.access(path.join(box.root, ".git")).then(() => true).catch(() => false), false);
+  await t.checkThrows(() => fs.access(path.join(box.root, ".git")), "Error");
 });
 
 // ## Foreign pre-commit hook — left alone
@@ -365,7 +296,7 @@ void test("A pre-commit hook that doesn't carry our marker is the user's own and
   console.warn = origConsoleWarn;
 
   // doctest:L376
-  await t.checkText(changed.includes(".git/hooks/pre-commit"), "false");
+  t.check(changed, ["_config/bbx-validate.ignore", ".claude/rules/bbx-validate-ignore.md", ".claude/settings.json", ".git/hooks/post-commit"]);
 
   // The user's hook is unchanged:
 
@@ -393,22 +324,10 @@ void test("When git annex init gets the hook slot first, it installs its canonic
   const changed = await installValidationHooks(box.root);
   const body = await fs.readFile(hookPath, "utf-8");
   const again = await installValidationHooks(box.root);
-  t.check(
-    [
-      changed.includes(".git/hooks/pre-commit"),
-      body.includes("# beebox validation hook (managed)"),
-      body.includes("git annex pre-commit"),
-      body.includes('"$BBX" validate --pre-commit'),
-      again.length,
-    ],
-    [
-    true,
-    true,
-    true,
-    true,
-    0,
-  ],
-  );
+  t.check(changed, ["_config/bbx-validate.ignore", ".claude/rules/bbx-validate-ignore.md", ".claude/settings.json", ".git/hooks/pre-commit", ".git/hooks/post-commit"]);
+  // The managed hook is a 50-line commented script: three narrow checks show it adopted the annex line and added the gate.
+  t.check(body, any(String).includes("# beebox validation hook (managed)").includes("git annex pre-commit").includes('"$BBX" validate --pre-commit'));
+  t.check(again, []);
 });
 
 // A near-match with an extra user command is foreign, even though it contains
@@ -427,16 +346,8 @@ void test("A near-match with an extra user command is foreign, even though it co
   console.warn = origConsoleWarn;
 
   // doctest:L437
-  t.check(
-    [
-      changed.includes(".git/hooks/pre-commit"),
-      (await fs.readFile(hookPath, "utf-8")) === customBody,
-    ],
-    [
-    false,
-    true,
-  ],
-  );
+  t.check(changed, ["_config/bbx-validate.ignore", ".claude/rules/bbx-validate-ignore.md", ".claude/settings.json", ".git/hooks/post-commit"]);
+  t.check(await fs.readFile(hookPath, "utf-8"), customBody);
 });
 
 // ## Post-commit — managed block, fresh file
@@ -448,18 +359,9 @@ void test("With no existing post-commit hook, one is created with our marker blo
   const box = await makeBox();
   await installValidationHooks(box.root);
   const body = await fs.readFile(path.join(box.root, ".git/hooks/post-commit"), "utf-8");
-  t.check(
-    [
-      body.includes("# >>> beebox url-check (managed) >>>"),
-      body.includes("validate --urls --urls-since HEAD~1"),
-      (await fs.stat(path.join(box.root, ".git/hooks/post-commit"))).mode & 0o111 ? true : false,
-    ],
-    [
-    true,
-    true,
-    true,
-  ],
-  );
+  // A commented shell block: its markers and command are the contract, so the check is narrow.
+  t.check(body, any(String).startsWith("#!/usr/bin/env bash\n").includes("# >>> beebox url-check (managed) >>>").includes("validate --urls --urls-since HEAD~1"));
+  t.check((await fs.stat(path.join(box.root, ".git/hooks/post-commit"))).mode & 0o111, 0o111);
 });
 
 // ## Post-commit — coexists with a foreign hook (git-lfs)
@@ -477,17 +379,12 @@ void test("A pre-existing post-commit (e.g.", async (t) => {
   // doctest:L481
   await installValidationHooks(box.root);
   const merged = await fs.readFile(postPath, "utf-8");
-  t.check([merged.startsWith(lfs), merged.includes("beebox url-check (managed)")], [
-    true,
-    true,
-  ]);
+  t.check(merged, any(String).startsWith(lfs).includes("beebox url-check (managed)"));
 
   // doctest:L491
   const again = await installValidationHooks(box.root);
-  t.check([again.includes(".git/hooks/post-commit"), (await fs.readFile(postPath, "utf-8")) === merged], [
-    false,
-    true,
-  ]);
+  t.check(again, []);
+  t.check(await fs.readFile(postPath, "utf-8"), merged);
 });
 
 // ## Validation-ignore scaffold — seed file + operator guardrail rule
@@ -504,19 +401,13 @@ void test("installValidationHooks also seeds the operator-owned config/bbx-valid
 
   // doctest:L511
   const seed = await fs.readFile(path.join(box.root, "_config/bbx-validate.ignore"), "utf-8");
-  await t.checkText(
-    // Every non-blank line is a comment — nothing is actively ignored out of the box.
-    seed.split("\n").filter((l) => l.trim() !== "").every((l) => l.trimStart().startsWith("#")),
-    "true",
-  );
+  // Every non-blank line is a comment — nothing is actively ignored out of the box.
+  t.check(seed.split("\n").filter((l) => l.trim() !== "" && !l.trimStart().startsWith("#")), []);
 
   // doctest:L518
   const rule = await fs.readFile(path.join(box.root, ".claude/rules/bbx-validate-ignore.md"), "utf-8");
-  await t.checkText(
-    // path-conditional scope
-    rule.includes("- \"_config/bbx-validate.ignore\""),
-    "true",
-  );
+  // path-conditional scope; the rest is generated prose, so the check stays narrow
+  t.check(rule, any(String).includes("- \"_config/bbx-validate.ignore\""));
 
   // An operator's edits to the ignore file are never clobbered — the seed is written
   // only when the file is absent, so a second install (or a deploy-sync) leaves a
@@ -525,8 +416,8 @@ void test("installValidationHooks also seeds the operator-owned config/bbx-valid
   // doctest:L529
   await fs.writeFile(path.join(box.root, "_config/bbx-validate.ignore"), "vendor/**\n");
   const again = await installValidationHooks(box.root);
-  await t.checkText(again.includes("_config/bbx-validate.ignore"), "false");
+  t.check(again, []);
 
   // doctest:L536
-  t.check((await fs.readFile(path.join(box.root, "_config/bbx-validate.ignore"), "utf-8")).trim(), "vendor/**");
+  t.check(await fs.readFile(path.join(box.root, "_config/bbx-validate.ignore"), "utf-8"), "vendor/**\n");
 });

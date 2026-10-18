@@ -96,7 +96,7 @@ Patterns are imported from `agent-doctest/check`. Each pattern is typed:
 |---|---|
 | `any(String)`, `any(Number)`, `any(Boolean)` | any value of that type |
 | `.startsWith(s)`, `.endsWith(s)`, `.includes(s)`, `.matches(re)` | refine a string pattern |
-| `.int()`, `.between(min, max)`, `.positive()`, `.closeTo(n, tolerance)` | refine a number pattern |
+| `.int()`, `.between(min, max)` (inclusive), `.below(n)`, `.above(n)` (strict), `.positive()`, `.closeTo(n, tolerance)` | refine a number pattern |
 | `uuid()` | a UUID string |
 | `isoDate()` | an ISO date or timestamp string, or a valid `Date` |
 | `oneOf("a", "b")` | one of the listed values |

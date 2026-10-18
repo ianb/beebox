@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { instanceOf, not } from "agent-doctest/check";
 import {
   resolveExternalRef,
   buildVersionMarkers,
@@ -46,25 +47,18 @@ function shape(markers: string): string {
     .replace(/sha256:[\da-f]{12}/, "sha256:<hash>")
     .replace(/git:[\da-f]+/, "git:<rev>");
 }
-async function errName(p: Promise<unknown>): Promise<string> {
+async function rejection(p: Promise<unknown>): Promise<unknown> {
   try {
-    await p;
-    return "ok";
+    return { resolved: await p };
   } catch (e) {
-    return e instanceof ExternalRefError ? "ExternalRefError" : "other";
+    return e;
   }
-}
-async function dirtyChangesHashKeepsRev(): Promise<boolean> {
-  const before = await buildVersionMarkers(file);
-  writeFileSync(file, "edited content\n");
-  const after = await buildVersionMarkers(file);
-  return before !== after && before.includes("git:") && after.includes("git:");
 }
 
 // ## Resolves a `file:` URL under an allowed root
 void test("Resolves a `file:` URL under an allowed root", async (t) => {
   // doctest:L67
-  await t.checkText((await resolveExternalRef(href, { roots })) === file, "true");
+  t.check(await resolveExternalRef(href, { roots }), file);
 });
 
 // ## Version markers: content hash + git rev for a committed file
@@ -82,27 +76,28 @@ void test("An untracked file has only the content hash", async (t) => {
 // ## A dirty edit changes the hash but keeps the git rev
 void test("A dirty edit changes the hash but keeps the git rev", async (t) => {
   // doctest:L91
-  t.check(await dirtyChangesHashKeepsRev(), true);
+  const before = await buildVersionMarkers(file);
+  writeFileSync(file, "edited content\n");
+  const after = await buildVersionMarkers(file);
+  t.check(shape(before), "sha256:<hash> git:<rev>");
+  t.check(shape(after), "sha256:<hash> git:<rev>");
+  t.check(after, not(before));
 });
 
 // ## A non-`file:` URL is rejected
 void test("A non-`file:` URL is rejected", async (t) => {
   // doctest:L99
-  t.check(
-    await errName(resolveExternalRef("https://example.com/x", { roots }))
-    ,
-    "ExternalRefError",
-  );
+  t.check(await rejection(resolveExternalRef("https://example.com/x", { roots })), instanceOf(ExternalRefError));
 });
 
 // ## A path outside every allowed root is rejected
 void test("A path outside every allowed root is rejected", async (t) => {
   // doctest:L107
-  t.check(await errName(resolveExternalRef(`file:${outside}`, { roots })), "ExternalRefError");
+  t.check(await rejection(resolveExternalRef(`file:${outside}`, { roots })), instanceOf(ExternalRefError));
 });
 
 // ## A denylisted path (`.git/`) is rejected even under the root
 void test("A denylisted path (`.git/`) is rejected even under the root", async (t) => {
   // doctest:L115
-  t.check(await errName(resolveExternalRef(`file:${path.join(root, ".git", "config")}`, { roots })), "ExternalRefError");
+  t.check(await rejection(resolveExternalRef(`file:${path.join(root, ".git", "config")}`, { roots })), instanceOf(ExternalRefError));
 });

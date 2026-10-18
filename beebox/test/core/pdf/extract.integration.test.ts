@@ -28,7 +28,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import { any, oneOf, str } from "agent-doctest/check";
 import { createDoclingService, doclingArgs } from "../../../src/services/docling/core.js";
 import type { DoclingExtraction } from "../../../src/services/docling/core.js";
 import type { Result } from "../../../src/shared/result.js";
@@ -121,14 +121,8 @@ void test("A real extraction over a real PDF", async (t) => {
   };
 
   // doctest:L113
-  await t.checkText(
-    // One line, whichever path ran — so a skip is visible rather than a silent pass.
-    skipReason ? "SKIPPED" : (extracted ? "EXTRACTED" : `FAILED: ${failure}`),
-    "«show»",
-  );
-
-  // doctest:L117
-  t.check(skipReason ? "ok" : (extracted ? "ok" : `FAILED: ${failure}`), "ok");
+  // One line, whichever path ran — so a skip is visible rather than a silent pass.
+  t.check(skipReason ? "SKIPPED" : (extracted ? "EXTRACTED" : `FAILED: ${failure}`), oneOf("SKIPPED", "EXTRACTED"));
 
   // When it did run, the extraction has the shape the rest of pdf mode relies
   // on: markdown carrying the page's text, a `DoclingDocument` JSON on disk, and one
@@ -139,18 +133,14 @@ void test("A real extraction over a real PDF", async (t) => {
   // doctest:L128
   t.check(pick("Northwind", (run) => (run.markdown.includes("Northwind") ? "Northwind" : run.markdown)), "Northwind");
 
+  // Page renders are PNGs Docling wrote — the WebP re-encode happens a layer up, in
+  // `pdf-extract.ts`; one render per page of the one-page fixture.
   // doctest:L131
-  t.check(pick(1, (run) => run.pageImages.length), 1);
+  t.check(pick(["png"], (run) => run.pageImages.map((image) => image.filePath.split(".").pop())), ["png"]);
 
   // doctest:L134
   t.check(skipReason ? "DoclingDocument" : (extracted ? JSON.parse(await readFile(extracted.jsonPath, "utf-8")).schema_name : undefined), "DoclingDocument");
 
   // doctest:L137
-  await t.checkText(pick(DOCLING_VERSION, (run) => run.version), "«show»");
-
-  // Page renders are PNGs Docling wrote — the WebP re-encode happens a layer up, in
-  // `pdf-extract.ts`:
-
-  // doctest:L145
-  t.check(pick("png", (run) => run.pageImages[0]?.filePath.split(".").pop()), "png");
+  t.check(pick(DOCLING_VERSION, (run) => run.version), DOCLING_VERSION);
 });

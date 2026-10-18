@@ -81,8 +81,8 @@ void test("idle and ready accept a new send; starting and streaming are busy (qu
   t.check(lifecycleBusy({ phase: "stopping", run, wasBusy: false }), false);
 
   // doctest:L82
-  await t.checkText(lifecycleRun(IDLE) === null, "true");
+  t.check(lifecycleRun(IDLE), null);
 
   // doctest:L85
-  await t.checkText(lifecycleRun({ phase: "starting" }) === null, "true");
+  t.check(lifecycleRun({ phase: "starting" }), null);
 });

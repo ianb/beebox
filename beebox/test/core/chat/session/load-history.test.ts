@@ -12,13 +12,14 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { is, not } from "agent-doctest/check";
 import { loadSessionHistory, sessionHistoryReadStats } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
 import type { SessionLogSlice } from "../../../../src/cli/lib/session.js";
+import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -34,6 +35,23 @@ function line(i: number) {
     message: { role: "user", content: [{ type: "text", text: `<typed>Message ${i}</typed>` }] },
   });
 }
+
+/** The parsed form of the entry `line(i)` writes. */
+function entry(i: number) {
+  return {
+    uuid: `u${String(i)}`,
+    type: "user" as const,
+    timestamp: `2026-01-01T00:0${String(i)}:00Z`,
+    content: [{ type: "text" as const, text: `<typed>Message ${String(i)}</typed>` }],
+  };
+}
+
+/** What a read of `count` seeded lines answers, `from` onward. */
+function history(read: { sessionId: string; indexes: number[]; total: number }) {
+  return { sessionId: read.sessionId, entries: read.indexes.map(entry), total: read.total };
+}
+
+const OTHER = "99999999-8888-7777-6666-555555555555";
 
 // Write the transcript where `resolveSessionLogPath` will look for it.
 async function seed(boxRoot: string, count: number) {
@@ -58,8 +76,6 @@ async function configure(boxRoot: string, config: Record<string, unknown>) {
 
 // ## Ten concurrent identical reads, one parse
 void test("Ten concurrent identical reads, one parse", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -78,30 +94,30 @@ void test("Ten concurrent identical reads, one parse", async (t) => {
   const results = await Promise.all(
     Array.from({ length: 10 }, () => loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL })),
   );
-  print(`parses: ${readsSince(before)}`);
-  print(`all answered: ${results.every((r) => r.entries.length === 6)}`);
-  await t.checkText(out.with(print(`shared object: ${results.every((r) => r.entries === results[0]?.entries)}`)), `parses: 1
-all answered: true
-shared object: true`);
+  t.check(readsSince(before), 1);
+  const [first] = results;
+  assert.ok(first);
+  t.check(first, history({ sessionId: SESSION, indexes: [0, 1, 2, 3, 4, 5], total: 6 }));
+  t.check(results.map((r) => r.entries), results.map(() => is(first.entries)));
 
   // The window is shared, so it is frozen — a caller that starts mutating its
   // answer would be corrupting every peer's:
 
   // doctest:L82
-  await t.checkText(out.with(Object.isFrozen(results[0]?.entries)), "true");
+  t.check(Object.isFrozen(first.entries), true);
 
   // The map empties as soon as the read settles. It is a coalescing window, not a
   // cache:
 
   // doctest:L90
-  await t.checkText(out.with(sessionHistoryReadStats().inFlight), "0");
+  t.check(sessionHistoryReadStats().inFlight, 0);
 
   // So a caller arriving *after* the resolution reads the file again:
 
   // doctest:L97
   const after = sessionHistoryReadStats().reads;
   await loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL });
-  await t.checkText(out.with(readsSince(after)), "1");
+  t.check(readsSince(after), 1);
 
   // ## Different reads never share an answer
   //
@@ -114,11 +130,14 @@ shared object: true`);
   const [tail, page, other] = await Promise.all([
     loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
     loadSessionHistory(box.root, { sessionId: SESSION, slice: { mode: "page", offset: 0, limit: 2 } }),
-    loadSessionHistory(box.root, { sessionId: "99999999-8888-7777-6666-555555555555", slice: TAIL }),
+    loadSessionHistory(box.root, { sessionId: OTHER, slice: TAIL }),
   ]);
-  print(`parses: ${readsSince(mixed)}`);
-  await t.checkText(out.with(print(`tail: ${tail.entries.length}, page: ${page.entries.length}, other: ${other.entries.length}`)), `parses: 3
-tail: 6, page: 2, other: 0`);
+  t.check({ parses: readsSince(mixed), tail, page, other }, {
+    parses: 3,
+    tail: history({ sessionId: SESSION, indexes: [0, 1, 2, 3, 4, 5], total: 6 }),
+    page: history({ sessionId: SESSION, indexes: [0, 1], total: 6 }),
+    other: history({ sessionId: OTHER, indexes: [], total: 0 }),
+  });
 
   // A tail that differs only in `minRealUserMessages` is a different window too:
 
@@ -128,7 +147,7 @@ tail: 6, page: 2, other: 0`);
     loadSessionHistory(box.root, { sessionId: SESSION, slice: { mode: "tail", tail: 200 } }),
     loadSessionHistory(box.root, { sessionId: SESSION, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 } }),
   ]);
-  await t.checkText(out.with(readsSince(widened)), "2");
+  t.check(readsSince(widened), 2);
 });
 
 // ## An id the box has no record of never reaches an engine
@@ -150,8 +169,6 @@ tail: 6, page: 2, other: 0`);
 // client's own 3-minute timeout, so the guess this replaces did not merely produce
 // the wrong error, it could hang a history request.
 void test("Which store holds a transcript is a question about a specific session, and fo...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // A native Codex thread is the case this does NOT cover, and that is a deliberate
   // trade rather than an oversight. Codex threads live outside the box, so records
   // can be rewound while the thread survives — and for such an id the box default
@@ -181,7 +198,7 @@ void test("Which store holds a transcript is a question about a specific session
 
   // doctest:L167
   const unrecorded = await loadSessionHistory(codexBox.root, { sessionId: SESSION, slice: TAIL });
-  await t.checkText(out.with(print(`entries: ${unrecorded.entries.length}, total: ${unrecorded.total}`)), "entries: 0, total: 0");
+  t.check(unrecorded, history({ sessionId: SESSION, indexes: [], total: 0 }));
 
   // A RECORDED codex id, on the same box in the same state, does go to the stub and
   // fails there. That is the other half of the assertion above: the RPC path is live,
@@ -193,7 +210,7 @@ void test("Which store holds a transcript is a question about a specific session
   await recordSessionStart(codexBox.root, { sessionId: recordedCodex, engine: "codex" });
   const reached = await loadSessionHistory(codexBox.root, { sessionId: recordedCodex, slice: TAIL })
     .then(() => "resolved", () => "went to the engine");
-  await t.checkText(out.with(reached), "went to the engine");
+  t.check(reached, "went to the engine");
 
   // The fallback is not "assume Claude" — it is "read what is on this disk". A
   // transcript FILE under an unrecorded id is still served:
@@ -201,7 +218,7 @@ void test("Which store holds a transcript is a question about a specific session
   // doctest:L191
   await seed(codexBox.root, 4);
   const stillServed = await loadSessionHistory(codexBox.root, { sessionId: SESSION, slice: TAIL });
-  await t.checkText(out.with(stillServed.entries.length), "4");
+  t.check(stillServed, history({ sessionId: SESSION, indexes: [0, 1, 2, 3], total: 4 }));
 });
 
 // ## `fresh: true` never joins an in-flight scan
@@ -211,8 +228,6 @@ void test("Which store holds a transcript is a question about a specific session
 // read, not the answer of a scan that started before the change: it neither
 // joins nor registers itself in the coalescing map.
 void test("A caller reading BECAUSE it knows the transcript just changed (the post-turn-...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -232,9 +247,8 @@ void test("A caller reading BECAUSE it knows the transcript just changed (the po
     loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
     loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL, fresh: true }),
   ]);
-  print(`parses: ${readsSince(before)}`);
-  await t.checkText(out.with(print(`shared object: ${ordinary.entries === fresh.entries}`)), `parses: 2
-shared object: false`);
+  t.check(readsSince(before), 2);
+  t.check(fresh.entries, not(is(ordinary.entries)));
 
   // A `fresh` read also isn't visible to *other* callers to join — it never
   // occupies the `inFlight` slot:
@@ -248,9 +262,8 @@ shared object: false`);
       loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
     ]),
   ]);
-  print(`parses: ${readsSince(beforeOrdinary)}`);
-  await t.checkText(out.with(print(`the two ordinary reads shared one parse: ${twoOrdinary[0].entries === twoOrdinary[1].entries}`)), `parses: 2
-the two ordinary reads shared one parse: true`);
+  t.check(readsSince(beforeOrdinary), 2);
+  t.check(twoOrdinary[0].entries, is(twoOrdinary[1].entries));
 });
 
 // ## A transcript that appears later is picked up
@@ -260,8 +273,6 @@ the two ordinary reads shared one parse: true`);
 // about to write is visible as soon as it exists. This is why the in-flight entry
 // is dropped on settle rather than kept.
 void test("A missing JSONL is a normal state (a brand-new chat), and it answers empty.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -276,13 +287,12 @@ void test("A missing JSONL is a normal state (a brand-new chat), and it answers 
 
   // doctest:L273
   const empty = await loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL });
-  print(`before: ${empty.entries.length} entries, total ${empty.total}`);
+  t.check(empty, history({ sessionId: SESSION, indexes: [], total: 0 }));
 
   // doctest:L276
   await seed(box.root, 3);
   const found = await loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL });
-  await t.checkText(out.with(print(`after: ${found.entries.length} entries, total ${found.total}`)), `before: 0 entries, total 0
-after: 3 entries, total 3`);
+  t.check(found, history({ sessionId: SESSION, indexes: [0, 1, 2], total: 3 }));
 
   // A failed read is dropped from the map too — it is never handed to a later
   // caller. Pointing the session at a *directory* makes the read fail with EISDIR
@@ -299,9 +309,12 @@ after: 3 entries, total 3`);
   const failures = await Promise.allSettled(
     Array.from({ length: 3 }, () => loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL })),
   );
-  print(`parses: ${readsSince(before)}`);
-  print(`rejected: ${failures.filter((r) => r.status === "rejected").length}`);
-  await t.checkText(out.with(print(`in flight after: ${sessionHistoryReadStats().inFlight}`)), `parses: 1
-rejected: 3
-in flight after: 0`);
+  t.check(readsSince(before), 1);
+  const eisdir = { name: "Error", message: "EISDIR: illegal operation on a directory, read", errno: -21, code: "EISDIR", syscall: "read" };
+  t.check(failures, [
+    { status: "rejected", reason: eisdir },
+    { status: "rejected", reason: eisdir },
+    { status: "rejected", reason: eisdir },
+  ]);
+  t.check(sessionHistoryReadStats().inFlight, 0);
 });

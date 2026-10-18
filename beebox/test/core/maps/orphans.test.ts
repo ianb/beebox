@@ -8,7 +8,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { findOrphanMaps, pruneOrphanMaps } from "../../../src/core/maps/orphans.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
@@ -27,8 +26,6 @@ async function exists(box: TmpBox, rel: string): Promise<boolean> {
 // and nothing else, so it fails the useful-content rule. `work/` qualifies. The
 // box root is never reported: its AGENTS.md is a managed template.
 void test("content/chat/ is a skeleton-hidden path.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -50,7 +47,7 @@ void test("content/chat/ is a skeleton-hidden path.", async (t) => {
 
   // doctest:L41
   const scan = await findOrphanMaps(box.root);
-  await t.checkText(out.with(print(scan.ok ? scan.dirs.join(", ") : scan.skippedReason)), "_content/chat, solo");
+  t.check(scan, { ok: true, dirs: ["_content/chat", "solo"] });
 
   // A box with uncommitted user work is left alone, as the refresh precheck
   // leaves it:
@@ -58,7 +55,7 @@ void test("content/chat/ is a skeleton-hidden path.", async (t) => {
   // doctest:L50
   await box.write("work/draft.md", "wip");
   const busy = await findOrphanMaps(box.root);
-  await t.checkText(out.with(print(busy.ok ? "scanned" : busy.skippedReason)), "uncommitted_work");
+  t.check(busy, { ok: false, skippedReason: "uncommitted_work" });
 });
 
 // ## Pruning removes the map, the import, and the state entry
@@ -68,8 +65,6 @@ void test("content/chat/ is a skeleton-hidden path.", async (t) => {
 // AGENTS.md, or a symlink to anything other than `CLAUDE.md`, is never deleted.
 // The box is one made before `agents-md-2026-10` (`legacyInstructions`).
 void test("A CLAUDE.md that held only the import is deleted with its AGENTS.md mirror sy...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L68
   const box = await makeTmpBox({ git: true, legacyInstructions: true });
   await box.write("_content/chat/MAP.md", "# Map: store/chat\n");
@@ -99,22 +94,27 @@ void test("A CLAUDE.md that held only the import is deleted with its AGENTS.md m
   await pruneOrphanMaps(box.root, scan.ok ? scan.dirs : []);
 
   // doctest:L94
-  print(`chat: MAP=${await exists(box, "_content/chat/MAP.md")} CLAUDE=${await exists(box, "_content/chat/CLAUDE.md")} AGENTS=${await exists(box, "_content/chat/AGENTS.md")}`);
-  print(`solo: MAP=${await exists(box, "solo/MAP.md")} CLAUDE=${JSON.stringify(await box.read("solo/CLAUDE.md"))}`);
-  print(`inbox: CLAUDE=${await exists(box, "_content/inbox/CLAUDE.md")} AGENTS=${await exists(box, "_content/inbox/AGENTS.md")}`);
-  print(`old: CLAUDE=${await exists(box, "old/CLAUDE.md")} AGENTS=${await exists(box, "old/AGENTS.md")}`);
-  await t.checkText(out.with(print(Object.keys((await loadMapState(box.root)).maps).join(","))), `chat: MAP=false CLAUDE=false AGENTS=false
-solo: MAP=false CLAUDE="\\nKeep solo notes short.\\n"
-inbox: CLAUDE=false AGENTS=true
-old: CLAUDE=false AGENTS=true
-work`);
+  t.check(
+    {
+      chat: [await exists(box, "_content/chat/MAP.md"), await exists(box, "_content/chat/CLAUDE.md"), await exists(box, "_content/chat/AGENTS.md")],
+      solo: [await exists(box, "solo/MAP.md"), await box.read("solo/CLAUDE.md")],
+      inbox: [await exists(box, "_content/inbox/CLAUDE.md"), await exists(box, "_content/inbox/AGENTS.md")],
+      old: [await exists(box, "old/CLAUDE.md"), await exists(box, "old/AGENTS.md")],
+      state: Object.keys((await loadMapState(box.root)).maps),
+    },
+    {
+      chat: [false, false, false],
+      solo: [false, "\nKeep solo notes short.\n"],
+      inbox: [false, true],
+      old: [false, true],
+      state: ["work"],
+    },
+  );
 });
 
 // In a converted box the instruction file is `AGENTS.md`, pruned the same way: a
 // file that held only the import is deleted, and one with other content keeps it.
 void test("In a converted box the instruction file is AGENTS.md, pruned the same way:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -142,16 +142,23 @@ void test("In a converted box the instruction file is AGENTS.md, pruned the same
   await pruneOrphanMaps(box.root, scan.ok ? scan.dirs : []);
 
   // doctest:L128
-  print(`chat: MAP=${await exists(box, "_content/chat/MAP.md")} AGENTS=${await exists(box, "_content/chat/AGENTS.md")}`);
-  await t.checkText(out.with(print(`solo: MAP=${await exists(box, "solo/MAP.md")} AGENTS=${JSON.stringify(await box.read("solo/AGENTS.md"))}`)), `chat: MAP=false AGENTS=false
-solo: MAP=false AGENTS="\\nKeep solo notes short.\\n"`);
+  t.check(
+    {
+      chat: [await exists(box, "_content/chat/MAP.md"), await exists(box, "_content/chat/AGENTS.md")],
+      solo: [await exists(box, "solo/MAP.md"), await box.read("solo/AGENTS.md")],
+    },
+    {
+      chat: [false, false],
+      solo: [false, "\nKeep solo notes short.\n"],
+    },
+  );
 
   // After the engine commits the step, nothing is left to prune:
 
   // doctest:L138
   box.commitAll("prune");
   const again = await findOrphanMaps(box.root);
-  await t.checkText(out.with(print(again.ok ? `orphans: ${again.dirs.length}` : again.skippedReason)), "orphans: 0");
+  t.check(again, { ok: true, dirs: [] });
 });
 
 // ## A converted box's import lives in AGENTS.md

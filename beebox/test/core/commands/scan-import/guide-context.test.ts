@@ -31,11 +31,9 @@ async function writeGuide(root: string, content: string): Promise<void> {
 
 // ## No guide, no legacy file — no priors, and that's valid
 void test("No guide, no legacy file — no priors, and that's valid", async (t) => {
-  // doctest:L35
   const root = await makeBoxDir();
   t.check(await resolveScanGuideContext(root), null);
 
-  // doctest:L39
   await fs.rm(root, { recursive: true, force: true });
 });
 
@@ -45,41 +43,60 @@ void test("No guide, no legacy file — no priors, and that's valid", async (t) 
 // compiles; the compiled text carries the applies-to line and the
 // disambiguation-only rule into the vision prompt.
 void test("The scan entry in DOMAINSEEDS must produce a card that parses and compiles; t...", async (t) => {
-  // doctest:L49
   const root = await makeBoxDir();
   await writeGuide(root, createInitialGuideTemplate({ name: "scan" }));
   const resolved = await resolveScanGuideContext(root);
-  t.check(resolved?.source, "guide");
+  t.check(resolved, { text: `# Scan Guide
 
-  // doctest:L55
-  t.check(resolved?.warnings, []);
+Scanner priors for bbx scan-import photo extraction — people, places, vendors, and handwriting clues used to disambiguate names and dates on scanned photos and documents
 
-  // doctest:L58
-  t.check(resolved?.text.split("\n")[0], "# Scan Guide");
+## Triage Rules
 
-  // doctest:L61
-  t.check(resolved?.text.includes("disambiguation only"), true);
+- **Note**: Use these priors for disambiguation only — never invent an identification without strong visual or textual evidence
+- **Default → Ask User** — When a prior is missing or contradicted by what's on the page, ask rather than guess
 
-  // doctest:L64
-  t.check(resolved?.text.includes("**Default → Ask User**"), true);
+## Actions
 
-  // doctest:L67
+### Ask User
+**When:** An identification or date on a scanned page is ambiguous and these priors don't resolve it
+Create a question card in _bookkeeping/questions/
+
+## Active Experiments
+
+- **exp-scan-initial**: Priors listed here reduce misread names and dates in scan extraction
+  Approach: Record durable identifications from answered scan questions as triage rules; verify low-confidence priors with the boxholder
+`, source: "guide", warnings: [] });
+
   await fs.rm(root, { recursive: true, force: true });
 });
 
 // ## Guide wins over a lingering legacy file, loudly
 void test("Guide wins over a lingering legacy file, loudly", async (t) => {
-  // doctest:L73
   const root = await makeBoxDir();
   await writeGuide(root, createInitialGuideTemplate({ name: "scan" }));
   await fs.writeFile(path.join(root, "CLAUDE_SCANS.md"), "# Old priors\n");
   const resolved = await resolveScanGuideContext(root);
-  t.check(resolved?.source, "guide");
+  t.check(resolved, { text: `# Scan Guide
 
-  // doctest:L80
-  t.check(resolved?.warnings[0]?.includes("CLAUDE_SCANS.md is ignored"), true);
+Scanner priors for bbx scan-import photo extraction — people, places, vendors, and handwriting clues used to disambiguate names and dates on scanned photos and documents
 
-  // doctest:L83
+## Triage Rules
+
+- **Note**: Use these priors for disambiguation only — never invent an identification without strong visual or textual evidence
+- **Default → Ask User** — When a prior is missing or contradicted by what's on the page, ask rather than guess
+
+## Actions
+
+### Ask User
+**When:** An identification or date on a scanned page is ambiguous and these priors don't resolve it
+Create a question card in _bookkeeping/questions/
+
+## Active Experiments
+
+- **exp-scan-initial**: Priors listed here reduce misread names and dates in scan extraction
+  Approach: Record durable identifications from answered scan questions as triage rules; verify low-confidence priors with the boxholder
+`, source: "guide", warnings: ["Warning: CLAUDE_SCANS.md is ignored because _config/scan.guide.card exists — delete the legacy file"] });
+
   await fs.rm(root, { recursive: true, force: true });
 });
 
@@ -88,45 +105,32 @@ void test("Guide wins over a lingering legacy file, loudly", async (t) => {
 // Content passes through verbatim (it was hand-written for the prompt), and the
 // lowercase filename variant is honored too.
 void test("Content passes through verbatim (it was hand-written for the prompt), and the...", async (t) => {
-  // doctest:L92
   const root = await makeBoxDir();
   await fs.writeFile(path.join(root, "CLAUDE_SCANS.md"), "# Scan Context\n- Walter (born 1950)\n");
   const resolved = await resolveScanGuideContext(root);
   assert.ok(resolved);
-  t.check(resolved.source, "claude-scans");
+  t.check(resolved, { text: "# Scan Context\n- Walter (born 1950)\n", source: "claude-scans", warnings: ["Warning: CLAUDE_SCANS.md is deprecated — migrate to _config/scan.guide.card (bbx create guide --name scan; runbook: docs/plans/scan-guide-card.md)"] });
 
-  // doctest:L99
-  await t.checkText(resolved.text.includes("Walter (born 1950)"), "true");
-
-  // doctest:L102
-  t.check(resolved.warnings[0]?.includes("deprecated"), true);
-
-  // doctest:L105
   await fs.rm(root, { recursive: true, force: true });
 });
 
 void test("Legacy file alone still works, with a deprecation warning", async (t) => {
-  // doctest:L109
   const root = await makeBoxDir();
   await fs.writeFile(path.join(root, "claude_scans.md"), "lowercase priors\n");
   const resolved = await resolveScanGuideContext(root);
-  t.check(resolved?.source, "claude-scans");
+  t.check(resolved, { text: "lowercase priors\n", source: "claude-scans", warnings: ["Warning: CLAUDE_SCANS.md is deprecated — migrate to _config/scan.guide.card (bbx create guide --name scan; runbook: docs/plans/scan-guide-card.md)"] });
 
-  // doctest:L115
   await fs.rm(root, { recursive: true, force: true });
 });
 
 // A blank legacy file counts as absent:
 void test("A blank legacy file counts as absent:", async (t) => {
-  // doctest:L121
   const root = await makeBoxDir();
   await fs.writeFile(path.join(root, "CLAUDE_SCANS.md"), "   \n");
   t.check(await readScanContextFile(root), null);
 
-  // doctest:L126
   t.check(await resolveScanGuideContext(root), null);
 
-  // doctest:L129
   await fs.rm(root, { recursive: true, force: true });
 });
 
@@ -136,29 +140,21 @@ void test("A blank legacy file counts as absent:", async (t) => {
 // validation. Scanning without priors would commit misread names silently, so
 // the resolver refuses instead.
 void test("Each parse stage names itself:", async (t) => {
-  // doctest:L139
-  async function resolveError(root: string) {
-    try {
-      await resolveScanGuideContext(root);
-      return "(no error)";
-    } catch (e) {
-      return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-    }
-  }
-
-  // doctest:L148
   const root = await makeBoxDir();
   await writeGuide(root, "just prose, no frontmatter\n");
-  await t.checkText((await resolveError(root)).includes("ScanGuideParseError: _config/scan.guide.card has no YAML frontmatter"), "true");
+  await t.checkThrows(() => resolveScanGuideContext(root), "ScanGuideParseError: _config/scan.guide.card has no YAML frontmatter — fix the card (bbx validate _config/scan.guide.card)");
 
-  // doctest:L153
   await writeGuide(root, "---\nversion: [unclosed\n---\n");
-  await t.checkText((await resolveError(root)).startsWith("ScanGuideParseError: _config/scan.guide.card has invalid YAML:"), "true");
+  await t.checkThrows(() => resolveScanGuideContext(root), [
+      "ScanGuideParseError: _config/scan.guide.card has invalid YAML: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 19:",
+      "",
+      "version: [unclosed",
+      "                  ^",
+      " — fix the card (bbx validate _config/scan.guide.card)",
+    ].join("\n"));
 
-  // doctest:L157
   await writeGuide(root, "---\ntriage-rules: 5\n---\n");
-  t.check(await resolveError(root), "ScanGuideParseError: _config/scan.guide.card fails guide schema validation: triage-rules: Invalid input: expected array, received number — fix the card (bbx validate _config/scan.guide.card)");
+  await t.checkThrows(() => resolveScanGuideContext(root), "ScanGuideParseError: _config/scan.guide.card fails guide schema validation: triage-rules: Invalid input: expected array, received number — fix the card (bbx validate _config/scan.guide.card)");
 
-  // doctest:L161
   await fs.rm(root, { recursive: true, force: true });
 });

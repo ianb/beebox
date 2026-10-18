@@ -102,6 +102,16 @@ export class NumberPattern extends Pattern<number> {
     return this.refine(`.between(${min}, ${max})`, (v) => v >= min && v <= max);
   }
 
+  /** Strictly less than `max`: the bound of `x < max`. */
+  below(max: number): NumberPattern {
+    return this.refine(`.below(${max})`, (v) => v < max);
+  }
+
+  /** Strictly greater than `min`: the bound of `x > min`. */
+  above(min: number): NumberPattern {
+    return this.refine(`.above(${min})`, (v) => v > min);
+  }
+
   positive(): NumberPattern {
     return this.refine(".positive()", (v) => v > 0);
   }
@@ -183,7 +193,7 @@ export function is<T>(value: T): Pattern<T> {
  * `value` does not match: `t.check(next.sha, not(previous.sha))`,
  * `t.check(html, not(any(String).includes("<script")))`.
  */
-export function not<T extends Literal>(value: T | Pattern<T>): Pattern<T> {
+export function not<T>(value: Pattern<T> | (T & Literal)): Pattern<T> {
   const source = `not(${value instanceof Pattern ? value.source : literalSource(value)})`;
   const matches = (v: unknown): boolean => (value instanceof Pattern ? value.match(v).ok : Object.is(v, value));
   return new Pattern<T>(source, (v) => (matches(v) ? fail(source) : OK));

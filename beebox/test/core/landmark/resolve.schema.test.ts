@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { utimes } from "node:fs/promises";
 import {
@@ -88,7 +89,10 @@ destinations:
 // value describes the place, not the file, so a reader must still see it.
 void test("prominence is admitted the same way symbol is (landmark.ts):", async (t) => {
   // doctest:L74
-  t.check(parseLandmarkFields("---\nnavigation:\n  label: Logs\nprominence: background\n---\n")?.prominence, "background");
+  t.check(parseLandmarkFields("---\nnavigation:\n  label: Logs\nprominence: background\n---\n"), {
+    navigation: { label: "Logs" },
+    prominence: "background",
+  });
 });
 
 // Presentation metadata is validated by the presentation reader. A malformed
@@ -98,7 +102,10 @@ void test("prominence is admitted the same way symbol is (landmark.ts):", async 
 void test("Presentation metadata is validated by the presentation reader.", async (t) => {
   // doctest:L84
   const badPrimitiveTheme = parseLandmarkFields("---\nnavigation:\n  label: Still here\ndestinations:\n  - for: [triage]\nsystem-theme: bogus\n---\n");
-  await t.checkText([badPrimitiveTheme?.navigation?.label, badPrimitiveTheme?.destinations?.[0]?.for, badPrimitiveTheme?.["system-theme"]], "[\"Still here\", [\"triage\"], null]");
+  t.check(badPrimitiveTheme, {
+    navigation: { label: "Still here" },
+    destinations: [{ for: ["triage"] }],
+  });
 });
 
 // Malformed means the wrong SHAPE. A name or stock the engine does not recognize
@@ -108,13 +115,10 @@ void test("Presentation metadata is validated by the presentation reader.", asyn
 void test("Malformed means the wrong SHAPE.", async (t) => {
   // doctest:L95
   const unknownStock = parseLandmarkFields("---\nnavigation:\n  label: Also here\nsystem-theme:\n  name: paper\n  stock: purple\n---\n");
-  t.check([unknownStock?.navigation?.label, unknownStock?.["system-theme"]], [
-    "Also here",
-    {
-      name: "paper",
-      stock: "purple",
-    },
-  ]);
+  t.check(unknownStock, {
+    navigation: { label: "Also here" },
+    "system-theme": { name: "paper", stock: "purple" },
+  });
 });
 
 // ## Template
@@ -167,37 +171,13 @@ void test("A link to a file that doesn't exist still appears, with exists:", asy
       ],
     },
   });
-  t.check(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists })), [
-    {
-      ref: "_content/recipes/Bread.recipe.card",
-      label: null,
-      exists: true,
-    },
-    {
-      ref: "_content/recipes/Vanished.recipe.card",
-      label: null,
-      exists: false,
-    },
-    {
-      ref: "_content/docs/About.doc.card",
-      label: "about",
-      exists: true,
-    },
-    {
-      ref: "_content/docs/Index.doc.card",
-      label: "index",
-      exists: true,
-    },
-    {
-      ref: "_content/recipes/Gone.recipe.card",
-      label: null,
-      exists: false,
-    },
-    {
-      ref: "../../../../etc/hosts",
-      label: "escape",
-      exists: false,
-    },
+  t.check(links, [
+    { ref: "_content/recipes/Bread.recipe.card", label: null, title: "Bread", exists: true, source: "listed" },
+    { ref: "_content/recipes/Vanished.recipe.card", label: null, title: "Vanished", exists: false, source: "listed" },
+    { ref: "_content/docs/About.doc.card", label: "about", title: "About", exists: true, source: "listed" },
+    { ref: "_content/docs/Index.doc.card", label: "index", title: "Index", exists: true, source: "listed" },
+    { ref: "_content/recipes/Gone.recipe.card", label: null, title: "Gone", exists: false, source: "listed" },
+    { ref: "../../../../etc/hosts", label: "escape", title: "hosts", exists: false, source: "listed" },
   ]);
 });
 
@@ -211,10 +191,10 @@ void test("Without a template, expand emits one bare link per match, sorted alph
     files: { "_content/recipes/Carrot.recipe.card": "Carrot", "_content/recipes/Apple.recipe.card": "Apple", "_content/recipes/Bread.recipe.card": "Bread" },
     navigation: { expand: [{ query: "*.recipe.card" }] },
   });
-  t.check(links.map((l) => l.ref), [
-    "_content/recipes/Apple.recipe.card",
-    "_content/recipes/Bread.recipe.card",
-    "_content/recipes/Carrot.recipe.card",
+  t.check(links, [
+    { ref: "_content/recipes/Apple.recipe.card", label: null, title: "Apple", exists: true, source: "expand" },
+    { ref: "_content/recipes/Bread.recipe.card", label: null, title: "Bread", exists: true, source: "expand" },
+    { ref: "_content/recipes/Carrot.recipe.card", label: null, title: "Carrot", exists: true, source: "expand" },
   ]);
 });
 
@@ -231,7 +211,7 @@ void test("An expand query glob is evaluated with the landmark's own directory a
     files: { "_content/recipes/Bread.recipe.card": "Bread", "src/private.doc.card": "Secret Doc" },
     navigation: { expand: [{ query: "../../src/private.doc.card", "template-label": "${title}" }] },
   });
-  await t.checkText(links.length, "0");
+  t.check(links, []);
 });
 
 // ## Expand: generated refs are box paths
@@ -248,11 +228,8 @@ void test("The default (no template-ref) emits the match's box path — the cano
     files: { "_content/recipes/attach/Filed.recipe.card": "Filed", "_content/recipes/Recipes.attach/Trap.recipe.card": "Trap" },
     navigation: { expand: [{ query: "attach/*.recipe.card" }] },
   });
-  t.check(links.map((l) => ({ ref: l.ref, exists: l.exists })), [
-    {
-      ref: "_content/recipes/attach/Filed.recipe.card",
-      exists: true,
-    },
+  t.check(links, [
+    { ref: "_content/recipes/attach/Filed.recipe.card", label: null, title: "Filed", exists: true, source: "expand" },
   ]);
 });
 
@@ -268,15 +245,9 @@ void test("Template placeholders interpolate per match.", async (t) => {
     files: { "_content/recipes/Bread.recipe.card": "Crusty Bread", "_content/recipes/Pasta.recipe.card": "Cacio e Pepe" },
     navigation: { expand: [{ query: "*.recipe.card", "template-ref": "${path}", "template-label": "${title}" }] },
   });
-  t.check(links.map((l) => ({ ref: l.ref, label: l.label })), [
-    {
-      ref: "_content/recipes/Bread.recipe.card",
-      label: "Crusty Bread",
-    },
-    {
-      ref: "_content/recipes/Pasta.recipe.card",
-      label: "Cacio e Pepe",
-    },
+  t.check(links, [
+    { ref: "_content/recipes/Bread.recipe.card", label: "Crusty Bread", title: "Crusty Bread", exists: true, source: "expand" },
+    { ref: "_content/recipes/Pasta.recipe.card", label: "Cacio e Pepe", title: "Cacio e Pepe", exists: true, source: "expand" },
   ]);
 });
 
@@ -290,15 +261,9 @@ void test("A card appearing in both a hand-listed link and an expand result show
     files: { "_content/recipes/Bread.recipe.card": "Bread", "_content/recipes/Pasta.recipe.card": "Pasta" },
     navigation: { links: [{ ref: "Bread.recipe.card", label: "the bread" }], expand: [{ query: "*.recipe.card" }] },
   });
-  t.check(links.map((l) => ({ ref: l.ref, label: l.label })), [
-    {
-      ref: "_content/recipes/Bread.recipe.card",
-      label: "the bread",
-    },
-    {
-      ref: "_content/recipes/Pasta.recipe.card",
-      label: null,
-    },
+  t.check(links, [
+    { ref: "_content/recipes/Bread.recipe.card", label: "the bread", title: "Bread", exists: true, source: "listed" },
+    { ref: "_content/recipes/Pasta.recipe.card", label: null, title: "Pasta", exists: true, source: "expand" },
   ]);
 });
 
@@ -317,27 +282,22 @@ void test("An expand carrying a group title stays grouped instead of flattening 
     },
     navigation: { links: [{ ref: "Bread.recipe.card", label: "the bread" }], expand: [{ query: "images/*.image.card", group: "Images" }] },
   });
-  t.check(
-    ({
-      links: resolved.links.map((l) => l.ref),
-      groups: resolved.groups.map((g) => ({ label: g.label, count: g.count, children: g.children.map((c) => c.ref) })),
-    }),
-    {
+  t.check(resolved, {
     links: [
-      "_content/recipes/Bread.recipe.card",
+      { ref: "_content/recipes/Bread.recipe.card", label: "the bread", title: "Bread", exists: true, source: "listed" },
     ],
     groups: [
       {
         label: "Images",
         count: 2,
         children: [
-          "_content/recipes/images/A.image.card",
-          "_content/recipes/images/B.image.card",
+          { ref: "_content/recipes/images/A.image.card", label: null, title: "A", exists: true, source: "expand" },
+          { ref: "_content/recipes/images/B.image.card", label: null, title: "B", exists: true, source: "expand" },
         ],
       },
     ],
-  },
-  );
+    derivedProblems: [],
+  });
 });
 
 // ## Order: modified-desc
@@ -350,9 +310,9 @@ void test("order:", async (t) => {
     navigation: { expand: [{ query: "*.recipe.card", order: "modified-desc" }] },
     backdated: ["_content/recipes/A.recipe.card"], // backdated so B is newer
   });
-  t.check(links.map((l) => l.ref), [
-    "_content/recipes/B.recipe.card",
-    "_content/recipes/A.recipe.card",
+  t.check(links, [
+    { ref: "_content/recipes/B.recipe.card", label: null, title: "B", exists: true, source: "expand" },
+    { ref: "_content/recipes/A.recipe.card", label: null, title: "A", exists: true, source: "expand" },
   ]);
 });
 
@@ -372,13 +332,13 @@ destinations:
 `);
   assert.ok(fields);
   const dest = findDestination(fields.destinations, "commentary");
-  t.check(dest?.for, [
-    "triage",
-    "commentary",
-  ]);
+  t.check(dest, {
+    for: ["triage", "commentary"],
+    rules: "Articles saved for close reading and commentary.",
+  });
 
   // doctest:L312
-  await t.checkText(findDestination(fields.destinations, "triage") === dest, "true");
+  t.check(findDestination(fields.destinations, "triage"), is(dest));
 
   // A landmark without a matching destination returns null:
 

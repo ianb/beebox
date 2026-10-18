@@ -15,7 +15,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -47,8 +47,6 @@ async function withWarnings<T>(fn: () => Promise<T>): Promise<[T, string[]]> {
 // The env pair and the stray file are both set here precisely to show they do
 // nothing.
 void test("The env pair and the stray file are both set here precisely to show they do n...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env.BBX_DEEPGRAM_API_KEY;
@@ -59,7 +57,6 @@ void test("The env pair and the stray file are both set here precisely to show t
       t.error(error);
     }
   });
-  // doctest:L50
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
@@ -70,17 +67,14 @@ void test("The env pair and the stray file are both set here precisely to show t
     JSON.stringify({ apiKey: "placeholder-file-key", projectId: "placeholder-file-project" }),
   );
 
-  // doctest:L60
-  print(`env pair and stray file: ${await getDeepgramCredentials(box.root, { observe: true })}`);
+  t.check(await getDeepgramCredentials(box.root, { observe: true }), null);
 
-  // doctest:L62
   await setSecret({
     name: "deepgram",
     value: JSON.stringify({ apiKey: "placeholder-store-key", projectId: "placeholder-store-project" }),
   });
   await grantSecret({ slug, name: "deepgram", access: "server" });
-  await t.checkText(out.with(print(`store granted: ${JSON.stringify(await getDeepgramCredentials(box.root, { observe: true }))}`)), `env pair and stray file: null
-store granted: {"apiKey":"placeholder-store-key","projectId":"placeholder-store-project"}`);
+  t.check(await getDeepgramCredentials(box.root, { observe: true }), { apiKey: "placeholder-store-key", projectId: "placeholder-store-project" });
 
   // ## A malformed JSON-string value degrades to not-configured
   //
@@ -88,33 +82,31 @@ store granted: {"apiKey":"placeholder-store-key","projectId":"placeholder-store-
   // reported rather than papered over. The warning names the secret; the connector
   // sees the "not configured" it already handles.
 
-  // doctest:L80
   await setSecret({ name: "deepgram", value: "not-json-at-all" });
   const [bad, badWarnings] = await withWarnings(() => getDeepgramCredentials(box.root, { observe: true }));
-  print(`not JSON: ${bad}`);
-  print(`warned: ${badWarnings.some((w) => w.includes('"deepgram" is not valid JSON'))}`);
+  t.check({ bad, badWarnings }, {
+    bad: null,
+    // The parenthesised parser message belongs to the JS engine, not to this code.
+    badWarnings: [str`[secrets] the stored secret "deepgram" is not valid JSON (${any(String)}) — treating it as not configured. Multi-field credentials are stored as a JSON string.`],
+  });
 
-  // doctest:L85
   await setSecret({ name: "deepgram", value: JSON.stringify({ apiKey: 42 }) });
   const [wrongShape, shapeWarnings] = await withWarnings(() => getDeepgramCredentials(box.root, { observe: true }));
-  print(`wrong shape: ${wrongShape}`);
-  await t.checkText(out.with(print(`warned: ${shapeWarnings.some((w) => w.includes("does not match the shape"))}`)), `not JSON: null
-warned: true
-wrong shape: null
-warned: true`);
+  t.check({ wrongShape, shapeWarnings }, {
+    wrongShape: null,
+    shapeWarnings: ['[secrets] the stored secret "deepgram" does not match the shape this connector needs (Invalid input: expected string, received number) — treating it as not configured.'],
+  });
 
   // ## A half-configured credential is no credential
   //
   // Both fields are required — one without the other cannot call Deepgram at all,
   // so it reads as not configured rather than half-working.
 
-  // doctest:L102
   await setSecret({ name: "deepgram", value: JSON.stringify({ apiKey: "placeholder-store-key" }) });
-  await t.checkText(out.with(await getDeepgramCredentials(box.root, { observe: true })), "null");
+  t.check(await getDeepgramCredentials(box.root, { observe: true }), null);
 
   // No entry at all is `null`, not a throw:
 
-  // doctest:L110
   process.env.BBX_SECRETS_FILE = join(dir, "no-store-here.json");
-  await t.checkText(out.with(await getDeepgramCredentials(box.root, { observe: true })), "null");
+  t.check(await getDeepgramCredentials(box.root, { observe: true }), null);
 });

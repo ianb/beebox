@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, str, unordered } from "agent-doctest/check";
 import { strict as assert } from "node:assert";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -58,25 +59,42 @@ void test("line 25", async (t) => {
 
   // doctest:L51
   const record = await boxMaintenanceStatus(boxRoot);
-  t.check({ answered: (await readFile(join(boxRoot, question), "utf8")).includes("Keep both versions"), phase: record?.phase, owner: record?.owner, agents: invocations, jobs: (await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")).length }, {
-    answered: true,
+  // The card text embeds timestamps and the full repair directive; the answer is the contract here.
+  t.check(await readFile(join(boxRoot, question), "utf8"), any(String).includes("answer:\n  text: Keep both versions\n"));
+  t.check({ phase: record?.phase, owner: record?.owner, agents: invocations, jobs: (await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")) }, {
     phase: "exclusive",
     owner: null,
     agents: 1,
-    jobs: 1,
+    jobs: [str`${any(String)}-migration_attachments-0-question-${any(String)}.question-followup.job.card`],
   });
 
   // doctest:L55
   const owner = await acquireBoxMaintenance(boxRoot, { reason: "retry" });
   await owner.run(() => repairMigration({ ...repairOptions, retry: async () => 0 }));
-  await t.checkText(agentPrompt.includes("Previous answered question") && agentPrompt.includes("Keep both versions"), "true");
+  // The prompt embeds the whole previous question card, whose timestamps vary.
+  t.check(agentPrompt, any(String).includes("Previous answered question").includes("Keep both versions"));
 
   // doctest:L60
   await owner.release();
   const cliQuestion = question.replace("-0.question.card", "-1.question.card");
   await writeFile(join(boxRoot, cliQuestion), createTextQuestionTemplate({ memo: "Migration attachments", askedAt: "2026-09-14T00:00:00Z", prompt: `Migration: attachments\nRecovery: ${snapshot.ref}`, directive: "Wait for migration repair" }));
   await exec(process.execPath, ["--import", import.meta.resolve("tsx"), join(PACKAGE_ROOT, "src/cli/entry/run.ts"), "answer", cliQuestion, "Use the preserved copy"], { cwd: boxRoot });
-  await t.checkText((await readFile(join(boxRoot, cliQuestion), "utf8")).includes("Use the preserved copy"), "true");
+  t.check(await readFile(join(boxRoot, cliQuestion), "utf8"), str`---
+type: question
+memo: Migration attachments
+prompt: |-
+  Migration: attachments
+  Recovery: ${snapshot.ref}
+input:
+  type: text
+directive: Wait for migration repair
+asked-at: 2026-09-14T00:00:00Z
+answer:
+  text: Use the preserved copy
+answered-at: ${isoDate()}
+answered-via: cli
+---
+`);
 
   // doctest:L67
   // An answered question stays answered; the record clears when an attempt completes.
@@ -97,7 +115,11 @@ void test("line 25", async (t) => {
   t.check(normal.statusCode, 200);
 
   // doctest:L85
-  await t.checkText((await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")).length, "3");
+  t.check((await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")), unordered([
+    str`${any(String)}-migration_attachments-0-question-${any(String)}.question-followup.job.card`,
+    str`${any(String)}-migration_attachments-1-question-${any(String)}.question-followup.job.card`,
+    str`${any(String)}-ordinary-question-${any(String)}.question-followup.job.card`,
+  ]));
 
   // doctest:L88
   await accepted.release();

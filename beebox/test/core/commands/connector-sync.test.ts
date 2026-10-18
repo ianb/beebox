@@ -18,7 +18,6 @@ void test("line 13", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L14
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/connector-review.procedure.card", `---
 name: connector-review
@@ -53,11 +52,23 @@ steps:
     syncArgs: { connector: "procedure-source" },
     connectors: [fakeConnector],
   });
-  t.check(result.success, true);
+  t.check(result, { success: true, data: { created: 0, errors: 0 } });
 
-  // doctest:L51
-  await t.checkText(collector.getOutput().includes("Running procedure _config/procedures/connector-review.procedure.card"), "true");
+  await t.checkText(collector.getOutput(), `Syncing procedure-source...
+  No new items.
+Running procedure _config/procedures/connector-review.procedure.card...
+Starting procedure: connector-review
+Run: _bookkeeping/procedure/runs/connector-review_«*»
+«blankline»
+=== Step: record ===
+Record the trigger
+«blankline»
+  Running shell command...
+✓ Step completed: record
+«blankline»
+✓ Procedure completed: connector-review
+«blankline»
+Total: 0 created, 0 errors.`);
 
-  // doctest:L54
   t.check((await box.read("_bookkeeping/output/connector-review.txt")).trim(), "reviewed");
 });

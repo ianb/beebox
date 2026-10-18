@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import {
   appendHistory,
   getFeaturesForSession,
@@ -144,8 +143,6 @@ void test("Existing sessions added via appendHistory keep their contextDir — u
 // default flipped a Claude chat to Codex, permanently, on its first feature
 // toggle, and coined chats must be Claude.
 void test("Creating an entry writes an engine, and this function cannot know which one.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -166,9 +163,10 @@ void test("Creating an entry writes an engine, and this function cannot know whi
     boxRoot: box.root, store, sessionId: coined,
     contextDir: null, seedFeatures: {}, requestedEngine: "claude",
   });
-  print(`reserved: ${reserved.kind}`);
-  await t.checkText(out.with(print(`recorded before: ${String(await resolveRecordedChatEngine(box.root, { sessionId: coined }))}`)), `reserved: reserved
-recorded before: claude`);
+  t.check(
+    { reserved, recordedBefore: await resolveRecordedChatEngine(box.root, { sessionId: coined }) },
+    { reserved: { kind: "reserved", sessionId: coined }, recordedBefore: "claude" },
+  );
 
   // The caller resolves the engine the way every reader does and passes it in, so
   // the reservation's answer survives:
@@ -179,9 +177,10 @@ recorded before: claude`);
   await updateFeaturesForSession(box.root, { sessionId: coined, updates: { narration: "on" }, engine });
 
   // doctest:L153
-  print(`recorded after:  ${String(await resolveRecordedChatEngine(box.root, { sessionId: coined }))}`);
-  await t.checkText(out.with(print(`features kept:   ${JSON.stringify(await getFeaturesForSession(box.root, coined))}`)), `recorded after:  claude
-features kept:   {"narration":"on"}`);
+  t.check(
+    { recordedAfter: await resolveRecordedChatEngine(box.root, { sessionId: coined }), featuresKept: await getFeaturesForSession(box.root, coined) },
+    { recordedAfter: "claude", featuresKept: { narration: "on" } },
+  );
 });
 
 // ## An unrecorded session's flags are not written under a guess
@@ -196,8 +195,6 @@ features kept:   {"narration":"on"}`);
 // the session rather than writing a row whose invented engine would then outrank
 // the real answer if the records came back.
 void test("FeatureStore.persist is the other way a row gets created, and it is not a cli...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -215,9 +212,10 @@ void test("FeatureStore.persist is the other way a row gets created, and it is n
 
   // doctest:L184
   await store.set("narration", "on");
-  print(`in memory: ${store.get().narration}`);
-  await t.checkText(out.with(print(`written:   ${JSON.stringify(await getFeaturesForSession(box.root, "77777777-7777-4777-8777-777777777777"))}`)), `in memory: on
-written:   null`);
+  t.check(
+    { inMemory: store.get(), written: await getFeaturesForSession(box.root, "77777777-7777-4777-8777-777777777777") },
+    { inMemory: { narration: "on", prose: "on" }, written: null },
+  );
 
   // A recorded session persists as it always did:
 
@@ -230,9 +228,10 @@ written:   null`);
     onChange: () => {},
   });
   await recordedStore.set("narration", "on");
-  print(`written:   ${JSON.stringify(await getFeaturesForSession(box.root, recorded))}`);
-  await t.checkText(out.with(print(`engine kept: ${(await loadHistoryEntries(box.root)).find((e) => e.id === recorded)?.engine}`)), `written:   {"narration":"on"}
-engine kept: codex`);
+  t.check(
+    { written: await getFeaturesForSession(box.root, recorded), history: await loadHistoryEntries(box.root) },
+    { written: { narration: "on" }, history: [{ id: recorded, engine: "codex", features: { narration: "on" } }] },
+  );
 });
 
 // ## A toggle while the start writes its seed is not lost

@@ -196,6 +196,9 @@ void test("patterns: any, refinements, uuid, isoDate, oneOf", async (t) => {
   t.ok(passes("/box/notes/today", any(String).startsWith("/box/").endsWith("/today").includes("notes")));
   t.ok(passes("abc-123", any(String).matches(/^[a-z]+-\d+$/)));
   t.ok(passes(0.1 + 0.2, any(Number).closeTo(0.3, 1e-9)));
+  t.ok(passes(7.9, any(Number).below(8)));
+  t.notOk(passes(8, any(Number).below(8)), "below is strict");
+  t.notOk(passes(1000, any(Number).above(1000)), "above is strict");
   t.ok(passes("open", oneOf("open", "closed")));
   t.ok(passes("b2", not("a1")));
   t.notOk(passes("a1", not("a1")));
@@ -204,6 +207,8 @@ void test("patterns: any, refinements, uuid, isoDate, oneOf", async (t) => {
   const first = { n: 1 };
   t.ok(passes(first, is(first)));
   t.notOk(passes({ n: 1 }, is(first)), "an equal copy is not the same object");
+  t.ok(passes({ n: 1 }, not(is(first))), "a different object");
+  t.notOk(passes(first, not(is(first))));
   t.ok(passes(new RangeError("x"), instanceOf(Error)));
   t.notOk(passes(new Error("x"), instanceOf(RangeError)));
   t.checkText(report({ n: 7 }, { n: any(Number).int().between(1, 5) }), `check failed: 1 mismatch

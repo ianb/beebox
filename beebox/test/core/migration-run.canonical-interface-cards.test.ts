@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { containing, isoDate } from "agent-doctest/check";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -45,7 +46,7 @@ void test("A partial bootstrap keeps notes and installs the rest.", async (t) =>
 
   // doctest:L39
   await seedSystemCards(box.root, SYSTEM_CARD_MIGRATION);
-  await t.checkText((await box.read(SYSTEM_CARD_PATHS.dashboard)).includes("Preserved rationale."), "true");
+  t.check(await box.read(SYSTEM_CARD_PATHS.dashboard), "---\ntitle: My dashboard\n---\nPreserved rationale.\n");
 
   // With the cards in place, the sweep records both pending cohort names:
 
@@ -55,10 +56,10 @@ void test("A partial bootstrap keeps notes and installs the rest.", async (t) =>
   t.check((await sweepMigrations({ boxRoot: box.root })).status, "applied");
 
   // doctest:L52
-  t.check((await readManifest(box.root))?.some((entry) => entry.name === SYSTEM_CARD_MIGRATION), true);
+  t.check(await readManifest(box.root), containing([{ name: SYSTEM_CARD_MIGRATION, "applied-at": isoDate() }]));
 
   // doctest:L55
-  t.check((await readManifest(box.root))?.some((entry) => entry.name === REMAINING_SYSTEM_CARD_MIGRATION), true);
+  t.check(await readManifest(box.root), containing([{ name: REMAINING_SYSTEM_CARD_MIGRATION, "applied-at": isoDate() }]));
 });
 
 // A noncanonical copy fails the manifest gate at commit time: the sweep reports
@@ -80,10 +81,10 @@ void test("A noncanonical copy fails the manifest gate at commit time:", async (
   t.check((await sweepMigrations({ boxRoot: conflict.root })).status, "commit-failed");
 
   // doctest:L75
-  t.check((await readManifest(conflict.root))?.some((entry) => entry.name === SYSTEM_CARD_MIGRATION), false);
+  t.check((await readManifest(conflict.root))?.filter((entry) => entry.name === SYSTEM_CARD_MIGRATION), []);
 
   // doctest:L78
-  await t.checkText((await conflict.read("_content/Copy.dashboard.card")).includes("Wrong location"), "true");
+  t.check(await conflict.read("_content/Copy.dashboard.card"), "---\ntitle: Wrong location\n---\n");
 
   // doctest:L81
   await t.checkThrows(async () => (await seedSystemCards(conflict.root, SYSTEM_CARD_MIGRATION)), "SystemCardInvariantError");
@@ -113,11 +114,11 @@ void test("The first cohort stays frozen to its original three cards even after 
   ]);
 
   // doctest:L102
-  await t.checkText((await oldOnly.read("_content/Future.admin.card")).includes("Old cohort ignores later cards."), "true");
+  t.check(await oldOnly.read("_content/Future.admin.card"), "---\ntitle: Future conflict\n---\nOld cohort ignores later cards.\n");
 
   // doctest:L105
   await appendManifestEntry(oldOnly.root, { name: SYSTEM_CARD_MIGRATION, "applied-at": "2026-09-10T00:00:00Z" });
-  t.check((await readManifest(oldOnly.root))?.some((entry) => entry.name === SYSTEM_CARD_MIGRATION), true);
+  t.check(await readManifest(oldOnly.root), containing([{ name: SYSTEM_CARD_MIGRATION, "applied-at": "2026-09-10T00:00:00Z" }]));
 
   // doctest:L109
   await t.checkThrows(async () => (await appendManifestEntry(oldOnly.root, { name: REMAINING_SYSTEM_CARD_MIGRATION, "applied-at": "2026-09-10T00:00:00Z" })), "SystemCardInvariantError");
@@ -139,7 +140,7 @@ void test("The first cohort stays frozen to its original three cards even after 
   await rm(oldOnly.path("_content/Future.admin.card"));
   await seedSystemCards(oldOnly.root, REMAINING_SYSTEM_CARD_MIGRATION);
   await seedSystemCards(oldOnly.root, SEARCH_SYSTEM_CARD_MIGRATION);
-  await t.checkText(Object.values(SYSTEM_CARD_PATHS).every((path) => existsSync(oldOnly.path(path))), "true");
+  t.check(Object.values(SYSTEM_CARD_PATHS).filter((path) => existsSync(oldOnly.path(path))), Object.values(SYSTEM_CARD_PATHS));
 });
 
 // The second cohort is missing-only for the five later cards. A conflicting card
@@ -161,17 +162,17 @@ void test("The second cohort is missing-only for the five later cards.", async (
   await t.checkThrows(async () => (await seedSystemCards(remainingConflict.root, REMAINING_SYSTEM_CARD_MIGRATION)), "SystemCardInvariantError");
 
   // doctest:L145
-  await t.checkText((await remainingConflict.read("_content/Copy.admin.card")).includes("Do not overwrite."), "true");
+  t.check(await remainingConflict.read("_content/Copy.admin.card"), "---\ntitle: Wrong Admin\n---\nDo not overwrite.\n");
 
   // doctest:L148
   await rm(remainingConflict.path("_content/Copy.admin.card"));
   await remainingConflict.write(SYSTEM_CARD_PATHS.history, "---\ntitle: My history\n---\nPreserved history notes.\n");
   await seedSystemCards(remainingConflict.root, REMAINING_SYSTEM_CARD_MIGRATION);
-  await t.checkText((await remainingConflict.read(SYSTEM_CARD_PATHS.history)).includes("Preserved history notes."), "true");
+  t.check(await remainingConflict.read(SYSTEM_CARD_PATHS.history), "---\ntitle: My history\n---\nPreserved history notes.\n");
 
   // doctest:L154
   await appendManifestEntry(remainingConflict.root, { name: REMAINING_SYSTEM_CARD_MIGRATION, "applied-at": "2026-09-10T00:00:00Z" });
-  t.check((await readManifest(remainingConflict.root))?.some((entry) => entry.name === REMAINING_SYSTEM_CARD_MIGRATION), true);
+  t.check(await readManifest(remainingConflict.root), containing([{ name: REMAINING_SYSTEM_CARD_MIGRATION, "applied-at": "2026-09-10T00:00:00Z" }]));
 });
 
 // Fresh initialization verifies cards before marking its completion. A failed
@@ -197,14 +198,14 @@ void test("Fresh initialization verifies cards before marking its completion.", 
   // doctest:L177
   await fresh.write(SYSTEM_CARD_PATHS.settings, "---\ntitle: Settings\n---\nRepaired notes.\n");
   await initBox(fresh.root);
-  t.check((await readManifest(fresh.root))?.some((entry) => entry.name === SYSTEM_CARD_MIGRATION), true);
+  t.check(await readManifest(fresh.root), containing([{ name: SYSTEM_CARD_MIGRATION, "applied-at": isoDate() }]));
 
   // doctest:L182
-  t.check((await readManifest(fresh.root))?.some((entry) => entry.name === REMAINING_SYSTEM_CARD_MIGRATION), true);
+  t.check(await readManifest(fresh.root), containing([{ name: REMAINING_SYSTEM_CARD_MIGRATION, "applied-at": isoDate() }]));
 
   // doctest:L185
-  await t.checkText(Object.values(SYSTEM_CARD_PATHS).every((path) => existsSync(fresh.path(path))), "true");
+  t.check(Object.values(SYSTEM_CARD_PATHS).filter((path) => existsSync(fresh.path(path))), Object.values(SYSTEM_CARD_PATHS));
 
   // doctest:L188
-  await t.checkText((await fresh.read(SYSTEM_CARD_PATHS.settings)).includes("Repaired notes."), "true");
+  t.check(await fresh.read(SYSTEM_CARD_PATHS.settings), "---\ntitle: Settings\n---\nRepaired notes.\n");
 });

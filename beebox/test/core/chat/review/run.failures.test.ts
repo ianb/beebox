@@ -5,6 +5,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { isoDate } from "agent-doctest/check";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
@@ -62,7 +63,7 @@ function userEntry(uuid: string, text: string) {
  * A readable fixture label as a stable UUID. The husk's `session` field is
  * validated as a UUID (`schemas/chat.ts`), while the husk *filename* below
  * keeps the label — the same split the schema enforces: the field is the key,
- * the name is only a convention. `label`/`labelled` map back so the
+ * the name is only a convention. `label` maps back so the
  * expectations stay readable.
  */
 const idsByLabel = new Map<string, string>();
@@ -83,12 +84,6 @@ function label(sessionId: string): string {
   return labelsById.get(sessionId) ?? sessionId;
 }
 
-function labelled(text: string): string {
-  let out = text;
-  for (const [id, name] of labelsById) out = out.split(id).join(name);
-  return out;
-}
-
 /** Seed a husk card plus a backdated transcript big enough to clear the gate. */
 async function seed(box: TmpBox, opts: { sessionId: string; husk: string; entries: object[] }) {
   await box.write(`_content/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
@@ -105,6 +100,33 @@ async function seed(box: TmpBox, opts: { sessionId: string; husk: string; entrie
 function bulk(uuid: string) {
   return userEntry(uuid, "a".repeat(4000));
 }
+
+/** A run summary with every count zero except those in `counts`. */
+function summaryWith(counts: Partial<Record<"reviewed" | "bootstrapped" | "reviewerFailures" | "alreadyApplied" | "belowTitleThreshold" | "missingTranscripts" | "deferredActive" | "overflow", number>> & { rejected?: string[] }) {
+  const rejected: string[] = [];
+  return {
+    reviewed: 0,
+    titled: 0,
+    titlesKept: 0,
+    alreadyApplied: 0,
+    bootstrapped: 0,
+    rewritten: 0,
+    reviewerFailures: 0,
+    sessionErrors: 0,
+    exhausted: 0,
+    rejected,
+    missingTranscripts: 0,
+    deferredActive: 0,
+    belowThreshold: 0,
+    belowTitleThreshold: 0,
+    tooFewTurns: 0,
+    foreignOrigin: 0,
+    overflow: 0,
+    ...counts,
+  };
+}
+
+const FIRST_MESSAGE = `${"a".repeat(79)}…`;
 
 const OUTPUT: ReviewOutput = {
   title: "Sorting out a recurring billing problem",
@@ -147,11 +169,18 @@ void test("The leak scan rejects exactly one thing:", async (t) => {
     }]),
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check(labelled(summary.rejected.join(",")), "sess9999:title");
+  t.check(summary, summaryWith({ bootstrapped: 1, rejected: [`${sid("sess9999")}:title`] }));
 
   // doctest:L145
   const card = await readFile(box.path(huskPath), "utf8");
-  t.check([card.includes("sk-abcdefghijklmnop"), card.includes("contains: Working through")].join(","), "false,true");
+  t.checkText(card, `---
+session: ${sid("sess9999")}
+contains: Working through a repeated billing error and how to stop it.
+contains-evidence: |-
+  - decision: cancel the duplicate subscription
+  - follow-up: check next month's statement
+first-message: ${FIRST_MESSAGE}
+---`);
 
   // An ordinary title full of specifics sails through — no name-stripping, no
   // address-stripping.
@@ -170,11 +199,20 @@ void test("The leak scan rejects exactly one thing:", async (t) => {
     }]),
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  await t.checkText(plain.rejected.length, "0");
+  t.check(plain, summaryWith({ reviewed: 1, bootstrapped: 1 }));
 
   // doctest:L170
   const card2 = await readFile(box2.path(husk2), "utf8");
-  t.check([card2.includes("Indigo's custodial account paperwork"), card2.includes("dana.lin@example.com")].join(","), "true,true");
+  t.checkText(card2, `---
+session: ${sid("sessplain")}
+contains: Sorting out a clerical error, dana.lin@example.com copied in.
+contains-evidence: |-
+  - decision: cancel the duplicate subscription
+  - follow-up: check next month's statement
+title: Indigo's custodial account paperwork
+review-span: cdfa7b2936de7114
+first-message: ${FIRST_MESSAGE}
+---`);
 
   // doctest:L174
   await box2.cleanup();
@@ -211,14 +249,19 @@ void test("The husk is written first and the journal second, so a crash in betwe
   const afterFirst = await readFile(box.path(huskPath), "utf8");
 
   // doctest:L203
-  t.check(
-    // The marker and the account it claims landed together — the marker is never
-    // written without them, so it can never certify an account that isn't there.
-    [afterFirst.includes("review-span:"), afterFirst.includes("contains-evidence:")].join(","),
-    "true,true",
-  );
+  // The marker and the account it claims landed together — the marker is never
+  // written without them, so it can never certify an account that isn't there.
+  t.checkText(afterFirst, `---
+session: ${sid("sesscrash")}
+contains: Working through a repeated billing error and how to stop it.
+contains-evidence: |-
+  - decision: cancel the duplicate subscription
+  - follow-up: check next month's statement
+title: Sorting out a recurring billing problem
+review-span: c7a84bf64dc103ef
+first-message: ${FIRST_MESSAGE}
+---`);
 
-  // doctest:L208
   // Simulate the crash: the husk write landed, the journal did not.
   await writeFile(box.path(".beebox/chat-review/state.json"),
     JSON.stringify({ lastRunAt: null, sessions: {} }, null, 2) + "\n");
@@ -228,20 +271,29 @@ void test("The husk is written first and the journal second, so a crash in betwe
   const summary = await runChatReview(box.root, {
     reviewer: recovery, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check({ alreadyApplied: summary.alreadyApplied, modelCalls: recovery.calls.length }, {
-    alreadyApplied: 1,
-    modelCalls: 0,
-  });
+  t.check(summary, summaryWith({ alreadyApplied: 1, bootstrapped: 1 }));
+  t.check(recovery.calls, []);
 
   // The card is untouched, and the journal has caught up — so a third run sees
   // nothing new either.
 
   // doctest:L224
-  await t.checkText((await readFile(box.path(huskPath), "utf8")) === afterFirst, "true");
+  t.check(await readFile(box.path(huskPath), "utf8"), afterFirst);
 
   // doctest:L227
   const state = await loadReviewState(box.root);
-  t.check(state.sessions[sid("sesscrash")]?.applied["metadata"]?.endUuid, "c2");
+  const crashSpan = { spanId: "c7a84bf64dc103ef", endUuid: "c2", endIndex: 1, prefixHash: "2fcfe70228a7f171", at: NOW.toISOString() };
+  t.check(state, {
+    lastRunAt: isoDate(),
+    sessions: {
+      [sid("sesscrash")]: {
+        applied: { metadata: crashSpan, title: crashSpan },
+        titleOwner: "manual",
+        titleHash: null,
+        attempts: 0,
+      },
+    },
+  });
 });
 
 // ## A reviewer failure is counted, not fatal
@@ -263,14 +315,16 @@ void test("A reviewer failure is counted, not fatal", async (t) => {
     reviewer: fakeReviewer([new Error("model unavailable")]),
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check({ reviewed: summary.reviewed, failures: summary.reviewerFailures }, {
-    reviewed: 0,
-    failures: 1,
-  });
+  t.check(summary, summaryWith({ bootstrapped: 1, reviewerFailures: 1 }));
 
   // doctest:L250
   const state = await loadReviewState(box.root);
-  t.check(state.sessions[sid("sessfail")]?.attempts, 1);
+  t.check(state, {
+    lastRunAt: isoDate(),
+    sessions: {
+      [sid("sessfail")]: { applied: {}, titleOwner: "unmanaged", titleHash: null, attempts: 1, failedSpanId: "fe1d478d7e333eaf" },
+    },
+  });
 });
 
 // ## The per-run cap picks the oldest sessions
@@ -303,39 +357,22 @@ void test("Discovery no longer carries parsed transcripts — each reviewed sess
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 2, now: NOW, ownerEmail: null,
   });
-  t.check(
-    {
-      reviewed: summary.reviewed,
-      overflow: summary.overflow,
-      asked: reviewer.calls.map((c) => label(c.sessionId)),
-    },
-    {
-    reviewed: 2,
-    overflow: 1,
-    asked: [
-      "sessold",
-      "sessmid",
-    ],
-  },
-  );
+  t.check(summary, summaryWith({ reviewed: 2, bootstrapped: 2, overflow: 1 }));
+  t.check(reviewer.calls.map((c) => label(c.sessionId)), ["sessold", "sessmid"]);
 
   // The deferred session is untouched — no husk fields, no journal entry — and the
   // next run picks it up.
 
   // doctest:L292
-  await t.checkText((await readFile(box.path("_content/chat/web/2026-07-28_sessnew.chat.card"), "utf8")).includes("title:"), "false");
+  t.checkText(await readFile(box.path("_content/chat/web/2026-07-28_sessnew.chat.card"), "utf8"), `---\nsession: ${sid("sessnew")}\n---`);
 
   // doctest:L295
   const rest = fakeReviewer([OUTPUT]);
   const second = await runChatReview(box.root, {
     reviewer: rest, maxSessions: 2, now: NOW, ownerEmail: null,
   });
-  t.check({ reviewed: second.reviewed, asked: rest.calls.map((c) => label(c.sessionId)) }, {
-    reviewed: 1,
-    asked: [
-      "sessnew",
-    ],
-  });
+  t.check(second, summaryWith({ reviewed: 1, bootstrapped: 1, belowTitleThreshold: 2 }));
+  t.check(rest.calls.map((c) => label(c.sessionId)), ["sessnew"]);
 
   // ## A transcript that vanishes between discovery and review is counted, not fatal
   //
@@ -366,20 +403,8 @@ void test("Discovery no longer carries parsed transcripts — each reviewed sess
   const vanished = await runChatReview(box2.root, {
     reviewer: saboteur, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check(
-    {
-      reviewed: vanished.reviewed,
-      missing: vanished.missingTranscripts,
-      asked: saboteur.calls.map((c) => label(c.sessionId)),
-    },
-    {
-    reviewed: 1,
-    missing: 1,
-    asked: [
-      "sessfirst",
-    ],
-  },
-  );
+  t.check(vanished, summaryWith({ reviewed: 1, bootstrapped: 1, missingTranscripts: 1 }));
+  t.check(saboteur.calls.map((c) => label(c.sessionId)), ["sessfirst"]);
 
   // doctest:L338
   await box2.cleanup();
@@ -426,36 +451,28 @@ void test("A run spans one model call per session, so a session that was quiet w
   const summary = await runChatReview(box.root, {
     reviewer: interrupting, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check(
-    {
-      reviewed: summary.reviewed,
-      deferredActive: summary.deferredActive,
-      asked: interrupting.calls.map((c) => label(c.sessionId)),
-    },
-    {
-    reviewed: 1,
-    deferredActive: 1,
-    asked: [
-      "sessfirst",
-    ],
-  },
-  );
+  t.check(summary, summaryWith({ reviewed: 1, bootstrapped: 1, deferredActive: 1 }));
+  t.check(interrupting.calls.map((c) => label(c.sessionId)), ["sessfirst"]);
 
   // The deferred session keeps its husk and its journal, so the next quiet night
   // reviews the whole conversation including the new material.
 
   // doctest:L390
   const state = await loadReviewState(box.root);
-  t.check(
-    {
-      husk: (await readFile(box.path("_content/chat/web/2026-07-28_sesslive.chat.card"), "utf8")).includes("title:"),
-      journal: sid("sesslive") in state.sessions,
+  t.checkText(await readFile(box.path("_content/chat/web/2026-07-28_sesslive.chat.card"), "utf8"), `---\nsession: ${sid("sesslive")}\n---`);
+  const firstSpan = { spanId: "66a91b9be85faa88", endUuid: "sessfirst2", endIndex: 1, prefixHash: "b3e536ea8b42aba9", at: NOW.toISOString() };
+  t.check(state, {
+    lastRunAt: isoDate(),
+    sessions: {
+      [sid("sessfirst")]: {
+        applied: { metadata: firstSpan, title: firstSpan },
+        titleOwner: "generated",
+        titleHash: "3ffdc452954613c7",
+        attempts: 0,
+        titleAttempts: 0,
+      },
     },
-    {
-    husk: false,
-    journal: false,
-  },
-  );
+  });
 });
 
 // ## The husk body is never touched
@@ -483,5 +500,16 @@ void test("The account lives in a field, so prose the boxholder wrote in the bod
   await runChatReview(box.root, {
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  await t.checkText((await readFile(box.path(huskPath), "utf8")).includes("My own notes about this chat."), "true");
+  t.checkText(await readFile(box.path(huskPath), "utf8"), `---
+session: ${sid("sessbody")}
+contains: Working through a repeated billing error and how to stop it.
+contains-evidence: |-
+  - decision: cancel the duplicate subscription
+  - follow-up: check next month's statement
+title: Sorting out a recurring billing problem
+review-span: 8c63ca7bbb2a6249
+first-message: ${FIRST_MESSAGE}
+---
+
+My own notes about this chat.`);
 });

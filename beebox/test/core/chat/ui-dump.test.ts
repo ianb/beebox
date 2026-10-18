@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any } from "agent-doctest/check";
 import { formatUiDump } from "../../../src/core/chat/ui-dump.js";
 import type { UiScanEntry, UiScanPayload } from "../../../src/shared/ui-scan/core.js";
 
@@ -175,8 +175,6 @@ button [Send](control:bbx-composer-send)`,
 // user can actually reach — off-screen loses; if both are on screen, the channel
 // decides.
 void test("Track 4a could not unify the desktop and mobile composer rows, so the mobile...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L181
   const bothRows = [
     entry({ role: "textbox", name: "Type a message...", id: "bbx-composer-input" }),
@@ -187,9 +185,10 @@ void test("Track 4a could not unify the desktop and mobile composer rows, so the
     const match = /At this viewport (\S+) is the one/.exec(text);
     return match === null ? "no note" : (match[1] ?? "no note");
   };
-  print(`desktop: ${reachable({ channel: "web-desktop" })}`);
-  await t.checkText(out.with(print(`mobile: ${reachable({ channel: "web-mobile" })}`)), `desktop: bbx-composer-input
-mobile: bbx-composer-input-mobile`);
+  t.check(
+    { desktop: reachable({ channel: "web-desktop" }), mobile: reachable({ channel: "web-mobile" }) },
+    { desktop: "bbx-composer-input", mobile: "bbx-composer-input-mobile" },
+  );
 
   // An off-screen row loses regardless of the channel — that is the case where the
   // layout has already made the decision:
@@ -199,11 +198,10 @@ mobile: bbx-composer-input-mobile`);
     entry({ role: "textbox", name: "Type a message...", id: "bbx-composer-input", offscreen: true }),
     entry({ role: "textbox", name: "Type a message...", id: "bbx-composer-input-mobile" }),
   ];
-  await t.checkText(
-    out.with(formatUiDump(payload({ entries: offscreenDesktop, channel: "web-desktop" }))
-      .replace(/\s+/g, " ")
-      .includes("At this viewport bbx-composer-input-mobile is the one")),
-    "true",
+  // The full dump is large generated text; the note is the contract here.
+  t.check(
+    formatUiDump(payload({ entries: offscreenDesktop, channel: "web-desktop" })).replace(/\s+/g, " "),
+    any(String).includes("At this viewport bbx-composer-input-mobile is the one"),
   );
 });
 

@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { isoDate } from "agent-doctest/check";
 import { finalize } from "../../../src/core/maps/finalize/core.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
@@ -22,8 +22,6 @@ import { join } from "node:path";
 // `head` is the brief-time HEAD — captured *before* the agent writes, since
 // that's what the precheck records on each task.
 void test("When a directory has a MAP.md but no instruction file, finalize writes a stub...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -48,19 +46,16 @@ void test("When a directory has a MAP.md but no instruction file, finalize write
   });
 
   // doctest:L39
-  print(JSON.stringify(await box.read("AGENTS.md")));
-  await t.checkText(out2.with(print(JSON.stringify(await box.read("inbox/AGENTS.md")))), `"@MAP.md\\n"
-"@MAP.md\\n"`);
+  t.check([await box.read("AGENTS.md"), await box.read("inbox/AGENTS.md")], ["@MAP.md\n", "@MAP.md\n"]);
 
   // State file records both at HEAD:
 
   // doctest:L49
   const state = await loadMapState(box.root);
-  const summary = Object.keys(state.maps).toSorted().map((k) =>
-    `${k || "<root>"}: ${state.maps[k]!.asOf === head ? "at-head" : "stale"}`
-  );
-  await t.checkText(out2.with(print(summary.join("\n"))), `<root>: at-head
-inbox: at-head`);
+  t.check(state.maps, {
+    "": { asOf: head, generatedAt: isoDate() },
+    inbox: { asOf: head, generatedAt: isoDate() },
+  });
 });
 
 // ## In an unconverted box, a fresh CLAUDE.md gets its AGENTS.md mirror
@@ -71,8 +66,6 @@ inbox: at-head`);
 // until some later `generate-docs` run happens to plant one — so finalize links
 // the file it just created, and only that file.
 void test("A box made before agents-md-2026-10 (legacyInstructions) still writes CLAUDE.md.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -96,9 +89,7 @@ void test("A box made before agents-md-2026-10 (legacyInstructions) still writes
 
   // doctest:L84
   const mirror = join(box.root, "store", "AGENTS.md");
-  print(`symlink: ${(await lstat(mirror)).isSymbolicLink()}`);
-  await t.checkText(out2.with(print(`target: ${await readlink(mirror)}`)), `symlink: true
-target: CLAUDE.md`);
+  t.check([(await lstat(mirror)).isSymbolicLink(), await readlink(mirror)], [true, "CLAUDE.md"]);
 
   // An existing CLAUDE.md that only needed the include line inserted already has a
   // mirror beside it, so nothing is relinked:
@@ -112,7 +103,7 @@ target: CLAUDE.md`);
       { map: "people/MAP.md", dir: "people", action: "create", head, added: [], deleted: [], children: [] },
     ],
   });
-  await t.checkText(out2.with(print(JSON.stringify(await box.read("people/CLAUDE.md")))), "\"@MAP.md\\nHand-written notes.\\n\"");
+  t.check(await box.read("people/CLAUDE.md"), "@MAP.md\nHand-written notes.\n");
 });
 
 // ## Preserves existing AGENTS.md content
@@ -120,8 +111,6 @@ target: CLAUDE.md`);
 // If AGENTS.md already has hand-edited content, the @-include is added at
 // the top without disturbing the rest.
 void test("If AGENTS.md already has hand-edited content, the @-include is added at the t...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -146,13 +135,11 @@ void test("If AGENTS.md already has hand-edited content, the @-include is added 
   });
 
   // doctest:L132
-  await t.checkText(out2.with(print(JSON.stringify(await box.read("AGENTS.md")))), "\"@MAP.md\\n# Project notes\\n\\nSome details.\\n\"");
+  t.check(await box.read("AGENTS.md"), "@MAP.md\n# Project notes\n\nSome details.\n");
 });
 
 // ## Idempotent — doesn't duplicate the include
 void test("Idempotent — doesn't duplicate the include", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -176,17 +163,13 @@ void test("Idempotent — doesn't duplicate the include", async (t) => {
   });
 
   // doctest:L156
-  const content = await box.read("AGENTS.md");
-  const matches = content.match(/@MAP\.md/g);
-  await t.checkText(out2.with(print(`occurrences: ${matches ? matches.length : 0}`)), "occurrences: 1");
+  t.check(await box.read("AGENTS.md"), "@MAP.md\n# Notes\n");
 });
 
 // ## Prunes stale state entries
 //
 // State entries pointing to directories that no longer exist are removed.
 void test("State entries pointing to directories that no longer exist are removed.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -222,7 +205,7 @@ void test("State entries pointing to directories that no longer exist are remove
 
   // doctest:L195
   const state = await loadMapState(box.root);
-  await t.checkText(out2.with(print(Object.keys(state.maps).toSorted().join(","))), "");
+  t.check(state.maps, { "": { asOf: "old", generatedAt: "t" } });
 });
 
 // ## Only stamps maps the agent actually rewrote
@@ -233,8 +216,6 @@ void test("State entries pointing to directories that no longer exist are remove
 // (next section), so a run that got through only part of its brief doesn't mark
 // the rest current. Here inbox's map does not list its new `triage/`.
 void test("An update task's MAP.md already exists before the agent runs, so its mere exi...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -263,17 +244,13 @@ void test("An update task's MAP.md already exists before the agent runs, so its 
   });
 
   // doctest:L231
-  print(`applied: ${result.applied.join(",")}`);
-  await t.checkText(out2.with(print(`unchanged: ${result.skippedUnchanged.join(",")}`)), `applied: store
-unchanged: inbox`);
+  t.check([result.applied, result.skippedUnchanged], [["store"], ["inbox"]]);
 
   // The untouched dir keeps its old `asOf`, so the next run picks it up again:
 
   // doctest:L241
   const state = await loadMapState(box.root);
-  print(`store stamped: ${state.maps["store"] !== undefined}`);
-  await t.checkText(out2.with(print(`inbox stamped: ${state.maps["inbox"] !== undefined}`)), `store stamped: true
-inbox stamped: false`);
+  t.check(state.maps, { store: { asOf: head, generatedAt: isoDate() } });
 });
 
 // ## Banks work the agent left uncommitted
@@ -282,8 +259,6 @@ inbox stamped: false`);
 // step — so the agent's writes are still in the working tree. Evidence has to
 // see them there, or a run that died before committing would bank nothing.
 void test("Finalize runs as a procedure run-phase shell, before the engine commits the s...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -308,7 +283,7 @@ void test("Finalize runs as a procedure run-phase shell, before the engine commi
       { map: "store/MAP.md", dir: "store", action: "update", asOf: head, head, added: [], deleted: [], children: [] },
     ],
   });
-  await t.checkText(out2.with(print(`applied: ${result.applied.join(",")}`)), "applied: store");
+  t.check(result.applied, ["store"]);
 });
 
 // ## A map that is already correct is stamped without a change
@@ -319,8 +294,6 @@ void test("Finalize runs as a procedure run-phase shell, before the engine commi
 // check (`maps-verify.doctest.md`). The same holds for an update whose only
 // addition is a plain file, which the map should not list.
 void test("A map with no state entry is a create task, and a correct one needs no rewrite.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -343,24 +316,20 @@ void test("A map with no state entry is a create task, and a correct one needs n
       { map: "inbox/MAP.md", dir: "inbox", action: "create", head, added: [], deleted: [], children: ["triage/"] },
     ],
   });
-  print(`applied: ${result.applied.join(",")}`);
-  print(`verified: ${result.verified.join(",")}`);
-  print(`unchanged: ${result.skippedUnchanged.join(",")}`);
-  await t.checkText(out2.with(print(JSON.stringify(result.coverageFailures))), `applied: 
-verified: store
-unchanged: inbox
-[{"dir":"inbox","problems":["header is \\"# Map: store/inbox\\", expected \\"# Map: inbox\\""]}]`);
+  t.check([result.applied, result.verified, result.skippedUnchanged, result.coverageFailures], [
+    [],
+    ["store"],
+    ["inbox"],
+    [{ dir: "inbox", problems: ['header is "# Map: store/inbox", expected "# Map: inbox"'] }],
+  ]);
 
   // The verified map is stamped and gets its `AGENTS.md` include; the stale-header
   // one is left for the agent to rewrite:
 
   // doctest:L320
   const state = await loadMapState(box.root);
-  print(`store stamped: ${state.maps["store"] !== undefined}`);
-  print(`inbox stamped: ${state.maps["inbox"] !== undefined}`);
-  await t.checkText(out2.with(print((await box.read("store/AGENTS.md")).trim())), `store stamped: true
-inbox stamped: false
-@MAP.md`);
+  t.check(state.maps, { store: { asOf: head, generatedAt: isoDate() } });
+  t.check((await box.read("store/AGENTS.md")).trim(), "@MAP.md");
 });
 
 // ## A rewritten map that fails the check is stamped and reported
@@ -368,8 +337,6 @@ inbox stamped: false
 // A rewrite is still evidence the agent reached the map, so it is stamped as
 // before. The coverage failure is reported so the run log shows it.
 void test("A rewrite is still evidence the agent reached the map, so it is stamped as be...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -391,9 +358,7 @@ void test("A rewrite is still evidence the agent reached the map, so it is stamp
       { map: "store/MAP.md", dir: "store", action: "update", asOf: head, head, added: ["refs/"], deleted: [], children: ["notes/", "refs/"] },
     ],
   });
-  print(`applied: ${result.applied.join(",")}`);
-  await t.checkText(out2.with(print(JSON.stringify(result.coverageFailures))), `applied: store
-[{"dir":"store","problems":["does not list refs/"]}]`);
+  t.check([result.applied, result.coverageFailures], [["store"], [{ dir: "store", problems: ["does not list refs/"] }]]);
 });
 
 // ## Stamps the brief's HEAD, not the HEAD at finalize time
@@ -403,8 +368,6 @@ void test("A rewrite is still evidence the agent reached the map, so it is stamp
 // from every future diff. Stamping the brief's HEAD leaves it visible as an
 // addition on the next run.
 void test("The map was verified against the brief's listing.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -432,5 +395,5 @@ void test("The map was verified against the brief's listing.", async (t) => {
     ],
   });
   const state = await loadMapState(box.root);
-  await t.checkText(out2.with(print(`stamped at brief head: ${state.maps["store"]?.asOf === briefHead}`)), "stamped at brief head: true");
+  t.check(state.maps, { store: { asOf: briefHead, generatedAt: isoDate() } });
 });

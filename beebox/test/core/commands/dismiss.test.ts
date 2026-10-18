@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate, str } from "agent-doctest/check";
 import { executeDismiss } from "../../../src/core/commands/dismiss.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -31,22 +32,23 @@ void test("Dismisses a pending question, no follow-up job", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L28
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/questions/Receipt.question.card", PENDING);
 
-  // doctest:L31
   const res = await dismiss(box, { question: "_bookkeeping/questions/Receipt.question.card" });
-  t.check(res.success, true);
+  t.check(res, { success: true, data: { path: "_bookkeeping/questions/Receipt.question.card" } });
 
-  // doctest:L35
-  const card = await box.read("_bookkeeping/questions/Receipt.question.card");
-  await t.checkText(card.includes("dismissed-at:"), "true");
+  t.check(await box.read("_bookkeeping/questions/Receipt.question.card"), str`---
+type: question
+prompt: Where does this receipt go?
+input:
+  type: text
+dismissed-at: ${isoDate()}
+---
+`);
 
   // No follow-up job is created (dismissal has no directive to execute):
-
-  // doctest:L43
-  await t.checkText((await box.list("_bookkeeping/jobs")).includes(".card"), "false");
+  t.check(await box.list("_bookkeeping/jobs"), "_bookkeeping/jobs/.gitkeep");
 });
 
 // ## Only a pending question can be dismissed
@@ -58,7 +60,6 @@ void test("Only a pending question can be dismissed", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L54
   const box = await makeTmpBox({ git: true });
   await box.write(
     "_bookkeeping/questions/Done.question.card",
@@ -69,10 +70,6 @@ void test("Only a pending question can be dismissed", async (t) => {
     ),
   );
 
-  // doctest:L64
   const res = await dismiss(box, { question: "_bookkeeping/questions/Done.question.card" });
-  t.check(res.success, false);
-
-  // doctest:L68
-  t.check(res.error, "Question is answered, not pending; only a pending question can be dismissed");
+  t.check(res, { success: false, error: "Question is answered, not pending; only a pending question can be dismissed" });
 });

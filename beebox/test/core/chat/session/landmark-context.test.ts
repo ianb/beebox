@@ -8,7 +8,9 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { rm, symlink } from "node:fs/promises";
+import { instanceOf } from "agent-doctest/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { UnsafeAgentContextIncludeError } from "../../../../src/core/agent-context-includes.js";
 import { buildLandmarkBoxContext } from "../../../../src/core/chat/session/landmark-context.js";
 
 // Each include arrives. The root file's own text does not: Claude Code loads it
@@ -20,22 +22,16 @@ void test("Each include arrives.", async (t) => {
   await box.write("guide.md", "Guide text.\n");
   await box.write("_content/brief.md", "Briefing text.\n");
   const context = await buildLandmarkBoxContext(box.root);
-  t.check(
-    {
-      framed: context.startsWith("\n\nBOX CONTEXT:\n"),
-      rootTextDuplicated: context.includes("House rule: be brief."),
-      guide: context.includes("Guide text."),
-      briefing: context.includes("Briefing text."),
-      includeLines: /^@/m.test(context),
-    },
-    {
-    framed: true,
-    rootTextDuplicated: false,
-    guide: true,
-    briefing: true,
-    includeLines: false,
-  },
-  );
+  t.check(context, `
+
+BOX CONTEXT:
+This chat starts in a landmark directory, below the box root. The box root's instruction file loads, but its includes do not; they follow. The landmark directory's own instructions also apply, and take precedence for this chat.
+
+<!-- beebox include: guide.md -->
+Guide text.
+
+<!-- beebox include: _content/brief.md -->
+Briefing text.`);
 
   // doctest:L32
   await box.cleanup();
@@ -46,7 +42,7 @@ void test("A box with no root instruction file, or one with no includes, adds no
   // doctest:L38
   const bare = await makeTmpBox();
   await rm(bare.path("AGENTS.md"), { force: true });
-  await t.checkText((await buildLandmarkBoxContext(bare.root)).length, "0");
+  t.check(await buildLandmarkBoxContext(bare.root), "");
 
   // doctest:L43
   await bare.cleanup();
@@ -59,7 +55,13 @@ void test("An include that escapes the box throws.", async (t) => {
   // doctest:L51
   const escaping = await makeTmpBox();
   await escaping.write("AGENTS.md", "@../outside.md\n");
-  t.check(await buildLandmarkBoxContext(escaping.root).then(() => "ok", (e: unknown) => e instanceof Error ? e.name : "?"), "UnsafeAgentContextIncludeError");
+  const escapeError = await buildLandmarkBoxContext(escaping.root).then(() => null, (e: unknown) => e);
+  t.check(escapeError, instanceOf(UnsafeAgentContextIncludeError));
+  t.check(escapeError, {
+    name: "UnsafeAgentContextIncludeError",
+    message: "Agent context include must stay inside the box package",
+    specifier: "../outside.md",
+  });
 
   // doctest:L56
   await escaping.cleanup();
@@ -74,7 +76,13 @@ void test("A symlink inside the box that points outside it is refused the same w
   await outside.write("secret.md", "host secret\n");
   await symlink(outside.path("secret.md"), linked.path("notes.md"));
   await linked.write("AGENTS.md", "@notes.md\n");
-  t.check(await buildLandmarkBoxContext(linked.root).then((c) => c.includes("host secret") ? "leaked" : "ok", (e: unknown) => e instanceof Error ? e.name : "?"), "UnsafeAgentContextIncludeError");
+  const linkError = await buildLandmarkBoxContext(linked.root).then(() => null, (e: unknown) => e);
+  t.check(linkError, instanceOf(UnsafeAgentContextIncludeError));
+  t.check(linkError, {
+    name: "UnsafeAgentContextIncludeError",
+    message: "Agent context include must stay inside the box package",
+    specifier: "notes.md",
+  });
 
   // doctest:L71
   await linked.cleanup();

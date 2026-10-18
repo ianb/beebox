@@ -12,6 +12,7 @@ import {
   cardSchema,
   formatLintResults,
   type CardSchema,
+  type LintResult,
 } from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { lintCardsDispatch } from "../../src/core/card-lint/core/lint-cards.js";
@@ -55,6 +56,22 @@ const gadgetSchema: CardSchema = cardSchema("gadget", {
       : [],
 });
 
+type Issue = LintResult["errors"][number];
+const warn = (type: Issue["type"], message: string): Issue => ({ type, severity: "warning", message });
+const error = (type: Issue["type"], message: string): Issue => ({ type, severity: "error", message });
+/** The result and summary for a run that linted only `path`, with its issues split by severity. */
+function one(path: string, ...issues: Issue[]) {
+  const errors = issues.filter((i) => i.severity === "error");
+  const warnings = issues.filter((i) => i.severity === "warning");
+  return {
+    results: [{ path, errors, warnings }],
+    filesChecked: 1,
+    filesWithErrors: errors.length > 0 ? 1 : 0,
+    totalErrors: errors.length,
+    totalWarnings: warnings.length,
+  };
+}
+
 const ctx: LoadCardContext = {
   cardSchemas: new Map<string, CardSchema>([
     ["email-thread", threadSchema],
@@ -85,10 +102,7 @@ void test("Frontmatter cards that satisfy their schema lint clean", async (t) =>
     [box.path("_content/inbox/email/thread-x.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
-
-  // doctest:L91
-  t.check(result.filesChecked, 1);
+  t.check(result, one(`${box.root}/_content/inbox/email/thread-x.email-thread.card`));
 });
 
 // ## Schema violations in frontmatter cards surface as lint errors
@@ -103,10 +117,7 @@ void test("Schema violations in frontmatter cards surface as lint errors", async
     [box.path("_content/inbox/email/broken.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 1);
-
-  // doctest:L110
-  await t.checkText(result.results[0]!.errors[0]!.message.includes("invalid email-thread frontmatter"), "true");
+  t.check(result, one(`${box.root}/_content/inbox/email/broken.email-thread.card`, error("validation", "invalid email-thread frontmatter:\n  - subject: required (expected string)\n  - participants: required (expected array)\n  - date-range: required (expected object)\n  - messages: required (expected array)")));
 });
 
 // ## Unknown frontmatter keys are reported as warnings
@@ -125,10 +136,7 @@ void test("A key the schema doesn't declare is stripped on load, so the card sti
     [box.path("_content/inbox/notes/drift.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
-
-  // doctest:L133
-  await t.checkText(result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter key "bogus-field"')), "true");
+  t.check(result, one(`${box.root}/_content/inbox/notes/drift.doc.card`, warn("schema", "Unknown frontmatter key \"bogus-field\" — not declared by the doc schema; it is ignored on load and should be removed")));
 });
 
 // ## Broken refs in frontmatter cards are reported as warnings
@@ -149,13 +157,11 @@ void test("Each entry in a ref-declared field is resolved against the box; missi
     [box.path("_content/inbox/email/thread-x/thread.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
-
-  // doctest:L158
-  t.check(result.totalWarnings, 1);
-
-  // doctest:L161
-  t.check(result.results[0]!.warnings[0]!.message, "Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist");
+  t.check(
+    result,
+    one(`${box.root}/_content/inbox/email/thread-x/thread.email-thread.card`,
+      warn("reference", "Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist"),
+  ));
 });
 
 // ## A URL in a ref field is named as a URL, not as a missing file
@@ -174,7 +180,11 @@ void test("A ref names a path inside the box.", async (t) => {
     [box.path("_content/inbox/email/thread-y/thread.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(urlRef.results[0]!.warnings[0]!.message, "External URL at messages[0].ref: https://example.com/thread/1 — a ref names an in-box path; a URL belongs in an `href` field");
+  t.check(
+    urlRef,
+    one(`${box.root}/_content/inbox/email/thread-y/thread.email-thread.card`,
+      warn("reference", "External URL at messages[0].ref: https://example.com/thread/1 — a ref names an in-box path; a URL belongs in an `href` field"),
+  ));
 
   // A bare `#anchor` and an empty ref are NOT swept in with it: both name something
   // in-box (or missing), and the existence walk already describes them correctly.
@@ -188,7 +198,7 @@ void test("A ref names a path inside the box.", async (t) => {
     [box.path("_content/inbox/email/thread-z/thread.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(anchorRef.results[0]!.warnings.map((w) => w.type).join(","), "reference");
+  t.check(anchorRef, one(`${box.root}/_content/inbox/email/thread-z/thread.email-thread.card`, warn("reference", "Broken reference at messages[0].ref: #exp4 does not exist")));
 
   // doctest:L202
   await box.cleanup();
@@ -211,13 +221,13 @@ void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a 
     [box.path("_content/inbox/email/thread-x/thread.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalWarnings, 0);
-
-  // doctest:L225
-  t.check(result.totalErrors, 1);
-
-  // doctest:L228
-  t.check(result.results[0]!.errors[0]!.message, "Display-form path at messages[0].ref: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
+  t.check(
+    result,
+    one(
+      `${box.root}/_content/inbox/email/thread-x/thread.email-thread.card`,
+      error("display-path", "Display-form path at messages[0].ref: `Config:box.json` is the boxholder's display form; write `/_config/box.json`"),
+    ),
+  );
 });
 
 // ## A broken bare ref suggests `/_content/<path>` when that resolves
@@ -240,7 +250,12 @@ void test("A ref's bare form is DOCUMENT-relative, not box-root-relative — but
     [box.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.results[0]!.warnings.find((w) => w.type === "reference")!.message, "Broken reference at body:1:source.ref: recipes/Soup.recipe.card does not exist — did you mean `/_content/recipes/Soup.recipe.card`?");
+  t.check(
+    result,
+    one(`${box.root}/_content/box/notes/Meeting.doc.card`,
+      warn("canonical", "Non-canonical ref at body:1:source.ref: recipes/Soup.recipe.card → /_content/box/notes/recipes/Soup.recipe.card"),
+      warn("reference", "Broken reference at body:1:source.ref: recipes/Soup.recipe.card does not exist — did you mean `/_content/recipes/Soup.recipe.card`?"),
+  ));
 });
 
 // No suggestion is offered when `/_content/<path>` doesn't resolve either — the
@@ -256,7 +271,12 @@ void test("No suggestion is offered when /content/<path> doesn't resolve either 
     [box2.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: box2.root, ctx },
   );
-  t.check(result2.results[0]!.warnings.find((w) => w.type === "reference")!.message, "Broken reference at body:1:source.ref: nowhere/at/all.card does not exist");
+  t.check(
+    result2,
+    one(`${box2.root}/_content/box/notes/Meeting.doc.card`,
+      warn("canonical", "Non-canonical ref at body:1:source.ref: nowhere/at/all.card → /_content/box/notes/nowhere/at/all.card"),
+      warn("reference", "Broken reference at body:1:source.ref: nowhere/at/all.card does not exist"),
+  ));
 });
 
 // A ref the box namespace fence refuses says so instead. A package doc exists on
@@ -274,7 +294,11 @@ void test("A ref the box namespace fence refuses says so instead.", async (t) =>
     [boxFence.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: boxFence.root, ctx },
   );
-  t.check(resultFence.results[0]!.warnings.find((w) => w.type === "reference")!.message, "Broken reference at body:1:source.ref: /node_modules/beebox/box-docs/card-doc.md points outside the box — a ref reaches only the box's areas (`_content`, `_config`, `_bookkeeping`, `_publish`, `_tmp`); package docs under `node_modules/` can't be linked, so name them in plain text");
+  t.check(
+    resultFence,
+    one(`${boxFence.root}/_content/box/notes/Meeting.doc.card`,
+      warn("reference", "Broken reference at body:1:source.ref: /node_modules/beebox/box-docs/card-doc.md points outside the box — a ref reaches only the box's areas (`_content`, `_config`, `_bookkeeping`, `_publish`, `_tmp`); package docs under `node_modules/` can't be linked, so name them in plain text"),
+  ));
 });
 
 // An `attach/…` ref never gets the content-form suggestion — it's a legitimate,
@@ -290,7 +314,11 @@ void test("An attach/… ref never gets the content-form suggestion — it's a l
     [box3.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: box3.root, ctx },
   );
-  t.check(result3.results[0]!.warnings.find((w) => w.type === "reference")!.message, "Broken reference at body:1:source.ref: attach/missing.pdf does not exist");
+  t.check(
+    result3,
+    one(`${box3.root}/_content/box/notes/Meeting.doc.card`,
+      warn("reference", "Broken reference at body:1:source.ref: attach/missing.pdf does not exist"),
+  ));
 });
 
 // ## A ref's `#fragment` addresses a spot inside the target, not another file
@@ -311,10 +339,7 @@ void test("feedback.target.ref is documented as path#fragment.", async (t) => {
     [box.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check([result.totalErrors, result.totalWarnings], [
-    0,
-    0,
-  ]);
+  t.check(result, one(`${box.root}/_content/box/notes/Meeting.doc.card`));
 });
 
 // ## `bbx validate`'s summary line calls out broken refs separately
@@ -374,11 +399,9 @@ void test("contains is one concise sentence stating what can be found in the car
     [box.path("_content/store/notes/Wordy.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
-
-  // doctest:L393
-  t.check(result.totalWarnings, 1);
-
-  // doctest:L396
-  t.check(result.results[0]!.warnings[0]!.message, "contains: is 220 chars (budget 200) — tighten it to one sentence stating what can be found in this card");
+  t.check(
+    result,
+    one(`${box.root}/_content/store/notes/Wordy.doc.card`,
+      warn("contains", "contains: is 220 chars (budget 200) — tighten it to one sentence stating what can be found in this card"),
+  ));
 });

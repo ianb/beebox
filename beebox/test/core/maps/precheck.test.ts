@@ -5,7 +5,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { precheck } from "../../../src/core/maps/precheck.js";
 import type { MapTask } from "../../../src/core/maps/precheck.js";
 import { saveMapState } from "../../../src/core/maps/state.js";
@@ -65,8 +64,8 @@ async function cleanStoreBox() {
   return box;
 }
 
-function taskLine(t: MapTask) {
-  return `${t.dir || "<root>"}:${t.action} added=[${t.added.join(",")}] deleted=[${t.deleted.join(",")}]`;
+function taskView(t: MapTask) {
+  return { dir: t.dir || "<root>", action: t.action, added: t.added, deleted: t.deleted };
 }
 
 // ## Skip reasons
@@ -119,7 +118,7 @@ void test("Two kinds of uncommitted state are not user work, so they do not skip
     ["procedure run marker", "_bookkeeping/procedure/runs/refresh-maps_2026-05-09T2052/run.procedure-run.card", "<run-card status=\"running\"/>"],
     ["usage session manifest", "_bookkeeping/usage/session-manifest.jsonl", "{}\n{}\n"],
   ];
-  const out: string[] = [];
+  const out: Array<{ label: string; needsWork: boolean; skipped: string | null }> = [];
   for (const [label, path, content] of exempt) {
     const box = await makeTmpBox({ git: true });
     await box.write("a/b/note.md", "x");
@@ -129,14 +128,16 @@ void test("Two kinds of uncommitted state are not user work, so they do not skip
     await box.write(path, content);
 
     const brief = await precheck({ boxRoot: box.root });
-    out.push(`${label}: needsWork=${brief.needsWork} skipped=${brief.skippedReason ?? "(none)"}`);
+    out.push({ label, needsWork: brief.needsWork, skipped: brief.skippedReason ?? null });
     await box.cleanup();
   }
   // doctest:L126
 
   // doctest:L131
-  await t.checkText(out.join("\n"), `procedure run marker: needsWork=true skipped=(none)
-usage session manifest: needsWork=true skipped=(none)`);
+  t.check(out, [
+    { label: "procedure run marker", needsWork: true, skipped: null },
+    { label: "usage session manifest", needsWork: true, skipped: null },
+  ]);
 });
 
 // ## Bootstrap: no MAP.md anywhere yet
@@ -153,8 +154,6 @@ usage session manifest: needsWork=true skipped=(none)`);
 // - **Root is always skipped** — top-level paths are skeleton categories
 //   already covered in the root AGENTS.md.
 void test("A clean box with no MAP.md files and no state — every directory with mappable...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -172,18 +171,17 @@ void test("A clean box with no MAP.md files and no state — every directory wit
 
   // doctest:L159
   const brief = await precheck({ boxRoot: box.root });
-  print(`needsWork=${brief.needsWork}`);
-  print(`tasks=${brief.tasks.length}`);
-  const dirs = brief.tasks.map((task) => `${task.dir || "<root>"}:${task.action}`).toSorted();
-  print(dirs.join("\n"));
-  await t.checkText(
-    out2.with(// The store task lists every immediate child, including file-only ones.
-    print(brief.tasks.find((task) => task.dir === "store")!.children.join(", "))),
-    `needsWork=true
-tasks=1
-store:create
-notes/, scratch/`,
-  );
+  const store = brief.tasks.find((task) => task.dir === "store");
+  t.check({
+    needsWork: brief.needsWork,
+    tasks: brief.tasks.map((task) => `${task.dir || "<root>"}:${task.action}`).toSorted(),
+    // The store task lists every immediate child, including file-only ones.
+    children: store?.children,
+  }, {
+    needsWork: true,
+    tasks: ["store:create"],
+    children: ["notes/", "scratch/"],
+  });
 });
 
 // ## What dirties a map
@@ -212,7 +210,7 @@ void test("Recorded state at HEAD means a re-run reports nothing to do.", async 
       await box.write("store/projects/README.md", "y");
     }],
   ];
-  const out: string[] = [];
+  const out: Array<{ label: string; needsWork: boolean; tasks: ReturnType<typeof taskView>[] }> = [];
   for (const [label, change] of cases) {
     const box = await cleanStoreBox();
     if (change) {
@@ -220,16 +218,21 @@ void test("Recorded state at HEAD means a re-run reports nothing to do.", async 
       box.commitAll(label);
     }
     const brief = await precheck({ boxRoot: box.root });
-    out.push(`${label}: needsWork=${brief.needsWork} ${brief.tasks.map(taskLine).toSorted().join(" | ") || "(no tasks)"}`);
+    out.push({ label, needsWork: brief.needsWork, tasks: brief.tasks.map(taskView).toSorted((a, b) => a.dir.localeCompare(b.dir)) });
     await box.cleanup();
   }
 
   // doctest:L215
-  await t.checkText(out.join("\n"), `no change: needsWork=false (no tasks)
-add file: needsWork=true store:update added=[README.md] deleted=[]
-modify file: needsWork=false (no tasks)
-new leaf dir: needsWork=true store:update added=[triage/] deleted=[]
-new container dir: needsWork=true store/projects:create added=[] deleted=[] | store:update added=[projects/] deleted=[]`);
+  t.check(out, [
+    { label: "no change", needsWork: false, tasks: [] },
+    { label: "add file", needsWork: true, tasks: [{ dir: "store", action: "update", added: ["README.md"], deleted: [] }] },
+    { label: "modify file", needsWork: false, tasks: [] },
+    { label: "new leaf dir", needsWork: true, tasks: [{ dir: "store", action: "update", added: ["triage/"], deleted: [] }] },
+    { label: "new container dir", needsWork: true, tasks: [
+      { dir: "store", action: "update", added: ["projects/"], deleted: [] },
+      { dir: "store/projects", action: "create", added: [], deleted: [] },
+    ] },
+  ]);
 });
 
 // ## Ignore patterns
@@ -239,8 +242,6 @@ new container dir: needsWork=true store/projects:create added=[] deleted=[] | st
 // ending in `.attach` (card attach scopes are an implementation detail of
 // the card layout):
 void test("Default patterns include the skeleton hide-list (bookkeeping/procedure/runs/,...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // Notes:
   // - Root is always skipped (every top-level dir is skeleton).
   // - `_bookkeeping/procedure/runs/**` hides the whole `_bookkeeping/procedure/runs/` tree.
@@ -272,9 +273,7 @@ void test("Default patterns include the skeleton hide-list (bookkeeping/procedur
   // doctest:L244
   const brief = await precheck({ boxRoot: box.root });
   const dirs = brief.tasks.map((task) => task.dir || "<root>").toSorted();
-  await t.checkText(out2.with(print(dirs.join("\n"))), `a
-emails
-emails/keep`);
+  t.check(dirs, ["a", "emails", "emails/keep"]);
 });
 
 // ## Instruction files and box config never appear in a listing
@@ -291,8 +290,6 @@ emails/keep`);
 // regular file: `readdir` reports it via `isDirectory() === false` and `ls-tree`
 // as a blob, and the fix has to hold on both paths.
 void test("A box not yet converted to AGENTS.md has an AGENTS.md symlink beside each CLA...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -313,10 +310,11 @@ void test("A box not yet converted to AGENTS.md has an AGENTS.md symlink beside 
 
   // doctest:L291
   const brief = await precheck({ boxRoot: box.root });
-  const children = (dir: string) => brief.tasks.find((task) => task.dir === dir)?.children.join(", ") ?? "(no task)";
-  print(`store: ${children("store")}`);
-  await t.checkText(out2.with(print(`_config: ${children("_config")}`)), `store: notes/, refs/
-_config: a/, b/, feedback/, interface/, migrations.jsonl, template-versions.json, transcription.json`);
+  const children = (dir: string) => brief.tasks.find((task) => task.dir === dir)?.children ?? null;
+  t.check({ store: children("store"), _config: children("_config") }, {
+    store: ["notes/", "refs/"],
+    _config: ["a/", "b/", "feedback/", "interface/", "migrations.jsonl", "template-versions.json", "transcription.json"],
+  });
 
   // The git-side listing agrees. This half has to be set up so the mirror appears
   // *between* the recorded state and HEAD — the diff compares only the
@@ -336,26 +334,23 @@ _config: a/, b/, feedback/, interface/, migrations.jsonl, template-versions.json
   // doctest:L315
   const peopleTask = async () => {
     const task = (await precheck({ boxRoot: box.root })).tasks.find((entry) => entry.dir === "people");
-    return task === undefined ? "(none)" : `${task.action}:${task.added.join("|")}`;
+    return task === undefined ? null : { action: task.action, added: task.added };
   };
 
   // doctest:L320
   await box.write("people/CLAUDE.md", "@MAP.md\n");
   await symlink("CLAUDE.md", join(box.root, "people", "AGENTS.md"));
   box.commitAll("plant instruction files");
-  print(`after instruction files: ${await peopleTask()}`);
+  t.check(await peopleTask(), null);
 
   // doctest:L325
   await box.write("people/real.md", "r\n");
   box.commitAll("real file");
-  await t.checkText(out2.with(print(`after real file: ${await peopleTask()}`)), `after instruction files: (none)
-after real file: update:real.md`);
+  t.check(await peopleTask(), { action: "update", added: ["real.md"] });
 });
 
 // ## User-supplied .bbx-maps-ignore extends the defaults
 void test("User-supplied .bbx-maps-ignore extends the defaults", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -375,7 +370,7 @@ void test("User-supplied .bbx-maps-ignore extends the defaults", async (t) => {
   // doctest:L348
   const brief = await precheck({ boxRoot: box.root });
   const dirs = brief.tasks.map((task) => task.dir || "<root>").toSorted();
-  await t.checkText(out2.with(print(dirs.join("\n"))), "keep");
+  t.check(dirs, ["keep"]);
 });
 
 // ## Single-entry MAPs are skipped
@@ -383,8 +378,6 @@ void test("User-supplied .bbx-maps-ignore extends the defaults", async (t) => {
 // A directory with one visible subdir and nothing else doesn't qualify
 // for a MAP — the single bullet would just restate the dirname.
 void test("A directory with one visible subdir and nothing else doesn't qualify for a MA...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -401,7 +394,7 @@ void test("A directory with one visible subdir and nothing else doesn't qualify 
   // doctest:L370
   const brief = await precheck({ boxRoot: box.root });
   const dirs = brief.tasks.map((task) => task.dir || "<root>").toSorted();
-  await t.checkText(out2.with(print(dirs.length === 0 ? "(none)" : dirs.join("\n"))), "(none)");
+  t.check(dirs, []);
 
   // Add a sibling file and the dir qualifies:
 
@@ -410,7 +403,7 @@ void test("A directory with one visible subdir and nothing else doesn't qualify 
   box.commitAll("add sibling file");
   const brief2 = await precheck({ boxRoot: box.root });
   const dirs2 = brief2.tasks.map((task) => task.dir).toSorted();
-  await t.checkText(out2.with(print(dirs2.join("\n"))), "collection");
+  t.check(dirs2, ["collection"]);
 });
 
 // ## path/* and path/** in the ignore list
@@ -429,7 +422,7 @@ void test("store/items/ excludes the per-item subdirs but keeps store/items/ its
     ["store/items/*", []],
     ["store/items/**", ["store/README.md"]],  // 2nd visible child for store
   ];
-  const out: string[] = [];
+  const out: Array<{ pattern: string; dirs: string[]; storeChildren: string[] | undefined }> = [];
   for (const [pattern, extraFiles] of patterns) {
     const box = await makeTmpBox({ git: true });
     await seedSkeletonMaps(box);
@@ -445,15 +438,16 @@ void test("store/items/ excludes the per-item subdirs but keeps store/items/ its
       ignorePatterns: [...DEFAULT_IGNORE_PATTERNS, ...SKELETON_HIDDEN_PATHS, pattern],
     });
     const dirs = brief.tasks.map((task) => task.dir || "<root>").toSorted();
-    const store = brief.tasks.find((task) => task.dir === "store")!;
-    out.push(`${pattern}: dirs=${dirs.join(", ")} store children=${store.children.join(", ")}`);
+    out.push({ pattern, dirs, storeChildren: brief.tasks.find((task) => task.dir === "store")?.children });
     await box.cleanup();
   }
   // doctest:L418
 
   // doctest:L428
-  await t.checkText(out.join("\n"), `store/items/*: dirs=store, store/keep store children=items/, keep/
-store/items/**: dirs=store, store/keep store children=README.md, keep/`);
+  t.check(out, [
+    { pattern: "store/items/*", dirs: ["store", "store/keep"], storeChildren: ["items/", "keep/"] },
+    { pattern: "store/items/**", dirs: ["store", "store/keep"], storeChildren: ["README.md", "keep/"] },
+  ]);
 });
 
 // ## An unresolvable asOf is an anomaly, not a diff
@@ -464,8 +458,6 @@ store/items/**: dirs=store, store/keep store children=README.md, keep/`);
 // The precheck records an anomaly and downgrades the task to `create`, so the
 // map is regenerated from HEAD's listing.
 void test("When the commit a MAP.md was generated against no longer resolves — history r...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -495,9 +487,8 @@ void test("When the commit a MAP.md was generated against no longer resolves —
 
   // doctest:L461
   const brief = await precheck({ boxRoot: box.root });
-  print(JSON.stringify(brief.anomalies));
-  await t.checkText(out2.with(print(brief.tasks.map((task) => `${task.dir}:${task.action}:+${task.added.length}`).join(" "))), `[{"kind":"asof_unresolvable","dir":"store","asOf":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}]
-store:create:+0`);
+  t.check(brief.anomalies, [{ kind: "asof_unresolvable", dir: "store", asOf: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" }]);
+  t.check(brief.tasks.map((task) => ({ dir: task.dir, action: task.action, added: task.added })), [{ dir: "store", action: "create", added: [] }]);
 });
 
 // ## A directory absent at a *resolvable* asOf is ordinary
@@ -506,8 +497,6 @@ store:create:+0`);
 // has an honest empty prior listing, so its children really are additions — that
 // is a normal `update`, with no anomaly.
 void test("The anomaly must not over-fire.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -537,9 +526,8 @@ void test("The anomaly must not over-fire.", async (t) => {
 
   // doctest:L497
   const brief = await precheck({ boxRoot: box.root });
-  print(`anomalies: ${brief.anomalies.length}`);
-  await t.checkText(out2.with(print(brief.tasks.map((task) => `${task.dir}:${task.action}:${task.added.join("|")}`).join(" "))), `anomalies: 0
-store:update:later/`);
+  t.check(brief.anomalies, []);
+  t.check(brief.tasks.map((task) => ({ dir: task.dir, action: task.action, added: task.added })), [{ dir: "store", action: "update", added: ["later/"] }]);
 });
 
 // ## Listings come from the committed tree, on every path
@@ -551,8 +539,6 @@ store:update:later/`);
 // counted toward its parent's map, never dirtied it, and appeared in the listing
 // or not depending on which branch ran.
 void test("The walker, the create listing, and the update listing all read the same git...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -575,7 +561,7 @@ void test("The walker, the create listing, and the update listing all read the s
   // doctest:L530
   await box.write("store/photos/holiday.jpg", "JPEG");
   const quiet = await precheck({ boxRoot: box.root });
-  await t.checkText(out2.with(print(`needsWork=${quiet.needsWork}`)), "needsWork=false");
+  t.check(quiet.needsWork, false);
 
   // An unrelated tracked change dirties `store`; the listing still omits the
   // ignored directory:
@@ -584,7 +570,7 @@ void test("The walker, the create listing, and the update listing all read the s
   await box.write("store/c.md", "c");
   box.commitAll("add c");
   const update = await precheck({ boxRoot: box.root });
-  await t.checkText(out2.with(print(update.tasks.map((task) => `${task.dir}:${task.action}:${task.children.join(",")}`).join(" "))), "store:update:b.md,c.md,notes/");
+  t.check(update.tasks.map((task) => ({ dir: task.dir, action: task.action, children: task.children })), [{ dir: "store", action: "update", children: ["b.md", "c.md", "notes/"] }]);
 
   // The create path, with no state entry, gives the same listing:
 
@@ -592,7 +578,7 @@ void test("The walker, the create listing, and the update listing all read the s
   await saveMapState({ boxRoot: box.root, state: { maps: skeleton } });
   box.commitAll("drop store state");
   const create = await precheck({ boxRoot: box.root });
-  await t.checkText(out2.with(print(create.tasks.map((task) => `${task.dir}:${task.action}:${task.children.join(",")}`).join(" "))), "store:create:b.md,c.md,notes/");
+  t.check(create.tasks.map((task) => ({ dir: task.dir, action: task.action, children: task.children })), [{ dir: "store", action: "create", children: ["b.md", "c.md", "notes/"] }]);
 
   // A directory holding only ignored files does not make its parent a container
   // either:
@@ -604,7 +590,7 @@ void test("The walker, the create listing, and the update listing all read the s
   await box.write("solo/other.md", "o");
   box.commitAll("solo");
   const solo = await precheck({ boxRoot: box.root });
-  await t.checkText(out2.with(print(`solo mapped: ${solo.tasks.some((task) => task.dir === "solo")}`)), "solo mapped: false");
+  t.check(solo.tasks.map((task) => task.dir), ["store"]);
 });
 
 // ## Non-ASCII names are listed as written
@@ -613,8 +599,6 @@ void test("The walker, the create listing, and the update listing all read the s
 // listing reads NUL-separated raw paths, so an added name matches what is on
 // disk and what the map names.
 void test("Git quotes non-ASCII paths in its default output (\"caf\\303\\251.md\").", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -639,7 +623,8 @@ void test("Git quotes non-ASCII paths in its default output (\"caf\\303\\251.md\
   box.commitAll("add accented names");
   const brief = await precheck({ boxRoot: box.root });
   const store = brief.tasks.find((task) => task.dir === "store")!;
-  print(`added: ${store.added.join(", ")}`);
-  await t.checkText(out2.with(print(`children: ${store.children.join(", ")}`)), `added: café.md, résumés/
-children: b.md, café.md, notes/, résumés/`);
+  t.check({ added: store.added, children: store.children }, {
+    added: ["café.md", "résumés/"],
+    children: ["b.md", "café.md", "notes/", "résumés/"],
+  });
 });

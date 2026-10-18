@@ -409,11 +409,8 @@ void test("Runtime records outside the box, such as a Codex thread's cwd, still 
   );
 
   // doctest:L250
-  await t.checkText(
-    v2ContentPathsFor("_content/recipes/soups").every((v2) => {
-      const mapped = mapV2Path(v2);
-      return mapped.kind === "move" && mapped.newPath === "_content/recipes/soups";
-    }),
-    "true",
-  );
+  t.check(v2ContentPathsFor("_content/recipes/soups").map(mapV2Path), [
+    { kind: "move", newPath: "_content/recipes/soups" },
+    { kind: "move", newPath: "_content/recipes/soups" },
+  ]);
 });

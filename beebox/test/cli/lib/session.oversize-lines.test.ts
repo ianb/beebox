@@ -78,7 +78,7 @@ void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64
     hasMore: false,
     stubs: 20,
     stubSample: str`[message too large to display: ~${any(String).matches(/^\d+$/)} KB]`,
-    retainedMb: any(Number).between(-Infinity, 8),
+    retainedMb: any(Number).below(8),
   });
 });
 

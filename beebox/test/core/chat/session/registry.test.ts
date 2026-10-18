@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, is, str } from "agent-doctest/check";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -175,7 +176,7 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
 
   // doctest:L166
   clock = 3_000;
-  registry.getOrCreate("s3");
+  const s3 = registry.getOrCreate("s3");
   registry.touch("s3", { subprocessUse: true });
   registry.enforceLiveCap("s3");
   await tick();
@@ -189,7 +190,7 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // ready to re-spawn on the next send:
 
   // doctest:L179
-  await t.checkText(registry.get("s1") === s1, "true");
+  t.check(registry.get("s1"), is(s1));
 
   // ## Pins beat the LRU order
   //
@@ -258,11 +259,11 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   clock = 16_500; // s1/s2 last touched at ≤5_000 → idle; s3 touched at 3_000 → also idle
   registry.touch("s3");
   registry.sweepIdle();
-  t.check({ size: registry.size(), s1: registry.get("s1") !== null, s2: registry.get("s2") !== null, s3: registry.get("s3") !== null }, {
+  t.check({ size: registry.size(), s1: registry.get("s1"), s2: registry.get("s2"), s3: registry.get("s3") }, {
     size: 2,
-    s1: false,
-    s2: true,
-    s3: true,
+    s1: null,
+    s2: is(s2),
+    s3: is(s3),
   });
 
   // Releasing the pin exposes s2 to the next sweep; s3 (last touched by the
@@ -272,9 +273,9 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   releaseS2Again();
   clock = 40_000;
   registry.sweepIdle();
-  t.check({ size: registry.size(), s2: registry.get("s2") === null }, {
+  t.check({ size: registry.size(), s2: registry.get("s2") }, {
     size: 0,
-    s2: true,
+    s2: null,
   });
 });
 
@@ -402,7 +403,7 @@ closeWarmCount: 1`);
   // Even if addressability expires after construction, the session retains the
   // accepted start choice; a feature toggle cannot mint a competing history row.
   clock += 7 * 60 * 60 * 1_000;
-  const reservationExpired = codexRegistry.getReservation(coined) === null;
+  const reservationAfterExpiry = codexRegistry.getReservation(coined);
   await coinedSession.setFeature("narration", "on");
   await coinedSession.send("hi");
   await tick();
@@ -415,26 +416,21 @@ closeWarmCount: 1`);
   });
   const historyEntry = (await loadHistoryEntries(codexBox.root)).find((entry) => entry.id === coined);
   const husk = await findChatHuskEntry(codexBox.root, coined);
-  t.check(
-    {
-      reserved: reserved.kind,
-      reservationExpired,
-      backend: codexBackend.lastRun()?.startOptions.engine,
-      husk: husk?.engine,
-      history: historyEntry?.engine,
-      features: historyEntry?.features,
-    },
-    {
-    reserved: "reserved",
-    reservationExpired: true,
+  const { localOrigin } = await import("../../../../src/core/chat/session/origin.js");
+  const here = await localOrigin();
+  t.check({ reserved, reservationAfterExpiry, backend: codexBackend.lastRun()?.startOptions.engine, husk, history: historyEntry }, {
+    reserved: { kind: "reserved", sessionId: coined },
+    reservationAfterExpiry: null,
     backend: "claude",
-    husk: "claude",
-    history: "claude",
-    features: {
-      narration: "on",
+    husk: {
+      path: str`_content/chat/web/${any(String)}_${coined.slice(0, 8)}.chat.card`,
+      session: coined,
+      engine: "claude",
+      origin: here.id,
+      originName: here.name,
     },
-  },
-  );
+    history: { id: coined, engine: "claude", features: { narration: "on" } },
+  });
 
   // doctest:L409
   await codexRegistry.shutdown();

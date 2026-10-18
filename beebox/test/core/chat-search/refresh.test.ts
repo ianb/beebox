@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { mkdir, rm, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
@@ -28,6 +29,44 @@ function userEntry({ uuid, text, at }: { uuid: string; text: string; at: string 
 function assistantEntry({ uuid, text, at }: { uuid: string; text: string; at: string }) {
   return { type: "assistant", uuid, timestamp: at, message: { role: "assistant", content: [{ type: "text", text }] } };
 }
+
+const ROOF_U1 = {
+  sessionId: "sess-roof",
+  anchor: "u1",
+  title: "Insurance follow-up",
+  snippet: "Did the insurance claim go through? Yes — the roof claim was approved on Tuesday.",
+  created: "2026-09-27T09:00:00Z",
+  score: 0.3063627265070913,
+};
+const ROOF_U2 = {
+  sessionId: "sess-roof",
+  anchor: "u2",
+  title: "Insurance follow-up",
+  snippet: "What about the deductible on the solar panels? The panel deductible is separate: $500.",
+  created: "2026-09-28T11:00:00Z",
+};
+const OTHER_V1 = {
+  sessionId: "sess-other",
+  anchor: "v1",
+  title: "",
+  snippet: "Remind me to clean the panels on the roof this weekend.",
+  created: "2026-09-20T09:00:00Z",
+};
+const NO_HITS = { results: [], total: 0, truncated: false, warnings: [], stale: false };
+const roofRecord = ({ mtimeMs, entryCount, docIds }: { mtimeMs: number; entryCount: number; docIds: string[] }) => ({
+  engine: "claude" as const,
+  huskPath: "_content/chat/web/2026-09-28_sess-roof.chat.card",
+  mtimeMs,
+  entryCount,
+  docIds,
+});
+const otherRecord = {
+  engine: "claude" as const,
+  huskPath: "_content/chat/web/2026-09-28_sess-other.chat.card",
+  mtimeMs: 1789898400000,
+  entryCount: 1,
+  docIds: ["sess-other#v1"],
+};
 
 async function seed(box: TmpBox, opts: {
   sessionId: string;
@@ -78,36 +117,14 @@ void test("First query builds the index and finds the chat that said it", async 
   // doctest:L69
   const result = await searchChats(box.root, { query: "roof claim" });
 
-  // doctest:L71
-  t.check(result.total, 1);
-
-  // doctest:L74
-  t.check(result.results[0]?.sessionId, "sess-roof");
-
-  // doctest:L77
-  t.check(result.results[0]?.anchor, "u1");
-
-  // doctest:L80
-  t.check(result.results[0]?.title, "Insurance follow-up");
-
-  // doctest:L83
-  t.check(result.results[0]?.snippet.includes("roof"), true);
-
-  // doctest:L86
-  t.check(result.stale, false);
+  t.check(result, { results: [ROOF_U1], total: 1, truncated: false, warnings: [], stale: false });
 
   // The manifest recorded the cursor the next refresh diffs against.
 
   // doctest:L93
   const manifest = await loadChatManifest(box.root);
-  const record = manifest.sessions["sess-roof"];
 
-  // doctest:L96
-  t.check({ engine: record?.engine, entryCount: record?.entryCount, docs: record?.docIds.length }, {
-    engine: "claude",
-    entryCount: 2,
-    docs: 1,
-  });
+  t.check(manifest, { schemaVersion: 1, sessions: { "sess-roof": roofRecord({ mtimeMs: 1790596800000, entryCount: 2, docIds: ["sess-roof#u1"] }) } });
 
   // ## An appended turn is findable immediately, and only the new tail is chunked
 
@@ -126,30 +143,19 @@ void test("First query builds the index and finds the chat that said it", async 
   // doctest:L115
   const updated = await searchChats(box.root, { query: "deductible panels" });
 
-  // doctest:L117
-  t.check(updated.total, 1);
-
-  // doctest:L120
-  t.check(updated.results[0]?.anchor, "u2");
-
-  // doctest:L123
-  const after = await loadChatManifest(box.root);
-  const afterRecord = after.sessions["sess-roof"];
-
-  // doctest:L126
-  t.check(afterRecord?.entryCount, 4);
-
-  // doctest:L129
-  t.check(afterRecord?.docIds.length, 2);
-
   // The first chunk is untouched — its doc id is stable across the append, so
   // a persisted index only ever inserts.
-
-  // doctest:L137
-  t.check(afterRecord?.docIds[0], "sess-roof#u1");
-
-  // doctest:L140
-  t.check(afterRecord?.docIds.includes("sess-roof#u2"), true);
+  t.check(updated, {
+    results: [{ ...ROOF_U2, score: 0.7752217598810629 }],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+  });
+  t.check(await loadChatManifest(box.root), {
+    schemaVersion: 1,
+    sessions: { "sess-roof": roofRecord({ mtimeMs: 1790597100000, entryCount: 4, docIds: ["sess-roof#u1", "sess-roof#u2"] }) },
+  });
 
   // ## Two chats match: one row each, better score first
 
@@ -165,14 +171,16 @@ void test("First query builds the index and finds the chat that said it", async 
   // doctest:L155
   const both = await searchChats(box.root, { query: "panels" });
 
-  // doctest:L157
-  t.check(both.total, 2);
-
-  // doctest:L160
-  await t.checkText(both.results.map((r) => r.sessionId).includes("sess-roof"), "true");
-
-  // doctest:L163
-  await t.checkText(both.results.map((r) => r.sessionId).includes("sess-other"), "true");
+  t.check(both, {
+    results: [
+      { ...OTHER_V1, score: 0.2777931898228526 },
+      { ...ROOF_U2, score: 0.2548611229008566 },
+    ],
+    total: 2,
+    truncated: false,
+    warnings: [],
+    stale: false,
+  });
 
   // ## A rewritten (shortened) transcript rebuilds its session's docs
 
@@ -186,16 +194,26 @@ void test("First query builds the index and finds the chat that said it", async 
   // doctest:L177
   const rebuilt = await searchChats(box.root, { query: "piano tuning" });
 
-  // doctest:L179
-  t.check(rebuilt.total, 1);
-
-  // doctest:L182
-  const rebuiltManifest = await loadChatManifest(box.root);
-
-  // doctest:L184
-  t.check(rebuiltManifest.sessions["sess-roof"]?.docIds, [
-    "sess-roof#w1",
-  ]);
+  t.check(rebuilt, {
+    results: [
+      {
+        sessionId: "sess-roof",
+        anchor: "w1",
+        title: "Insurance follow-up",
+        snippet: "Fresh start: piano tuning.",
+        created: "2026-09-28T12:00:00Z",
+        score: 1.3676863831182813,
+      },
+    ],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+  });
+  t.check(await loadChatManifest(box.root), {
+    schemaVersion: 1,
+    sessions: { "sess-roof": roofRecord({ mtimeMs: 1790597400000, entryCount: 1, docIds: ["sess-roof#w1"] }), "sess-other": otherRecord },
+  });
 
   // The pre-rewrite material is gone from the index — old chunks pointed at a
   // transcript that no longer says it:
@@ -204,7 +222,13 @@ void test("First query builds the index and finds the chat that said it", async 
   const gone = await searchChats(box.root, { query: "roof claim deductible" });
 
   // doctest:L194
-  await t.checkText(gone.results.map((r) => r.sessionId).includes("sess-roof"), "false");
+  t.check(gone, {
+    results: [{ ...OTHER_V1, score: 0.29605608390018 }],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+  });
 
   // ## Deleting the husk drops the session's docs
 
@@ -215,15 +239,11 @@ void test("First query builds the index and finds the chat that said it", async 
   const afterDelete = await searchChats(box.root, { query: "panels" });
 
   // doctest:L205
-  t.check(afterDelete.total, 0);
-
-  // doctest:L208
-  const finalManifest = await loadChatManifest(box.root);
-
-  // doctest:L210
-  t.check(Object.keys(finalManifest.sessions), [
-    "sess-roof",
-  ]);
+  t.check(afterDelete, NO_HITS);
+  t.check(await loadChatManifest(box.root), {
+    schemaVersion: 1,
+    sessions: { "sess-roof": roofRecord({ mtimeMs: 1790597400000, entryCount: 1, docIds: ["sess-roof#w1"] }) },
+  });
 
   // ## A blank query matches nothing without touching the index
 
@@ -231,16 +251,12 @@ void test("First query builds the index and finds the chat that said it", async 
   const blank = await searchChats(box.root, { query: "   " });
 
   // doctest:L219
-  t.check({ total: blank.total, results: blank.results.length, stale: blank.stale }, {
-    total: 0,
-    results: 0,
-    stale: false,
-  });
+  t.check(blank, NO_HITS);
 
   // The index is a disposable cache beside the manifest:
 
   // doctest:L226
-  await t.checkText((await chatSearchStore.restore(box.root)) !== null, "true");
+  t.check(await chatSearchStore.restore(box.root), not(null));
 
   // ## A crash between index and manifest persist re-converges (remove-before-insert)
   //
@@ -277,11 +293,15 @@ void test("First query builds the index and finds the chat that said it", async 
   const converged = await searchChats(box.root, { query: "garage door estimate" });
 
   // doctest:L263
-  t.check(converged.total, 1);
-
-  // doctest:L266
-  await t.checkText(converged.warnings.length, "0");
-
-  // doctest:L269
-  t.check((await loadChatManifest(box.root)).sessions["sess-roof"]?.entryCount, 2);
+  t.check(converged, {
+    results: [{ sessionId: "sess-roof", anchor: "w2", title: "Insurance follow-up", snippet: "Also get a garage door estimate.", created: "2026-09-28T13:00:00Z", score: 1.165204312148184 }],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+  });
+  t.check(await loadChatManifest(box.root), {
+    schemaVersion: 1,
+    sessions: { "sess-roof": roofRecord({ mtimeMs: 1790600700000, entryCount: 2, docIds: ["sess-roof#w1", "sess-roof#w2"] }) },
+  });
 });

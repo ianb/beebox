@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -84,7 +85,7 @@ web-push sent`);
 
   // doctest:L81
   const slug = await boxSlug(box.root);
-  await t.checkText(push.sent[0]?.payload.url === `/${slug}/browse/_content/inbox/field-trip.email.card`, "true");
+  t.check(push.sent[0]?.payload.url, `/${slug}/browse/_content/inbox/field-trip.email.card`);
 
   // doctest:L85
   t.check(push.sent[0]?.payload.silent, false);
@@ -94,22 +95,30 @@ web-push sent`);
 
   // doctest:L93
   const [n] = await readRecent(box.root, { days: 1, now: NOW });
-  t.check([n?.intent.id === result.id, n?.intent.target, n?.intent.loudness, n?.intent.source], [
-    true,
-    "card:_content/inbox/field-trip.email.card",
-    "loud",
-    "notify-doctest",
-  ]);
+  t.check(n?.intent, {
+    kind: "intent",
+    at: "2026-09-26T12:00:00.000Z",
+    id: result.id,
+    title: "Field trip form due Friday",
+    body: "The school emailed: the form is due Friday.",
+    target: "card:_content/inbox/field-trip.email.card",
+    loudness: "loud",
+    source: "notify-doctest",
+  });
 
   // doctest:L97
   const bus = createEventBus(box.root);
   const events = bus.readSince(0).filter((e) => e.event === "notification").map((e) => eventSchemas.notification.parse(e.data));
   bus.close();
-  t.check([events.length, events[0]?.id === result.id, events[0]?.url === push.sent[0]?.payload.url], [
-    1,
-    true,
-    true,
-  ]);
+  t.check(events, [{
+    id: result.id,
+    title: "Field trip form due Friday",
+    body: "The school emailed: the form is due Friday.",
+    target: "card:_content/inbox/field-trip.email.card",
+    loudness: "loud",
+    source: "notify-doctest",
+    url: `/${slug}/browse/_content/inbox/field-trip.email.card`,
+  }]);
 
   // doctest:L103
   t.check(await failing(box), "all ok");
@@ -139,12 +148,23 @@ void test("An open app with a person active shows a quiet notification itself, s
 web-push skipped: present`);
 
   // doctest:L128
-  await t.checkText(push.sent.length, "0");
+  t.check(push.sent, []);
 
   // doctest:L131
   await writePresence(box.root, { activeWeb: 1, now: new Date(NOW.getTime() - 120_000) });
   await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push } });
-  await t.checkText(push.sent.length, "1");
+  const quietSlug = await boxSlug(box.root);
+  t.check(push.sent, [{
+    endpoint: "https://push.example/phone",
+    payload: {
+      icon: `${quietSlug}/icon-192.png`,
+      title: "Field trip form due Friday",
+      body: "The school emailed: the form is due Friday.",
+      url: `/${quietSlug}/browse/_content/inbox/field-trip.email.card`,
+      tag: undefined,
+      silent: true,
+    },
+  }]);
 
   // A `quiet` push carries `silent`, which the service worker passes to
   // `showNotification`, so it makes no sound:
@@ -216,7 +236,7 @@ void test("notifyChannels needs someone to send to and what the send needs:", as
   const withKeys = await notifyChannels(box.root);
   delete process.env.BBX_VAPID_PUBLIC_KEY;
   delete process.env.BBX_VAPID_PRIVATE_KEY;
-  t.check(withKeys.webPush, true);
+  t.check(withKeys, { apns: false, webPush: true });
 });
 
 // ## Generated ids start with a letter
@@ -235,7 +255,7 @@ void test("A URL search parser reads an all-digit value as a number, so an id is
   const box = await reachableBox();
   const ids: string[] = [];
   for (let i = 0; i < 5; i++) ids.push((await notifyBoxholder(box.root, { intent: intent("dot"), now: NOW })).id);
-  await t.checkText(ids.every((id) => /^n[\w-]{8}$/.test(id)), "true");
+  t.check(ids, Array.from({ length: 5 }, () => any(String).matches(/^n[\w-]{8}$/)));
 });
 
 // ## `channel` restricts delivery to one channel
@@ -259,7 +279,18 @@ void test("bbx notify --channel uses this to test one channel.", async (t) => {
   t.check(await logged(box), "web-push sent");
 
   // doctest:L233
-  await t.checkText(push.sent.length, "1");
+  const channelSlug = await boxSlug(box.root);
+  t.check(push.sent, [{
+    endpoint: "https://push.example/phone",
+    payload: {
+      icon: `${channelSlug}/icon-192.png`,
+      title: "Field trip form due Friday",
+      body: "The school emailed: the form is due Friday.",
+      url: `/${channelSlug}/browse/_content/inbox/field-trip.email.card`,
+      tag: undefined,
+      silent: false,
+    },
+  }]);
 });
 
 // ## A failing push: one `failed` line and a health check
@@ -288,7 +319,12 @@ web-push failed: no device received the push (sent 0, pruned 0, failed 1)`);
   // A day later the failure has aged out of the check:
 
   // doctest:L262
-  await t.checkText((await notificationHealthChecks(box.root, { now: new Date(NOW.getTime() + 25 * 60 * 60 * 1000) })).every((c) => c.ok), "true");
+  t.check(await notificationHealthChecks(box.root, { now: new Date(NOW.getTime() + 25 * 60 * 60 * 1000) }), [
+    { name: "notifications-undelivered", ok: true, message: "No notification failed to deliver in the last 24 hours", severity: "warning" },
+    { name: "notifications-no-channel", ok: true, message: "Every notification in the last 24 hours had a channel to reach the boxholder", severity: "warning" },
+    { name: "notification-log-writable", ok: true, message: "The notification log is writable", severity: "warning" },
+    { name: "jev-budget", ok: true, message: "No judgment deferred for the daily Jev budget in the last 24 hours", severity: "warning" },
+  ]);
 });
 
 // ## An unwritable log does not stop delivery
@@ -311,8 +347,13 @@ void test("The log is the record, not the delivery path.", async (t) => {
   const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push: createFakePush() } });
 
   // doctest:L281
-  t.check(result.deliveries.map((d) => `${d.channel} ${d.status}`).join(", "), "apns skipped, web-push sent");
+  t.check(result.deliveries.map((d) => `${d.channel} ${d.status}`), ["apns skipped", "web-push sent"]);
 
   // doctest:L284
-  t.check((await notificationHealthChecks(box.root, { now: NOW })).find((c) => c.name === "notification-log-writable")?.ok, false);
+  t.check((await notificationHealthChecks(box.root, { now: NOW })).find((c) => c.name === "notification-log-writable"), {
+    name: "notification-log-writable",
+    ok: false,
+    message: `The notification log is not writable (EISDIR: illegal operation on a directory, open '${notificationLogPath(box.root)}'); notifications still send but leave no record`,
+    severity: "warning",
+  });
 });

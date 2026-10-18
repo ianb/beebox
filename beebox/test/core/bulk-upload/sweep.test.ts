@@ -199,7 +199,7 @@ void test("A delivered upload-batch card still under a tmp-upload/ past the stal
   t.check(notified, [{
     cardRelPath: "store/x/tmp-upload/upload-old/Batch.upload-batch.card",
     sessionId: "s-target",
-    ageDays: any(Number).between(1000, Infinity),
+    ageDays: any(Number).above(1000),
   }]);
 
   // The batch is marked `sweep-notified` (committed), so a SECOND sweep does not

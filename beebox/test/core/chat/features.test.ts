@@ -34,7 +34,10 @@ console.warn = () => {};
 // `on`/`off` values.
 void test("The initial registry has three features.", async (t) => {
   // doctest:L37
-  t.check(listFeatures().map((f) => f.name).join(","), "narration,prose");
+  t.check(listFeatures(), [
+    { name: "narration", allowedValues: ["on", "off"], default: "off", uiKind: "toggle", label: "Narration mode" },
+    { name: "prose", allowedValues: ["on", "off"], default: "on", uiKind: "toggle", label: "Show agent prose" },
+  ]);
 
   // doctest:L40
   t.check(getFeature("nope"), null);
@@ -243,27 +246,14 @@ void test("The agent emits <chat-app> tags as state mutations.", async (t) => {
   const result = parseChatAppDeltas(
     "Sure, switching to narration. <chat-app narration=\"on\"/> Done."
   );
-  t.check(result.deltas, [
-    {
-      feature: "narration",
-      value: "on",
-    },
-  ]);
-
-  // doctest:L223
-  t.check(result.cleaned, "Sure, switching to narration.  Done.");
+  t.check(result, { deltas: [{ feature: "narration", value: "on" }], cleaned: "Sure, switching to narration.  Done." });
 });
 
 // The paired form (with empty body) parses the same way.
 void test("The paired form (with empty body) parses the same way.", async (t) => {
   // doctest:L230
   const r = parseChatAppDeltas("<chat-app prose=\"off\"></chat-app>");
-  t.check(r.deltas, [
-    {
-      feature: "prose",
-      value: "off",
-    },
-  ]);
+  t.check(r, { deltas: [{ feature: "prose", value: "off" }], cleaned: "" });
 });
 
 // Unknown features and invalid values are dropped. The system-written
@@ -275,35 +265,24 @@ void test("Unknown features and invalid values are dropped.", async (t) => {
   const r = parseChatAppDeltas(
     "<chat-app narration=\"on\" bogus=\"yes\" prose=\"maybe\" time=\"now\" local-time=\"x\" channel=\"y\" last-activity=\"z\" calendar=\"w\" open-card=\"a.card\"/>"
   );
-  t.check(r.deltas, [
-    {
-      feature: "narration",
-      value: "on",
-    },
-  ]);
+  t.check(r, { deltas: [{ feature: "narration", value: "on" }], cleaned: "" });
 });
 
 // Multiple tags in one response yield multiple deltas, in document
 // order.
 void test("Multiple tags in one response yield multiple deltas, in document order.", async (t) => {
   // doctest:L262
-  t.check(parseChatAppDeltas("<chat-app narration=\"on\"/> body <chat-app prose=\"off\"/>").deltas, [
-    {
-      feature: "narration",
-      value: "on",
-    },
-    {
-      feature: "prose",
-      value: "off",
-    },
-  ]);
+  t.check(parseChatAppDeltas("<chat-app narration=\"on\"/> body <chat-app prose=\"off\"/>"), {
+    deltas: [
+      { feature: "narration", value: "on" },
+      { feature: "prose", value: "off" },
+    ],
+    cleaned: " body ",
+  });
 });
 
 // No tags → no deltas, content unchanged.
 void test("No tags → no deltas, content unchanged.", async (t) => {
   // doctest:L278
-  await t.checkText(parseChatAppDeltas("Hello world").deltas.length, "0");
-
-  // doctest:L281
-  t.check(parseChatAppDeltas("Hello world").cleaned, "Hello world");
+  t.check(parseChatAppDeltas("Hello world"), { deltas: [], cleaned: "Hello world" });
 });

@@ -14,6 +14,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import Database from "better-sqlite3";
 import { join } from "node:path";
 import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
@@ -21,6 +22,9 @@ import { eventSchemas, isBusEventName } from "../../src/core/event-bus/schemas.j
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const TS = "2026-07-09T00:00:00.000Z";
+
+// SQLite's `datetime('now')` stamp: it differs on every run.
+const createdAt = any(String).matches(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/);
 
 // One representative valid payload per event — the exact shape its emit sites
 // produce. If a schema were stricter than a real payload, the round-trip below
@@ -57,7 +61,7 @@ const samples = {
 // schema the read boundary uses:
 void test("The sample catalog covers every event, and each parses cleanly against the sc...", async (t) => {
   // doctest:L60
-  await t.checkText(JSON.stringify(Object.keys(samples).toSorted()) === JSON.stringify(Object.keys(eventSchemas).toSorted()), "true");
+  t.check(Object.keys(samples).toSorted(), Object.keys(eventSchemas).toSorted());
 
   // doctest:L63
   const failures = Object.entries(samples).filter(([name, sample]) => !(isBusEventName(name) && eventSchemas[name].safeParse(sample).success)).map(([name]) => name);
@@ -71,10 +75,16 @@ void test("The sample catalog covers every event, and each parses cleanly agains
 // treats a bare `z.unknown()` object property as required):
 void test("An answer carries only answer OR selectedId; JSON.stringify drops the undefin...", async (t) => {
   // doctest:L75
-  t.check(eventSchemas["question-answered"].safeParse({ path: "Q.question.card", selectedId: "opt-1", timestamp: TS }).success, true);
+  t.check(eventSchemas["question-answered"].safeParse({ path: "Q.question.card", selectedId: "opt-1", timestamp: TS }), {
+    success: true,
+    data: { path: "Q.question.card", selectedId: "opt-1", timestamp: TS },
+  });
 
   // doctest:L78
-  t.check(eventSchemas["question-answered"].safeParse({ path: "Q.question.card", answer: "freeform", timestamp: TS }).success, true);
+  t.check(eventSchemas["question-answered"].safeParse({ path: "Q.question.card", answer: "freeform", timestamp: TS }), {
+    success: true,
+    data: { path: "Q.question.card", answer: "freeform", timestamp: TS },
+  });
 });
 
 // ## A persisted event reads back byte-identical
@@ -95,17 +105,7 @@ void test("Validation gates, it never transforms:", async (t) => {
   const bus = createEventBus(box.root);
   bus.emit("card-created", samples["card-created"]);
   const rows = bus.readSince(0);
-  t.check(rows.map((r) => r.event), [
-    "card-created",
-  ]);
-
-  // doctest:L95
-  t.check(rows[0]?.data, {
-    path: "Voice.doc.card",
-    template: "doc",
-    timestamp: "2026-07-09T00:00:00.000Z",
-    audioPath: "attach/a.webm",
-  });
+  t.check(rows, [{ id: 1, event: "card-created", data: samples["card-created"], createdAt }]);
 });
 
 // ## readRecent — a bounded tail of one event type
@@ -134,20 +134,24 @@ void test("readSince(afterId) answers \"what have I missed\", which needs a curs
   bus2.emit("chat-complete", { sessionId: "s-1", timestamp: TS });
 
   // doctest:L121
-  t.check(bus2.readRecent({ event: "cards-changed", limit: 3 }).map((e) => eventSchemas["cards-changed"].parse(e.data).source).join(","), "b,c,d");
+  t.check(bus2.readRecent({ event: "cards-changed", limit: 3 }), [
+    { id: 2, event: "cards-changed", data: { source: "b" }, createdAt },
+    { id: 3, event: "cards-changed", data: { source: "c" }, createdAt },
+    { id: 4, event: "cards-changed", data: { source: "d" }, createdAt },
+  ]);
 
   // It answers about one type only — a busier neighbouring event stream cannot
   // crowd out the answer:
 
   // doctest:L129
-  t.check(bus2.readRecent({ event: "chat-complete", limit: 10 }).map((e) => e.event), [
-    "chat-complete",
+  t.check(bus2.readRecent({ event: "chat-complete", limit: 10 }), [
+    { id: 5, event: "chat-complete", data: { sessionId: "s-1", timestamp: TS }, createdAt },
   ]);
 
   // A type nothing has emitted is empty, not an error:
 
   // doctest:L136
-  await t.checkText(bus2.readRecent({ event: "chat-user-message", limit: 10 }).length, "0");
+  t.check(bus2.readRecent({ event: "chat-user-message", limit: 10 }), []);
 });
 
 // ## A bad row degrades to a sentinel without breaking its siblings
@@ -180,23 +184,18 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
 
   // doctest:L164
   const rows = bus.readSince(0);
-  t.check(rows.map((r) => r.event), [
-    "cards-changed",
-    "unknown",
-    "unknown",
-    "unknown",
+  t.check(rows, [
+    { id: 1, event: "cards-changed", data: { source: "gmail" }, createdAt },
+    { id: 2, event: "unknown", data: { originalEvent: "card-created", raw: { path: 123 }, error: any(String) }, createdAt },
+    { id: 3, event: "unknown", data: { originalEvent: "cards-changed", raw: "{not json", error: any(String).startsWith("JSON parse failed: SyntaxError") }, createdAt },
+    { id: 4, event: "unknown", data: { originalEvent: "mystery-event", raw: { x: 1 }, error: 'unknown event name "mystery-event"' }, createdAt },
   ]);
 
   // The valid sibling keeps its real payload; a sentinel carries the original event
   // name and raw payload for debugging:
 
   // doctest:L173
-  t.check(rows[0]?.data, {
-    source: "gmail",
-  });
 
-  // doctest:L176
-  t.check(rows[1]?.event === "unknown" ? rows[1].data.originalEvent : undefined, "card-created");
 });
 
 // ## A generation mismatch truncates persisted rows on open
@@ -218,7 +217,10 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
   const bus1 = createEventBus(box.root);
   bus1.emit("cards-changed", { source: "a" });
   bus1.emit("cards-changed", { source: "b" });
-  await t.checkText(bus1.readSince(0).length, "2");
+  t.check(bus1.readSince(0), [
+    { id: 1, event: "cards-changed", data: { source: "a" }, createdAt },
+    { id: 2, event: "cards-changed", data: { source: "b" }, createdAt },
+  ]);
 
   // doctest:L201
   bus1.close();
@@ -230,7 +232,7 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
 
   // doctest:L207
   const bus2 = createEventBus(box.root);
-  await t.checkText(bus2.readSince(0).length, "0");
+  t.check(bus2.readSince(0), []);
 });
 
 // ## A legacy DB (no meta row) drops its pre-generation rows on first open
@@ -258,5 +260,5 @@ void test("A box upgraded from before generation stamping has an events table fu
 
   // doctest:L232
   const bus = createEventBus(box.root);
-  await t.checkText(bus.readSince(0).length, "0");
+  t.check(bus.readSince(0), []);
 });

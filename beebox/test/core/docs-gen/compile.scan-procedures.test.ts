@@ -15,7 +15,6 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## Reads name + first-line description from frontmatter
 void test("Reads name + first-line description from frontmatter", async (t) => {
-  // doctest:L19
   const box = await makeTmpBox();
   await box.write(
     "_config/procedures/process-news.procedure.card",
@@ -26,7 +25,6 @@ void test("Reads name + first-line description from frontmatter", async (t) => {
     "---\nname: triage-inbox\ndescription: |-\n  Sort inbox items into destinations.\n  Second line is dropped from the compact index.\nsteps: []\n---\n",
   );
 
-  // doctest:L29
   const out = await scanProcedures(box.root);
   t.check(out, [
     {
@@ -44,14 +42,12 @@ void test("Reads name + first-line description from frontmatter", async (t) => {
 
 // ## Missing name falls back to the filename; missing description is empty
 void test("Missing name falls back to the filename; missing description is empty", async (t) => {
-  // doctest:L37
   const box = await makeTmpBox();
   await box.write(
     "_config/procedures/orphan.procedure.card",
     "---\nsteps: []\n---\n",
   );
 
-  // doctest:L43
   const out = await scanProcedures(box.root);
   t.check(out, [
     {
@@ -64,11 +60,9 @@ void test("Missing name falls back to the filename; missing description is empty
 
 // ## A card with no readable frontmatter is indexed with a placeholder, not dropped
 void test("A card with no readable frontmatter is indexed with a placeholder, not dropped", async (t) => {
-  // doctest:L51
   const box = await makeTmpBox();
   await box.write("_config/procedures/bad.procedure.card", "not a frontmatter card\n");
 
-  // doctest:L54
   const out = await scanProcedures(box.root);
   t.check(out, [
     {
@@ -81,8 +75,7 @@ void test("A card with no readable frontmatter is indexed with a placeholder, no
 
 // ## No procedures directory returns an empty list
 void test("No procedures directory returns an empty list", async (t) => {
-  // doctest:L62
   const box = await makeTmpBox();
   const out = await scanProcedures(box.root);
-  await t.checkText(out.length, "0");
+  t.check(out, []);
 });

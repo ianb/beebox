@@ -10,7 +10,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { deriveTranscriptState, resolveSessionAvailability } from "../../../../src/core/chat/session/availability.js";
 import { localOrigin } from "../../../../src/core/chat/session/origin.js";
@@ -166,8 +165,6 @@ void test("resolveSessionAvailability needs to know which store holds a transcri
 //
 // A merely-materialized id is a ghost, and says so:
 void test("resolveSessionAvailability answers resumable early for a chat that is mid-tur...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env["BBX_ORIGIN_ID_FILE"];
@@ -192,7 +189,7 @@ void test("resolveSessionAvailability answers resumable early for a chat that is
   const ghost = randomUUID();
   ghostRegistry.getOrCreate(ghost);
   const asGhost = await resolveSessionAvailability({ boxRoot: ghostBox.root, sessionId: ghost, registry: ghostRegistry });
-  await t.checkText(out.with(print(`materialized only: ${asGhost.kind}`)), "materialized only: unavailable");
+  t.check(asGhost, { kind: "unavailable", reason: "missing-local-transcript", transcript: { state: "unknown" }, huskPath: null });
 
   // A session that is actually running is resumable, transcript or not — which is
   // the case the gate exists for:
@@ -202,7 +199,7 @@ void test("resolveSessionAvailability answers resumable early for a chat that is
   const liveSession = ghostRegistry.getOrCreate(live);
   await liveSession.send("hi");
   const asLive = await resolveSessionAvailability({ boxRoot: ghostBox.root, sessionId: live, registry: ghostRegistry });
-  await t.checkText(out.with(print(`running: ${asLive.kind} (isRunning=${String(liveSession.isRunning())})`)), "running: resumable (isRunning=true)");
+  t.check({ availability: asLive, isRunning: liveSession.isRunning() }, { availability: { kind: "resumable" }, isRunning: true });
 
   // And the case tightening this gate could have broken: a real session that has
   // been EVICTED — its subprocess stopped to free a slot, its entry kept because it
@@ -218,5 +215,5 @@ void test("resolveSessionAvailability answers resumable early for a chat that is
   await fs.writeFile(logPath, "");
   const evictedSession = ghostRegistry.getOrCreate(evicted);
   const asEvicted = await resolveSessionAvailability({ boxRoot: ghostBox.root, sessionId: evicted, registry: ghostRegistry });
-  await t.checkText(out.with(print(`evicted with transcript: ${asEvicted.kind} (isRunning=${String(evictedSession.isRunning())})`)), "evicted with transcript: resumable (isRunning=false)");
+  t.check({ availability: asEvicted, isRunning: evictedSession.isRunning() }, { availability: { kind: "resumable" }, isRunning: false });
 });

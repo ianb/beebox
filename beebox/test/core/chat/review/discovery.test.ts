@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import assert from "node:assert/strict";
@@ -64,6 +65,23 @@ async function seed(box: TmpBox, opts: { sessionId: string; entries: object[]; a
   await utimes(logPath, when, when);
 }
 
+/** The qualified session a two-`bulk` transcript seeded `agoHours` ago discovers as. */
+function bulkSession(box: TmpBox, { sessionId, agoHours }: { sessionId: string; agoHours: number }) {
+  return {
+    sessionId,
+    huskPath: `_content/chat/web/2026-07-28_${sessionId}.chat.card`,
+    logPath: getSessionLogPath(box.root, sessionId),
+    mtime: new Date(NOW.getTime() - agoHours * HOUR),
+    spanChars: 8071,
+    bootstrap: "no-journal" as const,
+    needsMetadata: true,
+    titleSpanChars: 8071,
+    titleBootstrap: "no-journal" as const,
+    snippetTitle: `${"a".repeat(79)}…`,
+    userTurns: 2,
+  };
+}
+
 async function discover(box: TmpBox) {
   await writeFile(box.path("origin-id"), `${LOCAL_ORIGIN}\n`);
   process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
@@ -93,40 +111,12 @@ void test("A qualified session is scalars — no parsed transcript rides along",
   const session = result.qualified[0];
   assert.ok(session);
 
-  // doctest:L88
-  t.check(Object.keys(session).toSorted().join(","), "bootstrap,huskPath,logPath,mtime,needsMetadata,sessionId,snippetTitle,spanChars,titleBootstrap,titleSpanChars,userTurns");
-
-  // Named explicitly, because these two fields are the regression: retaining either
-  // one restores the peak this shape exists to remove.
-
-  // doctest:L96
-  t.check({ entries: "entries" in session, span: "span" in session }, {
-    entries: false,
-    span: false,
-  });
-
-  // The scalars the reviewer and `--dry-run` actually need survive: how much new
-  // material there is, and whether the span continues the journal or restarts it.
-
-  // doctest:L104
-  t.check(
-    {
-      sessionId: session.sessionId,
-      spanChars: session.spanChars > 8000,
-      bootstrap: session.bootstrap,
-    },
-    {
-    sessionId: "sessone",
-    spanChars: true,
-    bootstrap: "no-journal",
-  },
-  );
-
-  // Nothing on the object is large: a whole qualified session serializes to a couple
-  // of hundred bytes, whatever the transcript's size.
-
-  // doctest:L116
-  await t.checkText(JSON.stringify(session).length < 700, "true");
+  // The whole session is scalars. `entries` and `span` are the regression: retaining
+  // either one restores the peak this shape exists to remove, and the exact key set
+  // below keeps them out. The scalars the reviewer and `--dry-run` actually need
+  // survive: how much new material there is, and whether the span continues the
+  // journal or restarts it.
+  t.check(session, bulkSession(box, { sessionId: "sessone", agoHours: 5 }));
 
   // ## The window is re-read on demand, from the same journal
   //
@@ -142,16 +132,8 @@ void test("A qualified session is scalars — no parsed transcript rides along",
   });
   assert.ok(window);
   t.check(
-    {
-      spanEntries: window.entries.length,
-      bootstrap: window.bootstrap,
-      clipped: window.clipped,
-    },
-    {
-    spanEntries: 2,
-    bootstrap: "no-journal",
-    clipped: false,
-  },
+    { ...window, entries: window.entries.map((e) => e.uuid) },
+    { entries: ["a1", "a2"], endIndex: 1, endPrefixHash: "768efaf0fa6038d4", bootstrap: "no-journal", clipped: false },
   );
 
   // A husk whose transcript is gone reads as null rather than throwing.
@@ -199,30 +181,16 @@ void test("Dropping the arrays did not move any threshold.", async (t) => {
 
   // doctest:L178
   const result = await discover(box);
-  t.check(
-    {
-      qualified: result.qualified.map((s) => s.sessionId),
-      titleOnly: result.titleOnly,
-      belowTitleThreshold: result.belowTitleThreshold,
-      tooFewTurns: result.tooFewTurns,
-      deferredActive: result.deferredActive,
-      missingTranscripts: result.missingTranscripts,
-      foreignOrigin: result.foreignOrigin,
-    },
-    {
-    qualified: [
-      "sessbig",
-    ],
-    titleOnly: 0,
+  t.check(result, {
+    qualified: [bulkSession(box, { sessionId: "sessbig", agoHours: 5 })],
+    deferredActive: ["sessnow"],
     belowTitleThreshold: 1,
+    titleOnly: 0,
+    belowThreshold: 0,
     tooFewTurns: 1,
-    deferredActive: [
-      "sessnow",
-    ],
     missingTranscripts: 1,
     foreignOrigin: 0,
-  },
-  );
+  });
 
   // ## Qualified sessions come back oldest first
   //
@@ -234,7 +202,20 @@ void test("Dropping the arrays did not move any threshold.", async (t) => {
   await seed(box, { sessionId: "sessmid", entries: [bulk("m1"), bulk("m2")], agoHours: 20 });
 
   // doctest:L201
-  t.check((await discover(box)).qualified.map((s) => s.sessionId).join(","), "sessold,sessmid,sessbig");
+  t.check(await discover(box), {
+    qualified: [
+      bulkSession(box, { sessionId: "sessold", agoHours: 40 }),
+      bulkSession(box, { sessionId: "sessmid", agoHours: 20 }),
+      bulkSession(box, { sessionId: "sessbig", agoHours: 5 }),
+    ],
+    deferredActive: ["sessnow"],
+    belowTitleThreshold: 1,
+    titleOnly: 0,
+    belowThreshold: 0,
+    tooFewTurns: 1,
+    missingTranscripts: 1,
+    foreignOrigin: 0,
+  });
 });
 
 // ## Review is claimed by origin
@@ -262,36 +243,21 @@ void test("A session's transcript lives on one machine, and that machine is the 
 
   // doctest:L224
   const result = await discover(box);
-  t.check(
-    {
-      qualified: result.qualified.map((s) => s.sessionId).toSorted(),
-      foreignOrigin: result.foreignOrigin,
-    },
-    {
-    qualified: [
-      "sessmine",
-      "sessunset",
-    ],
-    foreignOrigin: 1,
-  },
-  );
-
   // The foreign husk's transcript is never opened, so a session that ran elsewhere
   // costs nothing to skip — it is turned away before the stat.
-
-  // doctest:L236
-  t.check(
-    {
-      missingTranscripts: result.missingTranscripts,
-      belowThreshold: result.belowThreshold,
-      tooFewTurns: result.tooFewTurns,
-    },
-    {
-    missingTranscripts: 0,
+  t.check(result, {
+    qualified: [
+      bulkSession(box, { sessionId: "sessmine", agoHours: 5 }),
+      bulkSession(box, { sessionId: "sessunset", agoHours: 5 }),
+    ],
+    deferredActive: [],
+    belowTitleThreshold: 0,
+    titleOnly: 0,
     belowThreshold: 0,
     tooFewTurns: 0,
-  },
-  );
+    missingTranscripts: 0,
+    foreignOrigin: 1,
+  });
 });
 
 // ## A boundary past the first page is still found; the span is bounded
@@ -352,21 +318,11 @@ void test("The span walk streams the transcript in pages, so a session that grew
     consumer: "metadata",
   });
   assert.ok(window);
+  const { entries: spanEntries, ...spanRest } = window;
+  t.check(spanRest, { endIndex: 5003, endPrefixHash: any(String), bootstrap: null, clipped: true });
   t.check(
-    {
-      bootstrap: window.bootstrap,
-      first: window.entries[0]?.uuid,
-      spanEntries: window.entries.length,
-      endIndex: window.endIndex,
-      clipped: window.clipped,
-    },
-    {
-    bootstrap: null,
-    first: "cap-4",
-    spanEntries: 5000,
-    endIndex: 5003,
-    clipped: true,
-  },
+    spanEntries.map((e) => e.uuid),
+    Array.from({ length: 5000 }, (_, i) => `cap-${String(i + 4)}`),
   );
 
   // The journal hash for the new boundary covers the whole prefix, not just the
@@ -376,7 +332,7 @@ void test("The span walk streams the transcript in pages, so a session that grew
   const logPath = getSessionLogPath(box.root, "sesscap");
   const head = await parseSessionLog({ logPath, slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES } });
   const tail = await parseSessionLog({ logPath, slice: { mode: "page", offset: MAX_SESSION_ENTRIES, limit: 4 } });
-  await t.checkText(window.endPrefixHash === prefixHash([...head.entries, ...tail.entries], 5003), "true");
+  t.check(window.endPrefixHash, prefixHash([...head.entries, ...tail.entries], 5003));
 });
 
 // ## A short chat qualifies for the title pass, not the summary pass
@@ -410,16 +366,17 @@ void test("Titling is decoupled from the summary gate:", async (t) => {
   const result = await discover(tbox);
   const session = result.qualified[0];
   assert.ok(session);
-  t.check(
-    {
-      needsMetadata: session.needsMetadata,
-      titleSpanChars: session.titleSpanChars > 100,
-      titleBootstrap: session.titleBootstrap,
-    },
-    {
+  t.check(session, {
+    sessionId: "sesschat",
+    huskPath: "_content/chat/web/2026-07-28_sesschat.chat.card",
+    logPath: getSessionLogPath(tbox.root, "sesschat"),
+    mtime: new Date(NOW.getTime() - 5 * HOUR),
+    spanChars: 1061,
+    bootstrap: "no-journal",
     needsMetadata: false,
-    titleSpanChars: true,
+    titleSpanChars: 1061,
     titleBootstrap: "no-journal",
-  },
-  );
+    snippetTitle: "please help me plan a small birthday dinner for saturday. please help me plan a…",
+    userTurns: 2,
+  });
 });
