@@ -35,3 +35,4 @@ export {
   type CheckResult,
   type Extractions,
 } from "../tap-check/text/compare.js";
+export { runCommand, tsxCommand, CommandStartError, type CommandOptions, type CommandResult } from "../observe/command.js";

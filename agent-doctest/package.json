@@ -8,6 +8,7 @@
   },
   "exports": {
     "./check": "./src/exports/check.ts",
+    "./eslint": "./src/exports/eslint.ts",
     "./tap": "./src/tap-check/tap.ts",
     "./loader": "./src/doctest-loader.ts",
     "./hooks": "./src/doctest-hooks/hooks.ts",

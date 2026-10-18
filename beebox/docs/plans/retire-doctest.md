@@ -338,6 +338,56 @@ Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion
     missing key, a wrong leaf type, and `any(String)` in a number position.
   - The three hand-converted beebox tests ported to the final API.
 
+### Track 1a — lint rules and observation helpers
+
+Decided with the boxholder on 2026-10-18, after the generative review:
+- **Lint rules:** "6 is very good, that's really happened".
+- **Observation helpers:** "1 is useful, and should hopefully exist and be
+  adapted".
+
+- **What:** two lint rules, and two helpers that turn an HTTP response or a
+  command run into one checkable value.
+- **Why.**
+  - Agents write `void` in front of a promise-returning check, and lossy
+    checks such as a length, a JSON string, or a boolean.
+    `no-floating-promises` (`personal-vibe-check/preset.ts:718`) does not
+    flag `void x`, which is its documented escape hatch.
+  - Route tests read bodies as `unknown`, so their expected values are never
+    typed.
+  - CLI tests hand-roll their spawns: 178 `spawnSync`/`execFileSync`/`execa`
+    calls in 59 doctests (grep, 2026-10-18). The issue
+    `2026-10-13-shared-helper-spawn-bin-ts-from-doctest` asks for a shared
+    helper.
+- **Direction: lint.** The rules ship from agent-doctest as an ESLint plugin
+  (`agent-doctest/eslint`), enabled on beebox test files.
+  - `agent-doctest/no-voided-check`: `void t.check…(...)` is an error. Await
+    it.
+  - `agent-doctest/check-whole-value` flags these as the actual argument of
+    `t.check`:
+    - a comparison (`a === b`);
+    - `.length` or `.size`;
+    - `JSON.stringify(...)`;
+    - `!`, `!!` or `Boolean(...)`;
+    - `.includes`, `.has`, `.some`, `.every`, `.startsWith` or `.endsWith`.
+
+    Each message names the whole-value form. A field check that really is
+    the contract carries an `eslint-disable-next-line` with its reason,
+    which is the repo's existing exception.
+- **Direction: helpers.**
+  - **HTTP:** `TestServer.request` already returns `{ statusCode, body }` and
+    `rawRequest` returns `{ statusCode, payload, headers }`
+    (`beebox/test/helpers/doctest-server.ts:36-45`). A new `response(opts)`
+    returns `{ status, headers, body }`.
+    - The body stays `unknown`. A schema-parsed variant was built and then
+      dropped, because Zod's `object` parse removes unknown keys and so
+      would hide extra fields from an exact check.
+    - Typed route bodies remain a known gap. tRPC tests are typed through
+      their callers.
+  - **CLI:** a new `runCommand(argv, { cwd, env })` returns `{ exitCode,
+    signal, stdout, stderr }`, and resolves tsx the way the issue describes.
+- **First implementation chunk:** both lint rules with RuleTester tests, and
+  `runCommand` with its test.
+
 ### Track 1b — cutover notice and guard
 
 - **What:** dated, prominent instructions that new tests are `.test.ts` with
@@ -403,6 +453,9 @@ Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion
     `workstreams-app/` frontend/server tests.
   - Keep the existing coverage for beebox `test/`, the root `bin/`, and
     `scan-uploader/`.
+  - The frontend's lint config covers only `src/`
+    (`beebox/src/frontend/eslint.config.ts:147`). Converted frontend tests
+    need lint coverage, including the agent-doctest rules from track 1a.
   - `bin/test-roots.ts` lists each test root with its program. The driver,
     pre-commit, and track 6 use that list.
 - **Direction: the converter.** It is mechanical and exact. It never changes
@@ -505,6 +558,11 @@ Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion
          (the phase 3 worker task).
        - T7: create a record, capture its id with `capture()`, then check a list
          that must contain it.
+     - **Hidden mutants** (from the generative review): each task carries two
+       to four planted bugs in the code under test, each tied to the task's
+       contract. The tests a model writes run against each mutant, and a
+       test that does not fail on a mutant missed it. Results are reported
+       per mutant.
      - Scored per run:
        - whether it passes;
        - assertion strength: whole value or field checks;
@@ -586,6 +644,11 @@ Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion
     One worker per slot makes that check exact.
   - It commits in the slot, and applies that commit to the conversion branch
     serially.
+- **Direction: zero-model path.** A converted file that passes fidelity,
+  lint, and typecheck with no edits lands with no worker. Whether this path
+  is real is measured by track 2's report: the share of files that convert
+  clean. Repeated lint findings of one kind go back into the converter as
+  a fix, not to workers.
 - **Direction: phase 2 worker task.** Make the converted files pass lint and
   typecheck. Assertions are not changed.
   - **Allowed:** rename variables, extract helpers, add types, and remove

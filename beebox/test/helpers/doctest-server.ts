@@ -10,7 +10,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
-import type { FastifyInstance, InjectOptions } from "fastify";
+import type { FastifyInstance, InjectOptions, LightMyRequestResponse } from "fastify";
 import type { EventBus } from "../../src/core/event-bus/core.js";
 import { createTestServer, TEST_SLUG, type TestServerOptions } from "./test-server.js";
 
@@ -44,6 +44,33 @@ export interface RawInjectResult {
   headers: Record<string, string>;
 }
 
+/**
+ * A whole HTTP response as one value for `t.check`: status, headers, and
+ * body. The body is parsed JSON when the response says JSON, else the text.
+ */
+export interface ObservedResponse<B = unknown> {
+  status: number;
+  headers: Record<string, string>;
+  body: B;
+}
+
+/** Options for `TestServer.response`. */
+export interface ResponseOptions {
+  /** Request the URL as given, without the box slug prefix. */
+  root?: boolean;
+}
+
+function observe(res: LightMyRequestResponse): ObservedResponse {
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(res.headers)) {
+    if (value === undefined) continue;
+    headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
+  }
+  const isJson = (headers["content-type"] ?? "").includes("json");
+  const body: unknown = isJson && res.payload !== "" ? res.json() : res.payload;
+  return { status: res.statusCode, headers, body };
+}
+
 export interface TestServer {
   /** Absolute path to the temp box root. */
   boxRoot: string;
@@ -66,6 +93,11 @@ export interface TestServer {
   rootRequest(opts: InjectOpts): Promise<InjectResult>;
   /** Inject and return raw { statusCode, payload, headers } — for non-JSON responses. */
   rawRequest(opts: InjectOpts): Promise<RawInjectResult>;
+  /**
+   * Inject and return the whole response, `{ status, headers, body }`, for
+   * `t.check`. The body is untyped: route handlers declare no response types.
+   */
+  response(opts: InjectOpts, options?: ResponseOptions): Promise<ObservedResponse>;
   /** Write a card file into the test box. */
   seed(relativePath: string, content: string): Promise<void>;
   /**
@@ -110,6 +142,10 @@ export async function makeTestServer(options?: TestServerOptions): Promise<TestS
         payload: res.payload,
         headers,
       };
+    },
+    async response(opts: InjectOpts, responseOptions?: ResponseOptions) {
+      const url = responseOptions?.root === true ? opts.url : `${BASE}${opts.url}`;
+      return observe(await ctx.server.inject(injectOptions(opts, url)));
     },
     async rootRequest(opts: InjectOpts) {
       const res = await ctx.server.inject(injectOptions(opts, opts.url));
