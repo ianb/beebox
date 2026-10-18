@@ -174,6 +174,31 @@ export function checkSdkBinary(deps: Pick<DoctorDeps, "resolveSdkBinary">): Chec
   });
 }
 
+/**
+ * `tsc` is TypeScript 7 (`@typescript/native`) and `tsc6` the 6.0 compatibility
+ * package that the `typescript` name points at for typescript-eslint
+ * (`beebox/docs/implemented-plans/typescript-7.md`). An install that linked them the other
+ * way would typecheck on 6.0 or crash lint, with nothing naming the cause.
+ */
+export async function checkTypescriptCompilers(deps: Pick<DoctorDeps, "run" | "repoRoot">): Promise<CheckResult> {
+  const name = "TypeScript 7 + 6.0";
+  const bin = path.join(deps.repoRoot, "node_modules", ".bin");
+  const [seven, six] = await Promise.all([
+    deps.run(path.join(bin, "tsc"), ["--version"]),
+    deps.run(path.join(bin, "tsc6"), ["--version"]),
+  ]);
+  const sevenVersion = seven.code === 0 ? seven.stdout.trim() : "";
+  const sixVersion = six.code === 0 ? six.stdout.trim() : "";
+  if (sevenVersion.startsWith("Version 7.") && sixVersion.startsWith("Version 6.")) {
+    return pass(name, `tsc ${sevenVersion.slice(8)}, tsc6 ${sixVersion.slice(8)}`);
+  }
+  return fail(name, {
+    detail: `tsc reports "${sevenVersion || "nothing"}", tsc6 reports "${sixVersion || "nothing"}"`,
+    remedy:
+      "run `pnpm install` from the repo root; `@typescript/native` must be typescript 7.x and `typescript` the @typescript/typescript6 package",
+  });
+}
+
 export function checkFrontendBuild(deps: Pick<DoctorDeps, "fileExists" | "repoRoot">): CheckResult {
   const name = "Frontend build";
   const indexHtml = path.join(deps.repoRoot, "beebox", "src", "frontend", "dist", "index.html");

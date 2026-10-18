@@ -3,7 +3,7 @@
  * edges and the other per-module facts the model records. Specifier
  * resolution (turning `specifier` into `target`/`external`) is `resolve.ts`.
  */
-import ts from "typescript";
+import * as ts from "../../../lib/typescript/syntax.js";
 
 /** An import edge before resolution: `target`/`external` are filled in by `resolve.ts`. */
 export interface RawImportEdge {
@@ -20,18 +20,30 @@ export interface ParsedModuleFacts {
   relativePathLiterals: string[];
 }
 
-function scriptKindFor(fileName: string): ts.ScriptKind {
-  return fileName.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-}
+/**
+ * One parser (one TypeScript Go process) for the whole layout run. Layout
+ * commands are short-lived processes, so it lives until the process exits; a
+ * dead child throws on the next parse instead of being restarted.
+ */
+let parser: ts.Parser | undefined;
+
+/**
+ * Trees by file name, then by text. A check parses most files more than once
+ * (9,102 parses of 4,018 files in `layout-check`, 2026-10-17), and a parse
+ * through the Go process costs about twice the in-process 5.x parse. Trees are
+ * only read, so a repeat returns the same tree.
+ */
+const parsed = new Map<string, Map<string, ts.SourceFile>>();
 
 export function parseSourceFile(params: { fileName: string; sourceText: string }): ts.SourceFile {
-  return ts.createSourceFile(
-    params.fileName,
-    params.sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindFor(params.fileName),
-  );
+  const byText = parsed.get(params.fileName) ?? new Map<string, ts.SourceFile>();
+  parsed.set(params.fileName, byText);
+  const cached = byText.get(params.sourceText);
+  if (cached !== undefined) return cached;
+  parser ??= ts.createParser();
+  const sourceFile = parser.parse(params);
+  byText.set(params.sourceText, sourceFile);
+  return sourceFile;
 }
 
 function namesOfImportClause(importClause: ts.ImportClause | undefined): string[] {
@@ -48,7 +60,7 @@ function namesOfImportClause(importClause: ts.ImportClause | undefined): string[
 
 function isTypeOnlyImport(importClause: ts.ImportClause | undefined): boolean {
   if (importClause === undefined) return false;
-  if (importClause.isTypeOnly) return true;
+  if (importClause.phaseModifier === ts.SyntaxKind.TypeKeyword) return true;
   const bindings = importClause.namedBindings;
   if (importClause.name !== undefined || bindings === undefined || !ts.isNamedImports(bindings)) return false;
   return bindings.elements.length > 0 && bindings.elements.every((element) => element.isTypeOnly);
@@ -112,7 +124,7 @@ function walk(node: ts.Node, out: Collected): void {
     const text = node.text;
     if (text.startsWith("./") || text.startsWith("../")) out.relativePathLiterals.push(text);
   }
-  ts.forEachChild(node, (child) => walk(child, out));
+  node.forEachChild((child) => walk(child, out));
 }
 
 function calleeText(expression: ts.Expression, sourceFile: ts.SourceFile): string {

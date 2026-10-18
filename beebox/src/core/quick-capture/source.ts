@@ -20,6 +20,7 @@ import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.j
 import { quickCaptureDeclarationSchema } from "../../shared/quick-capture.js";
 import { captureDirectory, readCapture, withCaptureLock, writeCapture, QuickCaptureError, type CaptureRecord } from "./store.js";
 import { ensureIncomingDir, INCOMING_DIR } from "../incoming.js";
+import { PLACEHOLDER_TITLE } from "./filing.js";
 import type { QuickCaptureDeclaration } from "../../shared/quick-capture.js";
 
 const CAPTURES_DIR = "_content/captures";
@@ -121,7 +122,7 @@ export async function materializeCaptureSource(boxRoot: string, record: CaptureR
     const material = declaration.material;
     let body = declaration.input === undefined ? "" : neutralizeIngestedMarkdown(declaration.input);
     const fields: Record<string, unknown> = {
-      title: material?.kind === "audio" ? "Voice note" : "Saved capture",
+      title: material?.kind === "audio" ? "Voice note" : PLACEHOLDER_TITLE,
       "share-id": record.id, via: { channel: declaration.source },
     };
     if (material?.kind === "url") fields["sources"] = [{ href: material.url, ...(material.title === undefined ? {} : { label: material.title }) }];

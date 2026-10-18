@@ -46,7 +46,7 @@ public final class UploadFolderStore: ObservableObject {
     public private(set) var loadFailure: String?
 
     private let storageURL: URL
-    private let log = Logger(subsystem: "run.beebox.mac", category: "uploads")
+    private let log = MacLogger(category: "uploads")
 
     public init(storageURL: URL) {
         self.storageURL = storageURL
@@ -94,7 +94,7 @@ public final class UploadFolderStore: ObservableObject {
             scanTokenNames = snapshot.scanTokenNames
         } catch {
             loadFailure = "\(storageURL.lastPathComponent) could not be read: \(error.localizedDescription)"
-            log.error("upload folders load failed error=\(String(describing: error), privacy: .public)")
+            log.error("upload folders load failed error=\(String(describing: error))")
         }
     }
 
@@ -104,7 +104,7 @@ public final class UploadFolderStore: ObservableObject {
             try FileManager.default.createDirectory(at: storageURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(Snapshot(folders: newFolders, scanTokenNames: newNames)).write(to: storageURL, options: .atomic)
         } catch {
-            log.error("upload folders save failed error=\(String(describing: error), privacy: .public)")
+            log.error("upload folders save failed error=\(String(describing: error))")
             return false
         }
         folders = newFolders

@@ -15,7 +15,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import ts from "typescript";
+import * as ts from "../../../../lib/typescript/syntax.js";
 import type { LayoutFile, PublicSurface } from "../../model.js";
 import { isRecord } from "../../../../shared/is-record.js";
 import { dirOf } from "../../graph.js";
@@ -53,7 +53,7 @@ function findBuildCalls(sourceFile: ts.SourceFile): ts.CallExpression[] {
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "build") {
       calls.push(node);
     }
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(sourceFile);
   return calls;

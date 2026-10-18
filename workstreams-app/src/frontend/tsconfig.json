@@ -3,7 +3,9 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    // The program reaches into ../shared and ../server; nothing emits from it.
+    "rootDir": "../../.."
   },
   "include": ["./**/*", "../shared/**/*", "../server/api/router.ts", "../server/api/trpc.ts", "../server/services.ts"],
   "exclude": ["node_modules", "dist"]

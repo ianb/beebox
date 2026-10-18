@@ -48,7 +48,7 @@ public enum FolderProblem: Error, Equatable, Sendable {
         case .scanTokenUnavailable(let detail): "Could not set up the scanner credential: \(detail)"
         case .credentialNotSaved: "Could not save the scanner credential in the Keychain."
         case .oldUploaderWatching: "The command-line uploader already watches this folder. Remove it with `bin/scan-uploader schedule uninstall` first."
-        case .photos(.accessDenied): "Bee Box has no access to Photos. Allow it in System Settings → Privacy & Security → Photos."
+        case .photos(.accessDenied): "Bee Box Desktop has no access to Photos. Allow it in System Settings → Privacy & Security → Photos."
         case .photos(.albumMissing): "The Photos album is gone."
         case .photos(.failed(let detail)): "Photos export failed: \(detail)"
         }
@@ -102,7 +102,7 @@ public final class UploadCoordinator: ObservableObject {
     /// A box that answered 429 is not asked again before this time, whatever
     /// triggers the next sweep.
     private var notBefore: [PairedBox.ID: Date] = [:]
-    private let log = Logger(subsystem: "run.beebox.mac", category: "uploads")
+    private let log = MacLogger(category: "uploads")
 
     public init(
         folders: UploadFolderStore,
@@ -158,6 +158,7 @@ public final class UploadCoordinator: ObservableObject {
         photosAlbum: PhotosAlbumRef? = nil
     ) async -> FolderProblem? {
         if OldUploaderCheck.conflicts(folderPath: path, plistURL: oldUploaderPlist) {
+            log.warning("watched folder refused reason=old-uploader folder=\(URL(filePath: path).lastPathComponent)")
             return .oldUploaderWatching
         }
         if case .failure(let problem) = await ensureScanToken(for: box) {
@@ -165,6 +166,7 @@ public final class UploadCoordinator: ObservableObject {
         }
         let folder = UploadFolder(id: UUID(), folderPath: path, boxID: box.id, disposition: disposition, photosAlbum: photosAlbum)
         guard folders.add(folder) else { return .credentialNotSaved }
+        log.info("watched folder added folder=\(folder.folder.lastPathComponent) box=\(box.displayHost) after=\(disposition.rawValue) photos=\(photosAlbum != nil)")
         await sweepAll()
         return nil
     }
@@ -183,6 +185,7 @@ public final class UploadCoordinator: ObservableObject {
             forgetScanToken(forBox: folder.boxID)
         }
         statuses[folder.id] = nil
+        log.info("watched folder removed folder=\(folder.folder.lastPathComponent) force=\(force)")
         return .removed
     }
 
@@ -210,7 +213,7 @@ public final class UploadCoordinator: ObservableObject {
     /// box may have revoked it already), then mint a new one.
     public func reconnect(box: PairedBox) async -> FolderProblem? {
         if let failure = await revokeScanToken(forBox: box.id) {
-            log.warning("reconnect: old scan token not revoked: \(failure, privacy: .public)")
+            log.warning("reconnect: old scan token not revoked: \(failure)")
         }
         forgetScanToken(forBox: box.id)
         if case .failure(let problem) = await ensureScanToken(for: box) {
@@ -254,8 +257,15 @@ public final class UploadCoordinator: ObservableObject {
             status.totalSent += summary.uploaded
         }
         let problem = summary.standingProblem.map(FolderProblem.sweep) ?? photosProblem.map(FolderProblem.photos)
-        if let problem, problem != status.problem {
-            log.warning("upload folder problem folder=\(folder.id, privacy: .public) problem=\(String(describing: problem), privacy: .public)")
+        if problem != status.problem {
+            if let problem {
+                log.warning("watched folder problem folder=\(folder.folder.lastPathComponent) problem=\(String(describing: problem))")
+            } else if status.problem != nil {
+                log.info("watched folder problem cleared folder=\(folder.folder.lastPathComponent)")
+            }
+        }
+        if summary.uploaded > 0 || summary.rejectedOnUpload > 0 || summary.errors > 0 || summary.skippedIdentityChanged > 0 {
+            log.info("sweep folder=\(folder.folder.lastPathComponent) box=\(box.displayHost) uploaded=\(summary.uploaded) duplicate=\(summary.duplicate) rejected=\(summary.rejected) newlyRejected=\(summary.rejectedOnUpload) failed=\(summary.errors) unsettled=\(summary.skippedUnsettled) changed=\(summary.skippedIdentityChanged)")
         }
         status.problem = problem
         if summary.uploaded > 0 || !summary.rejectedFileNames.isEmpty {
@@ -294,13 +304,13 @@ public final class UploadCoordinator: ObservableObject {
             guard scanTokens.readToken(for: box.id) == token else { throw PairedBoxCredentialStore.Error.missingToken }
         } catch {
             // The box holds a token this Mac cannot use; take it back.
-            log.error("scan token keychain write failed; revoking name=\(name, privacy: .public)")
+            log.error("scan token keychain write failed; revoking name=\(name)")
             if await revokeAfterFailedSave(box: box, deviceToken: deviceToken, name: name) {
                 forgetScanToken(forBox: box.id)
             }
             return .failure(.credentialNotSaved)
         }
-        log.info("scan token minted name=\(name, privacy: .public)")
+        log.info("scan token minted name=\(name)")
         return .success(())
     }
 
@@ -313,7 +323,7 @@ public final class UploadCoordinator: ObservableObject {
             try await tokenClient.revoke(baseURL: box.baseURL, deviceToken: deviceToken, name: name)
             return true
         } catch {
-            log.error("unsaved scan token not revoked name=\(name, privacy: .public) error=\(String(describing: error), privacy: .public)")
+            log.error("unsaved scan token not revoked name=\(name) error=\(String(describing: error))")
             return false
         }
     }
@@ -336,7 +346,7 @@ public final class UploadCoordinator: ObservableObject {
         do {
             try scanTokens.deleteToken(for: boxID)
         } catch {
-            log.error("scan token keychain delete failed box=\(boxID, privacy: .public)")
+            log.error("scan token keychain delete failed box=\(boxID)")
         }
         folders.setScanTokenName(nil, forBox: boxID)
     }
@@ -356,6 +366,7 @@ public final class UploadCoordinator: ObservableObject {
     }
 
     private func problem(for error: ScanTokenError, box: PairedBox) -> FolderProblem {
+        log.warning("scan token request failed host=\(box.displayHost) error=\(error)")
         switch error {
         case .notOwner:
             return .notOwner

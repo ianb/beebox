@@ -53,7 +53,7 @@ const FieldRule = z.union([RenameRule, ValuesRule, WrapRule]);
  */
 const FIELD_KEY = /^(?:([\w.-]+)(\[]|{})\.)?([\w.-]+)$/;
 
-export const FieldMapSchema = z
+const FieldMapSchema = z
   .object({
     types: z.record(z.string(), z.record(z.string().regex(FIELD_KEY), FieldRule)),
   })

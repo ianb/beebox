@@ -15,8 +15,9 @@
   // `files` takes no globs: every plugin's `plugin.ts` and `view.tsx` emit to
   // dist/plugins/<name>/{plugin,view}.d.ts, the `types` targets of the
   // `./plugins/*` and `./plugins/*/view` exports. `src/types/view-widgets.d.ts`
-  // is the ambient `beebox/view-widgets` a view imports.
-  "include": ["src/plugins/*/plugin.ts", "src/plugins/*/view.tsx", "src/types/view-widgets.d.ts"],
+  // is the ambient `beebox/view-widgets` a view imports; `src/types/css.d.ts`
+  // types the CSS side-effect imports views make (Vite bundles the CSS).
+  "include": ["src/plugins/*/plugin.ts", "src/plugins/*/view.tsx", "src/types/view-widgets.d.ts", "src/types/css.d.ts"],
   // `exclude` is inherited from tsconfig.json unless restated; the base
   // excludes `src/plugins/*/view.tsx`, which this program emits.
   "exclude": ["node_modules", "dist", "src/frontend", "src/schemas/*/list-entry.tsx"],

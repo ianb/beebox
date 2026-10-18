@@ -59,7 +59,7 @@ export const targetStringSchema = z.string().superRefine((value, ctx) => {
   }
 });
 
-export const intentLineSchema = z.object({
+const intentLineSchema = z.object({
   kind: z.literal("intent"),
   at: z.string(),
   id: z.string().min(1),
@@ -72,7 +72,7 @@ export const intentLineSchema = z.object({
 });
 export type IntentLine = z.infer<typeof intentLineSchema>;
 
-export const deliveryLineSchema = z.object({
+const deliveryLineSchema = z.object({
   kind: z.literal("delivery"),
   at: z.string(),
   notificationId: z.string().min(1),

@@ -81,6 +81,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var termSource: DispatchSourceSignal?
 
+    override init() {
+        MacLog.setFileSink { line in AppLogFile.shared.append(line) }
+        super.init()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         // SIGTERM (launchd, `kill`) stops the VM cleanly, then exits. It does
@@ -92,6 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         source.setEventHandler { [weak self] in self?.stopAndExit() }
         source.resume()
         termSource = source
+        appLog("launch version=\(BundleConfig.version) hosting=\(hosting.enabled ? "on" : "off") boxes=\(boxStore.boxes.count) watched=\(uploadFolders.folders.count)")
         hosting.startIfEnabled()
         if !uploadFolders.folders.isEmpty { UploadNotifications.requestPermission() }
         uploadTriggers.start()
@@ -136,10 +142,10 @@ struct BoxIcon: View {
         // never a notification (the design doc's "Uploads stuck" row).
         if uploads.hasStandingProblem, !runtime.isFailedPhase {
             Image(systemName: "exclamationmark.triangle")
-                .accessibilityLabel("Bee Box: an upload folder needs attention")
+                .accessibilityLabel("Bee Box Desktop: a watched folder needs attention")
         } else {
             Image(systemName: runtime.menuIcon)
-                .accessibilityLabel("Bee Box: \(runtime.statusText)")
+                .accessibilityLabel("Bee Box Desktop: \(runtime.statusText)")
         }
     }
 }
@@ -196,9 +202,9 @@ struct BoxMenu: View {
         }
         Divider()
         if let version = updates.available {
-            Button("Update to Bee Box \(version)…") { updates.checkForUpdates() }
+            Button("Update to Bee Box Desktop \(version)…") { updates.checkForUpdates() }
         }
-        Button(runtime.isRunning ? "Stop Box and Quit" : "Quit Bee Box") { quit() }
+        Button(runtime.isRunning ? "Stop Box and Quit" : "Quit Bee Box Desktop") { quit() }
     }
 }
 

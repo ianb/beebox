@@ -51,7 +51,7 @@ const ProcedureValidate = z.object({
 });
 
 /** One step. */
-export const ProcedureStep = z.object({
+const ProcedureStep = z.object({
   id: z.string(),
   description: z.string().optional(),
   precheck: ProcedurePrecheck.optional(),

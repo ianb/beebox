@@ -10,6 +10,7 @@ import { readQuickChatRecord } from "../chat/routing/quick-chat-store.js";
 import { deliveryExpired, type QuickChatRecord } from "../chat/routing/quick-chat-record.js";
 import { submitQuickChat, submitQuickChatFollowup, type QuickChatContext } from "../chat/routing/quick-chat-submit/submit.js";
 import { materializeCaptureSource, writeSourceTranscription, reconcileCaptureSource } from "./source.js";
+import { isWordless, FILING_WAITING_ERROR } from "./filing.js";
 import { captureDirectory, listCaptures, readCapture, withCaptureLock, writeCapture, requireCaptureOwner, QuickCaptureError, type CaptureRecord } from "./store.js";
 
 const RETRY_HORIZON_MS = 7 * 24 * 60 * 60 * 1000;
@@ -110,6 +111,13 @@ async function prepareOriginal(ctx: CaptureWorkerContext, record: CaptureRecord)
   }
   return undefined;
 }
+/** Saved material with no words is requested for filing; Retry starts a fresh set of filing wakeups. */
+function markSaved(ctx: CaptureWorkerContext, record: CaptureRecord): void {
+  record.state = "saved";
+  if (!isWordless(record)) return;
+  record.filingRequested = true;
+  if (ctx.manualRetry === true) { delete record.filingKicks; delete record.filingKickAt; if (record.error === FILING_WAITING_ERROR) delete record.error; }
+}
 function automaticRetryExpired(ctx: CaptureWorkerContext, record: CaptureRecord): boolean {
   return ctx.manualRetry !== true && record.state !== "sent" && record.state !== "saved" && record.state !== "needs-choice"
     && getBoxTime(ctx.boxRoot).getTime() - Date.parse(record.acceptedAt) > RETRY_HORIZON_MS;
@@ -124,7 +132,7 @@ async function processLocked(ctx: CaptureWorkerContext, record: CaptureRecord): 
     transcriptionProblem = await prepareOriginal(ctx, record);
     const input = record.declaration.input?.trim() || record.transcript?.trim();
     if (input === undefined || input === "") {
-      record.state = "saved";
+      markSaved(ctx, record);
     } else {
       let sourceRef = record.sourceRef;
       let retainedRecording = record.declaration.material?.kind === "audio";

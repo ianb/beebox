@@ -8,7 +8,7 @@ import { BOX_DIRS } from "../lib/paths/core.js";
 
 export const CODEX_USAGE_REL_PATH = `${BOX_DIRS.usage}/codex-turns.jsonl`;
 
-export const codexTokenUsageSchema = z.object({
+const codexTokenUsageSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
   cachedInputTokens: z.number().int().nonnegative(),
   cacheWriteInputTokens: z.number().int().nonnegative(),

@@ -10,7 +10,7 @@
  * Anything not in this set — MCP tools (`mcp__server__tool`), future built-ins —
  * is an "unknown" tool each site handles via its own explicit fallback.
  */
-export const KNOWN_TOOL_NAMES = [
+const KNOWN_TOOL_NAMES = [
   "Read",
   "Write",
   "Edit",

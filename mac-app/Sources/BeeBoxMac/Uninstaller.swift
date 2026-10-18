@@ -1,6 +1,6 @@
 import AppKit
 
-/// "Uninstall Bee Box…": stops the box, deletes what the app keeps outside
+/// "Uninstall Bee Box Desktop…": stops the box, deletes what the app keeps outside
 /// its bundle, and moves the app to the Trash. Boxes are the user's data, so
 /// they stay unless the user ticks the checkbox, and then they go to the Trash
 /// rather than being deleted. Shared data is deleted outright so the space
@@ -27,11 +27,11 @@ enum Uninstaller {
         let boxes = boxFolders()
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Uninstall Bee Box?"
+        alert.messageText = "Uninstall Bee Box Desktop?"
         alert.informativeText = """
-            This stops your box, deletes Bee Box's shared data (\(sizeText(of: Paths.support))): the downloaded \
+            This stops your box, deletes Bee Box Desktop's shared data (\(sizeText(of: Paths.support))): the downloaded \
             image, accounts, agent sign-ins, logs, and the paired boxes and their credentials. Then it moves \
-            Bee Box to the Trash.
+            Bee Box Desktop to the Trash.
 
             Your boxes in \(displayPath(Paths.boxes)) are kept unless you choose otherwise.
             """
@@ -88,7 +88,7 @@ enum Uninstaller {
             }
             if !failures.isEmpty || !unrevoked.isEmpty {
                 let report = NSAlert()
-                report.messageText = "Bee Box could not remove everything"
+                report.messageText = "Bee Box Desktop could not remove everything"
                 var text = ""
                 if !failures.isEmpty {
                     text += "Remove these by hand:\n\n" + failures.joined(separator: "\n")

@@ -92,10 +92,34 @@ export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
   return { mode, boxRoot: resolvedRoot };
 }
 
+const NATIVE_ALIAS_PREFIX = "npm:typescript@";
+
+/** The engine's `@typescript/native` dependency is missing or not an `npm:typescript@` alias. */
+class EngineTypescriptAliasError extends Error {
+  readonly spec: string | undefined;
+  constructor(spec: string | undefined) {
+    super(`Expected @typescript/native to be "${NATIVE_ALIAS_PREFIX}<range>" in the engine's dependencies, found ${spec ?? "nothing"}`);
+    this.name = "EngineTypescriptAliasError";
+    this.spec = spec;
+  }
+}
+
+/** `npm:typescript@7.0.2` → `7.0.2`. */
+function boxTypescriptRange(spec: string | undefined): string {
+  if (spec?.startsWith(NATIVE_ALIAS_PREFIX) !== true || spec.length === NATIVE_ALIAS_PREFIX.length) {
+    throw new EngineTypescriptAliasError(spec);
+  }
+  return spec.slice(NATIVE_ALIAS_PREFIX.length);
+}
+
 interface EngineVersions {
   /** The engine's own package version, to pin the scaffolded `beebox` dependency. */
   engine: string;
-  /** `typescript`'s version range, read from the engine's own `dependencies`. */
+  /**
+   * `typescript`'s version range: the TypeScript 7 version the engine runs
+   * (its `@typescript/native` alias). A box has no typescript-eslint, so it
+   * uses the plain name.
+   */
   typescript: string;
   /** `@types/node`'s version range, read from the engine's own `devDependencies`. */
   typesNode: string;
@@ -129,7 +153,7 @@ async function readEngineVersions(): Promise<EngineVersions> {
   const frontend = FrontendPackageJsonSchema.parse(JSON.parse(rawFrontend));
   return {
     engine: engine.version ?? "0.0.0",
-    typescript: engine.dependencies?.typescript ?? "^5.7.0",
+    typescript: boxTypescriptRange(engine.dependencies?.["@typescript/native"]),
     typesNode: engine.devDependencies?.["@types/node"] ?? "^22.0.0",
     typesReact: frontend.devDependencies?.["@types/react"] ?? "^18.3.0",
     react: engine.dependencies?.react ?? "^18.3.1",
