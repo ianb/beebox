@@ -1,6 +1,6 @@
 ---
 title: "Retire doctest: TypeScript tests with a typed check()"
-status: draft
+status: partial
 workstream: doctest-typecheck
 issues:
   - ../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md
