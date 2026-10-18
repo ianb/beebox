@@ -528,6 +528,7 @@ void test("A crash after send() resolved (the message reached the transcript) bu
 
   // doctest:L448
   // First run: send lands the message, then "crashes" before the delivered write.
+  // The simulated crash makes this call reject; the test only needs the state it leaves behind.
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: scriptedSend }).catch(() => {});
   t.check(sendCount, 1);
 
