@@ -17,6 +17,9 @@
  *       Run one worker on the batch's unverified files in a free slot, then
  *       apply and verify its edits here. Exits 1 when the batch is rejected.
  *       With --trial, check the edits in the slot and apply nothing.
+ *   node --import tsx bin/doctest-convert.ts revert <dir|file>...
+ *       Undo the conversion of each selected file that is not verified (its
+ *       doctest returns), so only verified files are left to commit.
  *   node --import tsx bin/doctest-convert.ts progress
  *       Rewrite bin/doctest-convert/PROGRESS.md.
  *
@@ -28,6 +31,7 @@ import { dispatch, initSlots, type Model } from "./doctest-convert/dispatch.ts";
 import { stateLockPath, withLock } from "./doctest-convert/locks.ts";
 import { DriverError, ModelArgError, NothingConvertedError, PrepareArgsError, UnknownCommandError, VerifyArgsError } from "./doctest-convert/errors.ts";
 import { prepare } from "./doctest-convert/prepare.ts";
+import { revert } from "./doctest-convert/revert.ts";
 import { loadAll, writeProgress } from "./doctest-convert/state.ts";
 import { REPO } from "./doctest-convert/tools.ts";
 import { select, verify, type Selected } from "./doctest-convert/verify.ts";
@@ -88,6 +92,14 @@ function main(argv: readonly string[]): boolean {
       else console.log(result.checkOutput);
       for (const r of result.reasons) console.log(`rejected: ${r}`);
       return result.accepted;
+    }
+    case "revert": {
+      if (paths.length === 0) throw new VerifyArgsError();
+      return withLock(stateLockPath(), () => {
+        for (const d of revert(select(paths))) console.log(`reverted ${d}`);
+        writeProgress(loadAll());
+        return true;
+      });
     }
     case "progress": {
       writeProgress(loadAll());

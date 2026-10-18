@@ -1,0 +1,3435 @@
+{
+ "dir": "bin",
+ "files": {
+  "bin/test/agent-quotas.doctest.md": {
+   "test": "bin/test/agent-quotas.test.ts",
+   "blob": "558e32bbd34488858d4dd3b66acf5abbb0fc6e05",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 29,
+     "kind": "check"
+    },
+    {
+     "line": 72,
+     "kind": "check"
+    },
+    {
+     "line": 84,
+     "kind": "check"
+    },
+    {
+     "line": 106,
+     "kind": "check"
+    },
+    {
+     "line": 127,
+     "kind": "check"
+    },
+    {
+     "line": 154,
+     "kind": "check"
+    },
+    {
+     "line": 184,
+     "kind": "check"
+    },
+    {
+     "line": 221,
+     "kind": "check"
+    },
+    {
+     "line": 248,
+     "kind": "check"
+    },
+    {
+     "line": 288,
+     "kind": "statement"
+    },
+    {
+     "line": 313,
+     "kind": "check"
+    },
+    {
+     "line": 328,
+     "kind": "statement"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "29": [
+     {
+      "method": "check",
+      "actual": "f596bab739d7f192",
+      "expected": "f4a9405292cde9e6",
+      "line": 58
+     }
+    ],
+    "72": [
+     {
+      "method": "check",
+      "actual": "2718fe123f7e3c2f",
+      "expected": "c0d82cff5a01a9e6",
+      "line": 105
+     }
+    ],
+    "84": [
+     {
+      "method": "check",
+      "actual": "d58921d11ccad89e",
+      "expected": "5fb1a465c5a929fa",
+      "line": 134
+     }
+    ],
+    "106": [
+     {
+      "method": "check",
+      "actual": "2a73dac1a8e6e839",
+      "expected": "cc3e396f62dbe733",
+      "line": 166
+     }
+    ],
+    "127": [
+     {
+      "method": "check",
+      "actual": "f5b09b007d7612fd",
+      "expected": "a5fd316742538352",
+      "line": 201
+     }
+    ],
+    "154": [
+     {
+      "method": "check",
+      "actual": "352250c39b53c985",
+      "expected": "5e0d70b7c874fa7b",
+      "line": 246
+     }
+    ],
+    "184": [
+     {
+      "method": "check",
+      "actual": "1b9701c25a6a7d40",
+      "expected": "2cbf9d6bc4ff725c",
+      "line": 287
+     }
+    ],
+    "221": [
+     {
+      "method": "check",
+      "actual": "79463843d034e207",
+      "expected": "055bc66ba6bdd7f4",
+      "line": 320
+     }
+    ],
+    "248": [
+     {
+      "method": "check",
+      "actual": "a3fc6b13b51d81c0",
+      "expected": "6f86b07d0a366d37",
+      "line": 365
+     }
+    ],
+    "313": [
+     {
+      "method": "check",
+      "actual": "33da147a9030f8ba",
+      "expected": "785f3ec7eb32f30b",
+      "line": 421
+     }
+    ]
+   },
+   "assertions": 19,
+   "expectedAssertions": 19,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/assign-issue-workstream.doctest.md": {
+   "test": "bin/test/assign-issue-workstream.test.ts",
+   "blob": "019b18071430cb1e1d0cd920cc985a338374f8db",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 11,
+     "kind": "check"
+    },
+    {
+     "line": 15,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "11": [
+     {
+      "method": "check",
+      "actual": "8850bfc2ced7bb9c",
+      "expected": "4dfa70e9e0b528c5",
+      "line": 13
+     }
+    ],
+    "15": [
+     {
+      "method": "check",
+      "actual": "3e1d87540be5617b",
+      "expected": "8d86d470d616147d",
+      "line": 24
+     }
+    ]
+   },
+   "assertions": 3,
+   "expectedAssertions": 3,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/claude-quota-cleanup.doctest.md": {
+   "test": "bin/test/claude-quota-cleanup.test.ts",
+   "blob": "12068708ce78dae7d1c309348a80ba9ec2da7ccb",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 21,
+     "kind": "check"
+    },
+    {
+     "line": 43,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "21": [
+     {
+      "method": "check",
+      "actual": "1905a5cda79ad152",
+      "expected": "e44973749a38f856",
+      "line": 37
+     }
+    ],
+    "43": [
+     {
+      "method": "check",
+      "actual": "6a047a5ddcf71c35",
+      "expected": "b5bea41b6c623f7c",
+      "line": 62
+     }
+    ]
+   },
+   "assertions": 4,
+   "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/coding-feedback.doctest.md": {
+   "test": "bin/test/coding-feedback.test.ts",
+   "blob": "0f16a78a00f9b77e2cfc27531042eba24bace2d7",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 126,
+     "kind": "check"
+    },
+    {
+     "line": 157,
+     "kind": "check"
+    },
+    {
+     "line": 174,
+     "kind": "check"
+    },
+    {
+     "line": 199,
+     "kind": "check"
+    },
+    {
+     "line": 226,
+     "kind": "check"
+    },
+    {
+     "line": 251,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "126": [
+     {
+      "method": "check",
+      "actual": "a591a2f088072a41",
+      "expected": "510df9840e9414ce",
+      "line": 130
+     }
+    ],
+    "157": [
+     {
+      "method": "check",
+      "actual": "03d05d9ffd8a6304",
+      "expected": "1313b81907e1a954",
+      "line": 193
+     }
+    ],
+    "174": [
+     {
+      "method": "check",
+      "actual": "3a2faf947546f179",
+      "expected": "9cefb398f87ec5b8",
+      "line": 229
+     }
+    ],
+    "199": [
+     {
+      "method": "check",
+      "actual": "bdb4e231e1dddc8c",
+      "expected": "5f79305128148e3d",
+      "line": 272
+     }
+    ],
+    "226": [
+     {
+      "method": "check",
+      "actual": "058cbe4ab99a60fa",
+      "expected": "946730e896d07f62",
+      "line": 306
+     }
+    ],
+    "251": [
+     {
+      "method": "check",
+      "actual": "34b9082a901e35ee",
+      "expected": "f4faa5047a5d9ddf",
+      "line": 351
+     }
+    ]
+   },
+   "assertions": 12,
+   "expectedAssertions": 12,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L126, line 133",
+    "at doctest:L226, line 309"
+   ]
+  },
+  "bin/test/comments-exhibit.doctest.md": {
+   "test": "bin/test/comments-exhibit.test.ts",
+   "blob": "ddbfa3bd01c488d7e772ebd2e10aeb93800503dc",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 46,
+     "kind": "check"
+    },
+    {
+     "line": 53,
+     "kind": "check"
+    },
+    {
+     "line": 63,
+     "kind": "check"
+    },
+    {
+     "line": 74,
+     "kind": "check"
+    },
+    {
+     "line": 84,
+     "kind": "check"
+    },
+    {
+     "line": 94,
+     "kind": "check"
+    },
+    {
+     "line": 106,
+     "kind": "check"
+    },
+    {
+     "line": 115,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "46": [
+     {
+      "method": "check",
+      "actual": "e3577028eabf7187",
+      "expected": "ac298d81c27720d4",
+      "line": 48
+     }
+    ],
+    "53": [
+     {
+      "method": "check",
+      "actual": "5a4b9ad9ee436396",
+      "expected": "b7de6f0708d55963",
+      "line": 61
+     }
+    ],
+    "63": [
+     {
+      "method": "check",
+      "actual": "70de8b3186f8b4bb",
+      "expected": "d674ca235ba6a46e",
+      "line": 77
+     }
+    ],
+    "74": [
+     {
+      "method": "check",
+      "actual": "1489e8e687f7e4e0",
+      "expected": "e2d4c57e03fc30c9",
+      "line": 87
+     }
+    ],
+    "84": [
+     {
+      "method": "check",
+      "actual": "feed728a5491292e",
+      "expected": "baca48caf167dc3c",
+      "line": 101
+     }
+    ],
+    "94": [
+     {
+      "method": "check",
+      "actual": "d9891d8176b2f5ce",
+      "expected": "e8c90fc15cc99465",
+      "line": 124
+     }
+    ],
+    "106": [
+     {
+      "method": "check",
+      "actual": "51cb497e8bcabcf7",
+      "expected": "bc5705bc8295b8c8",
+      "line": 136
+     }
+    ],
+    "115": [
+     {
+      "method": "check",
+      "actual": "872324527c924089",
+      "expected": "8707d13271ab967a",
+      "line": 146
+     }
+    ]
+   },
+   "assertions": 9,
+   "expectedAssertions": 9,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L84, line 101"
+   ]
+  },
+  "bin/test/comments-mount.doctest.md": {
+   "test": "bin/test/comments-mount.test.ts",
+   "blob": "cb8564d6624a2787c1c36548aac43a9f8a3d421b",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 59,
+     "kind": "check"
+    },
+    {
+     "line": 73,
+     "kind": "statement"
+    },
+    {
+     "line": 78,
+     "kind": "statement"
+    },
+    {
+     "line": 83,
+     "kind": "check"
+    },
+    {
+     "line": 100,
+     "kind": "check"
+    },
+    {
+     "line": 113,
+     "kind": "check"
+    },
+    {
+     "line": 132,
+     "kind": "check"
+    },
+    {
+     "line": 152,
+     "kind": "check"
+    },
+    {
+     "line": 161,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "59": [
+     {
+      "method": "check",
+      "actual": "6704cfb861387e85",
+      "expected": "4dab544ff7d3b064",
+      "line": 63
+     }
+    ],
+    "83": [
+     {
+      "method": "check",
+      "actual": "4fcfadf9a8ea90a3",
+      "expected": "2c0a93ce6a1df04e",
+      "line": 96
+     }
+    ],
+    "100": [
+     {
+      "method": "check",
+      "actual": "3ac8d48f90c785ea",
+      "expected": "770abd101c34f8b0",
+      "line": 110
+     }
+    ],
+    "113": [
+     {
+      "method": "check",
+      "actual": "a98691dd02ecbd4d",
+      "expected": "d7714d03960be7a0",
+      "line": 129
+     }
+    ],
+    "132": [
+     {
+      "method": "check",
+      "actual": "6210beb8c161f296",
+      "expected": "aa08351726c1b388",
+      "line": 148
+     }
+    ],
+    "152": [
+     {
+      "method": "check",
+      "actual": "d675c178814122f3",
+      "expected": "d19243580cad4e30",
+      "line": 178
+     }
+    ],
+    "161": [
+     {
+      "method": "check",
+      "actual": "e61a3d78c65133c7",
+      "expected": "b5bea41b6c623f7c",
+      "line": 188
+     }
+    ]
+   },
+   "assertions": 11,
+   "expectedAssertions": 11,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/commit-blocklist-check.doctest.md": {
+   "test": "bin/test/commit-blocklist-check.test.ts",
+   "blob": "8d9f48dc3534976cf3f2ef9f439c43878958a339",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 12,
+     "kind": "check"
+    },
+    {
+     "line": 19,
+     "kind": "check"
+    },
+    {
+     "line": 26,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "12": [
+     {
+      "method": "check",
+      "actual": "01c97aa6bbe03a39",
+      "expected": "f8cb311b4394948e",
+      "line": 13
+     }
+    ],
+    "19": [
+     {
+      "method": "check",
+      "actual": "7a1e429a36f375bc",
+      "expected": "cebd86978a1beacc",
+      "line": 26
+     }
+    ],
+    "26": [
+     {
+      "method": "check",
+      "actual": "9e33b6ee10ad05e4",
+      "expected": "3754a93d965f1920",
+      "line": 38
+     }
+    ]
+   },
+   "assertions": 4,
+   "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/confirm-tested.doctest.md": {
+   "test": "bin/test/confirm-tested.test.ts",
+   "blob": "aa7c7c1658b825b3ac9eebb59874068a830c4bc0",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 19,
+     "kind": "statement"
+    },
+    {
+     "line": 41,
+     "kind": "statement"
+    },
+    {
+     "line": 55,
+     "kind": "statement"
+    },
+    {
+     "line": 75,
+     "kind": "statement"
+    },
+    {
+     "line": 95,
+     "kind": "statement"
+    },
+    {
+     "line": 122,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "122": [
+     {
+      "method": "check",
+      "actual": "3aa7c6765a5dabda",
+      "expected": "12ae32cb1ec02d01",
+      "line": 143
+     }
+    ]
+   },
+   "assertions": 5,
+   "expectedAssertions": 5,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/dev-apps-typecheck.doctest.md": {
+   "test": "bin/test/dev-apps-typecheck.test.ts",
+   "blob": "eee3fc29d441b66355d0dffeab18d0c583446a13",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 56,
+     "kind": "statement"
+    },
+    {
+     "line": 61,
+     "kind": "statement"
+    },
+    {
+     "line": 64,
+     "kind": "check"
+    },
+    {
+     "line": 80,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "64": [
+     {
+      "method": "check",
+      "actual": "3c79bfc406f76981",
+      "expected": "a060f02b785f8242",
+      "line": 70
+     }
+    ],
+    "80": [
+     {
+      "method": "check",
+      "actual": "20d03363b0f493e0",
+      "expected": "0ea46c856f5e0ab6",
+      "line": 96
+     }
+    ]
+   },
+   "assertions": 4,
+   "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/doc-lifecycle-check.doctest.md": {
+   "test": "bin/test/doc-lifecycle-check.test.ts",
+   "blob": "4d64a7e8d908b2892f4c985dd3a11fa13390d858",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 58,
+     "kind": "check"
+    },
+    {
+     "line": 82,
+     "kind": "check"
+    },
+    {
+     "line": 107,
+     "kind": "check"
+    },
+    {
+     "line": 130,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "58": [
+     {
+      "method": "check",
+      "actual": "2fe433360851beaf",
+      "expected": "45f72bfe6bba8cfd",
+      "line": 73
+     }
+    ],
+    "82": [
+     {
+      "method": "check",
+      "actual": "50c170acfc3248e8",
+      "expected": "1c978ff54cb6e202",
+      "line": 98
+     }
+    ],
+    "107": [
+     {
+      "method": "check",
+      "actual": "1b3f71de06886a8b",
+      "expected": "e0ad5358578bc736",
+      "line": 126
+     }
+    ],
+    "130": [
+     {
+      "method": "check",
+      "actual": "d06775690800c760",
+      "expected": "603f0d1228647528",
+      "line": 154
+     }
+    ]
+   },
+   "assertions": 8,
+   "expectedAssertions": 8,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/doctest-typecheck-staged.doctest.md": {
+   "test": "bin/test/doctest-typecheck-staged.test.ts",
+   "blob": "b1d874fa9a19662751412160b5e2638bc745bfaa",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 20,
+     "kind": "check"
+    },
+    {
+     "line": 28,
+     "kind": "check"
+    },
+    {
+     "line": 36,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "20": [
+     {
+      "method": "check",
+      "actual": "0925fc7de4899dba",
+      "expected": "c23f5bd11e8f14f9",
+      "line": 20
+     }
+    ],
+    "28": [
+     {
+      "method": "check",
+      "actual": "9cbf0c0ce9cc6fc4",
+      "expected": "9f8d0e5c9aadd1d1",
+      "line": 31
+     }
+    ],
+    "36": [
+     {
+      "method": "check",
+      "actual": "bcbab89dfec1b85c",
+      "expected": "74234e98afe7498f",
+      "line": 38
+     }
+    ]
+   },
+   "assertions": 6,
+   "expectedAssertions": 6,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/exhibits.cli.doctest.md": {
+   "test": "bin/test/exhibits.cli.test.ts",
+   "blob": "6320c49c46ecc6deeb8f1ef9238ab2f125dfc392",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 77,
+     "kind": "check"
+    },
+    {
+     "line": 109,
+     "kind": "check"
+    },
+    {
+     "line": 124,
+     "kind": "check"
+    },
+    {
+     "line": 171,
+     "kind": "check"
+    },
+    {
+     "line": 191,
+     "kind": "check"
+    },
+    {
+     "line": 216,
+     "kind": "check"
+    },
+    {
+     "line": 246,
+     "kind": "check"
+    },
+    {
+     "line": 277,
+     "kind": "check"
+    },
+    {
+     "line": 304,
+     "kind": "check"
+    },
+    {
+     "line": 324,
+     "kind": "check"
+    },
+    {
+     "line": 344,
+     "kind": "check"
+    },
+    {
+     "line": 363,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "77": [
+     {
+      "method": "check",
+      "actual": "7ffda4db05d85514",
+      "expected": "d9f68d5fbfbe8996",
+      "line": 87
+     }
+    ],
+    "109": [
+     {
+      "method": "check",
+      "actual": "435fcf95c3e9856f",
+      "expected": "256ea87949266166",
+      "line": 138
+     }
+    ],
+    "124": [
+     {
+      "method": "check",
+      "actual": "bc6d824db71418a8",
+      "expected": "6c5a25e886e9921a",
+      "line": 174
+     }
+    ],
+    "171": [
+     {
+      "method": "check",
+      "actual": "e415b229236c4d4b",
+      "expected": "4e93655438f8e410",
+      "line": 216
+     }
+    ],
+    "191": [
+     {
+      "method": "check",
+      "actual": "8fbc7c2e6d621f9a",
+      "expected": "8b16f983d06df935",
+      "line": 244
+     }
+    ],
+    "216": [
+     {
+      "method": "check",
+      "actual": "b412cdfcce305d9a",
+      "expected": "d02465d1bef05b20",
+      "line": 295
+     }
+    ],
+    "246": [
+     {
+      "method": "check",
+      "actual": "3caf99bf03fb36c8",
+      "expected": "46a8016d61103131",
+      "line": 352
+     }
+    ],
+    "277": [
+     {
+      "method": "check",
+      "actual": "784c7c8204a71ae5",
+      "expected": "7a6a37ea0a19b5d2",
+      "line": 408
+     }
+    ],
+    "304": [
+     {
+      "method": "check",
+      "actual": "d368c5e426f60306",
+      "expected": "4b2f2196f0207753",
+      "line": 442
+     }
+    ],
+    "324": [
+     {
+      "method": "check",
+      "actual": "f5a88002e2d49ae3",
+      "expected": "b8dd445ae84a10cf",
+      "line": 480
+     }
+    ],
+    "344": [
+     {
+      "method": "check",
+      "actual": "2d7c5a2f70c80a20",
+      "expected": "81feac7a7c12fb14",
+      "line": 513
+     }
+    ],
+    "363": [
+     {
+      "method": "check",
+      "actual": "61ff2e665b25dcc9",
+      "expected": "e25cfcd0289b7b8f",
+      "line": 543
+     }
+    ]
+   },
+   "assertions": 24,
+   "expectedAssertions": 24,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/finish-preflight-merge.doctest.md": {
+   "test": "bin/test/finish-preflight-merge.test.ts",
+   "blob": "c4a2ea2a8b9f735bfdc137bcbe9061e4a4b4206b",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 64,
+     "kind": "check"
+    },
+    {
+     "line": 77,
+     "kind": "check"
+    },
+    {
+     "line": 88,
+     "kind": "check"
+    },
+    {
+     "line": 103,
+     "kind": "check"
+    },
+    {
+     "line": 129,
+     "kind": "check"
+    },
+    {
+     "line": 144,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "64": [
+     {
+      "method": "checkText",
+      "actual": "fd1000a8b5614ad7",
+      "expected": "e5f5b9b20016e768",
+      "line": 72
+     }
+    ],
+    "77": [
+     {
+      "method": "check",
+      "actual": "79827500db12e67f",
+      "expected": "5036a75f739da9f9",
+      "line": 89
+     }
+    ],
+    "88": [
+     {
+      "method": "check",
+      "actual": "d1d853ee591f0de2",
+      "expected": "74234e98afe7498f",
+      "line": 103
+     }
+    ],
+    "103": [
+     {
+      "method": "checkText",
+      "actual": "9fb9232749e487c3",
+      "expected": "0f50de9f850134e9",
+      "line": 135
+     }
+    ],
+    "129": [
+     {
+      "method": "checkText",
+      "actual": "20213cd239de4f91",
+      "expected": "10beeeb208e7f67c",
+      "line": 140
+     }
+    ],
+    "144": [
+     {
+      "method": "check",
+      "actual": "79d32dbeaf9b0d57",
+      "expected": "8fadec8e876abffc",
+      "line": 162
+     }
+    ]
+   },
+   "assertions": 11,
+   "expectedAssertions": 11,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/finish-preflight.doctest.md": {
+   "test": "bin/test/finish-preflight.test.ts",
+   "blob": "a2bb9bbfcc564f16f340f6ffdfcd287de98e04af",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 55,
+     "kind": "statement"
+    },
+    {
+     "line": 72,
+     "kind": "check"
+    },
+    {
+     "line": 86,
+     "kind": "check"
+    },
+    {
+     "line": 94,
+     "kind": "statement"
+    },
+    {
+     "line": 104,
+     "kind": "check"
+    },
+    {
+     "line": 122,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "72": [
+     {
+      "method": "check",
+      "actual": "8c57a02b99bd9b10",
+      "expected": "d10ef68596afd283",
+      "line": 83
+     }
+    ],
+    "86": [
+     {
+      "method": "check",
+      "actual": "583edf3ab40c5183",
+      "expected": "8bbd91ec351544c2",
+      "line": 96
+     }
+    ],
+    "104": [
+     {
+      "method": "check",
+      "actual": "518aa89c6ee4249c",
+      "expected": "ef205c6ab380837d",
+      "line": 121
+     }
+    ],
+    "122": [
+     {
+      "method": "check",
+      "actual": "7d77135a375e4d7a",
+      "expected": "20db496cff9d5a9c",
+      "line": 145
+     }
+    ]
+   },
+   "assertions": 5,
+   "expectedAssertions": 5,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/finish-verify.doctest.md": {
+   "test": "bin/test/finish-verify.test.ts",
+   "blob": "a13db770303067a0ae17ee112c7319577a1ccb38",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 48,
+     "kind": "check"
+    },
+    {
+     "line": 57,
+     "kind": "check"
+    },
+    {
+     "line": 64,
+     "kind": "statement"
+    },
+    {
+     "line": 77,
+     "kind": "statement"
+    },
+    {
+     "line": 96,
+     "kind": "check"
+    },
+    {
+     "line": 106,
+     "kind": "check"
+    },
+    {
+     "line": 135,
+     "kind": "statement"
+    },
+    {
+     "line": 149,
+     "kind": "statement"
+    },
+    {
+     "line": 164,
+     "kind": "check"
+    },
+    {
+     "line": 195,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "48": [
+     {
+      "method": "check",
+      "actual": "3f96ceddc1ecb537",
+      "expected": "a1990819a66d5c6e",
+      "line": 59
+     }
+    ],
+    "57": [
+     {
+      "method": "check",
+      "actual": "568a439778a96d49",
+      "expected": "a12033e984541b14",
+      "line": 71
+     }
+    ],
+    "96": [
+     {
+      "method": "check",
+      "actual": "5694d08a2e53ffca",
+      "expected": "d6f0c71ef0c88e45",
+      "line": 110
+     }
+    ],
+    "106": [
+     {
+      "method": "check",
+      "actual": "0d3221b5e5cfa20d",
+      "expected": "d6f0c71ef0c88e45",
+      "line": 136
+     }
+    ],
+    "164": [
+     {
+      "method": "checkText",
+      "actual": "e0d5edce8d11abb8",
+      "expected": "7c126c6c79e859aa",
+      "line": 194
+     }
+    ],
+    "195": [
+     {
+      "method": "checkText",
+      "actual": "fd1a56b72caaee4a",
+      "expected": "4e38763e9a6a304b",
+      "line": 214
+     }
+    ]
+   },
+   "assertions": 13,
+   "expectedAssertions": 13,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/auto-sweep-detach.doctest.md": {
+   "test": "bin/test/lib/auto-sweep-detach.test.ts",
+   "blob": "f2f491a720b3ca7a50b68d3dafe8cd62d7103e9b",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 73,
+     "kind": "statement"
+    },
+    {
+     "line": 78,
+     "kind": "check"
+    },
+    {
+     "line": 94,
+     "kind": "statement"
+    },
+    {
+     "line": 101,
+     "kind": "check"
+    },
+    {
+     "line": 113,
+     "kind": "statement"
+    },
+    {
+     "line": 119,
+     "kind": "check"
+    },
+    {
+     "line": 132,
+     "kind": "statement"
+    },
+    {
+     "line": 147,
+     "kind": "check"
+    },
+    {
+     "line": 166,
+     "kind": "statement"
+    },
+    {
+     "line": 173,
+     "kind": "check"
+    },
+    {
+     "line": 192,
+     "kind": "statement"
+    },
+    {
+     "line": 200,
+     "kind": "statement"
+    },
+    {
+     "line": 213,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "78": [
+     {
+      "method": "check",
+      "actual": "e166b6bac99d9f6b",
+      "expected": "98947be9f68f226e",
+      "line": 87
+     }
+    ],
+    "101": [
+     {
+      "method": "check",
+      "actual": "4449720975e125d5",
+      "expected": "b5bea41b6c623f7c",
+      "line": 116
+     }
+    ],
+    "119": [
+     {
+      "method": "check",
+      "actual": "da3d569c8adc140f",
+      "expected": "afb07343c4c96769",
+      "line": 133
+     }
+    ],
+    "147": [
+     {
+      "method": "check",
+      "actual": "abab1cd6e720f1e1",
+      "expected": "08207127a4dac80a",
+      "line": 169
+     }
+    ],
+    "173": [
+     {
+      "method": "check",
+      "actual": "585b3ed49f24e455",
+      "expected": "b5bea41b6c623f7c",
+      "line": 197
+     }
+    ],
+    "213": [
+     {
+      "method": "check",
+      "actual": "c08e5db69c664fb6",
+      "expected": "6528083855fa0a64",
+      "line": 237
+     }
+    ]
+   },
+   "assertions": 7,
+   "expectedAssertions": 7,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/briefing-sigils.doctest.md": {
+   "test": "bin/test/lib/briefing-sigils.test.ts",
+   "blob": "f6df349464eb285049d95463064be876064c6d12",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 30,
+     "kind": "check"
+    },
+    {
+     "line": 40,
+     "kind": "check"
+    },
+    {
+     "line": 51,
+     "kind": "check"
+    },
+    {
+     "line": 74,
+     "kind": "check"
+    },
+    {
+     "line": 97,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "30": [
+     {
+      "method": "check",
+      "actual": "082a6c51f8322593",
+      "expected": "d5c3d65e51f7def7",
+      "line": 29
+     }
+    ],
+    "40": [
+     {
+      "method": "check",
+      "actual": "68ba6a48297e4431",
+      "expected": "ce8124bc1b0fbc0c",
+      "line": 42
+     }
+    ],
+    "51": [
+     {
+      "method": "check",
+      "actual": "cd987cbe05fbef0f",
+      "expected": "fd07e9559cbb1789",
+      "line": 56
+     }
+    ],
+    "74": [
+     {
+      "method": "check",
+      "actual": "135e6da25e9f1397",
+      "expected": "c478a3cc5ca267c8",
+      "line": 99
+     }
+    ],
+    "97": [
+     {
+      "method": "check",
+      "actual": "dc3d3b82270ede7c",
+      "expected": "9273d6ec5a6e17b5",
+      "line": 118
+     }
+    ]
+   },
+   "assertions": 9,
+   "expectedAssertions": 9,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L74, line 108"
+   ]
+  },
+  "bin/test/lib/comments-store.doctest.md": {
+   "test": "bin/test/lib/comments-store.test.ts",
+   "blob": "efade69ed2cf760c15add732e14e5ba1b67153c6",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 63,
+     "kind": "check"
+    },
+    {
+     "line": 76,
+     "kind": "check"
+    },
+    {
+     "line": 102,
+     "kind": "statement"
+    },
+    {
+     "line": 112,
+     "kind": "check"
+    },
+    {
+     "line": 131,
+     "kind": "statement"
+    },
+    {
+     "line": 137,
+     "kind": "statement"
+    },
+    {
+     "line": 142,
+     "kind": "statement"
+    },
+    {
+     "line": 149,
+     "kind": "check"
+    },
+    {
+     "line": 165,
+     "kind": "check"
+    },
+    {
+     "line": 172,
+     "kind": "statement"
+    },
+    {
+     "line": 178,
+     "kind": "check"
+    },
+    {
+     "line": 188,
+     "kind": "check"
+    },
+    {
+     "line": 200,
+     "kind": "statement"
+    },
+    {
+     "line": 203,
+     "kind": "statement"
+    },
+    {
+     "line": 206,
+     "kind": "statement"
+    },
+    {
+     "line": 209,
+     "kind": "check"
+    },
+    {
+     "line": 222,
+     "kind": "check"
+    },
+    {
+     "line": 236,
+     "kind": "check"
+    },
+    {
+     "line": 259,
+     "kind": "statement"
+    },
+    {
+     "line": 264,
+     "kind": "check"
+    },
+    {
+     "line": 286,
+     "kind": "check"
+    },
+    {
+     "line": 302,
+     "kind": "statement"
+    },
+    {
+     "line": 307,
+     "kind": "statement"
+    },
+    {
+     "line": 313,
+     "kind": "statement"
+    },
+    {
+     "line": 319,
+     "kind": "check"
+    },
+    {
+     "line": 328,
+     "kind": "check"
+    },
+    {
+     "line": 339,
+     "kind": "statement"
+    },
+    {
+     "line": 344,
+     "kind": "statement"
+    },
+    {
+     "line": 350,
+     "kind": "statement"
+    },
+    {
+     "line": 356,
+     "kind": "check"
+    },
+    {
+     "line": 380,
+     "kind": "check"
+    },
+    {
+     "line": 397,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "63": [
+     {
+      "method": "check",
+      "actual": "48a53f0774c8ceff",
+      "expected": "d6307957395a74dc",
+      "line": 63
+     }
+    ],
+    "76": [
+     {
+      "method": "check",
+      "actual": "55ae9783666c413a",
+      "expected": "ba7f2ff88a35347a",
+      "line": 86
+     }
+    ],
+    "112": [
+     {
+      "method": "check",
+      "actual": "b8b142fa994e8794",
+      "expected": "e566ce916efbeb9d",
+      "line": 130
+     }
+    ],
+    "149": [
+     {
+      "method": "check",
+      "actual": "4f66cf87b6be9ba9",
+      "expected": "b4e9eedb5720d759",
+      "line": 176
+     }
+    ],
+    "165": [
+     {
+      "method": "check",
+      "actual": "5b8382f096296f0f",
+      "expected": "9930e0031bd84f81",
+      "line": 188
+     }
+    ],
+    "178": [
+     {
+      "method": "check",
+      "actual": "761b7ad8ad439b28",
+      "expected": "1680bed02c45b51a",
+      "line": 203
+     }
+    ],
+    "188": [
+     {
+      "method": "check",
+      "actual": "0fa4512a814fb73e",
+      "expected": "40f94374f878801b",
+      "line": 215
+     }
+    ],
+    "209": [
+     {
+      "method": "check",
+      "actual": "c187e609c81b0181",
+      "expected": "7c1378882571cdc9",
+      "line": 242
+     }
+    ],
+    "222": [
+     {
+      "method": "check",
+      "actual": "5b1dda5c7dd2e609",
+      "expected": "b5bea41b6c623f7c",
+      "line": 256
+     }
+    ],
+    "236": [
+     {
+      "method": "check",
+      "actual": "c1d1f29ec069038a",
+      "expected": "2c624232cdd22177",
+      "line": 274
+     }
+    ],
+    "264": [
+     {
+      "method": "check",
+      "actual": "3dc3291e2b1c4360",
+      "expected": "e7f6c011776e8db7",
+      "line": 306
+     }
+    ],
+    "286": [
+     {
+      "method": "check",
+      "actual": "fdfed2767823e8a9",
+      "expected": "c4bf1cb4f7238917",
+      "line": 318
+     }
+    ],
+    "319": [
+     {
+      "method": "check",
+      "actual": "a9d4034da07d8ef3",
+      "expected": "b35b7142b35ab1be",
+      "line": 348
+     }
+    ],
+    "328": [
+     {
+      "method": "check",
+      "actual": "04ce271f58d47838",
+      "expected": "5feceb66ffc86f38",
+      "line": 361
+     }
+    ],
+    "356": [
+     {
+      "method": "check",
+      "actual": "0fc4dfc4feb3b154",
+      "expected": "687607a38431159f",
+      "line": 404
+     }
+    ],
+    "380": [
+     {
+      "method": "check",
+      "actual": "55faf5eb0a3b57e2",
+      "expected": "d146244ef649bc24",
+      "line": 433
+     }
+    ],
+    "397": [
+     {
+      "method": "check",
+      "actual": "a4e3c20a32776660",
+      "expected": "76a726484fd0a9c8",
+      "line": 463
+     }
+    ]
+   },
+   "assertions": 31,
+   "expectedAssertions": 31,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/exhibits-store.doctest.md": {
+   "test": "bin/test/lib/exhibits-store.test.ts",
+   "blob": "74c528e2f33c104003ed778546d2698f2a481400",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 47,
+     "kind": "statement"
+    },
+    {
+     "line": 51,
+     "kind": "statement"
+    },
+    {
+     "line": 56,
+     "kind": "check"
+    },
+    {
+     "line": 76,
+     "kind": "statement"
+    },
+    {
+     "line": 83,
+     "kind": "check"
+    },
+    {
+     "line": 102,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "56": [
+     {
+      "method": "check",
+      "actual": "c9ce543e564fec67",
+      "expected": "11b46f165e811e01",
+      "line": 61
+     }
+    ],
+    "83": [
+     {
+      "method": "check",
+      "actual": "c194ad6e26c7eb4e",
+      "expected": "8e58b1983a00b204",
+      "line": 99
+     }
+    ],
+    "102": [
+     {
+      "method": "check",
+      "actual": "b15cceef8afa9fbe",
+      "expected": "550c9bee6f5bae24",
+      "line": 135
+     }
+    ]
+   },
+   "assertions": 6,
+   "expectedAssertions": 6,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/schedules-alerts.conditions.doctest.md": {
+   "test": "bin/test/lib/schedules-alerts.conditions.test.ts",
+   "blob": "0dec5c47e84fdba18a6a925b0d47973df06a4b39",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 59,
+     "kind": "check"
+    },
+    {
+     "line": 66,
+     "kind": "check"
+    },
+    {
+     "line": 78,
+     "kind": "check"
+    },
+    {
+     "line": 90,
+     "kind": "check"
+    },
+    {
+     "line": 100,
+     "kind": "check"
+    },
+    {
+     "line": 113,
+     "kind": "check"
+    },
+    {
+     "line": 131,
+     "kind": "check"
+    },
+    {
+     "line": 142,
+     "kind": "check"
+    },
+    {
+     "line": 153,
+     "kind": "check"
+    },
+    {
+     "line": 166,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "59": [
+     {
+      "method": "check",
+      "actual": "24354259a240f62a",
+      "expected": "5feceb66ffc86f38",
+      "line": 60
+     }
+    ],
+    "66": [
+     {
+      "method": "check",
+      "actual": "812d3a683f0df7ed",
+      "expected": "8f589cd008739580",
+      "line": 64
+     }
+    ],
+    "78": [
+     {
+      "method": "check",
+      "actual": "1211017be635fb2e",
+      "expected": "3405c7ce7173ec60",
+      "line": 79
+     }
+    ],
+    "90": [
+     {
+      "method": "check",
+      "actual": "4cfa6c6bcc46b49e",
+      "expected": "b5bea41b6c623f7c",
+      "line": 90
+     }
+    ],
+    "100": [
+     {
+      "method": "check",
+      "actual": "24354259a240f62a",
+      "expected": "6b86b273ff34fce1",
+      "line": 101
+     }
+    ],
+    "113": [
+     {
+      "method": "check",
+      "actual": "761b7ad8ad439b28",
+      "expected": "96876e119682f813",
+      "line": 119
+     }
+    ],
+    "131": [
+     {
+      "method": "check",
+      "actual": "4284d4164b1c462d",
+      "expected": "fcbcf165908dd18a",
+      "line": 137
+     }
+    ],
+    "142": [
+     {
+      "method": "check",
+      "actual": "eaa81ef6589f62dd",
+      "expected": "7ccce0bcd2a98acc",
+      "line": 149
+     }
+    ],
+    "153": [
+     {
+      "method": "check",
+      "actual": "15aa44e56797eb37",
+      "expected": "b5bea41b6c623f7c",
+      "line": 158
+     }
+    ],
+    "166": [
+     {
+      "method": "check",
+      "actual": "cb28b5cbef7fc5b9",
+      "expected": "759dc9c3bc74cd95",
+      "line": 180
+     }
+    ]
+   },
+   "assertions": 11,
+   "expectedAssertions": 11,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/schedules-alerts.digest.doctest.md": {
+   "test": "bin/test/lib/schedules-alerts.digest.test.ts",
+   "blob": "39d143d81ce2c9592e594164241217e1fe9d06cf",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 45,
+     "kind": "check"
+    },
+    {
+     "line": 63,
+     "kind": "check"
+    },
+    {
+     "line": 79,
+     "kind": "check"
+    },
+    {
+     "line": 86,
+     "kind": "check"
+    },
+    {
+     "line": 108,
+     "kind": "check"
+    },
+    {
+     "line": 122,
+     "kind": "check"
+    },
+    {
+     "line": 139,
+     "kind": "check"
+    },
+    {
+     "line": 148,
+     "kind": "check"
+    },
+    {
+     "line": 167,
+     "kind": "check"
+    },
+    {
+     "line": 194,
+     "kind": "check"
+    },
+    {
+     "line": 209,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "45": [
+     {
+      "method": "check",
+      "actual": "495e9961a4c257de",
+      "expected": "eca2e0ed8ae7fe22",
+      "line": 45
+     }
+    ],
+    "63": [
+     {
+      "method": "check",
+      "actual": "ce74fd17fb944127",
+      "expected": "82da75e71e39eff4",
+      "line": 78
+     }
+    ],
+    "79": [
+     {
+      "method": "check",
+      "actual": "525545574c804c97",
+      "expected": "74234e98afe7498f",
+      "line": 94
+     }
+    ],
+    "86": [
+     {
+      "method": "check",
+      "actual": "5baca00bec07fdcc",
+      "expected": "6cd426a864662e27",
+      "line": 113
+     }
+    ],
+    "108": [
+     {
+      "method": "check",
+      "actual": "74ce8b62091778a1",
+      "expected": "7451ad51bd2b45b7",
+      "line": 133
+     }
+    ],
+    "122": [
+     {
+      "method": "check",
+      "actual": "36a91452ec8011c1",
+      "expected": "d55a797ffe8db7c8",
+      "line": 154
+     }
+    ],
+    "139": [
+     {
+      "method": "check",
+      "actual": "d595b24d99436906",
+      "expected": "85118946aa916cbe",
+      "line": 167
+     }
+    ],
+    "148": [
+     {
+      "method": "checkText",
+      "actual": "afd6abdd169dc737",
+      "expected": "b9a53b4be7fe75a5",
+      "line": 170
+     }
+    ],
+    "167": [
+     {
+      "method": "check",
+      "actual": "18f2be7303850e58",
+      "expected": "ad41e54bf60a9398",
+      "line": 200
+     }
+    ],
+    "194": [
+     {
+      "method": "check",
+      "actual": "c4c565ce851444a5",
+      "expected": "e81ae51e6f55a56e",
+      "line": 231
+     }
+    ],
+    "209": [
+     {
+      "method": "check",
+      "actual": "fe6a90b27ef6b349",
+      "expected": "9b62b13236d49422",
+      "line": 255
+     }
+    ]
+   },
+   "assertions": 12,
+   "expectedAssertions": 12,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L45, line 63",
+    "at doctest:L79, line 112"
+   ]
+  },
+  "bin/test/lib/schedules-branch.doctest.md": {
+   "test": "bin/test/lib/schedules-branch.test.ts",
+   "blob": "f0f5834325cef7a9ce8b0ba8295c5618241f9ef7",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 80,
+     "kind": "statement"
+    },
+    {
+     "line": 90,
+     "kind": "check"
+    },
+    {
+     "line": 105,
+     "kind": "check"
+    },
+    {
+     "line": 121,
+     "kind": "check"
+    },
+    {
+     "line": 129,
+     "kind": "check"
+    },
+    {
+     "line": 141,
+     "kind": "check"
+    },
+    {
+     "line": 162,
+     "kind": "check"
+    },
+    {
+     "line": 185,
+     "kind": "check"
+    },
+    {
+     "line": 207,
+     "kind": "check"
+    },
+    {
+     "line": 230,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "90": [
+     {
+      "method": "check",
+      "actual": "73e5bfd542abbe81",
+      "expected": "5159aab1b4ee0bc4",
+      "line": 92
+     }
+    ],
+    "105": [
+     {
+      "method": "check",
+      "actual": "84abcdeafc790ae7",
+      "expected": "8d269bc47ecf9830",
+      "line": 112
+     }
+    ],
+    "121": [
+     {
+      "method": "check",
+      "actual": "aed8319175f553a0",
+      "expected": "bcdf5541e8607096",
+      "line": 129
+     }
+    ],
+    "129": [
+     {
+      "method": "check",
+      "actual": "de2923eb996d68e5",
+      "expected": "5feceb66ffc86f38",
+      "line": 142
+     }
+    ],
+    "141": [
+     {
+      "method": "check",
+      "actual": "d75bc08f1dc12359",
+      "expected": "c05599a319a4f074",
+      "line": 159
+     }
+    ],
+    "162": [
+     {
+      "method": "check",
+      "actual": "0dc0ebaf0e0858ab",
+      "expected": "1203e2e6e9ae5b9b",
+      "line": 183
+     }
+    ],
+    "185": [
+     {
+      "method": "check",
+      "actual": "7a976912c68d92e0",
+      "expected": "cef8676fe082d588",
+      "line": 223
+     }
+    ],
+    "207": [
+     {
+      "method": "check",
+      "actual": "808686f2d1edeb30",
+      "expected": "faf185ff992639fb",
+      "line": 245
+     }
+    ],
+    "230": [
+     {
+      "method": "check",
+      "actual": "57156619c03aa4df",
+      "expected": "ce8124bc1b0fbc0c",
+      "line": 275
+     }
+    ]
+   },
+   "assertions": 14,
+   "expectedAssertions": 14,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/session-registry.doctest.md": {
+   "test": "bin/test/lib/session-registry.test.ts",
+   "blob": "6371c151047c734d9865bac5c22917c050007301",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 27,
+     "kind": "check"
+    },
+    {
+     "line": 32,
+     "kind": "check"
+    },
+    {
+     "line": 42,
+     "kind": "check"
+    },
+    {
+     "line": 50,
+     "kind": "check"
+    },
+    {
+     "line": 56,
+     "kind": "check"
+    },
+    {
+     "line": 60,
+     "kind": "check"
+    },
+    {
+     "line": 73,
+     "kind": "check"
+    },
+    {
+     "line": 81,
+     "kind": "check"
+    },
+    {
+     "line": 91,
+     "kind": "check"
+    },
+    {
+     "line": 99,
+     "kind": "check"
+    },
+    {
+     "line": 104,
+     "kind": "check"
+    },
+    {
+     "line": 114,
+     "kind": "check"
+    },
+    {
+     "line": 123,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "27": [
+     {
+      "method": "check",
+      "actual": "93c23914108c95a9",
+      "expected": "4b62d186290abd56",
+      "line": 36
+     }
+    ],
+    "32": [
+     {
+      "method": "check",
+      "actual": "d70fc29ed25dd58e",
+      "expected": "d471399965591518",
+      "line": 42
+     }
+    ],
+    "42": [
+     {
+      "method": "check",
+      "actual": "e02baad95eea74d4",
+      "expected": "00233ddd589573f8",
+      "line": 58
+     }
+    ],
+    "50": [
+     {
+      "method": "check",
+      "actual": "ade86faa6ce63db7",
+      "expected": "de5f2cbf4c10a0d1",
+      "line": 67
+     }
+    ],
+    "56": [
+     {
+      "method": "check",
+      "actual": "fc2e6de65cf4730f",
+      "expected": "b5bea41b6c623f7c",
+      "line": 71
+     }
+    ],
+    "60": [
+     {
+      "method": "check",
+      "actual": "7101f7813a1d24f1",
+      "expected": "731068501d33ffa1",
+      "line": 76
+     }
+    ],
+    "73": [
+     {
+      "method": "check",
+      "actual": "e98e5a1656ae7c5c",
+      "expected": "db0fb2bf5ebc4244",
+      "line": 90
+     }
+    ],
+    "81": [
+     {
+      "method": "check",
+      "actual": "7fdfa9885a0f1b74",
+      "expected": "2421c8236ce04206",
+      "line": 100
+     }
+    ],
+    "91": [
+     {
+      "method": "check",
+      "actual": "500fed721cead6d8",
+      "expected": "2658dde4dffa8c4d",
+      "line": 113
+     }
+    ],
+    "99": [
+     {
+      "method": "check",
+      "actual": "3ac765b63a1277f1",
+      "expected": "95c1c5c2732feadf",
+      "line": 122
+     }
+    ],
+    "104": [
+     {
+      "method": "check",
+      "actual": "95c9f1e528503457",
+      "expected": "8ffcdf49074ca9d5",
+      "line": 131
+     }
+    ],
+    "114": [
+     {
+      "method": "check",
+      "actual": "cfb3f8152b0853c8",
+      "expected": "97f29401f23466b4",
+      "line": 147
+     }
+    ],
+    "123": [
+     {
+      "method": "check",
+      "actual": "eba2e1caa0b50df0",
+      "expected": "4b62d186290abd56",
+      "line": 158
+     }
+    ]
+   },
+   "assertions": 14,
+   "expectedAssertions": 14,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/session-start-registry.doctest.md": {
+   "test": "bin/test/lib/session-start-registry.test.ts",
+   "blob": "7192011096ae21fc3f0fcaab225bc36076ea44a8",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 41,
+     "kind": "check"
+    },
+    {
+     "line": 54,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "41": [
+     {
+      "method": "check",
+      "actual": "351a7ac07e87a97f",
+      "expected": "da98436c410b7877",
+      "line": 54
+     }
+    ],
+    "54": [
+     {
+      "method": "check",
+      "actual": "c106677729e9fe06",
+      "expected": "fcbcf165908dd18a",
+      "line": 65
+     }
+    ]
+   },
+   "assertions": 3,
+   "expectedAssertions": 3,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/tap-root-guard.doctest.md": {
+   "test": "bin/test/lib/tap-root-guard.test.ts",
+   "blob": "ee05b9f48ea244d4e6834f8de1c777e7d69aa26c",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 18,
+     "kind": "check"
+    },
+    {
+     "line": 27,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "18": [
+     {
+      "method": "checkText",
+      "actual": "ca03c4db9645b564",
+      "expected": "9f912775a4cb254f",
+      "line": 18
+     }
+    ],
+    "27": [
+     {
+      "method": "checkText",
+      "actual": "c5da8877b7c61c6d",
+      "expected": "c57846b93f79228b",
+      "line": 26
+     }
+    ]
+   },
+   "assertions": 4,
+   "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/terminal-tabs.doctest.md": {
+   "test": "bin/test/lib/terminal-tabs.test.ts",
+   "blob": "82ca94cba2bea6d781423dea98348878837d3078",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 23,
+     "kind": "check"
+    },
+    {
+     "line": 27,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "23": "typed check failed on the run's value",
+    "27": "typed check failed on the run's value"
+   },
+   "awaited": [],
+   "checks": {
+    "23": [
+     {
+      "method": "checkText",
+      "actual": "740e5e23f6612925",
+      "expected": "391552c099c101b1",
+      "line": 24
+     }
+    ],
+    "27": [
+     {
+      "method": "checkText",
+      "actual": "90beb601197637a8",
+      "expected": "391552c099c101b1",
+      "line": 28
+     }
+    ]
+   },
+   "assertions": 3,
+   "expectedAssertions": 3,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/workstream-box-state.doctest.md": {
+   "test": "bin/test/lib/workstream-box-state.test.ts",
+   "blob": "3fe8644fd450cc2c2a5d326f5e38f182f26424cc",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 25,
+     "kind": "check"
+    },
+    {
+     "line": 54,
+     "kind": "check"
+    },
+    {
+     "line": 79,
+     "kind": "statement"
+    },
+    {
+     "line": 100,
+     "kind": "check"
+    },
+    {
+     "line": 116,
+     "kind": "check"
+    },
+    {
+     "line": 122,
+     "kind": "check"
+    },
+    {
+     "line": 129,
+     "kind": "check"
+    },
+    {
+     "line": 140,
+     "kind": "check"
+    },
+    {
+     "line": 183,
+     "kind": "check"
+    },
+    {
+     "line": 234,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "183": "typed check failed on the run's value"
+   },
+   "awaited": [],
+   "checks": {
+    "25": [
+     {
+      "method": "check",
+      "actual": "ae0a9094ef836f00",
+      "expected": "e53ae86bd9f36249",
+      "line": 40
+     }
+    ],
+    "54": [
+     {
+      "method": "check",
+      "actual": "5aa9457473c0cc80",
+      "expected": "89eed03ec0c52a36",
+      "line": 75
+     }
+    ],
+    "100": [
+     {
+      "method": "check",
+      "actual": "64267aec096530d5",
+      "expected": "d2f268229b50c408",
+      "line": 128
+     }
+    ],
+    "116": [
+     {
+      "method": "check",
+      "actual": "64267aec096530d5",
+      "expected": "06d3132365191c44",
+      "line": 134
+     }
+    ],
+    "122": [
+     {
+      "method": "check",
+      "actual": "64267aec096530d5",
+      "expected": "ebf28e65139f987f",
+      "line": 141
+     }
+    ],
+    "129": [
+     {
+      "method": "check",
+      "actual": "64267aec096530d5",
+      "expected": "ebf28e65139f987f",
+      "line": 147
+     }
+    ],
+    "140": [
+     {
+      "method": "check",
+      "actual": "774f837cbfe6756f",
+      "expected": "de00bd750be75850",
+      "line": 181
+     }
+    ],
+    "183": [
+     {
+      "method": "checkText",
+      "actual": "beff6bf90857451d",
+      "expected": "4cb7a5ce5c08a575",
+      "line": 247
+     }
+    ],
+    "234": [
+     {
+      "method": "check",
+      "actual": "fe76cb54185562d0",
+      "expected": "cb388afdbef55dfe",
+      "line": 277
+     }
+    ]
+   },
+   "assertions": 15,
+   "expectedAssertions": 15,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/workstream-cull.doctest.md": {
+   "test": "bin/test/lib/workstream-cull.test.ts",
+   "blob": "4ae29a0860a6f66d807cadf98030f2037fca363a",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 41,
+     "kind": "statement"
+    },
+    {
+     "line": 56,
+     "kind": "check"
+    },
+    {
+     "line": 72,
+     "kind": "check"
+    },
+    {
+     "line": 77,
+     "kind": "check"
+    },
+    {
+     "line": 107,
+     "kind": "check"
+    },
+    {
+     "line": 118,
+     "kind": "check"
+    },
+    {
+     "line": 137,
+     "kind": "check"
+    },
+    {
+     "line": 152,
+     "kind": "check"
+    },
+    {
+     "line": 165,
+     "kind": "check"
+    },
+    {
+     "line": 173,
+     "kind": "check"
+    },
+    {
+     "line": 192,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "56": [
+     {
+      "method": "check",
+      "actual": "6a6a7b97a87f123d",
+      "expected": "f3ddbe0263356e28",
+      "line": 77
+     }
+    ],
+    "72": [
+     {
+      "method": "check",
+      "actual": "ae671cba898226d3",
+      "expected": "b09c7d54e7dd3d63",
+      "line": 85
+     }
+    ],
+    "77": [
+     {
+      "method": "check",
+      "actual": "2c08748358e7d090",
+      "expected": "fcbcf165908dd18a",
+      "line": 103
+     }
+    ],
+    "107": [
+     {
+      "method": "check",
+      "actual": "e294dda2ffaf05e7",
+      "expected": "ce313f8947d9a07b",
+      "line": 128
+     }
+    ],
+    "118": [
+     {
+      "method": "check",
+      "actual": "28b4d7e56389f829",
+      "expected": "30a0924a3360be68",
+      "line": 139
+     }
+    ],
+    "137": [
+     {
+      "method": "check",
+      "actual": "aa16dee8418acb26",
+      "expected": "746ed9defe4675d1",
+      "line": 158
+     }
+    ],
+    "152": [
+     {
+      "method": "check",
+      "actual": "57b24cf1baa090a0",
+      "expected": "ce313f8947d9a07b",
+      "line": 174
+     }
+    ],
+    "165": [
+     {
+      "method": "check",
+      "actual": "aa16dee8418acb26",
+      "expected": "a375d57729e082c3",
+      "line": 185
+     }
+    ],
+    "173": [
+     {
+      "method": "check",
+      "actual": "aa16dee8418acb26",
+      "expected": "b213d92f65219e65",
+      "line": 196
+     }
+    ],
+    "192": [
+     {
+      "method": "check",
+      "actual": "f9132824b8b42696",
+      "expected": "2e237d8e8ab4cf1a",
+      "line": 250
+     }
+    ]
+   },
+   "assertions": 13,
+   "expectedAssertions": 13,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/lib/workstream-resume.doctest.md": {
+   "test": "bin/test/lib/workstream-resume.test.ts",
+   "blob": "5410a70490a966b72382ea2170c415568bbeaf3e",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 44,
+     "kind": "check"
+    },
+    {
+     "line": 62,
+     "kind": "check"
+    },
+    {
+     "line": 84,
+     "kind": "check"
+    },
+    {
+     "line": 100,
+     "kind": "check"
+    },
+    {
+     "line": 128,
+     "kind": "check"
+    },
+    {
+     "line": 144,
+     "kind": "check"
+    },
+    {
+     "line": 154,
+     "kind": "check"
+    },
+    {
+     "line": 179,
+     "kind": "check"
+    },
+    {
+     "line": 183,
+     "kind": "check"
+    },
+    {
+     "line": 187,
+     "kind": "check"
+    },
+    {
+     "line": 191,
+     "kind": "check"
+    },
+    {
+     "line": 199,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "44": [
+     {
+      "method": "check",
+      "actual": "af4fff569edfca1e",
+      "expected": "01f42dfbae0dace2",
+      "line": 44
+     }
+    ],
+    "62": [
+     {
+      "method": "check",
+      "actual": "ff033be9dae4e3a4",
+      "expected": "172304e438f69b20",
+      "line": 81
+     }
+    ],
+    "84": [
+     {
+      "method": "check",
+      "actual": "1f897b64fa668e18",
+      "expected": "05e2e2ed16fe5404",
+      "line": 133
+     }
+    ],
+    "100": [
+     {
+      "method": "check",
+      "actual": "0ae2b551412c5c60",
+      "expected": "dde3fea3447fece9",
+      "line": 165
+     }
+    ],
+    "128": [
+     {
+      "method": "check",
+      "actual": "8690eab754481b2f",
+      "expected": "5b4c05df435f3024",
+      "line": 196
+     }
+    ],
+    "144": [
+     {
+      "method": "check",
+      "actual": "9fa67d950261ffcb",
+      "expected": "b5bea41b6c623f7c",
+      "line": 213
+     }
+    ],
+    "154": [
+     {
+      "method": "check",
+      "actual": "ce8b5fb60c676e42",
+      "expected": "b40103867c46a897",
+      "line": 227
+     }
+    ],
+    "179": [
+     {
+      "method": "check",
+      "actual": "1dc64a9ffe653427",
+      "expected": "7c0ebddc5cc0dc61",
+      "line": 251
+     }
+    ],
+    "183": [
+     {
+      "method": "check",
+      "actual": "923fe0fc46c3d6fe",
+      "expected": "d103e9777d57ad48",
+      "line": 258
+     }
+    ],
+    "187": [
+     {
+      "method": "check",
+      "actual": "5ac46817b5a45377",
+      "expected": "2ebe30ac7334d10e",
+      "line": 265
+     }
+    ],
+    "191": [
+     {
+      "method": "check",
+      "actual": "01e17ee721fe1efe",
+      "expected": "91a335d3e725e2ff",
+      "line": 272
+     }
+    ],
+    "199": [
+     {
+      "method": "check",
+      "actual": "deb88d786240f9c2",
+      "expected": "bace3462beb5fe6c",
+      "line": 293
+     }
+    ]
+   },
+   "assertions": 17,
+   "expectedAssertions": 17,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": [
+    "at doctest:L44, line 44",
+    "at doctest:L62, line 81",
+    "at doctest:L100, line 165",
+    "at doctest:L128, line 196"
+   ]
+  },
+  "bin/test/lib/worktree-create.concurrency.doctest.md": {
+   "test": "bin/test/lib/worktree-create.concurrency.test.ts",
+   "blob": "38cb3d7da1c77aa1edc936448197a99cd3ce72c3",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 251,
+     "kind": "check"
+    },
+    {
+     "line": 271,
+     "kind": "check"
+    },
+    {
+     "line": 294,
+     "kind": "check"
+    },
+    {
+     "line": 305,
+     "kind": "check"
+    },
+    {
+     "line": 316,
+     "kind": "check"
+    },
+    {
+     "line": 327,
+     "kind": "check"
+    },
+    {
+     "line": 337,
+     "kind": "check"
+    },
+    {
+     "line": 347,
+     "kind": "check"
+    },
+    {
+     "line": 358,
+     "kind": "check"
+    },
+    {
+     "line": 368,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "251": [
+     {
+      "method": "check",
+      "actual": "5d8331fed8deae23",
+      "expected": "64e16b632433b852",
+      "line": 268
+     }
+    ],
+    "271": [
+     {
+      "method": "check",
+      "actual": "af46eaf9a47ba0eb",
+      "expected": "f4e1d28a0fa37f4d",
+      "line": 295
+     }
+    ],
+    "294": [
+     {
+      "method": "check",
+      "actual": "5837a1519073157a",
+      "expected": "beb7284a94119f68",
+      "line": 310
+     }
+    ],
+    "305": [
+     {
+      "method": "check",
+      "actual": "cb3c36c06bb892b3",
+      "expected": "c2356069e9d1e79c",
+      "line": 325
+     }
+    ],
+    "316": [
+     {
+      "method": "check",
+      "actual": "feda51344a8ada4e",
+      "expected": "57010a17a3fd3790",
+      "line": 334
+     }
+    ],
+    "327": [
+     {
+      "method": "check",
+      "actual": "7b2d499fad548aaf",
+      "expected": "37024d7ac54dbae7",
+      "line": 347
+     }
+    ],
+    "337": [
+     {
+      "method": "check",
+      "actual": "018b12e864fa8b65",
+      "expected": "6a0fcdedd6b14b37",
+      "line": 360
+     }
+    ],
+    "347": [
+     {
+      "method": "check",
+      "actual": "621d1e35cbaf3747",
+      "expected": "8166e102fbe86978",
+      "line": 373
+     }
+    ],
+    "358": [
+     {
+      "method": "check",
+      "actual": "a6a93627b844dc2f",
+      "expected": "a24b892371aeab28",
+      "line": 386
+     }
+    ],
+    "368": [
+     {
+      "method": "check",
+      "actual": "e5fba01a9538e33b",
+      "expected": "4db626655b69c52e",
+      "line": 425
+     }
+    ]
+   },
+   "assertions": 11,
+   "expectedAssertions": 11,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/post-merge-install.doctest.md": {
+   "test": "bin/test/post-merge-install.test.ts",
+   "blob": "2cf4a0d1acf311481143d123eb792fe27c4d912e",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 68,
+     "kind": "check"
+    },
+    {
+     "line": 81,
+     "kind": "check"
+    },
+    {
+     "line": 89,
+     "kind": "statement"
+    },
+    {
+     "line": 96,
+     "kind": "statement"
+    },
+    {
+     "line": 123,
+     "kind": "check"
+    },
+    {
+     "line": 138,
+     "kind": "statement"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "68": [
+     {
+      "method": "check",
+      "actual": "da9627a35b2fadd5",
+      "expected": "b5bea41b6c623f7c",
+      "line": 74
+     }
+    ],
+    "81": [
+     {
+      "method": "check",
+      "actual": "b22d54593527b045",
+      "expected": "12ae32cb1ec02d01",
+      "line": 85
+     }
+    ],
+    "123": [
+     {
+      "method": "check",
+      "actual": "da9627a35b2fadd5",
+      "expected": "b5bea41b6c623f7c",
+      "line": 129
+     }
+    ]
+   },
+   "assertions": 8,
+   "expectedAssertions": 8,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/private-issues.orphans.doctest.md": {
+   "test": "bin/test/private-issues.orphans.test.ts",
+   "blob": "f16cbcb9c5ae432cf9741fe90943f46302901ace",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 41,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "41": [
+     {
+      "method": "check",
+      "actual": "d55af39f0b5196c1",
+      "expected": "6b7c6d6c0c7e5452",
+      "line": 53
+     }
+    ]
+   },
+   "assertions": 2,
+   "expectedAssertions": 2,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/process-cleanup.liveness.doctest.md": {
+   "test": "bin/test/process-cleanup.liveness.test.ts",
+   "blob": "ec5437997fe1a27916c026d37a2a1d5732c79987",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 100,
+     "kind": "statement"
+    },
+    {
+     "line": 105,
+     "kind": "statement"
+    },
+    {
+     "line": 112,
+     "kind": "check"
+    },
+    {
+     "line": 121,
+     "kind": "check"
+    },
+    {
+     "line": 124,
+     "kind": "check"
+    },
+    {
+     "line": 131,
+     "kind": "check"
+    },
+    {
+     "line": 148,
+     "kind": "check"
+    },
+    {
+     "line": 175,
+     "kind": "check"
+    },
+    {
+     "line": 191,
+     "kind": "check"
+    },
+    {
+     "line": 202,
+     "kind": "check"
+    },
+    {
+     "line": 213,
+     "kind": "check"
+    },
+    {
+     "line": 225,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "202": "typed check failed on the run's value"
+   },
+   "awaited": [],
+   "checks": {
+    "112": [
+     {
+      "method": "check",
+      "actual": "a8eb408ab39df157",
+      "expected": "cf8183de6c925c09",
+      "line": 114
+     }
+    ],
+    "121": [
+     {
+      "method": "check",
+      "actual": "1c7395efc05ff0f1",
+      "expected": "b5bea41b6c623f7c",
+      "line": 130
+     }
+    ],
+    "124": [
+     {
+      "method": "check",
+      "actual": "c73adac0fe4cda70",
+      "expected": "b5bea41b6c623f7c",
+      "line": 133
+     }
+    ],
+    "131": [
+     {
+      "method": "check",
+      "actual": "fd5e62127aad75e1",
+      "expected": "fcbcf165908dd18a",
+      "line": 143
+     }
+    ],
+    "148": [
+     {
+      "method": "check",
+      "actual": "8f63028344b4b603",
+      "expected": "7b31a2f6884e78bc",
+      "line": 156
+     }
+    ],
+    "175": [
+     {
+      "method": "check",
+      "actual": "d1bf8af1e35bbb62",
+      "expected": "85ea888c640d7a74",
+      "line": 214
+     }
+    ],
+    "191": [
+     {
+      "method": "check",
+      "actual": "7dd00a44e020db6c",
+      "expected": "b5bea41b6c623f7c",
+      "line": 250
+     }
+    ],
+    "202": [
+     {
+      "method": "checkText",
+      "actual": "e8766bfd4522ef82",
+      "expected": "eeb196872dddf69b",
+      "line": 258
+     }
+    ],
+    "213": [
+     {
+      "method": "check",
+      "actual": "0484fa086fc17ef0",
+      "expected": "b5bea41b6c623f7c",
+      "line": 273
+     }
+    ],
+    "225": [
+     {
+      "method": "check",
+      "actual": "9c76ae5656ab9318",
+      "expected": "87abc7df76fa3733",
+      "line": 294
+     }
+    ]
+   },
+   "assertions": 18,
+   "expectedAssertions": 18,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/smoke-lib.doctest.md": {
+   "test": "bin/test/smoke-lib.test.ts",
+   "blob": "3dae76c94d05abc59e164a14081f160fc4af8fc0",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 19,
+     "kind": "check"
+    },
+    {
+     "line": 27,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "19": [
+     {
+      "method": "check",
+      "actual": "fa3594cd95632797",
+      "expected": "6311de600a6a4e33",
+      "line": 19
+     }
+    ],
+    "27": [
+     {
+      "method": "check",
+      "actual": "a8bcfd4fba0d53fc",
+      "expected": "be196a84556d49c6",
+      "line": 26
+     }
+    ]
+   },
+   "assertions": 4,
+   "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/workstreams.archive.doctest.md": {
+   "test": "bin/test/workstreams.archive.test.ts",
+   "blob": "08903f626b8397b646c397e3355ae9d7564abb3e",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 32,
+     "kind": "statement"
+    },
+    {
+     "line": 43,
+     "kind": "statement"
+    },
+    {
+     "line": 50,
+     "kind": "check"
+    },
+    {
+     "line": 56,
+     "kind": "check"
+    },
+    {
+     "line": 65,
+     "kind": "statement"
+    },
+    {
+     "line": 88,
+     "kind": "statement"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "50": [
+     {
+      "method": "check",
+      "actual": "1867cf813d4fe0d7",
+      "expected": "b5bea41b6c623f7c",
+      "line": 55
+     }
+    ],
+    "56": [
+     {
+      "method": "check",
+      "actual": "7a32d037a33a99c1",
+      "expected": "74234e98afe7498f",
+      "line": 59
+     }
+    ]
+   },
+   "assertions": 4,
+   "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "bin/test/workstreams.list.doctest.md": {
+   "test": "bin/test/workstreams.list.test.ts",
+   "blob": "3be18518c27045a218c3ae2520ee4234a1e46e64",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 42,
+     "kind": "check"
+    },
+    {
+     "line": 69,
+     "kind": "check"
+    },
+    {
+     "line": 77,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "42": [
+     {
+      "method": "check",
+      "actual": "9018427cc98e5d47",
+      "expected": "27ac02fecb502784",
+      "line": 73
+     }
+    ],
+    "69": [
+     {
+      "method": "check",
+      "actual": "5017fda020dfdefc",
+      "expected": "45adc8662eaa7402",
+      "line": 90
+     }
+    ],
+    "77": [
+     {
+      "method": "check",
+      "actual": "c3affb00f382b67a",
+      "expected": "4439ee0977b850dc",
+      "line": 142
+     }
+    ]
+   },
+   "assertions": 4,
+   "expectedAssertions": 4,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  }
+ }
+}
