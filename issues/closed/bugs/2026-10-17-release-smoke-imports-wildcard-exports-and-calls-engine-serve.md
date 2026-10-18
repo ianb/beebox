@@ -3,10 +3,15 @@ title: "`pnpm smoke` fails: it imports wildcard export keys literally and calls 
 workstream: unattached
 area: beebox
 labels: [tests, release]
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-ts7 — running the release smoke to verify the TypeScript 7 move
 ---
+
+> **Fixed 2026-10-17** (workstream ts7): the smoke test expands `./plugins/*`
+> to each plugin directory the installed package ships
+> and boots `bbx engine serve`. `pnpm smoke` passes end to end.
 
 `pnpm smoke` (`beebox/src/scripts/smoke-external-box.ts`, the release gate
 that installs the `pnpm release` tarball into a fresh external box) fails on
