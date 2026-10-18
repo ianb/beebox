@@ -8,6 +8,7 @@
  *   assertion count (counts, not exit codes: a file that fails to load
  *   reports as one skipped test);
  * - eslint, run from its root's `lintFrom`, reports nothing;
+ * - its package's tap config includes it (`tap list`);
  * - its root's typecheck program reports no error in it;
  * - it has no `eslint-disable` comment the converter did not write.
  *
@@ -19,7 +20,7 @@ import { join } from "node:path";
 import { addedSuppressions, compareChecks, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { loadAll, save, type FileState, type StateFile } from "./state.ts";
-import { eslint, REPO, typecheck } from "./tools.ts";
+import { eslint, REPO, tapList, typecheck } from "./tools.ts";
 
 const MAX_LINT_LINES = 20;
 
@@ -48,15 +49,9 @@ function runtimeProblems(file: FileState, got: { failures: number; assertions: n
   return got.assertions === want ? [] : [`${got.assertions} assertions, want ${want}`];
 }
 
-/**
- * Verify the selected files and update their state entries; with `save`,
- * write the state files (a worker's `check` does not).
- */
-export function verify(selected: readonly Selected[], opts: { save: boolean }): void {
-  const tests = selected.map((s) => s.file.test);
-  const problems = new Map<string, string[]>(tests.map((t) => [t, []]));
-  const add = (test: string, p: string): void => void problems.get(test)?.push(p);
+type Add = (test: string, problem: string) => void;
 
+function checkStatic(selected: readonly Selected[], add: Add): void {
   for (const s of selected) {
     const path = join(REPO, s.file.test);
     if (!existsSync(path)) {
@@ -75,10 +70,20 @@ export function verify(selected: readonly Selected[], opts: { save: boolean }): 
     for (const p of report.problems) add(s.file.test, p);
     s.file.changedActuals = report.changedActuals;
   }
+}
 
+function checkRuntime(selected: readonly Selected[], add: Add): void {
+  const tests = selected.map((s) => s.file.test);
   const results = runAll(tests, {});
   for (const s of selected) for (const p of runtimeProblems(s.file, results.get(s.file.test))) add(s.file.test, `run: ${p}`);
+  // Run by name above; the package's own suite must also pick it up.
+  for (const [runFrom, group] of byRoot(tests, (r) => r.runFrom)) {
+    const listed = tapList(runFrom);
+    for (const t of group) if (!listed.has(t)) add(t, `run: ${runFrom}'s tap config does not include it`);
+  }
+}
 
+function checkLint(tests: readonly string[], add: Add): void {
   for (const [lintFrom, group] of byRoot(tests, (r) => r.lintFrom)) {
     for (const [file, messages] of eslint(lintFrom, group)) {
       const shown = messages.slice(0, MAX_LINT_LINES).map((m) => `lint: ${m.line ?? 0}: ${m.ruleId ?? "parse"}: ${m.message}`);
@@ -86,11 +91,15 @@ export function verify(selected: readonly Selected[], opts: { save: boolean }): 
       for (const p of [...shown, ...more]) add(file, p);
     }
   }
+}
 
-  // An error in an unfinished converted file outside the batch belongs to
-  // that file's batch. Any other error fails the whole batch: a helper a
-  // worker added, a verified file the batch broke, or a program that was
-  // already broken.
+/**
+ * An error in an unfinished converted file outside the batch belongs to
+ * that file's batch. Any other error fails the whole batch: a helper a
+ * worker added, a verified file the batch broke, or a program that was
+ * already broken.
+ */
+function checkTypes(tests: readonly string[], add: Add): void {
   const testSet = new Set(tests);
   const otherConverted = new Set(
     [...loadAll().values()].flatMap((st) => Object.values(st.files).filter((f) => f.status === "converted").map((f) => f.test)),
@@ -102,6 +111,20 @@ export function verify(selected: readonly Selected[], opts: { save: boolean }): 
       else if (!otherConverted.has(e.file)) for (const t of inProgram) add(t, `typecheck: ${program.dir} ${program.script} fails outside the batch: ${e.file}:${e.line}: ${e.code}`);
     }
   }
+}
+
+/**
+ * Verify the selected files and update their state entries; with `save`,
+ * write the state files (a worker's `check` does not).
+ */
+export function verify(selected: readonly Selected[], opts: { save: boolean }): void {
+  const tests = selected.map((s) => s.file.test);
+  const problems = new Map<string, string[]>(tests.map((t) => [t, []]));
+  const add: Add = (test, p) => void problems.get(test)?.push(p);
+  checkStatic(selected, add);
+  checkRuntime(selected, add);
+  checkLint(tests, add);
+  checkTypes(tests, add);
 
   const touched = new Set<StateFile>();
   for (const s of selected) {
