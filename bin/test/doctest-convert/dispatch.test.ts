@@ -26,6 +26,8 @@ void test("git may only read; file names that contain git are not git", async (t
       "cd beebox; git mv a b",
       "pnpm install",
       "rm beebox/test/lib/env.test.ts",
+      "python3 - <<'EOF'\ns = s.replace('git status', 'git diff')  # rm\nEOF",
+      "python3 - <<'EOF'\nprint(1)\nEOF\ngit commit -am x",
     ].map((c) => [c, forbidden(c)]),
   );
   t.check(verdicts, {
@@ -37,6 +39,8 @@ void test("git may only read; file names that contain git are not git", async (t
     "cd beebox; git mv a b": true,
     "pnpm install": true,
     "rm beebox/test/lib/env.test.ts": true,
+    "python3 - <<'EOF'\ns = s.replace('git status', 'git diff')  # rm\nEOF": false,
+    "python3 - <<'EOF'\nprint(1)\nEOF\ngit commit -am x": true,
   });
 });
 

@@ -23,11 +23,11 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { checkScript, parseCheckResult, type Box, type CheckResult } from "../src/controls.js";
 
-export class StubNode { static TEXT_NODE = 3; }
+class StubNode { static TEXT_NODE = 3; }
 
 interface Spec { id?: string; box: Box; text?: string; attrs?: Record<string, string>; pointerEvents?: string }
 
-export class StubElement extends StubNode {
+class StubElement extends StubNode {
   readonly nodeType = 1;
   readonly isConnected = true;
   readonly disabled = false;
@@ -80,7 +80,7 @@ export class StubElement extends StubNode {
   scrollIntoView(): void { /* every stand-in box is on screen */ }
 }
 
-export class StubInput extends StubElement {}
+class StubInput extends StubElement {}
 
 const el = (tag: string, spec: Spec): StubElement => new StubElement(tag, spec);
 const input = (spec: Spec): StubInput => new StubInput("input", spec);

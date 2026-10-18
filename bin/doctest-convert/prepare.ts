@@ -24,7 +24,7 @@ import { z } from "zod";
 import { checkSpans, checksByMarker, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { find, loadAll, save, type FileState, type StateFile } from "./state.ts";
-import { blobOf, convert, doctestsUnder, eslint, eslintLayoutFix, isCommitted, REPO, typecheck } from "./tools.ts";
+import { blobOf, convert, doctestsUnder, eslint, eslintLayoutFix, isCommitted, mentions, REPO, typecheck } from "./tools.ts";
 
 const TYPECHECK_ROUNDS = 6;
 const LINT_ROUNDS = 3;
@@ -145,6 +145,30 @@ function lintLoop(w: Work, log: (s: string) => void): void {
   }
 }
 
+/** Path-keyed lists that name a doctest; prepare points them at its test file. */
+const PATH_LISTS = ["bin/retired-product-name-allowlist.json"];
+
+/**
+ * Point path-keyed lists at the converted files, and report other tracked
+ * files that still name a converted doctest by path.
+ */
+function repoint(converted: readonly string[], log: (s: string) => void): void {
+  if (converted.length === 0) return;
+  for (const list of PATH_LISTS) {
+    const path = join(REPO, list);
+    const before = readFileSync(path, "utf8");
+    let after = before;
+    for (const d of converted) after = after.replaceAll(JSON.stringify(d), JSON.stringify(testOf(d)));
+    if (after !== before) {
+      writeFileSync(path, after);
+      log(`  ${list}: pointed at the converted files`);
+    }
+  }
+  for (const d of converted) {
+    for (const f of mentions(d)) if (!f.startsWith("bin/doctest-convert/") && !PATH_LISTS.includes(f)) log(`  ${f} names ${d}`);
+  }
+}
+
 function testsIn(source: string): number {
   return [...source.matchAll(/^void (?:test|tapTest\d*)\(/gm)].length;
 }
@@ -181,6 +205,7 @@ export function prepare(dir: string, log: (s: string) => void): StateFile {
     lintLoop(w, log);
     const failed = convert(doctests, writeOptions(w));
     for (const f of failed) log(`  ${f}`);
+    const converted: string[] = [];
     log("5. layout fixes");
     for (const [lintFrom, group] of byRoot(doctests.map(testOf), (r) => r.lintFrom)) eslintLayoutFix(lintFrom, group);
     for (const doctest of doctests) {
@@ -211,8 +236,10 @@ export function prepare(dir: string, log: (s: string) => void): StateFile {
       // The entry is on disk before the doctest goes.
       save(state);
       unlinkSync(join(REPO, doctest));
+      converted.push(doctest);
     }
     save(state);
+    repoint(converted, log);
     return state;
   } finally {
     rmSync(w.tmp, { recursive: true, force: true });
