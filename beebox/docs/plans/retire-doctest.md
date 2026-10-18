@@ -616,6 +616,22 @@ Decided with the boxholder on 2026-10-18, after the generative review:
       available.
     - Any task a model fails is assigned to the other model or to manual
       work in phase 2, with the reason recorded.
+- **Gate status (2026-10-18, evidence in `bin/doctest-convert/TRIALS.md`).**
+  - Differential: met. 0 looser cases over 31,470 mutated values.
+  - Haiku completes T1, T3, and T5 with no help: met.
+  - Luna completes T1, T3, and T5: T1 and T5 met; T3 failed once with the
+    plain brief because Luna did not run the test, and passed in two reruns
+    and with the verify sentence. Luna does not run tests unless the brief
+    says to. Every worker brief names its verify command, so phase 2 is not
+    affected; the boxholder decides whether that counts as "no help".
+  - No field-only checks where the whole value was available: one case,
+    Haiku's `t.ok(device)` before using a nullable value (T7); `check.md`
+    now shows `capture()` for it. Luna's T6 checked each directive exactly
+    rather than the whole policy, which the brief invited; T6b fixed the
+    brief.
+  - Assignments: every task to either model, with the verify command in
+    the brief. T6 (strengthening) uses the whole-value brief: with it, Luna
+    caught 4/4 mutants in both runs (T6b).
 - **Generative reviews before and after.** These go beyond the adversarial
   reviews in the implementation order: the other model family is asked to
   add to the directions being considered.
@@ -657,10 +673,13 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   - `prepare <dir>` runs the converter and writes the manifests.
   - `verify <batch>`, for each file:
     - **Static fidelity:** every manifest example appears once as its marker,
-      and the expected text of each check is unchanged.
+      and the expected value of each check (its last argument) is unchanged.
     - **Runtime fidelity:** the tap assertion count equals the manifest's
-      check-and-throws count, and the test passes.
-    - The file passes eslint and the owning program from `bin/test-roots.ts`.
+      check-and-throws count plus the number of tests, and the test passes.
+      Counts, not exit codes: tap's junit output reported a file that failed
+      to load as one skipped test.
+    - The file passes eslint, run from the root's `lintFrom` directory, and
+      the owning program from `bin/test-roots.ts`.
       Each program runs once per batch, serially, through its package's
       `typecheck` script. That script runs TypeScript 7 since the ts7
       merge (e.g. `beebox/package.json:71`). The driver never calls a
@@ -687,11 +706,15 @@ Decided with the boxholder on 2026-10-18, after the generative review:
 - **Direction: phase 2 worker task.** Make the converted files pass lint and
   typecheck. Assertions are not changed.
   - **Allowed:** rename variables, extract helpers, add types, and remove
-    unused code that lint flags.
-  - **Not allowed:** editing any `t.check*` call or `// doctest:` marker.
-    `verify` enforces this.
-  - **Brief:** edit only the batch; run only the given verify command; no git,
-    pnpm, rm, kill or pkill, and no subagents.
+    unused code that lint flags. A checked expression may change only to
+    satisfy lint and must keep its value: trial T5 showed lint findings
+    inside checks (a callback parameter `t` shadowing the test's, `.sort()`,
+    an `undefined` argument, a generic `Error` in a fake).
+  - **Not allowed:** editing an expected value or a `// doctest:` marker.
+    `verify` enforces this; runtime fidelity covers the checked expression.
+  - **Brief:** edit only the batch; run the given verify command, one per
+    test root's lint and typecheck program; no git, pnpm, rm, kill or pkill,
+    and no subagents.
 - **Calibration rule (decided now).** Run Haiku and Luna on the same 10
   files. Haiku takes a class of files if it verifies all 10 without a retry
   and the review finds no changed behavior. Otherwise that class goes to
@@ -740,20 +763,28 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     doctest rules forbid, such as `JSON.stringify(...)`, `=== … => true`, and
     `x?.field`.
 - **Direction:**
-  - **Upgrade pass (deterministic).**
-    - It parses each `checkText` expected text with `literal.ts:32`
-      `normalizeLiteral`, and emits `t.check(expr, <literal>)`.
-    - Wildcard mapping: `«int»` becomes `any(Number).int()`, `«uuid»`
-      becomes `uuid()`, and `«date»` becomes `isoDate()`.
-    - `«*»` inside a string becomes a `str` hole, never a whole-value
-      `any`.
-    - It keeps a change only if tsc and the test pass.
+  - **Upgrade pass (deterministic): moved into the conversion.** The
+    boxholder (2026-10-18): yes to `checkText` becoming `t.check` "as long as
+    it's going to happen". Doing it at conversion avoids touching every file
+    twice. `src/convert/upgrade.ts` parses each expected text
+    (`parseLiteral`), maps wildcards (`«int»` → `any(Number).int()`,
+    `«uuid»` → `uuid()`, `«date»` → `isoDate()`, a wildcard inside a string
+    → a `str` hole), and unwraps a checked `JSON.stringify(x)` to `x`. A
+    check stays `checkText`, with its reason in the manifest, when the
+    differential run shows its typed form failing on the real value, when
+    tsc rejects it, or when lint rejects it (a lossy actual value, or an
+    expected `undefined`). Result: 9,338 of 12,319 checks typed
+    (`bin/doctest-convert/TRIALS.md`).
   - **Workers then handle the judgment cases:**
-    - structured values the parser could not read;
-    - `JSON.stringify(x)` → `x`;
-    - `a === b` checked against `true` → `t.check(a, b)`;
+    - the 1,466 lossy checks kept as text: `a === b` checked against
+      `true` → `t.check(a, b)`; `.length` or `.includes()` → the whole
+      value;
+    - printed output and multi-line text that is really a value;
     - field reads → the whole object;
     - restating comments.
+  - **Brief (trial T6):** "check the whole value the code returns". A brief
+    that says "keep what each check covers" made Luna strengthen each check
+    in place and miss what the doctest never named.
   - **Reviewed separately:** every phase-3 batch diff is reviewed by a
     model from the other family. It checks each change against one rule:
     the new check must fail wherever the old one failed.
@@ -763,8 +794,8 @@ Decided with the boxholder on 2026-10-18, after the generative review:
       together.
   - **Landing:** phase 3 lands per directory. It can pause at any directory,
     because phase 2 already retired the format.
-- **First implementation chunk:** the upgrade pass on `beebox/test/lib/`, with
-  its unit tests.
+- **First implementation chunk:** the phase 3 worker brief and its review
+  rule, on the lossy checks in `beebox/test/lib/`.
 
 ### Track 6 — remove doctest
 
