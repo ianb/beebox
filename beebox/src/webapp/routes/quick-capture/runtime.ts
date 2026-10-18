@@ -53,6 +53,6 @@ export function startQuickCaptureLifecycle(args: { server: FastifyInstance; boxR
     stopped = true; timer?.stop();
     await activeSweep;
     const tasks = pending.get(args.boxRoot);
-    if (tasks !== undefined) { await Promise.allSettled([...tasks]); pending.delete(args.boxRoot); }
+    if (tasks !== undefined) { await Promise.allSettled(tasks); pending.delete(args.boxRoot); }
   });
 }
