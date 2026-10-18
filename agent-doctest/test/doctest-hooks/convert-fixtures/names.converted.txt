@@ -9,7 +9,12 @@ const t = { label: "mine" };
 const after = "later";
 
 tapRoot.teardown(async () => {
-  void after;
+  try {
+    void after;
+  } catch (error) {
+    console.error("teardown failed:", error);
+    process.exitCode = 1;
+  }
 });
 
 // The doctest gave each example 120s before a still-running notice.

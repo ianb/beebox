@@ -27,14 +27,15 @@ export async function eventually<T>(
     } catch (e) {
       error = e;
     }
-    if (error === undefined && value !== false && value !== undefined && value !== null) {
+    // Truthiness of `error`, as the runtime's helper: a thrown 0 or "" counts as no error.
+    if (!error && value !== false && value !== undefined && value !== null) {
       // The checks above exclude false, null, and undefined; TypeScript cannot narrow a generic by them.
       return value as NonNullable<Exclude<T, false>>;
     }
     if (Date.now() >= deadline) {
-      const message = error instanceof Error ? error.message : String(error);
-      const last = error === undefined ? `value: ${JSON.stringify(value)}` : `error: ${message}`;
-      const timeout = new Error(`${label} was not true after ${timeoutMs}ms; last ${last}`, error === undefined ? {} : { cause: error });
+      const message: unknown = typeof error === "object" && error !== null && "message" in error ? error.message : undefined;
+      const last = error ? `error: ${String(message ?? error)}` : `value: ${JSON.stringify(value)}`;
+      const timeout = new Error(`${label} was not true after ${timeoutMs}ms; last ${last}`, error ? { cause: error } : {});
       timeout.name = "EventuallyTimeout";
       throw timeout;
     }

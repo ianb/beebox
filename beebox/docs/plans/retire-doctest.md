@@ -482,7 +482,7 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   | `eventually`, `printed` | imported from `agent-doctest/check` |
   | Type-only imports in an example | hoisted to module-level `import type`, as the doctest typecheck does |
   | Setup that declares `t` | the callback parameter is named `tap` |
-  | Setup that declares `test`, `tap`, or `printed` | the import is renamed (`tapTest`, `tapRoot`, `doctestPrinted`) |
+  | A name the converter adds (`tap`, `out`, `printed`, `test`) that the doctest already uses | the added name gets a number (`tap2`, `out2`); a setup that declares `test` gets `tapTest` |
 
   - Test names come from the first sentence of the prose just before the
     block, cut to 80 characters; a heading often covers several blocks.

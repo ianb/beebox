@@ -9,11 +9,11 @@ function fail(message: string): never {
 // Name only, name and message, and a message with a bare colon:
 void test("Name only, name and message, and a message with a bare colon:", async (t) => {
   // doctest:L12
-  await t.checkThrows(async () => fail("x"), "TypeError");
+  await t.checkThrows(async () => (fail("x")), "TypeError");
 
   // doctest:L15
-  await t.checkThrows(async () => fail("bad input"), "TypeError: bad input");
+  await t.checkThrows(async () => (fail("bad input")), "TypeError: bad input");
 
   // doctest:L18
-  await t.checkThrows(async () => fail("a:b"), { expected: "TypeError:«*»", mode: "full" });
+  await t.checkThrows(async () => (fail("a:b")), { expected: "TypeError:«*»", mode: "full" });
 });

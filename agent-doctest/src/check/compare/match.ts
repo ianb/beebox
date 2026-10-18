@@ -297,6 +297,9 @@ class Walker {
       const i = pairOfActual[j];
       if (i === undefined && expected.allowsOthers) {
         shown.push(a);
+        // Kept in the suggestion: a failed containing() must not suggest a
+        // shorter list that matches anything.
+        suggested.push(this.propose(a, `${path}[${j}]`));
         continue;
       }
       if (i === undefined) {

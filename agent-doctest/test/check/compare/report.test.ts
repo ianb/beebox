@@ -282,7 +282,10 @@ mismatches:
 $: containing: no actual item matches this expected item
   expected: 2
 suggested:
-containing([])`);
+containing([
+  1,
+  4,
+])`);
 });
 
 void test("a suggestion keeps the patterns that matched", async (t) => {

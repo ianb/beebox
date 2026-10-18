@@ -22,7 +22,8 @@ export class Unordered<out I> {
 /**
  * Match an array regardless of order, keeping multiplicity. `I` comes only
  * from where the call stands (`NoInfer`), so an item is checked against the
- * actual element type, extra keys included.
+ * actual element type, extra keys included. Written outside a `t.check`
+ * call, it needs the type: `unordered<Note>([...])`.
  */
 export function unordered<I>(items: readonly NoInfer<I>[]): Unordered<I> {
   return new Unordered(items, false);

@@ -23,7 +23,7 @@ import { bracketBalance, type CodeBlock, parseCodeBlocks, parseExamples, type Ex
 import { parseFenceInfo, type FenceInfo } from "./doctest-info.ts";
 import { doctestOracle } from "./doctest-load.ts";
 import { oracleSplit, rewriteImports, splitExpression, typeOnlyImports } from "./doctest-split.ts";
-import { declaresName } from "./doctest-runtime.ts";
+import { blockDeclarations, declaresName } from "./doctest-runtime.ts";
 import { nextTemplateState } from "./doctest-parse.ts";
 
 /** One example of the doctest, as the manifest records it. */
@@ -192,7 +192,8 @@ function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: Rea
   const split = (ctx.oracle.has(ctx.md) ? oracleSplit(expression) : null) ?? splitExpression(expression);
   const setup = split.setup.join("\n");
   if ("throws" in ex) {
-    const fn = `async () => ${split.expr.trimStart().startsWith("{") ? `(${split.expr})` : split.expr}`;
+    // Parenthesized as the runtime does: `a, b` is one expression, not two arguments.
+    const fn = `async () => (${split.expr})`;
     // checkThrows reads "Name: message" as name and message; the doctest
     // runtime read any ":" that way, so a bare ":" needs the explicit mode.
     const expected = ex.expected.includes(":") && !ex.expected.includes(": ")
@@ -229,14 +230,24 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   // tap's `test` and `after` are imported under another name when setup already uses the name.
   const testName = setupDeclares("test") ? "tapTest" : "test";
   const tapImport = (name: string, local: string): string => (name === local ? name : `${name} as ${local}`);
-  const tName = setupDeclares("t") ? "tap" : "t";
+  // Names the converter introduces must not collide with a name the
+  // doctest's own code declares in any block.
+  const authorText = blocks.map((b) => b.block.content).join("\n");
+  const taken = new Set(blocks.flatMap((b) => blockDeclarations(b.block.content)));
+  const fresh = (base: string): string => {
+    let name = base;
+    for (let n = 2; taken.has(name) || uses(authorText, name); n++) name = `${base}${n}`;
+    taken.add(name);
+    return name;
+  };
+  // Each test is its own scope, so one name serves every test that prints.
+  const outName = fresh("out");
+  const tName = setupDeclares("t") ? fresh("tap") : "t";
   // A teardown block registers on tap's root test, as the runtime did. tap's
   // exported after() would wait for the root test to end, which a server the
   // file keeps open prevents.
-  const rootName = tName === "tap" || setupDeclares("tap") ? "tapRoot" : "tap";
-  // The doctest's own code may use the helper's name for something else.
-  const authorText = blocks.map((b) => b.block.content).join("\n");
-  const printedName = uses(authorText, "printed") ? "doctestPrinted" : "printed";
+  const rootName = fresh(tName === "tap" ? "tapRoot" : "tap");
+  const printedName = fresh("printed");
   const examples: ManifestExample[] = [];
 
   const setupLines: string[] = [];
@@ -254,7 +265,21 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
       continue;
     }
     if (info.kind === "teardown") {
-      afters.push(...prose, `${rootName}.teardown(async () => {`, ...indent(rewriteImports(content), "  "), "});", "");
+      for (const t of typeOnlyImports(content)) typeImports.add(t.statement);
+      // As the runtime does (doctest-runtime.ts teardownRegistration): a
+      // failing teardown is reported and fails the run, and the others still run.
+      afters.push(
+        ...prose,
+        `${rootName}.teardown(async () => {`,
+        "  try {",
+        ...indent(rewriteImports(content), "    "),
+        "  } catch (error) {",
+        '    console.error("teardown failed:", error);',
+        "    process.exitCode = 1;",
+        "  }",
+        "});",
+        "",
+      );
       continue;
     }
     if (info.kind === "prose") continue;
@@ -287,8 +312,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const testLines: string[] = [];
   for (const test of tests) {
     const text = [...test.body.map(textOf), ...test.teardowns.map((c) => c.code)].join("\n");
-    const printName = uses(text, "out") ? "printLog" : "out";
-    const out = !setupDeclares("print") && uses(text, "print") ? printName : null;
+    const out = !setupDeclares("print") && uses(text, "print") ? outName : null;
     const body: string[] = [];
     if (out !== null) body.push(`const ${out} = ${printedName}();`, `const print = ${out}.print;`);
     for (const { prose, code } of test.teardowns) {

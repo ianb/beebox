@@ -43,11 +43,17 @@ export function runCommand(argv: readonly [string, ...string[]], options: Comman
   const result = spawnSync(command, args, {
     encoding: "utf8",
     timeout: options.timeoutMs ?? 60_000,
+    maxBuffer: 64 * 1024 * 1024,
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
     ...(options.env === undefined ? {} : { env: options.env }),
     ...(options.input === undefined ? {} : { input: options.input }),
   });
   if (result.error !== undefined && result.pid === 0) throw new CommandStartError(command, result.error);
+  // A timeout is a result (signal SIGTERM); any other failure after the
+  // start, such as output past maxBuffer, would leave stdout cut short.
+  if (result.error !== undefined && !("code" in result.error && result.error.code === "ETIMEDOUT")) {
+    throw new Error(`${command} failed while running: ${result.error.message}`, { cause: result.error });
+  }
   return { exitCode: result.status, signal: result.signal, stdout: result.stdout, stderr: result.stderr };
 }
 

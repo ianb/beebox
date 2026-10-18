@@ -3,7 +3,12 @@
 import tap, { test } from "tap";
 
 tap.teardown(async () => {
-  console.log("all done");
+  try {
+    console.log("all done");
+  } catch (error) {
+    console.error("teardown failed:", error);
+    process.exitCode = 1;
+  }
 });
 
 // The test the cleanup belongs to.
