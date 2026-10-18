@@ -10,14 +10,20 @@
  * Afterward the driver rejects the batch if the worker ran a forbidden
  * command or changed anything but the batch, then copies the batch's files
  * back and verifies them in this checkout, which records the result.
- * Applying is serial: one dispatch at a time holds the apply lock.
+ * Applying is serial: it holds the checkout's state lock.
+ *
+ * Accepted gaps (the workers are cheap models following a brief, not
+ * adversaries): a worker's background process can outlive the timeout, and
+ * a `--trial` check runs the slot's own node_modules, which a worker could
+ * edit. An applied batch is verified here, with this checkout's tools.
  */
 
 import { spawnSync } from "node:child_process";
-import { closeSync, copyFileSync, cpSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
-import { NothingToDispatchError, SlotBusyError, ToolOutputError } from "./errors.ts";
+import { BatchInUseError, NothingToDispatchError, SlotBusyError, ToolOutputError } from "./errors.ts";
+import { readLock, stateLockPath, tryLock, withLock } from "./locks.ts";
 import { REPO } from "./tools.ts";
 import { select, verify, type Selected } from "./verify.ts";
 import { loadAll, STATE_DIR, writeProgress } from "./state.ts";
@@ -29,10 +35,20 @@ const WORKER_TIMEOUT_MS = 30 * 60 * 1000;
 const RULE_BREAKS: readonly RegExp[] = [
   /\bpnpm (?:install|i|add|remove)\b/,
   /\b(?:kill|killall|pkill)\b/,
-  /\bgit (?:push|reset|checkout|stash|clean|commit|restore|switch|rebase|merge)\b/,
   /--no-verify/,
   /\brm\b/,
 ];
+/**
+ * git as a command word (not `.git` or `git-lock.test.ts`). It may only
+ * read: every git command in a line must be one of these.
+ */
+const GIT = /(?:^|[\s&(;|])git\s/g;
+const GIT_READ = /(?:^|[\s&(;|])git\s+(?:-C\s+\S+\s+)?(?:diff|status|log|show|ls-files|grep|blame)\b/g;
+
+export function forbidden(command: string): boolean {
+  if (RULE_BREAKS.some((re) => re.test(command))) return true;
+  return [...command.matchAll(GIT)].length !== [...command.matchAll(GIT_READ)].length;
+}
 
 export type Model = "luna" | "haiku";
 
@@ -64,47 +80,23 @@ function install(slot: string): void {
   if (r.status !== 0) throw new ToolOutputError({ what: ["pnpm install in", slot], output: r.stdout + r.stderr });
 }
 
-/** Whether an error is the EEXIST of an exclusive create: the lock is held. */
-function isHeld(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "EEXIST";
-}
-
-/** Take a free slot: its lock file is created exclusively, and removed by `release`. */
-function claimSlot(): { slot: string; release: () => void } {
-  for (let n = 1; n <= SLOT_COUNT; n++) {
-    const slot = join(slotsDir(), `slot-${n}`);
-    if (!existsSync(slot)) continue;
-    const lock = `${slot}.lock`;
-    try {
-      closeSync(openSync(lock, "wx"));
-    } catch (error) {
-      if (isHeld(error)) continue;
-      throw error;
+/**
+ * Take a free slot and reserve the batch's files: no two dispatches work on
+ * one file. The slot's lock file holds both.
+ */
+function claimSlot(tests: readonly string[]): { slot: string; release: () => void } {
+  const slots = Array.from({ length: SLOT_COUNT }, (_, i) => join(slotsDir(), `slot-${i + 1}`)).filter((s) => existsSync(s));
+  for (const slot of slots) {
+    if (!tryLock(`${slot}.lock`, tests)) continue;
+    const held = slots.filter((o) => o !== slot).flatMap((o) => readLock(`${o}.lock`)?.files ?? []);
+    const overlap = tests.filter((t) => held.includes(t));
+    if (overlap.length > 0) {
+      rmSync(`${slot}.lock`, { force: true });
+      throw new BatchInUseError(overlap);
     }
-    writeFileSync(lock, `${process.pid}\n`);
-    return { slot, release: () => rmSync(lock, { force: true }) };
+    return { slot, release: () => rmSync(`${slot}.lock`, { force: true }) };
   }
   throw new SlotBusyError(slotsDir());
-}
-
-/** Hold the apply lock while `fn` runs; waits for another dispatch to finish applying. */
-function withApplyLock<T>(fn: () => T): T {
-  const lock = join(slotsDir(), "apply.lock");
-  const wait = new Int32Array(new SharedArrayBuffer(4));
-  for (;;) {
-    try {
-      closeSync(openSync(lock, "wx"));
-      break;
-    } catch (error) {
-      if (!isHeld(error)) throw error;
-      Atomics.wait(wait, 0, 0, 1000);
-    }
-  }
-  try {
-    return fn();
-  } finally {
-    rmSync(lock, { force: true });
-  }
 }
 
 export function brief(tests: readonly string[]): string {
@@ -175,12 +167,24 @@ function contentOf(path: string): string | null {
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 
-/** Paths `git status` reports changed in a worktree. */
+/**
+ * Paths `git status` reports changed in a worktree, both ends of a rename
+ * included. NUL-separated, so no path is quoted.
+ */
+export function parseStatus(z: string): string[] {
+  const fields = z.split("\0").filter((f) => f !== "");
+  const out: string[] = [];
+  for (let i = 0; i < fields.length; i++) {
+    const entry = fields[i] ?? "";
+    out.push(entry.slice(3));
+    // A rename or copy entry is followed by its source path.
+    if (/^[CR]/.test(entry) || /^.[CR]/.test(entry)) out.push(fields[++i] ?? "");
+  }
+  return out;
+}
+
 function changedPaths(cwd: string): string[] {
-  return git(cwd, ["status", "--porcelain", "--untracked-files=all"])
-    .split("\n")
-    .filter((l) => l !== "")
-    .map((l) => l.slice(3).replace(/^.* -> /, ""));
+  return parseStatus(git(cwd, ["status", "--porcelain", "-z", "--untracked-files=all"]));
 }
 
 /**
@@ -193,7 +197,7 @@ export function dispatch(batch: { paths: readonly string[]; model: Model; trial:
   const tests = selected.map((s) => s.file.test);
   if (tests.length === 0) throw new NothingToDispatchError(paths);
   const head = git(REPO, ["rev-parse", "HEAD"]).trim();
-  const { slot, release } = claimSlot();
+  const { slot, release } = claimSlot(tests);
   try {
     log(`${slot}: ${tests.length} files, ${model}`);
     git(slot, ["checkout", "-qf", "--detach", head]);
@@ -219,10 +223,12 @@ export function dispatch(batch: { paths: readonly string[]; model: Model; trial:
 
     const reasons: string[] = [];
     if (r.error !== undefined) reasons.push(`worker did not finish: ${r.error.message}`);
-    for (const c of commandsIn(transcript)) {
-      if (RULE_BREAKS.some((re) => re.test(c))) reasons.push(`ran a forbidden command: ${c.slice(0, 200)}`);
-    }
-    for (const p of changedPaths(slot)) {
+    else if (r.status !== 0) reasons.push(`worker exited with ${r.status ?? r.signal ?? "no status"}`);
+    for (const c of commandsIn(transcript)) if (forbidden(c)) reasons.push(`ran a forbidden command: ${c.slice(0, 200)}`);
+    if (git(slot, ["rev-parse", "HEAD"]).trim() !== head) reasons.push("moved the slot's HEAD");
+    if (spawnSync("git", ["diff", "--cached", "--quiet"], { cwd: slot }).status !== 0) reasons.push("staged changes");
+    // Every path changed before or after the worker ran, against what it held before.
+    for (const p of new Set([...before.keys(), ...changedPaths(slot)])) {
       if (tests.includes(p)) continue;
       if (before.has(p) && before.get(p) === contentOf(join(slot, p))) continue;
       reasons.push(`changed a path outside the batch: ${p}`);
@@ -235,7 +241,7 @@ export function dispatch(batch: { paths: readonly string[]; model: Model; trial:
       return { accepted: passed, reasons, transcript: transcriptPath, selected, checkOutput: c.stdout + c.stderr };
     }
 
-    withApplyLock(() => {
+    withLock(stateLockPath(), () => {
       for (const t of tests) copyFileSync(join(slot, t), join(REPO, t));
       // Reselect: another dispatch may have saved the state files meanwhile.
       const fresh = select(tests);

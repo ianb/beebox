@@ -25,6 +25,7 @@
 
 import { relative, resolve } from "node:path";
 import { dispatch, initSlots, type Model } from "./doctest-convert/dispatch.ts";
+import { stateLockPath, withLock } from "./doctest-convert/locks.ts";
 import { DriverError, ModelArgError, NothingConvertedError, PrepareArgsError, UnknownCommandError, VerifyArgsError } from "./doctest-convert/errors.ts";
 import { prepare } from "./doctest-convert/prepare.ts";
 import { loadAll, writeProgress } from "./doctest-convert/state.ts";
@@ -54,21 +55,27 @@ function main(argv: readonly string[]): boolean {
     case "prepare": {
       const [dir] = paths;
       if (dir === undefined || paths.length > 1) throw new PrepareArgsError();
-      const state = prepare(dir, (s) => console.log(s));
-      const converted = select(Object.keys(state.files).filter((d) => state.files[d]?.status === "converted"));
-      if (converted.length > 0) verify(converted, { save: true });
-      writeProgress(loadAll());
-      return report(converted);
+      return withLock(stateLockPath(), () => {
+        const state = prepare(dir, (s) => console.log(s));
+        const converted = select(Object.keys(state.files).filter((d) => state.files[d]?.status === "converted"));
+        if (converted.length > 0) verify(converted, { save: true });
+        writeProgress(loadAll());
+        return report(converted);
+      });
     }
     case "verify":
     case "check": {
       if (paths.length === 0) throw new VerifyArgsError();
-      const selected = select(paths);
-      if (selected.length === 0) throw new NothingConvertedError(paths);
       const save = command === "verify";
-      verify(selected, { save });
-      if (save) writeProgress(loadAll());
-      return report(selected);
+      const run = (): boolean => {
+        // Selected inside the lock, so the entries are current when saved.
+        const selected = select(paths);
+        if (selected.length === 0) throw new NothingConvertedError(paths);
+        verify(selected, { save });
+        if (save) writeProgress(loadAll());
+        return report(selected);
+      };
+      return save ? withLock(stateLockPath(), run) : run();
     }
     case "slots": {
       initSlots((s) => console.log(s));

@@ -3,7 +3,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { checksByMarker, compareChecks } from "../../doctest-convert/checks.ts";
+import { addedSuppressions, checksByMarker, compareChecks, suppressionsIn } from "../../doctest-convert/checks.ts";
 
 const converted = [
   "void test(\"a\", async (t) => {",
@@ -50,4 +50,14 @@ void test("a tagged template compares by its raw spelling", async (t) => {
   t.check(compareChecks({ before: checksByMarker(before, "x.test.ts"), source: after, fileName: "x.test.ts", markerLines: [5] }).problems, [
     "at doctest:L5: expected value changed (line 3)",
   ]);
+});
+
+void test("a suppression added or widened is reported; a moved one is not", async (t) => {
+  const before = suppressionsIn("// eslint-disable-next-line max-params -- Node's callback shape\nx();\n");
+  const widened = suppressionsIn("/* eslint-disable */\nx();\n");
+  const added = suppressionsIn("// eslint-disable-next-line max-params -- Node's callback shape\n// eslint-disable-next-line no-shadow\nx();\n");
+  t.check(
+    { before, widened: addedSuppressions(before, widened), added: addedSuppressions(before, added), same: addedSuppressions(before, before) },
+    { before: ["eslint-disable-next-line max-params"], widened: ["eslint-disable"], added: ["eslint-disable-next-line no-shadow"], same: [] },
+  );
 });

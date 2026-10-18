@@ -16,7 +16,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { compareChecks, suppressionsIn } from "./checks.ts";
+import { addedSuppressions, compareChecks, suppressionsIn } from "./checks.ts";
 import { byRoot, programsOf, runAll } from "./roots.ts";
 import { loadAll, save, type FileState, type StateFile } from "./state.ts";
 import { eslint, REPO, typecheck } from "./tools.ts";
@@ -65,7 +65,7 @@ export function verify(selected: readonly Selected[], opts: { save: boolean }): 
     }
     const source = readFileSync(path, "utf8");
     // A lint rule changes only with the boxholder's permission (AGENTS.md).
-    if (suppressionsIn(source) > s.file.suppressions) add(s.file.test, "an eslint-disable comment was added");
+    for (const d of addedSuppressions(s.file.suppressions, suppressionsIn(source))) add(s.file.test, `added a lint suppression: ${d}`);
     const report = compareChecks({
       before: s.file.checks,
       source,

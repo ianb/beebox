@@ -51,9 +51,20 @@ function digest(text: string): string {
   return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
-/** The number of `eslint-disable` comments in a file. */
-export function suppressionsIn(source: string): number {
-  return [...source.matchAll(/eslint-disable/g)].length;
+/** The `eslint-disable` directives in a file, each as its directive and rule list. */
+export function suppressionsIn(source: string): string[] {
+  return [...source.matchAll(/eslint-disable(?:-next-line|-line)?(?:[^\S\n]+[^\n*]*?)?(?=\s*(?:--|\*\/|$))/gm)].map((m) => m[0].trim());
+}
+
+/** Directives in `now` that `before` does not have (as a multiset). */
+export function addedSuppressions(before: readonly string[], now: readonly string[]): string[] {
+  const left = [...before];
+  return now.filter((d) => {
+    const i = left.indexOf(d);
+    if (i === -1) return true;
+    left.splice(i, 1);
+    return false;
+  });
 }
 
 /** Marker lines in source order, with the file line each sits on. */

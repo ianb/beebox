@@ -32,8 +32,8 @@ const FileStateSchema = z.object({
   assertions: z.number().nullable(),
   /** Checks and throws in the manifest plus tests in the file: the count a faithful conversion gives. */
   expectedAssertions: z.number(),
-  /** `eslint-disable` comments in the converted file; a worker may not add one. */
-  suppressions: z.number(),
+  /** The `eslint-disable` directives in the converted file; a worker may not add or widen one. */
+  suppressions: z.array(z.string()),
   /** What the last prepare or verify found wrong; empty when it passed. */
   problems: z.array(z.string()),
   /** Checks whose actual value a worker changed, for review. */
@@ -88,7 +88,7 @@ export function save(state: StateFile): void {
   const files = Object.fromEntries(Object.entries(state.files).toSorted(([a], [b]) => a.localeCompare(b)));
   // Written aside, flushed, and renamed: prepare deletes a doctest once its
   // entry is saved, so a half-written state file would lose it.
-  const aside = `${path}.tmp`;
+  const aside = `${path}.${process.pid}.tmp`;
   const fd = openSync(aside, "w");
   try {
     writeSync(fd, `${JSON.stringify({ dir: state.dir, files }, null, 1)}\n`);

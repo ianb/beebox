@@ -94,3 +94,17 @@ export class ModelArgError extends UsageError {
     this.name = "ModelArgError";
   }
 }
+
+export class LockTimeoutError extends DriverError {
+  public constructor(path: string) {
+    super(`gave up waiting for ${path}; if no driver is running, remove it`);
+    this.name = "LockTimeoutError";
+  }
+}
+
+export class BatchInUseError extends DriverError {
+  public constructor(files: readonly string[]) {
+    super(`another dispatch holds these files: ${files.join(" ")}`);
+    this.name = "BatchInUseError";
+  }
+}
