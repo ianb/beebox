@@ -74,7 +74,7 @@ async function resolveBbxBinary(shape: BoxShape): Promise<string> {
 
 /** Admit resolution before spawning; the child independently admits startup. */
 export async function spawnBoxChild(args: {
-  root: string; slug: string; hubSecret: string; spawn: SpawnChildFn;
+  root: string; slug: string; hubSecret: string; spawn: SpawnChildFn; secretsFile?: string;
 }): Promise<{ child: ChildProc; port: number; boxRoot: string }> {
   const startup = await acquireBoxStartup(args.root);
   let boxRoot: string;
@@ -83,7 +83,15 @@ export async function spawnBoxChild(args: {
   const shape = await getBoxShape(boxRoot);
   const bbxBinary = await resolveBbxBinary(shape);
   const port = await getPorts();
-  const env = buildChildEnv({ sourceEnv: process.env, hubExtras: { BBX_BIN: bbxBinary, BBX_HUB_SECRET: args.hubSecret } });
+  const env = buildChildEnv({
+    sourceEnv: process.env,
+    hubExtras: {
+      BBX_BIN: bbxBinary,
+      BBX_HUB_SECRET: args.hubSecret,
+      // A box with its own store (a dev test box) reads only that file.
+      ...(args.secretsFile !== undefined && { BBX_SECRETS_FILE: args.secretsFile, BBX_SECRETS_STORE_ISOLATED: "1" }),
+    },
+  });
   const child = args.spawn({ bbxBinary, args: ["engine", "serve", boxRoot, "--slug", args.slug, "--port", String(port)], cwd: shape.boxRoot, env });
   return { child, port, boxRoot };
 }

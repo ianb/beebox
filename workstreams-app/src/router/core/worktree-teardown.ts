@@ -66,6 +66,15 @@ export function isolatedSecretsFileFor(browseDir: string, name: string): string 
   return path.join(path.dirname(browseDir), "secrets", `${name}.json`);
 }
 
+/**
+ * The store of one test box (`TEST_BOXES=`) that `main` serves. `main` keeps
+ * the real store for the boxholder's own boxes, so a test box gets its own
+ * file, passed to that box's hub child only (`secretsFile` in `hub.json`).
+ */
+export function testBoxSecretsFileFor(browseDir: string, box: { worktree: string; slug: string }): string {
+  return path.join(path.dirname(browseDir), "secrets", box.worktree, `${box.slug}.json`);
+}
+
 // SIGTERM→SIGKILL escalation for one generation's children — shared by the
 // failure path, the superseded-start self-clean (invariant #5), onChildExit,
 // and stopWorktree. Returns the escalation TimerHandle so the caller can store

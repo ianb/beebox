@@ -231,10 +231,13 @@ export interface Harness {
   failNextPidWrite: { value: unknown | undefined };
   /** The backend-source token the effects report; assign to simulate a rebuild. */
   sourceToken: { value: string | null };
+  /** Every `writeHubConfig` call, in order. */
+  hubConfigs: Parameters<RouterEffects["writeHubConfig"]>[0][];
   cleanup(): Promise<void>;
 }
 
-export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Harness> {
+export async function makeHarness(options?: { devNoHub?: boolean; boxes?: string[]; testBoxes?: string[] }): Promise<Harness> {
+  const hubConfigs: Harness["hubConfigs"] = [];
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "router-core-test-"));
   const clock = new FakeClock();
   const spawner = new FakeSpawner();
@@ -283,16 +286,20 @@ export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Har
         removeCalls.push({ name, expect });
       },
     },
-    writeHubConfig: async () => path.join(tmp, "hub.json"),
+    writeHubConfig: async (params) => {
+      hubConfigs.push(params);
+      return path.join(tmp, "hub.json");
+    },
     getPort: (() => {
       let p = 6000;
       return () => Promise.resolve(p++);
     })(),
     resolveWorktree: async (name): Promise<ResolvedWorktree | null> => {
       if (unknownNames.has(name)) return null;
-      return { name, root: tmp, backendCwd: tmp, frontendCwd: tmp, viteBin: path.join(tmp, "frontend-vite"), boxes: [] };
+      return { name, root: tmp, backendCwd: tmp, frontendCwd: tmp, viteBin: path.join(tmp, "frontend-vite"), boxes: options?.boxes ?? [], testBoxes: options?.testBoxes ?? [] };
     },
-    resolveBoxEntries: async () => [],
+    // An entry is its own content dir; its slug is the last path segment.
+    resolveBoxEntries: async (entries) => entries.map((entry) => ({ contentDir: entry, slug: path.basename(entry) })),
     // Current-layout candidates always "exist" so tests exercise the same
     // spawn args as production's normal (non-fallback) path; backend-entry
     // resolution itself is unit-tested in backend-entry.test.ts.
@@ -311,6 +318,7 @@ export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Har
   });
 
   return {
+    hubConfigs,
     core,
     clock,
     spawner,

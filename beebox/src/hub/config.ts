@@ -51,6 +51,11 @@ const boxEntrySchema = z.strictObject({
   /** Absolute or relative (resolved against the config file's own directory)
    *  path to the box root — one root (shapeVersion 3). */
   path: z.string().min(1),
+  /** This box's own secret store (resolved like `path`). The dev router sets
+   *  it for a test box so the box never shares entries with the boxholder's
+   *  real boxes; the child gets it as `BBX_SECRETS_FILE`, marked isolated.
+   *  Absent: the hub's own store. */
+  secretsFile: z.string().min(1).optional(),
 });
 
 const hubConfigFileSchema = z.strictObject({
@@ -240,7 +245,7 @@ export async function parseHubConfig(json: unknown, configPath: string): Promise
       );
     }
     const resolvedPath = path.resolve(configDir, entry.path);
-    boxes[slug] = { path: resolvedPath };
+    boxes[slug] = { path: resolvedPath, ...(entry.secretsFile !== undefined && { secretsFile: path.resolve(configDir, entry.secretsFile) }) };
     const canonicalKey = await canonicalBoxKey(resolvedPath);
     const existing = canonicalToEntries.get(canonicalKey) ?? [];
     existing.push({ slug, resolvedPath });

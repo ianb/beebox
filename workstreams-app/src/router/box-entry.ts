@@ -37,6 +37,9 @@ export interface ResolvedBoxEntry {
   contentDir: string;
   /** The URL slug this box is served under: `/<worktree>/<slug>/...`. */
   slug: string;
+  /** A test box's own secret store (`TEST_BOXES=`); absent means the
+   *  worktree's store. Set by the generation, never by entry resolution. */
+  secretsFile?: string;
 }
 
 async function exists(p: string): Promise<boolean> {

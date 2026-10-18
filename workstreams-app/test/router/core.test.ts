@@ -53,6 +53,28 @@ test("a worktree's hub gets its own secret store; main keeps the real one", asyn
   }
 });
 
+test("main's test boxes (TEST_BOXES=) each get their own store; its other boxes keep the real one", async () => {
+  const h = await makeHarness({ boxes: ["/boxes/test1", "/boxes/own"], testBoxes: ["/boxes/test1"] });
+  try {
+    await startReady(h, "main");
+    const boxes = h.hubConfigs[0]?.resolvedBoxes ?? [];
+    assert.match(boxes.find((b) => b.slug === "test1")?.secretsFile ?? "", /[/\\]secrets[/\\]main[/\\]test1\.json$/, "the test box has its own store file");
+    assert.equal(boxes.find((b) => b.slug === "own")?.secretsFile, undefined, "an unlisted box stays on main's real store");
+    assert.equal(h.spawner.lifecycleCalls()[0]?.options.env?.BBX_SECRETS_FILE, process.env.BBX_SECRETS_FILE, "main's hub itself keeps the store it inherited");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("without the hub, TEST_BOXES refuses to start rather than share the real store", async () => {
+  const h = await makeHarness({ devNoHub: true, boxes: ["/boxes/test1"], testBoxes: ["/boxes/test1"] });
+  try {
+    await assert.rejects(() => h.core.ensureRunning("main"), /TEST_BOXES needs the hub/);
+  } finally {
+    await h.cleanup();
+  }
+});
+
 test("direct backend explicitly enables development surfaces too", async () => {
   const h = await makeHarness({ devNoHub: true });
   try {
