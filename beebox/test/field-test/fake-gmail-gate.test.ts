@@ -20,7 +20,7 @@ import {
   loadFakeGmailState,
   saveFakeGmailState,
 } from "../../src/field-test/fake-gmail-state.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const labels = [{ id: "INBOX", name: "INBOX", type: "system" }];
 

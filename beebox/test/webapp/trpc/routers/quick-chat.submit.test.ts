@@ -28,7 +28,7 @@ import type { ChatChannel } from "../../../../src/shared/chat-channel.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";
 import { createFakeJev, type JevService } from "../../../../src/services/jev.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 

@@ -1,125 +1,33 @@
-# Testing with check()
+# Getting started
 
-Write tests using `t.check(actual, expected)` alongside tap. `check()` compares everything as strings — values are serialized, then matched against an expected string with optional wildcards.
+Write tests with `t.check(actual, expected)` alongside tap. The expected value is code, and the type checker checks it against the actual value's type.
 
 ```ts
 import { test } from "tap";
-import "agent-doctest/tap";
-```
+import { any } from "agent-doctest/check";
 
-The import adds `t.check()` to all tap test objects. It's also loaded automatically via `.taprc` so the import is only needed for TypeScript types.
-
-## Write a test
-
-```ts
-test("safeFilename strips special characters", async (t) => {
+void test("safeFilename strips special characters", async (t) => {
   t.check(safeFilename("Hello World!"), "Hello_World");
-  t.check(safeFilename(""), "untitled");
+  t.check(await getStatus(boxRoot), { staged: [], modified: [], untracked: [], clean: true });
+  t.check(await createNote("Draft"), { id: any(String), title: "Draft" });
 });
 ```
 
-Objects are serialized as pretty-printed JSON:
+`agent-doctest/tap` adds the methods to every tap test object. The `.taprc` in the [README](../README.md) loads it with `--import`.
+
+For patterns, matching rules, how to find the expected value, and how to read a failure, see [testing with t.check](../../beebox/docs/testing/check.md).
+
+## Text and errors
+
+- `t.checkText(actual, text)` compares the value's text. The text may hold `«»` wildcards. Use it for command output. Details: [check-reference.md](check-reference.md).
+- `t.checkThrows(fn, "Name")` or `t.checkThrows(fn, "Name: message")` checks that `fn` throws or rejects. A rejection counts as the throw. `await` the call.
 
 ```ts
-test("getStatus on clean repo", async (t) => {
-  await t.check(getStatus(boxRoot), `{
-  "staged": [],
-  "modified": [],
-  "untracked": [],
-  "clean": true
-}`);
-});
+await t.checkThrows(() => parseDate("not-a-date"), "RangeError: Invalid date string");
 ```
 
-## Test side effects with the printer
+On failure, the caught error's stack trace is in the tap diagnostics.
 
-When `actual` is a function, it receives a `print` callback. Printed lines + the return value become the "actual" string:
+## Lint
 
-```ts
-test("creating a card modifies git status", async (t) => {
-  await t.check(async (print) => {
-    await fs.writeFile(path.join(boxRoot, "box/inbox/test.card"), content);
-    print("wrote: box/inbox/test.card");
-    return await getStatus(boxRoot);
-  }, `wrote: box/inbox/test.card
-{
-  "staged": [],
-  "modified": [],
-  "untracked": ["box/inbox/test.card"],
-  "clean": false
-}`);
-});
-```
-
-## Use wildcards for volatile values
-
-`«»` wildcards match variable text. Named and typed wildcards are self-documenting:
-
-```ts
-t.check(commitOutput, "«hash=*» initial commit");
-t.check(logLine, "[«date»] «author=*»: created card");
-```
-
-## Test exceptions
-
-Use `t.checkThrows()` to assert that code throws with a specific error type:
-
-```ts
-test("rejects invalid input", async (t) => {
-  t.checkThrows(
-    () => parseDate("not-a-date"),
-    { expected: "RangeError", mode: "name" },
-  );
-});
-```
-
-Use `mode: "full"` to also check the error message:
-
-```ts
-t.checkThrows(
-  () => parseDate("not-a-date"),
-  { expected: "RangeError: Invalid date string", mode: "full" },
-);
-```
-
-An async fn works too — a rejection counts as the throw; `await` the call so
-the assertion lands inside the test:
-
-```ts
-await t.checkThrows(
-  async () => fetchDate("bad-url"),
-  { expected: "RangeError", mode: "name" },
-);
-```
-
-In doctests, use the `=> throws` syntax:
-
-````markdown
-```
-parseDate("not-a-date")
-=> throws RangeError
-```
-````
-
-On failure, the caught error's stack trace is included in tap diagnostics.
-
-## When to use check() vs tap assertions
-
-| Use | For |
-|---|---|
-| `t.check(val, "expected")` | String-shaped output, rendered content, JSON structures, side-effect sequences |
-| `t.equal(a, b)` | Exact value equality (numbers, booleans, specific strings) |
-| `t.same(a, b)` | Deep structural equality where you care about the shape, not the text |
-| `t.ok(condition)` | Boolean conditions |
-
-They mix freely in the same test.
-
-## What's in the full reference
-
-See [check-reference.md](check-reference.md) for:
-
-- **Serializers** — register custom value-to-string converters for domain types (GitStatus, Card, etc.) so tests read naturally instead of showing raw JSON
-- **Options** — `normalizeWhitespace` for messy output, `label` for identifying checks in error messages
-- **inspect()** — non-throwing variant that returns `{ pass, actual, expected, diff }` for programmatic use
-- **Standalone check()** — the throwing API for non-tap contexts
-- **API summary** — full type signatures
+Enable the three rules from `agent-doctest/eslint` on test files. See the [README](../README.md#lint-rules).

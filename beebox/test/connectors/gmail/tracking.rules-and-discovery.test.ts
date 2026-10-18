@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
 import type { GmailMessage } from "../../../src/services/google-gmail-types.js";

@@ -3,7 +3,7 @@
  *
  * Selected when `_config/transcription.json` sets `"service": "fake"`. Reads a
  * box-local script at `_config/fake-transcription.json` and returns the entry
- * keyed by the clip filename (falling back to `"*"`), so doctests and a dev box
+ * keyed by the clip filename (falling back to `"*"`), so tests and a dev box
  * can produce deterministic transcripts + word timings with no API key. Word
  * timestamps are relative seconds from the clip start — the same shape a real
  * service returns.

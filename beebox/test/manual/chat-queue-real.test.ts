@@ -18,7 +18,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { ChatSession } from "../../src/core/chat/session/run/core.js";
 import { createChatBackend } from "../../src/services/claude-chat/core.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 async function plainPrompt(): Promise<string> { return "Reply tersely."; }
 

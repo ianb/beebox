@@ -11,7 +11,7 @@ import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../../src/core/migrations.js";
 import { createTextQuestionTemplate } from "../../../src/schemas/question.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";

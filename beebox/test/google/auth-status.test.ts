@@ -23,7 +23,7 @@ import {
 import { saveGoogleTokens, markGoogleAuthDead } from "../../src/google/token-store.js";
 import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "google-auth-status-"));
 const TOKENS_FILE = path.join(tmp, "google-tokens.json");

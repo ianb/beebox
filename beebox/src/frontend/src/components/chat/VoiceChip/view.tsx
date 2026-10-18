@@ -9,7 +9,7 @@
  * docs/plans/top-nav-ia.md it renders in the app bar's chip slot rather than
  * a chat header row; the chip itself is unchanged.
  *
- * `VoiceChipFace` is exported separately so it can be rendered in a doctest
+ * `VoiceChipFace` is exported separately so it can be rendered in a test
  * (src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.test.ts) without the Dropdown/router
  * context the full chip needs.
  */

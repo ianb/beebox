@@ -14,7 +14,7 @@ import "agent-doctest/tap";
 import { processBatchJobs } from "../../../../src/core/reactor/engine/batch-jobs.js";
 import type { JobWithContent } from "../../../../src/core/reactor/types.js";
 import { createFakeAgent } from "../../fake-agent.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

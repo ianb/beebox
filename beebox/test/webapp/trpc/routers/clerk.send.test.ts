@@ -25,7 +25,7 @@ import type { ReserveResult } from "../../../../src/core/chat/session/reserve.js
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { ChatScheduleManager } from "../../../../src/core/chat/schedules/core.js";
 import type { FakeJevService, JevService } from "../../../../src/services/jev.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { ChatRuntime, SendOutcome, SendTargetArgs, SendTargetResult, UserMessageSendArgs } from "../../../../src/webapp/chat-runtime.js";
 import { setChatRuntime } from "../../../../src/webapp/chat-runtime.js";
@@ -33,7 +33,7 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeJev } from "../../../../src/services/jev.js";
 import { executeMove } from "../../../../src/core/commands/move/command.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 function caller(boxRoot: string, jev: JevService | undefined) {
   return appRouter.createCaller(trpcContext({

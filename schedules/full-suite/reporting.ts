@@ -24,7 +24,7 @@ export async function report(args: string[]): Promise<boolean> {
 
 /**
  * Conditions this run found still true that a test verdict must not resolve:
- * the doctest typecheck's, which tests passing does not clear.
+ * the typecheck's, which tests passing does not clear.
  */
 const held = new Set<string>();
 

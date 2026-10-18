@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { createRequire } from "node:module";

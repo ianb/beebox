@@ -1,7 +1,7 @@
 /**
- * Every directory that holds doctests or the tap tests converted from them,
+ * Every directory that holds tests or the tap tests converted from them,
  * the package that runs them, and the typecheck script whose program covers
- * them. The doctest conversion driver and its checks read this list
+ * them. The test conversion driver and its checks read this list
  * (beebox/docs/plans/retire-doctest.md, track 2). Other test runners
  * (node:test files, beebox-clerk) are not listed.
  *

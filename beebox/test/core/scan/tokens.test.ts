@@ -15,7 +15,7 @@ import { printed } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import {
   createScanToken,
   listScanTokens,

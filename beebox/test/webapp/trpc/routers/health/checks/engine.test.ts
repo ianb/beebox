@@ -14,7 +14,7 @@ import { z } from "zod";
 import { engineHealthChecks, boxSchemaFieldsCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/engine.js";
 import { cardSchema } from "../../../../../../src/exports/cards.js";
 import { invalidateBoxSchemas } from "../../../../../../src/schemas.js";
-import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 
 // Hand-scaffold a v3 (one-root) shape inside a tmp box: package.json
 // declaring a beebox dependency and the marker, both at the same root.

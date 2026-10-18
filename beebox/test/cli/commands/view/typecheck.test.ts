@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { typecheckViews } from "../../../../src/cli/commands/view/typecheck.js";
 
 // Views live at `<boxRoot>/src/views`.

@@ -9,7 +9,7 @@
  * `reportNone` that outlasts the grace window), and `timeout` (nothing
  * answered — the route maps this to "no client connected"). The generic
  * `fulfilled` status is renamed `audio` here so existing callers and the
- * doctest keep their `status === "audio"` / `result.fulfillment.audio` shape.
+ * test keep their `status === "audio"` / `result.fulfillment.audio` shape.
  *
  * **Echo-and-verify** (retranscription-in-chat plan, Track 1b — load-bearing):
  * every request targets an exact `messageId` (there is no untargeted "latest"

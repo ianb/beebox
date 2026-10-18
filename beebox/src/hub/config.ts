@@ -181,7 +181,7 @@ export async function canonicalBoxKey(resolvedPath: string): Promise<string> {
  * box, not accepted as two distinct ones. `loadHubConfig` was already
  * async (it reads the file from disk), so making this one check async too
  * doesn't change the function's shape -- it stays the one place that
- * validates `hub.json`, which is what keeps this module's doctests
+ * validates `hub.json`, which is what keeps this module's tests
  * (`test/hub/config.test.ts`) meaningful as pure-ish validation
  * tests rather than needing supervisor/process machinery.
  */

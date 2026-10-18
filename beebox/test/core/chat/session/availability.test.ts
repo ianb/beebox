@@ -11,7 +11,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { deriveTranscriptState, resolveSessionAvailability } from "../../../../src/core/chat/session/availability.js";
 import { localOrigin } from "../../../../src/core/chat/session/origin.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";

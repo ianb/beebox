@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { getLogPaginated, getTrailerFacets, stageAndCommitPaths } from "../../src/lib/git/core/operations.js";
 import { buildGreps } from "../../src/webapp/trpc/routers/history.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 void test("line 14", async (t) => {
   t.teardown(async () => {

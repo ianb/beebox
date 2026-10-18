@@ -10,7 +10,7 @@ import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadHubConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 async function writeConfig(dir: string, obj: object): Promise<string> {
   const configPath = path.join(dir, "hub.json");

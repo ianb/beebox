@@ -12,8 +12,8 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import type { StoredEngineUnavailability } from "../../../../src/core/agent/engine-availability-store.js";
 import { invariant } from "../../../../src/shared/invariant.js";
 import { recordScheduleEpisodes } from "../../../../src/core/schedule/scheduler/health-alert.js";

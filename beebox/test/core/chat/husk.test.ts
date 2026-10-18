@@ -15,7 +15,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { ensureChatHusk, reconcileChatHusks } from "../../../src/core/chat/husk.js";
 import { findChatHuskEntry, listChatHusks } from "../../../src/core/chat/husk-read.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";

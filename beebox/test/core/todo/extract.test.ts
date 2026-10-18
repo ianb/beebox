@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { extractCardTodos } from "../../../src/core/todo/extract/core.js";
 import { deriveTodo } from "../../../src/core/todo/derive.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { formatTodoLocation, type TodoLocator } from "../../../src/core/todo/collect-types.js";
 
 const box = await makeTmpBox();

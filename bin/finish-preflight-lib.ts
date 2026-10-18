@@ -134,31 +134,25 @@ export function groupPaths(
   };
 }
 
-/** A `.doctest.md` is executable behaviour, never prose. */
-export function isDoctest(path: string): boolean {
-  return path.endsWith(".doctest.md");
-}
-
 export function isDocPath(path: string): boolean {
-  return path.endsWith(".md") && !isDoctest(path);
+  return path.endsWith(".md");
 }
 
 export function isTestPath(path: string): boolean {
-  return isDoctest(path) || /\.test\.tsx?$/.test(path) || /(^|\/)test\//.test(path);
+  return /\.test\.tsx?$/.test(path) || /(^|\/)test\//.test(path);
 }
 
 /**
- * The docs-only rule: every changed path is either a non-doctest `.md`
- * anywhere (an issue note, README, CONTRIBUTING, a plan) or sits under a
- * `docs/` directory (which admits images and other doc assets), and none is
- * a `.doctest.md`. Broadened 2026-09-12 from "under docs/ only": the
+ * The docs-only rule: every changed path is either a `.md` anywhere (an
+ * issue note, README, CONTRIBUTING, a plan) or sits under a `docs/`
+ * directory (which admits images and other doc assets). Broadened 2026-09-12 from "under docs/ only": the
  * checkpoint note finish appends under `issues/` was flipping every
  * docs-only landing into the full test tier plus the smoke walk. This
  * matches `hasCodeChange`, which already treats any `.md` as a doc.
  */
 export function isDocsOnly(paths: string[]): boolean {
   if (paths.length === 0) return false;
-  return paths.every((path) => isDocPath(path) || (path.split("/").includes("docs") && !isDoctest(path)));
+  return paths.every((path) => isDocPath(path) || path.split("/").includes("docs"));
 }
 
 /** Anything the public site build reads: site/ itself, or any markdown (the docs manifest promotes repo docs). */

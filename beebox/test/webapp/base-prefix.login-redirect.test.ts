@@ -15,12 +15,12 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { validateBasePrefix, readBasePrefix } from "../../src/webapp/base-prefix.js";
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
 import http from "node:http";
 import type { Socket } from "node:net";
 import { createHubServer } from "../../src/hub/server/core.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // The box-scope redirect only fires OUTSIDE hub mode; keep this process
 // non-hub for the standalone-box section below.

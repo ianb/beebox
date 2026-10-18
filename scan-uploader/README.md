@@ -374,7 +374,7 @@ pnpm install   # from the monorepo root
 pnpm build     # bundles src/cli/main.ts -> dist/scan-uploader.mjs
 pnpm typecheck
 pnpm lint
-pnpm test      # doctests (agent-doctest) against a fake HTTP server + tmp fixtures
+pnpm test      # tests (t.check) against a fake HTTP server + tmp fixtures
 ```
 
 Tests use a fake HTTP implementation of the two scan routes

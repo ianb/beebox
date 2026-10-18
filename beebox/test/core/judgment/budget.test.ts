@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { jevBudgetHealthCheck, reserveJevCalls } from "../../../src/core/judgment/budget.js";
 import { runJudge } from "../../../src/cli/commands/judge/command.js";
 import { createFakeJev } from "../../../src/services/jev.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const NOON = new Date("2026-09-26T12:00:00Z");
 const hours = (h: number) => new Date(NOON.getTime() + h * 60 * 60 * 1000);

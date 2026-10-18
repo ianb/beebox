@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import type { ChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { FakeChatBackendRun } from "../../../../src/services/claude-chat/fake.js";
 import type { ChatSession } from "../../../../src/core/chat/session/run/core.js";

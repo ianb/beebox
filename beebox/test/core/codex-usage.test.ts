@@ -13,7 +13,7 @@ import {
   totalCodexSessionUsage,
 } from "../../src/core/codex-usage.js";
 import { queryUsage, syncUsage } from "../../src/core/usage.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 void test("line 18", async (t) => {
   // doctest:L19

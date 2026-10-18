@@ -24,8 +24,8 @@ import { execa } from "execa";
 import { createFakeDocling } from "../../../../src/services/docling/core.js";
 import { runPdfMode } from "../../../../src/core/commands/scan-import/pdf.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { isRecord } from "../../../../src/shared/is-record.js";
 import { textPdf, textlessPdf } from "../../../helpers/pdf-fixtures.js";
 

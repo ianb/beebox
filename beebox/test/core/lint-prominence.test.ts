@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { lintProminenceBudget } from "../../src/core/lint-prominence/core.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 /** Build a throwaway box from a path -> content map and return its warnings as "rule: path: message" lines. */
 async function warningsFor(files: Record<string, string>) {

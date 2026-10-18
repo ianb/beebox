@@ -17,7 +17,7 @@ import "agent-doctest/tap";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 
 // The upload route's success body; a failed upload fails the parse rather than yielding `undefined`.
 const UploadedFile = z.looseObject({ path: z.string(), originalName: z.string(), size: z.number(), mimetype: z.string() });

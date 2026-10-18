@@ -10,7 +10,7 @@
  * same reason it lives in `.taprc` rather than a box helper: isolation has to
  * be the process default, not a convention each new test remembers.
  *
- * A test that sets either variable itself (the auth doctests, which point at
+ * A test that sets either variable itself (the auth tests, which point at
  * fixture stores) keeps its own value.
  */
 

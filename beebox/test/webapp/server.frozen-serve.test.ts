@@ -5,7 +5,7 @@ import { test } from "tap";
 import { any, others, str } from "agent-doctest/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
 
 const FROZEN = "<html><head><title>X</title></head><body><img src=\"https://example.com/a.png\"></body></html>";
 

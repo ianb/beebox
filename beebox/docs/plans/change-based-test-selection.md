@@ -831,7 +831,7 @@ full-suite schedule runs since 2026-10-01 with `concurrency: 0`.
   files. The graph now has 1,016 entrypoints. The sum of per-file medians is
   4,654 s, which is about 13 minutes at 6 jobs.
 - **190 source files have 300 or more test importers.** Examples:
-  `src/core/box/package.ts` (467), `test/helpers/doctest-helpers.ts` (393),
+  `src/core/box/package.ts` (467), `test/helpers/test-helpers.ts` (393),
   and most of `src/schemas/` and `src/shared/`. A change to any of them
   selects about half of the suite.
 

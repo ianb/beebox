@@ -11,7 +11,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { str, uuid } from "agent-doctest/check";
 import { z } from "zod";
-import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import { StagingSessionSchema } from "../../../src/core/capture/staging-schema.js";
 import { buildMultipartForm } from "../../../src/lib/multipart.js";
 import { setStagingState, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";

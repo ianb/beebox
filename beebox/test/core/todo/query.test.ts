@@ -17,7 +17,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { runTodoQuery } from "../../../src/core/todo/query.js";
 import { formatTodoLocation } from "../../../src/core/todo/collect-types.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 /** Every todo in the glob, whatever its status or assignee, plus the issues beside them. */
 async function collectTodos(boxRoot: string, options?: { glob: string }) {

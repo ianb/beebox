@@ -13,7 +13,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { generateDocs } from "../../../src/core/docs-gen/generate/core.js";
 import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../../../src/core/docs-gen/shared.js";

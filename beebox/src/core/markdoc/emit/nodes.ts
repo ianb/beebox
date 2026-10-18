@@ -132,9 +132,9 @@ export function emitNode(node: Node, out: string[]): void {
   // at runtime even though `nodeHandlers` is statically exhaustive over it
   // (the `satisfies` clause proves compile-time completeness, not runtime
   // agreement with a vendor-boundary value). `node.type as never` mirrors
-  // `assertNever`'s own doctest pattern for feeding an off-union value to a
+  // `assertNever`'s own test pattern for feeding an off-union value to a
   // never-parameter guard.
-  // eslint-disable-next-line no-restricted-syntax -- feeds an off-union vendor value to tolerateNever's `never` param (see comment above); mirrors assertNever's doctest pattern, runtime-fallback only
+  // eslint-disable-next-line no-restricted-syntax -- feeds an off-union vendor value to tolerateNever's `never` param (see comment above); mirrors assertNever's test pattern, runtime-fallback only
   tolerateNever(node.type as never, "emitNode: unhandled Markdoc NodeType");
   emitChildren(node, out);
 }

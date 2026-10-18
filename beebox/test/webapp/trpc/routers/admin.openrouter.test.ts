@@ -14,13 +14,13 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { clearOpenRouterCatalogCache } from "../../../../src/core/openrouter-catalog.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
-import type { TestServer } from "../../../helpers/doctest-server.js";
+import type { TestServer } from "../../../helpers/test-route-server.js";
 
 const fixture = async (name: string) => readFile(new URL(`../../../fixtures/openrouter/${name}`, import.meta.url), "utf8");
 const models = await fixture("models.json");

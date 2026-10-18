@@ -12,10 +12,10 @@ import "agent-doctest/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 
 const SESSION = "aaaa1111-2222-4333-8444-555566667777";

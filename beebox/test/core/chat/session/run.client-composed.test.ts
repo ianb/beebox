@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { combineQueuedInputs } from "../../../../src/core/chat/session/state.js";
 import { buildQueryOptions } from "../../../../src/core/agent/invoke/run.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { once } from "node:events";
 import { waitForRuns, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 

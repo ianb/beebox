@@ -12,8 +12,8 @@ import * as path from "node:path";
 import { executeTrash, moveCardsToTrash } from "../../../../src/core/commands/trash/command.js";
 import { rollbackTrashReceipt } from "../../../../src/core/chat/session/delete/trash-recovery.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { isRecord } from "../../../../src/shared/is-record.js";
 
 /** A directory listing without scaffolding: `.gitkeep` files and the empty directories that hold only one. */

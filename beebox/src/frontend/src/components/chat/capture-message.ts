@@ -45,7 +45,7 @@ export function parseCaptureWrapper(text: string): CaptureChipModel | null {
 
 /**
  * The chip's one-line label, e.g. "Capture — 3 photos, 4:10 audio". Pure so it
- * doctests; the chip component adds the icon and the summary line around it.
+ * tests; the chip component adds the icon and the summary line around it.
  */
 export function captureChipLabel(model: CaptureChipModel): string {
   const parts: string[] = [];

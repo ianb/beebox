@@ -1,7 +1,7 @@
 /**
- * Mount React components in a happy-dom document from a doctest: run effects
+ * Mount React components in a happy-dom document from a test: run effects
  * and events, read the DOM, and count which components rendered. How to write
- * one: `docs/testing/doctests.md`, "DOM doctests". Counts cover committed
+ * one: `docs/testing/tests.md`, "DOM tests". Counts cover committed
  * renders of ordinary trees; Suspense fallbacks are not special-cased.
  */
 // First, and bare: React DOM reads the window and the DevTools hook when it loads.

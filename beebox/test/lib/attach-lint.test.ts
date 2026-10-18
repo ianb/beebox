@@ -8,7 +8,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { lintAttachLayout } from "../../src/lib/attach-lint.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## Basenames that only differ by case also collide
 //

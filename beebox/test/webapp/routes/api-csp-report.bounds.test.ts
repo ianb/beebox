@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 

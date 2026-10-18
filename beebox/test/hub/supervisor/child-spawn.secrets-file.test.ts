@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadHubConfig } from "../../../src/hub/config.js";
 import { defaultSpawnChild, spawnBoxChild, type SpawnChildFn } from "../../../src/hub/supervisor/child-spawn.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("secretsFile resolves against the config and reaches only its own box's child", async (t) => {
   const box = await makeTmpBox({ git: true });

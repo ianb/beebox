@@ -11,7 +11,7 @@ import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
 import { readFile, utimes } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { captureMigrationSnapshot, changedMigrationPaths } from "../../src/core/migration-recovery.js";
 
 function git(box: { root: string }, ...args: string[]) {

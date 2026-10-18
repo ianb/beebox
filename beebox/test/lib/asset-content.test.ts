@@ -12,7 +12,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { probePointer, readAssetContent } from "../../src/lib/asset-content.js";
 
 const POINTER =

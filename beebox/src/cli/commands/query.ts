@@ -56,7 +56,7 @@ export const queryCommand = new Command("query")
 
 /**
  * The command's logic, taking `boxRoot` directly rather than resolving it from
- * `process.cwd()` — the seam the doctest drives, same approach as
+ * `process.cwd()` — the seam the test drives, same approach as
  * `runTodosForBox`.
  */
 export async function runQueryForBox(

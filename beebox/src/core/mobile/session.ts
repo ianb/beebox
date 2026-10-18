@@ -206,7 +206,7 @@ export function verifyMobileSession(boxRoot: string, cookie: string | undefined)
   return result.data;
 }
 
-/** Test seam: drop cached secrets so a doctest can swap box roots in-process. */
+/** Test seam: drop cached secrets so a test can swap box roots in-process. */
 export function clearMobileSessionSecretCache(): void {
   secretCache.clear();
 }

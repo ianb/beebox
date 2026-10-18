@@ -22,7 +22,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { typecheckProject } from "../../../src/lib/typescript/check.js";
 

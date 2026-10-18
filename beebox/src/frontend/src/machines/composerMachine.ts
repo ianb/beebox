@@ -26,7 +26,7 @@
  * (`startMic`, `resumeMic`, `cancelMic`, `stopSpeech`, `playSpeech`,
  * `markPlayed`) that the wiring provides via `.provide()`. Guards are pure
  * functions of context, so the decision logic is unit-testable with no React
- * (see `composerMachine.doctest.md`).
+ * (see `test/machines/composerMachine.composer-machine.test.ts`).
  */
 
 import { setup, assign, emit } from "xstate";

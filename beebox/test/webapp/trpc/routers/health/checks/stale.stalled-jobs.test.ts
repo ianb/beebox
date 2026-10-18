@@ -12,7 +12,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { stalledJobsCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/stale.js";
-import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 import { createIntakeJobTemplate } from "../../../../../../src/schemas/intake-job.js";
 
 const job = (description: string) =>

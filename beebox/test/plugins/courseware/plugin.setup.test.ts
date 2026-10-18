@@ -15,7 +15,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { bbx, readmeStubs as readPluginStubs, stubbedBox as stubbedPluginBox } from "../../helpers/plugin-readme.js";
 import { loadBoxSchemas } from "../../../src/schemas.js";

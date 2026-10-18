@@ -5,7 +5,7 @@
  * to `localStorage` under the singleton key (`emissionKey`, one per box —
  * NOT per session), so the composition survives a session switch and a
  * reload. Pure serialize/parse/adoption logic lives in `input/emission-persist.ts`
- * and is doctested there; this hook owns the storage I/O, the React
+ * and is tested there; this hook owns the storage I/O, the React
  * lifecycle, and the restore-time file-existence check.
  *
  * Restore (once, only into an EMPTY store — never clobbers active

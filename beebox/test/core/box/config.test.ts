@@ -15,7 +15,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { loadBoxTimezone } from "../../../src/core/box/config.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## No timezone configured: `null`, no warning
 void test("No timezone configured: `null`, no warning", async (t) => {

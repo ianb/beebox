@@ -17,7 +17,7 @@ import {
   resolveBoxes,
   toBoxArgs,
 } from "../../../src/cli/commands/serve.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## `--slug` overrides the default, and the dev-arg encoding carries it through
 void test("`--slug` overrides the default, and the dev-arg encoding carries it through", async (t) => {

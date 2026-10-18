@@ -15,7 +15,7 @@ import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { getChatRuntime, setChatRuntime } from "../../src/webapp/chat-runtime.js";
 import { ChatSessionRegistry } from "../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
-import { makeTestServer, type TestServer } from "../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../helpers/test-route-server.js";
 import { trpcContext } from "../helpers/trpc-context.js";
 import { plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
 

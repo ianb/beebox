@@ -1,110 +1,31 @@
 # agent-doctest
 
-> **Testing cutover (since 2026-10-18).** Write new tests as `.test.ts` files that
-> use `t.check` ([reference](../beebox/docs/testing/check.md)). Do not create `.doctest.md` files;
-> pre-commit rejects them. Existing doctests are being converted (plan
-> [retire-doctest](../beebox/docs/plans/retire-doctest.md)). If your change affects an existing doctest, edit
-> it in place; the conversion picks up your edit. If git reports a
-> modify/delete conflict on a doctest that was converted, convert your
-> version with `node agent-doctest/bin/doctest-to-ts.mjs <file>`.
+The `t.check` plugin for [tap](https://node-tap.org/), and the lint rules that keep `t.check` tests strong.
 
-Write tests as executable markdown. Each fenced code block becomes a [tap](https://node-tap.org/) test case. Prose between blocks is documentation.
+The package began as a runner for executable markdown (`.doctest.md`). That format is gone. The name stays.
 
-## Why
+## What it gives you
 
-When agents write code, they naturally want to explain what they built — the intent, the edge cases, the design choices. agent-doctest gives that explanation a place to live as automated tests.
+`t.check(actual, expected)` compares a whole value. The expected value is code. The type checker checks it against the actual value's type. A failed check prints a diff and a paste-ready suggested value.
 
-A `.doctest.md` file is a story about how the code works, with code blocks that also serve as tests. The code is embedded in the story, not the other way around — unlike comments in a test file, the narrative comes first and the examples illustrate it. The result reads like reference documentation but stays honest because it breaks when the code changes.
+```ts
+import { test } from "tap";
+import { any } from "agent-doctest/check";
 
-Compared to typical BDD-style tests, the output is more complete and more pleasant to work with. You get real narrative flow instead of `describe`/`it` nesting, and the test file itself is something you'd actually want to read.
-
-## Status
-
-This is an experiment. Conceived by [Ian Bicking](https://ianbicking.org) ([bsky](https://bsky.app/profile/ianbicking.org)), written entirely by Claude Code. Fork it and explore what you want to do with it — I'd love to hear what you learn.
-
-## Examples
-
-````markdown
-# URL routing
-
-```ts setup
-import { matchRoute } from "../src/router.js";
-```
-
-Static paths match exactly:
-
-```
-matchRoute("/api/users", "/api/users")
-=>
-{
-  "params": {}
-}
-```
-
-Path parameters are extracted by name:
-
-```
-matchRoute("/api/users/42/posts", "/api/users/:id/posts")
-=>
-{
-  "params": {
-    "id": "42"
-  }
-}
-```
-
-No match returns null:
-
-```
-matchRoute("/api/users", "/api/posts")
-=> null
-```
-````
-
-Or test something with side effects — `print()` captures output alongside return values:
-
-````markdown
-# HTTP client with retries
-
-```ts setup
-import { fetchRetry } from "../src/http.js";
-import { createTestServer } from "../src/test-helpers.js";
-
-const server = createTestServer();
-```
-
-Retries on failure, logging each attempt:
-
-```
-let failures = 2;
-server.handle("/data", (req) => {
-  if (failures-- > 0) return { status: 503 };
-  return { status: 200, body: { result: "ok" } };
+void test("a note has an id and a title", async (t) => {
+  t.check(await createNote("Draft"), { id: any(String), title: "Draft" });
 });
-
-await fetchRetry(server.url("/data"), {
-  retries: 3,
-  onRetry: (attempt, err) => print(`attempt ${attempt}: ${err.status}`),
-});
-=> attempt 1: 503
-attempt 2: 503
-{
-  "result": "ok"
-}
 ```
 
-``` cleanup
-server.close();
-```
-````
+Also on the test object: `t.checkText` (text with `«»` wildcards) and `t.checkThrows` (an error by name or message).
+
+The full guide, with patterns and failure output, is [testing with t.check](../beebox/docs/testing/check.md).
 
 ## Install
 
 ```bash
-npm install --save-dev agent-doctest tap esbuild tsx
+npm install --save-dev agent-doctest tap tsx
 ```
-
-## Setup
 
 Create a `.taprc` in your project root:
 
@@ -114,297 +35,52 @@ plugin:
 node-arg:
   - --import=tsx
   - --import=agent-doctest/tap
-  - --import=agent-doctest/loader
 include:
   - test/**/*.test.ts
-  - test/**/*.doctest.md
 ```
 
-Run with `npx tap` or add `"test": "tap"` to your package scripts.
-
-## Doctest syntax
-
-Files ending in `.doctest.md` are transformed into tap test modules at load time.
-
-### Setup blocks
-
-` ```ts setup ` blocks run at module scope — use for imports and shared helpers:
-
-````markdown
-```ts setup
-import { readFile } from "node:fs/promises";
-
-function fixture(name) {
-  return readFile(`test/fixtures/${name}`, "utf-8");
-}
-```
-````
-
-### Examples
-
-Regular ` ``` ` blocks contain examples. An expression followed by `=>` is checked against the expected value:
-
-````markdown
-```
-1 + 1
-=> 2
-```
-````
-
-Multiple examples in one block share scope (variables persist). Separate with blank lines:
-
-````markdown
-```
-const list = [3, 1, 2];
-list.sort();
-list.length
-=> 3
-
-list.join(", ")
-=> 1, 2, 3
-```
-````
-
-### Multi-line expected values
-
-Expected output continues on subsequent lines until a blank line or end of block:
-
-````markdown
-```
-JSON.stringify({ a: 1, b: 2 }, null, 2)
-=> {
-  "a": 1,
-  "b": 2
-}
-```
-````
-
-`=>` on its own line works the same way — expected starts on the next line:
-
-````markdown
-```
-JSON.stringify({ a: 1, b: 2 }, null, 2)
-=>
-{
-  "a": 1,
-  "b": 2
-}
-```
-````
-
-### Statements
-
-Lines ending with `;` are run as setup statements. The last non-semicolon expression is checked:
-
-````markdown
-```
-const data = JSON.parse('{"x": 1}');
-data.x
-=> 1
-```
-````
-
-### No assertion
-
-Blocks without `=>` just verify the code doesn't throw:
-
-````markdown
-```
-const map = new Map();
-map.set("key", "value");
-```
-````
-
-### Continue blocks
-
-` ``` continue ` appends to the previous block's scope — use prose between code that shares variables:
-
-````markdown
-```
-const counter = { value: 0 };
-counter.value
-=> 0
-```
-
-Increment and check:
-
-``` continue
-counter.value += 1;
-counter.value
-=> 1
-```
-````
-
-### Cleanup blocks
-
-` ``` cleanup ` registers teardown code via `t.teardown()`:
-
-````markdown
-```
-const server = await startServer();
-server.port
-=> 3000
-```
-
-``` cleanup
-await server.close();
-```
-````
-
-The teardown is registered before the examples run, so a failing assertion
-cannot leave the resource open. That matters most for a doctest holding an OS
-handle — a watch, a server, a child process — where a leaked handle keeps the
-tap child process alive and turns one failed assertion into a whole-file
-timeout that names nothing.
-
-### print()
-
-Each test gets a `print()` function. Printed lines drain into the next `=>` assertion:
-
-````markdown
-```
-print("step 1");
-print("step 2");
-"done"
-=> step 1
-step 2
-done
-```
-````
-
-## check() — String comparison
-
-`t.check(actual, expected)` compares values as strings. It's available in all tests automatically (loaded via `.taprc`).
-
-```ts
-test("example", async (t) => {
-  t.check("hello", "hello");
-  t.check(42, "42");
-  t.check({ a: 1 }, '{\n  "a": 1\n}');
-});
-```
-
-Objects serialize as `JSON.stringify(value, null, 2)`. On mismatch you get a visual diff.
-
-### Wildcards
-
-Use `«»` wildcards for volatile values:
-
-```ts
-t.check(output, "created «date»");              // ISO date
-t.check(record, '{"id": «uuid»}');              // UUID
-t.check(line, "commit «hash=*» by «author=*»");  // named captures
-t.check(response, '{"count": «int»}');           // integer
-```
-
-| Pattern | Matches | Default name |
-|---|---|---|
-| `«*»` | anything | (positional) |
-| `«date»` | ISO date/datetime | `date` |
-| `«uuid»` | UUID | `uuid` |
-| `«int»` | integer | `int` |
-| `«number»` | number (decimal, scientific) | `number` |
-| `«string»` | quoted string | `string` |
-| `«blankline»` | empty string (literal blank line) | — |
-| `«codeblock»` | triple backticks | — |
-| `«name=*»` | anything | `name` |
-| `«name=type»` | type's pattern | `name` |
-
-### Extractions
-
-Wildcards capture matched text, returned from `t.check()`:
-
-```ts
-const ext = t.check(line, "commit «hash=*» at «date»");
-ext.hash   // "abc123"
-ext.date   // "2026-03-02"
-ext[0]     // "abc123" (positional)
-```
-
-### Custom serializers
-
-By default, objects serialize as `JSON.stringify(value, null, 2)`. Custom serializers let you control how domain objects render, so assertions read naturally instead of dumping raw JSON:
-
-```ts
-import { registerSerializer } from "agent-doctest/check";
-
-class User {
-  constructor(public name: string, public email: string, public role: string) {}
-}
-
-registerSerializer((value) => {
-  if (value instanceof User) {
-    return `${value.name} <${value.email}> [${value.role}]`;
-  }
-  return null;
-});
-```
-
-Now tests read like documentation:
-
-````markdown
-```
-db.getUser("alice")
-=> Alice <alice@example.com> [admin]
-```
-
-```
-db.listUsers()
-=> Alice <alice@example.com> [admin]
-Bob <bob@example.com> [member]
-```
-````
-
-Without the serializer, you'd be asserting against a wall of JSON. The serializer turns opaque objects into a format that makes intent obvious and diffs readable.
-
-## Typechecking
-
-tsx strips types without checking them, so a doctest that calls an API with
-the wrong shape fails only when it runs. `doctest-typecheck` checks the module
-the loader generates from each doctest, so names in a `continue` block resolve
-as they do at run time, and it prints each error on the markdown line:
-
-```
-doctest-typecheck --project tsconfig.json 'test/**/*.doctest.md' \
-  --project src/frontend/tsconfig.json 'src/frontend/test/**/*.doctest.md'
-```
-
-Each `--project` names the tsconfig for the doctests after it: the one whose
-options and path aliases the code under test is written against. The checker
-keeps every checking option and drops only emit settings (`rootDir`,
-`outDir`), since doctests usually sit outside a package's `rootDir`.
-`--by-dir N` adds an error count per directory. The command exits 1 when it
-finds an error.
-
-Runs are incremental. Each tsconfig keeps TypeScript build info in
-`node_modules/.cache/doctest-typecheck/` beside it, and a doctest is
-re-checked only when it, or a file it imports, changed. A run over a few
-doctests (a commit's staged files) reads that cache without replacing it, so
-the next full run stays warm. On beebox (about 1,000 doctests) a warm full run
-takes about 9s against 34s cold, and one doctest about 2.5s. `--no-cache`
-checks everything and writes nothing.
-
-`--only <file>...`, last on the line, narrows a run to the listed doctests,
-each under the `--project` group whose patterns match it; a listed file no
-group matches is an error. A hook passes a commit's staged doctests this way,
-so the package's script stays the one place that maps doctests to tsconfigs.
-
-The check builds its module with one difference from the run: type-only
-imports in example blocks, which the run erases, are moved to module scope.
-Two blocks that import different types under one name then collide
-(TS2300); rename one of them.
-Unused-binding errors on the runner's own bindings (`t`, `print`,
-`eventually`) are not reported.
+Run with `npx tap`.
 
 ## Exports
 
 | Import | Contents |
 |---|---|
-| `agent-doctest/loader` | Node.js loader hook registration (use in `.taprc`) |
-| `agent-doctest/tap` | Adds `t.check()` to tap (use in `.taprc`) |
-| `agent-doctest/check` | `check()`, `inspect()`, `serialize()`, `registerSerializer()`, `CheckError` |
-| `agent-doctest/hooks` | Parser functions: `parseCodeBlocks()`, `parseExamples()`, `generateTestSource()` |
-| `agent-doctest/typecheck` | `typecheckDoctests({ tsconfig, files })`, the API behind `doctest-typecheck` |
+| `agent-doctest/tap` | Adds `t.check`, `t.checkText`, and `t.checkThrows` to tap (use in `.taprc`) |
+| `agent-doctest/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`), `eventually`, `runCommand`, `printed`, and the text-comparison API |
+| `agent-doctest/eslint` | ESLint plugin: `check-whole-value`, `no-voided-check`, `no-tap-assert` |
+
+## Lint rules
+
+Enable the rules on test files:
+
+```ts
+import agentDoctest from "agent-doctest/eslint";
+
+export default [
+  {
+    files: ["test/**/*.ts"],
+    plugins: { "agent-doctest": agentDoctest },
+    rules: {
+      "agent-doctest/check-whole-value": "error",
+      "agent-doctest/no-voided-check": "error",
+      "agent-doctest/no-tap-assert": "error",
+    },
+  },
+];
+```
+
+- `check-whole-value`: do not check a length, a boolean, a comparison, or `JSON.stringify(x)`. Check the value.
+- `no-voided-check`: do not `void` a check. Await it, so a failure is not lost.
+- `no-tap-assert`: use `t.check`, not `t.equal`, `t.same`, or `t.ok`.
+
+## Docs
+
+- [Getting started](docs/getting-started.md)
+- [Text comparison reference](docs/check-reference.md): `t.checkText`, wildcards, serializers.
+
+## Status
+
+An experiment. Conceived by [Ian Bicking](https://ianbicking.org) ([bsky](https://bsky.app/profile/ianbicking.org)), written entirely by Claude Code. Fork it and explore what you want to do with it. I would love to hear what you learn.
 
 ## License
 

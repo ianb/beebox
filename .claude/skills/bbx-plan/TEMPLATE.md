@@ -159,12 +159,12 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 <!-- Not "will there be tests" — which tier reaches this behaviour and what it
      costs to write. When a DECISION is the risky part, extract it as a pure
-     function so the doctest tiers reach it, instead of a heavier tier to test
+     function so the test tiers reach it, instead of a heavier tier to test
      it in place. Two traps: a new test tier is a norm for every future agent
      and a mock written by the bug's author encodes the bug — say explicitly
      if one is needed; a tour is the walk written down and kept true weekly
      (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
-     that must stay true in a doctest. -->
+     that must stay true in a test. -->
 
 ## Implementation order
 
@@ -174,7 +174,7 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Rollout shape
 
-<!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
+<!-- Tests first, as a design tool (docs/testing.md): name the test for each
      substantial codepath while designing it, and state done-when as the tests
      that must pass. Cover the substantial paths and the Failure-modes "Test
      exists?" column, not every line. Then: which knowledge audits land with

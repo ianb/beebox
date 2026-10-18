@@ -11,7 +11,7 @@ import "agent-doctest/tap";
 import { pluginHealthChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/core.js";
 import { withDocId } from "../../../../../../../src/core/docs-gen/shared.js";
 import type { HealthCheck, PluginDefinition } from "../../../../../../../src/cards/plugin-definition.js";
-import { makeTmpBox } from "../../../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../../helpers/test-helpers.js";
 
 /** Only the failing rows, as `{ name, severity, message }`. */
 function failing(checks: HealthCheck[]) {

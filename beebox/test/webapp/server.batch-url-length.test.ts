@@ -8,7 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
 import { TRPC_MAX_URL_LENGTH } from "../../src/shared/trpc-url-limit.js";
 
 const box = await makeTestServer();

@@ -12,7 +12,7 @@ import { readdir } from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string) {

@@ -13,7 +13,7 @@ import { printed } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
 import { armSetupToken, clearSetupToken } from "../../../src/webapp/setup-token.js";
 import { loginThrottle } from "../../../src/webapp/routes/auth/login-throttle.js";
 import { createFirstUser, getLocalOwnerEmail } from "../../../src/webapp/local-users.js";

@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { z } from "zod";
 import { cardSchema, type CardSchema } from "../../../../src/cards/schema.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { lintCardsDispatch } from "../../../../src/core/card-lint/core/lint-cards.js";
 import { DocSchema } from "../../../../src/schemas/doc.js";
 

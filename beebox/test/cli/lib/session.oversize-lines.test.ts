@@ -16,7 +16,7 @@ import { any, str, printed } from "agent-doctest/check";
 import { parseSessionLog, MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session.js";
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 import { writeGiantLineSessionLog } from "./session-log-fixture.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";

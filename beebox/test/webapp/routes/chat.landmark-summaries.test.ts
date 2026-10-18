@@ -14,7 +14,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { loadLandmarkSummaries } from "../../../src/core/landmark/summaries.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## Frontmatter landmark cards yield label + text symbol
 void test("Frontmatter landmark cards yield label + text symbol", async (t) => {

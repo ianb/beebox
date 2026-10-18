@@ -14,7 +14,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { tick, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 import { stopChatSessionsAndWait } from "../../../../src/core/chat/session/registry/shutdown.js";
 

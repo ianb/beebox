@@ -21,7 +21,7 @@ import { createGmailConnector } from "../../src/connectors/gmail/connector.js";
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar/connector.js";
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive/connector.js";
 import { clearBoxConfigCache } from "../../src/core/box/config.js";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import type { SyncResult } from "../../src/connector.js";
 
 /** One line per connector: success, then how it skipped. */

@@ -681,12 +681,12 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
       // A test throws a plain Error on purpose: as the input the code under
       // test receives, from a fake that simulates a failure or must not be
       // called, or as a guard that narrows setup. A custom error class for
-      // each adds nothing; converted doctests had 297 such lines.
+      // each adds nothing; converted tests had 297 such lines.
       //
       // max-lines is 600 in tests, not 300 — boxholder decision 2026-10-18:
       // a test file holds a setup and many examples, so it runs longer than
       // the module it tests, though past some length it still needs a split.
-      // Of 1,094 converted doctests, 73 were over 300 lines and 8 over 600.
+      // Of 1,094 converted tests, 73 were over 300 lines and 8 over 600.
       files: ["**/test/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
       rules: {
         "error/no-generic-error": "off",

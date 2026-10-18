@@ -26,7 +26,7 @@ import { TIERS, batchExit, completionMarker, tierProducedResults, workstreamOf }
 import { batchSlowdown, durationHistories, runIsUntrusted } from "./trust.js";
 import { readBatch } from "./batch.js";
 import { holdCondition, raiseCondition, report, resolveAll } from "./reporting.js";
-import { renderTypecheckAlert, typecheckDoctests } from "./doctest-typecheck.js";
+import { renderTypecheckAlert, typecheckAll } from "./typecheck.js";
 import { createCheckout, failingFiles, removeCheckout, runTier, type Checkout, type SuiteRun } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
 import { readPending, writeKnownRed, writePending } from "./state.js";
@@ -223,18 +223,18 @@ async function main(): Promise<void> {
     // Reported before the test verdict, and held, so the verdict's resolves
     // leave a standing typecheck alert alone. When the tests are green the
     // alert is the run's one report, so `done` is skipped.
-    const typecheck = await typecheckDoctests(checkout.dir);
+    const typecheck = await typecheckAll(checkout.dir);
     if (typecheck.ok) {
-      await report(["resolve", "--condition", "doctest-typecheck"]);
+      await report(["resolve", "--condition", "typecheck"]);
     } else {
-      process.stdout.write(`full-suite: doctests do not typecheck.\n${typecheck.output}\n`);
-      holdCondition("doctest-typecheck");
+      process.stdout.write(`full-suite: the repo does not typecheck.\n${typecheck.output}\n`);
+      holdCondition("typecheck");
       await raiseCondition({
-        kind: "doctest-typecheck",
+        kind: "typecheck",
         culprits: [],
         verdict: false,
         priority: "normal",
-        title: "full suite: doctests do not typecheck",
+        title: "full suite: the repo does not typecheck",
         message: renderTypecheckAlert({ testedCommit: batch.pinned, output: typecheck.output, landings: batch.landings }),
       });
     }

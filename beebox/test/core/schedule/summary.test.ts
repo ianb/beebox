@@ -22,8 +22,8 @@ import {
 import type { RunHistoryEntry } from "../../../src/core/schedule/summary.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import { chatReviewRunSummary } from "../../../src/core/chat/review/run-summary.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 

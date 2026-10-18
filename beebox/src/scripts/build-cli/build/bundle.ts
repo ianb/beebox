@@ -13,7 +13,7 @@
 // Every output is built into a temp dir and renamed into dist/ at the end, so
 // a concurrent reader never sees a half-written file. That reader can be a
 // `bbx` invocation (bin/bbx self-heals on staleness) or a test: the suite
-// rebuilds the bundle mid-run (hub.e2e.doctest.md) while other tests exec the
+// rebuilds the bundle mid-run (test/hub.e2e.test.ts) while other tests exec the
 // CLI, which loads dist/exports/* and dist/view-widgets/* at runtime. When
 // only cli.mjs was renamed, `view test` under that overlap failed on a
 // partly written export.

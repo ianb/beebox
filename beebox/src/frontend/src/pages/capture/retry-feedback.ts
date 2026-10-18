@@ -8,7 +8,7 @@
  * delivered face (engineering principle #13) — a control that doesn't show the
  * state the system is in.
  *
- * The states are kept as a pure reducer so every face is reachable in a doctest
+ * The states are kept as a pure reducer so every face is reachable in a test
  * without a transport: tapping retry starts `retrying`, the batch settles into
  * `recovered` or `failed-again`, and `recovered` expires back to `idle` on its
  * own.

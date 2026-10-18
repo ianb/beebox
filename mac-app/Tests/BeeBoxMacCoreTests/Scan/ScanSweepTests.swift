@@ -3,8 +3,8 @@ import XCTest
 
 @testable import BeeBoxMacCore
 
-/// Ports of `run-target.doctest.md`, `settle.retry.doctest.md` and the folder
-/// parts of `disposition.doctest.md`.
+/// Ports of `run-target.test.ts`, `settle.retry.test.ts` and the folder
+/// parts of `disposition.test.ts`.
 final class ScanSweepTests: ScanTestCase {
     // MARK: run-target
 

@@ -9,7 +9,7 @@
 
 /**
  * Why a path was refused. One class rather than a subclass per case: the store
- * doctest reads `error.name`, and callers branch on `reason.kind` — the wording
+ * test reads `error.name`, and callers branch on `reason.kind` — the wording
  * is composed here so no throw site carries message text.
  */
 export type CommentPathRefusal =

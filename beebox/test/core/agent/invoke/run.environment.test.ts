@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { buildScriptEnv } from "../../../../src/core/script-env/core.js";
 import type { ConsumeStreamOptions } from "../../../../src/core/agent/invoke/stream.js";
 import type { CodexSdkSessionOptions } from "../../../../src/services/codex-sdk-session/core.js";

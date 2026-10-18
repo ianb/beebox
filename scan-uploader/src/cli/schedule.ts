@@ -5,7 +5,7 @@
  * never spawns a process itself — the real implementation is
  * `launchctl.ts`; tests inject a fake that records invocations. Free of
  * other process globals too (uid, home directory, node/bundle paths are all
- * parameters) so it's directly doctestable; `schedule-cli.ts` owns
+ * parameters) so it's directly testable; `schedule-cli.ts` owns
  * `process.argv`/`process.cwd`/`process.getuid`/platform and calls into
  * this.
  */

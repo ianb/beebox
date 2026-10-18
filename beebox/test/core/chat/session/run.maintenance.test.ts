@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { acquireBoxWork, closeBoxMaintenance } from "../../../../src/lib/box-maintenance/admission.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { waitForRuns } from "../../../helpers/chat-session-spawner-helpers.js";
 
 void test("line 13", async (t) => {

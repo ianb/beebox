@@ -87,7 +87,7 @@ export interface FakeChatBackend extends ChatBackend {
    * test can exercise run-start failure without an unspawnable environment.
    */
   failNextStart: Error | null;
-  /** Stable, human-readable snapshot of warm-pool state for doctests. */
+  /** Stable, human-readable snapshot of warm-pool state for tests. */
   describe(): string;
 }
 

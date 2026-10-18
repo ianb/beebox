@@ -11,7 +11,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { execSync } from "node:child_process";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { runPreCommitChecks } from "../../../../src/cli/commands/validate/pre-commit.js";
 
 const stage = (box: TmpBox) => { execSync("git add -A", { cwd: box.root }); };

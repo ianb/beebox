@@ -140,7 +140,7 @@ writes with `set()` — neither subscribes, so a keystroke never re-renders them
 a prop through the body.** New code that needs the text reads `useInputValue()`
 (reactive, composer-only) or takes the `InputStore` and calls `get()`/`set()`.
 `MessageList` is also wrapped in `React.memo` as a second line of defense; the
-store is the first. Check render counts with a DOM doctest's `renders()`.
+store is the first. Check render counts with a DOM test's `renders()`.
 
 ## Workspace card roots survive presentation changes
 

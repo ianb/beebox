@@ -21,7 +21,7 @@ const realHome = process.env["HOME"] ?? homedir();
 // The manual tier (`pnpm test:manual`) exists to exercise REAL services, and
 // the one real thing a throwaway HOME hides is the developer's Claude Code
 // login: `claude auth status` reports logged-out under any other HOME, even
-// with `~/.claude` linked in, so the real-SDK doctest failed its auth
+// with `~/.claude` linked in, so the real-SDK test failed its auth
 // preflight every week from 2026-09-08. That tier opts out of the HOME swap
 // with this variable and keeps its real home; every other isolation below
 // (uv cache, url checks) and beside this file (secret store, auth file,

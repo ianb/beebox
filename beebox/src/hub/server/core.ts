@@ -282,7 +282,7 @@ function decideHubAuth({
  * box picker), then hijack every other request into the endpoint proxy.
  * Returns the underlying `http.Server` (Fastify's own, after `ready()`) so
  * callers keep the plain `http.Server` interface (`.listen`, `.close`,
- * `.on("upgrade")`) `cli/commands/hub.ts` and the doctests already use.
+ * `.on("upgrade")`) `cli/commands/hub.ts` and the tests already use.
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
   const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false } = options;

@@ -15,7 +15,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { createAgent } from "../../../../src/core/agent/invoke/core.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 const MINTED = "11111111-1111-4111-8111-111111111111";
 

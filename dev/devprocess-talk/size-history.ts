@@ -62,7 +62,7 @@ type Week = {
   totalDirs: number;
   openIssues: number;
   closedIssues: number;
-  /** Test lines split: inside doctest code fences, doctest prose, and tests that are not doctests. */
+  /** Test lines split: inside test code fences, test prose, and tests that are not tests. */
   doctestCode: number;
   doctestProse: number;
   otherTestLines: number;

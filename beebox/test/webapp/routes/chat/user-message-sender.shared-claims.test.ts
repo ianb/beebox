@@ -11,7 +11,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import type { BusEvent, EventBus } from "../../../../src/core/event-bus/core.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";

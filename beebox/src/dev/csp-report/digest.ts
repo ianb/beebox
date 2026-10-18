@@ -130,7 +130,7 @@ export function digestEntries(entries: CspEntry[], opts?: { incremental?: boolea
   return { total: entries.length, violations, clean, summary };
 }
 
-/** Convenience for whole-log digests (used by the doctest): parse + dedupe in one call. */
+/** Convenience for whole-log digests (used by the test): parse + dedupe in one call. */
 export function digestCspReports(logText: string): CspDigest {
   return digestEntries(parseCspLog(logText));
 }
@@ -241,7 +241,7 @@ async function main(): Promise<void> {
   await program.parseAsync();
 }
 
-// Run only as a script, not when imported by the doctest.
+// Run only as a script, not when imported by the test.
 if (process.argv[1] !== undefined && process.argv[1].endsWith("csp-digest.ts")) {
   await main();
 }

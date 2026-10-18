@@ -16,7 +16,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { createContainsBackfillJob, refreshSearchIndex } from "../../../../src/cli/commands/wakeup/steps.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { searchBox } from "../../../../src/core/search/query/core.js";
 import { acquireLock, releaseLock } from "../../../../src/lib/file-lock.js";
 import { searchLockPath } from "../../../../src/core/search/store/core.js";

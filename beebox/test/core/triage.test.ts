@@ -11,7 +11,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { compileTriageInstructions } from "../../src/core/triage/instructions.js";
 import { runTriage } from "../../src/core/triage/run/core.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## Compile instructions from landmarks
 //

@@ -12,7 +12,7 @@
  * - {@link ScanElement} is a *minimal structural view* of a DOM element: the
  *   handful of things the walk actually reads. The real DOM is adapted to it in
  *   `live-dom.ts`; tests build it from an HTML fixture. It exists because the
- *   frontend doctests run under plain Node with no jsdom (see
+ *   frontend tests run under plain Node with no jsdom (see
  *   `lib/deferred-resync.ts` for the same seam applied to `document.hidden`),
  *   so a walk written against `Element` directly would be untestable here.
  */

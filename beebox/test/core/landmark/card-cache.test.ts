@@ -15,7 +15,7 @@ import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import { loadLandmarkSummaries } from "../../../src/core/landmark/summaries.js";
 import { readLandmarkCard } from "../../../src/core/landmark/card-cache.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 /** Labels of a box's landmarks, in scan order. */
 async function labels(root: string): Promise<string> {

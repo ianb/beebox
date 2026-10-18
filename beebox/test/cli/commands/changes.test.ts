@@ -13,7 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { runChanges, type ChangesOptions } from "../../../src/cli/commands/changes.js";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 
 const card = (title: string) => `---\ntitle: ${title}\n---\n${title} body\n`;
 

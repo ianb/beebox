@@ -17,7 +17,7 @@ import { join } from "node:path";
 import * as childProcess from "node:child_process";
 import { promisify } from "node:util";
 import type { Test } from "tap";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { inspectIndexLock, INDEX_LOCK_STALE_MS, formatAge } from "../../src/lib/git-stale-lock.js";
 
 const execFileAsync = promisify(childProcess.execFile);

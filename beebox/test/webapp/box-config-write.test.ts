@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const PACKAGE_ROOT = join(import.meta.dirname, "../..");
 

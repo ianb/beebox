@@ -6,7 +6,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { parseCardName, isCardFile, findBoxRoot } from "../../src/lib/paths/core.js";
 import { PreV3ShapeError } from "../../src/lib/box-shape-errors.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 

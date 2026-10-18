@@ -5,7 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
 import { processCapture } from "../../../src/core/quick-capture/worker.js";

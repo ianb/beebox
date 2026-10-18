@@ -9,7 +9,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import assert from "node:assert/strict";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import type { ChatSessionRegistryOptions } from "../../../../src/core/chat/session/registry/options.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";

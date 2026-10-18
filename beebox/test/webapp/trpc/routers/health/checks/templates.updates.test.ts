@@ -12,7 +12,7 @@ import { printed } from "agent-doctest/check";
 import { templateUpdatesCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/templates.js";
 import { loadScheduleHealth, summarizeScheduleHealth } from "../../../../../../src/core/schedule/health-box.js";
 import { saveScriptState, normalizeScriptState } from "../../../../../../src/core/schedule/state.js";
-import { makeTmpBox } from "../../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 import {
   parkedUpdatesForTask,
   procedureCardForRuns,

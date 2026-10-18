@@ -16,7 +16,7 @@
  *     and a leaked old log line is worthless.
  *
  * Injected clock (principle #10): `armSetupToken`/`checkSetupToken` take `now`,
- * so a doctest can arm a token "in the past" to exercise expiry without waiting.
+ * so a test can arm a token "in the past" to exercise expiry without waiting.
  */
 
 import * as crypto from "node:crypto";

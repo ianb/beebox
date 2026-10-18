@@ -9,7 +9,6 @@
     "cli": "tsx src/cli.ts",
     "verify-help": "tsx packages/agent-browser-typed/src/scripts/verify-help.ts",
     "typecheck": "tsc --noEmit",
-    "typecheck:doctest": "doctest-typecheck --project tsconfig.json 'test/**/*.doctest.md' 'packages/*/test/**/*.doctest.md'",
     "lint": "eslint .",
     "test": "tap"
   },

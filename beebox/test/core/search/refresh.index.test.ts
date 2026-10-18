@@ -12,7 +12,7 @@ import { rename, writeFile } from "node:fs/promises";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import { searchIndexPath, searchLockPath, type SearchIndex } from "../../../src/core/search/store/core.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 async function find(db: SearchIndex, term: string): Promise<string> {
   const result = await search(db, { term, properties: ["title", "contains", "content"] });

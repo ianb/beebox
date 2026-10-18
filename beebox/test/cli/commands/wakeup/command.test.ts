@@ -8,7 +8,7 @@ import "agent-doctest/tap";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
 import { createIntakeJobsForUnjobbed, cleanupStaleJobs } from "../../../../src/cli/commands/wakeup/command.js";
 import type { Connector } from "../../../../src/connector.js";

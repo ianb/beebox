@@ -14,7 +14,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox, type TmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { archiveChatSession } from "../../../../src/core/chat/session/archive.js";
 import { loadDeadHusks, listSessionEntries } from "../../../../src/core/chat/session/list/core.js";
 import { listChatHusks, listChatHusksUnder } from "../../../../src/core/chat/husk-read.js";

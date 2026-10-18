@@ -13,7 +13,7 @@ import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { cleanupOldTmpUploads } from "../../src/core/housekeeping.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 async function writeAged(file: string, ageDays: number) {

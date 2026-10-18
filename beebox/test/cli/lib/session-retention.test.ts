@@ -17,7 +17,7 @@ import {
   MAX_SESSION_ENTRIES,
 } from "../../../src/cli/lib/session.js";
 import { writeBigSessionLog } from "./session-log-fixture.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
 
 // ## A big transcript, parsed under a 128 MB heap cap

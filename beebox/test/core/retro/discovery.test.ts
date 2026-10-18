@@ -10,7 +10,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { countUserMessages, discoverSessions } from "../../../src/core/retro/discovery/core.js";
 import { renderSessionCompact } from "../../../src/core/chat/transcript-render.js";

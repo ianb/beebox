@@ -8,7 +8,7 @@
  *
  * Written against an injected {@link NativeControlBridge} rather than `window`,
  * so every outcome — answered, refused, never answered, answered for someone
- * else — is exercised by a doctest under plain Node.
+ * else — is exercised by a test under plain Node.
  */
 
 import {

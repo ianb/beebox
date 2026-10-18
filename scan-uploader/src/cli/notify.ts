@@ -63,7 +63,7 @@ interface Banner {
 }
 
 export interface NotifyOptions {
-  /** Overrides `process.platform`, for the doctest. */
+  /** Overrides `process.platform`, for the test. */
   readonly platform?: string;
   readonly photosFound?: readonly { readonly album: string; readonly count: number }[];
 }

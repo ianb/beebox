@@ -14,7 +14,7 @@ import {
   type ScanPageAnalysis,
 } from "../../../../src/core/commands/scan-import/helpers.js";
 import type { ScanVisionService } from "../../../../src/services/scan-vision.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join } from "node:path";

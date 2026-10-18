@@ -2,7 +2,7 @@
  * Pure transform composition for the lightbox — how a live pan, live pinch, or
  * a settle target is derived from the gesture baselines and the measured
  * geometry. Built on the primitives in `lightbox-gesture-math.ts`; no DOM.
- * Doctested alongside the primitives.
+ * Tested alongside the primitives.
  */
 
 import {

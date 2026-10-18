@@ -48,7 +48,7 @@ const STREAM_WATCHDOG_IDLE_POLLS = 3;
 /**
  * One watchdog poll result folded into the running idle count. `busy` resets
  * the count (the server is genuinely working); an idle poll increments it;
- * `recover` fires at the threshold. Pure so the policy is doctestable apart
+ * `recover` fires at the threshold. Pure so the policy is testable apart
  * from the timers.
  */
 export function streamWatchdogAdvance(input: { busy: boolean; idlePolls: number }): {

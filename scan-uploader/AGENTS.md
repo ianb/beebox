@@ -31,7 +31,7 @@ neighbouring code does rather than inventing a third posture.
 [`../beebox/docs/scan-upload-contract.md`](../beebox/docs/scan-upload-contract.md)
 is the only coordination point with the server. Every site here that encodes
 part of it carries `// WIRE CONTRACT (scan-upload): …`. Change both sides, that
-document, and the server's route doctests in one change.
+document, and the server's route tests in one change.
 
 **If you change what a correct client must *do*, bump
 `SCAN_CONTRACT_VERSION`** in `src/cli/contract-version.ts`,
@@ -85,8 +85,8 @@ nagging.
 ```bash
 pnpm typecheck
 pnpm lint
-pnpm test                      # tap over test/**/*.doctest.md
-pnpm exec tap test/<name>.doctest.md
+pnpm test                      # tap over test/**/*.test.ts
+pnpm exec tap test/<name>.test.ts
 pnpm build                     # only needed for the copy-the-bundle path
 ```
 
@@ -94,16 +94,5 @@ pnpm build                     # only needed for the copy-the-bundle path
 needs no build. Tests use a fake HTTP server (`test/cli/fake-scan-server.ts`) and
 package-local temp dirs (`test/tmp/`) — never the real network, never `/tmp`.
 
-> **Testing cutover (since 2026-10-18).** Write new tests as `.test.ts` files that
-> use `t.check` ([reference](../beebox/docs/testing/check.md)). Do not create `.doctest.md` files;
-> pre-commit rejects them. Existing doctests are being converted (plan
-> [retire-doctest](../beebox/docs/plans/retire-doctest.md)). If your change affects an existing doctest, edit
-> it in place; the conversion picks up your edit. If git reports a
-> modify/delete conflict on a doctest that was converted, convert your
-> version with `node ../agent-doctest/bin/doctest-to-ts.mjs <file>`.
-
-Existing doctests here use bare fences (` ``` `, ` ```continue `, ` ```cleanup `), not
-beebox's `ts`-tagged convention. Read
-[`../agent-doctest/docs/syntax.md`](../agent-doctest/docs/syntax.md) first —
-in particular that a `cleanup` block tears down the block it follows, so a
-resource and its teardown belong in one `continue` chain.
+Tests are `.test.ts` files with `t.check` ([reference](../beebox/docs/testing/check.md)).
+Register teardown with `t.teardown(...)` right after you create the resource.

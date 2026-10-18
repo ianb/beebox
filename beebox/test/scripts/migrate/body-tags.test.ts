@@ -13,7 +13,7 @@ import "agent-doctest/tap";
 import { createHash } from "node:crypto";
 import { planBodyTagRewrites } from "../../../src/scripts/migrate/body-tags/plan.js";
 import { runBodyTags } from "../../../src/scripts/migrate/body-tags/run.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 const SEED = "---\ntype: briefing\npurpose: Seed.\n---\nSeed body.\n";

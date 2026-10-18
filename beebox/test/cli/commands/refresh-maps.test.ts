@@ -10,7 +10,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { refreshMapsCommand } from "../../../src/cli/commands/refresh-maps.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { fileExists } from "../../../src/lib/file-exists.js";
 import { join } from "node:path";
 

@@ -33,7 +33,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { globSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { TestGraph } from "./test-graph-query.js";
 
@@ -57,8 +57,7 @@ const CHECKOUT_ROOT = resolve(BIN_DIR, "..");
 
 /**
  * Sources whose change invalidates every graph: the builder itself, the
- * doctest transform and resolution rules it calls into, and the toolchain
- * those two are pinned to.
+ * resolution rules it calls into, and the toolchain those are pinned to.
  */
 function toolchainPaths(): string[] {
   return [
@@ -66,11 +65,8 @@ function toolchainPaths(): string[] {
     join(BIN_DIR, "test-graph-cache.ts"),
     join(BIN_DIR, "test-graph-query.ts"),
     join(BIN_DIR, "test-tiers.ts"),
-    join(CHECKOUT_ROOT, "agent-doctest/package.json"),
+    join(BIN_DIR, "lib/resolve-rules.ts"),
     join(CHECKOUT_ROOT, "node_modules/esbuild/package.json"),
-    ...globSync("agent-doctest/src/**/*.ts", { cwd: CHECKOUT_ROOT }).map((rel) =>
-      join(CHECKOUT_ROOT, rel),
-    ),
   ];
 }
 

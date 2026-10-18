@@ -11,7 +11,7 @@ import { actionsRouter } from "../../../../src/webapp/trpc/routers/actions.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { EventBus } from "../../../../src/core/event-bus/core.js";
 import { TRPCError } from "@trpc/server";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 
 // Minimal tRPC context — the actions procedures read only boxRoot + eventBus.

@@ -72,7 +72,7 @@ export interface EmbeddingsService {
  * `data`, null items, wrong `index`, absent/misshapen/non-finite
  * `embedding` — becomes a typed EmbeddingsError, never a raw TypeError:
  * the refresh and query layers degrade on EmbeddingsError specifically.
- * Exported for doctests (no real key can exercise this boundary in CI).
+ * Exported for tests (no real key can exercise this boundary in CI).
  */
 export function parseEmbeddingsResponse(body: unknown, expectedCount: number): number[][] {
   const data = isRecord(body) ? body["data"] : undefined;
@@ -111,7 +111,7 @@ export function parseEmbeddingsResponse(body: unknown, expectedCount: number): n
 
 /**
  * Split texts into request chunks respecting both input-count and char
- * budgets. Exported for doctests only — the real service applies it inside
+ * budgets. Exported for tests only — the real service applies it inside
  * embed().
  */
 export function chunkTexts(texts: string[]): string[][] {

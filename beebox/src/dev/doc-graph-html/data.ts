@@ -100,13 +100,14 @@ export const PILLARS: Pillar[] = [
   {
     id: "testing",
     name: "Testing",
-    blurb: "Doctests as the primary test format, plus periodic agent knowledge audits.",
-    vibe: "Docs ARE the tests. If a doc goes stale, its tests start failing. Painful when it works.",
+    blurb: "TypeScript tap tests with typed whole-value checks, plus periodic agent knowledge audits.",
+    vibe: "One t.check per behavior; the type checker reads the expected value too.",
     color: "#1d4ed8",
     entry: "docs/testing.md",
-    entryNote: "Philosophy. 537 lines on why doctests, then how.",
+    entryNote: "How beebox tests: instruments, where tests live, and how to run them.",
     supporting: [
-      { path: ".claude/rules/doctest.md", note: "Conditional pointer to the doctest syntax reference." },
+      { path: ".claude/rules/tests.md", note: "Conditional pointer to the t.check reference." },
+      { path: "docs/testing/check.md", note: "The t.check API: patterns, wildcards, and test helpers." },
       { path: "docs/testing/knowledge-audits.md", note: "Periodic 'does the agent still know what we think it knows?' tests." },
       { path: "docs/development/maintenance.md", note: "The meta-tools: doc-graph, prompt-report — including the thing rendering this page." },
     ],

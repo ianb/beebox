@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import ICALmodule from "ical.js";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleCalendar } from "../../src/services/google-calendar/core.js";
 import type { CalendarEvent, GoogleCalendarService } from "../../src/services/google-calendar/core.js";

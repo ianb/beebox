@@ -51,7 +51,7 @@ export async function pluginLintIssues(input: {
   type: string;
   fields: Record<string, unknown>;
   boxRoot: string;
-  /** The installed plugins; defaults to the registry. A doctest seam for a fixture hook. */
+  /** The installed plugins; defaults to the registry. A test seam for a fixture hook. */
   plugins?: ReadonlyArray<PluginDefinition> | undefined;
 }): Promise<LintIssue[]> {
   const { path, type, fields, boxRoot, plugins } = input;

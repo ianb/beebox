@@ -23,7 +23,7 @@ recurring sweep that runs afterwards.)
      it again.
 2. **Work in batches, and run the full suite per batch.** `pnpm -C beebox
    test` plus `pnpm -C beebox typecheck` after each batch of deletions,
-   not once at the end: a deleted export whose only consumer is a doctest fails
+   not once at the end: a deleted export whose only consumer is a test fails
    in a place the deletion diff does not name, and a batch you can still read is
    a batch you can still undo.
 3. Commit per batch, path-scoped, on this worktree's branch.

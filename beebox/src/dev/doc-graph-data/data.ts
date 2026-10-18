@@ -19,7 +19,6 @@ const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html", "do
 // `box-docs` is the engine's generated reference docs for boxes (gitignored;
 // src/core/docs-gen/package-docs/core.ts), full of illustrative example links.
 const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports", "box-docs"];
-const EXCLUDE_PATTERNS = [/\.doctest\.md$/];
 
 export interface Reference {
   from: string;
@@ -49,7 +48,6 @@ function findMarkdownFiles(): string[] {
         if (entry.name.startsWith(".")) continue;
         walk(path.join(dir, entry.name));
       } else if (entry.name.endsWith(".md")) {
-        if (EXCLUDE_PATTERNS.some((p) => p.test(entry.name))) continue;
         results.push(rel);
       }
     }
@@ -71,7 +69,7 @@ function findExternalSourceFiles(monoRoot: string): string[] {
       if (entry.isDirectory()) {
         if (entry.name === "node_modules") continue;
         walk(path.join(dir, entry.name));
-      } else if (entry.name.endsWith(".md") && !EXCLUDE_PATTERNS.some((p) => p.test(entry.name))) {
+      } else if (entry.name.endsWith(".md")) {
         results.push(path.relative(monoRoot, path.join(dir, entry.name)));
       }
     }

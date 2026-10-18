@@ -243,12 +243,12 @@ void test("Same set, but util.ts is used only by files inside routes/chat/, a me
 
 // ## A test importing a helper does not make it an entry
 //
-// `helper.doctest.md` imports `helper.ts` directly (tests import internals
+// `helper.test.ts` imports `helper.ts` directly (tests import internals
 // freely), but that import does not count: `helper.ts` stays owned only by
 // `core.ts`. Were the test counted, `helper.ts` would itself become an entry
 // (imported from outside `priv/`) and the unit-directory finding below would
 // disappear.
-void test("helper.doctest.md imports helper.ts directly (tests import internals freely),...", async (t) => {
+void test("helper.test.ts imports helper.ts directly (tests import internals freely),...", async (t) => {
   // doctest:L263
   const testLayout = layout({
     files: {
@@ -256,7 +256,7 @@ void test("helper.doctest.md imports helper.ts directly (tests import internals 
       "src/priv/helper.ts": { imports: [] },
       "src/priv/other.ts": { imports: [] },
       "src/entry4.ts": { imports: ["src/priv/core.ts", "src/priv/other.ts"] },
-      "test/priv/helper.doctest.md": { test: ["src/priv/helper.ts"] },
+      "test/priv/helper.test.ts": { test: ["src/priv/helper.ts"] },
     },
   });
   t.check(summary(unitsRule.check(testLayout)), "unit-directory pkg/src/priv/core.ts");

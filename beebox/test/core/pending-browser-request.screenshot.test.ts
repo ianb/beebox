@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
-import { makeTestServer, type TestServer } from "../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../helpers/test-route-server.js";
 import { isRecord } from "../../src/shared/is-record.js";
 
 // An 8-byte PNG signature plus a trailing byte — enough to pass the route's

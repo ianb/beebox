@@ -8,8 +8,8 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { getOrCreateAgentToken, verifyAgentBearer, resolveAgentToken } from "../../../src/core/agent/token.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
 
 /** The `error` field of a JSON error body. */
 function errorOf(body: unknown): unknown {

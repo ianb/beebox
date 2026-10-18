@@ -19,7 +19,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { createHubServer } from "../../src/hub/server/core.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { createScanToken, revokeScanToken } from "../../src/core/scan/tokens.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-scan-token-doctest";
 

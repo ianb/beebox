@@ -14,7 +14,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { runIntake } from "../../../../src/core/commands/intake/run.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 // ## Routing fresh arrivals
 //

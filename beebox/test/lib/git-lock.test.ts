@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { withBoxGitLock, activeBoxGitLockCount, BOX_GIT_LOCK_WAIT_MS } from "../../src/lib/git-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../src/lib/file-lock.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { getStatus } from "../../src/lib/git/core/operations.js";
 import { join } from "node:path";
 

@@ -90,12 +90,12 @@ export interface SupervisorOptions {
    *  unless a test overrides it. See `CheckReadyFn`. */
   checkReady?: CheckReadyFn;
   /** Injectable clock (defaults to `Date.now`), shared with `HubState`, so
-   *  doctests can drive idle/keep-set ordering deterministically instead of
+   *  tests can drive idle/keep-set ordering deterministically instead of
    *  waiting out real timers. See `test/hub/supervisor.test.ts`. */
   now?: () => number;
   /**
    * First crash-loop retry delay, defaulting to {@link BASE_BACKOFF_MS}.
-   * Injectable for the same reason as `now`: a doctest that drives a launch
+   * Injectable for the same reason as `now`: a test that drives a launch
    * failure has a LIVE retry timer running behind its assertions, and at the
    * production 1s it only has to spend a second anywhere later in the block —
    * one slow `makeTmpBox`, one loaded machine — for the retry to land and
@@ -288,7 +288,7 @@ export class Supervisor implements EndpointProvider {
   }
 
   /**
-   * The idle-timer's decision, factored out of the timer callback so doctests
+   * The idle-timer's decision, factored out of the timer callback so tests
    * can drive it deterministically (the real `setTimeout` just calls this).
    * A running box that's in the keep-set -- the `config.keepRecent`
    * most-recently-active running boxes -- stays alive and re-arms its timer,
@@ -316,7 +316,7 @@ export class Supervisor implements EndpointProvider {
 
   /** The current keep-set: the `config.keepRecent` most-recently-active
    *  running boxes (by in-memory `lastActivity`). Empty when `keepRecent` is
-   *  0. Exposed for `evaluateIdle` and its doctests. */
+   *  0. Exposed for `evaluateIdle` and its tests. */
   keepSetSlugs(): string[] {
     if (this.config.keepRecent <= 0) return [];
     return Array.from(this.boxes.values())

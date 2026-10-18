@@ -14,7 +14,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { applyEngineUnavailability } from "../../../src/core/agent/engine-unavailability-apply.js";
 import { liveEngineUnavailability } from "../../../src/core/agent/engine-availability-store.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // The verbatim CLI message from the live probe (2026-08-18). The reset date is
 // far in the past relative to any test run, so the parsed date clamps to the

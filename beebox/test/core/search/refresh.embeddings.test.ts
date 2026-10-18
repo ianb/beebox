@@ -14,7 +14,7 @@ import { loadManifest } from "../../../src/core/search/refresh/manifest.js";
 import { searchLockPath } from "../../../src/core/search/store/core.js";
 import { createFakeEmbeddings } from "../../../src/services/openai-embeddings.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const DOC = (text: string, contains?: string) =>
   `---\ntitle: Note\n${contains ? `contains: ${contains}\n` : ""}---\n${text}\n`;

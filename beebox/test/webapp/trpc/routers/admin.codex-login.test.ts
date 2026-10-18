@@ -10,7 +10,7 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeCodexCli } from "../../../../src/services/codex-cli/core.js";
 import { checkCodexAuth, resetCodexAuthCache } from "../../../../src/core/agent/auth-preflight.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 
 void test("line 16", async (t) => {

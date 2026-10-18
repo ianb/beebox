@@ -93,7 +93,7 @@ export function useEmissionDispatch(opts: {
   // Recovered dictation: a segment that survived a page drop (screen sleep,
   // tab eviction, reload) with no live composer state around it to fold in —
   // plain <speech>, no selections, not diarized (historical shape, pinned by
-  // emission-assemble.doctest.md's "site 5").
+  // test/components/chat.emission-assemble.test.ts's "site 5").
   const sendVoiceSegment = useCallback(
     (text: string) => {
       const emission = createVoiceEmission({ text, selections: [], diarized: false });

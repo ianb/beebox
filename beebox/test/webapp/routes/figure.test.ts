@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { makeTestServer, type TestServer } from "../../helpers/doctest-server.js";
+import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
 import { writeFile, utimes, symlink, rm } from "node:fs/promises";
 import { join } from "node:path";
 

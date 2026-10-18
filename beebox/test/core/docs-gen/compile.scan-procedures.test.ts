@@ -11,7 +11,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { scanProcedures } from "../../../src/core/docs-gen/compile/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## Reads name + first-line description from frontmatter
 void test("Reads name + first-line description from frontmatter", async (t) => {

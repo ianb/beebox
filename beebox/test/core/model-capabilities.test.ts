@@ -15,7 +15,7 @@ import { serviceCapabilities } from "../../src/core/model-capabilities.js";
 import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
 import { secretsLogDir } from "../../src/core/secrets/store.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 async function useTempStore() {
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));

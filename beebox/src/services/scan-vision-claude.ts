@@ -273,7 +273,7 @@ export function createClaudeScanVision({
 /**
  * The parse boundary from `structured_output` to post-conditioned analyses:
  * Zod validation, the per-page slot invariant, legibility→flag folding, and
- * batch alignment. Exported so the doctest can exercise it with canned
+ * batch alignment. Exported so the test can exercise it with canned
  * SDK-shaped fixtures, no subprocess involved.
  */
 export function parseClaudeScanBatch(

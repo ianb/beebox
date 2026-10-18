@@ -25,7 +25,7 @@ import type { CloudflarePublishBinding, CloudflarePublishBoxHost, CloudflarePubl
 import type { FakeProvisioningClient } from "../../src/services/cloudflare-provisioning/core.js";
 import type { ManagedPublicationRuntime } from "../../src/services/managed-publication-runtime/core.js";
 import type { TrpcActor } from "../../src/webapp/trpc/context.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { trpcContext } from "../helpers/trpc-context.js";
 
 type PreparedCandidate = Awaited<ReturnType<typeof prepareManagedPublication>>;

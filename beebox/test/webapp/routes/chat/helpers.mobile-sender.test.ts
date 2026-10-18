@@ -13,7 +13,7 @@ import "agent-doctest/tap";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { createFirstUser } from "../../../../src/webapp/local-users.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../../src/core/mobile/pairing.js";
 import { resolveMobileSender, injectUserAttr } from "../../../../src/webapp/routes/chat/helpers.js";

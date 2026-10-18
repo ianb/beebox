@@ -19,7 +19,7 @@ import { TEMPLATE_STOCK_HASHES } from "../../../src/core/template-stock-hashes.j
 import { installBriefing } from "../../../src/core/box/structure/defaults.js";
 import { readVersions, writeVersions } from "../../../src/core/install-template-file.js";
 import { parseLandmarkFields } from "../../../src/schemas/landmark.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 

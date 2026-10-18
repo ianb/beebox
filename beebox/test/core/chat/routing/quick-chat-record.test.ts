@@ -17,7 +17,7 @@ import {
 import {
   readQuickChatRecord, saveQuickChatRecord, listOpenQuickChatRecords, listRecentlySentQuickChatRecords,
 } from "../../../../src/core/chat/routing/quick-chat-store.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 const NOW = Date.parse("2026-10-06T12:00:00.000Z");
 const ID = "11111111-1111-4111-8111-111111111111";

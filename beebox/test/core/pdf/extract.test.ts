@@ -25,8 +25,8 @@ import { extractPdf, clearExtractionAssets } from "../../../src/core/pdf/extract
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText } from "../../../src/core/card-io.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { writeFile, readdir, readFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";

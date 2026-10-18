@@ -19,7 +19,7 @@ import {
   signMobileSession,
   verifyMobileSession,
 } from "../../../src/core/mobile/session.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // docs/mobile-contract.md §8 pins the cookie name; a rename here is a
 // contract break that must move both sides together.

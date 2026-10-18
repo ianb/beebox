@@ -17,7 +17,7 @@ import { JEV_MAX_REQUEST_CHARS } from "../../../src/services/jev-wire.js";
 import { createFakeDocling } from "../../../src/services/docling/core.js";
 import type { DoclingService } from "../../../src/services/docling/core.js";
 import { createFakeScanVision } from "../../../src/services/scan-vision.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const fixture = path.resolve("test/fixtures/triage-evaluation/documents/raw");
 type TmpBox = Awaited<ReturnType<typeof makeTmpBox>>;

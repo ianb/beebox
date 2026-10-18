@@ -27,7 +27,7 @@
  * failure worse than having no mechanism: it reports "current" for a bundle
  * that is genuinely stale. The mitigation is that the bump rides an existing
  * ritual rather than being a new obligation — the contract's own change
- * discipline already requires the doc, both implementations, and the doctests
+ * discipline already requires the doc, both implementations, and the tests
  * to move in one change.
  *
  * This number is spelled three times: here, in `beebox/src/core/scan/contract-version.ts`

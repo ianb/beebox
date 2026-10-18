@@ -266,7 +266,7 @@ function describeExit(exit: ChildExit, failure: string | null): string {
 }
 
 /** Whether a stopped server's process is really gone. Exported for the
- *  lifecycle doctest's teardown assertion. */
+ *  lifecycle test's teardown assertion. */
 export function serverProcessAlive(server: FieldServer): boolean {
   return server.pid !== undefined && pidAlive(server.pid);
 }

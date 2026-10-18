@@ -18,7 +18,7 @@ import {
   HubConfigEditError,
 } from "../../src/hub/config-edit.js";
 import { HubConfigError, loadHubConfig } from "../../src/hub/config.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 /** A fixture hub with one already-registered box, plus a second box on disk
  *  that no slug claims yet. Both are v2 package-layout boxes (`.beebox/box.json` lives

@@ -11,7 +11,6 @@ const childArgs = [
   "--disable-warning=DEP0040",
   "--import=tsx",
   "--import=agent-doctest/tap",
-  "--import=agent-doctest/loader",
   "--input-type=module",
   "--eval",
   `const imported = await import('./src/frontend/src/lib/view-bindings.ts');

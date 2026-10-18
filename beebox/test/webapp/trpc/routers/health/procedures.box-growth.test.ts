@@ -15,7 +15,7 @@ import {
   measureBoxGrowthIfDue,
   readBoxGrowthState,
 } from "../../../../../src/core/box-growth/health.js";
-import { makeTmpBox } from "../../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../../helpers/trpc-context.js";
 
 function caller(boxRoot: string, isOwner: boolean) {

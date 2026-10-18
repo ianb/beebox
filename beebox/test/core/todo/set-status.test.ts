@@ -9,7 +9,7 @@ import "agent-doctest/tap";
 import { setTodoAttribute, setTodoStatus } from "../../../src/core/todo/set-status.js";
 import { extractCardTodos } from "../../../src/core/todo/extract/core.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const box = await makeTmpBox();
 const ctx = await buildLoadContext(box.root);

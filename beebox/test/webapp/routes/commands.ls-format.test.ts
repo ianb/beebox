@@ -9,7 +9,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { executeCommandStreaming } from "../../../src/webapp/routes/commands.js";
 
 async function lsLines(boxRoot: string, args: Record<string, unknown>) {

@@ -58,7 +58,7 @@ await write("pkg/tsconfig.base.json", "{}\n");
 
 // A real scan feeds `scanPublicSurfaces` its already-parsed
 // `ModuleFile.buildEntries` (via `buildEntriesFromFiles`) instead of
-// re-reading any file here; this doctest, without a full `PackageLayout`,
+// re-reading any file here; this test, without a full `PackageLayout`,
 // parses just the one module it wrote and builds the same shape by hand.
 const buildScriptText = await readFile(join(repoRoot, buildScriptPath), "utf8");
 const buildScriptSource = parseSourceFile({ fileName: buildScriptPath, sourceText: buildScriptText });

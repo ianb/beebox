@@ -9,7 +9,7 @@ import "agent-doctest/tap";
 import { rename, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { getLogPaginated } from "../../src/lib/git/core/operations.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 void test("line 14", async (t) => {
   // doctest:L15

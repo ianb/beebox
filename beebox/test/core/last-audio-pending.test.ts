@@ -12,7 +12,7 @@ import { eventSchemas } from "../../src/core/event-bus/schemas.js";
 import { isRecord } from "../../src/shared/is-record.js";
 import { AUDIO_QUESTION_MODEL, buildAudioQuestionPrompt } from "../../src/core/audio-question.js";
 import { audioMimeType, missingMessageIdError } from "../../src/cli/commands/chat/audio.js";
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { makeTestServer } from "../helpers/test-route-server.js";
 import { createStagingSession, addAudioChunk } from "../../src/core/capture/staging-store/core.js";
 import { sealVoiceSession } from "../../src/core/voice-recording/voice-staging/core.js";
 

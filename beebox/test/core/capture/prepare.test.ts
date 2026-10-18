@@ -14,7 +14,7 @@ import { mkdir, writeFile, appendFile, readFile, readdir, rm, access } from "nod
 import { parse as parseYaml } from "yaml";
 import { dirname } from "node:path";
 import assert from "node:assert/strict";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
 import { createEventBus, type BusEvent } from "../../../src/core/event-bus/core.js";
 import type { ChatSession } from "../../../src/core/chat/session/run/core.js";

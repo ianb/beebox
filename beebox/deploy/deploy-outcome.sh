@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # Classify how a deploy run ended. Sourced by deploy.sh; tested by
-# test/deploy/deploy-outcome.doctest.md.
+# test/deploy/outcome.test.ts.
 #
 # An interrupt is known from the signal trap, never from the exit code: a child
 # process can exit 128 or higher without this script having been signalled.

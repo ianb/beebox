@@ -17,7 +17,7 @@ import {
 } from "../../src/shared/card-theme/core.js";
 import { cardSchema } from "../../src/cards/schema.js";
 import { z } from "zod";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { lintCardsDispatch } from "../../src/core/card-lint/core/lint-cards.js";
 

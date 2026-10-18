@@ -15,7 +15,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { searchBox } from "../../../src/core/search/query/core.js";
 import { createFakeEmbeddings, EmbeddingsError, type EmbeddingsService } from "../../../src/services/openai-embeddings.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { toError } from "../../../src/shared/error-guards.js";
 
 // No ambient key: the no-service cases must resolve to null, never a real

@@ -10,7 +10,7 @@ void test("listBoxCardFiles and listBoxMarkdownFiles skip a publication project'
   // doctest:L8
   const path = await import("node:path");
   const { listBoxCardFiles, listBoxMarkdownFiles } = await import("../../src/core/list-cards.js");
-  const { makeTmpBox } = await import("../helpers/doctest-helpers.js");
+  const { makeTmpBox } = await import("../helpers/test-helpers.js");
 
   // doctest:L12
   const box = await makeTmpBox();

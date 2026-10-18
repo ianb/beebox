@@ -3,19 +3,14 @@ plugin:
 node-arg:
   - --import=tsx
   - --import=./src/tap-check/tap.ts
-  - --import=./src/doctest-loader.ts
 include:
   - test/**/*.test.ts
-  - test/**/*.doctest.md
 # Agent-first output: plain machine-readable TAP, no ANSI/cursor codes.
 # See beebox/.taprc for rationale.
 reporter: tap
 color: false
-# The uncovered remainder is the Node loader-hook plumbing (resolve/load),
-# which only runs via real module loading, not unit tests. Don't fail the
-# suite on it — same setting as cardworks.
+# Coverage is not a gate here; same setting as cardworks.
 allow-incomplete-coverage: true
-# Per-file timeout. doctest-hooks.load.test.ts spawns a process per case and
-# took 24s alone (2026-10-16), close to tap's 30s default; with
-# typecheck.doctest.md building TypeScript programs in parallel it passed 30s.
+# Per-file timeout. Some tests here spawn a process per case or build
+# TypeScript programs in parallel, which approached tap's 30s default.
 timeout: 120

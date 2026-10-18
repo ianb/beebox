@@ -190,7 +190,7 @@ export function listSecretGuides(): Array<{ key: string; guide: SecretGuide }> {
 }
 
 /**
- * Names the engine has a use for but no guide — should be empty. A doctest
+ * Names the engine has a use for but no guide — should be empty. A test
  * asserts it, so adding a consumer to `uses.ts` without writing its guide fails
  * loudly instead of leaving a name the add form cannot explain.
  */

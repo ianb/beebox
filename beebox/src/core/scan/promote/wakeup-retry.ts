@@ -11,7 +11,7 @@
  * per engineering principle 4 (resilient AND never silent).
  *
  * The decision is a pure function so the policy — not the I/O around it — is
- * what the doctest exercises.
+ * what the test exercises.
  *
  * Neither state file ends in `.json`: `readAllQuarantineEntries` treats every
  * `.json` in the quarantine dir as a sidecar, so a `.json` name here would be

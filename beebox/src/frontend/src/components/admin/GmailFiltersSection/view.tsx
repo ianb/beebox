@@ -18,7 +18,7 @@ import { GmailLabelList } from "./views";
 type GmailConfig = RouterOutput["admin"]["gmailConfig"];
 type GmailAction = NonNullable<GmailConfig["action"]>;
 
-// Components rather than module-level JSX: the doctest loader imports this
+// Components rather than module-level JSX: the test loader imports this
 // module without a JSX runtime configured for evaluation at import time.
 function Description() {
   return <>

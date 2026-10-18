@@ -4,7 +4,7 @@
  */
 
 // Relative (not `@shared/…`): this file is imported directly by Node/tsx in
-// doctests (no Vite bundler in that path to resolve the aliased specifier),
+// tests (no Vite bundler in that path to resolve the aliased specifier),
 // same reasoning as components/view-widgets/node-entry.tsx.
 import { buildChatContentBlocks, IMAGE_NOT_DISPLAYED } from "../../../../shared/chat-content-blocks";
 import type {

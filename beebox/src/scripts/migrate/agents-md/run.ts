@@ -102,7 +102,7 @@ export type RunMode = "plan" | "apply";
 
 /**
  * One run over one box. Returns the exit code and the lines it printed.
- * `stopAfter` applies only that many steps and returns (doctests use it to
+ * `stopAfter` applies only that many steps and returns (tests use it to
  * leave each interruption state); the marker is then left in place.
  */
 export async function runAgentsMd({ boxRoot, mode, stopAfter }: { boxRoot: string; mode: RunMode; stopAfter?: number }): Promise<{ code: number; lines: string[] }> {
@@ -142,7 +142,7 @@ export async function runAgentsMd({ boxRoot, mode, stopAfter }: { boxRoot: strin
   return { code: 0, lines };
 }
 
-// CLI entry — only when run directly, not when imported by a doctest.
+// CLI entry — only when run directly, not when imported by a test.
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   const boxRoot = args.find((a) => !a.startsWith("--"));

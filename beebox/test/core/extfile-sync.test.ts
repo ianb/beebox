@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../src/exports/cards.js";
 import { isRecord } from "../../src/shared/is-record.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { syncExtfile } from "../../src/core/extfile-sync.js";
 
 async function readFm(path: string): Promise<Record<string, unknown>> {

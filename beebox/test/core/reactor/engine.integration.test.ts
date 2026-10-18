@@ -13,7 +13,7 @@ import { createFakeAgent } from "../fake-agent.js";
 import type { FakeAgent } from "../fake-agent.js";
 import type { createAgent } from "../../../src/core/agent/invoke/core.js";
 import { invariant } from "../../../src/shared/invariant.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createIntakeJobTemplate } from "../../../src/schemas/intake-job.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

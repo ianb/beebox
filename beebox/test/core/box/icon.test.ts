@@ -11,7 +11,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { renderBoxIcon } from "../../../src/core/box/icon.js";
 import assert from "node:assert/strict";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 
 const render = (box: TmpBox, size?: number) => renderBoxIcon({ boxRoot: box.root, slug: "kitchen", size: size ?? 192 });
 

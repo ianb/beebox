@@ -8,7 +8,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { checkExternalUrls } from "../../../src/core/external/url-check/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { UrlVerdict } from "../../../src/core/external/url-check/fetch.js";
 
 // A stub checker: records what it was asked to check, and reports any URL in

@@ -10,7 +10,7 @@ import "agent-doctest/tap";
 import { definitionFromCard, publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
 import { readPublicationCardSource, resolvePublicationCardPath } from "../../src/publish/prepare/card-source.js";
 import { createPublicationCardTemplate } from "../../src/schemas/publication.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const validDefinition = {
   pubId: "abcdefghijklmnop2345672345",

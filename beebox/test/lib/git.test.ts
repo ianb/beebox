@@ -14,7 +14,7 @@ import {
 import {
   getCurrentBranch, createBranch, checkoutBranch, createTag, deleteTag,
 } from "../../src/lib/git-refs.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { rename } from "node:fs/promises";
 import { writeFile as writeFileFs, rm as rmFs } from "node:fs/promises";
 import { join as joinPath } from "node:path";

@@ -6,7 +6,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { getBoxTime, getBoxTimeISO, clearTimeCache } from "../../src/lib/time.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 

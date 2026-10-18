@@ -11,7 +11,7 @@ import * as fs from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { scanBoxInventory } from "../../src/core/box-inventory/core.js";
 import { scanBoxRepositoryStats } from "../../src/core/box-inventory/repository-stats.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const box = await makeTmpBox();
 function hasAnnex(): boolean {

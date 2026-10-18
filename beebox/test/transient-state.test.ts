@@ -16,7 +16,7 @@ import {
   transientStatePath,
   TransientStateCorruptError,
 } from "../src/transient-state.js";
-import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { makeTmpBox } from "./helpers/test-helpers.js";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 

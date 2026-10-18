@@ -8,7 +8,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { repairBoxLinks } from "../../src/core/link-repair.js";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 

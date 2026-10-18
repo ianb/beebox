@@ -9,7 +9,7 @@ import { printed } from "agent-doctest/check";
 import { ChatSession, buildContentBlocks } from "../../../../src/core/chat/session/run/core.js";
 import { chatHistorySlice } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 

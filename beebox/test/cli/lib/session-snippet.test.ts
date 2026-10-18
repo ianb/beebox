@@ -17,8 +17,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFirstUserSnippet } from "../../../src/cli/lib/session-snippet.js";
 import { getSessionMetadata } from "../../../src/cli/lib/session.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 function user(text: string, extra?: Record<string, unknown>) {
   return JSON.stringify({

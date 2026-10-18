@@ -2,9 +2,9 @@
 // barrier, and the file-level acquire/release it drives. Run with:
 //   node --import tsx --test bin/test-locks.test.ts
 //
-// A `.test.ts` rather than the doctest bin/AGENTS.md prescribes, because the
-// semaphore sits in front of `pnpm test` itself: a doctest of it would have to
-// run under the very suite whose slots it hands out.
+// A `node:test` file rather than a tap test, because the semaphore sits in
+// front of `pnpm test` itself: a tap test of it would have to run under the
+// very suite whose slots it hands out.
 
 import assert from "node:assert/strict";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

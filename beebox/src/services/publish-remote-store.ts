@@ -10,7 +10,7 @@
  * through the injected bearer provider — no S3-style request signing.
  *
  * ⚠️ UNVERIFIED: the real R2 adapter cannot be exercised without live Cloudflare
- * credentials, so it is NOT covered by any doctest. The publication logic is
+ * credentials, so it is NOT covered by any test. The publication logic is
  * fully tested through the fake; the adapter is the thin, best-effort seam.
  *
  * Credentials: the box server resolves the bucket and API token from the
@@ -207,7 +207,7 @@ export function createR2PublishStore(config: R2PublishStoreConfig, deps?: { fetc
 }
 
 // ---------------------------------------------------------------------------
-// Fake — in-memory, for publication doctests. No network.
+// Fake — in-memory, for publication tests. No network.
 // ---------------------------------------------------------------------------
 
 export interface FakePublishStore extends PublishRemoteStore {
@@ -219,7 +219,7 @@ export interface FakePublishStore extends PublishRemoteStore {
   deleted: string[];
   /** Every mutating op in call order (`put:<key>` / `delete:<key>`) — for cross-op ordering assertions. */
   ops: string[];
-  /** Stable, human-readable snapshot for doctest assertions. */
+  /** Stable, human-readable snapshot for test assertions. */
   describe(): string;
 }
 

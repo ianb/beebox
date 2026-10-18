@@ -157,7 +157,7 @@ async function readSummary(boxRoot: string, relPath: string): Promise<CardOutcom
  * unreadable file (an fs error) is a different failure — it warns and is left
  * out of both lists, since there's nothing to say about a card we never read.
  *
- * Exported for the chat-picker regression doctest: this read once used the XML
+ * Exported for the chat-picker regression test: this read once used the XML
  * `parseCard`, which silently threw on every (now-frontmatter) landmark card
  * and left the picker landmark-less.
  */

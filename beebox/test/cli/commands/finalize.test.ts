@@ -16,7 +16,7 @@ import { addSubscription } from "../../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../../src/services/push.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 import { boxSlug } from "../../../src/lib/box-slug.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 process.env.BBX_PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-finalize-${process.pid}-${Date.now()}`);
 

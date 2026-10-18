@@ -147,7 +147,7 @@ function emitQuestionExpired(boxRoot: string, relativePath: string): void {
  * expire past the full window. Never synthesizes an answer — expiry only
  * demotes visibility (the card stays in `_bookkeeping/questions/`, still answerable).
  * Time comes from `getBoxTime` (BBX_TIME-honoring), never `new Date()`
- * directly, so this is doctestable with frozen time.
+ * directly, so this is testable with frozen time.
  */
 export async function ageQuestions(
   boxRoot: string,

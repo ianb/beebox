@@ -393,7 +393,7 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   // character (not only `/`) — a box path with `_` or `.` in it, linked under a
   // `/`-only translation, lands in a directory Claude Code never reads, so its
   // auto-memory silently stays global. The root also honors
-  // `BBX_CLAUDE_PROJECTS_DIR`, so doctests and the box-packageify smoke test
+  // `BBX_CLAUDE_PROJECTS_DIR`, so tests and the box-packageify smoke test
   // can point this at a fixture directory instead of the real global one.
   const globalMemoryDir = path.join(claudeProjectsRoot(), encodeProjectDir(resolvedRoot), "memory");
 

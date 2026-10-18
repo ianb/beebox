@@ -16,7 +16,7 @@ import { execSync, spawnSync } from "node:child_process";
 import { assertStandaloneBox, assertCleanAuditBox } from "../../../src/dev/lib/box-guard.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { generateDocs } from "../../../src/core/docs-gen/generate/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { runTest } from "../../../src/dev/lib/test-runner/runner/run-test.js";
 
 // Run the guard, returning the thrown error's class name, or "ok".

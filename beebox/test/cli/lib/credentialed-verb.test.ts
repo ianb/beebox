@@ -16,7 +16,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
+import { makeTestServer, TEST_SLUG } from "../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { createFakeGoogleCalendar } from "../../../src/services/google-calendar/core.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";

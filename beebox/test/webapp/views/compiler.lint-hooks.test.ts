@@ -12,7 +12,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { spawn } from "node:child_process";
 import { isViewFile, isViewSourceFile } from "../../../src/lib/paths/core.js";

@@ -62,7 +62,7 @@ export const rendersCardTypes = ["recipe"];
 export const dependencies = ["**/*.recipe.card"];
 ```
 
-The doctest `test/plugins/recipe/plugin.setup.test.ts` writes these exact
+The test `test/plugins/recipe/plugin.setup.test.ts` writes these exact
 files into a temp box and validates a recipe card that uses every tag, so this
 section is what loads.
 

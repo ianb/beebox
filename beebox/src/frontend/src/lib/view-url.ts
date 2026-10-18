@@ -16,8 +16,8 @@
  * file name containing `#` keeps working wherever targets are stored.
  */
 
-// Relative (not the `@shared` alias) so this lib resolves under the doctest
-// runner's Node resolution too — view-url is unit-doctested outside the bundler.
+// Relative (not the `@shared` alias) so this lib resolves under the test
+// runner's Node resolution too — view-url is unit-tested outside the bundler.
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import type { ControlAction } from "./ui-scan/types.js";

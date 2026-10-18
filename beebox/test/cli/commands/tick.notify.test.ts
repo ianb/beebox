@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
 import { readRecent } from "../../../src/core/notification/log.js";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 
 // Hermetic: no engine-availability store, and every channel through its fake.
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";

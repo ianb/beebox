@@ -12,7 +12,7 @@ import {
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
 import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 

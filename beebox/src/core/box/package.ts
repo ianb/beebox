@@ -172,7 +172,7 @@ async function readEngineVersions(): Promise<EngineVersions> {
  * isn't resolvable through a real registry/tarball channel yet (Track F).
  * Instead, when `node_modules/` is absent, it symlinks
  * `node_modules/beebox` straight at the running engine's own
- * `PACKAGE_ROOT` — the same trick the fixture doctests and `bbx view test`
+ * `PACKAGE_ROOT` — the same trick the fixture tests and `bbx view test`
  * use — so the box is loadable (`getBoxShape`'s dependency check, native
  * schema/view resolution) before a real install ever happens. Track F's real
  * install replaces this symlink with an actual dependency.
@@ -288,7 +288,7 @@ export interface ScaffoldedBox {
  * Build a valid shapeVersion-3 box at `target`: the npm-package half
  * (`scaffoldPackageRoot`) then the operational half (`initBox`), both on the
  * SAME root. This is the single composition that `bbx engine init` (fresh), the
- * `init` doctest, and every test fixture (`makeTmpBox`, `test-server`)
+ * `init` test, and every test fixture (`makeTmpBox`, `test-server`)
  * delegate to, so a valid box is produced exactly one way.
  *
  * Does NOT initialize git or run `bbx engine init`'s card installers — callers that

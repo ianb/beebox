@@ -3,8 +3,8 @@ import XCTest
 
 @testable import BeeBoxMacCore
 
-/// Ports of `hash.doctest.md`, `settle.identity.doctest.md` and the parse
-/// parts of `wire-client.doctest.md`.
+/// Ports of `hash.test.ts`, `settle.identity.test.ts` and the parse
+/// parts of `wire-client.test.ts`.
 final class ScanFilesAndWireTests: ScanTestCase {
     // MARK: hash
 

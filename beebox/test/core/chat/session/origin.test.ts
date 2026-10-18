@@ -10,7 +10,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as os from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { localOrigin, readOrCreateOriginId } from "../../../../src/core/chat/session/origin.js";
 
 // ## the first read mints the id; later reads return the same one

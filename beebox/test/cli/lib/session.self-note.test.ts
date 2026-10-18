@@ -10,8 +10,8 @@ import { parseSelfNote, parseSelfNotes, entrySelfNotes, parseSessionLog, getSess
 import type { SessionLogSlice } from "../../../src/cli/lib/session-retention.js";
 import assert from "node:assert/strict";
 import { isRecord } from "../../../src/shared/is-record.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { makeTestServer } from "../../helpers/doctest-server.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
 
 // "Everything, bounded": the first page at the hard retention ceiling.
 const ALL = { mode: "page", offset: 0, limit: 5000 } satisfies SessionLogSlice;

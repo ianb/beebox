@@ -8,7 +8,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import { movePhase2CardFiles, movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // The card move and the standalone file move both retain access to their object.
 // An unrelated relative symlink keeps its original text.

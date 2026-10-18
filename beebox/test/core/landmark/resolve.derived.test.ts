@@ -14,7 +14,7 @@ import "agent-doctest/tap";
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { prunedSubtree } from "../../../src/core/landmark/prominence-index.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 /** The fields the assertions below care about, in list order. */
 function summarize(links: { ref: string; label: string | null; source: string; prominence?: string }[]) {

@@ -7,12 +7,12 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import assert from "node:assert/strict";
 import { startProcedure, resumeProcedure } from "../../../src/core/procedure/engine/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { getLog } from "../../../src/lib/git/core/operations.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 import type { ProcedureRun } from "../../../src/schemas/procedure-run.js";
 import type { Result } from "../../../src/shared/result.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 import type { ProcedureOptions } from "../../../src/core/procedure/engine-types.js";
 
 /** A shell list item for a YAML `shells:` block. */

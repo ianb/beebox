@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { preparePublication, PUBLICATION_FILE_LIMITS, type PrepareDeps, type ProjectCommandRequest } from "../../src/publish/prepare/core/prepare-publication.js";
 import { releaseIdForFiles } from "../../src/publish/manifest-edge.js";
 import { createPublicationCardTemplate } from "../../src/schemas/publication.js";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 
 const CARD = "_content/Example.publication.card";
 const ATTACH = "_content/Example.attach";

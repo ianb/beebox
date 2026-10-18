@@ -20,7 +20,7 @@ import {
 } from "../../../../src/cli/commands/wakeup/cycle-lock.js";
 import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../../../src/cli/wakeup-outcome.js";
 import { inspectLock } from "../../../../src/lib/file-lock.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 /** Collect what the cycle printed instead of letting it reach the test output. */
 async function capture(fn: () => unknown) {

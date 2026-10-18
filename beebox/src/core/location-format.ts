@@ -1,7 +1,7 @@
 /**
  * Presentation for a stored location: age + staleness, and the one-line
  * human form `bbx location get` prints. Pure given a `now`, so it's directly
- * doctestable without touching the filesystem.
+ * testable without touching the filesystem.
  */
 
 import { describeElapsed } from "./session-context.js";

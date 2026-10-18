@@ -15,7 +15,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { runQueryForBox } from "../../../src/cli/commands/query.js";
 import type { TodoQueryResult } from "../../../src/core/todo/query.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 

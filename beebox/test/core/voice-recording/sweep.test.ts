@@ -8,8 +8,8 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { any, str } from "agent-doctest/check";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import type { TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
 import type { StagingSession, StagingVoice } from "../../../src/core/capture/staging-schema.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import { createStagingSession, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";

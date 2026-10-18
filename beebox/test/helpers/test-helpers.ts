@@ -1,8 +1,8 @@
 /**
- * Shared helpers for filesystem-based doctests.
+ * Shared helpers for filesystem-based tests.
  *
  * All output methods return paths relative to the temp root,
- * so temp dir names never appear in doctest expected output.
+ * so temp dir names never appear in test expected output.
  */
 
 

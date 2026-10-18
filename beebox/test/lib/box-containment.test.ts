@@ -16,7 +16,7 @@ import {
   realpathContained,
 } from "../../src/lib/box-containment.js";
 import { resolveContainedRef } from "../../src/core/ref-exists.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## `containWithinBox` — the string floor
 //

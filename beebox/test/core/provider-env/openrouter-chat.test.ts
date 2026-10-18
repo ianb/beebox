@@ -22,7 +22,7 @@ import { openRouterChatEnv } from "../../../src/core/provider-env/openrouter-cha
 import { ProviderSetupError } from "../../../src/core/provider-setup-error.js";
 import { grantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../src/lib/box-slug.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const kimi = { id: "moonshotai/kimi-k2-0905:exacto", label: "Kimi K2" };
 

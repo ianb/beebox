@@ -8,7 +8,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { computeTodoAmbientLine } from "../../../src/core/todo/ambient-summary.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const DOC_FM = "title: Kitchen\ncontains: Notes on the kitchen remodel.\n";
 

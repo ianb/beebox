@@ -11,7 +11,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, rm, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { searchChats } from "../../../src/core/chat-search/query.js";
 import { loadChatManifest } from "../../../src/core/chat-search/manifest.js";

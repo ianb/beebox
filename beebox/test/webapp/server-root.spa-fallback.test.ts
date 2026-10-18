@@ -13,7 +13,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import Fastify from "fastify";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/session.js";
 import { TEST_FRONTEND_PATH } from "../helpers/test-server.js";

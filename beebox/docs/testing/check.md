@@ -1,5 +1,9 @@
 # Tests with `t.check`
 
+**Location:** `test/<area>/<name>.test.ts`, mirroring the `src/` path
+**Runner:** [tap](https://node-tap.org/) with the `agent-doctest/tap` plugin
+**Run:** `pnpm test`, or `pnpm exec tap test/<path>.test.ts` from the package
+
 A test file is `<name>.test.ts`, run by tap. Each test compares whole values
 with `t.check(actual, expected)`. The expected value is written as code, and
 the type checker checks it against the actual value's type.
@@ -17,7 +21,7 @@ whole observed value, so a regression shows as a diff.
 import { test } from "tap";
 import { any } from "agent-doctest/check";
 import { signMobileSession, verifyMobileSession } from "../../../src/core/mobile/session.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("a minted cookie verifies back to its device", async (t) => {
   const box = await makeTmpBox();
@@ -171,3 +175,109 @@ A failure prints three parts:
 
 Fix the code when the behavior is wrong. Fix the expected value when the
 behavior is right.
+
+## Helpers
+
+- `test/helpers/test-helpers.ts`: `makeTmpBox()` for filesystem tests. It
+  returns `.root`, `.list()`, `.read()`, `.write()`, `.commitAll()`, and
+  `.cleanup()`. `list()` returns relative paths, so no temp directory names
+  reach an expected value.
+- `test/helpers/test-route-server.ts`: `makeTestServer()` for route tests. It
+  returns `.inject()` (text), `.request()` (parsed object), `.seed()`,
+  `.read()`, `.commitAll()`, and `.cleanup()`. It uses Fastify `inject()`, so
+  no socket opens. `.request()` and `.inject()` prefix URLs with the test box
+  slug (`/test`). `.rootRequest()` hits a root-level route without the prefix.
+- `eventually(fn, { label })`, from `agent-doctest/check`, waits for a
+  condition. Never use a fixed sleep.
+
+## Service fakes
+
+External dependencies (APIs, CLIs) sit behind typed service interfaces with
+in-memory fakes. The service layer is documented in `src/services/AGENTS.md`.
+Each service has an interface (the subset we use), a real factory, and a fake
+factory with domain-specific constructor parameters and observable state:
+
+```ts
+const cal = createFakeGoogleCalendar({ calendars: [{ id: "primary", summary: "Home" }] });
+await cal.insertEvent("primary", { summary: "Dentist", start, end });
+t.check(cal.events.length, 1);
+```
+
+Pass fakes to a route with `makeTestServer({ services: { calendar: cal } })`,
+then check what the route did through the fake's state.
+
+| Service | Factory | Key constructor params | Observable state |
+|---------|---------|----------------------|-----------------|
+| Claude CLI | `createFakeClaudeCli()` | `{ loggedIn? }` | `.loggedIn` |
+| Google Calendar | `createFakeGoogleCalendar()` | `{ calendars?, events? }` | `.calendars[]`, `.events[]` |
+| OpenAI Audio | `createFakeOpenAIAudio()` | `{ transcriptionText? }` | `.calls[]` |
+| IMAP | `createFakeImap()` | `{ messages? }` | `.connected`, `.lockedMailbox` |
+| Google Auth | `createFakeGoogleAuth()` | `{ accessToken? }` | none |
+
+A connector test uses `makeTmpBox({ git: true })`, seeds config files, injects
+a fake, and runs `sync()`. Credentials go through the machine secret store
+([secrets](../secrets.md)): `setSecret` and `grantSecret`
+(`src/core/secrets/lifecycle.ts`) do what `bbx secrets set` and `grant` do.
+
+```ts
+const box = await makeTmpBox({ git: true });
+t.teardown(() => box.cleanup());
+await initBox(box.root);
+box.commitAll("init box");
+await setSecret({ name, value });
+await grantSecret({ slug, name, access: "server" });
+
+const connector = createGmailConnector(box.root, createFakeGoogleGmail({ messages }));
+await t.check(connector.sync(), { created: 1, updated: 0, pushed: 0 });
+```
+
+## DOM tests
+
+A frontend test can render a component two ways. `renderToStaticMarkup`
+(`react-dom/server`) shows the first render's HTML and runs no effects.
+`mount()` mounts the component in a [happy-dom](https://github.com/capricorn86/happy-dom)
+document, from `src/frontend/test/helpers/dom-harness.ts`. Use `mount()` for
+what only a live tree shows: effects and their cleanups, event handlers, state
+across re-renders, and which components re-render.
+
+Every test process loads frontend modules through the React Compiler, with the
+options the Vite build uses (`src/frontend/test/helpers/react-compiler-hooks.ts`,
+registered in `.taprc`). Memoization in a test therefore matches the browser.
+`REACT_COMPILER=0` turns it off for debugging. Compiled modules are cached in
+`src/frontend/node_modules/.cache/`.
+
+- Import `dom-harness.js` first. React DOM reads the window and the
+  render-count hook when it loads. `mount()` throws `HarnessLoadOrderError` if
+  React DOM loaded first.
+- Change state through the handle: `rerender(element)` as a parent would, or
+  `act(fn)` for a setter or an event. Both resolve after effects flush.
+- `renders()` counts committed renders per component name since mount or
+  `resetRenders()`. Reset after the setup renders, then check the exact counts
+  for the step under test. An exact object catches a component that starts
+  rendering.
+- End each test with `unmount()` (or `t.teardown`), so the cleanups run.
+- A component that calls `useParams` needs a router around it, as in
+  `src/frontend/test/components/PersonView.person-view.test.ts`.
+
+```ts
+import { mount } from "../helpers/dom-harness.js";
+import { createElement as h, useState } from "react";
+
+function Counter() {
+  const [n, setN] = useState(0);
+  return h("button", { onClick: () => setN(n + 1) }, `clicked ${n}`);
+}
+
+void test("a click re-renders the counter once", async (t) => {
+  const view = await mount(h(Counter));
+  t.teardown(() => view.unmount());
+  await view.act(() => view.container.querySelector("button")?.click());
+  t.check({ text: view.container.textContent, renders: view.renders() }, {
+    text: "clicked 1",
+    renders: { Counter: 2 },
+  });
+});
+```
+
+Render counts cover committed renders of ordinary trees. An aborted render is
+not counted, and Suspense fallbacks get no special handling.

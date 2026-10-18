@@ -15,7 +15,7 @@ import { runTick } from "../../../src/cli/commands/tick.js";
 import { runOnWakeupScripts } from "../../../src/cli/tick-utils.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
 import { loadScheduleHealth } from "../../../src/core/schedule/health-box.js";
-import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 

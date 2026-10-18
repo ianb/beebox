@@ -10,11 +10,11 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import type { TmpBox } from "../../../helpers/doctest-helpers.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { runTodoQuery } from "../../../../src/core/todo/query.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 /** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
 async function collectTodos(boxRoot: string) {

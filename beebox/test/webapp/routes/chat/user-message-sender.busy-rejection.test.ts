@@ -18,7 +18,7 @@ import { anything, eventually } from "agent-doctest/check";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 

@@ -11,7 +11,7 @@ import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
 } from "../../../src/core/transcription/dispatch/core.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## Defaults
 //

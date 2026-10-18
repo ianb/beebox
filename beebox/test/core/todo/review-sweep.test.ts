@@ -13,7 +13,7 @@ import "agent-doctest/tap";
 import assert from "node:assert/strict";
 import { computeTodoReviewSets, boxTodayEpoch, toBriefItem } from "../../../src/core/todo/review-sweep.js";
 import { parseIsoDate } from "../../../src/shared/todo-model.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const DOC_FM = "title: Kitchen\ncontains: Notes on the kitchen remodel.\n";
 

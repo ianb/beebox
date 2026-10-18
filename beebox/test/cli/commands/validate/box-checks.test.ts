@@ -13,7 +13,7 @@ import {
   checkRootStrayErrors,
 } from "../../../../src/cli/commands/validate/box-checks.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 // A clean box reports nothing:
 void test("A clean box reports nothing:", async (t) => {

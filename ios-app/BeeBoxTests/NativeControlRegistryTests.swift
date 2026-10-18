@@ -98,7 +98,7 @@ final class NativeControlRegistryTests: XCTestCase {
 
 /// The command envelope, both versions, and the result channel — checked against
 /// the shared golden fixtures under
-/// `beebox/test/mobile-contract/fixtures/`, which the TypeScript doctest
+/// `beebox/test/mobile-contract/fixtures/`, which the TypeScript test
 /// reads too. A contract change edits a fixture once and both suites fail.
 final class NativeComposerCommandV2Tests: XCTestCase {
     private func decodeCommand(_ input: [String: Any]) throws -> NativeComposerCommand? {
@@ -421,7 +421,7 @@ final class NativePointAtControlCommandTests: XCTestCase {
     }
 
     /// The round trip in the direction the web reads it, through the same golden
-    /// fixture the TypeScript doctest asserts against.
+    /// fixture the TypeScript test asserts against.
     func testPointResultFixturesDecode() throws {
         let fixtures = try MobileContractFixtures.load("composer-command-result")
         for (name, fixture) in fixtures where name.hasPrefix("point-at-control") {

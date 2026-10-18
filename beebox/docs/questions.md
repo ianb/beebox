@@ -169,7 +169,7 @@ same `bbx finalize` call site as the pending-question notification sweep
   always runs — only nudge *delivery* depends on a channel existing (the
   header badge is the channel-independent surface).
 - Time comes from `getBoxTime`/`getBoxTimeISO` (`BBX_TIME`-honoring), never
-  `new Date()`, so the sweep is doctestable with frozen time
+  `new Date()`, so the sweep is testable with frozen time
   (`test/core/question-aging.test.ts`).
 
 ## The answer round-trip

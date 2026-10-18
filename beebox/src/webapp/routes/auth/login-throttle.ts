@@ -27,7 +27,7 @@
  *
  * Testability (principle #10, the `BBX_TIME` pattern): the core NEVER reads
  * `Date.now()`. Every time-dependent method takes an injected `now`, so the
- * doctest drives the whole backoff schedule with plain integers. The route is
+ * test drives the whole backoff schedule with plain integers. The route is
  * the one impure boundary that passes `Date.now()` in.
  */
 

@@ -139,7 +139,7 @@ export async function checkSharedLogs(homeDir: string): Promise<HostFinding[]> {
 /**
  * Duplicates `encodeProjectDir` from
  * `beebox/src/core/chat/session/transcript-paths.ts:34` on purpose — see this
- * file's header. Keep in sync by hand; a doctest for the real function is
+ * file's header. Keep in sync by hand; a test for the real function is
  * the source of truth, this is a read-only audit of its output on disk.
  */
 function encodeProjectDir(cwd: string): string {

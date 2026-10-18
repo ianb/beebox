@@ -26,7 +26,7 @@ import type { OpenerSendOutcome } from "./opener-send";
 
 /**
  * What a click on an opener does, as a plain function so the once-only rule is
- * testable without a DOM (the frontend doctests run under plain Node). Returns
+ * testable without a DOM (the frontend tests run under plain Node). Returns
  * whether the send happened. The set is marked sent only after the send
  * accepts, so a rejected click leaves it enabled.
  */

@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { compileView, listViews, buildErrorModule, invalidateView } from "../../../src/webapp/views/compiler/compile.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## Metadata extraction
 //

@@ -13,7 +13,7 @@ import { mkdtemp, writeFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus, type EventBus } from "../../../src/core/event-bus/core.js";
 import { createBrowserTaskTemplate } from "../../../src/schemas/browser-task.js";
 import { acceptSubmission } from "../../../src/core/cards/accept-submission.js";

@@ -25,13 +25,13 @@ import { terminateChild } from "./child-signals.js";
 test("parses per-file results and durations from raw TAP", () => {
   const raw = [
     "TAP version 14",
-    "ok 1 - test/core/geo.doctest.md # time=630.192ms",
-    "not ok 2 - test/webapp/routes/routes-api.doctest.md # time=5548.991ms",
+    "ok 1 - test/core/geo.test.ts # time=630.192ms",
+    "not ok 2 - test/webapp/routes/routes-api.test.ts # time=5548.991ms",
     "1..2",
   ].join("\n");
   assert.deepEqual(parseTapFiles(raw), [
-    { file: "test/core/geo.doctest.md", ok: true, ms: 630 },
-    { file: "test/webapp/routes/routes-api.doctest.md", ok: false, ms: 5549 },
+    { file: "test/core/geo.test.ts", ok: true, ms: 630 },
+    { file: "test/webapp/routes/routes-api.test.ts", ok: false, ms: 5549 },
   ]);
 });
 
@@ -40,23 +40,23 @@ test("ignores indented subtest lines, which would double-count", () => {
   // those would report thousands of "files" and wreck every denominator.
   const raw = [
     "    ok 1 - (unnamed test)",
-    "    ok 2 - test/not-a-real-file.doctest.md",
-    "ok 1 - test/core/geo.doctest.md # time=1ms",
+    "    ok 2 - test/not-a-real-file.test.ts",
+    "ok 1 - test/core/geo.test.ts # time=1ms",
   ].join("\n");
-  assert.deepEqual(parseTapFiles(raw).map((r) => r.file), ["test/core/geo.doctest.md"]);
+  assert.deepEqual(parseTapFiles(raw).map((r) => r.file), ["test/core/geo.test.ts"]);
 });
 
 test("the failure recap names the failing files last, so a truncated tail keeps them", () => {
   // This is what survives when only the end of a run is kept; a crash that
   // names no file must say so rather than listing nothing.
   const raw = [
-    "ok 1 - test/core/geo.doctest.md # time=630.192ms",
-    "not ok 2 - test/webapp/routes/routes-api.doctest.md # time=5548.991ms",
+    "ok 1 - test/core/geo.test.ts # time=630.192ms",
+    "not ok 2 - test/webapp/routes/routes-api.test.ts # time=5548.991ms",
   ].join("\n");
   assert.deepEqual(failureRecapLines(raw, 1), [
     "test-ledger: 1 failing test file:",
-    "  test/webapp/routes/routes-api.doctest.md",
-    "test-ledger: rerun with: pnpm exec tap test/webapp/routes/routes-api.doctest.md",
+    "  test/webapp/routes/routes-api.test.ts",
+    "test-ledger: rerun with: pnpm exec tap test/webapp/routes/routes-api.test.ts",
   ]);
   assert.deepEqual(failureRecapLines(raw, 0), []);
   assert.deepEqual(failureRecapLines("Segmentation fault", 139), [
@@ -65,8 +65,8 @@ test("the failure recap names the failing files last, so a truncated tail keeps 
 });
 
 test("a file result with no timing still parses, with zero duration", () => {
-  assert.deepEqual(parseTapFiles("ok 1 - test/a.doctest.md"), [
-    { file: "test/a.doctest.md", ok: true, ms: 0 },
+  assert.deepEqual(parseTapFiles("ok 1 - test/a.test.ts"), [
+    { file: "test/a.test.ts", ok: true, ms: 0 },
   ]);
 });
 
@@ -119,24 +119,24 @@ test("a path containing ' -> ' is not mistaken for a rename", () => {
 // ── classification ──────────────────────────────────────────────────────────
 
 test("a failure the graph pointed at is attached", () => {
-  const implicated = new Set(["test/a.doctest.md"]);
-  assert.equal(classifyFailure({ file: "test/a.doctest.md", implicated }), "attached");
+  const implicated = new Set(["test/a.test.ts"]);
+  assert.equal(classifyFailure({ file: "test/a.test.ts", implicated }), "attached");
 });
 
 test("a failure the graph did not point at is unimplicated", () => {
   // The number the whole instrument exists to produce.
-  const implicated = new Set(["test/a.doctest.md"]);
-  assert.equal(classifyFailure({ file: "test/b.doctest.md", implicated }), "unimplicated");
+  const implicated = new Set(["test/a.test.ts"]);
+  assert.equal(classifyFailure({ file: "test/b.test.ts", implicated }), "unimplicated");
 });
 
 test("with no graph, a failure is unknown — never guessed either way", () => {
-  assert.equal(classifyFailure({ file: "test/a.doctest.md", implicated: null }), "unknown");
+  assert.equal(classifyFailure({ file: "test/a.test.ts", implicated: null }), "unknown");
 });
 
 // ── flake derivation ────────────────────────────────────────────────────────
 
 const FILESETS: Record<string, string[]> = {
-  all: ["test/a.doctest.md", "test/b.doctest.md"],
+  all: ["test/a.test.ts", "test/b.test.ts"],
   none: [],
 };
 
@@ -160,15 +160,15 @@ function rec(over: Partial<LedgerRecord>): LedgerRecord {
 
 test("fail then pass at the same commit and tree is a flake", () => {
   const records = [
-    rec({ failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+    rec({ failures: [{ file: "test/a.test.ts", class: "attached" }] }),
     rec({ failures: [] }),
   ];
-  assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], [["test/a.doctest.md", 1]]);
+  assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], [["test/a.test.ts", 1]]);
 });
 
 test("fail then pass at a DIFFERENT tree is not a flake — someone fixed it", () => {
   const records = [
-    rec({ failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+    rec({ failures: [{ file: "test/a.test.ts", class: "attached" }] }),
     rec({ treeHash: "t2", failures: [] }),
   ];
   assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], []);
@@ -176,7 +176,7 @@ test("fail then pass at a DIFFERENT tree is not a flake — someone fixed it", (
 
 test("fail then pass at a different commit is not a flake", () => {
   const records = [
-    rec({ failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+    rec({ failures: [{ file: "test/a.test.ts", class: "attached" }] }),
     rec({ commit: "c2", failures: [] }),
   ];
   assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], []);
@@ -184,7 +184,7 @@ test("fail then pass at a different commit is not a flake", () => {
 
 test("a later run that did not include the file proves nothing", () => {
   const records = [
-    rec({ failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+    rec({ failures: [{ file: "test/a.test.ts", class: "attached" }] }),
     rec({ ranFiles: "none", failures: [] }),
   ];
   assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], []);
@@ -192,12 +192,12 @@ test("a later run that did not include the file proves nothing", () => {
 
 test("repeated fail-then-pass cycles each count", () => {
   const records = [
-    rec({ failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+    rec({ failures: [{ file: "test/a.test.ts", class: "attached" }] }),
     rec({ failures: [] }),
-    rec({ failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+    rec({ failures: [{ file: "test/a.test.ts", class: "attached" }] }),
     rec({ failures: [] }),
   ];
-  assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], [["test/a.doctest.md", 2]]);
+  assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], [["test/a.test.ts", 2]]);
 });
 
 // ── careful-tier candidates (mechanism C) ───────────────────────────────────
@@ -206,7 +206,7 @@ test("repeated fail-then-pass cycles each count", () => {
 function flakeHistory(input: { pairs: number; clean: number }): LedgerRecord[] {
   const records: LedgerRecord[] = [];
   for (let i = 0; i < input.pairs; i++) {
-    records.push(rec({ treeHash: `t${i}`, failures: [{ file: "test/a.doctest.md", class: "attached" }] }));
+    records.push(rec({ treeHash: `t${i}`, failures: [{ file: "test/a.test.ts", class: "attached" }] }));
     records.push(rec({ treeHash: `t${i}`, failures: [] }));
   }
   for (let i = 0; i < input.clean; i++) records.push(rec({ treeHash: `clean${i}`, failures: [] }));
@@ -223,7 +223,7 @@ test("a file over the bar is a candidate; one under it is not", () => {
   });
   assert.deepEqual(
     over.candidates.map((c) => [c.file, c.flakes, c.runs]),
-    [["test/a.doctest.md", 3, 10]],
+    [["test/a.test.ts", 3, 10]],
   );
   const under = carefulCandidates({
     records: flakeHistory({ pairs: 3, clean: 34 }),
@@ -249,11 +249,11 @@ test("a current member is reported, never re-proposed", () => {
   const { candidates, members } = carefulCandidates({
     records: flakeHistory({ pairs: 3, clean: 4 }),
     filesets: FILESETS,
-    careful: ["test/a.doctest.md"],
+    careful: ["test/a.test.ts"],
     window: 10,
   });
   assert.deepEqual(candidates, []);
-  assert.deepEqual(members.map((m) => [m.file, m.share]), [["test/a.doctest.md", 0.3]]);
+  assert.deepEqual(members.map((m) => [m.file, m.share]), [["test/a.test.ts", 0.3]]);
 });
 
 test("a run that bailed out is no evidence either way", () => {
@@ -272,47 +272,47 @@ test("a run that bailed out is no evidence either way", () => {
 test("the denominator counts runs that included the file, not all runs", () => {
   // This is why green runs are recorded at all: without them there is no
   // denominator, and it cannot be reconstructed after the fact.
-  const filesets = { both: ["test/a.doctest.md", "test/b.doctest.md"], onlyA: ["test/a.doctest.md"] };
+  const filesets = { both: ["test/a.test.ts", "test/b.test.ts"], onlyA: ["test/a.test.ts"] };
   const records = [
     rec({ ranFiles: "both", failures: [] }),
-    rec({ ranFiles: "onlyA", commit: "c2", failures: [{ file: "test/a.doctest.md", class: "unimplicated" }] }),
+    rec({ ranFiles: "onlyA", commit: "c2", failures: [{ file: "test/a.test.ts", class: "unimplicated" }] }),
   ];
   const stats = summarize({ records, filesets });
-  assert.equal(stats.get("test/a.doctest.md")?.runs, 2);
-  assert.equal(stats.get("test/b.doctest.md")?.runs, 1, "b only ran once");
-  assert.equal(stats.get("test/a.doctest.md")?.failures, 1);
-  assert.equal(stats.get("test/a.doctest.md")?.unimplicatedFailures, 1);
+  assert.equal(stats.get("test/a.test.ts")?.runs, 2);
+  assert.equal(stats.get("test/b.test.ts")?.runs, 1, "b only ran once");
+  assert.equal(stats.get("test/a.test.ts")?.failures, 1);
+  assert.equal(stats.get("test/a.test.ts")?.unimplicatedFailures, 1);
 });
 
 test("a file that never failed still appears, with zero failures", () => {
   const stats = summarize({ records: [rec({})], filesets: FILESETS });
-  assert.equal(stats.get("test/b.doctest.md")?.failures, 0);
-  assert.equal(stats.get("test/b.doctest.md")?.runs, 1);
+  assert.equal(stats.get("test/b.test.ts")?.failures, 0);
+  assert.equal(stats.get("test/b.test.ts")?.runs, 1);
 });
 
 test("an incomplete run is excluded from the denominator", () => {
   // A signal-killed run reports only the files it reached; counting it would
   // inflate every file's run count with a run that never had a chance to fail.
   const records = [rec({ exitCode: 0 }), rec({ commit: "c2", exitCode: 143 })];
-  assert.equal(summarize({ records, filesets: FILESETS }).get("test/a.doctest.md")?.runs, 1);
+  assert.equal(summarize({ records, filesets: FILESETS }).get("test/a.test.ts")?.runs, 1);
 });
 
 test("a completed run with failures still counts", () => {
   const records = [
-    rec({ exitCode: 1, failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+    rec({ exitCode: 1, failures: [{ file: "test/a.test.ts", class: "attached" }] }),
   ];
   const stats = summarize({ records, filesets: FILESETS });
-  assert.equal(stats.get("test/a.doctest.md")?.runs, 1);
-  assert.equal(stats.get("test/a.doctest.md")?.failures, 1);
+  assert.equal(stats.get("test/a.test.ts")?.runs, 1);
+  assert.equal(stats.get("test/a.test.ts")?.failures, 1);
 });
 
 test("median duration comes from the recorded per-file timings", () => {
   const records = [
-    rec({ durations: { "test/a.doctest.md": 100 } }),
-    rec({ commit: "c2", durations: { "test/a.doctest.md": 300 } }),
-    rec({ commit: "c3", durations: { "test/a.doctest.md": 200 } }),
+    rec({ durations: { "test/a.test.ts": 100 } }),
+    rec({ commit: "c2", durations: { "test/a.test.ts": 300 } }),
+    rec({ commit: "c3", durations: { "test/a.test.ts": 200 } }),
   ];
-  assert.equal(summarize({ records, filesets: FILESETS }).get("test/a.doctest.md")?.medianMs, 200);
+  assert.equal(summarize({ records, filesets: FILESETS }).get("test/a.test.ts")?.medianMs, 200);
 });
 
 // ── fileset hashing ─────────────────────────────────────────────────────────
@@ -335,7 +335,7 @@ test("a record written before the semaphore, with no tier or concurrency, still 
   delete parsed.tier;
   delete parsed.concurrency;
   assert.equal(parsed.tier, undefined);
-  assert.equal(summarize({ records: [parsed], filesets: FILESETS }).get("test/a.doctest.md")?.runs, 1);
+  assert.equal(summarize({ records: [parsed], filesets: FILESETS }).get("test/a.test.ts")?.runs, 1);
 });
 
 test("a record from a run under the semaphore carries both", () => {

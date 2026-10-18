@@ -73,7 +73,7 @@ interface LoadedViewModule {
  * mock policy (see file header). The async helpers throw; fileUrl/navigate/
  * reportActivity are synchronous no-ops/strings safe to call during render.
  */
-/** The props `bbx view test` renders a view with; also what view doctests render with. */
+/** The props `bbx view test` renders a view with; also what view tests render with. */
 export function buildProps(opts: {
   cards: ViewProps["cards"];
   files: ViewProps["files"];

@@ -15,7 +15,7 @@ import { printed } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { resolveBoxIdentity } from "../../src/webapp/box-identity.js";
 import { COOKIE_NAME, signSession } from "../../src/webapp/auth.js";
 import { createFirstUser } from "../../src/webapp/local-users.js";

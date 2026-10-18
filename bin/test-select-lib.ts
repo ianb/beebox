@@ -54,7 +54,7 @@ export function selectTests(input: {
   const scopedSet = new Set(scoped);
   const implicated = implicatedTests({ graph, changed: input.changed });
 
-  // `bin/` is outside `scopedChanges`, but root doctests (`bin/test/…`) are
+  // `bin/` is outside `scopedChanges`, but root tests (`bin/test/…`) are
   // graph entrypoints and may import `bin/` files, so both are read here.
   const binChanged = input.changed.filter((path) => path.startsWith("bin/"));
   const binImporters = [...graph.tests]

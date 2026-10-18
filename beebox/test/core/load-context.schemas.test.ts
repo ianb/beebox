@@ -12,7 +12,7 @@ import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas.js";
 import { getTemplate } from "../../src/templates-registry.js";
 import { buildLoadContext } from "../../src/core/load-context.js";

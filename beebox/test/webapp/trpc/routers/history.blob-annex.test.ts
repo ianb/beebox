@@ -14,7 +14,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { execFileSync } from "node:child_process";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 
 function hasAnnex(): boolean {
   try {

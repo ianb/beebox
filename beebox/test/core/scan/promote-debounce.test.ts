@@ -16,7 +16,7 @@ import { createPromoteDebouncer } from "../../../src/core/scan/promote-debounce.
 import Fastify from "fastify";
 import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";
 import { setTimeout as sleep } from "node:timers/promises";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { acquireBoxWork, boxWorkEnvironment } from "../../../src/lib/box-maintenance/admission.js";
 import { mock } from "node:test";
 

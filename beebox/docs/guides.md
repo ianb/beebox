@@ -52,7 +52,7 @@ where new material goes and how it is named.
 | Mobile parity: iOS versus Android | [mobile-parity](mobile-parity.md) |
 | Scan upload wire contract | [scan-upload-contract](scan-upload-contract.md) |
 | Deploy scripts, directory map | [deploy/README](../deploy/README.md) |
-| Doctest syntax | [agent-doctest](../../agent-doctest/docs/syntax.md) |
+| Test syntax (`t.check`) | [check](testing/check.md) |
 | Glossary | [glossary](glossary.md) |
 | Example names for docs and tests | [example-names](example-names.md) |
 | Third-party assets and adopted ideas | [acknowledgements](../../ACKNOWLEDGEMENTS.md) |

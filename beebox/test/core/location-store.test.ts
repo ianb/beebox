@@ -8,7 +8,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { loadLocation, saveLocation, type StoredLocation } from "../../src/core/location-store.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const FIX: StoredLocation = { lat: 45.5231, lng: -122.6765, accuracy: 20, capturedAt: "2026-06-29T12:00:00.000Z", source: "web" };
 

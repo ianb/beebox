@@ -9,8 +9,8 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { z } from "zod";
-import { makeTestServer, type InjectResult } from "../../../../helpers/doctest-server.js";
-import { bodyField } from "../../../../helpers/doctest-helpers.js";
+import { makeTestServer, type InjectResult } from "../../../../helpers/test-route-server.js";
+import { bodyField } from "../../../../helpers/test-helpers.js";
 import { getStatus } from "../../../../../src/lib/git/core/operations.js";
 
 // The `/api/views/:id/cards` response: each file with its git status.

@@ -10,7 +10,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { runCommand, createCollectorContext, getCommand, listCommands } from "../../src/core/command-runner.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## A lookup loads every command with no other import
 //

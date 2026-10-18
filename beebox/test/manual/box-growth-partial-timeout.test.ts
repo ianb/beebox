@@ -9,7 +9,7 @@ import "agent-doctest/tap";
 import { printed } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { scanBoxGrowth } from "../../src/core/box-growth/scan.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // A native traversal that times out retains every complete type/path pair it
 // already streamed.

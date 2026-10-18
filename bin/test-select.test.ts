@@ -1,6 +1,6 @@
-// Tests for change-based test selection. A `.test.ts` rather than the
-// doctest this directory's AGENTS.md asks for, for the same reason
-// bin/test-graph.test.ts is one: the thing under test decides which doctests
+// Tests for change-based test selection. A `node:test` file rather than
+// a tap test, for the same reason
+// bin/test-graph.test.ts is one: the thing under test decides which tests
 // run, so exercising it from inside that suite is circular.
 //
 //   node --import tsx --test bin/test-select.test.ts
@@ -41,8 +41,8 @@ const BOX = "beebox/";
 test("the union rule: implicated tests, and only paths this suite could care about", () => {
   const graph = graphOf({
     tests: {
-      [`${BOX}test/core/box.doctest.md`]: [`${BOX}src/core/box.ts`],
-      [`${BOX}test/cli/init.doctest.md`]: [`${BOX}src/cli/init.ts`],
+      [`${BOX}test/core/box.test.ts`]: [`${BOX}src/core/box.ts`],
+      [`${BOX}test/cli/init.test.ts`]: [`${BOX}src/cli/init.ts`],
     },
   });
   const selection = selectTests({
@@ -54,11 +54,11 @@ test("the union rule: implicated tests, and only paths this suite could care abo
       "issues/bugs/x.md",
       `${BOX}docs/testing.md`,
     ],
-    spawnEdges: new Map([[`${BOX}test/cli/init.doctest.md`, new Set(["src/core/box.ts"])]]),
+    spawnEdges: new Map([[`${BOX}test/cli/init.test.ts`, new Set(["src/core/box.ts"])]]),
   });
   assert.deepEqual(selection.selected, [
-    `${BOX}test/cli/init.doctest.md`,
-    `${BOX}test/core/box.doctest.md`,
+    `${BOX}test/cli/init.test.ts`,
+    `${BOX}test/core/box.test.ts`,
   ]);
   assert.deepEqual(selection.scoped, [`${BOX}src/core/box.ts`]);
 });
@@ -69,7 +69,7 @@ test("a spawner is selected by a change to what it spawns, and by nothing else",
   const graph = graphOf({
     tests: {
       [`${BOX}test/cli/spawner.test.ts`]: [],
-      [`${BOX}test/core/box.doctest.md`]: [`${BOX}src/core/box.ts`],
+      [`${BOX}test/core/box.test.ts`]: [`${BOX}src/core/box.ts`],
     },
   });
   const spawnEdges = new Map([
@@ -82,7 +82,7 @@ test("a spawner is selected by a change to what it spawns, and by nothing else",
   );
   assert.deepEqual(
     selectTests({ graph, changed: [`${BOX}src/core/box.ts`], spawnEdges }).selected,
-    [`${BOX}test/core/box.doctest.md`],
+    [`${BOX}test/core/box.test.ts`],
   );
 });
 
@@ -90,12 +90,12 @@ test("a dist/cli.mjs spawner follows the bundle's real inputs", () => {
   // `scripts/build-cli.ts` bundles src/cli/entry/run.ts TRANSITIVELY — 932 files
   // across nearly every src/ subtree, not src/cli/**. The caller computes the
   // set; a null one fails open on all of src/.
-  const graph = graphOf({ tests: { [`${BOX}test/cli/cli.doctest.md`]: [] } });
-  const spawnEdges = new Map([[`${BOX}test/cli/cli.doctest.md`, new Set(["dist/cli.mjs"])]]);
+  const graph = graphOf({ tests: { [`${BOX}test/cli/cli.test.ts`]: [] } });
+  const spawnEdges = new Map([[`${BOX}test/cli/cli.test.ts`, new Set(["dist/cli.mjs"])]]);
   const cliBundleInputs = new Set([`${BOX}src/core/box.ts`]);
   assert.deepEqual(
     selectTests({ graph, changed: [`${BOX}src/core/box.ts`], spawnEdges, cliBundleInputs }).selected,
-    [`${BOX}test/cli/cli.doctest.md`],
+    [`${BOX}test/cli/cli.test.ts`],
   );
   assert.deepEqual(
     selectTests({
@@ -113,7 +113,7 @@ test("a dist/cli.mjs spawner follows the bundle's real inputs", () => {
       spawnEdges,
       cliBundleInputs: null,
     }).selected,
-    [`${BOX}test/cli/cli.doctest.md`],
+    [`${BOX}test/cli/cli.test.ts`],
   );
 });
 
@@ -121,7 +121,7 @@ test("a change nothing imports selects nothing — there is no full-suite fallba
   // Three quarters of branches look like this. The honest description of a
   // change to untested code is "this code has no tests"; running 627 files
   // hides that rather than fixing it (plan revision 2026-08-25).
-  const graph = graphOf({ tests: { [`${BOX}test/core/box.doctest.md`]: [`${BOX}src/core/box.ts`] } });
+  const graph = graphOf({ tests: { [`${BOX}test/core/box.test.ts`]: [`${BOX}src/core/box.ts`] } });
   const selection = selectTests({
     graph,
     changed: [`${BOX}src/frontend/src/components/Untested.tsx`],
@@ -131,30 +131,30 @@ test("a change nothing imports selects nothing — there is no full-suite fallba
 });
 
 test("nothing in scope means nothing selected, spawners included", () => {
-  const graph = graphOf({ tests: { [`${BOX}test/a.doctest.md`]: [] } });
+  const graph = graphOf({ tests: { [`${BOX}test/a.test.ts`]: [] } });
   const selection = selectTests({
     graph,
     changed: ["bin/test-select.ts", "issues/features/y.md"],
-    spawnEdges: new Map([[`${BOX}test/a.doctest.md`, new Set(["src/a.ts", "dist/cli.mjs"])]]),
+    spawnEdges: new Map([[`${BOX}test/a.test.ts`, new Set(["src/a.ts", "dist/cli.mjs"])]]),
   });
   assert.deepEqual(selection.selected, []);
 });
 
-test("a changed doctest selects itself", () => {
-  const graph = graphOf({ tests: { [`${BOX}test/core/box.doctest.md`]: [`${BOX}src/core/box.ts`] } });
-  const selection = selectTests({ graph, changed: [`${BOX}test/core/box.doctest.md`] });
-  assert.deepEqual(selection.selected, [`${BOX}test/core/box.doctest.md`]);
+test("a changed test selects itself", () => {
+  const graph = graphOf({ tests: { [`${BOX}test/core/box.test.ts`]: [`${BOX}src/core/box.ts`] } });
+  const selection = selectTests({ graph, changed: [`${BOX}test/core/box.test.ts`] });
+  assert.deepEqual(selection.selected, [`${BOX}test/core/box.test.ts`]);
 });
 
 test("an unresolved entrypoint is always selected — a missing edge fails open", () => {
   const graph = graphOf({
-    tests: { [`${BOX}test/core/box.doctest.md`]: [`${BOX}src/core/box.ts`] },
-    unresolved: [`${BOX}test/broken.doctest.md`],
+    tests: { [`${BOX}test/core/box.test.ts`]: [`${BOX}src/core/box.ts`] },
+    unresolved: [`${BOX}test/broken.test.ts`],
   });
   const selection = selectTests({ graph, changed: [`${BOX}src/core/box.ts`] });
   assert.deepEqual(selection.selected, [
-    `${BOX}test/broken.doctest.md`,
-    `${BOX}test/core/box.doctest.md`,
+    `${BOX}test/broken.test.ts`,
+    `${BOX}test/core/box.test.ts`,
   ]);
 });
 
@@ -163,17 +163,17 @@ test("an excluded (careful-tier) test is dropped unless it is what changed", () 
   // neighbour, not about skipping the test you just edited.
   const graph = graphOf({
     tests: {
-      [`${BOX}test/lib/git-lock.doctest.md`]: [`${BOX}src/lib/git.ts`],
-      [`${BOX}test/lib/git.doctest.md`]: [`${BOX}src/lib/git.ts`],
+      [`${BOX}test/lib/git-lock.test.ts`]: [`${BOX}src/lib/git.ts`],
+      [`${BOX}test/lib/git.test.ts`]: [`${BOX}src/lib/git.ts`],
     },
   });
-  const exclude = [`${BOX}test/lib/git-lock.doctest.md`];
+  const exclude = [`${BOX}test/lib/git-lock.test.ts`];
   assert.deepEqual(selectTests({ graph, changed: [`${BOX}src/lib/git.ts`], exclude }).selected, [
-    `${BOX}test/lib/git.doctest.md`,
+    `${BOX}test/lib/git.test.ts`,
   ]);
   assert.deepEqual(
-    selectTests({ graph, changed: [`${BOX}test/lib/git-lock.doctest.md`], exclude }).selected,
-    [`${BOX}test/lib/git-lock.doctest.md`],
+    selectTests({ graph, changed: [`${BOX}test/lib/git-lock.test.ts`], exclude }).selected,
+    [`${BOX}test/lib/git-lock.test.ts`],
   );
 });
 
@@ -199,8 +199,6 @@ function fixture(files: Record<string, string>): { root: string; cleanup: () => 
   return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }
 
-const doctest = (lines: string[]): string => [...lines, ""].join("\n");
-
 test("spawnerEdges catches a test whose CHILD imports source the parent does not", async () => {
   // Track 3c. The regression test for the TSX loader flake spawns twelve
   // children importing frontend source; no import edge reaches it, so no
@@ -211,31 +209,15 @@ test("spawnerEdges catches a test whose CHILD imports source the parent does not
       "const args = ['--eval', `await import('./src/child-only.ts')`];",
       "execFile(process.execPath, args);",
     ].join("\n"),
-    "test/cli.doctest.md": doctest([
-      "# cli",
-      "",
-      "```ts setup",
+    "test/cli.test.ts": [
       'import { spawnSync } from "node:child_process";',
-      "```",
-      "",
-      "```ts",
-      'spawnSync("node", ["dist/cli.mjs", "--help"]).status',
-      "=> 0",
-      "```",
-    ]),
-    "test/honest.doctest.md": doctest([
-      "# honest",
-      "",
-      "```ts setup",
+      'spawnSync("node", ["dist/cli.mjs", "--help"]);',
+    ].join("\n"),
+    "test/honest.test.ts": [
       'import { spawnSync } from "node:child_process";',
       'import { run } from "../src/run.js";',
-      "```",
-      "",
-      "```ts",
-      'spawnSync("node", ["../src/run.ts"]).status ?? run("x")',
-      "=> 1",
-      "```",
-    ]),
+      'spawnSync("node", ["../src/run.ts"]).status ?? run("x");',
+    ].join("\n"),
     "src/child-only.ts": "export const childOnly = () => 1;\n",
     "src/run.ts": "export const run = (_p: string) => 1;\n",
   });
@@ -252,13 +234,13 @@ test("spawnerEdges catches a test whose CHILD imports source the parent does not
       readFile: (path) => readFileSync(join(fx.root, path), "utf-8"),
     });
     assert.deepEqual([...edges.keys()].toSorted(), [
-      "pkg/test/cli.doctest.md",
+      "pkg/test/cli.test.ts",
       "pkg/test/spawner.test.ts",
     ]);
-    assert.deepEqual([...(edges.get("pkg/test/cli.doctest.md") ?? [])], ["dist/cli.mjs"]);
+    assert.deepEqual([...(edges.get("pkg/test/cli.test.ts") ?? [])], ["dist/cli.mjs"]);
     // The one that spawns a path it also imports is already reachable: the
     // graph selects it whenever src/run.ts changes.
-    assert.equal(edges.has("pkg/test/honest.doctest.md"), false);
+    assert.equal(edges.has("pkg/test/honest.test.ts"), false);
   } finally {
     fx.cleanup();
   }
@@ -266,12 +248,12 @@ test("spawnerEdges catches a test whose CHILD imports source the parent does not
 
 // ── the shell ───────────────────────────────────────────────────────────────
 
-test("selected paths are relative to the beebox package, including root bin/ doctests", () => {
-  // A bin/ doctest runs from the package as ../bin/test/…; passed through
+test("selected paths are relative to the beebox package, including root bin/ tests", () => {
+  // A bin/ test runs from the package as ../bin/test/…; passed through
   // bare, the runner found no such file and refused the whole selection.
   assert.deepEqual(
-    ["beebox/test/a.doctest.md", "beebox/src/frontend/test/b.doctest.md", "bin/test/lib/c.doctest.md"].map(packageRelative),
-    ["test/a.doctest.md", "src/frontend/test/b.doctest.md", "../bin/test/lib/c.doctest.md"],
+    ["beebox/test/a.test.ts", "beebox/src/frontend/test/b.test.ts", "bin/test/lib/c.test.ts"].map(packageRelative),
+    ["test/a.test.ts", "src/frontend/test/b.test.ts", "../bin/test/lib/c.test.ts"],
   );
 });
 

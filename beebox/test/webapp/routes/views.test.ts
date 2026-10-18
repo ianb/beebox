@@ -5,8 +5,8 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { z } from "zod";
-import { makeTestServer } from "../../helpers/doctest-server.js";
-import { bodyField } from "../../helpers/doctest-helpers.js";
+import { makeTestServer } from "../../helpers/test-route-server.js";
+import { bodyField } from "../../helpers/test-helpers.js";
 
 const VIEW_SOURCE = `
 export const name = "Test View";

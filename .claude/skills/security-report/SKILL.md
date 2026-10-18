@@ -230,11 +230,11 @@ human-in-the-loop on dangerous actions), not containment.
 
 **7b. Cross-box leakage on a shared host** — several boxes, one OS user,
 env-level isolation. Three channels, each with a named verifier: network
-(box A's credential reaching box B's data — the `cross-box-probe` doctest
+(box A's credential reaching box B's data — the `cross-box-probe` test
 and the `schedules/cross-box-leak-scan` static sweep), filesystem
 (same-user reach — accepted; the schedule's host audit checks modes,
 per-cwd keying, undocumented shared files), and inheritance (hub secrets
-in a child env — `supervisor.doctest.md`). Regenerating this entry means
+in a child env — `test/hub/supervisor.test.ts`). Regenerating this entry means
 re-running the schedule (`bin/schedules run cross-box-leak-scan --force`)
 and reconciling its findings table with the report: every `static`/`host`
 line the run produced is either a row here or a false positive named in

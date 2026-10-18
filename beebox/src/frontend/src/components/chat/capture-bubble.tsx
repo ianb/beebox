@@ -24,7 +24,7 @@
  *    when it decides a failure needs a human — discard becomes the emphasized
  *    answer rather than another retry.
  *
- * Pure caption/phase helpers are exported so the dev harness and doctests can
+ * Pure caption/phase helpers are exported so the dev harness and tests can
  * drive every state without a backend or a clock.
  */
 

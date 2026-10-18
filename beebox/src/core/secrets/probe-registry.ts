@@ -231,7 +231,7 @@ async function storeVerified(opts: { name: string; probedUpdated: string; verifi
 export async function probeSecret(opts: { name: string; deps?: { fetch?: FetchLike | undefined } }): Promise<SecretVerified> {
   const at = getBoxTimeISO();
   // `BBX_SECRET_PROBES=off` suppresses the REAL network path only — the test
-  // harness sets it for every test process so a doctest storing a placeholder
+  // harness sets it for every test process so a test storing a placeholder
   // key can never send it to a live provider, while a caller that injected its
   // own `fetch` is by definition not leaving the machine and still runs.
   const doFetch = opts.deps?.fetch;

@@ -11,7 +11,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { spawnSync } from "node:child_process";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { runUnignore } from "../../src/core/attachments-gitignore.js";
 import type { CommandContext } from "../../src/core/command-runner.js";
 import { isRecord } from "../../src/shared/is-record.js";

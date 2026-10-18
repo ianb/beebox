@@ -10,8 +10,8 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import Fastify from "fastify";
-import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createScanToken, revokeScanToken } from "../../../../src/core/scan/tokens.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../../src/core/mobile/pairing.js";
 import { makeScanAuthPreHandler, scanAuthOf } from "../../../../src/webapp/routes/scan-upload/scan-auth.js";

@@ -15,7 +15,7 @@ import { canonicalizeBox } from "../../../src/core/canonicalize-refs.js";
 import { rewriteViewRefs } from "../../../src/core/rewrite-card-refs/core.js";
 import { listBoxViewFiles } from "../../../src/core/list-cards.js";
 import { loadValidationIgnore } from "../../../src/core/validation-ignore.js";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 

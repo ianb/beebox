@@ -12,7 +12,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 import { acquireLock, forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
 import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance/admission.js";
 

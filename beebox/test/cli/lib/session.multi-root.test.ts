@@ -13,7 +13,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, writeFile, utimes } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { findSessionLog, listSessions } from "../../../src/cli/lib/session.js";
 import { partitionByAffinity } from "../../../src/cli/commands/session/modes.js";
 import {

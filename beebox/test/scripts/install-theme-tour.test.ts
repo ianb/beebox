@@ -8,7 +8,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { installThemeTour } from "../../src/scripts/install-theme-tour.js";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## Installation is idempotent and preserves edits
 void test("Installation is idempotent and preserves edits", async (t) => {

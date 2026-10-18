@@ -58,7 +58,7 @@ export interface FakeAgent extends Agent {
   /**
    * Render a structured log of all invocations.
    * System prompt shown on first invocation only.
-   * Useful for doctest assertions.
+   * Useful for test assertions.
    */
   printLog(): string;
 }

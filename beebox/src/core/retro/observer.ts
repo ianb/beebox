@@ -2,7 +2,7 @@
  * The retrospective observer — one tool-less LLM pass per chat session,
  * extracting what the boxholder implicitly taught the assistant.
  *
- * Behind an interface so the scan pipeline is doctestable with a
+ * Behind an interface so the scan pipeline is testable with a
  * scripted fake (the project's standard real + fake service split).
  */
 
