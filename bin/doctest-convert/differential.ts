@@ -120,6 +120,7 @@ const dropKey = (o: unknown): unknown => (isPlainObject(o) ? Object.fromEntries(
 const dropItem = (a: unknown): unknown => (Array.isArray(a) ? a.slice(0, -1) : a);
 const addItem = (a: unknown): unknown => (Array.isArray(a) ? [...a, a[0]] : a);
 const swapFirstTwo = (a: unknown): unknown => (Array.isArray(a) ? [a[1], a[0], ...a.slice(2)] : a);
+const reverseKeys = (o: unknown): unknown => (isPlainObject(o) ? Object.fromEntries(Object.entries(o).toReversed()) : o);
 
 function mutants(actual: unknown): Mutant[] {
   const out: Mutant[] = [];
@@ -141,6 +142,11 @@ function mutants(actual: unknown): Mutant[] {
     const target = get(actual, obj);
     if (isPlainObject(target) && Object.keys(target).length > 0) {
       out.push({ op: "drop key", path: obj.join("."), value: edited(actual, { path: obj, edit: dropKey }) });
+    }
+    // Key order: a JSON text check sees it, a typed check does not. Recorded
+    // separately, since whether order was part of the contract is a judgment.
+    if (isPlainObject(target) && Object.keys(target).length > 1) {
+      out.push({ op: "reverse key order", path: obj.join("."), value: edited(actual, { path: obj, edit: reverseKeys }) });
     }
   }
   const arr = firstContainer(actual, (c) => Array.isArray(c) && c.length > 0);
