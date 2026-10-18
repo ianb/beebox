@@ -13,12 +13,20 @@ These run on tap and assert with a typed whole-value
 `t.check(actual, expected)`. Then the doctest loader, its typecheck adapter,
 and the tools that know the format are deleted.
 
-The work runs in two phases:
+The work runs in three phases:
 
-1. **A mechanical conversion with proof that no check was lost.** This
-   phase retires the format.
-2. **A separate, reviewed pass that strengthens assertions.** Cheap models
-   (gpt-6-luna, Claude Haiku) do most of the per-file work in both phases.
+1. **Destination.** Build `t.check` and prove it is a sound destination
+   before anything is converted or announced:
+   - its own tests;
+   - a differential test against the doctest checks it replaces;
+   - usability trials with Haiku, Luna and Sonnet on real tasks.
+2. **Conversion.** A mechanical conversion with proof that no check was
+   lost. This phase retires the format.
+3. **Strengthening.** A separate, reviewed pass that strengthens
+   assertions.
+
+Cheap models (gpt-6-luna, Claude Haiku) do most of the per-file work in
+phases 2 and 3.
 
 **Issues addressed:**
 - `2026-09-27-convert-test-ts-files-to-doctests` is superseded: it went the
@@ -63,6 +71,7 @@ Authored change, estimated as additions plus deletions:
 |---|---:|
 | 1. Typed `check` and matchers (`agent-doctest/src/check/`) | 1,000 |
 | 2. Test typecheck programs, converter, fidelity manifest (converter temporary) | 1,600 |
+| V. Trial harness, mistake corpus, differential test (temporary) | 700 |
 | 3. Driver, worker slots, brief (temporary) | 600 |
 | 5. Upgrade pass (temporary) | 400 |
 | 6. Removal of loader, typecheck adapter, doctest-hooks, selection/ledger/hooks/knip/layout code | ~4,500, mostly deletions |
@@ -83,13 +92,13 @@ counted 51,762 prose lines and 110,201 code lines, so the result is roughly
 ## Stated preferences this plan trades against
 
 - **Principle 8, "One way to do each thing"** (`beebox/docs/engineering-principles.md:95`).
-  - Two formats run side by side during phase 1. That is a transition state
+  - Two formats run side by side during phase 2. That is a transition state
     with an end.
   - There are two assertion forms: `t.check` for typed values and
     `t.checkText` for text with `«»` wildcards. The text form exists because
     command output is text, and a type cannot describe the inside of a
     string.
-  - Phase 1 uses `checkText` everywhere, because it is the exact doctest
+  - Phase 2 uses `checkText` everywhere, because it is the exact doctest
     semantics.
 - **Principle 11, "Enforcement beats convention"** (`engineering-principles.md:127`).
   - Doctest code is not linted today. After conversion, `beebox/eslint.config.ts:236`
@@ -253,7 +262,7 @@ counted 51,762 prose lines and 110,201 code lines, so the result is roughly
   temporary.
 - **converter:** the one-shot tool that turns a doctest into a test file. It
   is temporary.
-- **upgrade pass:** the phase-2 deterministic step. It tries to turn each
+- **upgrade pass:** the phase-3 deterministic step. It tries to turn each
   `checkText` into a typed `check`, and keeps a change only when tsc and the
   test pass. It is temporary.
 - **worker:** a gpt-6-luna or Haiku process that edits one batch in its own
@@ -261,14 +270,19 @@ counted 51,762 prose lines and 110,201 code lines, so the result is roughly
 - **worker slot:** a dedicated git worktree that one worker uses at a time.
   The driver resets it to the conversion branch tip before each batch.
 - **batch:** a set of files in one directory, assigned to one worker.
-- **cutover date:** the day tracks 1 and 1b land on main.
+- **cutover date:** the day tracks 1 and 1b land on main, after the phase 1
+  gate.
+- **differential test:** for each `checkText` → `t.check` upgrade in the
+  sample, mutated actual values that must fail the typed check whenever
+  they fail the text check. It is temporary.
+- **trial:** one usability task given to one model, scored as in track V.
   - From then on, no new `.doctest.md` may be added.
   - Existing doctests are edited in place until they are converted.
   - It is written as an absolute date in every notice.
 
 ## Tracks / scope
 
-Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
+Phase 1 (destination) is tracks 1, 1b, 2's converter, and V. Phase 2 (conversion) is tracks 3, 4, and 6. Phase 3 (strengthening) is track 5. Track 6 needs phase 2 only.
 
 ### Track 1 — typed `check` and matchers on tap
 
@@ -276,8 +290,8 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
   holds the patterns, `Expected<T>`, the structural matcher, the diff, the
   suggestion printer, and the tap methods `t.check`, `t.checkText`, and
   `t.checkThrows`.
-- **Why:** phase 1 needs `checkText` and `checkThrows` under their final
-  names. Phase 2 and every new test need the typed `check`.
+- **Why:** phase 2 needs `checkText` and `checkThrows` under their final
+  names. Phase 3 and every new test need the typed `check`.
 - **Direction. Matching is recursive and exact, with a defined boundary:**
   - **Plain object:** same own enumerable string keys, unless `[others]` is
     present, and each value matches. A class instance compares by its own
@@ -320,8 +334,9 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
 ### Track 1b — cutover notice and guard
 
 - **What:** dated, prominent instructions that new tests are `.test.ts` with
-  `t.check`. A pre-commit guard rejects any newly added `.doctest.md`. Both
-  land on main together with track 1.
+  `t.check`, plus a pre-commit guard that rejects any newly added
+  `.doctest.md`. Both land on main together with track 1, after track V's
+  gate passes.
 - **Why:**
   - Conversion takes days. During that time, most feature work still meets
     doctests next to the code it changes.
@@ -329,8 +344,8 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
     any agent may copy them. A notice without a guard is convention
     (principle 11).
 - **Direction:**
-  - **Cutover date:** the day track 1 lands on main. The notices write it
-    as an absolute date.
+  - **Cutover date:** the day tracks 1 and 1b land on main, after the
+    phase 1 gate. The notices give it as an absolute date.
   - **The notice reads:**
     > **Testing cutover (since <date>).** Write new tests as `.test.ts` with
     > `t.check` ([docs/testing/check.md](…)). Do not create `.doctest.md`
@@ -361,7 +376,7 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
 - **Vocabulary lock-in:** the notice text, and the name `docs/testing/check.md`.
 - **First implementation chunk:** the notice in every listed file, the new
   check reference page, and the guard with a `bin/` test. It lands with
-  track 1.
+  track 1 after the phase 1 gate.
 
 ### Track 2 — test typecheck programs and the converter
 
@@ -416,7 +431,7 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
 - **Vocabulary lock-ins:**
   - The `.doctest.md` → `.test.ts` name mapping.
   - `printed()`.
-  - The `// doctest:L<n>` marker. Phase 2 workers may remove markers only
+  - The `// doctest:L<n>` marker. Phase 3 workers may remove markers only
     together with the check they mark, and only when merging.
 - **First implementation chunk:**
   - The frontend `tsconfig.test.json` and `bin/test-roots.ts`.
@@ -425,6 +440,88 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
   - Golden tests on 10 fixture doctests covering each census feature.
   - A run over all 1,092 files in a scratch copy, reporting files that fail
     to generate, typecheck, pass, or lint, and lint findings by rule.
+
+### Track V — destination validation (phase 1 gate)
+
+- **What:** evidence that `t.check` is a sound destination before the
+  cutover notice and before any conversion lands. The boxholder: "That's
+  the big phase one: confirming we really do have a solid destination for
+  rewriting these doctests to."
+- **Why:** every later phase builds on it.
+  - Phase 2 copies the API into 1,092 files.
+  - The cutover notice sends every agent to it.
+  - An API defect found after conversion costs a second migration.
+- **Direction: four kinds of evidence.**
+  1. **Behaviour tests** (track 1's `check.test.ts`), covering:
+     - exactness: extra, missing and reordered keys;
+     - `[others]`, `optional`, `oneOf` and refinements;
+     - captures;
+     - `Map`, `Set`, `Error`, `Date` and class instances;
+     - unsupported values;
+     - diff readability on nested values;
+     - suggestion output for UUIDs, dates and nested arrays.
+  2. **Differential translation test.**
+     - Take a sample of about 60 doctests, chosen to cover each census
+       feature, the 10 largest files, and typical files.
+     - Run the converter and the upgrade pass over them.
+     - For each check upgraded to typed `t.check`, mutate the actual value
+       (change one leaf, add a key, drop a key, reorder an array, change a
+       number's type). The typed check must fail in every case where the
+       original text check fails.
+     - Any case where the typed check passes and the text check fails is a
+       defect in `check` or in the upgrade pass.
+     - The test also reports which doctest expectations `t.check` cannot
+       express, with counts by kind. These counts are the API gaps to close
+       or to leave on `checkText` deliberately.
+  3. **Mistake corpus.**
+     - About 20 small test files, each with one realistic mistake: a wrong
+       key, `any(String)` on a number, a missing `await`, `checkText` on an
+       object, a pattern where a literal fits, a weak field check, a
+       fabricated expected value.
+     - Record what the type checker and the runner print for each. Rewrite
+       any message that does not name the fix.
+     - This follows `doctest-usability.md` evidence item 1.
+  4. **Usability trials.**
+     - Each task goes to Haiku, Luna and Sonnet (Sonnet as the reference),
+       briefed as a normal session with no syntax hints beyond the repo
+       docs: `docs/testing/check.md` and the notice.
+     - Same method as `doctest-usability.md` evidence item 2.
+     - Tasks:
+       - T1: add tests for an untested pure function.
+       - T2: add a route test with `makeTestServer`.
+       - T3: a failing test; fix it from the failure output.
+       - T4: convert one doctest to `.test.ts` by hand (stragglers and
+         branches need this).
+       - T5: fix lint and type errors in converter output without touching
+         checks (the phase 2 worker task).
+       - T6: strengthen a converted file's `checkText` and weak assertions
+         (the phase 3 worker task).
+       - T7: create a record, capture its id with `.as`, then check a list
+         that must contain it.
+     - Scored per run:
+       - whether it passes;
+       - assertion strength: whole value or field checks;
+       - type errors met, and how they were resolved;
+       - misuse of `checkText` or patterns;
+       - tool calls and reruns;
+       - rule breaks: pnpm install, kill, or edits outside the task.
+- **Rounds.**
+  - After each round, fix the API, the messages, or `docs/testing/check.md`.
+    Then rerun the affected tasks.
+  - The phase 1 gate criteria, decided now:
+    - The differential test shows no case where a typed check is looser
+      than its text check.
+    - In the last round, Haiku and Luna complete T1, T3 and T5 with no help.
+    - Neither model writes a field-only check where the whole value was
+      available.
+    - Any task a model fails is assigned to the other model or to manual
+      work in phase 2, with the reason recorded.
+- **Evidence location.**
+  - The summary, a table per round, goes in `bin/doctest-convert/TRIALS.md`
+    and is tracked.
+  - Transcripts go in the worktree's gitignored `scratch/doctest-trials/`.
+- **First implementation chunk:** the differential test over 10 sample
+  files, after track 1's first chunk and track 2's converter.
 
 ### Track 3 — driver, worker slots, pilot, calibration
 
@@ -471,7 +568,7 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
     One worker per slot makes that check exact.
   - It commits in the slot, and applies that commit to the conversion branch
     serially.
-- **Direction: phase 1 worker task.** Make the converted files pass lint and
+- **Direction: phase 2 worker task.** Make the converted files pass lint and
   typecheck. Assertions are not changed.
   - **Allowed:** rename variables, extract helpers, add types, and remove
     unused code that lint flags.
@@ -489,7 +586,7 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
 - **First implementation chunk:** `prepare` and `verify`, with static and
   runtime fidelity, run over `beebox/test/lib/`.
 
-### Track 4 — phase 1 bulk conversion
+### Track 4 — phase 2 bulk conversion
 
 - **What:** convert every remaining directory with the driver.
 - **Why:** this retires the format.
@@ -517,7 +614,7 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
 - **First implementation chunk:** none beyond track 3. This track repeats
   that chunk per directory.
 
-### Track 5 — phase 2: strengthen assertions
+### Track 5 — phase 3: strengthen assertions
 
 - **What:** turn `checkText` into typed `check` where the value is
   structured, and rewrite weak assertions as whole values.
@@ -541,21 +638,21 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
     - `a === b` checked against `true` → `t.check(a, b)`;
     - field reads → the whole object;
     - restating comments.
-  - **Reviewed separately:** every phase-2 batch diff is reviewed by a
+  - **Reviewed separately:** every phase-3 batch diff is reviewed by a
     model from the other family. It checks each change against one rule:
     the new check must fail wherever the old one failed.
     - A literal may become a pattern only where the value varies between
       runs. The worker shows two runs.
     - A merge of field checks into one whole check removes their markers
       together.
-  - **Landing:** phase 2 lands per directory. It can pause at any directory,
-    because phase 1 already retired the format.
+  - **Landing:** phase 3 lands per directory. It can pause at any directory,
+    because phase 2 already retired the format.
 - **First implementation chunk:** the upgrade pass on `beebox/test/lib/`, with
   its unit tests.
 
 ### Track 6 — remove doctest
 
-- **What:** delete the format and every tool that knows it, once phase 1 has
+- **What:** delete the format and every tool that knows it, once phase 2 has
   converted the last `.doctest.md`.
 - **Why:** each remaining reference is a maintained adapter (principle 8).
 - **Direction,** from the inventory of 2026-10-17:
@@ -640,12 +737,12 @@ Phase 1 is tracks 1–4 and 6. Phase 2 is track 5. Track 6 needs phase 1 only.
     loader, the typecheck adapter, line maps, the knip compiler, and the
     layout tooling.
   - 12,478 expected values stay unlinted.
-- **The next simplest: phase 1 only** (tracks 1–4 and 6, all `checkText`).
+- **The next simplest: phase 2 only** (tracks 1–4 and 6, all `checkText`).
   The plan is built so this is a complete stopping point. Track 5 is
   separate and can pause at any directory.
   - What track 5 adds: typed expected values (principle 1) and whole-value
     rewrites, the boxholder's "testing more".
-  - Phase 1 still needs model work, because pre-commit lint requires every
+  - Phase 2 still needs model work, because pre-commit lint requires every
     converted file to pass. Track 2's report sizes that work before track 3.
 - **Not added:**
   - a second runner;
@@ -662,16 +759,16 @@ are in this plan.
 ## Failure modes
 
 > **Critical gap:** none open.
-> - A check dropped in phase 1 is caught by the static and runtime fidelity
+> - A check dropped in phase 2 is caught by the static and runtime fidelity
 >   checks in `verify`.
-> - A weakened check in phase 2 is caught by reviewing every phase-2 diff.
+> - A weakened check in phase 3 is caught by reviewing every phase-3 diff.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Converter drops a statement example (no `=>`, so no assertion) | golden fixtures | static fidelity: every manifest example has its marker | clear |
 | Converter drops or alters a check | golden fixtures | static (marker plus unchanged expected text) and runtime (assertion count) fidelity | clear |
-| Phase-1 worker edits a check while fixing lint | none | `verify` rejects any change to `t.check*` lines or markers | clear |
-| Phase-2 worker weakens a check (literal → pattern, smaller value) | none automatic | every phase-2 diff reviewed by the other model family against "fails wherever the old one failed"; two-run evidence for new patterns | clear when reviewed; a reviewer miss is the accepted residual |
+| Phase-2 worker edits a check while fixing lint | none | `verify` rejects any change to `t.check*` lines or markers | clear |
+| Phase-3 worker weakens a check (literal → pattern, smaller value) | none automatic | every phase-3 diff reviewed by the other model family against "fails wherever the old one failed"; two-run evidence for new patterns | clear when reviewed; a reviewer miss is the accepted residual |
 | An unawaited async check finishes after its test | golden fixture | every converted check is `await`ed (`doctest-emit.ts:77`) | clear |
 | Import order changes side effects | golden fixture | example imports stay dynamic, in place | clear |
 | `continue` scope redeclares a `const` | golden fixtures | compile error | clear |
@@ -689,7 +786,7 @@ are in this plan.
 
 - **Wrong form: `checkText` on a structured value in a new test.** ADDRESSED:
   the rules file says to use `check` for values and `checkText` for command
-  output. Phase 2 converts the legacy uses.
+  output. Phase 3 converts the legacy uses.
 - **Wrong matcher: `any(String)` in a number position.** ADDRESSED: it is a
   type error (track 1 type tests).
 - **Stale reference to `foo.doctest.md`.** ADDRESSED in track 6 by the rename
@@ -738,7 +835,7 @@ are in this plan.
    - Ask the boxholder about any rule whose findings, after conversion, are
      dominated by one test pattern.
    - Track 2's report gives the data. This is settled before track 3.
-2. **Restating prose comments.** Lean: phase-2 workers delete comments that
+2. **Restating prose comments.** Lean: phase-3 workers delete comments that
    restate the code, and keep the contract and incident notes.
 
 ## Knowledge audits
@@ -761,22 +858,28 @@ for a `.test.ts` for `contentHash`. It lands run, in track 6.
 
 ## Implementation order
 
-1. **Track 1, `check`,** and **track 1b, the cutover notice and guard.**
-   - Track 1 includes the ACKNOWLEDGEMENTS.md entries (Jane Street, matklad)
-     and porting the three hand-converted tests.
-   - Tracks 1 and 1b land on main together, and that day is the cutover
-     date.
-2. **Track 2, typecheck programs and the converter.** Golden fixtures first.
-   Then the full scratch report, and open question 1 is settled.
+1. **Phase 1, destination.** Nothing lands on main until its gate passes.
+   1. Track 1, `check`. It includes the ACKNOWLEDGEMENTS.md entries
+      (Jane Street, matklad) and porting the three hand-converted tests.
+   2. Track 2's converter and its golden fixtures, which the differential
+      test needs.
+   3. Track V: the differential test, the mistake corpus, then the usability
+      trial rounds, with API and doc fixes between rounds.
+   4. Track 2's full report over all 1,092 files. Open question 1 is
+      settled here.
+   5. Boxholder review of the trial report: the phase 1 gate.
+   6. Cross-model review of `check`, then tracks 1 and 1b land on main
+      together. That day is the cutover date.
+2. **Track 2's typecheck programs,** if they did not land with step 1.
 3. **Track 3, driver and slots.** Then the pilot exemplars and calibration.
-4. **Track 4.** Phase-1 conversion, landing by directory.
+4. **Track 4.** Phase-2 conversion, landing by directory.
 5. **Track 6, removal,** once no doctest remains.
    - Runner and tooling go first.
    - Then the agent-doctest internals.
    - Then the docs, skills and rules, the track 1b notices and guard, the
      audit, and the `bin/doctest-convert/` paperwork.
-6. **Track 5, phase 2,** by directory. It can begin after a directory's
-   phase-1 landing.
+6. **Track 5, phase 3,** by directory. It can begin after a directory's
+   phase-2 landing.
 7. **Cross-model review** of the authored code (tracks 1, 2, 3, 6) before
    track 4's first landing and before track 6 lands.
 
@@ -798,14 +901,15 @@ for a `.test.ts` for `contentHash`. It lands run, in track 6.
 - **Method:** scripted conversion plus agent cleanup, gradual by directory.
 - **Transition state:** both formats run together. This state is designed,
   and it can stop at any landed directory.
-- **Phase 2** is independent, and it can stop at any directory.
+- **Phase 3** is independent, and it can stop at any directory.
 
 **Boxholder check-ins:**
-1. After track 2's report over all 1,092 files. The boxholder decides any
-   lint rule question (open question 1).
+1. After track V's trials and track 2's report over all 1,092 files: the
+   phase 1 gate. The boxholder reviews the trial report and decides any lint
+   rule question (open question 1).
 2. After the pilot and calibration. The boxholder reads the example
    directories and the Haiku/Luna results, and approves the converted style.
-3. After the first phase-1 landing on main.
+3. After the first phase-2 landing on main.
 4. Before track 6 removes doctest.
 
 Between check-ins 3 and 4, landings proceed. Each landing posts a
