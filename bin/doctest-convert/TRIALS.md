@@ -160,3 +160,48 @@ one `better-regex`, no type errors, no `checkText` for values, no
   It also ran `pnpm install` in an installed slot (T4), a rule break.
 - **The mutant miss in T1** ("a key without `/` is not a family") is a case
   none of Luna's names exercised; Haiku and Sonnet tested it.
+
+## 4. Generative reviews (codex gpt-6-sol)
+
+**Before phase 1** (2026-10-18; 20 proposals; answer in
+`scratch/cross-model/2026-10-18T01-16-59-899Z-codex.md`). Taken, with the
+boxholder's reactions:
+
+- Hidden regression mutants in trials: done (section 3).
+- A zero-model conversion path: done; the converter's output passes with
+  no worker for 560 of 1,094 files on lint, and fidelity holds for all.
+- Complete HTTP and CLI observations: `TestServer.response()` and
+  `runCommand`/`tsxCommand` (track 1a).
+- Failures that name the violated constraint: per-path mismatch lists,
+  and the hints added from the mistake corpus.
+- Exact unordered collections with multiplicity: `unordered`, `containing`.
+- Captures for relationship tests: `capture()`; T7 exercised it.
+- Mechanically reliable lint checks: `check-whole-value`, `no-voided-check`.
+
+Not taken in phase 1: rejected-async and stream observations, numeric
+tolerance beyond `closeTo`, DOM observations, unseen qualification tasks
+separate from learning rounds (the trials used fresh slots but the same
+tasks), cost per accepted conversion, prose as a second source of intent,
+replayable worker repairs, property-based input, and compact large
+failures.
+
+**After the trials** (2026-10-18; 9 proposals; answer in
+`scratch/cross-model/` beside `generative-after.prompt.md`). Adjudication,
+recorded in the plan:
+
+| Proposal | Decision |
+|---|---|
+| Correct Luna's T5 gate entry (one `max-lines` left) | done |
+| Rerun T1/T3/T5 with the exact worker brief before the gate closes | added to the gate |
+| Count the key order the `JSON.stringify` unwrap stops checking | key-order mutation added; result below |
+| Flag edited checked expressions for review | added to `verify` |
+| Measure phase 3 gains with held-out weak forms | added to track 5 |
+| A typed assertion for exactly `undefined` (98 checks stay text) | boxholder decision |
+| A cross-root pilot before calibration | added to track 3 |
+| Classify the 3,286 stricter cases | not yet: they make tests stricter, never looser |
+| Reconcile the two runtime counts | done (the two "count-mismatch" files equal their doctests) |
+| Lint for `checkText` on objects and tap field asserts | boxholder decision |
+
+**Adversarial review of the upgrade** (same reviewer; 5 findings): fixed
+`anything()` matching `undefined` and two reorder-hint bugs; documented
+`uuid()`/`.int()` widening; key order is the boxholder decision above.
