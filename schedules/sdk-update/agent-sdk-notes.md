@@ -33,7 +33,7 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.300`, Codex `0.162.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.301`, Codex `0.163.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
@@ -42,13 +42,13 @@ Codex entries here are labeled as such; they carry their own pin.
   the root copy and `bin/` tooling still imports it.
 - **Latest reviewed upstream version:** `0.3.302` (SDK), `2.1.302` (Claude Code), `0.163.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.300` on 2026-10-16
-  after its transcript-row check; Codex stays at `0.162.1`. Next: `0.3.301`
-  (settles 2026-10-17T14:35Z), Codex `0.163.0` (2026-10-17T21:30Z; check the
-  Daybreak default), `0.3.302` (2026-10-18T16:47Z; fork subagents on by
-  default, see its entry). A settled version that is not yet applied now
-  starts a session on its own, with no new release needed (2026-10-17).
-  The model aliases are current (2026-10-17): `sonnet`, `haiku`, and `sol` name Sonnet 5.5, Haiku 5.5, and GPT-6.1 Sol.
+- **Current recommendation:** Both families moved on 2026-10-17 — Agent SDK
+  to `0.3.301`, Codex to `0.163.0`. This was the first run started by the
+  runner's settled-bump check (`4cdf22c5d`), which fixes
+  `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
+  Next: `0.3.302` (settles 2026-10-18T16:47Z; check fork subagents, see its
+  entry). Open:
+  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -100,7 +100,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-10-18T16:47Z.
 - **Sources:** [SDK 0.3.302](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03302), [Claude Code 2.1.302](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21302)
 
-### Codex 0.163.0 — pending (published 2026-10-15T21:30Z, ~6h at this turn)
+### Codex 0.163.0 — APPLIED 2026-10-17 (published 2026-10-15T21:30Z)
 
 - **Check when taken:** *"Daybreak is enabled by default for eligible
   accounts."* In 0.161.0 it was opt-in, with automatic Cyber routing omitted by
@@ -114,10 +114,16 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - Network proxy hardening (permission before DNS, duplicate `Host` rejected).
   The bundled patched `zsh` is gone (beebox sets no shell flags). New `/config`
   search, leader key, `/daemon` restart, parallel read-only tools.
-- **Action:** Settled path; takeable 2026-10-17T21:30Z.
+- **Daybreak check (2026-10-17):** a thread built with beebox's own
+  `codexSdkThreadOptions` / `codexSdkConfig` (danger-full-access, no model) in a
+  fresh git repository answered normally; its rollout recorded
+  `cyber_access_program: "standard"`, so Daybreak did not route it to a Cyber
+  program. Its model came from this laptop's `~/.codex/config.toml`
+  (`gpt-6-astra`), so the probe does not show what a production box inherits.
+- **Action:** Applied 2026-10-17; the deploy gate passed on `codex-cli 0.163.0`.
 - **Sources:** [rust-v0.163.0](https://github.com/openai/codex/releases/tag/rust-v0.163.0)
 
-### 0.3.301 / Claude Code 2.1.301 — pending (published 2026-10-15T14:35Z)
+### 0.3.301 / Claude Code 2.1.301 — APPLIED 2026-10-17 (published 2026-10-15T14:35Z)
 
 - **SDK:** per-tool `permission_policy` on SDK MCP servers; `BUILTIN_TOOL_NAMES`
   and `LEGACY_TOOL_NAME_ALIASES` exports (could replace the hand list in
@@ -133,7 +139,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   worktree that may hold unpushed commits without asking — this repo creates
   worktrees through such a hook; full-disk refresh errors now name the disk;
   short commands exiting mid token refresh no longer cause sign-outs.
-- **Action:** Settled path; takeable 2026-10-17T14:35Z.
+- **Action:** Applied 2026-10-17. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.301, `pnpm -C beebox test` (12,713 pass, 2 skip).
 - **Sources:** [SDK 0.3.301](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03301), [Claude Code 2.1.301](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21301)
 
 ### 0.3.300 / Claude Code 2.1.300 — APPLIED 2026-10-16 (published 2026-10-14T14:28Z); transcript-row check passed
@@ -284,7 +290,7 @@ Applied 2026-10-13 with `0.3.296`.
   the damaged database kept as a backup; retries honor server retry guidance.
 - New and opt-in: `/mcp login`, voice device selection, Daybreak (off by
   default), `cyberAccessProgram` in the TypeScript SDK. beebox uses none.
-- **Action:** Applied 2026-10-09; the deploy gate passed on `codex-cli 0.161.0`. Boxes now inherit GPT-6.1 Sol as Codex's default model.
+- **Action:** Applied 2026-10-09; the deploy gate passed on `codex-cli 0.161.0`. *Corrected 2026-10-17:* this entry said boxes now inherit GPT-6.1 Sol. A box with no configured model gets whatever default its Codex home and the server resolve; that was not verified.
 - **Sources:** [rust-v0.161.0](https://github.com/openai/codex/releases/tag/rust-v0.161.0)
 
 ### 0.3.293 / Claude Code 2.1.293 — APPLIED 2026-10-09 (published 2026-10-07T17:21Z)
