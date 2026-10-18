@@ -1,6 +1,6 @@
 ---
 title: "Search section results open at their heading"
-status: active
+status: implemented
 workstream: journey-courseware
 issues:
   - ../../../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md
@@ -15,9 +15,8 @@ the slot; markdown links put a heading id there. No search index change. The
 same slot fixes in-card links such as `Other.doc.card#heading`, which opened a
 not-found state.
 
-**State (2026-10-18):** implemented in the `journey-courseware` worktree, not
-committed, not landed. Tests, typecheck, lint, and a browser walk are recorded
-under *Rollout shape*.
+**State (2026-10-18):** implemented and landed. Tests, typecheck, lint, and a
+browser walk are recorded under *Rollout shape*.
 
 **Issues addressed:**
 `issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md`.
