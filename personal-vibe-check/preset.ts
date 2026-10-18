@@ -667,6 +667,19 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
       rules: { "single-export/single-export": "off" },
     },
     {
+      // The error/* rules are off in tests — boxholder decision 2026-10-18.
+      // A test throws a plain Error on purpose: as the input the code under
+      // test receives, from a fake that simulates a failure or must not be
+      // called, or as a guard that narrows setup. A custom error class for
+      // each adds nothing; converted doctests had 297 such lines.
+      files: ["**/test/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
+      rules: {
+        "error/no-generic-error": "off",
+        "error/require-custom-error": "off",
+        "error/no-literal-error-message": "off",
+      },
+    },
+    {
       // Type-aware rules. projectService builds a TS program per project,
       // which adds roughly 1.5s to a single-file lint run (the per-edit hook)
       // and ~2s to a full-tree run — keep this entry small. Scoped to src/

@@ -726,7 +726,9 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     unused code that lint flags. A checked expression may change only to
     satisfy lint and must keep its value: trial T5 showed lint findings
     inside checks (a callback parameter `t` shadowing the test's, `.sort()`,
-    an `undefined` argument, a generic `Error` in a fake).
+    an `undefined` argument, a generic `Error` in a fake). Boxholder
+    (2026-10-18): the `error/*` rules are off in tests and `undefined`
+    arguments are allowed, so workers no longer meet those two.
   - **Not allowed:** editing an expected value or a `// doctest:` marker.
     `verify` enforces this. Runtime fidelity alone cannot show that an
     edited checked expression still observes the same thing, so `verify`
