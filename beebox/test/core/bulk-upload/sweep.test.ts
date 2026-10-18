@@ -8,7 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import { any, not, unordered } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -89,44 +89,14 @@ void test("sealed/preparing batches are always re-fired.", async (t) => {
 
   // doctest:L81
   // A delivering batch whose message never landed (empty transcript).
-  const delivering2 = await makeBulk(box.root, { state: "delivering", target: "s-lost" });
+  await makeBulk(box.root, { state: "delivering", target: "s-lost" });
   await seedTranscript({ boxRoot: box.root, sessionId: "s-lost", text: "" });
 
   // doctest:L85
   const fired: string[] = [];
   await sweepBulkBatches({ boxRoot: box.root, firePreparation: (id) => fired.push(id) });
-  t.check(
-    {
-      refired: fired.slice().toSorted(),
-      landedRefired: fired.includes(delivering1.id),
-      lostSkipped: !fired.includes(delivering2.id),
-    },
-    {
-    refired: [
-      str`${any(String)}`,
-      str`${any(String)}`,
-      str`${any(String)}`,
-    ],
-    landedRefired: true,
-    lostSkipped: true,
-  },
-  );
-
   // The re-fired set is exactly {sealed, preparing, delivering-landed}:
-
-  // doctest:L98
-  t.check(
-    {
-      sealed: fired.includes(sealed.id),
-      preparing: fired.includes(preparing.id),
-      count: fired.length,
-    },
-    {
-    sealed: true,
-    preparing: true,
-    count: 3,
-  },
-  );
+  t.check(fired.toSorted(), [sealed.id, preparing.id, delivering1.id].toSorted());
 });
 
 // ## Abandonment: a batch with nothing to report is discarded; anything else is surfaced
@@ -154,40 +124,16 @@ void test("An open batch idle past the window is surfaced (never auto-finalized)
 
   // doctest:L126
   const result = await sweepBulkBatches({ boxRoot: box.root });
-  t.check(
-    {
-      discarded: result.discarded,
-      abandoned: result.abandoned,
-      emptyGone: (await readStagingSession({ boxRoot: box.root, id: emptyOld.id })) === null,
-      recentKept: (await readStagingSession({ boxRoot: box.root, id: recent.id })) !== null,
-    },
-    {
-    discarded: [],
-    abandoned: [
-      str`${any(String)}`,
-      str`${any(String)}`,
-    ],
-    emptyGone: false,
-    recentKept: true,
-  },
-  );
+  t.check(result.discarded, []);
+  t.check(result.abandoned, unordered([emptyOld.id, nonEmptyOld.id]));
+  t.check(await readStagingSession({ boxRoot: box.root, id: recent.id }), not(null));
 
   // Both aged batches are surfaced, and both are still on disk — the sweep reports
   // them for the uploader to finish, it never finalizes or deletes them:
 
   // doctest:L140
-  t.check(
-    {
-      bothAbandoned: [emptyOld.id, nonEmptyOld.id].every((id) => result.abandoned.includes(id)),
-      registeredKept: (await readStagingSession({ boxRoot: box.root, id: emptyOld.id })) !== null,
-      nonEmptyKept: (await readStagingSession({ boxRoot: box.root, id: nonEmptyOld.id })) !== null,
-    },
-    {
-    bothAbandoned: true,
-    registeredKept: true,
-    nonEmptyKept: true,
-  },
-  );
+  t.check(await readStagingSession({ boxRoot: box.root, id: emptyOld.id }), not(null));
+  t.check(await readStagingSession({ boxRoot: box.root, id: nonEmptyOld.id }), not(null));
 });
 
 // ## A `delivered` batch with leaked staging is torn down
@@ -209,23 +155,8 @@ void test("Delivery cleans up staging, but if that teardown was swallowed the se
 
   // doctest:L162
   const result = await sweepBulkBatches({ boxRoot: box.root });
-  t.check(
-    {
-      cleaned: result.cleaned,
-      gone: (await readStagingSession({ boxRoot: box.root, id: delivered.id })) === null,
-    },
-    {
-    cleaned: [
-      str`${any(String)}`,
-    ],
-    gone: true,
-  },
-  );
-
-  // doctest:L171
-  t.check({ cleanedIsDelivered: result.cleaned[0] === delivered.id }, {
-    cleanedIsDelivered: true,
-  });
+  t.check(result.cleaned, [delivered.id]);
+  t.check(await readStagingSession({ boxRoot: box.root, id: delivered.id }), null);
 });
 
 // ## Unfiled ≥7-day batches are surfaced to their target chat via self-note, once
@@ -265,32 +196,37 @@ void test("A delivered upload-batch card still under a tmp-upload/ past the stal
   // doctest:L204
   const notified: UnfiledBatch[] = [];
   await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified.push(b) });
-  t.check(
-    {
-      count: notified.length,
-      path: notified[0]?.cardRelPath,
-      session: notified[0]?.sessionId,
-      aged: (notified[0]?.ageDays ?? 0) > 1000,
-    },
-    {
-    count: 1,
-    path: "store/x/tmp-upload/upload-old/Batch.upload-batch.card",
-    session: "s-target",
-    aged: true,
-  },
-  );
+  t.check(notified, [{
+    cardRelPath: "store/x/tmp-upload/upload-old/Batch.upload-batch.card",
+    sessionId: "s-target",
+    ageDays: any(Number).between(1000, Infinity),
+  }]);
 
   // The batch is marked `sweep-notified` (committed), so a SECOND sweep does not
   // re-fire the self-note — it notifies at most once ever, not every cycle:
 
   // doctest:L219
-  const notified2 = [];
+  const notified2: UnfiledBatch[] = [];
   await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified2.push(b) });
-  const marked = (await box.read("store/x/tmp-upload/upload-old/Batch.upload-batch.card")).includes("sweep-notified:");
-  t.check({ secondSweep: notified2.length, marked }, {
-    secondSweep: 0,
-    marked: true,
-  });
+  t.check(notified2, []);
+  t.checkText(await box.read("store/x/tmp-upload/upload-old/Batch.upload-batch.card"), `---
+delivered: true
+batch-id: upload-x
+target-session: s-target
+time:
+  start: 2020-01-01T00:00:00.000Z
+counts:
+  registered: 1
+  received: 1
+  missing: 0
+  failed: 0
+total-bytes: 6
+received:
+  - name: a.pdf
+    size: 6
+sweep-notified: «date»
+---
+1 file uploaded (6 B).`);
 });
 
 // ## The sweep never discards a batch that has something to report
@@ -316,16 +252,8 @@ void test("A batch that registered items but committed no bytes is not empty —
   const box = await makeTmpBox();
   const registered = await makeBulk(box.root, { state: "open", aged: true });
   const result = await sweepBulkBatches({ boxRoot: box.root });
-  t.check(
-    {
-      discarded: result.discarded.includes(registered.id),
-      abandoned: result.abandoned.includes(registered.id),
-    },
-    {
-    discarded: false,
-    abandoned: true,
-  },
-  );
+  t.check(result.discarded, []);
+  t.check(result.abandoned, [registered.id]);
 
   // A batch with a note is kept too — the boxholder typed it and pressed send:
 
@@ -341,7 +269,7 @@ void test("A batch that registered items but committed no bytes is not empty —
 
   // doctest:L266
   const second = await sweepBulkBatches({ boxRoot: box.root });
-  await t.checkText(second.discarded.includes(noted.id), "false");
+  t.check(second.discarded, []);
 
   // A genuinely empty batch — nothing registered, nothing uploaded, nothing said — is
   // still discarded:
@@ -357,7 +285,7 @@ void test("A batch that registered items but committed no bytes is not empty —
 
   // doctest:L283
   const third = await sweepBulkBatches({ boxRoot: box.root });
-  await t.checkText(third.discarded.includes(empty.id), "true");
+  t.check(third.discarded, [empty.id]);
 
   // A sealed batch is never discarded by the sweep, even if it looks empty — the
   // worker owns it, and the locked discard refuses:
@@ -374,16 +302,8 @@ void test("A batch that registered items but committed no bytes is not empty —
 
   // doctest:L301
   const fourth = await sweepBulkBatches({ boxRoot: box.root });
-  t.check(
-    {
-      discarded: fourth.discarded.includes(sealed.id),
-      stillOnDisk: (await readStagingSession({ boxRoot: box.root, id: sealed.id })) !== null,
-    },
-    {
-    discarded: false,
-    stillOnDisk: true,
-  },
-  );
+  t.check(fourth.discarded, []);
+  t.check(await readStagingSession({ boxRoot: box.root, id: sealed.id }), not(null));
 });
 
 // ## A sealed-but-undeliverable batch is handed to the chat agent
@@ -416,35 +336,29 @@ void test("Once a batch is sealed the box holds the bytes AND the boxholder's in
   // doctest:L333
   const seen: StrandedBatch[] = [];
   const result = await sweepBulkBatches({ boxRoot: box.root, notifyStranded: (b) => seen.push(b) });
-  t.check(
-    {
-      surfaced: result.stranded.includes(stranded.id),
-      target: seen[0]?.targetSessionId,
-      note: seen[0]?.note,
-      registered: seen[0]?.registeredCount,
-    },
-    {
-    surfaced: true,
-    target: "chat-1",
+  t.check(result.stranded, [stranded.id]);
+  t.check(seen, [{
+    sessionId: stranded.id,
+    targetSessionId: "chat-1",
+    state: "failed:deliver",
+    receivedCount: 0,
+    failedCount: 0,
+    registeredCount: 1,
     note: "Receipts from the Tokyo trip",
-    registered: 1,
-  },
-  );
+  }]);
 
   // The staging is NOT deleted — the agent may still need the bytes:
 
   // doctest:L347
-  await t.checkText((await readStagingSession({ boxRoot: box.root, id: stranded.id })) !== null, "true");
+  t.check(await readStagingSession({ boxRoot: box.root, id: stranded.id }), not(null));
 
   // It fires exactly once, not every sweep cycle:
 
   // doctest:L354
-  const again = [];
+  const again: StrandedBatch[] = [];
   const second = await sweepBulkBatches({ boxRoot: box.root, notifyStranded: (b) => again.push(b) });
-  t.check({ surfacedAgain: second.stranded.length, notified: again.length }, {
-    surfacedAgain: 0,
-    notified: 0,
-  });
+  t.check(second.stranded, []);
+  t.check(again, []);
 });
 
 // ## The sweep re-checks its whole decision under the lock
@@ -472,14 +386,6 @@ void test("The discard decision is made on a snapshot, then re-made against the 
 
   // doctest:L380
   const result = await sweepBulkBatches({ boxRoot: box.root });
-  t.check(
-    {
-      discarded: result.discarded.includes(revived.id),
-      stillOnDisk: (await readStagingSession({ boxRoot: box.root, id: revived.id })) !== null,
-    },
-    {
-    discarded: false,
-    stillOnDisk: true,
-  },
-  );
+  t.check(result.discarded, []);
+  t.check(await readStagingSession({ boxRoot: box.root, id: revived.id }), not(null));
 });

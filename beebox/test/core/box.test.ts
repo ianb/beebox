@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, not } from "agent-doctest/check";
 import { strict as assert } from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -45,7 +46,6 @@ async function listDirs(root: string) {
 // here — `src/`, `.claude/`, `.beebox/`, and `node_modules/` are the code/agent
 // side, covered by their own doctests:
 void test("A fresh v3 box's operational tree lives right at boxRoot (which is also the n...", async (t) => {
-  // doctest:L49
   const tmp = await makeTmpDir();
   const { boxRoot } = await scaffoldBoxRoot(tmp);
   const allDirs = (await listDirs(boxRoot)).split("\n");
@@ -92,13 +92,11 @@ _tmp`);
 
   // The box marker file contains version metadata:
 
-  // doctest:L99
   const marker = JSON.parse(await fs.readFile(path.join(boxRoot, BOX_MARKER), "utf-8"));
-  t.check(marker.shapeVersion, 3);
+  t.check(marker, { version: "1.0.0", shapeVersion: 3, created: isoDate() });
 
   // A properly initialized directory is recognized as a valid box:
 
-  // doctest:L107
   t.check(await isValidBox(boxRoot), true);
 });
 
@@ -106,7 +104,6 @@ _tmp`);
 //
 // An empty directory is not a valid box:
 void test("An empty directory is not a valid box:", async (t) => {
-  // doctest:L116
   const empty = await makeTmpDir();
   t.check(await isValidBox(empty), false);
 });
@@ -115,15 +112,13 @@ void test("An empty directory is not a valid box:", async (t) => {
 //
 // `findBoxRoot` walks up from any subdirectory to find the nearest box root:
 void test("findBoxRoot walks up from any subdirectory to find the nearest box root:", async (t) => {
-  // doctest:L126
   const tmp = await makeTmpDir();
   const { boxRoot } = await scaffoldBoxRoot(tmp);
   const found = await findBoxRoot(path.join(boxRoot, "_content", "inbox"));
-  await t.checkText(found === boxRoot, "true");
+  t.check(found, boxRoot);
 
   // An unrelated directory — no `.beebox/box.json` anywhere upward — fails closed with `null`, not a guess:
 
-  // doctest:L136
   const unrelatedDir = await makeTmpDir();
   t.check(await findBoxRoot(unrelatedDir), null);
 });
@@ -132,20 +127,17 @@ void test("findBoxRoot walks up from any subdirectory to find the nearest box ro
 //
 // `getBoxMetadata` reads the marker file. Running `initBox` again preserves the original created timestamp:
 void test("getBoxMetadata reads the marker file.", async (t) => {
-  // doctest:L146
   const tmp = await makeTmpDir();
   const { boxRoot } = await scaffoldBoxRoot(tmp);
   const meta1 = await getBoxMetadata(boxRoot);
   assert.ok(meta1);
-  t.check(meta1.version, "1.0.0");
+  t.check(meta1, { version: "1.0.0", created: isoDate() });
 
-  // doctest:L155
   await initBox(boxRoot, { skipGit: true });
   const meta2 = await getBoxMetadata(boxRoot);
   assert.ok(meta2);
-  await t.checkText(meta2.created === meta1.created, "true");
+  t.check(meta2, meta1);
 
-  // doctest:L161
   t.check(await isValidBox(boxRoot), true);
 });
 
@@ -166,20 +158,15 @@ void test("initBox rewrites .gitignore and .gitattributes on every run.", async 
       t.error(error);
     }
   });
-  // doctest:L176
   const tmp = await makeTmpDir();
   const { boxRoot } = await scaffoldBoxRoot(tmp);
   const gitignore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
   const gitattributes = await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8");
-  t.check(
-    [
-      gitignore.includes("**/*.attach/**/*.pdf"),
-      gitignore.includes("managed by bbx attachments unignore"),
-      gitignore.includes("**/tmp-capture/**/*.attach/**"),
-      gitattributes.includes("filter=lfs"),
-    ].join(" "),
-    "false true true false",
-  );
+  // Generated files: narrow checks on the lines that matter.
+  t.check(gitignore, not(any(String).includes("**/*.attach/**/*.pdf")));
+  t.check(gitignore, any(String).includes("managed by bbx attachments unignore"));
+  t.check(gitignore, any(String).includes("**/tmp-capture/**/*.attach/**"));
+  t.check(gitattributes, not(any(String).includes("filter=lfs")));
 
   // Capture staging stays ignored — a capture is pre-triage and gets rewritten
   // before it is filed.
@@ -187,13 +174,7 @@ void test("initBox rewrites .gitignore and .gitattributes on every run.", async 
   // It is idempotent: a second `initBox` leaves both files byte-identical, so
   // `bbx init` never dirties an existing box's working tree.
 
-  // doctest:L196
   await initBox(boxRoot, { skipGit: true });
-  t.check(
-    [
-      (await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8")) === gitignore,
-      (await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8")) === gitattributes,
-    ].join(" "),
-    "true true",
-  );
+  t.check(await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8"), gitignore);
+  t.check(await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8"), gitattributes);
 });

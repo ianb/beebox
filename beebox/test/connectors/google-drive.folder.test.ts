@@ -169,10 +169,7 @@ void test("A Doc and a Sheet have handlers, so they are mirrored as synced cards
     entries: [{ driveId: "sheet-1", kind: "file", cardPath: "Budget_2026.gsheet.card" }],
     claimed: ["sheet-1", "pdf-1"],
   }));
-  t.check({ files: held.createFiles.length, links: held.createLinks.length }, {
-    files: 0,
-    links: 0,
-  });
+  t.check(held, { createFiles: [], createLinks: [], subfolders: [], absent: [], refusals: [], duplicates: [] });
 });
 
 // ## The plan — a subfolder is a subdirectory with its own mount card
@@ -222,14 +219,18 @@ void test("A folder already entered on this pass is a cycle (a shortcut pointing
     claimed: ["folder-1"],
     visited: ["folder-1"],
   }));
-  t.check({ subfolders: cycle.subfolders, refusals: cycle.refusals }, {
+  t.check(cycle, {
+    createFiles: [],
+    createLinks: [],
     subfolders: [],
+    absent: [],
     refusals: [
       {
         reason: "cycle",
         message: "Folder folder-1 (\"Recipes\") already mirrored on this pass (via shortcut shortcut-1) — cycle, not descended",
       },
     ],
+    duplicates: [],
   });
 
   // The depth cap and the per-pass folder cap both leave the child's card in place
@@ -240,33 +241,37 @@ void test("A folder already entered on this pass is a cycle (a shortcut pointing
     children: [child({ id: "folder-9", name: "Deep", mimeType: FOLDER_MIME })],
     depth: MAX_FOLDER_DEPTH,
   }));
-  t.check(
-    {
-      subfolder: deep.subfolders[0],
-      reason: deep.refusals[0]?.reason,
-      message: deep.refusals[0]?.message,
-    },
-    {
-    subfolder: {
-      driveId: "folder-9",
-      name: "Deep",
-      cardPath: "Deep/Deep.gfolder.card",
-      create: true,
-      enter: false,
-    },
-    reason: "depth-cap",
-    message: "Folder folder-9 (\"Deep\") is deeper than the 8-level mirror depth cap — not descended",
-  },
-  );
+  t.check(deep, {
+    createFiles: [],
+    createLinks: [],
+    subfolders: [{ driveId: "folder-9", name: "Deep", cardPath: "Deep/Deep.gfolder.card", create: true, enter: false }],
+    absent: [],
+    refusals: [
+      {
+        reason: "depth-cap",
+        message: "Folder folder-9 (\"Deep\") is deeper than the 8-level mirror depth cap — not descended",
+      },
+    ],
+    duplicates: [],
+  });
 
   // doctest:L210
   const wide = planFolderSync(planInput({
     children: [child({ id: "folder-9", name: "Deep", mimeType: FOLDER_MIME })],
     foldersSoFar: MAX_FOLDERS_PER_PASS,
   }));
-  t.check({ reason: wide.refusals[0]?.reason, enter: wide.subfolders[0]?.enter }, {
-    reason: "folder-cap",
-    enter: false,
+  t.check(wide, {
+    createFiles: [],
+    createLinks: [],
+    subfolders: [{ driveId: "folder-9", name: "Deep", cardPath: "Deep/Deep.gfolder.card", create: true, enter: false }],
+    absent: [],
+    refusals: [
+      {
+        reason: "folder-cap",
+        message: "Folder folder-9 (\"Deep\") hit the 500-folder-per-sync cap — not descended",
+      },
+    ],
+    duplicates: [],
   });
 });
 
@@ -286,25 +291,19 @@ void test("Two shortcuts to one Doc, or a subfolder plus a shortcut to it, both 
       child({ id: "folder-2", name: "Sweets", mimeType: FOLDER_MIME, via: "shortcut-2" }),
     ],
   }));
-  t.check(
-    {
-      files: plan.createFiles.map((a) => a.cardPath),
-      subfolders: plan.subfolders.map((a) => a.cardPath),
-      duplicates: plan.duplicates,
-    },
-    {
-    files: [
-      "Trip_Notes.gdoc.card",
-    ],
+  t.check(plan, {
+    createFiles: [{ driveId: "doc-1", name: "Trip Notes", cardType: "gdoc", cardPath: "Trip_Notes.gdoc.card" }],
+    createLinks: [],
     subfolders: [
-      "Desserts/Desserts.gfolder.card",
+      { driveId: "folder-2", name: "Desserts", cardPath: "Desserts/Desserts.gfolder.card", create: true, enter: true },
     ],
+    absent: [],
+    refusals: [],
     duplicates: [
       "Drive item doc-1 (\"Trip Notes (shortcut)\") is listed twice in this folder — mirrored once",
       "Drive item folder-2 (\"Sweets\") is listed twice in this folder — mirrored once",
     ],
-  },
-  );
+  });
 });
 
 // ## The plan — a connector-made tombstone is re-created when Drive lists it again
@@ -328,9 +327,7 @@ void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what 
     claimed: ["sheet-1"],
     restorable: ["sheet-1"],
   }));
-  t.check(restored.createFiles.map((a) => a.cardPath), [
-    "Budget.gsheet.card",
-  ]);
+  t.check(restored.createFiles, [{ driveId: "sheet-1", name: "Budget", cardType: "gsheet", cardPath: "Budget.gsheet.card" }]);
 
   // A restored subfolder comes back the same way, and a restored pointer too.
 
@@ -340,11 +337,8 @@ void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what 
     claimed: ["folder-2"],
     restorable: ["folder-2"],
   }));
-  t.check(folder.subfolders.map((a) => ({ path: a.cardPath, create: a.create })), [
-    {
-      path: "Desserts/Desserts.gfolder.card",
-      create: true,
-    },
+  t.check(folder.subfolders, [
+    { driveId: "folder-2", name: "Desserts", cardPath: "Desserts/Desserts.gfolder.card", create: true, enter: true },
   ]);
 
   // doctest:L278
@@ -353,8 +347,8 @@ void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what 
     claimed: ["pdf-1"],
     restorable: ["pdf-1"],
   }));
-  t.check(pointer.createLinks.map((a) => a.cardPath), [
-    "Scanpdf.glink.card",
+  t.check(pointer.createLinks, [
+    { driveId: "pdf-1", name: "Scan.pdf", mimeType: "application/pdf", cardPath: "Scanpdf.glink.card" },
   ]);
 });
 
@@ -472,9 +466,16 @@ void test("End to end — a mount discovers its children and points at the rest"
   // doctest:L361
   const connector = createGoogleDriveConnector(box.root, drive);
   const result = await connector.sync();
-  t.check({ success: result.success, error: result.error ?? null }, {
+  t.check(result, {
     success: true,
-    error: null,
+    created: [
+      "_content/drive/recipes/Sourdough.attach/Sourdough.md",
+      "_content/drive/recipes/Sourdough.gdoc.card",
+      "_content/drive/recipes/Bake_Times.attach/Sheet1.json",
+      "_content/drive/recipes/Bake_Times.gsheet.card",
+      "_content/drive/recipes/Scan_2024pdf.glink.card",
+    ],
+    updated: ["_content/drive/recipes/Recipes.gfolder.card"],
   });
 
   // doctest:L366
@@ -515,8 +516,5 @@ last-sync: «stamped»
 
   // doctest:L403
   const again = await connector.sync();
-  t.check({ success: again.success, created: again.created }, {
-    success: true,
-    created: [],
-  });
+  t.check(again, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
 });

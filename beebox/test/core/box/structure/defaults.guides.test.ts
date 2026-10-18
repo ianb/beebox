@@ -71,7 +71,7 @@ void test("An untracked box's old stock guides update in place", async (t) => {
   ]);
 
   // doctest:L62
-  await t.checkText((await fs.readFile(path.join(box, "_config/intake.guide.card"), "utf-8")) === createInitialGuideTemplate({ name: "intake" }), "true");
+  t.check(await fs.readFile(path.join(box, "_config/intake.guide.card"), "utf-8"), createInitialGuideTemplate({ name: "intake" }));
 
   // ## An untracked box's pre-`basis` stock guide updates in place
 
@@ -82,7 +82,7 @@ void test("An untracked box's old stock guides update in place", async (t) => {
   ]);
 
   // doctest:L73
-  await t.checkText((await fs.readFile(path.join(preBasis, "_config/intake.guide.card"), "utf-8")) === createInitialGuideTemplate({ name: "intake" }), "true");
+  t.check(await fs.readFile(path.join(preBasis, "_config/intake.guide.card"), "utf-8"), createInitialGuideTemplate({ name: "intake" }));
 
   // ## An untracked box's pre-doc stock guides update in place
 
@@ -100,10 +100,10 @@ void test("An untracked box's old stock guides update in place", async (t) => {
     "_config/intake.guide.card": oldStock("intake"),
     "_config/template-versions.json": JSON.stringify({ "_config/intake.guide.card": { sha256: "0".repeat(64), "installed-at": "2026-09-01T00:00:00Z" } }),
   });
-  t.check((await installGuides(tracked)).filter((entry) => entry.includes("intake.guide.card")).map((entry) => entry.endsWith("(update available)")), [
-    true,
+  t.check((await installGuides(tracked)).filter((entry) => entry.includes("intake.guide.card")), [
+    "_config/_template-updates/_config/intake.guide.card (update available)",
   ]);
 
   // doctest:L95
-  await t.checkText((await fs.readFile(path.join(tracked, "_config/intake.guide.card"), "utf-8")) === oldStock("intake"), "true");
+  t.check(await fs.readFile(path.join(tracked, "_config/intake.guide.card"), "utf-8"), oldStock("intake"));
 });

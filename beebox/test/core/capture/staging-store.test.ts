@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, str, unordered } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import {
@@ -56,7 +57,19 @@ void test("A fresh session starts open and empty:", async (t) => {
   // doctest:L50
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-123", createdBy: null });
-  t.check(session.state, "open");
+  t.check(session, {
+    id: session.id,
+    createdAt: isoDate(),
+    lastActivityAt: isoDate(),
+    targetSessionId: "chat-123",
+    createdBy: null,
+    kind: "capture",
+    state: "open",
+    segments: [],
+    photos: [],
+    files: [],
+    totalBytes: 0,
+  });
 
   // doctest:L55
   t.check(stagingSessionIsEmpty(session), true);
@@ -82,24 +95,11 @@ void test("A fresh session starts open and empty:", async (t) => {
   });
   const afterAudio = await readStagingSession({ boxRoot: box.root, id: session.id });
   assert.ok(afterAudio);
-  t.check(afterAudio.segments.map((s) => ({ id: s.id, chunks: s.chunks })), [
-    {
-      id: "seg-a",
-      chunks: [
-        "audio-0-001.webm",
-        "audio-0-002.webm",
-      ],
-    },
-    {
-      id: "seg-b",
-      chunks: [
-        "audio-1-001.webm",
-      ],
-    },
-  ]);
-
-  // doctest:L83
-  t.check(afterAudio.segments.map((s) => s.format).join(","), "webm-opus,webm-opus");
+  const segments = [
+    { id: "seg-a", startedAt: "2026-07-09T14:00:00.000Z", format: "webm-opus" as const, chunks: ["audio-0-001.webm", "audio-0-002.webm"] },
+    { id: "seg-b", startedAt: "2026-07-09T14:05:00.000Z", format: "webm-opus" as const, chunks: ["audio-1-001.webm"] },
+  ];
+  t.check(afterAudio.segments, segments);
 
   // Photos and files land in their own collections (photos keep `source`; files
   // keep `originalName`/`mimeType`):
@@ -145,7 +145,19 @@ void test("A fresh session starts open and empty:", async (t) => {
 
   // doctest:L119
   await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
-  t.check((await readStagingSession({ boxRoot: box.root, id: session.id }))?.state, "sealed");
+  t.check(await readStagingSession({ boxRoot: box.root, id: session.id }), {
+    id: session.id,
+    createdAt: isoDate(),
+    lastActivityAt: isoDate(),
+    targetSessionId: "chat-123",
+    createdBy: null,
+    kind: "capture",
+    state: "sealed",
+    segments,
+    photos: staged.photos,
+    files: staged.files,
+    totalBytes: 13,
+  });
 
   // Cleanup removes the whole session directory:
 
@@ -195,19 +207,15 @@ void test("Native audio declares m4a-aac; a second file or a WebM chunk under th
   const after = await readStagingSession({ boxRoot: box.root, id: session.id });
   assert.ok(after);
   const files = await box.list(`_tmp/capture-staging/${session.id}`);
-  t.check({ message, segment: after.segments[0], firstExists: files.includes(`_tmp/capture-staging/${session.id}/ios-audio-a.m4a`), rejectedExists: files.includes(`_tmp/capture-staging/${session.id}/ios-audio-b.m4a`) }, {
-    message: "M4A segment must contain exactly one complete file",
-    segment: {
-      id: "native-audio",
-      startedAt: "2026-07-09T14:00:00.000Z",
-      format: "m4a-aac",
-      chunks: [
-        "ios-audio-a.m4a",
-      ],
-    },
-    firstExists: true,
-    rejectedExists: false,
-  });
+  t.check(message, "M4A segment must contain exactly one complete file");
+  t.check(after.segments, [{
+    id: "native-audio",
+    startedAt: "2026-07-09T14:00:00.000Z",
+    format: "m4a-aac",
+    chunks: ["ios-audio-a.m4a"],
+  }]);
+  t.checkText(files, `_tmp/capture-staging/${session.id}/ios-audio-a.m4a
+_tmp/capture-staging/${session.id}/session.json`);
 });
 
 // ## Concurrent chunk uploads to one segment all land (per-session lock)
@@ -236,10 +244,12 @@ void test("Ten chunks fired at once on a single segment read-modify-write sessio
   );
   const after = await readStagingSession({ boxRoot: box.root, id: session.id });
   assert.ok(after);
-  await t.checkText(after.segments.length, "1");
-
-  // doctest:L200
-  t.check(after.segments[0]?.chunks.length, 10);
+  t.check(after.segments, [{
+    id: "seg-a",
+    startedAt: "2026-07-09T14:00:00.000Z",
+    format: "webm-opus",
+    chunks: Array.from({ length: 10 }, (_v, i) => `audio-0-${String(i).padStart(3, "0")}.webm`),
+  }]);
 });
 
 // ## `sealStagingSession` is a single-winner compare-and-swap
@@ -261,10 +271,7 @@ void test("Two concurrent finalize POSTs both call the CAS; exactly one wins the
     sealStagingSession({ boxRoot: box.root, id: session.id }),
     sealStagingSession({ boxRoot: box.root, id: session.id }),
   ]);
-  await t.checkText([a.sealed, b.sealed].filter(Boolean).length, "1");
-
-  // doctest:L223
-  await t.checkText([a.alreadySealed, b.alreadySealed].filter(Boolean).length, "1");
+  t.check([a, b], unordered([{ sealed: true, alreadySealed: false }, { sealed: false, alreadySealed: true }]));
 
   // doctest:L226
   t.check((await readStagingSession({ boxRoot: box.root, id: session.id }))?.state, "sealed");
@@ -274,11 +281,11 @@ void test("Two concurrent finalize POSTs both call the CAS; exactly one wins the
 
   // doctest:L234
   await setStagingState({ boxRoot: box.root, id: session.id, state: "failed:deliver" });
-  t.check((await sealStagingSession({ boxRoot: box.root, id: session.id })).sealed, true);
+  t.check(await sealStagingSession({ boxRoot: box.root, id: session.id }), { sealed: true, alreadySealed: false });
 
   // doctest:L238
   await setStagingState({ boxRoot: box.root, id: session.id, state: "delivering" });
-  t.check((await sealStagingSession({ boxRoot: box.root, id: session.id })).alreadySealed, true);
+  t.check(await sealStagingSession({ boxRoot: box.root, id: session.id }), { sealed: false, alreadySealed: true });
 
   // The uploader's failed-item report rides in the SAME atomic seal write — a fresh
   // session seals to `sealed` and records `failedItems` in one mutation (no window
@@ -332,15 +339,9 @@ void test("A streamed upload re-checks the session state AND item registration u
   const sealedResult = await streamOrThrow(box.root, { id: session.id, filename: "s-a.bin", itemId: "a" });
   const after = await readStagingSession({ boxRoot: box.root, id: session.id });
   assert.ok(after);
-  const dirFiles = await box.list(`_tmp/capture-staging/${session.id}`);
-  const landed = dirFiles.includes(`_tmp/capture-staging/${session.id}/s-a.bin`);
-  const tmpLeak = dirFiles.includes(".upload-tmp-");
-  t.check({ sealedResult, files: after.files.length, landed, tmpLeak }, {
-    sealedResult: "StagingSessionNotOpenError",
-    files: 0,
-    landed: false,
-    tmpLeak: false,
-  });
+  t.check(sealedResult, "StagingSessionNotOpenError");
+  t.check(after.files, []);
+  t.checkText(await box.list(`_tmp/capture-staging/${session.id}`), `_tmp/capture-staging/${session.id}/session.json`);
 
   // An unregistered `itemId` is likewise rejected under the lock (registration is
   // the record of what may arrive):
@@ -384,7 +385,7 @@ void test("Missing (ENOENT) is a silently-absent session — no quarantine, no l
   t.check(missing, null);
 
   // doctest:L332
-  await t.checkText((await box.list("_tmp/capture-staging").catch(() => "")).includes(".corrupt"), "false");
+  t.check(await box.list("_tmp/capture-staging").catch(() => ""), "");
 });
 
 // ## `session.json` is written atomically (temp-file + rename)
@@ -403,16 +404,7 @@ void test("A write never leaves a bare session.json.tmp- file behind — only th
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
   const entries = await box.list(`_tmp/capture-staging/${session.id}`);
-  t.check(
-    {
-      onlyFinalManifest: entries === `_tmp/capture-staging/${session.id}/session.json`,
-      noLeftoverTmp: !entries.includes(".tmp-"),
-    },
-    {
-    onlyFinalManifest: true,
-    noLeftoverTmp: true,
-  },
-  );
+  t.check(entries, `_tmp/capture-staging/${session.id}/session.json`);
 });
 
 // ## A corrupt manifest is quarantined, logged, and read as null
@@ -441,23 +433,10 @@ void test("Invalid JSON in session.json is not indistinguishable from an absent 
   t.check(result, null);
 
   // doctest:L379
-  await t.checkText(errors.length, "1");
-
-  // doctest:L382
-  t.check(errors[0]?.includes(session.id), true);
+  t.check(errors, [str`[capture] Corrupt staging manifest for session ${session.id} in box ${box.root}: ${any(String)}`]);
 
   // doctest:L385
-  const fileLines = (await box.list(`_tmp/capture-staging/${session.id}`)).split("\n");
-  t.check(
-    {
-      corruptExists: fileLines.includes(`_tmp/capture-staging/${session.id}/session.json.corrupt`),
-      originalExists: fileLines.includes(`_tmp/capture-staging/${session.id}/session.json`),
-    },
-    {
-    corruptExists: true,
-    originalExists: false,
-  },
-  );
+  t.check(await box.list(`_tmp/capture-staging/${session.id}`), `_tmp/capture-staging/${session.id}/session.json.corrupt`);
 
   // A schema-invalid manifest (valid JSON, wrong shape) quarantines the same way,
   // and a repeated read against the already-quarantined session doesn't blow up
@@ -472,18 +451,18 @@ void test("Invalid JSON in session.json is not indistinguishable from an absent 
   t.check(schemaResult, null);
 
   // doctest:L406
-  await t.checkText(errors.length, "2");
+  const corruptNotice = str`[capture] Corrupt staging manifest for session ${session.id} in box ${box.root}: ${any(String)}`;
+  t.check(errors, [corruptNotice, corruptNotice]);
 
   // doctest:L409
-  const filesAfter = await box.list(`_tmp/capture-staging/${session.id}`);
-  await t.checkText(filesAfter.includes(`_tmp/capture-staging/${session.id}/session.json.corrupt`), "true");
+  t.check(await box.list(`_tmp/capture-staging/${session.id}`), `_tmp/capture-staging/${session.id}/session.json.corrupt`);
 
   // doctest:L413
   const secondRead = await readStagingSession({ boxRoot: box.root, id: session.id });
   t.check(secondRead, null);
 
   // doctest:L417
-  await t.checkText(errors.length, "2");
+  t.check(errors, [corruptNotice, corruptNotice]);
 });
 
 // ## A sealed session refuses new media
@@ -537,7 +516,7 @@ void test("The upload route checks state === \"open\" before it reads the reques
     uploadedAt: "2026-07-29T12:00:02.000Z", originalName: "notes.txt",
     mimeType: "text/plain", buffer: Buffer.from("LATE"),
   }));
-  t.check([photo, audio, file].join(","), "StagingSessionNotOpenError,StagingSessionNotOpenError,StagingSessionNotOpenError");
+  t.check([photo, audio, file], ["StagingSessionNotOpenError", "StagingSessionNotOpenError", "StagingSessionNotOpenError"]);
 
   // The manifest is untouched by the rejected adds — it still holds only the photo
   // that landed while the session was open, and no stray bytes were written:
@@ -545,11 +524,15 @@ void test("The upload route checks state === \"open\" before it reads the reques
   // doctest:L477
   const after = await readStagingSession({ boxRoot: box.root, id: session.id });
   assert.ok(after);
-  t.check([after.photos.length, after.segments.length, after.files.length].join("/"), "1/0/0");
+  t.check({ photos: after.photos, segments: after.segments, files: after.files }, {
+    photos: [{ filename: "photo-001.jpg", capturedAt: "2026-07-29T12:00:00.000Z", source: "camera-user" }],
+    segments: [],
+    files: [],
+  });
 
   // doctest:L484
-  const staged = await box.list(`_tmp/capture-staging/${session.id}`);
-  await t.checkText(staged.includes("photo-002.jpg"), "false");
+  t.checkText(await box.list(`_tmp/capture-staging/${session.id}`), `_tmp/capture-staging/${session.id}/photo-001.jpg
+_tmp/capture-staging/${session.id}/session.json`);
 
   // Lifecycle transitions themselves still work on a sealed session — the barrier is
   // specific to *media*, so preparation can keep moving the state forward:

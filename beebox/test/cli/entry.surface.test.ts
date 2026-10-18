@@ -75,10 +75,10 @@ void test("buildSurface registers only what the table names, so an unclassified 
 // `engine` is itself a top-level command, so it belongs in the first comparison.
 void test("engine is itself a top-level command, so it belongs in the first comparison.", async (t) => {
   // doctest:L79
-  await t.checkText(topLevel.filter((n) => n !== "engine").join(",") === agentNames.join(","), "true");
+  t.check(topLevel.filter((n) => n !== "engine"), agentNames);
 
   // doctest:L82
-  await t.checkText(engineVerbs.join(",") === engineNames.join(","), "true");
+  t.check(engineVerbs, engineNames);
 });
 
 // Nothing that left the agent's surface is still reachable at the top level. This
@@ -95,7 +95,7 @@ void test("Nothing that left the agent's surface is still reachable at the top l
 // operate half it does not.
 void test("scheduler, pub, and secrets each have a read half an agent uses and an operat...", async (t) => {
   // doctest:L101
-  t.check(splitNames.join(","), "pub,scheduler,secrets");
+  t.check(splitNames, ["pub", "scheduler", "secrets"]);
 
   // doctest:L104
   t.check(overlapping, []);
@@ -106,10 +106,10 @@ void test("scheduler, pub, and secrets each have a read half an agent uses and a
 // how the deprecated `bbx scheduler add|remove|list` aliases left the CLI.
 void test("The agent's scheduler offers the reads; the operator's offers the daemon life...", async (t) => {
   // doctest:L113
-  t.check(subNames(program.commands.find((c) => c.name() === "scheduler")).join(","), "log,status");
+  t.check(subNames(program.commands.find((c) => c.name() === "scheduler")), ["log", "status"]);
 
   // doctest:L116
-  t.check(subNames(engineParent?.commands.find((c) => c.name() === "scheduler")).join(","), "install,start,uninstall");
+  t.check(subNames(engineParent?.commands.find((c) => c.name() === "scheduler")), ["install", "start", "uninstall"]);
 });
 
 // ## Every eviction gives a reason, and every agent verb a smoke decision

@@ -151,17 +151,31 @@ void test("A synced spreadsheet card gets its Drive metadata in the card and one
 
   // doctest:L145
   const result = await createGoogleDriveConnector(box.root, fakeDrive([fx])).sync();
-  t.check(result.success, true);
+  t.check(result, {
+    success: true,
+    created: ["_content/drive/Budget.attach/Sheet1.json", "_content/drive/Budget.gsheet.card"],
+    updated: [],
+  });
 
   // The card now carries the remote spreadsheet metadata:
 
   // doctest:L153
   const card = await box.read("_content/drive/Budget.gsheet.card");
-  t.check([card.includes("drive:\n  id: sheet-abc123"), card.includes("title: Test Budget"), card.includes("Old Budget")], [
-    true,
-    true,
-    false,
-  ]);
+  t.checkText(
+    card,
+    `---
+drive:
+  id: sheet-abc123
+  link: https://docs.google.com/spreadsheets/d/sheet-abc123/edit
+  owner: test@example.com
+  modified: 2026-03-29T10:00:00Z
+title: Test Budget
+sheets:
+  - ref: attach/Sheet1.json
+    title: Sheet1
+    gid: "0"
+---`,
+  );
 
   // The tab file is created from the remote cell values:
 
@@ -207,16 +221,17 @@ void test("When a user edits a JSON file locally, the next sync pushes the chang
 
   // doctest:L196
   const result = await connector.sync();
-  t.check(result.success, true);
+  t.check(result, {
+    success: true,
+    created: [],
+    updated: ["_content/drive/Expenses.attach/Sheet1.json"],
+    pushed: ["_content/drive/Expenses.attach/Sheet1.json"],
+  });
 
   // doctest:L200
-  await t.checkText(drive.updateLog.length, "1");
-
-  // doctest:L203
-  t.check(drive.updateLog[0]?.sheetTitle, "Sheet1");
-
-  // doctest:L206
-  await t.checkText(drive.updateLog[0]?.values[1]?.[1], "6");
+  t.check(drive.updateLog, [
+    { fileId: "sheet-push1", sheetTitle: "Sheet1", values: [["Item", "Cost"], ["Coffee", "6"], ["Tea", "3"]] },
+  ]);
 });
 
 // Spreadsheets with multiple sheet tabs get separate JSON files:
@@ -247,7 +262,15 @@ void test("Spreadsheets with multiple sheet tabs get separate JSON files:", asyn
 
   // doctest:L233
   const result = await createGoogleDriveConnector(box.root, fakeDrive([fx])).sync();
-  t.check(result.success, true);
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/drive/Multi.attach/Summary.json",
+      "_content/drive/Multi.attach/Expenses.json",
+      "_content/drive/Multi.gsheet.card",
+    ],
+    updated: [],
+  });
 
   // doctest:L237
   const files = await readdir(join(box.root, "_content/drive/Multi"));
@@ -296,18 +319,47 @@ void test("A spreadsheet with comments gets a {basename}.comments.json sidecar (
 
   // doctest:L279
   const result = await createGoogleDriveConnector(box.root, drive).sync();
-  t.check(result.success, true);
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/drive/Reviewed.attach/Sheet1.json",
+      "_content/drive/Reviewed.attach/Reviewed.comments.json",
+      "_content/drive/Reviewed.gsheet.card",
+    ],
+    updated: [],
+  });
 
   // doctest:L283
   const card = await box.read("_content/drive/Reviewed.gsheet.card");
-  await t.checkText(card.includes("ref: attach/Reviewed.comments.json"), "true");
+  t.checkText(
+    card,
+    `---
+drive:
+  id: sheet-comm
+  link: https://docs.google.com/spreadsheets/d/sheet-comm/edit
+  owner: test@example.com
+  modified: 2026-03-29T10:00:00Z
+title: Reviewed
+sheets:
+  - ref: attach/Sheet1.json
+    title: Sheet1
+    gid: "0"
+comments:
+  ref: attach/Reviewed.comments.json
+---`,
+  );
 
   // doctest:L287
   const sidecar = JSON.parse(await box.read("_content/drive/Reviewed.attach/Reviewed.comments.json"));
-  t.check(sidecar[0]?.content, "Should this be Bob?");
-
-  // doctest:L291
-  t.check(sidecar[0]?.author?.displayName, "Reviewer");
+  t.check(sidecar, [
+    {
+      id: "c-1",
+      content: "Should this be Bob?",
+      author: { displayName: "Reviewer" },
+      resolved: false,
+      createdTime: "2026-03-28T08:00:00Z",
+    },
+  ]);
 });
 
 // ## Trashing a card stops sync, and restoring it resumes
@@ -347,18 +399,19 @@ void test("bbx rm moves both the card and its attachment scope into bookkeeping/
   );
   calls.getFile = 0;
   const trashed = await connector.sync();
-  t.check(
+  t.check(calls.getFile, 0);
+  t.check(trashed, { success: true, created: [], updated: [] });
+  t.check(receipt.moves, [
     {
-      getFileCalls: calls.getFile,
-      changed: trashed.created.length + trashed.updated.length + (trashed.pushed?.length ?? 0),
-      trashPath: receipt.moves[0]?.destPath,
+      sourcePath: "_content/drive/Trash-Me.gsheet.card",
+      destPath: "_bookkeeping/trash/Trash-Me.gsheet.card",
+      relatedFiles: ["Trash-Me.attach"],
+      fileMoves: [
+        { sourcePath: "_content/drive/Trash-Me.gsheet.card", destPath: "_bookkeeping/trash/Trash-Me.gsheet.card" },
+        { sourcePath: "_content/drive/Trash-Me.attach", destPath: "_bookkeeping/trash/Trash-Me.attach" },
+      ],
     },
-    {
-    getFileCalls: 0,
-    changed: 0,
-    trashPath: "_bookkeeping/trash/Trash-Me.gsheet.card",
-  },
-  );
+  ]);
 
   // Restoring the exact card and attachment paths makes it live again.
 
@@ -386,17 +439,23 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
     }
   });
   // doctest:L362
-  const { box, initial, liveCard, liveSheet, calls, connector, fixture } = await syncedFolderChild("sheet-folder-trash");
-  t.check(
-    {
-      created: initial.created.includes(liveCard),
-      attachment: (await box.list()).includes(liveSheet),
-    },
-    {
-    created: true,
-    attachment: true,
-  },
-  );
+  const { box, initial, liveCard, calls, connector, fixture } = await syncedFolderChild("sheet-folder-trash");
+  t.check(initial, {
+    success: true,
+    created: [
+      "_content/drive/folder/Folder_Child.attach/Sheet1.json",
+      "_content/drive/folder/Folder_Child.gsheet.card",
+    ],
+    updated: ["_content/drive/folder/Folder.gfolder.card"],
+  });
+  t.check((await box.list()).split("\n").filter((f) => f.startsWith("_content/drive/")), [
+    "_content/drive/.gitkeep",
+    "_content/drive/folder",
+    "_content/drive/folder/Folder.gfolder.card",
+    "_content/drive/folder/Folder_Child.attach",
+    "_content/drive/folder/Folder_Child.attach/Sheet1.json",
+    "_content/drive/folder/Folder_Child.gsheet.card",
+  ]);
 
   // Trash the previously synced card, so the connector retains both real transient
   // hashes and a durable tombstone. It must neither sync nor rediscover the child.
@@ -412,20 +471,14 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
   const retainedState: { files?: Record<string, { contentHashes?: Record<string, string> }> } = JSON.parse(
     await box.read("_bookkeeping/connectors/google-drive.state.json"),
   );
-  t.check(
-    {
-      getFileCalls: calls.getFile,
-      created: trashed.created.length,
-      liveCardExists: (await box.list()).includes(liveCard),
-      retainedHash: retainedState.files?.[fixture.file.id]?.contentHashes?.["Sheet1.json"] !== undefined,
-    },
-    {
-    getFileCalls: 1,
-    created: 0,
-    liveCardExists: false,
-    retainedHash: true,
-  },
-  );
+  t.check(calls.getFile, 1);
+  t.check(trashed, { success: true, created: [], updated: ["_content/drive/folder/Folder.gfolder.card"] });
+  t.check((await box.list()).split("\n").filter((f) => f.startsWith("_content/drive/")), [
+    "_content/drive/.gitkeep",
+    "_content/drive/folder",
+    "_content/drive/folder/Folder.gfolder.card",
+  ]);
+  t.check(retainedState.files?.[fixture.file.id]?.contentHashes, { "Sheet1.json": "9727f29f923354cc" });
 
   // Hard-deleting the complete tombstone allows the still-mounted folder to
   // recreate both the card and its attachment data, despite retained transient
@@ -437,18 +490,21 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
   }
   calls.getFile = 0;
   const rediscovered = await connector.sync();
-  t.check(
-    {
-      getFileCalls: calls.getFile,
-      createdCard: rediscovered.created.includes(liveCard),
-      createdAttachment: rediscovered.created.includes(liveSheet),
-      attachmentExists: (await box.list()).includes(liveSheet),
-    },
-    {
-    getFileCalls: 2,
-    createdCard: true,
-    createdAttachment: true,
-    attachmentExists: true,
-  },
-  );
+  t.check(calls.getFile, 2);
+  t.check(rediscovered, {
+    success: true,
+    created: [
+      "_content/drive/folder/Folder_Child.attach/Sheet1.json",
+      "_content/drive/folder/Folder_Child.gsheet.card",
+    ],
+    updated: ["_content/drive/folder/Folder.gfolder.card"],
+  });
+  t.check((await box.list()).split("\n").filter((f) => f.startsWith("_content/drive/")), [
+    "_content/drive/.gitkeep",
+    "_content/drive/folder",
+    "_content/drive/folder/Folder.gfolder.card",
+    "_content/drive/folder/Folder_Child.attach",
+    "_content/drive/folder/Folder_Child.attach/Sheet1.json",
+    "_content/drive/folder/Folder_Child.gsheet.card",
+  ]);
 });

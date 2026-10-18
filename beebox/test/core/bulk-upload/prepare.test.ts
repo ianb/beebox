@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { containing, isoDate } from "agent-doctest/check";
 import { execFileSync } from "node:child_process";
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -115,44 +116,34 @@ void test("Two registered items, both uploaded.", async (t) => {
 
   // The card carries the batch summary: not yet `delivered`, the counts, total bytes, and
   // a received list with server-computed sizes and client-claimed mimetypes:
-
-  // doctest:L108
   const card = await box.read(batch.cardRelPath);
-  t.check(
-    {
-      delivered: card.includes("delivered"),
-      batchId: card.includes(`batch-id: ${batch.batchSlug}`),
-      totalBytes: batch.totalBytes,
-      body: splitCardContent(card).body.trim(),
-    },
-    {
-    delivered: false,
-    batchId: true,
-    totalBytes: 11,
-    body: "2 files uploaded (11 B).",
-  },
-  );
+  t.checkText(card, `---
+batch-id: ${batch.batchSlug}
+time:
+  start: «date»
+  end: 2026-07-27T14:00:05.000Z
+counts:
+  registered: 2
+  received: 2
+  missing: 0
+  failed: 0
+total-bytes: 11
+received:
+  - name: report.pdf
+    size: 6
+    mimetype: application/pdf
+  - name: photo.png
+    size: 5
+    mimetype: image/png
+---
+2 files uploaded (11 B).`);
 
-  // The card's `received` list inventories both blobs with a size each, and no
-  // `manifest.json` is written: git-annex records the content hash itself, so a
-  // hand-maintained inventory beside it was a second record of the same fact.
-
-  // doctest:L123
-  t.check(
-    {
-      names: ["photo.png", "report.pdf"].filter((n) => card.includes(n)).toSorted(),
-      reportSize: card.includes("size: 6"),
-      noManifest: !(await box.list(batch.attachRelDir)).includes("manifest.json"),
-    },
-    {
-    names: [
-      "photo.png",
-      "report.pdf",
-    ],
-    reportSize: true,
-    noManifest: true,
-  },
-  );
+  // The attach scope holds both blobs, and no `manifest.json` is written:
+  // git-annex records the content hash itself, so a hand-maintained inventory
+  // beside it was a second record of the same fact.
+  t.checkText(await box.list(batch.attachRelDir), `${batch.attachRelDir}/.gitattributes
+${batch.attachRelDir}/photo.png
+${batch.attachRelDir}/report.pdf`);
 
   // The card **and the blobs** are committed, with the
   // `Created-By: bulk-upload` trailer.
@@ -165,31 +156,43 @@ void test("Two registered items, both uploaded.", async (t) => {
   // repository, and the staging copy is cleaned up after delivery. The batch-local
   // `.gitattributes` routes the blobs into the annex; the assertion below is what
   // proves they were actually handed to git at all.
-
-  // doctest:L144
-  const subjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
-  const tracked = trackedFiles(box.root);
-  t.check(
-    {
-      committed: subjects.includes(`Upload batch: ${batch.batchSlug}`),
-      trailer: execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().includes("bulk-upload"),
-      cardTracked: tracked.includes(batch.cardRelPath),
-      blobTracked: tracked.some((f) => f.endsWith("report.pdf")),
-      blobOnDisk: await pathExists(box.path(`${batch.attachRelDir}/report.pdf`)),
-    },
-    {
-    committed: true,
-    trailer: true,
-    cardTracked: true,
-    blobTracked: true,
-    blobOnDisk: true,
-  },
-  );
+  t.check(execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n"), [
+    `Upload batch: ${batch.batchSlug}`,
+    "init",
+  ]);
+  t.check(execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString(), "bulk-upload\n\n\n");
+  // The box scaffold tracks dozens of files; the batch's card and blobs are the contract.
+  t.check(trackedFiles(box.root), containing([
+    batch.cardRelPath,
+    `${batch.attachRelDir}/.gitattributes`,
+    `${batch.attachRelDir}/photo.png`,
+    `${batch.attachRelDir}/report.pdf`,
+  ]));
+  t.check(await pathExists(box.path(`${batch.attachRelDir}/report.pdf`)), true);
 
   // Staging is retained (not deleted at prepare time):
 
   // doctest:L159
-  await t.checkText((await readStagingSession({ boxRoot: box.root, id })) !== null, "true");
+  t.check(await readStagingSession({ boxRoot: box.root, id }), {
+    id,
+    createdAt: isoDate(),
+    lastActivityAt: isoDate(),
+    targetSessionId: null,
+    createdBy: null,
+    kind: "bulk",
+    state: "open",
+    segments: [],
+    photos: [],
+    files: [
+      { filename: "staged-0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "report.pdf", mimeType: "application/pdf", itemId: "a" },
+      { filename: "staged-1.bin", uploadedAt: "2026-07-27T14:00:05.000Z", originalName: "photo.png", mimeType: "image/png", itemId: "b" },
+    ],
+    expectedItems: [
+      { id: "a", name: "report.pdf", size: 6, mimetype: "application/pdf" },
+      { id: "b", name: "photo.png", size: 5, mimetype: "image/png" },
+    ],
+    totalBytes: 11,
+  });
 });
 
 // ## Where a batch lands: the chat's context dir, `_content/` at the root scope
@@ -218,8 +221,10 @@ void test("A chat scoped to a landmark lands its batch under that landmark's dir
   assert.ok(atRoot);
   const scoped = await prepareBulkBatch({ boxRoot: box.root, id: scopedId, contextDir: "_content/projects/garden" });
   assert.ok(scoped);
-  await t.checkText([atRoot.cardRelPath, scoped.cardRelPath].map((p) => p.replaceAll(atRoot.batchSlug, "<slug>").replaceAll(scoped.batchSlug, "<slug>")).join("\n"), `_content/tmp-upload/<slug>/<slug>.upload-batch.card
-_content/projects/garden/tmp-upload/<slug>/<slug>.upload-batch.card`);
+  t.check([atRoot.cardRelPath, scoped.cardRelPath], [
+    `_content/tmp-upload/${atRoot.batchSlug}/${atRoot.batchSlug}.upload-batch.card`,
+    `_content/projects/garden/tmp-upload/${scoped.batchSlug}/${scoped.batchSlug}.upload-batch.card`,
+  ]);
 
   // The card is named after the batch, so its attach scope is the one every
   // attach-aware tool derives from the card (`<basename>.attach`). `bbx rm` and
@@ -227,10 +232,8 @@ _content/projects/garden/tmp-upload/<slug>/<slug>.upload-batch.card`);
   // `Batch.upload-batch.attach`, matched no tool and was left behind.
 
   // doctest:L196
-  t.check(({ scope: atRoot.attachRelDir.replaceAll(atRoot.batchSlug, "<slug>"), derived: attachDirFor(atRoot.cardRelPath).replaceAll(atRoot.batchSlug, "<slug>") }), {
-    scope: "_content/tmp-upload/<slug>/<slug>.attach",
-    derived: "_content/tmp-upload/<slug>/<slug>.attach",
-  });
+  t.check(atRoot.attachRelDir, `_content/tmp-upload/${atRoot.batchSlug}/${atRoot.batchSlug}.attach`);
+  t.check(attachDirFor(atRoot.cardRelPath), `_content/tmp-upload/${atRoot.batchSlug}/${atRoot.batchSlug}.attach`);
 
   // Neither batch leaves anything at the box root for the root check to refuse:
 
@@ -334,14 +337,8 @@ void test("The uploader's failed list is its claim; the staged bytes are the fac
 
   // doctest:L279
   const fm = parseUploadBatch(card)?.frontmatter;
-  t.check(({ failed: fm?.failed?.map((f) => f.name), received: fm?.received?.map((r) => r.name) }), {
-    failed: [
-      "photo-010.jpg",
-    ],
-    received: [
-      "photo-009.jpg",
-    ],
-  });
+  t.check(fm?.failed, [{ name: "photo-010.jpg", reason: "The request timed out" }]);
+  t.check(fm?.received, [{ name: "photo-009.jpg", size: 4, mimetype: "image/jpeg" }]);
 });
 
 // ## Missing items are computed from the registry, failed from the caller
@@ -386,20 +383,28 @@ void test("A registered item whose bytes never arrived is missing; an item the c
 
   // doctest:L318
   const card = await box.read(batch.cardRelPath);
-  t.check(
-    {
-      missing: card.includes("never.pdf"),
-      failedName: card.includes("broke.mov"),
-      failedReason: card.includes("upload timed out"),
-      body: splitCardContent(card).body.trim(),
-    },
-    {
-    missing: true,
-    failedName: true,
-    failedReason: true,
-    body: "1 file uploaded (4 B); 1 missing; 1 failed.",
-  },
-  );
+  t.checkText(card, `---
+batch-id: ${batch.batchSlug}
+time:
+  start: «date»
+  end: 2026-07-27T14:00:00.000Z
+counts:
+  registered: 3
+  received: 1
+  missing: 1
+  failed: 1
+total-bytes: 4
+received:
+  - name: arrived.pdf
+    size: 4
+    mimetype: application/pdf
+missing:
+  - name: never.pdf
+failed:
+  - name: broke.mov
+    reason: upload timed out
+---
+1 file uploaded (4 B); 1 missing; 1 failed.`);
 });
 
 // ## Filename collisions dedupe with a numeric suffix (extension preserved)
@@ -436,16 +441,27 @@ void test("Two uploads with the same original name land as distinct files; the c
 
   // doctest:L356
   const card = await box.read(batch.cardRelPath);
-  t.check(
-    {
-      received: batch.counts.received,
-      bothNamed: card.includes("IMG_1234.jpg") && card.includes("IMG_1234-2.jpg"),
-    },
-    {
-    received: 2,
-    bothNamed: true,
-  },
-  );
+  t.checkText(card, `---
+batch-id: ${batch.batchSlug}
+time:
+  start: «date»
+  end: 2026-07-27T14:00:01.000Z
+counts:
+  registered: 2
+  received: 2
+  missing: 0
+  failed: 0
+total-bytes: 10
+received:
+  - name: IMG_1234.jpg
+    size: 4
+    mimetype: image/jpeg
+  - name: IMG_1234-2.jpg
+    size: 6
+    mimetype: image/jpeg
+---
+2 files uploaded (10 B).`);
+  t.check(batch.counts, { registered: 2, received: 2, missing: 0, failed: 0 });
 
   // An unsafe original name is sanitized (path parts stripped, spaces/odd chars
   // collapsed), keeping the extension:
@@ -487,28 +503,16 @@ void test("A crash after prepare committed leaves the batch in place; re-running
   const first = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(first);
   const cardAfterFirst = await box.read(first.cardRelPath);
-  const commitsAfterFirst = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n").filter((s) => s.startsWith("Upload batch:")).length;
-  t.check(commitsAfterFirst, 1);
+  const uploadSubjects = () => execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n").filter((s) => s.startsWith("Upload batch:"));
+  t.check(uploadSubjects(), [`Upload batch: ${first.batchSlug}`]);
 
   // Re-running produces the same slug, an unchanged card, and still one commit:
-
-  // doctest:L407
   const second = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(second);
-  t.check(
-    {
-      sameSlug: second.batchSlug === first.batchSlug,
-      sameCounts: JSON.stringify(second.counts) === JSON.stringify(first.counts),
-      cardUnchanged: (await box.read(second.cardRelPath)) === cardAfterFirst,
-      commits: execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n").filter((s) => s.startsWith("Upload batch:")).length,
-    },
-    {
-    sameSlug: true,
-    sameCounts: true,
-    cardUnchanged: true,
-    commits: 1,
-  },
-  );
+  t.check(second.batchSlug, first.batchSlug);
+  t.check(second.counts, first.counts);
+  t.check(await box.read(second.cardRelPath), cardAfterFirst);
+  t.check(uploadSubjects(), [`Upload batch: ${first.batchSlug}`]);
 });
 
 // ## A bulk session is not a capture session
@@ -562,16 +566,8 @@ void test("prepareBulkBatch refuses a capture (non-bulk) session, and the captur
     sessions: [{ ...capture, state: "open", files: nonEmpty }, { ...bulk, state: "open", files: nonEmpty }],
     targetSessionId: "chat-1", clientSessionId: null, requestingUser: null,
   }).map((r) => r.id);
-  t.check(
-    {
-      pendingOnlyCapture: pending.length === 1 && pending[0] === capture.id,
-      resumableOnlyCapture: resumable.length === 1 && resumable[0] === capture.id,
-    },
-    {
-    pendingOnlyCapture: true,
-    resumableOnlyCapture: true,
-  },
-  );
+  t.check(pending, [capture.id]);
+  t.check(resumable, [capture.id]);
 });
 
 // ## The batch's introduction lands in the card and survives a re-run
@@ -613,7 +609,21 @@ void test("The boxholder's composer text is recorded on the sealed session, and 
 
   // doctest:L514
   const card = await readFile(join(box.root, prepared.cardRelPath), "utf-8");
-  await t.checkText(splitCardContent(card).frontmatterText.includes("note: Receipts from the Tokyo trip"), "true");
+  t.checkText(splitCardContent(card).frontmatterText, `batch-id: ${prepared.batchSlug}
+time:
+  start: «date»
+  end: 2026-07-30T19:12:00.000Z
+counts:
+  registered: 1
+  received: 1
+  missing: 0
+  failed: 0
+total-bytes: 4
+received:
+  - name: IMG_0001.jpg
+    size: 4
+    mimetype: image/jpeg
+note: Receipts from the Tokyo trip`);
 
   // A re-run is idempotent: the card already exists, so the summary — including the
   // note — is recovered from it rather than rebuilt, and the `<upload>` message a
@@ -622,10 +632,8 @@ void test("The boxholder's composer text is recorded on the sealed session, and 
   // doctest:L524
   const rerun = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(rerun);
-  t.check({ note: rerun.note, sameCard: rerun.cardRelPath === prepared.cardRelPath }, {
-    note: "Receipts from the Tokyo trip",
-    sameCard: true,
-  });
+  t.check(rerun.note, "Receipts from the Tokyo trip");
+  t.check(rerun.cardRelPath, prepared.cardRelPath);
 
   // A batch with no introduction reports none — the case the agent's "ask first"
   // duty exists for:

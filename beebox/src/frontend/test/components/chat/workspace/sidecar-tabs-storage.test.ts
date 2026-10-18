@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import { serializeSidecarState, parseSidecarState, sidecarTabsKey, selectSidecarSession, persistSidecarTransition, loadSidecarState, saveSidecarState } from "../../../../src/components/chat/workspace/sidecar-tabs-storage.js";
 
 function target(path: string) {
@@ -184,6 +185,7 @@ void test("Explicit conversation changes restore; assignment only renames", asyn
   const provisional = { storageKey: "start-one", logicalKey: "logical-one", panel: strip };
   const assigned = selectSidecarSession(provisional, { storageKey: "assigned-one", logicalKey: "logical-one" });
   persistSidecarTransition(provisional, assigned);
+  t.check(assigned.panel, is(strip));
   t.check({ panel: assigned.panel, oldStored: loadSidecarState("start-one"), newStored: loadSidecarState("assigned-one") }, {
     panel: strip,
     oldStored: null,

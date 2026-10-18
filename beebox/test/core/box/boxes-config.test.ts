@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { instanceOf, str } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadBoxesConfig, BoxesConfigParseError } from "../../../src/core/box/boxes-config.js";
@@ -34,7 +35,6 @@ void test("Missing file: treated as an empty manifest, no throw", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L31
   const box = await makeTmpBox();
   const configPath = path.join(box.root, "boxes.json");
   const missing = await tryLoad(configPath);
@@ -44,7 +44,6 @@ void test("Missing file: treated as an empty manifest, no throw", async (t) => {
 
   // ## A valid manifest loads
 
-  // doctest:L41
   await fs.writeFile(configPath, JSON.stringify({ boxes: ["/path/to/box-a", "/path/to/box-b"] }));
   const valid = await tryLoad(configPath);
   t.check(valid, {
@@ -56,24 +55,22 @@ void test("Missing file: treated as an empty manifest, no throw", async (t) => {
 
   // ## Invalid JSON is a loud, named error — not a bare SyntaxError
 
-  // doctest:L50
   await fs.writeFile(configPath, "{ not valid json");
   const badJson = await tryLoad(configPath);
-  await t.checkText(badJson instanceof BoxesConfigParseError, "true");
+  t.check(badJson, instanceOf(BoxesConfigParseError));
 
-  // doctest:L55
-  await t.checkText(badJson instanceof BoxesConfigParseError && badJson.configPath === configPath, "true");
+  t.check(badJson, {
+    name: "BoxesConfigParseError",
+    message: str`Box manifest at ${configPath} is invalid: Expected property name or '}' in JSON at position 2 (line 1 column 3). Fix or delete the file by hand.`,
+    configPath,
+  });
 
-  // doctest:L58
-  await t.checkText(badJson instanceof BoxesConfigParseError && badJson.message.includes(configPath), "true");
 
   // ## Valid JSON that doesn't match the schema (wrong shape, unknown key) also throws
 
-  // doctest:L65
   await fs.writeFile(configPath, JSON.stringify({ boxes: "not-an-array" }));
-  await t.checkText((await tryLoad(configPath)) instanceof BoxesConfigParseError, "true");
+  t.check(await tryLoad(configPath), instanceOf(BoxesConfigParseError));
 
-  // doctest:L69
   await fs.writeFile(configPath, JSON.stringify({ boxes: [], extra: true }));
-  await t.checkText((await tryLoad(configPath)) instanceof BoxesConfigParseError, "true");
+  t.check(await tryLoad(configPath), instanceOf(BoxesConfigParseError));
 });

@@ -175,7 +175,7 @@ void test("Without --per-line, all of stdin is one state:", async (t) => {
   const trip = "_config/judgments/field-trip.judgment.card";
   const cat = `=== _content/inbox/trip.email.card\n${email("Spring field trip", "The field trip is on May 3.")}`;
   const echoed = await judge({ box, cardPath: trip, options: { min: ["trip=0.8"], echo: true }, run: { stdin: cat } });
-  await t.checkText(echoed === `${cat.replace(/\n$/, "")}\nexit 0`, "true");
+  await t.checkText(echoed, `${cat.replace(/\n$/, "")}\nexit 0`);
 
   // When nothing passed, `--or-skip` writes `{ "reason": "no-pass" }` to
   // `$BBX_DEFER_FILE` and exits 75, which a schedule records as deferred.

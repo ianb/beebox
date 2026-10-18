@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -41,13 +42,25 @@ void test("Fresh box: installs `_content/plate.todo-view.card` with `glob: \"**\
 
   // doctest:L36
   const content = await fs.readFile(path.join(box, "_content/plate.todo-view.card"), "utf-8");
-  await t.checkText(content.includes('glob: "**"'), "true");
+  t.check(content, `---
+title: The Plate
+glob: "**"
+---
+`);
 
   // doctest:L42
   const versions = await readVersions(box);
-  t.check(Object.keys(versions), [
-    "_content/plate.todo-view.card",
-  ]);
+  t.check(versions, {
+    "_content/plate.todo-view.card": {
+      sha256: "9e14e97104db92412879a91a7b9931affc6bd827cf019f2c297d87a1d253b71b",
+      "installed-at": isoDate(),
+      stock: `---
+title: The Plate
+glob: "**"
+---
+`,
+    },
+  });
 
   // ## Re-running on an already-installed, untouched box is a no-op (`installed: false`)
 

@@ -122,14 +122,9 @@ void test("Runs from `boxRoot/src/tricks`, with `BBX_BOX_ROOT` set to the box ro
 
   // doctest:L60
   const r = await runTrickCli(box.root, ["probe"]);
-  t.check(r.code, 0);
-
-  // doctest:L66
   const expectedCwd = await realpath(box.path("src/tricks"));
-  await t.checkText(r.stdout.includes("cwd:" + expectedCwd), "true");
-
-  // doctest:L70
-  await t.checkText(r.stdout.includes("boxRoot:" + (await realpath(box.root))), "true");
+  const expectedRoot = await realpath(box.root);
+  t.check(r, { code: 0, stdout: `cwd:${expectedCwd}\nboxRoot:${expectedRoot}\ntrickName:probe\n`, stderr: "" });
 });
 
 // ## Secret declarations can be checked without running a trick
@@ -176,14 +171,25 @@ void test("Listing and not-found messages name `src/tricks/scripts/...`", async 
 
   // doctest:L104
   const empty = await runTrickCli(box.root, []);
-  await t.checkText(empty.stdout.includes("Create one at src/tricks/scripts/<name>/index.ts"), "true");
+  t.check(empty, {
+    code: 0,
+    stdout: `No tricks found.
+
+Create one at src/tricks/scripts/<name>/index.ts
+See node_modules/beebox/box-docs/tricks.md for details.
+`,
+    stderr: "",
+  });
 
   // doctest:L110
   const missing = await runTrickCli(box.root, ["nope"]);
-  t.check(missing.code, 1);
-
-  // doctest:L114
-  await t.checkText(missing.stderr.includes("Expected: src/tricks/scripts/nope/index.ts"), "true");
+  t.check(missing, {
+    code: 1,
+    stdout: "",
+    stderr: `Trick not found: nope
+Expected: src/tricks/scripts/nope/index.ts
+`,
+  });
 });
 
 void test("A successful run commits only the paths the trick changed", async (t) => {
@@ -278,7 +284,13 @@ writeFileSync(join(process.env.BBX_BOX_ROOT, "out/small.txt"), "small\\n");
   ]);
 
   // doctest:L247
-  await t.checkText(r.stderr.includes("out/big.dat (11.0MB)"), "true");
+  t.check(r, {
+    code: 0,
+    stdout: `Committed 2 path(s) changed by trick "big".
+`,
+    stderr: `[git] Housekeeping skipped staging 1 file(s) over 10MB (left uncommitted — LFS-track, gitignore, or remove): out/big.dat (11.0MB)
+`,
+  });
 
   // doctest:L250
   t.check(dirty(box), [
@@ -307,7 +319,7 @@ void test("Output that git ignores commits nothing", async (t) => {
   t.check(r.code, 0);
 
   // doctest:L270
-  await t.checkText(git(box, ["rev-parse", "HEAD"]) === headBefore, "true");
+  t.check(git(box, ["rev-parse", "HEAD"]), headBefore);
 
   // doctest:L273
   t.check(dirty(box), [
@@ -337,7 +349,7 @@ void test("`--no-commit` and a failed run leave the tree as the trick left it", 
   t.check(failed.code, 3);
 
   // doctest:L297
-  await t.checkText(git(box, ["rev-parse", "HEAD"]) === headBefore, "true");
+  t.check(git(box, ["rev-parse", "HEAD"]), headBefore);
 
   // doctest:L300
   t.check(dirty(box), [

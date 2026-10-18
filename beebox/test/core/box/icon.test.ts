@@ -10,6 +10,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { renderBoxIcon } from "../../../src/core/box/icon.js";
+import { not } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 
@@ -23,7 +24,7 @@ async function describe(png: Buffer) {
   for (let i = 0; i < data.length; i += info.channels) {
     if (data[i] !== data[i + 1] || data[i + 1] !== data[i + 2]) coloured++;
   }
-  return `${info.width}x${info.height} ${coloured > 0 ? "colour" : "monochrome"}`;
+  return { width: info.width, height: info.height, colour: coloured > 0 };
 }
 
 // ## An emoji symbol renders, in colour, at the size asked for
@@ -31,18 +32,16 @@ async function describe(png: Buffer) {
 // Colour is the point: rendering the emoji as SVG *text* produced monochrome line
 // art, and nothing at all on a server with no emoji font.
 void test("Colour is the point:", async (t) => {
-  // doctest:L35
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Kitchen\n---\n");
   const icon = await render(box);
   assert.ok(icon);
-  t.check(await describe(icon.png), "192x192 colour");
+  t.check(await describe(icon.png), { width: 192, height: 192, colour: true });
 
   // The ETag covers the source and the size, so two sizes are not the same entity
   // and a card edit changes it.
 
-  // doctest:L47
-  await t.checkText((await render(box, 192))?.etag === (await render(box, 180))?.etag, "false");
+  t.check((await render(box, 192))?.etag, not((await render(box, 180))?.etag));
 });
 
 // ## An image symbol does not render here
@@ -51,7 +50,6 @@ void test("Colour is the point:", async (t) => {
 // which is what such a box showed before any of this existed — handing the file
 // to an unauthenticated caller to improve on that is not a trade worth making.
 void test("It is the box's own file.", async (t) => {
-  // doctest:L58
   const box = await makeTmpBox();
   await box.write("_content/art/pan.png", "not really a png, and never read");
   await box.write("_content/Box.landmark.card", "---\nsymbol:\n  src: /_content/art/pan.png\nnavigation:\n  label: Kitchen\n---\n");
@@ -63,7 +61,6 @@ void test("It is the box's own file.", async (t) => {
 // A word, a letter, or an emoji newer than the bundled set — the caller falls
 // back to the app's own icon rather than failing the request.
 void test("A word, a letter, or an emoji newer than the bundled set — the caller falls b...", async (t) => {
-  // doctest:L71
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: Kitchen\nnavigation:\n  label: Kitchen\n---\n");
   t.check([await render(box), await render(await makeTmpBox())], [

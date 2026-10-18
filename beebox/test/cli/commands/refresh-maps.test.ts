@@ -8,7 +8,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { refreshMapsCommand } from "../../../src/cli/commands/refresh-maps.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { fileExists } from "../../../src/lib/file-exists.js";
@@ -25,8 +24,6 @@ async function run(args: string[]): Promise<void> {
 }
 
 void test("line 26", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -45,9 +42,9 @@ void test("line 26", async (t) => {
 
   // doctest:L35
   await run(["--brief"]);
-  print(`after --brief: saved=${await fileExists(briefPath)}`);
+  const afterBrief = await fileExists(briefPath);
   await run([]);
-  print(`after bare run: saved=${await fileExists(briefPath)}`);
-  await t.checkText(out.with(process.chdir(cwd)), `after --brief: saved=false
-after bare run: saved=true`);
+  const afterBare = await fileExists(briefPath);
+  process.chdir(cwd);
+  t.check({ afterBrief, afterBare }, { afterBrief: false, afterBare: true });
 });

@@ -6,7 +6,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import {
   parseSessionLog,
   transformContent,
@@ -30,10 +29,8 @@ const ALL = { mode: "page", offset: 0, limit: 5000 } satisfies SessionLogSlice;
 //
 // Pure path computation — encodes slashes as hyphens:
 void test("Pure path computation — encodes slashes as hyphens:", async (t) => {
-  // doctest:L33
-  const result = getSessionLogPath("/home/user/mybox", "abc-123");
-  const expected = path.join(os.homedir(), ".claude/projects/-home-user-mybox/abc-123.jsonl");
-  await t.checkText(result === expected, "true");
+  t.check(getSessionLogPath("/home/user/mybox", "abc-123"), path.join(os.homedir(), ".claude/projects/-home-user-mybox/abc-123.jsonl"));
+
 });
 
 // ## containedSessionCwd
@@ -45,7 +42,7 @@ void test("Pure path computation — encodes slashes as hyphens:", async (t) => 
 // to. An ordinary binding resolves as you would expect:
 void test("A landmark-bound chat runs the SDK with its cwd set to a box subdirectory, an...", async (t) => {
   // doctest:L48
-  await t.checkText(containedSessionCwd("/tmp/test-box", "_content/recipes") === path.join("/tmp/test-box", "_content/recipes"), "true");
+  t.check(containedSessionCwd("/tmp/test-box", "_content/recipes"), path.join("/tmp/test-box", "_content/recipes"));
 });
 
 // No binding is the box root:
@@ -76,8 +73,6 @@ void test("A leading slash does not make it absolute — path.join reads it as b
 //
 // ### Empty file
 void test("Empty file", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -89,17 +84,11 @@ void test("Empty file", async (t) => {
   const box = await makeTmpBox();
   await box.write("log.jsonl", "");
   const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
-  print(`entries: ${result.entries.length}`);
-  print(`total: ${result.total}`);
-  await t.checkText(out2.with(print(`hasMore: ${result.hasMore}`)), `entries: 0
-total: 0
-hasMore: false`);
+  t.check(result, { entries: [], total: 0, hasMore: false });
 });
 
 // ### User and assistant entries
 void test("User and assistant entries", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -125,15 +114,14 @@ void test("User and assistant entries", async (t) => {
   ].join("\n");
   await box.write("log.jsonl", lines);
   const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
-  print(`total: ${result.total}`);
-  print(`e0 type: ${result.entries[0]?.type}`);
-  print(`e0 text: ${result.entries[0]?.content[0]?.text}`);
-  print(`e1 type: ${result.entries[1]?.type}`);
-  await t.checkText(out2.with(print(`e1 text: ${result.entries[1]?.content[0]?.text}`)), `total: 2
-e0 type: user
-e0 text: Hello
-e1 type: assistant
-e1 text: Hi there!`);
+  t.check(result, {
+    entries: [
+      { uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "Hello" }] },
+      { uuid: "a1", type: "assistant", timestamp: "2026-01-01T00:00:01Z", content: [{ type: "text", text: "Hi there!" }] },
+    ],
+    total: 2,
+    hasMore: false,
+  });
 });
 
 // ### Filters out tool-only user entries
@@ -165,10 +153,13 @@ void test("User entries with only toolresult blocks (no real text) are skipped:"
   ].join("\n");
   await box.write("log.jsonl", lines);
   const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
-  t.check(result.total, 1);
-
-  // doctest:L159
-  t.check(result.entries[0]?.content[0]?.text, "Real message");
+  t.check(result, {
+    entries: [
+      { uuid: "u2", type: "user", timestamp: "2026-01-01T00:00:01Z", content: [{ type: "text", text: "Real message" }] },
+    ],
+    total: 1,
+    hasMore: false,
+  });
 });
 
 // ### Filters out non-user/assistant types
@@ -196,13 +187,17 @@ void test("System and result entries are skipped:", async (t) => {
   ].join("\n");
   await box.write("log.jsonl", lines);
   const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
-  t.check(result.total, 1);
+  t.check(result, {
+    entries: [
+      { uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "Only real one" }] },
+    ],
+    total: 1,
+    hasMore: false,
+  });
 });
 
 // ### Pagination
 void test("Pagination", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -223,43 +218,34 @@ void test("Pagination", async (t) => {
   }
   await box.write("log.jsonl", lines.join("\n"));
   const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: { mode: "page", offset: 2, limit: 2 } });
-  print(`entries: ${result.entries.length}`);
-  print(`total: ${result.total}`);
-  print(`hasMore: ${result.hasMore}`);
-  await t.checkText(out2.with(print(`first: ${result.entries[0]?.content[0]?.text}`)), `entries: 2
-total: 5
-hasMore: true
-first: Message 2`);
+  t.check(result, {
+    entries: [
+      { uuid: "u2", type: "user", timestamp: "2026-01-01T00:02:00Z", content: [{ type: "text", text: "Message 2" }] },
+      { uuid: "u3", type: "user", timestamp: "2026-01-01T00:03:00Z", content: [{ type: "text", text: "Message 3" }] },
+    ],
+    total: 5,
+    hasMore: true,
+  });
 });
 
 // ## transformContent
 //
 // ### Text block
 void test("Text block", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L228
   const result = transformContent([{ type: "text", text: "hello world" }]);
-  print(`type: ${result[0]?.type}`);
-  await t.checkText(out2.with(print(`text: ${result[0]?.text}`)), `type: text
-text: hello world`);
+  t.check(result, [{ type: "text", text: "hello world" }]);
 });
 
 // ### String content (legacy format)
 void test("String content (legacy format)", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L239
   const result = transformContent("plain string");
-  print(`type: ${result[0]?.type}`);
-  await t.checkText(out2.with(print(`text: ${result[0]?.text}`)), `type: text
-text: plain string`);
+  t.check(result, [{ type: "text", text: "plain string" }]);
 });
 
 // ### Tool use block
 void test("Tool use block", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L250
   const result = transformContent([{
     type: "tool_use",
@@ -267,59 +253,39 @@ void test("Tool use block", async (t) => {
     id: "tool_1",
     input: { file_path: "/tmp/test.ts" },
   }]);
-  print(`type: ${result[0]?.type}`);
-  print(`toolName: ${result[0]?.toolName}`);
-  print(`toolId: ${result[0]?.toolId}`);
-  await t.checkText(out2.with(print(`inputSummary: ${result[0]?.inputSummary}`)), `type: tool_use
-toolName: Read
-toolId: tool_1
-inputSummary: /tmp/test.ts`);
+  t.check(result, [{ type: "tool_use", toolName: "Read", toolId: "tool_1", input: { file_path: "/tmp/test.ts" }, inputSummary: "/tmp/test.ts" }]);
 });
 
 // ### Tool result block
 void test("Tool result block", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L270
   const result = transformContent([{
     type: "tool_result",
     tool_use_id: "tool_1",
     content: "file contents here",
   }]);
-  print(`type: ${result[0]?.type}`);
-  print(`toolUseId: ${result[0]?.toolUseId}`);
-  await t.checkText(out2.with(print(`resultSummary: ${result[0]?.resultSummary}`)), `type: tool_result
-toolUseId: tool_1
-resultSummary: file contents here`);
+  t.check(result, [{ type: "tool_result", toolUseId: "tool_1", resultSummary: "file contents here" }]);
 });
 
 // ### Thinking block
 void test("Thinking block", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L287
   const result = transformContent([{ type: "thinking", thinking: "Let me consider..." }]);
-  print(`type: ${result[0]?.type}`);
-  await t.checkText(out2.with(print(`text: ${result[0]?.text}`)), `type: thinking
-text: Let me consider...`);
+  t.check(result, [{ type: "thinking", text: "Let me consider..." }]);
 });
 
 // ### Redacted thinking
 void test("Redacted thinking", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L298
   const result = transformContent([{ type: "redacted_thinking" }]);
-  print(`type: ${result[0]?.type}`);
-  await t.checkText(out2.with(print(`text: ${result[0]?.text}`)), `type: thinking
-text: [redacted]`);
+  t.check(result, [{ type: "thinking", text: "[redacted]" }]);
 });
 
 // ### Empty/non-array content
 void test("Empty/non-array content", async (t) => {
   // doctest:L309
   const result = transformContent(null);
-  await t.checkText(result.length, "0");
+  t.check(result, []);
 });
 
 // ### Image block (base64)
@@ -331,11 +297,11 @@ void test("User-pasted images arrive as image content blocks with a base64 sourc
   const result = transformContent([
     { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } }
   ]);
-  t.check(result[0], {
+  t.check(result, [{
     type: "image",
     mediaType: "image/png",
     dataBase64: "AAAA",
-  });
+  }]);
 });
 
 // ### Image block (url)
@@ -346,10 +312,10 @@ void test("Image blocks using a URL source are preserved as imageUrl:", async (t
   const result = transformContent([
     { type: "image", source: { type: "url", url: "https://example.com/x.png" } }
   ]);
-  t.check(result[0], {
+  t.check(result, [{
     type: "image",
     imageUrl: "https://example.com/x.png",
-  });
+  }]);
 });
 
 // ### User turn with only images is dropped as plumbing
@@ -359,8 +325,6 @@ void test("Image blocks using a URL source are preserved as imageUrl:", async (t
 // plumbing and filters them out (the surrounding user prose, if any,
 // is what carries the real message).
 void test("Claude Code emits user-role turns containing only image blocks when feeding P...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L347
   const { writeFile } = await import("node:fs/promises");
   const { mkdtempSync } = await import("node:fs");
@@ -381,11 +345,21 @@ void test("Claude Code emits user-role turns containing only image blocks when f
   ];
   await writeFile(logPath, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
   const result = await parseSessionLog({ logPath, slice: ALL });
-  print(`entries: ${result.entries.length}`);
-  print(`uuid: ${result.entries[0]?.uuid}`);
-  await t.checkText(out2.with(print(`blocks: ${result.entries[0]?.content.map((b) => b.type).join(",")}`)), `entries: 1
-uuid: u2
-blocks: text,image`);
+  t.check(result, {
+    entries: [
+      {
+        uuid: "u2",
+        type: "user",
+        timestamp: "t2",
+        content: [
+          { type: "text", text: "<typed>look</typed>" },
+          { type: "image", mediaType: "image/png", dataBase64: "PASTED" },
+        ],
+      },
+    ],
+    total: 1,
+    hasMore: false,
+  });
 });
 
 // ## summarizeToolInput
@@ -415,15 +389,13 @@ void test("summarizeToolResult", async (t) => {
   t.check(summarizeToolResult("simple string"), "simple string");
 
   // doctest:L403
-  await t.checkText(summarizeToolResult(["line1", "line2"]), `line1
-line2`);
+  t.check(summarizeToolResult(["line1", "line2"]), "line1\nline2");
 });
 
 // Array with text objects:
 void test("Array with text objects:", async (t) => {
   // doctest:L412
-  await t.checkText(summarizeToolResult([{ text: "first" }, { text: "second" }]), `first
-second`);
+  t.check(summarizeToolResult([{ text: "first" }, { text: "second" }]), "first\nsecond");
 });
 
 // Non-string/non-array returns empty:

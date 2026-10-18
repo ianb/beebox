@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import {
@@ -99,6 +100,61 @@ async function captureLogs(fn: () => Promise<void>): Promise<string> {
   return lines.join("\n");
 }
 
+const mountedRecipes = {
+  cardPath: "_content/drive/recipes/Recipes.gfolder.card",
+  name: "Recipes",
+  created: [
+    "_content/drive/recipes/Budget_2026.attach/Sheet1.json",
+    "_content/drive/recipes/Budget_2026.gsheet.card",
+    "_content/drive/recipes/Scanpdf.glink.card",
+  ],
+  updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+  pushed: [],
+  failures: [],
+  notes: [],
+  scheduleHint: null,
+};
+
+/** The `bbx drive status` report for the mounted recipes folder, with an optional extra line on the folder. */
+function statusReport(extra: string): string {
+  return `3 Drive card(s):
+
+  _content/drive/recipes/Budget_2026.gsheet.card
+    Kind: file (synced two-way)
+    Title: Budget 2026
+    Drive ID: sheet-1
+    Modified on Drive: «date»
+    Tabs: Sheet1
+
+  _content/drive/recipes/Recipes.gfolder.card
+    Kind: folder (mirrored)
+    Title: Recipes
+    Drive ID: folder-1
+    Last synced: «date»${extra}
+
+  _content/drive/recipes/Scanpdf.glink.card
+    Kind: link (pointer, nothing copied)
+    Title: Scan.pdf
+    Drive ID: pdf-1`;
+}
+
+const recipesMountCard = `---
+drive:
+  id: folder-1
+  link: https://drive.google.com/file/d/folder-1/view
+title: Recipes
+last-sync: «date»
+---`;
+
+async function refusal(op: Promise<unknown>): Promise<string> {
+  try {
+    await op;
+    return "no refusal";
+  } catch (e) {
+    return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  }
+}
+
 // ## mount writes the card and mirrors the folder in the same breath
 //
 // A mount is not a promise for later: `mount` writes the `.gfolder.card` and runs
@@ -124,11 +180,7 @@ void test("A mount is not a promise for later:", async (t) => {
     input: "https://drive.google.com/drive/folders/folder-1",
     dir: "_content/drive/recipes",
   });
-  t.check({ cardPath: result.cardPath, name: result.name, failures: result.failures }, {
-    cardPath: "_content/drive/recipes/Recipes.gfolder.card",
-    name: "Recipes",
-    failures: [],
-  });
+  t.check(result, mountedRecipes);
 
   // doctest:L121
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
@@ -141,21 +193,20 @@ void test("A mount is not a promise for later:", async (t) => {
 
   // doctest:L128
   const card = await box.read("_content/drive/recipes/Recipes.gfolder.card");
-  t.check(
-    {
-      driveId: /\n {2}id: (\S+)/.exec(card)?.[1],
-      failed: /^error:/m.test(card),
-      hasLastSync: card.includes("last-sync:"),
-    },
-    {
-    driveId: "folder-1",
-    failed: false,
-    hasLastSync: true,
-  },
-  );
+  t.checkText(card, recipesMountCard);
 
   // doctest:L136
-  t.check(/origin: (\S+)/.exec(await box.read("_content/drive/recipes/Scanpdf.glink.card"))?.[1], "mirror");
+  t.checkText(
+    await box.read("_content/drive/recipes/Scanpdf.glink.card"),
+    `---
+drive:
+  id: pdf-1
+  link: https://drive.google.com/file/d/pdf-1/view
+  mime: application/pdf
+title: Scan.pdf
+origin: mirror
+---`,
+  );
 
   // A second mount of the same folder is refused — two cards for one Drive ID are
   // two working copies, and the connector syncs neither.
@@ -217,7 +268,7 @@ void test("mount is for membership; a Sheet has content, and content is bbx driv
   // Nothing is left behind by the refusal — no directory, no card.
 
   // doctest:L192
-  await t.checkText((await box.list()).includes("_content/drive/budget"), "false");
+  t.check((await box.list()).split("\n").filter((p) => p.startsWith("_content/drive/budget")), []);
 
   // An input with no readable Drive ID never reaches Drive at all.
 
@@ -260,17 +311,16 @@ void test("A pointer copies nothing, so it works for a PDF, and for a folder som
 
   // doctest:L231
   const card = await box.read("_content/drive/Lease.glink.card");
-  t.check(
-    {
-      origin: /origin: (\S+)/.exec(card)?.[1],
-      driveId: /\n {2}id: (\S+)/.exec(card)?.[1],
-      body: card.split("---\n")[2],
-    },
-    {
-    origin: "manual",
-    driveId: "pdf-1",
-    body: "",
-  },
+  t.checkText(
+    card,
+    `---
+drive:
+  id: pdf-1
+  link: https://drive.google.com/file/d/pdf-1/view
+  mime: application/pdf
+title: Scan.pdf
+origin: manual
+---`,
   );
 
   // A full path is taken as given, and a folder is a legitimate pointer target.
@@ -282,8 +332,9 @@ void test("A pointer copies nothing, so it works for a PDF, and for a folder som
     input: FOLDER_URL("folder-1"),
     target: "_content/drive/Recipes_folder.glink.card",
   });
-  t.check({ cardPath: folderLink.cardPath, mimeType: folderLink.mimeType }, {
+  t.check(folderLink, {
     cardPath: "_content/drive/Recipes_folder.glink.card",
+    name: "Recipes",
     mimeType: "application/vnd.google-apps.folder",
   });
 
@@ -352,11 +403,11 @@ void test("unmount takes a directory or the card, and keeps every child", async 
     dir: "_content/drive/desserts",
   });
   t.check(
-    (await unmountDriveFolder({
+    await unmountDriveFolder({
       boxRoot: box.root,
       target: "_content/drive/desserts/Desserts.gfolder.card",
-    })).trashedTo,
-    "_bookkeeping/trash/Desserts.gfolder.card",
+    }),
+    { cardPath: "_content/drive/desserts/Desserts.gfolder.card", trashedTo: "_bookkeeping/trash/Desserts.gfolder.card" },
   );
 });
 
@@ -408,26 +459,7 @@ void test("A folder mount is not a file, and a pointer is not synced.", async (t
 
   // doctest:L358
   const output = await captureLogs(() => runDriveStatus(box.root));
-  t.check(
-    {
-      count: output.includes("3 Drive card(s)"),
-      folder: output.includes("Kind: folder (mirrored)"),
-      file: output.includes("Kind: file (synced two-way)"),
-      link: output.includes("Kind: link (pointer, nothing copied)"),
-      folderName: output.includes("Title: Recipes"),
-      noError: !output.includes("Error:"),
-      folderSynced: /Last synced: 20\d\d-/.test(output),
-    },
-    {
-    count: true,
-    folder: true,
-    file: true,
-    link: true,
-    folderName: true,
-    noError: true,
-    folderSynced: true,
-  },
-  );
+  t.checkText(output, statusReport(""));
 
   // A healthy mount says nothing about children it could not account for. Move the
   // Sheet out of the Drive folder and the next pass stamps the count, which status
@@ -436,7 +468,7 @@ void test("A folder mount is not a file, and a pointer is not synced.", async (t
 
   // doctest:L377
   const quiet = await captureLogs(() => runDriveStatus(box.root));
-  await t.checkText(quiet.includes("Not in folder:"), "false");
+  t.checkText(quiet, statusReport(""));
 
   // doctest:L381
   const sheet = drive.files.find((f) => f.id === "sheet-1");
@@ -449,7 +481,7 @@ void test("A folder mount is not a file, and a pointer is not synced.", async (t
     });
   });
   const noted = await captureLogs(() => runDriveStatus(box.root));
-  await t.checkText(noted.includes("Not in folder: 1 (still syncing on their own)"), "true");
+  t.checkText(noted, statusReport("\n    Not in folder: 1 (still syncing on their own)"));
 });
 
 // ## a legacy `folders` config converts itself into mount cards
@@ -476,20 +508,15 @@ void test("A box set up before folder mounts were cards still carries the array.
   // doctest:L413
   const connector = createGoogleDriveConnector(box.root, recipesDrive());
   const log = await captureLogs(async () => { await connector.sync(); });
-  t.check(
-    {
-      converted: log.includes("Converted 1 legacy folder mount(s)"),
-      cards: cardsIn(await box.list(), "_content/drive/recipes/"),
-    },
-    {
-    converted: true,
-    cards: [
-      "_content/drive/recipes/Budget_2026.gsheet.card",
-      "_content/drive/recipes/Scanpdf.glink.card",
-      "_content/drive/recipes/recipes.gfolder.card",
-    ],
-  },
+  t.checkText(
+    log,
+    "[google-drive] Converted 1 legacy folder mount(s) to .gfolder.card: _content/drive/recipes — a folder mount is now the card in the directory it mirrors.",
   );
+  t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
+    "_content/drive/recipes/Budget_2026.gsheet.card",
+    "_content/drive/recipes/Scanpdf.glink.card",
+    "_content/drive/recipes/recipes.gfolder.card",
+  ]);
 
   // The config no longer carries the entry, and the mount card that replaced it is
   // already stamped by the mirror pass that ran after the conversion.
@@ -503,34 +530,19 @@ void test("A box set up before folder mounts were cards still carries the array.
 
   // doctest:L430
   const card = await box.read("_content/drive/recipes/recipes.gfolder.card");
-  t.check(
-    {
-      driveId: /\n {2}id: (\S+)/.exec(card)?.[1],
-      name: /\ntitle: (.*)/.exec(card)?.[1],
-      failed: /^error:/m.test(card),
-    },
-    {
-    driveId: "folder-1",
-    name: "Recipes",
-    failed: false,
-  },
-  );
+  t.checkText(card, recipesMountCard);
 
   // A second sync converts nothing, writes no second card, and says nothing about
   // conversion — there is no `folders` key left to act on.
 
   // doctest:L443
   const again = await captureLogs(async () => { await connector.sync(); });
-  t.check(
-    {
-      quiet: again.includes("Converted"),
-      cards: cardsIn(await box.list(), "_content/drive/recipes/").length,
-    },
-    {
-    quiet: false,
-    cards: 3,
-  },
-  );
+  t.checkText(again, "");
+  t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
+    "_content/drive/recipes/Budget_2026.gsheet.card",
+    "_content/drive/recipes/Scanpdf.glink.card",
+    "_content/drive/recipes/recipes.gfolder.card",
+  ]);
 });
 
 // ## conversion refuses a directory that already mounts a different folder
@@ -563,7 +575,10 @@ void test("Converting would put two mirrors in one directory.", async (t) => {
   drive.files.push(driveFile({ id: "folder-9", name: "Other", mimeType: FOLDER_MIME }));
   const connector = createGoogleDriveConnector(box.root, drive);
   const log = await captureLogs(async () => { await connector.sync(); });
-  await t.checkText(log.includes("NOT converted"), "true");
+  t.checkText(
+    log,
+    "[google-drive] _content/drive/recipes already holds a folder mount for a different Drive folder (folder-9) — legacy config entry for folder-1 NOT converted, and left in _config/connectors/google-drive.json. Trash the card there, or point the config entry at another directory.",
+  );
 
   // doctest:L480
   t.check(await loadDriveConfig(box.root), {
@@ -608,30 +623,21 @@ void test("Reading a corrupt file as an empty config would silently drop the mou
 
   // doctest:L508
   const parsed = await loadDriveConfig(box.root);
-  t.check({ ok: parsed.ok, mentions: parsed.ok ? "" : parsed.error.includes("google-drive.json") }, {
-    ok: false,
-    mentions: true,
-  });
+  t.check(parsed, { ok: false, error: str`_config/connectors/google-drive.json is not valid JSON: ${any(String)}` });
 
   // doctest:L512
   const connector = createGoogleDriveConnector(box.root, recipesDrive());
-  let outcome = { success: true, error: "" };
+  let outcome: Awaited<ReturnType<typeof connector.sync>> | undefined;
   const log = await captureLogs(async () => {
-    const result = await connector.sync();
-    outcome = { success: result.success, error: result.error ?? "" };
+    outcome = await connector.sync();
   });
-  t.check(
-    {
-      success: outcome.success,
-      loud: log.includes("google-drive.json"),
-      reported: outcome.error.includes("google-drive.json"),
-    },
-    {
+  t.checkText(log, "[google-drive] _config/connectors/google-drive.json is not valid JSON: «*»");
+  t.check(outcome, {
     success: false,
-    loud: true,
-    reported: true,
-  },
-  );
+    created: [],
+    updated: [],
+    error: str`_config/connectors/google-drive.json is not valid JSON: ${any(String)}`,
+  });
 });
 
 // ## conversion refuses a directory holding two mounts, and a target outside the box
@@ -663,7 +669,12 @@ void test("Two .gfolder.cards in one directory are already an unresolved questio
   drive.files.push(driveFile({ id: "folder-9", name: "Two", mimeType: FOLDER_MIME }));
   const connector = createGoogleDriveConnector(box.root, drive);
   const log = await captureLogs(async () => { await connector.sync(); });
-  await t.checkText(log.includes("already holds 2 folder mounts (One.gfolder.card, Two.gfolder.card)"), "true");
+  t.checkText(
+    log,
+    `[google-drive] _content/drive/recipes already holds 2 folder mounts (One.gfolder.card, Two.gfolder.card) — legacy config entry for folder-1 NOT converted, and left in _config/connectors/google-drive.json. Trash all but one of those cards first.
+[google-drive] _content/drive/recipes/One.gfolder.card: not-in-folder: _content/drive/recipes/Two.gfolder.card — Drive folder-9 is no longer in this folder; left in place and still syncing
+[google-drive] _content/drive/recipes/Two.gfolder.card: not-in-folder: _content/drive/recipes/One.gfolder.card — Drive folder-8 is no longer in this folder; left in place and still syncing`,
+  );
 
   // doctest:L554
   t.check(await loadDriveConfig(box.root), {
@@ -686,7 +697,12 @@ void test("Two .gfolder.cards in one directory are already an unresolved questio
     folders: [{ driveFolderId: "folder-1", localPath: "../escaped" }],
   });
   const escape = await captureLogs(async () => { await connector.sync(); });
-  await t.checkText(escape.includes("The mount directory must be a path inside the box: ../escaped"), "true");
+  t.checkText(
+    escape,
+    `[google-drive] The mount directory must be a path inside the box: ../escaped — legacy config entry NOT converted.
+[google-drive] _content/drive/recipes/One.gfolder.card: not-in-folder: _content/drive/recipes/Two.gfolder.card — Drive folder-9 is no longer in this folder; left in place and still syncing
+[google-drive] _content/drive/recipes/Two.gfolder.card: not-in-folder: _content/drive/recipes/One.gfolder.card — Drive folder-8 is no longer in this folder; left in place and still syncing`,
+  );
 
   // doctest:L569
   t.check(await loadDriveConfig(box.root), {
@@ -723,15 +739,6 @@ void test("mount, link, and unmount all resolve their target through shared/ref-
   const drive = recipesDrive();
 
   // doctest:L590
-  const refusal = async (op: Promise<unknown>): Promise<string> => {
-    try {
-      await op;
-      return "no refusal";
-    } catch (e) {
-      return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-    }
-  };
-
   // doctest:L599
   t.check(
     await refusal(mountDriveFolder({
@@ -778,7 +785,7 @@ void test("mount, link, and unmount all resolve their target through shared/ref-
   const mounted = await mountDriveFolder({
     boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "/_content/drive/recipes",
   });
-  t.check(mounted.cardPath, "_content/drive/recipes/Recipes.gfolder.card");
+  t.check(mounted, mountedRecipes);
 });
 
 // ## Round-7 hardening finding 3: a symlinked-away directory refuses the write, not just the lexical check
@@ -807,15 +814,6 @@ void test("shared/ref-path.ts's check above is lexical only.", async (t) => {
   await fs.symlink(path.join("..", "src"), path.join(box.root, "_content", "code"));
 
   // doctest:L661
-  const refusal = async (op: Promise<unknown>): Promise<string> => {
-    try {
-      await op;
-      return "no refusal";
-    } catch (e) {
-      return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-    }
-  };
-
   // doctest:L670
   t.check(
     await refusal(linkDriveItem({

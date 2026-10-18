@@ -9,8 +9,9 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { type Expected, unordered } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
-import { typecheckViews } from "../../../../src/cli/commands/view/typecheck.js";
+import { typecheckViews, type ViewTypecheckResult } from "../../../../src/cli/commands/view/typecheck.js";
 
 // Views live at `<boxRoot>/src/views`.
 async function writeView(box: TmpBox, { rel, content }: { rel: string; content: string }) {
@@ -76,22 +77,27 @@ void test("A stale-typed view (removed field) fails; clean passes; `as any` slip
 
   // doctest:L70
   const result = await typecheckViews(box.root);
-  t.check(result.ok, false);
-
-  // doctest:L74
-  t.check(result.views.find((v) => v.slug === "stale")?.ok, false);
-
-  // doctest:L77
-  await t.checkText((result.views.find((v) => v.slug === "stale")?.errors ?? []).length > 0, "true");
-
-  // doctest:L80
-  t.check(result.views.find((v) => v.slug === "clean")?.ok, true);
-
-  // doctest:L83
-  t.check(result.views.find((v) => v.slug === "anycast")?.ok, true);
-
-  // doctest:L86
-  t.check(result.views.find((v) => v.slug === "noise")?.ok, true);
+  t.check(result, {
+    ok: false,
+    views: unordered<Expected<ViewTypecheckResult>>([
+      {
+        slug: "stale",
+        ok: false,
+        errors: [
+          `Type '({ cards }: { cards: VC[]; }) => Element' is not assignable to type 'ComponentType<ViewProps>'.
+  Type '({ cards }: { cards: VC[]; }) => Element' is not assignable to type 'FunctionComponent<ViewProps>'.
+    Types of parameters '__0' and 'props' are incompatible.
+      Type 'ViewProps' is not assignable to type '{ cards: VC[]; }'.
+        Types of property 'cards' are incompatible.
+          Type 'ViewCard[]' is not assignable to type 'VC[]'.
+            Property 'tagName' is missing in type 'ViewCard' but required in type 'VC'.`,
+        ],
+      },
+      { slug: "noise", ok: true },
+      { slug: "clean", ok: true },
+      { slug: "anycast", ok: true },
+    ]),
+  });
 });
 
 // </content>

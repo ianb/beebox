@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, not } from "agent-doctest/check";
 import { getOrCreateAgentToken, verifyAgentBearer, resolveAgentToken } from "../../../src/core/agent/token.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { makeTestServer } from "../../helpers/test-route-server.js";
@@ -18,8 +18,6 @@ function errorOf(body: unknown): unknown {
 
 // ## Token generation is idempotent and stays put
 void test("Token generation is idempotent and stays put", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -32,22 +30,19 @@ void test("Token generation is idempotent and stays put", async (t) => {
   const first = getOrCreateAgentToken(box.root);
   const second = getOrCreateAgentToken(box.root);
   const onDisk = (await box.read(".beebox/agent-token")).trim();
-  print(`length: ${first.length}`);
-  print(`stable: ${first === second}`);
-  await t.checkText(out.with(print(`persisted: ${first === onDisk}`)), `length: 64
-stable: true
-persisted: true`);
+  t.check(first, any(String).matches(/^.{64}$/s));
+  t.check(second, first);
+  t.check(onDisk, first);
 
   // Verification accepts exactly `Bearer <token>` and nothing else:
 
   // doctest:L37
-  print(`good: ${verifyAgentBearer(box.root, `Bearer ${first}`)}`);
-  print(`wrong token: ${verifyAgentBearer(box.root, `Bearer ${"x".repeat(64)}`)}`);
-  print(`no scheme: ${verifyAgentBearer(box.root, first)}`);
-  await t.checkText(out.with(print(`missing header: ${verifyAgentBearer(box.root, undefined)}`)), `good: true
-wrong token: false
-no scheme: false
-missing header: false`);
+  t.check({
+    good: verifyAgentBearer(box.root, `Bearer ${first}`),
+    wrongToken: verifyAgentBearer(box.root, `Bearer ${"x".repeat(64)}`),
+    noScheme: verifyAgentBearer(box.root, first),
+    missingHeader: verifyAgentBearer(box.root, undefined),
+  }, { good: true, wrongToken: false, noScheme: false, missingHeader: false });
 });
 
 // ## Verification never creates the token file
@@ -55,8 +50,6 @@ missing header: false`);
 // Only spawners (buildScriptEnv) provision the token; a verify against a box
 // with no token must fail rather than mint one an attacker could race.
 void test("Only spawners (buildScriptEnv) provision the token; a verify against a box wi...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -66,10 +59,8 @@ void test("Only spawners (buildScriptEnv) provision the token; a verify against 
   });
   // doctest:L58
   const box = await makeTmpBox();
-  print(`verify: ${verifyAgentBearer(box.root, "Bearer " + "x".repeat(64))}`);
-  const files = await box.list(".beebox").catch(() => "");
-  await t.checkText(out.with(print(`token file created: ${files.includes(".beebox/agent-token")}`)), `verify: false
-token file created: false`);
+  t.check(verifyAgentBearer(box.root, "Bearer " + "x".repeat(64)), false);
+  t.check(await box.list(".beebox").catch(() => ""), not(any(String).includes(".beebox/agent-token")));
 });
 
 // ## resolveAgentToken prefers the env var
@@ -78,7 +69,7 @@ void test("resolveAgentToken prefers the env var", async (t) => {
   process.env.BBX_AGENT_TOKEN = "t".repeat(64);
   const resolved = resolveAgentToken();
   delete process.env.BBX_AGENT_TOKEN;
-  await t.checkText(resolved === "t".repeat(64), "true");
+  t.check(resolved, "t".repeat(64));
 });
 
 // ## resolveAgentToken has no cwd fallback
@@ -97,8 +88,6 @@ void test("Without the env var it returns null — it never guesses a token file
 // request with the box's agent bearer gets through the wall (and then fails
 // route validation — proof it reached the handler).
 void test("With auth enabled, an unauthenticated loopback POST is rejected; the same req...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -112,7 +101,6 @@ void test("With auth enabled, an unauthenticated loopback POST is rejected; the 
   // openAccess: false here to exercise the wall.
   const ctx = await makeTestServer({ openAccess: false });
   const anon = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload: {} });
-  print(`anonymous: ${anon.statusCode} ${errorOf(anon.body)}`);
   const token = getOrCreateAgentToken(ctx.boxRoot);
   const authed = await ctx.request({
     method: "POST",
@@ -120,7 +108,6 @@ void test("With auth enabled, an unauthenticated loopback POST is rejected; the 
     payload: {},
     headers: { authorization: `Bearer ${token}` },
   });
-  print(`with bearer: ${authed.statusCode} ${errorOf(authed.body)}`);
   // messageId is required since the targeted-fetch change
   // (docs/implemented-plans/retranscription-in-chat.md, Track 1b) — this test only
   // exercises the bearer wall, so any id works; no tab answers → 504.
@@ -130,7 +117,13 @@ void test("With auth enabled, an unauthenticated loopback POST is rejected; the 
     payload: { timeoutMs: 1, messageId: "msg-agent-token-test" },
     headers: { authorization: `Bearer ${token}` },
   });
-  await t.checkText(out.with(print(`last-audio with bearer: ${audio.statusCode} ${errorOf(audio.body)}`)), `anonymous: 401 Not authenticated
-with bearer: 400 body is required
-last-audio with bearer: 504 no-client`);
+  t.check({
+    anonymous: [anon.statusCode, errorOf(anon.body)],
+    withBearer: [authed.statusCode, errorOf(authed.body)],
+    lastAudioWithBearer: [audio.statusCode, errorOf(audio.body)],
+  }, {
+    anonymous: [401, "Not authenticated"],
+    withBearer: [400, "body is required"],
+    lastAudioWithBearer: [504, "no-client"],
+  });
 });

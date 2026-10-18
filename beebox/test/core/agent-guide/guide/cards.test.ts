@@ -33,30 +33,18 @@ void test("Groups by category and carries each type's description", async (t) =>
     fields: { status: z.string() },
   });
 
+  // The authored group renders before the system group. A built-in type with
+  // instructions links its doc in the package; a type without has no doc to link.
   // doctest:L36
-  const text = cardTypesList({ allCardSchemas: [authored, system] });
-  const lines = text.split("\n");
-  await t.checkText(
-    // A built-in type with instructions links its doc in the package
-    lines.includes("- **note** — a captured note → `node_modules/beebox/box-docs/card-note.md`"),
-    "true",
-  );
+  t.checkText(
+    cardTypesList({ allCardSchemas: [authored, system] }),
+    `**Types you create and edit:**
 
-  // doctest:L42
-  await t.checkText(lines.includes("- **backfill-job** — reactor bookkeeping"), "true");
+- **note** — a captured note → \`node_modules/beebox/box-docs/card-note.md\`
 
-  // doctest:L45
-  await t.checkText(
-    // The authored group renders before the system group
-    lines.findIndex((l) => l.startsWith("**Types you create")) < lines.findIndex((l) => l.startsWith("**System bookkeeping")),
-    "true",
-  );
+**System bookkeeping** — made and consumed by the machinery; don't author these:
 
-  // doctest:L49
-  t.check(
-    // A type without instructions has no doc to link
-    lines.find((l) => l.startsWith("- **backfill-job**"))?.includes("→"),
-    false,
+- **backfill-job** — reactor bookkeeping`,
   );
 });
 
@@ -73,7 +61,12 @@ void test("The list is read on every turn, so each entry is the type's brief, fi
     category: "authored",
     fields: { status: z.string() },
   });
-  await t.checkText(cardTypesList({ allCardSchemas: [briefed] }).split("\n").includes("- **note** — A captured note"), "true");
+  t.checkText(
+    cardTypesList({ allCardSchemas: [briefed] }),
+    `**Types you create and edit:**
+
+- **note** — A captured note`,
+  );
 
   // doctest:L70
   t.check(
@@ -111,12 +104,13 @@ void test("Box-local schemas live in the box's src/schemas/ and their docs are c
   });
 
   // doctest:L102
-  const text = cardTypesList({ allCardSchemas: [builtinNote, boxNote, boxOnly], boxCardSchemas: [boxNote, boxOnly] });
-  const lines = text.split("\n");
-  t.check(lines.filter((l) => l.startsWith("- **note**")).join(" | "), "- **note** — this box's note → `_content/docs/generated/card-note.md`");
+  t.checkText(
+    cardTypesList({ allCardSchemas: [builtinNote, boxNote, boxOnly], boxCardSchemas: [boxNote, boxOnly] }),
+    `**Types you create and edit:**
 
-  // doctest:L107
-  await t.checkText(lines.includes("- **widget** — a box-local type → `_content/docs/generated/card-widget.md`"), "true");
+- **note** — this box's note → \`_content/docs/generated/card-note.md\`
+- **widget** — a box-local type → \`_content/docs/generated/card-widget.md\``,
+  );
 });
 
 // ## A description-less schema (e.g. box-local) still lists, defaulting to authored
@@ -125,12 +119,12 @@ void test("A description-less schema (e.g. box-local) still lists, defaulting to
   const bare: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
 
   // doctest:L116
-  const text = cardTypesList({ allCardSchemas: [bare] });
-  const lines = text.split("\n");
-  await t.checkText(lines.includes("- **widget**"), "true");
+  t.checkText(
+    cardTypesList({ allCardSchemas: [bare] }),
+    `**Types you create and edit:**
 
-  // doctest:L121
-  await t.checkText(lines.some((l) => l.startsWith("**Types you create")), "true");
+- **widget**`,
+  );
 });
 
 // ## An empty schema list still renders the section (no crash)
@@ -144,6 +138,7 @@ void test("With no schemas the list is empty, and the section keeps its heading 
   // doctest:L134
   const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, instructionFile: "AGENTS.md", allCardSchemas: [] });
   const section = guide.split("## CARD_TYPES\n")[1]?.split("\n## ")[0] ?? "";
+  // The section is long guide prose; the contract here is its paragraph structure.
   const paragraphs = section.trim().split("\n\n");
-  t.check([paragraphs.length, section.includes("\n\n\n")].join("|"), "2|false");
+  t.check({ paragraphs: paragraphs.length, tripleBlank: section.includes("\n\n\n") }, { paragraphs: 2, tripleBlank: false });
 });

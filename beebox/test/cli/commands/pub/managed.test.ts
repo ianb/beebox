@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../src/webapp/trpc/routers.js";
 import { pubCommand } from "../../../../src/cli/commands/pub/command.js";
@@ -67,40 +68,71 @@ void test("bbx pub carries only the server-managed commands.", async (t) => {
 // manifest had been live.
 void test("A remote outage must not read as disabled, even when the last observed edge m...", async (t) => {
   // doctest:L65
-  t.check(publicationSiteLines([site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })])[0]?.includes("serving state unknown"), true);
+  t.check(publicationSiteLines([site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })]), [
+    "notes — card notes/Notes.publication.card; serving state unknown; serving audience public at /notes/; active aaaaaaaaaaaa; no prepared update; publication: https://notes.example.workers.dev/p/notes/",
+  ]);
 
   // doctest:L68
-  t.check(publicationSiteLines([site({ pending: { ...candidate, requestedScope: candidate.requestedScope } })])[0]?.includes(`prepared ${releaseId.slice(0, 12)}`), true);
+  t.check(publicationSiteLines([site({ pending: { ...candidate, requestedScope: candidate.requestedScope } })]), [
+    "notes — card notes/Notes.publication.card; live; serving audience public at /notes/; active aaaaaaaaaaaa; prepared aaaaaaaaaaaa; publication: https://notes.example.workers.dev/p/notes/",
+  ]);
 
   // doctest:L71
-  t.check(publicationSiteLines([site({ approved: { tier: "public", status: "live", slug: "hello", expiresAt: null } })])[0]?.includes("serving audience public at /hello/"), true);
+  t.check(publicationSiteLines([site({ approved: { tier: "public", status: "live", slug: "hello", expiresAt: null } })]), [
+    "notes — card notes/Notes.publication.card; live; serving audience public at /hello/; active aaaaaaaaaaaa; no prepared update; publication: https://notes.example.workers.dev/p/hello/",
+  ]);
 
   // doctest:L74
   const pendingSecret = { kind: "site" as const, hostHandle: "notes-host", tier: "secret" as const, expiresAt: null };
-  const transitioned = publicationSiteLines([site({ pending: { ...candidate, requestedScope: pendingSecret } })])[0];
-  t.check(
-    { servingAudience: transitioned?.includes("serving audience public"), preparedAudience: transitioned?.includes("prepared audience secret"), oldUrl: transitioned?.includes("https://notes.example.workers.dev/p/notes/"), candidateUrl: transitioned?.includes("https://notes.example.workers.dev/s/abcdefghijklmnopqrstuvwxyz/") }
-    ,
-    {
-    servingAudience: true,
-    preparedAudience: true,
-    oldUrl: true,
-    candidateUrl: true,
-  },
-  );
+  const transitioned = publicationSiteLines([site({ pending: { ...candidate, requestedScope: pendingSecret } })]);
+  t.check(transitioned, [
+    "notes — card notes/Notes.publication.card; live; serving audience public at /notes/; active aaaaaaaaaaaa; prepared aaaaaaaaaaaa; publication: https://notes.example.workers.dev/p/notes/; prepared audience secret; candidate URL: https://notes.example.workers.dev/s/abcdefghijklmnopqrstuvwxyz/",
+  ]);
 });
 
 // A matching audience can advance the active release immediately; a pending
 // candidate remains explicitly gated by member approval.
 void test("A matching audience can advance the active release immediately; a pending can...", async (t) => {
   // doctest:L84
-  t.check(publicationPreparedLines(candidate, site()).at(-1), "  content is live under the already approved audience; within-scope updates take effect immediately.");
+  t.check(publicationPreparedLines(candidate, site()), [
+    "Notes (notes)",
+    "  publication id: abcdefghijklmnopqrstuvwxyz",
+    "  requested audience: public",
+    "  release: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "  files: 1; scan findings: 0; skipped binaries: 0",
+    "  publication URL: https://notes.example.workers.dev/p/notes/",
+    "  publication URL: https://notes.example.workers.dev/p/notes/",
+    "  approval: open the publication card /box-a/browse/notes/Notes.publication.card in this box's app.",
+    "    index.html  42 bytes  sha256:cccccccccccccccc…",
+    "  content is live under the already approved audience; within-scope updates take effect immediately.",
+  ]);
 
   // doctest:L87
-  t.check(publicationPreparedLines(candidate, site({ activeReleaseId: null, approved: null, pending: { ...candidate, requestedScope: candidate.requestedScope } })).at(-1), "  waiting for a signed-in box member to approve and enable this release.");
+  t.check(publicationPreparedLines(candidate, site({ activeReleaseId: null, approved: null, pending: { ...candidate, requestedScope: candidate.requestedScope } })), [
+    "Notes (notes)",
+    "  publication id: abcdefghijklmnopqrstuvwxyz",
+    "  requested audience: public",
+    "  release: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "  files: 1; scan findings: 0; skipped binaries: 0",
+    "  candidate URL (awaiting member approval): https://notes.example.workers.dev/p/notes/",
+    "  approval: open the publication card /box-a/browse/notes/Notes.publication.card in this box's app.",
+    "    index.html  42 bytes  sha256:cccccccccccccccc…",
+    "  waiting for a signed-in box member to approve and enable this release.",
+  ]);
 
   // doctest:L90
-  t.check(publicationPreparedLines(candidate, site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })).at(-1), "  serving state is unknown; check the publication card _content/publications/abcdefghijklmnopqrstuvwxyz.publication.card before describing it as live or disabled.");
+  t.check(publicationPreparedLines(candidate, site({ remoteStatus: { status: "unavailable", reason: "cloudflare-unavailable" } })), [
+    "Notes (notes)",
+    "  publication id: abcdefghijklmnopqrstuvwxyz",
+    "  requested audience: public",
+    "  release: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "  files: 1; scan findings: 0; skipped binaries: 0",
+    "  publication URL: https://notes.example.workers.dev/p/notes/",
+    "  publication URL: https://notes.example.workers.dev/p/notes/",
+    "  approval: open the publication card /box-a/browse/notes/Notes.publication.card in this box's app.",
+    "    index.html  42 bytes  sha256:cccccccccccccccc…",
+    "  serving state is unknown; check the publication card _content/publications/abcdefghijklmnopqrstuvwxyz.publication.card before describing it as live or disabled.",
+  ]);
 });
 
 // Publication links preserve the tier route, and the approval link uses the
@@ -119,22 +151,23 @@ void test("Publication links preserve the tier route, and the approval link uses
   t.check(publicationDestinationUrl({ hostname: null, pubId: candidate.pubId, scope: { tier: "public", slug: "hello", sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/hello/" } } }), "https://publish.example.org/hello/");
 
   // doctest:L110
-  t.check(publicationSharedHostLines(null)[0], "Shared publication host: not configured; a member must set it up in Admin before new publications can be prepared.");
+  t.check(publicationSharedHostLines(null), ["Shared publication host: not configured; a member must set it up in Admin before new publications can be prepared."]);
 
   // doctest:L113
-  t.check(publicationSharedHostLines({ hostname: "publish.example.org", connectionName: "primary", status: "pending" })[0], "Shared publication host: https://publish.example.org/ (setup pending; member should retry in Admin; connection primary)");
+  t.check(publicationSharedHostLines({ hostname: "publish.example.org", connectionName: "primary", status: "pending" }), ["Shared publication host: https://publish.example.org/ (setup pending; member should retry in Admin; connection primary)"]);
 
   // doctest:L116
-  t.check(publicationSharedHostLines({ hostname: "publish.example.org", connectionName: "primary", status: "attached" })[0], "Shared publication host: https://publish.example.org/ (ready; connection primary)");
+  t.check(publicationSharedHostLines({ hostname: "publish.example.org", connectionName: "primary", status: "attached" }), ["Shared publication host: https://publish.example.org/ (ready; connection primary)"]);
 
   // doctest:L119
   t.check(
     publicationSiteLines([site({
       requested: { kind: "site", hostHandle: "notes-host", tier: "public", expiresAt: null, customHostname: "www.example.org" },
       approved: { tier: "public", status: "live", customHostname: "www.example.org", expiresAt: null },
-    })])[0]?.includes("publication: https://www.example.org/")
-    ,
-    true,
+    })]),
+    [
+      "notes — card notes/Notes.publication.card; live; serving audience public; active aaaaaaaaaaaa; no prepared update; publication: https://www.example.org/; legacy workers.dev URL: https://notes.example.workers.dev/",
+    ],
   );
 
   // doctest:L125
@@ -142,9 +175,10 @@ void test("Publication links preserve the tier route, and the approval link uses
     publicationSiteLines([site({
       approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
       sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
-    })])[0]?.includes("publication: https://publish.example.org/notes/; legacy workers.dev URL: https://notes.example.workers.dev/p/notes/")
-    ,
-    true,
+    })]),
+    [
+      "notes — card notes/Notes.publication.card; live; serving audience public at /notes/; active aaaaaaaaaaaa; no prepared update; publication: https://publish.example.org/notes/; legacy workers.dev URL: https://notes.example.workers.dev/p/notes/",
+    ],
   );
 
   // doctest:L131
@@ -153,8 +187,10 @@ void test("Publication links preserve the tier route, and the approval link uses
       hostname: null,
       approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
       sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
-    })])[0]?.includes("legacy workers.dev URL"),
-    false,
+    })]),
+    [
+      "notes — card notes/Notes.publication.card; live; serving audience public at /notes/; active aaaaaaaaaaaa; no prepared update; publication: https://publish.example.org/notes/",
+    ],
   );
 
   // doctest:L138
@@ -172,7 +208,8 @@ void test("Publication links preserve the tier route, and the approval link uses
 // The card path is normalized; an unknown card gets a clear error.
 void test("files and cat resolve the card to its publication through the list rows.", async (t) => {
   // doctest:L149
-  await t.checkText(publicationForCard([site()], "./notes/./Notes.publication.card").pubId === candidate.pubId, "true");
+  const row = site();
+  t.check(publicationForCard([row], "./notes/./Notes.publication.card"), is(row));
 
   // doctest:L152
   await t.check(Promise.resolve().then(() => publicationForCard([site()], "notes/Other.publication.card")).catch((error) => error.message), "No prepared publication has card notes/Other.publication.card. Run `bbx pub prepare notes/Other.publication.card` first, or check that it is a <Name>.publication.card.");
@@ -197,5 +234,8 @@ pending release dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 // A pending candidate identical to the active release is not repeated.
 void test("A pending candidate identical to the active release is not repeated.", async (t) => {
   // doctest:L174
-  await t.checkText(publicationFilesLines(site({ pending: { revision: "b".repeat(64), releaseId, preparedAt: candidate.preparedAt, requestedScope: candidate.requestedScope, preview: candidate.preview, scan: candidate.scan } })).length, "2");
+  t.check(publicationFilesLines(site({ pending: { revision: "b".repeat(64), releaseId, preparedAt: candidate.preparedAt, requestedScope: candidate.requestedScope, preview: candidate.preview, scan: candidate.scan } })), [
+    "active release aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:",
+    "  index.html  42 bytes",
+  ]);
 });

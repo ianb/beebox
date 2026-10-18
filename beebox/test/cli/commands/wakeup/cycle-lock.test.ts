@@ -53,24 +53,26 @@ void test("The outer call models a wakeup that is mid-cycle; the inner one is a 
   process.env[WAKEUP_OUTCOME_ENV] = "1";
 
   // doctest:L47
-  let secondCycleDidWork = false;
-  let secondCycleRan = null;
+  const second: { ran: boolean | null; didWork: boolean } = { ran: null, didWork: false };
   const printed = await capture(async () => {
     await runUnderWakeupCycleLock(box.root, async () => {
-      secondCycleRan = await runUnderWakeupCycleLock(box.root, async () => {
-        secondCycleDidWork = true;
+      second.ran = await runUnderWakeupCycleLock(box.root, async () => {
+        second.didWork = true;
       });
     });
   });
 
   // doctest:L57
-  t.check(`ran=${secondCycleRan}; didWork=${secondCycleDidWork}`, "ran=false; didWork=false");
+  t.check(second, { ran: false, didWork: false });
 
   // It is one visible line, not a silent no-op — a skipped cycle that printed
   // nothing would read as a cycle that found nothing to do:
 
   // doctest:L65
-  await t.checkText(printed.filter((line) => line === WAKEUP_ALREADY_RUNNING).length, "1");
+  t.check(printed, [
+    WAKEUP_ALREADY_RUNNING,
+    '[wakeup-outcome] {"connectorErrors":0,"connectors":[],"reactorOk":true,"reactorSkipped":false,"jobsProcessed":0,"jobsRemaining":0,"skipped":"wakeup-running"}',
+  ]);
 
   // ## The outcome carries the skip
   //

@@ -14,7 +14,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { encodeSessionMediaRef, parseSessionMediaRef } from "../../../src/shared/session-media.js";
 import { findTranscriptLineByUuid } from "../../../src/cli/lib/session-line-scan.js";
 import { extractSessionMedia } from "../../../src/cli/lib/session-media-extract.js";
@@ -116,8 +115,6 @@ void test("Both ids are interpolated into a filesystem path, so the parse is whe
 // other photo through the heap on the way. The search runs over bytes instead, and
 // only the line it wants ever becomes a string.
 void test("The lookup exists because the obvious implementation is the bug:", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -128,34 +125,28 @@ void test("The lookup exists because the obvious implementation is the bug:", as
   // doctest:L109
   const box = await makeTmpBox();
   const logPath = box.path("chat.jsonl");
+  const second = turnLine({ uuid: "u-2", text: "second", images: [inlineImage({ mediaType: "image/jpeg", data: photo("b") })] });
   await box.write("chat.jsonl", [
     turnLine({ uuid: "u-1", text: "first", images: [inlineImage({ mediaType: "image/png", data: photo("a") })] }),
-    turnLine({ uuid: "u-2", text: "second", images: [inlineImage({ mediaType: "image/jpeg", data: photo("b") })] }),
+    second,
     turnLine({ uuid: "u-3", text: "third", images: [inlineImage({ mediaType: "image/png", data: photo("c") })] }),
   ].join("\n"));
 
   // doctest:L117
-  const found = await findTranscriptLineByUuid({ logPath, uuid: "u-2" });
-  print(`found: ${found.found}`);
-  assert.ok(found.found);
-  print(`is the right line: ${found.line.includes("second")}`);
-  await t.checkText(out2.with(print(`did not return a neighbour: ${!found.line.includes("first") && !found.line.includes("third")}`)), `found: true
-is the right line: true
-did not return a neighbour: true`);
+  // The whole line comes back, and only that one: not a neighbour.
+  t.check(await findTranscriptLineByUuid({ logPath, uuid: "u-2" }), { found: true, line: second });
 
   // A `parentUuid` naming the same entry cannot be mistaken for the entry itself —
   // the needle carries the leading quote of the field name, and `parentUuid` has a
   // letter there instead:
 
   // doctest:L133
-  await box.write("parented.jsonl", [
-    JSON.stringify({ type: "user", uuid: "aaa", parentUuid: null, message: { role: "user", content: [{ type: "text", text: "the target" }] } }),
-    JSON.stringify({ type: "user", uuid: "bbb", parentUuid: "aaa", message: { role: "user", content: [{ type: "text", text: "the child" }] } }),
-  ].join("\n"));
+  const target = JSON.stringify({ type: "user", uuid: "aaa", parentUuid: null, message: { role: "user", content: [{ type: "text", text: "the target" }] } });
+  const child = JSON.stringify({ type: "user", uuid: "bbb", parentUuid: "aaa", message: { role: "user", content: [{ type: "text", text: "the child" }] } });
+  await box.write("parented.jsonl", [target, child].join("\n"));
 
   // doctest:L138
-  const parented = await lineOf(box.path("parented.jsonl"), "aaa");
-  await t.checkText(out2.with(parented.includes("the target")), "true");
+  t.check(await lineOf(box.path("parented.jsonl"), "aaa"), target);
 
   // A uuid nothing carries, and a transcript that does not exist yet, are the same
   // answer — there is no image either way:
@@ -163,7 +154,7 @@ did not return a neighbour: true`);
   // doctest:L147
   const missing = await findTranscriptLineByUuid({ logPath, uuid: "nope" });
   const absent = await findTranscriptLineByUuid({ logPath: box.path("never-written.jsonl"), uuid: "u-1" });
-  await t.checkText(out2.with(JSON.stringify([missing, absent])), "[{\"found\":false,\"reason\":\"not-found\"},{\"found\":false,\"reason\":\"not-found\"}]");
+  t.check([missing, absent], [{ found: false, reason: "not-found" }, { found: false, reason: "not-found" }]);
 });
 
 // ## Taking one image out of a line full of them
@@ -175,8 +166,6 @@ did not return a neighbour: true`);
 //
 // A turn carrying two photos, addressed by ordinal:
 void test("Parsing the raw line would work and would also rebuild every payload in it —...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -199,11 +188,14 @@ void test("Parsing the raw line would work and would also rebuild every payload 
   // doctest:L178
   const first = extractSessionMedia({ line, index: 0 });
   const second = extractSessionMedia({ line, index: 1 });
-  print(`first: ${mediaOf(first).mediaType} starting ${mediaOf(first).bytes.toString("utf8").slice(0, 4)}`);
-  print(`second: ${mediaOf(second).mediaType} starting ${mediaOf(second).bytes.toString("utf8").slice(0, 5)}`);
-  await t.checkText(out2.with(print(`whole photo recovered: ${mediaOf(first).bytes.length === 200_000 * 4}`)), `first: image/png starting left
-second: image/jpeg starting right
-whole photo recovered: true`);
+  // Each photo comes back whole, with its own media type.
+  t.check(
+    [first, second].map((r) => ({ mediaType: mediaOf(r).mediaType, text: mediaOf(r).bytes.toString("utf8") })),
+    [
+      { mediaType: "image/png", text: "left".repeat(200_000) },
+      { mediaType: "image/jpeg", text: "right".repeat(200_000) },
+    ],
+  );
 
   // Asking for an image the turn does not have is not the same as asking for one
   // whose bytes never arrived. A failed upload leaves a real image block with
@@ -219,7 +211,7 @@ whole photo recovered: true`);
   }));
   const emptyLine = await lineOf(box.path("empty.jsonl"), "u-empty");
   const empty = extractSessionMedia({ line: emptyLine, index: 0 });
-  await t.checkText(out2.with(JSON.stringify([past, empty])), "[{\"ok\":false,\"reason\":\"no-such-image\"},{\"ok\":false,\"reason\":\"no-payload\"}]");
+  t.check([past, empty], [{ ok: false, reason: "no-such-image" }, { ok: false, reason: "no-payload" }]);
 
   // The `media_type` comes out of the transcript and the route puts it in a
   // `Content-Type`, so only real image types get through. Anything else degrades to
@@ -232,10 +224,10 @@ whole photo recovered: true`);
     images: [inlineImage({ mediaType: "text/html", data: photo("x") })],
   }));
   const htmlLine = await lineOf(box.path("html.jsonl"), "u-html");
-  await t.checkText(out2.with(mediaOf(extractSessionMedia({ line: htmlLine, index: 0 })).mediaType), "application/octet-stream");
+  t.check(mediaOf(extractSessionMedia({ line: htmlLine, index: 0 })).mediaType, "application/octet-stream");
 
   // A line the transcript writer left half-written has no image in it either:
 
   // doctest:L225
-  await t.checkText(out2.with(JSON.stringify(extractSessionMedia({ line: '{"type":"user","uuid":"u-1","mess', index: 0 }))), "{\"ok\":false,\"reason\":\"unparsable\"}");
+  t.check(extractSessionMedia({ line: '{"type":"user","uuid":"u-1","mess', index: 0 }), { ok: false, reason: "unparsable" });
 });

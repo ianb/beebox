@@ -137,7 +137,7 @@ void test("A batch submitted from an empty composer must be byte-identical to th
     fileCount: 5, totalBytes: 500, failedCount: 0, summary: "5 files uploaded (500 B).",
     note: "   \n  ",
   });
-  await t.checkText(blankNote === withoutNote, "true");
+  t.check(blankNote, withoutNote);
 });
 
 // ## A doc path with an attribute/tag delimiter is a broken invariant (throws)

@@ -24,19 +24,10 @@ void test("Two segments, three chunks each → two buffers, order preserved", as
       chunks: [Buffer.from("B0"), Buffer.from("B1"), Buffer.from("B2")],
     },
   ]);
-  await t.checkText(out.length, "2");
-
-  // doctest:L30
-  t.check(out[0]?.segmentId, "seg-a");
-
-  // doctest:L33
-  t.check(out[0]?.buffer.toString("utf-8"), "A0A1A2");
-
-  // doctest:L36
-  t.check(out[1]?.segmentId, "seg-b");
-
-  // doctest:L39
-  t.check(out[1]?.buffer.toString("utf-8"), "B0B1B2");
+  t.check(out.map((seg) => ({ ...seg, buffer: seg.buffer.toString("utf-8") })), [
+    { segmentId: "seg-a", startedAt: "2026-07-09T14:00:00.000Z", buffer: "A0A1A2" },
+    { segmentId: "seg-b", startedAt: "2026-07-09T14:05:00.000Z", buffer: "B0B1B2" },
+  ]);
 });
 
 // ## Empty segments are dropped
@@ -48,10 +39,9 @@ void test("A segment that recorded no chunks produces no card:", async (t) => {
     { segmentId: "empty", startedAt: "2026-07-09T14:00:00.000Z", chunks: [] },
     { segmentId: "real", startedAt: "2026-07-09T14:01:00.000Z", chunks: [Buffer.from("X")] },
   ]);
-  await t.checkText(out.length, "1");
-
-  // doctest:L55
-  t.check(out[0]?.segmentId, "real");
+  t.check(out.map((seg) => ({ ...seg, buffer: seg.buffer.toString("utf-8") })), [
+    { segmentId: "real", startedAt: "2026-07-09T14:01:00.000Z", buffer: "X" },
+  ]);
 });
 
 // ## A truncated tail chunk still concatenates (decodable prefix, no throw)
@@ -66,8 +56,7 @@ void test("A crash mid-recording can leave the last chunk cut to half its bytes 
   const out = concatSegments([
     { segmentId: "seg-a", startedAt: "2026-07-09T14:00:00.000Z", chunks: [header, truncatedTail] },
   ]);
-  await t.checkText(out.length, "1");
-
-  // doctest:L74
-  t.check(out[0]?.buffer.toString("utf-8"), "HEADER-cluster0-cluster1-cluster2");
+  t.check(out.map((seg) => ({ ...seg, buffer: seg.buffer.toString("utf-8") })), [
+    { segmentId: "seg-a", startedAt: "2026-07-09T14:00:00.000Z", buffer: "HEADER-cluster0-cluster1-cluster2" },
+  ]);
 });

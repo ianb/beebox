@@ -45,19 +45,12 @@ void test("Resolves through the derived child environment", async (t) => {
       return new Response(JSON.stringify({ value: "secret-value", suspect: false }), { status: 200 });
     },
   });
-  t.check(resolved.suspect, false);
-
-  // doctest:L45
-  t.check(seen[0]?.url, "http://localhost:3210/test1/api/secrets/resolve");
-
-  // doctest:L48
-  await t.checkText(seen[0]?.body, "{\"name\":\"openai-images\",\"purpose\":\"image-generation\"}");
-
-  // doctest:L51
-  t.check(seen[0]?.authorization, "Bearer agent-token");
-
-  // doctest:L54
-  t.check(resolved.value, "secret-value");
+  t.check(resolved, { value: "secret-value", suspect: false });
+  t.check(seen, [{
+    url: "http://localhost:3210/test1/api/secrets/resolve",
+    body: '{"name":"openai-images","purpose":"image-generation"}',
+    authorization: "Bearer agent-token",
+  }]);
 });
 
 // ## Invalid declarations fail before execution

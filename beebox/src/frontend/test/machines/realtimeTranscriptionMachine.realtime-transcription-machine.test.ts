@@ -16,6 +16,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import { createActor, fromCallback } from "xstate";
 import {
   realtimeTranscriptionMachine,
@@ -184,6 +185,7 @@ void test("Cause microphone goes to reconnecting:", async (t) => {
   t.check(s.state(), "idle");
 
   t.check(s.context(), contextWith({ error: "Recording stopped — the microphone was taken away", errorLevel: "warning", recording: s.recording }));
+  t.check(s.context().recording, is(s.recording));
 });
 
 // When the mic comes back but the socket has not, the actor reports `MIC_LIVE`
@@ -297,6 +299,7 @@ void test("STOP from `recordingLocal` ends the segment with its recording", asyn
   t.check(s.state(), "idle");
 
   t.check(s.context(), contextWith({ recording: s.recording }));
+  t.check(s.context().recording, is(s.recording));
 
   t.check(s.log, ["actor start target=chat-1", "STOP", "actor stopped"]);
 });
@@ -345,6 +348,7 @@ void test("On expiry the machine emits maxDurationReached (the hook parks a subm
   t.check(s.state(), "idle");
 
   t.check(s.context(), contextWith({ recording: s.recording }));
+  t.check(s.context().recording, is(s.recording));
 
   t.check(s.log, ["actor start target=chat-1", "STOP", "actor stopped"]);
 });

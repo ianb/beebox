@@ -31,13 +31,14 @@ const NOW = new Date(2026, 7, 18, 12, 0);
 void test("The embedded reset time (\"Aug 19th, 2026 11:34 PM\") has no timezone — it is i...", async (t) => {
   // doctest:L33
   const hit = recognizeEngineUnavailability({ provider: "codex", message: CODEX_QUOTA_MESSAGE, now: NOW });
-  t.check(hit?.reason, "quota-exhausted");
-
-  // doctest:L37
-  t.check(hit?.retryAtSource, "parsed");
-
-  // doctest:L40
-  await t.checkText(hit?.retryAt === new Date(2026, 7, 19, 23, 34).toISOString(), "true");
+  t.check(hit, {
+    provider: "codex",
+    reason: "quota-exhausted",
+    retryAt: new Date(2026, 7, 19, 23, 34).toISOString(),
+    retryAtSource: "parsed",
+    detectedAt: NOW.toISOString(),
+    message: CODEX_QUOTA_MESSAGE,
+  });
 
   // The description is the one line every string surface shows — chat, `lastError`,
   // procedure output. It names the cause, the scope, and the reset time, and keeps
@@ -45,13 +46,7 @@ void test("The embedded reset time (\"Aug 19th, 2026 11:34 PM\") has no timezone
 
   // doctest:L49
   const description = describeEngineUnavailability(hit!);
-  await t.checkText(description.startsWith("Codex is out of usage quota until "), "true");
-
-  // doctest:L53
-  await t.checkText(description.includes("account-level: affects every box and task"), "true");
-
-  // doctest:L56
-  await t.checkText(description.includes(CODEX_QUOTA_MESSAGE), "true");
+  t.check(description, `Codex is out of usage quota until Aug 19, 11:34 PM (account-level: affects every box and task using this Codex account). Provider message: ${CODEX_QUOTA_MESSAGE}`);
 });
 
 // ## Unrecognized failures stay ordinary failures
@@ -78,10 +73,14 @@ void test("Format drift in the provider's date degrades to hourly retries — ne
     message: "You've hit your usage limit. Try again in a while.",
     now: NOW2,
   });
-  t.check(drifted?.retryAtSource, "fallback");
-
-  // doctest:L88
-  await t.checkText(drifted?.retryAt === new Date(NOW2.getTime() + 60 * 60 * 1000).toISOString(), "true");
+  t.check(drifted, {
+    provider: "codex",
+    reason: "quota-exhausted",
+    retryAt: new Date(NOW2.getTime() + 60 * 60 * 1000).toISOString(),
+    retryAtSource: "fallback",
+    detectedAt: NOW2.toISOString(),
+    message: "You've hit your usage limit. Try again in a while.",
+  });
 });
 
 // ## Implausible parsed dates clamp to the same hold
@@ -96,7 +95,14 @@ void test("A reset in the past or more than 7 days out is treated as a misparse 
     message: "You've hit your usage limit. Please try again at Aug 17th, 2026 11:34 PM.",
     now: NOW3,
   });
-  t.check(past?.retryAtSource, "fallback");
+  t.check(past, {
+    provider: "codex",
+    reason: "quota-exhausted",
+    retryAt: new Date(NOW3.getTime() + 60 * 60 * 1000).toISOString(),
+    retryAtSource: "fallback",
+    detectedAt: NOW3.toISOString(),
+    message: "You've hit your usage limit. Please try again at Aug 17th, 2026 11:34 PM.",
+  });
 
   // doctest:L107
   const farOut = recognizeEngineUnavailability({
@@ -104,7 +110,14 @@ void test("A reset in the past or more than 7 days out is treated as a misparse 
     message: "You've hit your usage limit. Please try again at Sep 19th, 2026 11:34 PM.",
     now: NOW3,
   });
-  t.check(farOut?.retryAtSource, "fallback");
+  t.check(farOut, {
+    provider: "codex",
+    reason: "quota-exhausted",
+    retryAt: new Date(NOW3.getTime() + 60 * 60 * 1000).toISOString(),
+    retryAtSource: "fallback",
+    detectedAt: NOW3.toISOString(),
+    message: "You've hit your usage limit. Please try again at Sep 19th, 2026 11:34 PM.",
+  });
 });
 
 // ## Claude signals (provisional — not yet verified against a live exhaustion)
@@ -120,10 +133,14 @@ void test("Claude Code's known surface embeds a unix epoch:", async (t) => {
     message: `Claude AI usage limit reached|${epochSecs}`,
     now: NOW4,
   });
-  t.check(claudeEpoch?.retryAtSource, "parsed");
-
-  // doctest:L132
-  await t.checkText(claudeEpoch?.retryAt === new Date(epochSecs * 1000).toISOString(), "true");
+  t.check(claudeEpoch, {
+    provider: "claude",
+    reason: "quota-exhausted",
+    retryAt: new Date(epochSecs * 1000).toISOString(),
+    retryAtSource: "parsed",
+    detectedAt: NOW4.toISOString(),
+    message: `Claude AI usage limit reached|${epochSecs}`,
+  });
 
   // doctest:L135
   const claudeBare = recognizeEngineUnavailability({
@@ -131,8 +148,13 @@ void test("Claude Code's known surface embeds a unix epoch:", async (t) => {
     message: "Claude AI usage limit reached — upgrade to continue",
     now: NOW4,
   });
-  t.check(claudeBare?.retryAtSource, "fallback");
-
-  // doctest:L143
-  await t.checkText(describeEngineUnavailability(claudeBare!).startsWith("Claude is out of usage quota until "), "true");
+  t.check(claudeBare, {
+    provider: "claude",
+    reason: "quota-exhausted",
+    retryAt: new Date(NOW4.getTime() + 60 * 60 * 1000).toISOString(),
+    retryAtSource: "fallback",
+    detectedAt: NOW4.toISOString(),
+    message: "Claude AI usage limit reached — upgrade to continue",
+  });
+  t.check(describeEngineUnavailability(claudeBare!), "Claude is out of usage quota until Aug 18, 1:00 PM (account-level: affects every box and task using this Claude account). Provider message: Claude AI usage limit reached — upgrade to continue");
 });

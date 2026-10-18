@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, str } from "agent-doctest/check";
 import { join } from "node:path";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -14,6 +15,17 @@ import { initBox } from "../../../src/core/box/structure/core.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
 import { createGmailConnector } from "../../../src/connectors/gmail/connector.js";
 import { strandedDraftsHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/connectors.js";
+
+/** The drafts a fake Gmail holds, with each raw MIME message decoded. */
+function uploaded(gmail: ReturnType<typeof createFakeGoogleGmail>) {
+  return gmail.drafts.map((d) => ({
+    draft: d.draft,
+    raw: Buffer.from(d.raw.replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf-8"),
+  }));
+}
+
+const DRAFT = (threadId: string) => ({ id: "r-fake-1", message: { id: "m-fake-1", threadId, labelIds: ["DRAFT"] } });
+const MIME_TAIL = "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n";
 
 // ## A new outbound (no thread) gets uploaded and stamped
 void test("A new outbound (no thread) gets uploaded and stamped", async (t) => {
@@ -35,37 +47,35 @@ void test("A new outbound (no thread) gets uploaded and stamped", async (t) => {
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
   const result = await connector.sync();
-  t.check(result.success, true);
+  t.check(result, {
+    success: true,
+    created: [],
+    updated: ["_content/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card"],
+    procedures: [],
+  });
 
   // doctest:L39
-  await t.checkText(gmail.drafts.length, "1");
+  t.check(uploaded(gmail), [{
+    draft: DRAFT("t-fake-1"),
+    raw: `To: alice@example.com\r\nSubject: Hello\r\n${MIME_TAIL}Hi there.\n`,
+  }]);
 
   // The card is stamped with the returned draft id and URL:
 
   // doctest:L46
   const stampedPath = "_content/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card";
   const stamped = await readFile(join(box.root, stampedPath), "utf-8");
-  await t.checkText(stamped.includes("gmail-draft-id: r-fake-1"), "true");
+  t.check(stamped, `---
+type: email-outbound
+status: draft
+to: alice@example.com
+subject: Hello
+gmail-draft-id: r-fake-1
+gmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-fake-1
+---
+Hi there.
+`);
 
-  // doctest:L51
-  await t.checkText(
-    stamped.includes("gmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-fake-1")
-    ,
-    "true",
-  );
-
-  // The MIME we uploaded has the headers and body:
-
-  // doctest:L58
-  const raw = gmail.drafts[0]?.raw ?? "";
-  const decoded = Buffer.from(raw.replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf-8");
-  await t.checkText(decoded.includes("To: alice@example.com"), "true");
-
-  // doctest:L63
-  await t.checkText(decoded.includes("Subject: Hello"), "true");
-
-  // doctest:L66
-  await t.checkText(decoded.includes("Hi there."), "true");
 });
 
 // ## A reply outbound inherits threading from the source message
@@ -99,24 +109,12 @@ void test("When an outbound has <in-reply-to ref=\"...\" />, the connector reads
   await connector.sync();
 
   // doctest:L98
-  await t.checkText(gmail.drafts.length, "1");
+  // Reply uses the source thread-id, and the MIME has the threading headers
+  t.check(uploaded(gmail), [{
+    draft: DRAFT("thread-abc12345"),
+    raw: `To: alice@example.com\r\nSubject: Re: Test\r\nIn-Reply-To: orig-msg-id-123\r\nReferences: orig-msg-id-123\r\n${MIME_TAIL}Thanks for the note.\n`,
+  }]);
 
-  // doctest:L101
-  t.check(
-    // Reply uses the source thread-id
-    gmail.drafts[0]?.draft.message.threadId,
-    "thread-abc12345",
-  );
-
-  // The MIME has the threading headers:
-
-  // doctest:L109
-  const raw = gmail.drafts[0]?.raw ?? "";
-  const decoded = Buffer.from(raw.replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf-8");
-  await t.checkText(decoded.includes("In-Reply-To: orig-msg-id-123"), "true");
-
-  // doctest:L114
-  await t.checkText(decoded.includes("References: orig-msg-id-123"), "true");
 });
 
 // ## Threading also works with box-relative or box-anchored absolute refs
@@ -149,10 +147,10 @@ void test("Agents sometimes write <in-reply-to> with a longer path.", async (t) 
   await connector.sync();
 
   // doctest:L145
-  await t.checkText(gmail.drafts.length, "1");
-
-  // doctest:L148
-  t.check(gmail.drafts[0]?.draft.message.threadId, "thread-zzz99999");
+  t.check(uploaded(gmail), [{
+    draft: DRAFT("thread-zzz99999"),
+    raw: `To: a@b.com\r\nSubject: Re: X\r\nIn-Reply-To: abs-msg-id\r\nReferences: abs-msg-id\r\n${MIME_TAIL}Reply 1.\n`,
+  }]);
 });
 
 // ## A reply draft with an unresolvable in-reply-to ref reports the error
@@ -181,29 +179,39 @@ void test("If the agent writes a draft whose in-reply-to doesn't point to a real
   const result = await connector.sync();
 
   // doctest:L175
-  await t.checkText(
-    // No draft uploaded, sync reports the error per-card
-    gmail.drafts.length,
-    "0",
-  );
+  // No draft uploaded, sync reports the error per-card
+  t.check(gmail.drafts, []);
 
   // doctest:L179
-  t.check(result.success, true);
-
-  // doctest:L182
-  t.check(
-    // Inbound sync succeeded, but the failed card is named in the error, so the
-    // wakeup and finalize output (and the connector activity record) show it.
-    result.error?.startsWith("Draft upload failed for 1 card: _content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card: "),
-    true,
-  );
+  // Inbound sync succeeded, but the failed card is named in the error, so the
+  // wakeup and finalize output (and the connector activity record) show it.
+  const badCard = "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card";
+  const reason = str`in-reply-to ref "does-not-exist.email-message.card" did not resolve to a readable email-message card with email.message-id and email.thread-id (looked at ${box.root}/_content/inbox/email/thread-Bad-aaa00000/does-not-exist.email-message.card)`;
+  t.check(result, {
+    success: true,
+    created: [],
+    updated: [badCard],
+    procedures: [],
+    // The error text is cut at a fixed length, partway through the tmp path.
+    error: str`Draft upload failed for 1 card: ${badCard}: in-reply-to ref "does-not-exist.email-message.card" did not resolve to a readable email-message card with email.message-id and email.thread-id (looked at ${any(String)}â€¦`,
+  });
 
   // doctest:L187
   // No draft id. The failure is the card's own, so the reason is written on
   // the card and the connector stops retrying it.
   const cardPath = join(box.root, "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card");
   const stamped = await readFile(cardPath, "utf-8");
-  t.check(`${stamped.includes("gmail-draft-id")} | ${stamped.includes("gmail-draft-error: in-reply-to ref")}`, "false | true");
+  t.check(stamped, str`---
+type: email-outbound
+status: draft
+to: x@y.com
+subject: "Re: missing"
+in-reply-to:
+  ref: does-not-exist.email-message.card
+gmail-draft-error: ${reason}
+---
+...
+`);
 
   // The next sync leaves the stranded card alone: no retry and no error. The
   // dashboard lists it instead, until someone fixes the card and deletes the
@@ -211,17 +219,27 @@ void test("If the agent writes a draft whose in-reply-to doesn't point to a real
 
   // doctest:L200
   const again = await connector.sync();
-  t.check(`${again.error} | ${gmail.drafts.length}`, "undefined | 0");
+  t.check(again, { success: true, created: [], updated: [], procedures: [] });
+  t.check(gmail.drafts, []);
 
   // doctest:L204
   const [check] = await strandedDraftsHealthChecks(box.root);
-  t.check(`${check?.name} | ${check?.message.startsWith("1 Gmail draft could not be uploaded and is no longer retried: _content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card")}`, "gmail-drafts | true");
+  t.check(check, {
+    name: "gmail-drafts",
+    ok: false,
+    message: str`1 Gmail draft could not be uploaded and is no longer retried: ${badCard} (${reason}). Fix the card, then delete its gmail-draft-error line to retry.`,
+    severity: "warning",
+  });
 
   // doctest:L208
   // Fixing the card: point the ref at nothing (a new thread) and drop the error line.
   await writeFile(cardPath, "---\ntype: email-outbound\nstatus: draft\nto: x@y.com\nsubject: \"Re: missing\"\n---\n...\n");
   await connector.sync();
-  t.check(`${gmail.drafts.length} | ${(await strandedDraftsHealthChecks(box.root)).length}`, "1 | 0");
+  t.check(uploaded(gmail), [{
+    draft: DRAFT("t-fake-1"),
+    raw: `To: x@y.com\r\nSubject: Re: missing\r\n${MIME_TAIL}...\n`,
+  }]);
+  t.check(await strandedDraftsHealthChecks(box.root), []);
 });
 
 // ## A draft Gmail rejects is stranded; a transient failure is retried
@@ -244,7 +262,15 @@ void test("Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by ret
   gmail.rejectDrafts = "Invalid To header";
   await createGmailConnector(box.root, gmail).sync();
   const cardPath = join(box.root, "_content/inbox/email/draft-2026-04-28-a/draft-001.email-outbound.card");
-  await t.checkText((await readFile(cardPath, "utf-8")).includes("gmail-draft-error: \"Gmail rejected the draft: Invalid To header\""), "true");
+  t.check(await readFile(cardPath, "utf-8"), `---
+type: email-outbound
+status: draft
+to: not an address
+subject: Hi
+gmail-draft-error: "Gmail rejected the draft: Invalid To header"
+---
+Hello.
+`);
 
   // doctest:L237
   await box.seed(
@@ -255,14 +281,29 @@ void test("Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by ret
   const result = await createGmailConnector(box.root, offline).sync();
   const otherPath = join(box.root, "_content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card");
   const other = await readFile(otherPath, "utf-8");
-  t.check(`${result.error?.includes("socket hang up")} | ${other.includes("gmail-draft-error")} | ${other.includes("gmail-draft-failing-since:")}`, "true | false | true");
+  t.check(result, {
+    success: true,
+    created: [],
+    updated: ["_content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card"],
+    procedures: [],
+    error: "Draft upload failed for 1 card: _content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card: socket hang up",
+  });
+  t.check(other, str`---
+type: email-outbound
+status: draft
+to: bob@example.com
+subject: Hi
+gmail-draft-failing-since: ${isoDate()}
+---
+Hello.
+`);
 
   // The first retried failure starts a clock on the card; a later failure inside
   // the week leaves the card as it is:
 
   // doctest:L253
   await createGmailConnector(box.root, offline).sync();
-  await t.checkText((await readFile(otherPath, "utf-8")) === other, "true");
+  t.check(await readFile(otherPath, "utf-8"), other);
 
   // ## Retried failures stop after a week
   //
@@ -274,10 +315,23 @@ void test("Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by ret
   await writeFile(otherPath, other.replace(/gmail-draft-failing-since: .*/, `gmail-draft-failing-since: ${eightDaysAgo}`));
   await createGmailConnector(box.root, offline).sync();
   const gaveUp = await readFile(otherPath, "utf-8");
-  t.check(`${gaveUp.includes("gmail-draft-error: \"Upload kept failing for 7 days")} | ${gaveUp.includes("gmail-draft-failing-since")}`, "true | false");
+  t.check(gaveUp, `---
+type: email-outbound
+status: draft
+to: bob@example.com
+subject: Hi
+gmail-draft-error: "Upload kept failing for 7 days, since ${eightDaysAgo}: socket hang up"
+---
+Hello.
+`);
 
   // doctest:L271
-  t.check((await strandedDraftsHealthChecks(box.root))[0]?.message.includes("draft-2026-04-28-b"), true);
+  t.check(await strandedDraftsHealthChecks(box.root), [{
+    name: "gmail-drafts",
+    ok: false,
+    message: `2 Gmail drafts could not be uploaded and are no longer retried: _content/inbox/email/draft-2026-04-28-a/draft-001.email-outbound.card (Gmail rejected the draft: Invalid To header); _content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card (Upload kept failing for 7 days, since ${eightDaysAgo}: socket hang up). Fix the card, then delete its gmail-draft-error line to retry.`,
+    severity: "warning",
+  }]);
 
   // Deleting the error line retries it; a successful upload clears the clock:
 
@@ -286,7 +340,20 @@ void test("Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by ret
   const online = createFakeGoogleGmail();
   await createGmailConnector(box.root, online).sync();
   const sent = await readFile(otherPath, "utf-8");
-  t.check(`${online.drafts.length} | ${sent.includes("gmail-draft-id")} | ${sent.includes("gmail-draft-failing-since")}`, "1 | true | false");
+  t.check(uploaded(online), [{
+    draft: DRAFT("t-fake-1"),
+    raw: `To: bob@example.com\r\nSubject: Hi\r\n${MIME_TAIL}Hello.\n`,
+  }]);
+  t.check(sent, `---
+type: email-outbound
+status: draft
+to: bob@example.com
+subject: Hi
+gmail-draft-id: r-fake-1
+gmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-fake-1
+---
+Hello.
+`);
 });
 
 // ## Already-stamped outbounds are skipped
@@ -314,7 +381,7 @@ void test("An outbound card with gmail-draft-id set has already been uploaded â€
   await connector.sync();
 
   // doctest:L308
-  await t.checkText(gmail.drafts.length, "0");
+  t.check(gmail.drafts, []);
 });
 
 // ## Received email-message cards are not picked up as outbound
@@ -342,5 +409,5 @@ void test("A normal received email-message card under content/inbox/email/ is le
   await connector.sync();
 
   // doctest:L334
-  await t.checkText(gmail.drafts.length, "0");
+  t.check(gmail.drafts, []);
 });

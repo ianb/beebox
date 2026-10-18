@@ -135,24 +135,22 @@ void test("triggeredBy distinguishes this run in the box's history from a schedu
   const forced = await forceWakeup({ connector: "google-drive" });
   assert.ok(forced.ok);
   assert.ok(forced.value.outcome);
-  t.check({ calls: box.calls, ok: forced.ok && forced.value.ok }, {
-    calls: [
-      {
-        triggeredBy: "force-wakeup",
-        connector: "google-drive",
-      },
-    ],
-    ok: true,
-  });
+  t.check(box.calls, [{ triggeredBy: "force-wakeup", connector: "google-drive" }]);
 
-  // doctest:L134
-  t.check(forced.value.outcome.connectors[0], {
-    name: "google-drive",
-    success: true,
-    created: 3,
-    updated: 1,
-    pushed: 0,
-    jobs: 2,
+  // The child's output is not in the value.
+  t.check(forced.value, {
+    ok: true,
+    detail: "",
+    outcome: {
+      connectorErrors: 0,
+      connectors: [
+        { name: "google-drive", success: true, created: 3, updated: 1, pushed: 0, jobs: 2 },
+      ],
+      reactorOk: true,
+      reactorSkipped: false,
+      jobsProcessed: 2,
+      jobsRemaining: 0,
+    },
   });
 
   // doctest:L137
@@ -161,8 +159,6 @@ void test("triggeredBy distinguishes this run in the box's history from a schedu
     "reactor: ok, 2 jobs processed, 0 remaining",
   ]);
 
-  // doctest:L140
-  await t.checkText("output" in forced.value, "false");
 });
 
 // ## A connector that deliberately did nothing says so, with the reason
@@ -197,10 +193,7 @@ void test("This is the failure the incident was made of:", async (t) => {
   // schedule runs — the same code, not a forced variant of it:
 
   // doctest:L171
-  t.check(box.calls[0], {
-    triggeredBy: "force-wakeup",
-    connector: null,
-  });
+  t.check(box.calls, [{ triggeredBy: "force-wakeup", connector: null }]);
 });
 
 // ## A cycle that skipped on the box's lock is a successful call
@@ -226,15 +219,20 @@ void test("Two overlapping wakeups are ordinary.", async (t) => {
   const forced = await forceWakeup({});
   assert.ok(forced.ok);
   assert.ok(forced.value.outcome);
-  const summary = { ok: forced.value.ok, skipped: forced.value.outcome.skipped, lines: forceWakeupLines(forced.value), detail: forced.value.detail.split(",")[0] };
-  t.check(summary, {
+  t.check(forced.value, {
     ok: true,
-    skipped: "wakeup-running",
-    lines: [
-      "wakeup skipped: already running",
-    ],
-    detail: "Another wakeup cycle was already running on this box",
+    detail: "Another wakeup cycle was already running on this box, so this one did nothing. Try again once it finishes.",
+    outcome: {
+      connectorErrors: 0,
+      connectors: [],
+      reactorOk: true,
+      reactorSkipped: false,
+      jobsProcessed: 0,
+      jobsRemaining: 0,
+      skipped: "wakeup-running",
+    },
   });
+  t.check(forceWakeupLines(forced.value), ["wakeup skipped: already running"]);
 });
 
 // ## A child that produced no outcome is "unknown", not "fine"
@@ -253,7 +251,9 @@ void test("An older binary or a crash before the end of the cycle leaves nothing
   const box = await boxWith({ ok: true, detail: "", output: "", outcome: null });
   const forced = await forceWakeup({});
   assert.ok(forced.ok);
-  t.check(forceWakeupLines(forced.value)[0]?.split("—")[0]?.trim(), "The wakeup finished, but produced no outcome line");
+  t.check(forceWakeupLines(forced.value), [
+    "The wakeup finished, but produced no outcome line — what it did is unknown. Check the box's logs, or run it again.",
+  ]);
 });
 
 // ## A failed child keeps its per-connector detail, and the verb exits non-zero
@@ -277,21 +277,30 @@ void test("A failed child keeps its per-connector detail, and the verb exits non
   });
   const forced = await forceWakeup({ connector: "nope" });
   assert.ok(forced.ok);
-  const failed = { ok: forced.value.ok, lines: forceWakeupLines(forced.value) };
-  t.check(failed, {
-    ok: false,
-    lines: [
-      "  nope: error: Connector not found: nope",
-      "reactor: ok, 0 jobs processed, 0 remaining",
-      "bbx wakeup exited with code 1",
-    ],
-  });
+  t.check(forceWakeupLines(forced.value), [
+    "  nope: error: Connector not found: nope",
+    "reactor: ok, 0 jobs processed, 0 remaining",
+    "bbx wakeup exited with code 1",
+  ]);
 
   // `--json` prints exactly this object, so an agent reads fields rather than the
   // lines above:
 
   // doctest:L244
-  t.check(Object.keys(JSON.parse(JSON.stringify(forced.value))).toSorted().join(","), "detail,ok,outcome");
+  t.check(forced.value, {
+    ok: false,
+    detail: "bbx wakeup exited with code 1",
+    outcome: {
+      connectorErrors: 1,
+      connectors: [
+        { name: "nope", success: false, created: 0, updated: 0, pushed: 0, jobs: 0, error: "Connector not found: nope" },
+      ],
+      reactorOk: true,
+      reactorSkipped: false,
+      jobsProcessed: 0,
+      jobsRemaining: 0,
+    },
+  });
 });
 
 // ## Without the box environment it refuses by name — in every profile
@@ -319,5 +328,5 @@ void test("The refusal points at the spawn site, not at the box.", async (t) => 
   ]);
 
   // doctest:L265
-  await t.checkText(box.calls.length, "0");
+  t.check(box.calls, []);
 });

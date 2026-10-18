@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate, str } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -74,7 +74,21 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
 
   // doctest:L73
   const skip = await evaluateSkip(makeCtx());
-  t.check(`${skip?.cause?.reason} | ${skip?.line.includes("waiting on claude quota until")}`, "engine-quota | true");
+  t.check(skip, {
+    line: str`  Skipping test-script: waiting on claude quota until ${any(String)}`,
+    cause: {
+      reason: "engine-quota",
+      live: {
+        provider: "claude",
+        reason: "quota-exhausted",
+        retryAt: reset.toISOString(),
+        retryAtSource: "parsed",
+        detectedAt: NOW.toISOString(),
+        message: "Claude AI usage limit reached|1780000000",
+        episodeStartedAt: isoDate(),
+      },
+    },
+  });
 
   // doctest:L77
   t.check(await evaluateSkip(makeCtx({ options: { force: true } })), null);
@@ -99,10 +113,10 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
     runStartedAt: new Date(NOW.getTime() - 60_000),
     error: new Error("Command failed with exit code 1"),
   });
-  t.check(fresh.result, "deferred");
-
-  // doctest:L106
-  await t.checkText(fresh.error.startsWith("Claude is out of usage quota until "), "true");
+  t.check(fresh, {
+    result: "deferred",
+    error: str`Claude is out of usage quota until ${any(String)} (account-level: affects every box and task using this Claude account). Provider message: Claude AI usage limit reached|1780000000`,
+  });
 
   // doctest:L109
   const stale = await classifyScheduleFailure({
@@ -110,10 +124,7 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
     runStartedAt: new Date(NOW.getTime() + 60_000),
     error: new Error("Command failed with exit code 1"),
   });
-  t.check(stale.result, "failure");
-
-  // doctest:L117
-  t.check(stale.error, "Command failed with exit code 1");
+  t.check(stale, { result: "failure", error: "Command failed with exit code 1" });
 });
 
 // ## A deferred outcome freezes the failure counter
@@ -122,8 +133,6 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
 // reset (a genuinely broken task doesn't get its counter laundered by a quota
 // episode):
 void test("Not incremented (the engine was unavailable, not the task broken) and not res...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L128
   const state = normalizeScriptState({ lastResult: "failure", consecutiveFailures: 4 });
   recordOutcome(state, {
@@ -134,8 +143,21 @@ void test("Not incremented (the engine was unavailable, not the task broken) and
     windowMs: 24 * 60 * 60 * 1000,
     now: new Date("2026-06-09T12:00:00Z"),
   });
-  await t.checkText(out2.with(print(`${state.lastResult}, failures: ${state.consecutiveFailures}`)), "deferred, failures: 4");
+  t.check(state, {
+    lastRun: isoDate(),
+    lastResult: "deferred",
+    lastError: "Claude is out of usage quota until Jun 9, 6:00 PM",
+    lastDurationMs: 1200,
+    lastSuccess: null,
+    consecutiveFailures: 4,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 1,
+    lastCommit: null,
+    carry: null,
+    lastDeferReason: null,
+    recentRuns: [{ ts: isoDate(), durationMs: 1200 }],
+  });
 
-  // doctest:L140
-  await t.checkText(out2.with(state.lastError), "Claude is out of usage quota until Jun 9, 6:00 PM");
 });

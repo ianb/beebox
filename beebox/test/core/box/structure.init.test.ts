@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate, not } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -70,25 +70,22 @@ refresh-maps.scheduled-script.card
 todo-review.scheduled-script.card`);
 
   // The working tree is clean — everything is committed, nothing left untracked:
-
-  // doctest:L69
-  const status = await getStatus(boxRoot);
-  t.check(status.clean, true);
+  t.check(await getStatus(boxRoot), { staged: [], modified: [], untracked: [], clean: true });
 
   // There's exactly one commit with the right subject:
-
-  // doctest:L77
-  const log = await getLog(boxRoot, 5);
-  await t.checkText(log.length, "1");
-
-  // doctest:L81
-  t.check(log[0]?.subject, "Initialize Bee Box");
+  t.check(await getLog(boxRoot, 5), [
+    {
+      hash: any(String).matches(/^[\da-f]{40}$/),
+      date: isoDate(),
+      subject: "Initialize Bee Box",
+      body: "Created-By: bbx init",
+      trailers: { "Created-By": "bbx init" },
+    },
+  ]);
 });
 
 // ## Procedures and guides are also committed
 void test("Procedures and guides are also committed", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await fs.rm(tmp, { recursive: true, force: true });
@@ -101,7 +98,7 @@ void test("Procedures and guides are also committed", async (t) => {
   const { boxRoot } = await fullInit(tmp);
 
   // doctest:L95
-  await t.checkText(out.with(await listFiles(boxRoot, "_config/procedures")), `browser-task-drain.procedure.card
+  await t.checkText(await listFiles(boxRoot, "_config/procedures"), `browser-task-drain.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
 todo-review.procedure.card`);
@@ -124,14 +121,13 @@ todo-review.procedure.card`);
       .filter((name) => name.endsWith(".procedure.card"))
       .map((name) => fs.readFile(path.join(procedureDir, name), "utf8")),
   );
-  print(`refresh-maps: ${refreshMaps.includes("model: balanced")}`);
-  print(`browser-task-drain: ${browserTaskDrain.includes("model: balanced")}`);
-  await t.checkText(out.with(print(`provider pins: ${/model: (?:haiku|sonnet|opus|fable)/.test(stockProcedures.join("\n"))}`)), `refresh-maps: true
-browser-task-drain: true
-provider pins: false`);
+  // Whole procedure files are large generated text; the narrow checks look for one line.
+  t.check(refreshMaps, any(String).includes("model: balanced"));
+  t.check(browserTaskDrain, any(String).includes("model: balanced"));
+  t.check(stockProcedures.join("\n"), not(any(String).matches(/model: (?:haiku|sonnet|opus|fable)/)));
 
   // doctest:L131
-  await t.checkText(out.with(await listFiles(boxRoot, "_config")), `calendar.guide.card
+  await t.checkText(await listFiles(boxRoot, "_config"), `calendar.guide.card
 connectors
 feedback
 intake.guide.card
@@ -145,8 +141,7 @@ template-versions.json
 transcription.json`);
 
   // doctest:L148
-  const status = await getStatus(boxRoot);
-  await t.checkText(out.with(status.clean), "true");
+  t.check(await getStatus(boxRoot), { staged: [], modified: [], untracked: [], clean: true });
 });
 
 // ## Git repo is initialized

@@ -176,23 +176,38 @@ void test("A type the map does not name is never touched; a refused card is repo
 
   // doctest:L159
   const dry = await applyFieldMap(box.root, { map, apply: false });
-  t.check({ converted: dry.converted, already: dry.already, refused: dry.refused.map((r) => r.path) }, {
+  t.check(dry, {
     converted: [
       "_content/bills/Water.bill.card",
       "_content/books/Dune.book.card",
     ],
     already: 0,
     refused: [
-      "_content/books/Odd.book.card",
+      {
+        path: "_content/books/Odd.book.card",
+        reason: "book ownership has both the old and the new keys; migrate this card by hand",
+      },
     ],
   });
 
   // doctest:L163
-  await t.checkText((await box.read("_content/books/Dune.book.card")).includes("status: owned"), "true");
+  t.check(await box.read("_content/books/Dune.book.card"), "---\ntitle: Dune\nstatus: owned\n---\n");
 
   // doctest:L166
   const applied = await applyFieldMap(box.root, { map, apply: true });
-  await t.checkText(applied.converted.length, "2");
+  t.check(applied, {
+    converted: [
+      "_content/bills/Water.bill.card",
+      "_content/books/Dune.book.card",
+    ],
+    already: 0,
+    refused: [
+      {
+        path: "_content/books/Odd.book.card",
+        reason: "book ownership has both the old and the new keys; migrate this card by hand",
+      },
+    ],
+  });
 
   // doctest:L170
   t.check(await box.read("_content/books/Dune.book.card"), `---
@@ -202,5 +217,14 @@ ownership: owned
 `);
 
   // doctest:L173
-  await t.checkText((await applyFieldMap(box.root, { map, apply: true })).converted.length, "0");
+  t.check(await applyFieldMap(box.root, { map, apply: true }), {
+    converted: [],
+    already: 2,
+    refused: [
+      {
+        path: "_content/books/Odd.book.card",
+        reason: "book ownership has both the old and the new keys; migrate this card by hand",
+      },
+    ],
+  });
 });

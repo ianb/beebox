@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";
 import { generateSkills, skillConflicts } from "../../../../../src/core/box/guidance-sync/skills/core.js";
 import { readFile, readdir } from "node:fs/promises";
@@ -18,7 +19,6 @@ function skillFile(box: TmpBox, rel: string) {
 
 // It installs the managed skills and returns their names. A plugin's skill (courseware's, for one) is not among them: the engine mirrors it only while the plugin is active (`docs/plugins.md`):
 void test("It installs the managed skills and returns their names.", async (t) => {
-  // doctest:L22
   const box = await makeTmpBox();
   const { written } = await generateSkills(box.root);
   t.check(written, [
@@ -38,38 +38,36 @@ void test("It installs the managed skills and returns their names.", async (t) =
 // Each lands at `.claude/skills/<name>/SKILL.md` with well-formed frontmatter (the
 // `name` and a `description` that drives triggering):
 void test("Each lands at .claude/skills/<name>/SKILL.md with well-formed frontmatter (th...", async (t) => {
-  // doctest:L43
   const box = await makeTmpBox();
   await generateSkills(box.root);
   const text = await readFile(skillFile(box, "calendar/SKILL.md"), "utf8");
-  await t.checkText(text.startsWith("---\nname: calendar\n") && text.includes("description:"), "true");
+  // A large generated skill file: the frontmatter opening is the contract here.
+  t.check(text, any(String).startsWith("---\nname: calendar\n").includes("description:"));
 });
 
 // The guide-section extractions — `email`, `location`, `schedules`, `tricks`, `views` —
 // install the same way. Each is a doorway to a capability the always-loaded guide no
 // longer carries, discovered via its trigger `description`:
 void test("The guide-section extractions — email, location, schedules, tricks, views — i...", async (t) => {
-  // doctest:L55
   const box = await makeTmpBox();
   await generateSkills(box.root);
   const names = ["email", "location", "schedules", "tricks", "views"];
   const texts = await Promise.all(names.map((name) => readFile(skillFile(box, name + "/SKILL.md"), "utf8")));
-  const bad = names.filter((name, i) => !(texts[i]?.startsWith("---\nname: " + name + "\n") && texts[i]?.includes("description:")));
-  t.check(bad.join(","), "");
+  for (const [i, name] of names.entries()) {
+    t.check(texts[i], any(String).startsWith("---\nname: " + name + "\n").includes("description:"));
+  }
 });
 
 // The `browser-task` skill is the executor procedure for a `browser-task` card. It
 // ships with the box so a boxholder's Claude Code session in the box directory can
 // run a task; it carries no reference to the development checkout:
 void test("The browser-task skill is the executor procedure for a browser-task card.", async (t) => {
-  // doctest:L69
   const box = await makeTmpBox();
   await generateSkills(box.root);
   const bt = await readFile(skillFile(box, "browser-task/SKILL.md"), "utf8");
-  await t.checkText(bt.startsWith("---\nname: browser-task\n") && bt.includes("description:"), "true");
+  t.check(bt, any(String).startsWith("---\nname: browser-task\n").includes("description:"));
 
-  // doctest:L75
-  t.check(/monorepo|beebox\/src|\bbin\/|worktree|localhost:3210|dev router/i.test(bt), false);
+  t.check(bt, not(any(String).matches(/monorepo|beebox\/src|\bbin\/|worktree|localhost:3210|dev router/i)));
 });
 
 // ## An active plugin's skill is mirrored under the plugin's name
@@ -78,13 +76,24 @@ void test("The browser-task skill is the executor procedure for a browser-task c
 // frontmatter the engine writes (`name` is the plugin name, `description` its
 // one-line description) and the marker after it, like every managed skill:
 void test("Listing a plugin in config/box.json plugins adds its skill, with the frontmat...", async (t) => {
-  // doctest:L86
   const box = await makeTmpBox();
   await box.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }));
   const { written, conflicts } = await generateSkills(box.root);
   const text = await readFile(skillFile(box, "courseware/SKILL.md"), "utf8");
-  t.check(({ written: written.includes("courseware"), conflicts, head: text.split("\n").slice(0, 5) }), {
-    written: true,
+  t.check(({ written, conflicts, head: text.split("\n").slice(0, 5) }), {
+    written: [
+    "beebox-system-feedback",
+    "browser-task",
+    "calendar",
+    "drive",
+    "email",
+    "location",
+    "schedules",
+    "tricks",
+    "views",
+    "what-can-you-do",
+    "courseware",
+  ],
     conflicts: [],
     head: [
       "---",
@@ -98,10 +107,20 @@ void test("Listing a plugin in config/box.json plugins adds its skill, with the 
   // Deactivating the plugin retires the skill: the directory is no longer in the
   // manifest and its `SKILL.md` carries the marker naming itself, so it goes.
 
-  // doctest:L108
   await box.write("_config/box.json", JSON.stringify({ plugins: [] }));
   await generateSkills(box.root);
-  t.check(await readdir(skillFile(box, "")).then((names) => names.includes("courseware")), false);
+  t.check(await readdir(skillFile(box, "")), [
+    "beebox-system-feedback",
+    "browser-task",
+    "calendar",
+    "drive",
+    "email",
+    "location",
+    "schedules",
+    "tricks",
+    "views",
+    "what-can-you-do",
+  ]);
 });
 
 // ## A skill the boxholder wrote under a managed name is never overwritten
@@ -111,20 +130,30 @@ void test("Listing a plugin in config/box.json plugins adds its skill, with the 
 // can name both files (`skill-name-conflict`). `skillConflicts` is the same
 // reading without the write:
 void test("A SKILL.md without the marker is the box's own.", async (t) => {
-  // doctest:L122
   const box = await makeTmpBox();
   await box.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }));
   await box.write(".claude/skills/courseware/SKILL.md", "---\nname: courseware\ndescription: mine\n---\nMy own course notes.\n");
   const { written, conflicts } = await generateSkills(box.root);
   t.check(
     ({
-      written: written.includes("courseware"),
+      written,
       conflicts,
       kept: await readFile(skillFile(box, "courseware/SKILL.md"), "utf8"),
       reader: await skillConflicts(box.root),
     }),
     {
-    written: false,
+    written: [
+    "beebox-system-feedback",
+    "browser-task",
+    "calendar",
+    "drive",
+    "email",
+    "location",
+    "schedules",
+    "tricks",
+    "views",
+    "what-can-you-do",
+  ],
     conflicts: [
       {
         name: "courseware",
@@ -152,7 +181,6 @@ My own course notes.
 // When a managed skill goes, an unmarked file the boxholder put beside it stays,
 // and so does the directory holding it:
 void test("When a managed skill goes, an unmarked file the boxholder put beside it stays...", async (t) => {
-  // doctest:L146
   const box = await makeTmpBox();
   await box.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }));
   await generateSkills(box.root);
