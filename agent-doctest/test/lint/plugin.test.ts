@@ -47,3 +47,15 @@ void test("no-voided-check flags void in front of a check", async (t) => {
     ],
   });
 });
+
+void test("no-tap-assert flags tap's own asserts", async (t) => {
+  tester(t).run("no-tap-assert", plugin.rules["no-tap-assert"], {
+    valid: ["t.check(x, 1);", "t.error(err);", "t.fail('unreachable');", "other.equal(a, b);", "assert.ok(x);"],
+    invalid: [
+      { code: "t.equal(a, 1);", errors: [{ messageId: "tapAssert", data: { method: "equal", replacement: "check" } }] },
+      { code: "tap.same(list, []);", errors: [{ messageId: "tapAssert", data: { method: "same", replacement: "check" } }] },
+      { code: "t.ok(x);", errors: [{ messageId: "tapAssert", data: { method: "ok", replacement: "check" } }] },
+      { code: "await t.rejects(p);", errors: [{ messageId: "tapAssert", data: { method: "rejects", replacement: "checkThrows" } }] },
+    ],
+  });
+});

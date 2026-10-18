@@ -294,8 +294,11 @@ const enabledRules: Linter.RulesRecord = {
   "unicorn/no-unreadable-iife": "error",
   // Drop useless empty args on collection constructors (new Set([]) → new Set())
   "unicorn/no-useless-collection-argument": "error",
-  // Don't pass undefined explicitly when it's the default
-  "unicorn/no-useless-undefined": "error",
+  // Don't write undefined where it's already the default (`return undefined`,
+  // `let x = undefined`). Arguments are exempt — boxholder decision
+  // 2026-10-18: an explicit `undefined` argument can be the value that
+  // matters, as in `t.check(result, undefined)`, which the rule flagged.
+  "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   // Drop unnecessary .0 fractions — 1.0 → 1
   "unicorn/no-zero-fractions": "error",
   // Disabled: conflicts with prettier's numeric separator formatting

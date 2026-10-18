@@ -627,7 +627,8 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     not run the test, and passed in two reruns and with the verify
     sentence. Luna does not run tests unless the brief
     says to. Every worker brief names its verify command, so phase 2 is not
-    affected; the boxholder decides whether that counts as "no help".
+    affected. Boxholder (2026-10-18): a brief that names the verify
+    command counts as "no help". Met.
   - No field-only checks where the whole value was available: one case,
     Haiku's `t.ok(device)` before using a nullable value (T7); `check.md`
     now shows `capture()` for it. Luna's T6 checked each directive exactly
@@ -643,8 +644,8 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     transcript shows it.
   - Key order: 1,645 typed checks no longer assert the order the code
     built an object in (1,608 of them unwrapped `JSON.stringify`); no
-    other loosening over 33,681 mutated values. Boxholder decision: accept
-    (the recommendation: order was incidental), or keep those as text.
+    other loosening over 33,681 mutated values. Boxholder (2026-10-18):
+    accepted; the order was incidental.
   - Assignments: every task to either model, with the verify command in
     the brief. T6 (strengthening) uses the whole-value brief: with it, Luna
     caught 4/4 mutants in both runs (T6b).
@@ -796,7 +797,9 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     check stays `checkText`, with its reason in the manifest, when the
     differential run shows its typed form failing on the real value, when
     tsc rejects it, or when lint rejects it (a lossy actual value, or an
-    expected `undefined`). Result: 9,338 of 12,319 checks typed
+    expected `undefined`, until the boxholder exempted arguments from
+    `unicorn/no-useless-undefined` on 2026-10-18). Result: 9,338 of 12,319
+    checks typed
     (`bin/doctest-convert/TRIALS.md`).
   - **Workers then handle the judgment cases:**
     - the 1,466 lossy checks kept as text: `a === b` checked against
@@ -805,6 +808,15 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     - printed output and multi-line text that is really a value;
     - field reads → the whole object;
     - restating comments.
+  - **A lint rule against `checkText` on an object** (boxholder: yes,
+    2026-10-18) lands with this phase. Test lint has no type information
+    (`personal-vibe-check/preset.ts` gives `projectService` to `src/**`
+    only), so the rule needs it added for test files, or a runtime check in
+    `checkText`. Either form fires on the converted checks kept as text
+    for multi-line output, a failed typed form, or a structure, which are
+    this phase's work list; enabling it earlier would make phase 2 workers
+    do phase 3's work. `agent-doctest/no-tap-assert` (tap's own `t.equal`,
+    `t.ok`, ...) is already on.
   - **Brief (trial T6):** "check the whole value the code returns". A brief
     that says "keep what each check covers" made Luna strengthen each check
     in place and miss what the doctest never named.

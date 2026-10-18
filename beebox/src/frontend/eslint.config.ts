@@ -240,6 +240,7 @@ export default [
     rules: {
       "agent-doctest/check-whole-value": "error",
       "agent-doctest/no-voided-check": "error",
+      "agent-doctest/no-tap-assert": "error",
     },
   },
 ];

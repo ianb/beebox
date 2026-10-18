@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { test } from "tap";
+import "agent-doctest/tap";
 
 const execFileAsync = promisify(execFile);
 const beeBoxRoot = fileURLToPath(new URL("../../../../..", import.meta.url));
@@ -36,5 +37,6 @@ test("frontend tRPC directory entrypoint resolves in concurrent loader children"
         : [`child ${index + 1}: missing success marker; stdout=${JSON.stringify(result.value.stdout)}`]
   ));
 
-  t.same(failures, [], `all ${childCount} concurrent loader children resolved view-bindings -> lib/trpc`);
+  // All concurrent loader children resolved view-bindings -> lib/trpc.
+  t.check(failures, []);
 });

@@ -8,7 +8,7 @@ import type { CallExpression, Node } from "estree";
 
 const CHECK_METHODS = new Set(["check", "checkText", "checkThrows"]);
 /** The names a test's tap object goes by: the callback parameter, or `tap` when setup declares `t`. */
-const TEST_OBJECTS = new Set(["t", "tap"]);
+export const TEST_OBJECTS: ReadonlySet<string> = new Set(["t", "tap"]);
 
 /** The method name when `node` is a call like `t.check(...)`, or null. */
 export function checkMethod(node: Node): string | null {
