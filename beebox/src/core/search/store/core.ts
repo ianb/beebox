@@ -46,7 +46,7 @@ export type { IndexPersisted } from "./index-store.js";
  */
 export const SEARCH_SCHEMA_VERSION = 5;
 
-export const searchOramaSchema = {
+const searchOramaSchema = {
   path: "string",
   fragment: "string",
   kind: "enum",

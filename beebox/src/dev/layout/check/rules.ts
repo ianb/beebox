@@ -8,11 +8,19 @@ import { namesRule } from "./rules/names.js";
 import { pluginImportsRule } from "./rules/plugin-imports.js";
 import { setsRule } from "./rules/sets/rule.js";
 import { testsRule } from "./rules/tests.js";
+import { typescriptImportsRule } from "./rules/typescript-imports.js";
 import { unitsRule } from "./rules/units.js";
 
 export const layoutRules = defineRegistry<LayoutRule>({
   directory: "./rules",
   entry: "rule",
   ordered: false,
-  members: { names: namesRule, pluginImports: pluginImportsRule, sets: setsRule, tests: testsRule, units: unitsRule },
+  members: {
+    names: namesRule,
+    pluginImports: pluginImportsRule,
+    sets: setsRule,
+    tests: testsRule,
+    typescriptImports: typescriptImportsRule,
+    units: unitsRule,
+  },
 });

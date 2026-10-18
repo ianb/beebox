@@ -6,7 +6,9 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    // TypeScript 6+ no longer loads every @types package by default.
+    "types": ["chrome"]
   },
   "include": ["eslint.config.ts", ".wxt/wxt.d.ts", "src/**/*", "test/**/*"],
   "exclude": ["node_modules", ".output"]

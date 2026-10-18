@@ -26,7 +26,7 @@ const NOTES_MAX = 40;
 /** One account item stays a line, not an essay. */
 const NOTE_MAX = 280;
 
-export const ReviewOutputSchema = z.object({
+const ReviewOutputSchema = z.object({
   /** One line. Empty string means "the existing title still fits, keep it". */
   title: z
     .string()
@@ -57,7 +57,7 @@ export type ReviewOutput = z.infer<typeof ReviewOutputSchema>;
  * "the existing title still fits, keep it" — but is a *failure* when the
  * conversation has no title at all (nothing to keep), enforced by the caller.
  */
-export const TitleOutputSchema = z.object({
+const TitleOutputSchema = z.object({
   title: z
     .string()
     .max(TITLE_MAX)

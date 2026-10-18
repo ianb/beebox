@@ -16,8 +16,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    // Cross-boundary import aliases. Two contracts, by design:
+    // Cross-boundary import aliases, relative to this file. Two contracts, by design:
     //   @shared/*  -> ../shared/*   VALUE-safe: also aliased in vite.config.ts,
     //                so runtime value imports resolve in the client bundle.
     //                src/shared/ is isomorphic + bundler-safe.

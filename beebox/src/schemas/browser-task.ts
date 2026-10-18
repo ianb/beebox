@@ -5,7 +5,7 @@ import { validateBatch, COVERAGE_REASONS } from "../shared/browser-task-batch.js
 import { IsoDuration } from "../shared/iso-duration.js";
 
 /** One drained batch, as the drain records it on the card. The card's scan history. */
-export const BrowserTaskRun = z.object({
+const BrowserTaskRun = z.object({
   batch: z.string(),
   at: z.string().datetime({ offset: true }),
   scanned: z.number().int().nonnegative(),

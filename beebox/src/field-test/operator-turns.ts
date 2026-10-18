@@ -134,7 +134,7 @@ export function trackOperatorTurns(options: TurnTrackerOptions): TurnTracker {
     state.pending = null;
     pending.timer.stop();
     pending.resolve({
-      note: (outcome.note ?? null) ?? pending.texts.join("\n\n"),
+      note: outcome.note ?? pending.texts.join("\n\n"),
       turns: pending.turns,
       status: outcome.status,
       error: outcome.error,

@@ -81,7 +81,7 @@ export type StagingSessionKind = z.infer<typeof StagingSessionKindSchema>;
  * on both the `retrying` and `failed` HQ states so a resumed job and the client
  * badge can show the same reason without re-deriving it.
  */
-export const HqFailureSchema = z.object({
+const HqFailureSchema = z.object({
   kind: z.enum(["transient", "permanent", "exhausted"]),
   code: z.string(),
   message: z.string(),
@@ -92,7 +92,7 @@ export const HqFailureSchema = z.object({
 export type HqFailure = z.infer<typeof HqFailureSchema>;
 
 /** The finished HQ transcript, once every piece has succeeded. */
-export const VoiceHqResultSchema = z.object({
+const VoiceHqResultSchema = z.object({
   text: z.string(),
   diarized: z.boolean(),
   service: z.string(),

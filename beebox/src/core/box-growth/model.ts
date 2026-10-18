@@ -18,7 +18,7 @@ const unavailableHistorySchema = z.object({
   error: z.string(),
 });
 
-export const growthHistorySchema = z.discriminatedUnion("status", [
+const growthHistorySchema = z.discriminatedUnion("status", [
   availableHistorySchema,
   unavailableHistorySchema,
 ]);
@@ -38,7 +38,7 @@ const unavailableBytesSchema = z.object({
 
 const growthBytesSchema = z.discriminatedUnion("status", [availableBytesSchema, unavailableBytesSchema]);
 
-export const subtreeCountsSchema = z.object({
+const subtreeCountsSchema = z.object({
   path: z.string(),
   directories: z.number().int().nonnegative(),
   files: z.number().int().nonnegative(),
@@ -46,7 +46,7 @@ export const subtreeCountsSchema = z.object({
   sourceLabel: z.string().nullable(),
 });
 
-export const growthMeasurementSchema = z.object({
+const growthMeasurementSchema = z.object({
   measuredAt: z.iso.datetime(),
   counts: growthCountsSchema,
   complete: z.boolean().default(true),
@@ -65,7 +65,7 @@ const unmeasuredStateSchema = z.object({
   lastError: z.string().nullable(),
 });
 
-export const growthRateFindingKindSchema = z.enum([
+const growthRateFindingKindSchema = z.enum([
   "rate-directories",
   "rate-files",
   "rate-commits",
@@ -75,7 +75,7 @@ export const growthRateFindingKindSchema = z.enum([
   "rate-engine-bytes",
 ]);
 
-export const growthRateExpectationSchema = z.object({
+const growthRateExpectationSchema = z.object({
   kind: growthRateFindingKindSchema,
   path: z.string().nullable(),
   thresholdPerHour: z.number().nonnegative(),

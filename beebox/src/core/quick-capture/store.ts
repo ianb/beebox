@@ -9,7 +9,7 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { quickCaptureDeclarationSchema, quickCaptureDeclarationFieldsSchema, QUICK_CAPTURE_STATES, type QuickCaptureDeclaration } from "../../shared/quick-capture.js";
 import { invariant } from "../../shared/invariant.js";
 
-export const captureRecordSchema = z.object({
+const captureRecordSchema = z.object({
   id: z.string().uuid(), owner: z.string().nullable(), digest: z.string(),
   declaration: quickCaptureDeclarationFieldsSchema.partial({ source: true }), acceptedAt: z.string(),
   state: z.enum(QUICK_CAPTURE_STATES), sourceRef: z.string().optional(),

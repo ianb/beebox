@@ -28,6 +28,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/turndown": "^5.0.6",
+    "@typescript/native": "npm:typescript@7.0.2",
     "@wxt-dev/module-react": "^1.2.2",
     "autoprefixer": "^10",
     "eslint": "^9.39.2",
@@ -36,7 +37,7 @@
     "tailwindcss": "^3",
     "tap": "^21",
     "tsx": "^4.23.1",
-    "typescript": "^5.7.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "wxt": "^0.20.26"
   },
   "tap": {

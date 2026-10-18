@@ -227,6 +227,16 @@ Object.keys(pkg.devDependencies).sort()
 ]
 ```
 
+The box's `typescript` is the TypeScript 7 version the engine itself runs:
+the engine names it `@typescript/native` (its own `typescript` name is the 6.0
+package typescript-eslint needs), and a box, which has no typescript-eslint,
+takes the plain name:
+
+```ts continue
+pkg.devDependencies.typescript
+=> 7.0.2
+```
+
 `node_modules/beebox` is a symlink straight at the running engine
 (Track F's real install replaces it) — `pnpm install` was NOT run:
 

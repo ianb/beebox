@@ -11,14 +11,18 @@
  * `tsc` is the compiler here rather than esbuild for one specific reason: the tool requires the
  * script to open with `export const meta = {…}` as a literal, and esbuild rewrites that into
  * `var meta = {…}` with a trailing `export { meta }` in both bundle and transform modes. `tsc`
- * leaves the export declaration where it stands.
+ * leaves the export declaration where it stands. It runs as the TypeScript 7 binary with
+ * `--noCheck`: 7.0 has no `transpileModule`, and a checked build would reject the top-level
+ * `return` below.
  *
  * Usage: pnpm exec tsx beebox/src/scripts/user-stories/build-workflows.ts
  */
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import ts from "typescript";
+import { tscBinary } from "../../lib/typescript/tsc.js";
 
 const HERE = import.meta.dirname;
 
@@ -33,10 +37,23 @@ const HERE = import.meta.dirname;
 const OUT_DIR = resolve(HERE, "../../../dist/workflows");
 
 // A workflow's body runs inside an async function the runtime wraps around it, so it ends in a
-// top-level `return` — a grammar error to a compiler reading the file as a module. The sources
-// mark that one line `@ts-expect-error`, which is what makes `tsc --noEmit` over this directory
-// pass; here the same diagnostic is dropped, since it is the form and not a mistake.
-const TOP_LEVEL_RETURN = 1108;
+// top-level `return`. That is a grammar error (TS1108) only to the type checker; `--noCheck`
+// skips it, and real syntax errors still fail the build. The sources mark the line
+// `@ts-expect-error`, which is what makes `tsc --noEmit` over this directory pass.
+const TSC_FLAGS = [
+  "--ignoreConfig",
+  "--noCheck",
+  "--target", "es2023",
+  "--module", "esnext",
+  "--moduleResolution", "bundler",
+  "--types", "",
+  // The prose in these files is most of what they are — every prompt handed to a subagent
+  // is a comment away from the code that sends it. Stripping comments would throw away the
+  // reasoning behind the pipeline for a few hundred bytes.
+  "--removeComments", "false",
+  "--newLine", "lf",
+  "--pretty", "false",
+];
 
 const workflows = readdirSync(HERE)
   .filter((f) => f.endsWith(".workflow.ts"))
@@ -47,40 +64,32 @@ if (workflows.length === 0) {
   process.exit(1);
 }
 
-for (const file of workflows) {
-  const source = readFileSync(join(HERE, file), "utf8");
-  const { outputText, diagnostics } = ts.transpileModule(source, {
-    fileName: file,
-    reportDiagnostics: true,
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2023,
-      module: ts.ModuleKind.ESNext,
-      // The prose in these files is most of what they are — every prompt handed to a subagent
-      // is a comment away from the code that sends it. Stripping comments would throw away the
-      // reasoning behind the pipeline for a few hundred bytes.
-      removeComments: false,
-      newLine: ts.NewLineKind.LineFeed,
-    },
-  });
+const emitDir = mkdtempSync(join(tmpdir(), "bbx-workflows-"));
+try {
+  try {
+    execFileSync(process.execPath, [tscBinary(), ...TSC_FLAGS, "--outDir", emitDir, ...workflows.map((f) => join(HERE, f))], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (e) {
+    const out = e instanceof Error && "stdout" in e ? String(e.stdout) : "";
+    console.error(out.trim() === "" ? String(e) : out.trim());
+    process.exit(1);
+  }
 
-  const real = (diagnostics ?? []).filter((d) => d.code !== TOP_LEVEL_RETURN);
-  if (real.length > 0) {
-    for (const d of real) {
-      console.error(`${file}: TS${d.code}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+  for (const file of workflows) {
+    const outputText = readFileSync(join(emitDir, file.replace(/\.ts$/, ".js")), "utf8");
+    if (!outputText.startsWith("export const meta = {")) {
+      // The tool reads `meta` off the top of the file as a literal before it runs anything. If a
+      // compiler change ever moved or rewrote that declaration, the workflow would fail to load
+      // with nothing here to say why.
+      console.error(`${file}: emitted output does not open with \`export const meta = {\`.`);
+      process.exit(1);
     }
-    process.exit(1);
+    const out = file.replace(/\.ts$/, ".mjs");
+    mkdirSync(OUT_DIR, { recursive: true });
+    writeFileSync(join(OUT_DIR, out), outputText);
+    console.log(`dist/workflows/${out} (${outputText.split("\n").length} lines)`);
   }
-
-  if (!outputText.startsWith("export const meta = {")) {
-    // The tool reads `meta` off the top of the file as a literal before it runs anything. If a
-    // compiler change ever moved or rewrote that declaration, the workflow would fail to load
-    // with nothing here to say why.
-    console.error(`${file}: emitted output does not open with \`export const meta = {\`.`);
-    process.exit(1);
-  }
-
-  const out = file.replace(/\.ts$/, ".mjs");
-  mkdirSync(OUT_DIR, { recursive: true });
-  writeFileSync(join(OUT_DIR, out), outputText);
-  console.log(`dist/workflows/${out} (${outputText.split("\n").length} lines)`);
+} finally {
+  rmSync(emitDir, { recursive: true, force: true });
 }

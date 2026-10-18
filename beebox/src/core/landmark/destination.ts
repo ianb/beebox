@@ -18,8 +18,7 @@
 import type { LandmarkDestinationData } from "../../schemas/landmark.js";
 
 /** Destination kinds the system understands. `for` may list any subset. */
-export const DESTINATION_KINDS = ["triage", "commentary", "share"] as const;
-export type DestinationKind = (typeof DESTINATION_KINDS)[number];
+export type DestinationKind = "triage" | "commentary" | "share";
 
 /**
  * Find the destination advertising `kind` among a landmark's `destinations`,

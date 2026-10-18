@@ -32,7 +32,7 @@ import { CONTROL_ID_PATTERN, MAX_CONTROL_ID_LENGTH } from "./control-address.js"
  *   the box switcher are missing from the dump. Stated out loud in the dump
  *   rather than left to look like "this surface has no such controls".
  */
-export const UI_SCAN_COVERAGES = ["dom", "dom+native", "dom-native-unavailable"] as const;
+const UI_SCAN_COVERAGES = ["dom", "dom+native", "dom-native-unavailable"] as const;
 
 export type UiScanCoverage = (typeof UI_SCAN_COVERAGES)[number];
 
@@ -56,7 +56,7 @@ const plainText = (max: number): z.ZodString =>
     .regex(/^[^\u0000-\u001F\u007F]+$/, "must be single-line text");
 
 /** One control or landmark, as the client reports it. */
-export const uiScanEntrySchema = z
+const uiScanEntrySchema = z
   .object({
     kind: z.enum(["control", "landmark"]),
     /** The element's `bbx-` DOM id, or null for a control with no address. */
