@@ -626,6 +626,15 @@ queue_remote stdin bash -s <<'REMOTE'
     echo "  Removing stale /opt/beebox/cardworks (package removed)..."
     rm -rf /opt/beebox/cardworks
   fi
+  # pub-worker is excluded from the sync (see RSYNC_OPTS), but a copy synced
+  # before that exclude lingers, and `--delete` never removes an excluded path.
+  # pnpm then reads its stale package.json as a workspace member, and the
+  # frozen install fails as soon as the checkout's pub-worker manifest changes
+  # (2026-10-18, TypeScript 7). Drop it idempotently.
+  if [[ -d /opt/beebox/beebox/pub-worker ]]; then
+    echo "  Removing stale /opt/beebox/beebox/pub-worker (excluded from the sync)..."
+    rm -rf /opt/beebox/beebox/pub-worker
+  fi
   # One-time cutover from the old per-subdir installs to a single workspace
   # install. Before this change each subdir had its own isolated node_modules;
   # the workspace uses a hoisted node_modules at the root. Remove the legacy
