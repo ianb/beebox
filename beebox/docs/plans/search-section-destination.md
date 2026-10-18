@@ -3,7 +3,7 @@ title: "Search section results open at their heading"
 status: active
 workstream: journey-courseware
 issues:
-  - ../../../issues/bugs/2026-09-21-search-section-results-drop-their-destination.md
+  - ../../../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md
 ---
 # Search section results open at their heading
 
@@ -20,7 +20,7 @@ committed, not landed. Tests, typecheck, lint, and a browser walk are recorded
 under *Rollout shape*.
 
 **Issues addressed:**
-`issues/bugs/2026-09-21-search-section-results-drop-their-destination.md`.
+`issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md`.
 Queue searches (`bin/issues search` for "fragment", "heading", "anchor",
 "scroll to", "#heading", "markdown link hash", "link to heading") found no
 duplicate. Related, not closed: `issues/features/2026-10-05-markdown-toc-navigation.md`

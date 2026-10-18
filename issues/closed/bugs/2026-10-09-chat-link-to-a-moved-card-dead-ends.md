@@ -5,7 +5,12 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — A-lending journey walk, 2026-10-09
+resolution: implemented
 ---
+
+> **Closed 2026-10-17** (`fd9013d3a`, review fix `1cb1d347e`): the moved-card
+> lookup now pairs a delete with the one same-type card the same commit added
+> (or the card its `.attach` folder moved to), and never with a trashed card.
 
 In the A-lending walk the agent linked a loan card in its setup reply, then
 renamed the card with `bbx mv` (a mystery book that turned out to be
@@ -31,10 +36,10 @@ repair belongs on the read side: when a path is missing and git history shows a
 rename, the view can offer the new location. Deletes and trash have no
 successor, and a path can be renamed more than once.
 
-Related: [open-card-silently-follows-into-trash](2026-10-08-open-card-silently-follows-into-trash.md)
+Related: [open-card-silently-follows-into-trash](../../bugs/2026-10-08-open-card-silently-follows-into-trash.md)
 (an open panel after a move or trash).
 
-Report: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R5.
+Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R5.
 
 ## 2026-10-17: the read-side lookup exists; rename detection misses this case
 
@@ -61,6 +66,6 @@ Options for `committedRename`:
    in a trick's commit.
 
 The lookup also follows a rename into `_bookkeeping/trash/`; that belongs to
-[open-card-silently-follows-into-trash](2026-10-08-open-card-silently-follows-into-trash.md).
+[open-card-silently-follows-into-trash](../../bugs/2026-10-08-open-card-silently-follows-into-trash.md).
 An unused patch for a separate successor endpoint on `MissingCardState` was
 written and dropped as a duplicate of the existing lookup.
