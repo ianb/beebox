@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-18T20:01:26Z
+Generated: 2026-10-18T23:46:20Z
 Total documents: 544
 
 ## Issues
@@ -617,8 +617,8 @@ Referenced by:
 - ../dev/devprocess-talk/slides/06d-no-disable-rule.md:8 (mention) — rule in the preset is a deliberate choice, and several restate code-style.md.
 - ../dev/devprocess-talk/slides/15a-false-starts-table.md:14 (mention) — | bbx-codehealth | Jul 4 | Oct 7 | "promoted index.ts barrels against code-style.md"; its probes already ran weekly |
 - ../dev/skills-review-2026-10.md:45 (mention) — 1. **bbx-codehealth contradicts a boxholder decision.** Lines 27-35, 154 and 204 call an `index.ts` re-export surface "t
-- ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:67 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:94 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
+- ../issues/closed/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:81 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
 - ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:35 (mention) — per the no-barrels decision. `code-style.md` now states that a missing `export`
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:18 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
@@ -10360,7 +10360,7 @@ References:
 - → ../issues/closed/bugs/2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path.md (link)
 - → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
 - → ../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
-- → ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
+- → ../issues/closed/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
 - → ../issues/bugs/2026-08-25-one-pink-bar-three-severities.md (link)
 - → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
 - → ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md (link)

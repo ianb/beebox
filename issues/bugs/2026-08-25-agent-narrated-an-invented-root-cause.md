@@ -1,6 +1,6 @@
 ---
 title: "Under failure, the agent narrated a confident, specific, wrong root cause — and repaired an unrelated file"
-workstream: unattached
+workstream: turn-feedback
 area: beebox
 labels: [journey-findings, prompt-surface]
 filed-by: agent
