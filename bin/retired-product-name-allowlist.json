@@ -102,19 +102,19 @@
     "reason": "The persisted-state migration recognizes the former package dependency."
   },
   {
-    "path": "beebox/test/bin/cb-tombstone.doctest.md",
+    "path": "beebox/test/bin/cb-tombstone.test.ts",
     "occurrenceClass": "standalone-cli-token",
-    "expectedCount": 9,
+    "expectedCount": 8,
     "reason": "The regression fixture proves stale invocations of the retired command get the migration message and never perform work."
   },
   {
-    "path": "beebox/test/core/agent-context-mirrors.doctest.md",
+    "path": "beebox/test/core/agent-context-mirrors.test.ts",
     "occurrenceClass": "kebab-name",
     "expectedCount": 3,
     "reason": "The regression fixture proves retired agent mirrors are removed."
   },
   {
-    "path": "beebox/test/core/install-validation-hooks.doctest.md",
+    "path": "beebox/test/core/install-validation-hooks.test.ts",
     "occurrenceClass": "kebab-name",
     "expectedCount": 6,
     "reason": "The regression fixture proves repeated retired managed hooks are replaced."
@@ -132,13 +132,13 @@
     "reason": "The regression fixture proves worktree setup migrates the retired engine dependency in existing box packages."
   },
   {
-    "path": "beebox/test/hub/config.doctest.md",
+    "path": "beebox/test/hub/config.test.ts",
     "occurrenceClass": "dot-state-directory",
     "expectedCount": 2,
     "reason": "Hub discovery fixtures prove legacy state is recognized without router-side mutation."
   },
   {
-    "path": "beebox/test/lib/state-migration.doctest.md",
+    "path": "beebox/test/lib/state-migration.test.ts",
     "occurrenceClass": "dot-state-directory",
     "expectedCount": 11,
     "reason": "Migration fixtures prove former box state and marker paths move, conflict, or converge safely."

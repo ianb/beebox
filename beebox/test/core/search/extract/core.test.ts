@@ -1,0 +1,189 @@
+// # search/extract: card → search documents
+//
+// Pure extraction: a loaded card becomes one search document, plus per-section
+// documents when the body is long. Per-kind frontmatter folds into searchable
+// text; email body files are deliberately never read (untrusted content stays
+// out of the index — see `src/schemas/email-message.tsx`).
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { loadCardFromText, type LoadCardContext } from "../../../../src/core/card-io.js";
+import {
+  declareInputFiles,
+  extractCardDocs,
+  SECTION_SPLIT_THRESHOLD,
+} from "../../../../src/core/search/extract/core.js";
+import { splitMarkdownSections } from "../../../../src/shared/markdown-sections.js";
+import { createCardSchemaMap } from "../../../../src/schemas.js";
+
+const ctx: LoadCardContext = {
+  cardSchemas: await createCardSchemaMap(),
+};
+
+async function docsFor(path: string, text: string) {
+  const card = await loadCardFromText({ content: text, source: path, ctx });
+  return extractCardDocs({ path, card, contentHash: "hash0" });
+}
+
+// ## A doc card becomes one document titled from its `title:` field
+//
+// A short body stays a single document; the `contains` sentence rides along.
+void test("A short body stays a single document; the contains sentence rides along.", async (t) => {
+  // doctest:L34
+  const docs = await docsFor(
+    "_content/inbox/Dentist_Call.doc.card",
+    "---\ntitle: Dentist call\ncontains: Dentist moved to June 17; confirmation in this email.\n---\nThe dentist called — appointment moved to June 17.\n"
+  );
+  await t.checkText(docs.length, "1");
+
+  // doctest:L41
+  t.check(docs[0]?.id, "_content/inbox/Dentist_Call.doc.card#");
+
+  // doctest:L44
+  t.check(docs[0]?.kind, "doc");
+
+  // doctest:L47
+  t.check(docs[0]?.title, "Dentist call");
+
+  // doctest:L50
+  t.check(docs[0]?.contains, "Dentist moved to June 17; confirmation in this email.");
+
+  // doctest:L53
+  t.check(docs[0]?.content, "The dentist called — appointment moved to June 17.");
+});
+
+// ## Email messages fold headers and snippet, never the body file
+void test("Email messages fold headers and snippet, never the body file", async (t) => {
+  // doctest:L60
+  const docs = await docsFor(
+    "_content/inbox/email/t.attach/msg-001.email-message.card",
+    "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: alice@example.com\n  to: bob@example.com\n  received: 2026-05-14T19:00:00Z\n  subject: Weekend plans\n  snippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
+  );
+  t.check(docs[0]?.title, "Weekend plans");
+
+  // doctest:L67
+  await t.checkText(docs[0]?.content, `Weekend plans
+alice@example.com
+bob@example.com
+Hey, are you free Saturday...`);
+
+  // doctest:L73
+  t.check(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: a@x.com\n  received: 2026-05-14T19:00:00Z\n  subject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }), []);
+});
+
+// ## Email threads fold subject, participants, labels, and date-range
+void test("Email threads fold subject, participants, labels, and date-range", async (t) => {
+  // doctest:L80
+  const docs = await docsFor(
+    "_content/inbox/email/thread-x.email-thread.card",
+    "---\nemail:\n  thread-id: t1\n  subject: Usage-based pricing demo\n  participants:\n    - hello@metricly.example\n  date-range:\n    start: 2026-05-14T19:00:00Z\n    end: 2026-05-14T19:00:00Z\n  labels:\n    - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
+  );
+  t.check(docs[0]?.title, "Usage-based pricing demo");
+
+  // doctest:L87
+  await t.checkText(docs[0]?.content, `Usage-based pricing demo
+hello@metricly.example
+promotions`);
+});
+
+// ## Gdocs declare their content snapshot and index it as the body
+void test("Gdocs declare their content snapshot and index it as the body", async (t) => {
+  // doctest:L96
+  const cardText = "---\ndrive:\n  id: d1\n  link: https://docs.google.com/document/d/d1/edit\n  owner: owner@example.com\n  modified: 2026-05-01\ntitle: Project Notes\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
+  const path = "_content/drive/Project_Notes.gdoc.card";
+  const card = await loadCardFromText({ content: cardText, source: path, ctx });
+  t.check(declareInputFiles({ path, card }), [
+    "_content/drive/Project_Notes.attach/Project_Notes.md",
+  ]);
+
+  // doctest:L102
+  const inputContents = new Map([["_content/drive/Project_Notes.attach/Project_Notes.md", "Quarterly planning notes for the project."]]);
+  const docs = extractCardDocs({ path, card, contentHash: "h1", inputContents });
+  t.check(docs[0]?.title, "Project Notes");
+
+  // doctest:L107
+  t.check(docs[0]?.content, "Quarterly planning notes for the project.");
+});
+
+// ## A briefing's purpose is folded in from frontmatter
+//
+// The purpose statement lives in the briefing's `purpose:` field, not its body,
+// so the extractor folds it into the document; a directory briefing with no body
+// text is still found by what it says the directory is for.
+void test("The purpose statement lives in the briefing's purpose: field, not its body, s...", async (t) => {
+  // doctest:L118
+  const docs = await docsFor(
+    "_content/garden/briefing.briefing.card",
+    "---\ntype: briefing\npurpose: Plans and records for the vegetable garden.\n---\n"
+  );
+  t.check(docs[0]?.content.includes("vegetable garden"), true);
+});
+
+// ## An image's description doubles as its contains fallback; OCR text indexes
+void test("An image's description doubles as its contains fallback; OCR text indexes", async (t) => {
+  // doctest:L129
+  const docs = await docsFor(
+    "_bookkeeping/archive/photo.image.card",
+    "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
+  );
+  t.check(docs[0]?.contains, "The boiler's serial-number plate (K-44210)");
+
+  // doctest:L136
+  t.check(docs[0]?.title, "The boiler's serial-number plate (K-44210)");
+
+  // doctest:L139
+  t.check(docs[0]?.content.includes("Model HX-200 240V"), true);
+});
+
+// ## Long bodies split into per-section documents; the preamble stays on the card
+void test("Long bodies split into per-section documents; the preamble stays on the card", async (t) => {
+  // doctest:L146
+  const section = "words ".repeat(Math.ceil(SECTION_SPLIT_THRESHOLD / 12));
+  const bodyText = `Intro before any heading.\n\n# Mill\n${section}\n\n## Gears\n${section}\n\n# Store\n${section}\n`;
+  const docs = await docsFor(
+    "box/examples/Engine.doc.card",
+    `---\ntitle: The Analytical Engine\n---\n${bodyText}`
+  );
+  t.check(docs.map((d) => d.fragment), [
+    "",
+    "/Mill",
+    "/Mill/Gears",
+    "/Store",
+  ]);
+
+  // doctest:L155
+  t.check(docs[0]?.content, "Intro before any heading.");
+
+  // doctest:L158
+  t.check(docs[1]?.id, "box/examples/Engine.doc.card#/Mill");
+
+  // doctest:L161
+  await t.checkText(docs.every((d) => d.kind === "doc" && d.title === "The Analytical Engine"), "true");
+});
+
+// ## Short bodies with headings stay one document
+void test("Short bodies with headings stay one document", async (t) => {
+  // doctest:L168
+  const split = splitMarkdownSections("Preamble.\n\n# One\nalpha\n\n# Two\nbeta\n");
+  t.check(split.preamble, "Preamble.");
+
+  // doctest:L172
+  t.check(split.sections.map((s) => s.fragment), [
+    "/One",
+    "/Two",
+  ]);
+
+  // doctest:L175
+  const docs = await docsFor("box/examples/Short.doc.card", "---\ntitle: Short\n---\nPreamble.\n\n# One\nalpha\n");
+  await t.checkText(docs.length, "1");
+});
+
+// ## Sheets index their tab titles
+void test("Sheets index their tab titles", async (t) => {
+  // doctest:L183
+  const docs = await docsFor(
+    "_content/drive/Budget.gsheet.card",
+    "---\ndrive:\n  id: d2\n  link: https://docs.google.com/spreadsheets/d/d2/edit\n  owner: o@example.com\n  modified: 2026-05-01\ntitle: Family Budget\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
+  );
+  t.check(docs[0]?.content, "Monthly Spending");
+});

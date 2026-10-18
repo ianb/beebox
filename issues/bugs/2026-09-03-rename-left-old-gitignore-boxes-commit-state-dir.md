@@ -212,7 +212,7 @@ which `hasAssignedSession` makes availability answer `resumable` before the
 recorded-engine check runs; and `ChatThreadSession` preflights a guessed engine
 with no availability check at all. Both predate this fix.
 
-`test/webapp/chat-reservation-restart.doctest.md` (moved to `beebox/test/webapp/chat-runtime.reservation-restart.doctest.md`) asserted the broken behavior:
+`test/webapp/chat-reservation-restart.doctest.md` (moved to `beebox/test/webapp/chat-runtime.reservation-restart.test.ts`) asserted the broken behavior:
 its prose narrated this exact mechanism and expected the throw. Worth noting
 that the hazard was written down as expected output rather than filed.
 

@@ -1,0 +1,52 @@
+// # Scheduler Utilities
+//
+// Tests for scheduler utility functions — box validation.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { isBox } from "../../../src/core/schedule/scheduler/core.js";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+// ## isBox
+//
+// ### Directory with .beebox/box.json marker is a box
+void test("Directory with .beebox/box.json marker is a box", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L17
+  const box = await makeTmpBox();
+  // Create the .beebox/box.json marker that isBox() looks for
+  await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
+  await fs.writeFile(path.join(box.root, ".beebox/box.json"), "");
+  const result = await isBox(box.root);
+  t.check(result, true);
+});
+
+// ### Directory without marker is not a box
+void test("Directory without marker is not a box", async (t) => {
+  t.teardown(async () => {
+    try {
+      await fs.rm(tmpDir, { recursive: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L33
+  const tmpDir = await fs.mkdtemp(path.join(await import("node:os").then(m => m.tmpdir()), "not-a-box-"));
+  const result = await isBox(tmpDir);
+  t.check(result, false);
+});
+
+// ### Nonexistent directory is not a box
+void test("Nonexistent directory is not a box", async (t) => {
+  // doctest:L46
+  const result = await isBox("/tmp/nonexistent-box-test-12345");
+  t.check(result, false);
+});

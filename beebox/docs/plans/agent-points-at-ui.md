@@ -1239,7 +1239,7 @@ honest native meanings.
   the entry cap.
 - `test/frontend/lib/view-url.doctest.md` (extend) — `control:` classification,
   params, unknown action degrades to `point`, empty id falls through.
-- `test/webapp/routes/chat-ui-routes.doctest.md` (moved to `beebox/test/webapp/routes/chat/ui-routes.doctest.md`) — the four outcomes, the
+- `test/webapp/routes/chat-ui-routes.doctest.md` (moved to `beebox/test/webapp/routes/chat/ui-routes.test.ts`) — the four outcomes, the
   loopback guard 403, the Zod-reject path, and the native-unavailable coverage
   value.
 - A tour assertion in `test/tours/nav-pages.tour.ts` that every `Dropdown`

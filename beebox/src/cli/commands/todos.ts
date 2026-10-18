@@ -54,7 +54,7 @@ export const todosCommand = new Command("todos")
 
 /**
  * The command's logic, taking `boxRoot` directly rather than resolving it
- * from `process.cwd()` — the seam doctests drive (`test/cli/commands/todos.doctest.md`),
+ * from `process.cwd()` — the seam doctests drive (`test/cli/commands/todos.test.ts`),
  * same approach as `auth.ts`'s exported `run*` functions.
  */
 export async function runTodosForBox(boxRoot: string, options: TodosCliOptions): Promise<void> {

@@ -73,7 +73,7 @@ people.
 
 If you add a browser-side call to a new external host (a new STT/TTS provider, an
 external image/asset host, a third-party iframe), you **must** add its origin to
-the matching directive in `src/lib/csp.ts` (and update `test/lib/csp.doctest.md`).
+the matching directive in `src/lib/csp.ts` (and update `test/lib/csp.test.ts`).
 Otherwise it works in no-CSP environments but is reported (and, once enforced,
 blocked) in prod. Server-side calls (the backend talking to an API) never need a
 CSP entry — only things the browser contacts directly.

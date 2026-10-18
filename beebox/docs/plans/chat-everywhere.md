@@ -701,7 +701,7 @@ The implementation uses the existing doctest tiers. Its focused coverage lives i
 - `test/frontend/chat/card-conversation-context.doctest.md` and `card-activity-store.doctest.md` for focused content, selection sources, and source-scoped activity.
 - `test/frontend/chat/ambient-replies.doctest.md` for transcript projection, background attribution, dismissal, reconnect, and incomplete history.
 - `test/mobile-contract/fixtures.doctest.md` plus shared composer-binding/native-emission fixtures for version, target, assignment, and recovery boundaries.
-- `test/webapp/chat-exact-committed.doctest.md` (moved to `beebox/test/webapp/routes/chat/send-target.exact-committed.doctest.md`) and `chat-send-routes-validation.doctest.md` for exact-session admission and context validation.
+- `test/webapp/chat-exact-committed.doctest.md` (moved to `beebox/test/webapp/routes/chat/send-target.exact-committed.test.ts`) and `chat-send-routes-validation.doctest.md` for exact-session admission and context validation.
 - `ComposerDraftTests.swift` and `SpeechKeywordsTests.swift` for native binding persistence, record upgrade, receipts, keyword send, and box isolation. The recorded native run used a simulator.
 
 Extract decisions into pure functions; route tests exercise actual backend

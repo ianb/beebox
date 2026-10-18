@@ -19,7 +19,8 @@
  *       With --trial, check the edits in the slot and apply nothing.
  *   node --import tsx bin/doctest-convert.ts revert <dir|file>...
  *       Undo the conversion of each selected file that is not verified (its
- *       doctest returns), so only verified files are left to commit.
+ *       doctest returns, and references point at it again), so only verified
+ *       files are left to commit.
  *   node --import tsx bin/doctest-convert.ts repoint
  *       Point references to every converted doctest at its test file
  *       (prepare does this for the files it converts).
@@ -99,13 +100,15 @@ function main(argv: readonly string[]): boolean {
     case "revert": {
       if (paths.length === 0) throw new VerifyArgsError();
       return withLock(stateLockPath(), () => {
-        for (const d of revert(select(paths))) console.log(`reverted ${d}`);
+        const reverted = revert(select(paths));
+        for (const d of reverted) console.log(`reverted ${d}`);
+        repoint(reverted, { log: (s) => console.log(s), back: true });
         writeProgress(loadAll());
         return true;
       });
     }
     case "repoint": {
-      repoint([...loadAll().values()].flatMap((s) => Object.keys(s.files)), (s) => console.log(s));
+      repoint([...loadAll().values()].flatMap((s) => Object.keys(s.files)), { log: (s) => console.log(s) });
       return true;
     }
     case "progress": {

@@ -16,7 +16,7 @@ priority: backlog
 > `0a9b0be5` (today) takes the box git lock in every index mutator, replacing
 > the old best-effort single 2s retry — which is exactly hypothesis (a), index
 > contention between a chat-turn commit and `stageAndCommitPaths`. It is gated
-> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md` (moved to `beebox/test/lib/git.concurrent-commit.doctest.md`)).
+> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md` (moved to `beebox/test/lib/git.concurrent-commit.test.ts`)).
 >
 > **That fix probably does not explain the freeze**, though it fixes a real
 > correctness bug (dropped commits). `src/lib/git-lock.ts` states its design

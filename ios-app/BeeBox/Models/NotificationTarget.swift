@@ -7,7 +7,7 @@ import Foundation
 /// the phone renders it against the paired box. `boxPath` is `targetUrl` with
 /// the leading `/<slug>/` removed, because a paired box's `baseURL` already
 /// ends in the slug. `NotificationTargetTests` runs the TypeScript doctest's
-/// cases (`beebox/test/core/notification/target.doctest.md`); a change to the
+/// cases (`beebox/test/core/notification/target.test.ts`); a change to the
 /// rules there changes them here.
 ///
 /// One rule is looser than the box's: a card path must normalize to a path

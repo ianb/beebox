@@ -432,7 +432,7 @@ Implementation completed the tracks below with these deliberate boundaries:
     explicit and concurrent tracking, deletion, tracked-only refresh, history
     expiry, resumable bounds, config validation, rolling budgets, pending
     summaries, and the read-only `gws` gate.
-  - `test/core/commands/connector-sync.doctest.md` covers post-sync procedure
+  - `test/core/commands/connector-sync.test.ts` covers post-sync procedure
     execution and failure reporting.
   - `test/services/service-google-gmail.doctest.md` (moved to `beebox/test/services/google-gmail-fake.doctest.md`) covers full-thread retrieval
     and bounded thread/history list behavior.

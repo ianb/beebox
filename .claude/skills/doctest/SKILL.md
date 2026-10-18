@@ -22,7 +22,7 @@ right instrument at all: [choosing an instrument](../../../beebox/docs/testing.m
 ## Authoring
 
 Create `test/<name>.doctest.md`, mirroring the `src/` path. A good model:
-`beebox/test/core/pdf/probe.text-layer-quality.doctest.md`.
+`beebox/test/core/pdf/probe.text-layer-quality.test.ts`.
 
 - **The prose is the document.** Open with the contract or the incident behind
   the code. The sentence before each example says what rule it shows and where

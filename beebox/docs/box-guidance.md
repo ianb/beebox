@@ -28,7 +28,7 @@ The class says who writes the bytes:
 To classify a new surface, ask who writes the bytes after the first install.
 
 `GUIDANCE_SURFACES` in `src/core/box/guidance-surfaces.ts` is the list. This
-table restates it, and `test/core/box/guidance-sync.doctest.md` fails when the
+table restates it, and `test/core/box/guidance-sync.test.ts` fails when the
 two differ. `<name>` stands for one path segment, and `**/` for any directory.
 
 | Surface | Tier | Class | Installed by | In box git |
@@ -139,7 +139,7 @@ Engine facts about a subject go in that subject's package doc under
 `docs/box/` (for example [tricks](box/tricks.md) or
 [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
 plus the box's own conventions, and a managed skill holds its trigger, its
-first commands, and a pointer. `test/core/docs-gen/package-docs.pointers.doctest.md` fails
+first commands, and a pointer. `test/core/docs-gen/package-docs.pointers.test.ts` fails
 when a pointer names a doc the package does not ship.
 
 The agent guide follows the same rule; its ledger, bins, and handles are in

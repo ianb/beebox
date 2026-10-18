@@ -1,0 +1,302 @@
+// # Capture abandonment sweep
+//
+// `sweepAbandonedCaptures` turns staged captures the browser never finished into
+// delivered-but-partial captures, discards empty orphans, and logs (never retries
+// or deletes) stale failures and unfiled `tmp-capture/` cards. "Old" is measured
+// against `BBX_TIME`: sessions are created at one frozen time, then the clock is
+// advanced past the 60-minute window before the sweep runs.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
+import { makeTmpBox, type TmpBox } from "../../helpers/doctest-helpers.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
+import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
+import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
+import {
+  createStagingSession,
+  addAudioChunk,
+  addPhoto,
+  setStagingState,
+  readStagingSession,
+} from "../../../src/core/capture/staging-store/core.js";
+import { sweepAbandonedCaptures } from "../../../src/core/capture/sweep.js";
+import { prepareCaptureSession } from "../../../src/core/capture/prepare/core.js";
+import { sessionBasenameFor } from "../../../src/core/capture/prepare/write-cards.js";
+
+const EARLY = "2026-07-09T13:00:00.000Z"; // when abandoned sessions were last active
+const LATE = "2026-07-09T14:30:00.000Z";  // 90 min later — past the 60 min window
+
+const GITIGNORE = ["tmp/", ".beebox/", "**/*.attach/**/*.webm", "**/*.attach/**/*.jpg"].join("\n") + "\n";
+
+const SCRIPT = {
+  "audio-001.webm": {
+    text: "Note to self.",
+    duration: 3,
+    words: [
+      { word: "Note", start: 0, end: 1 },
+      { word: "to", start: 1, end: 2 },
+      { word: "self.", start: 2, end: 3 },
+    ],
+  },
+};
+
+async function configureBox(box: TmpBox) {
+  await box.write(".gitignore", GITIGNORE);
+  await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
+  await box.write("config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
+  box.commitAll("configure fake transcription");
+}
+
+// ## An abandoned open capture is sealed partial, prepared, and delivered partial
+//
+// An `open` session with media, untouched for over an hour, is CAS-sealed with
+// `partial: true` and preparation fires — the capture card gets `partial: true`
+// frontmatter and the delivered `<capture>` wrapper carries `partial="1"`.
+void test("An open session with media, untouched for over an hour, is CAS-sealed with pa...", async (t) => {
+  t.teardown(async () => {
+    try {
+      registry.shutdown();
+      eventBus.close();
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L60
+  process.env.BBX_TIME = EARLY;
+  const box = await makeTmpBox({ git: true });
+  await configureBox(box);
+
+  // doctest:L64
+  // Stage an open capture with one recording + one photo at 13:00.
+  const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+  const id = staged.id;
+  await addAudioChunk({ boxRoot: box.root, id, segmentId: "seg-a", segmentStartedAt: EARLY, filename: "audio-a-001.webm", buffer: Buffer.from("A") });
+  await addPhoto({ boxRoot: box.root, id, filename: "photo-x.jpg", capturedAt: EARLY, source: "camera-user", buffer: Buffer.from("J") });
+
+  // doctest:L70
+  const backend = createFakeChatBackend();
+  const registry = new ChatSessionRegistry(box.root, {
+    backend,
+    buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+  });
+  const eventBus = createEventBus(box.root);
+
+  // doctest:L77
+  // Advance the clock past the window and sweep, firing (and awaiting) prepare.
+  process.env.BBX_TIME = LATE;
+  let prep = Promise.resolve();
+  const result = await sweepAbandonedCaptures({
+    boxRoot: box.root,
+    firePreparation: (sweptId) => { prep = prepareCaptureSession({ boxRoot: box.root, id: sweptId, eventBus, registry }); },
+  });
+  await prep;
+  await tick();
+
+  // doctest:L87
+  await t.checkText(result.sealed.includes(id), "true");
+
+  // The committed capture card is marked partial, and the delivered wrapper carries
+  // `partial="1"`:
+
+  // doctest:L95
+  const basename = sessionBasenameFor({ actualStartedAt: EARLY, id });
+  const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
+  await t.checkText((await box.read(docRel)).includes("partial: true"), "true");
+
+  // doctest:L100
+  const sent = eventBus.readSince(0).find((e) => e.event === "chat-user-message");
+  const msg = eventSchemas["chat-user-message"].parse(sent?.data).message;
+  await t.checkText(msg.includes("partial=\"1\""), "true");
+
+  // The staging media was cleaned up once delivered:
+
+  // doctest:L109
+  t.check(await readStagingSession({ boxRoot: box.root, id }), null);
+});
+
+// ## Empty orphans discarded, fresh sessions untouched, stale failures warned
+void test("Empty orphans discarded, fresh sessions untouched, stale failures warned", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L123
+  process.env.BBX_TIME = EARLY;
+  const box = await makeTmpBox({ git: true });
+  await configureBox(box);
+
+  // doctest:L127
+  // Empty open session, abandoned at 13:00 → should be discarded.
+  const empty = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+
+  // doctest:L130
+  // Failed session with media, abandoned at 13:00 → warned, NOT retried.
+  const failed = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+  await addPhoto({ boxRoot: box.root, id: failed.id, filename: "p.jpg", capturedAt: EARLY, source: "camera-user", buffer: Buffer.from("J") });
+  await setStagingState({ boxRoot: box.root, id: failed.id, state: "failed:deliver" });
+
+  // doctest:L135
+  // Advance the clock, then create a FRESH open session with media (active now).
+  process.env.BBX_TIME = LATE;
+  const fresh = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+  await addPhoto({ boxRoot: box.root, id: fresh.id, filename: "p.jpg", capturedAt: LATE, source: "camera-user", buffer: Buffer.from("J") });
+
+  // doctest:L140
+  // Sweep with no firePreparation (the seal-only path): sealing still happens.
+  const result = await sweepAbandonedCaptures({ boxRoot: box.root });
+
+  // doctest:L143
+  t.check({ discarded: result.discarded, staleFailed: result.staleFailed, sealed: result.sealed }, {
+    discarded: [
+      str`${any(String)}`,
+    ],
+    staleFailed: [
+      str`${any(String)}`,
+    ],
+    sealed: [],
+  });
+
+  // The empty orphan is gone; the fresh session is untouched (still open); the failed
+  // session is left `failed:deliver`, not re-sealed:
+
+  // doctest:L151
+  t.check(await readStagingSession({ boxRoot: box.root, id: empty.id }), null);
+
+  // doctest:L154
+  t.check((await readStagingSession({ boxRoot: box.root, id: fresh.id }))?.state, "open");
+
+  // doctest:L157
+  t.check((await readStagingSession({ boxRoot: box.root, id: failed.id }))?.state, "failed:deliver");
+
+  // The discarded/warned entries are exactly the abandoned ones:
+
+  // doctest:L164
+  await t.checkText(result.discarded[0] === empty.id, "true");
+
+  // doctest:L167
+  await t.checkText(result.staleFailed[0] === failed.id, "true");
+});
+
+// ## A server sweep re-fires a sealed session left by `bbx wakeup` (X2)
+//
+// `bbx wakeup`'s seal-only sweep (no runtime) seals abandoned captures but can't
+// prepare them; a crashed worker also leaves sessions `sealed`/`preparing`/
+// `delivering`. The periodic *server* sweep (which has `firePreparation`) re-fires
+// these regardless of age, so they don't strand until the next restart. Here a
+// session is already `sealed` and recently active — still re-fired:
+void test("bbx wakeup's seal-only sweep (no runtime) seals abandoned captures but can't...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L185
+  process.env.BBX_TIME = LATE;
+  const box = await makeTmpBox({ git: true });
+  await configureBox(box);
+
+  // doctest:L189
+  const sealed = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+  await addPhoto({ boxRoot: box.root, id: sealed.id, filename: "p.jpg", capturedAt: LATE, source: "camera-user", buffer: Buffer.from("J") });
+  await setStagingState({ boxRoot: box.root, id: sealed.id, state: "sealed" });
+
+  // doctest:L193
+  const fired: string[] = [];
+  const result = await sweepAbandonedCaptures({
+    boxRoot: box.root,
+    firePreparation: (id) => { fired.push(id); },
+  });
+
+  // doctest:L199
+  t.check({ refired: result.refired, sealed: result.sealed }, {
+    refired: [
+      str`${any(String)}`,
+    ],
+    sealed: [],
+  });
+
+  // The re-fired id is the sealed session, and `firePreparation` was actually called
+  // for it:
+
+  // doctest:L207
+  await t.checkText(result.refired[0] === sealed.id, "true");
+
+  // doctest:L210
+  await t.checkText(fired[0] === sealed.id, "true");
+
+  // Without a runtime (the `bbx wakeup` seal-only path), a sealed session is left for
+  // the next server startup — not re-fired here:
+
+  // doctest:L218
+  const result2 = await sweepAbandonedCaptures({ boxRoot: box.root });
+  await t.checkText(result2.refired.length, "0");
+});
+
+// ## Voice sessions are invisible to the capture sweep
+//
+// A voice recording (`docs/plans/resilient-voice-recording.md`) is a different
+// staging pipeline (`kind: "voice"`) with its own resume/GC path (a later chunk).
+// Whether it sits `open` and long-idle, or already `sealed`, the capture sweep
+// must never touch it — sealing it would fire `prepareCaptureSession` against a
+// manifest shape it doesn't understand.
+void test("A voice recording (docs/plans/resilient-voice-recording.md) is a different st...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L237
+  process.env.BBX_TIME = EARLY;
+  const box = await makeTmpBox({ git: true });
+
+  // doctest:L240
+  const idleVoice = await createStagingSession({
+    boxRoot: box.root, targetSessionId: "chat-voice", createdBy: null, kind: "voice",
+  });
+  const sealedVoice = await createStagingSession({
+    boxRoot: box.root, targetSessionId: "chat-voice-2", createdBy: null, kind: "voice",
+  });
+  await setStagingState({ boxRoot: box.root, id: sealedVoice.id, state: "sealed" });
+
+  // doctest:L248
+  process.env.BBX_TIME = LATE;
+  const fired: string[] = [];
+  const result = await sweepAbandonedCaptures({
+    boxRoot: box.root,
+    firePreparation: (id) => { fired.push(id); },
+  });
+
+  // doctest:L255
+  t.check({ sealed: result.sealed, discarded: result.discarded, refired: result.refired, fired }, {
+    sealed: [],
+    discarded: [],
+    refired: [],
+    fired: [],
+  });
+
+  // Both voice sessions survive untouched — the idle one still `open`, the other
+  // still `sealed`:
+
+  // doctest:L263
+  const idleAfter = await readStagingSession({ boxRoot: box.root, id: idleVoice.id });
+  const sealedAfter = await readStagingSession({ boxRoot: box.root, id: sealedVoice.id });
+  t.check({ idle: idleAfter?.state, sealed: sealedAfter?.state }, {
+    idle: "open",
+    sealed: "sealed",
+  });
+});

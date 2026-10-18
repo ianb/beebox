@@ -1,0 +1,316 @@
+// # Question aging (nudge, then expire)
+//
+// `ageQuestions` (`src/core/question-aging.ts`) ages every pending question by
+// its durable `asked-at`, never latch state: a re-notification ("nudge") fires
+// once past the nudge threshold, and the question gets `expired-at` (via the
+// shared guarded transition, same as `answer`/`dismiss`) past the expiry
+// window. Both windows default to 30 days expire / 7 days nudge, or derive from
+// a card's `expires-after` override (nudge at half). Expiry never depends on a
+// notification channel being configured — only nudge *delivery* does.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { boxSlug } from "../../src/lib/box-slug.js";
+import * as os from "node:os";
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { execSync } from "node:child_process";
+import {
+  ageQuestions,
+  DEFAULT_EXPIRE_AFTER_MS,
+  DEFAULT_NUDGE_AFTER_MS,
+} from "../../src/core/question-aging.js";
+import { getSystemState } from "../../src/core/state.js";
+import { generateContext } from "../../src/webapp/context.js";
+import { addSubscription } from "../../src/core/push-subscriptions.js";
+import { createFakePush } from "../../src/services/push.js";
+import { readRecent } from "../../src/core/notification/log.js";
+import { makeTmpBox, type TmpBox } from "../helpers/doctest-helpers.js";
+
+const storeDir = path.join(os.tmpdir(), `bbx-qaging-${process.pid}-${Date.now()}`);
+process.env.BBX_PUSH_STORE_DIR = storeDir;
+
+const SUB = { endpoint: "https://push.example/qaging", keys: { p256dh: "p", auth: "a" } };
+
+const ASKED_AT = new Date("2026-01-01T00:00:00Z");
+const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: ASKED_AT.toISOString() });
+
+// makeTmpBox writes a shapeVersion-3 marker with no version/created; ageQuestions
+// calls getSystemState → getBoxMetadata, which parses those, so seed a marker
+// carrying both (it must keep shapeVersion 3 or getBoxShape rejects the box).
+async function seedBox(box: TmpBox) {
+  await box.seed(".beebox/box.json", MARKER);
+}
+
+function addMs(date: Date, ms: number) {
+  return new Date(date.getTime() + ms);
+}
+
+function setTime(date: Date) {
+  process.env.BBX_TIME = date.toISOString();
+}
+
+function question(opts: { prompt: string; askedAt?: string; expiresAfter?: string }) {
+  const { prompt, askedAt, expiresAfter } = opts;
+  const lines = ["---", `prompt: ${prompt}`, "input:", "  type: text"];
+  if (askedAt !== undefined) lines.push(`asked-at: ${askedAt}`);
+  if (expiresAfter !== undefined) lines.push(`expires-after: ${expiresAfter}`);
+  lines.push("---", "");
+  return lines.join("\n");
+}
+
+// Trailers on HEAD, one per line.
+function headTrailers(root: string) {
+  return execSync("git log -1 --format=%B", { cwd: root, stdio: "pipe" }).toString().trim();
+}
+
+// ## No nudge before the default 7-day threshold
+void test("No nudge before the default 7-day threshold", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L70
+  const box = await makeTmpBox({ git: true });
+  await seedBox(box);
+  await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
+  await box.write(
+    "_bookkeeping/questions/Color.question.card",
+    question({ prompt: "What color?", askedAt: ASKED_AT.toISOString() })
+  );
+  box.commitAll("seed question");
+
+  // doctest:L79
+  setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS - 60_000));
+  const before = await ageQuestions(box.root);
+  t.check(before, {
+    nudged: [],
+    expired: [],
+  });
+
+  // At the 7-day mark it nudges exactly once. The nudge is `quiet`, pushed to the
+  // subscribed device, targets the question, and is in the notification log:
+
+  // doctest:L89
+  setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS));
+  const push = createFakePush();
+  const nudgedResult = await ageQuestions(box.root, { push });
+  t.check(nudgedResult, {
+    nudged: [
+      "_bookkeeping/questions/Color.question.card",
+    ],
+    expired: [],
+  });
+
+  // doctest:L95
+  await t.checkText(push.describe(), `FakePush: 1 sent
+  https://push.example/qaging → ⏰ Reminder: a question is waiting: What color?`);
+
+  // doctest:L99
+  const [logged] = await readRecent(box.root, { days: 1 });
+  t.check([logged?.intent.target, logged?.intent.loudness, logged?.deliveries.find((d) => d.channel === "web-push")?.status], [
+    "question:_bookkeeping/questions/Color.question.card",
+    "quiet",
+    "sent",
+  ]);
+
+  // A second sweep at the same age (or later, still under expiry) does not
+  // re-nudge — the latch dedups it:
+
+  // doctest:L108
+  setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS + 60 * 60 * 1000));
+  t.check(await ageQuestions(box.root), {
+    nudged: [],
+    expired: [],
+  });
+
+  // The question is still pending — nudging never sets `expired-at`:
+
+  // doctest:L116
+  const card = await box.read("_bookkeeping/questions/Color.question.card");
+  await t.checkText(card.includes("expired-at"), "false");
+});
+
+// ## Expiry at the default 30-day window
+//
+// No push subscription exists here: expiry still runs, and only
+// nudge delivery is gated on a channel.
+void test("No push subscription exists here:", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L132
+  const box = await makeTmpBox({ git: true });
+  await seedBox(box);
+  await box.write(
+    "_bookkeeping/questions/Stale.question.card",
+    question({ prompt: "Still relevant?", askedAt: ASKED_AT.toISOString() })
+  );
+  box.commitAll("seed question");
+
+  // doctest:L140
+  setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
+  const result = await ageQuestions(box.root);
+  t.check(result, {
+    nudged: [],
+    expired: [
+      "_bookkeeping/questions/Stale.question.card",
+    ],
+  });
+
+  // doctest:L145
+  const card = await box.read("_bookkeeping/questions/Stale.question.card");
+  await t.checkText(card.includes("expired-at:"), "true");
+
+  // The commit carries the `Expired-By` trailer:
+
+  // doctest:L153
+  await t.checkText(headTrailers(box.root).includes("Expired-By: question-aging"), "true");
+
+  // Expired questions drop out of the pending count and pending-questions list:
+
+  // doctest:L160
+  const state = await getSystemState(box.root);
+  await t.checkText(state.questions.filter((q) => q.state === "pending").length, "0");
+
+  // doctest:L164
+  const { pendingQuestions } = await generateContext(box.root);
+  await t.checkText(pendingQuestions.length, "0");
+});
+
+// ## `expires-after` override: nudge at half, expire at the full window
+//
+// A 10-day override nudges at 5 days (half), not the default 7:
+void test("A 10-day override nudges at 5 days (half), not the default 7:", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L179
+  const box = await makeTmpBox({ git: true });
+  await seedBox(box);
+  await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
+  const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+  await box.write(
+    "_bookkeeping/questions/Deadline.question.card",
+    question({ prompt: "Confirm by Friday?", askedAt: ASKED_AT.toISOString(), expiresAfter: "P10D" })
+  );
+  box.commitAll("seed question");
+
+  // doctest:L189
+  setTime(addMs(ASKED_AT, TEN_DAYS_MS / 2 - 60_000));
+  t.check(await ageQuestions(box.root), {
+    nudged: [],
+    expired: [],
+  });
+
+  // doctest:L193
+  setTime(addMs(ASKED_AT, TEN_DAYS_MS / 2));
+  t.check(await ageQuestions(box.root), {
+    nudged: [
+      "_bookkeeping/questions/Deadline.question.card",
+    ],
+    expired: [],
+  });
+
+  // Past the full 10-day override window it expires (not the 30-day default):
+
+  // doctest:L201
+  setTime(addMs(ASKED_AT, TEN_DAYS_MS));
+  t.check(await ageQuestions(box.root), {
+    nudged: [],
+    expired: [
+      "_bookkeeping/questions/Deadline.question.card",
+    ],
+  });
+});
+
+// ## Missing `asked-at` warns and skips, never crashes
+//
+// A pending question with no `asked-at` (shouldn't exist post-migration, but
+// the sweep degrades loudly rather than throwing):
+void test("A pending question with no asked-at (shouldn't exist post-migration, but the...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L217
+  const box = await makeTmpBox({ git: true });
+  await seedBox(box);
+  await box.write(
+    "_bookkeeping/questions/NoAskedAt.question.card",
+    "---\nprompt: When was this asked?\ninput:\n  type: text\n---\n"
+  );
+  box.commitAll("seed question");
+
+  // doctest:L225
+  setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
+  t.check(await ageQuestions(box.root), {
+    nudged: [],
+    expired: [],
+  });
+
+  // doctest:L229
+  const card = await box.read("_bookkeeping/questions/NoAskedAt.question.card");
+  await t.checkText(card.includes("expired-at"), "false");
+});
+
+// ## Race-loser: already-answered questions are simply not pending
+//
+// The shared `withQuestionTransition` primitive (`question-transition.ts`)
+// re-checks state after acquiring both locks and skips silently when it's no
+// longer in the allowed set — that's exercised directly by the `answer`/
+// `dismiss` doctests' "already answered" cases. A true cross-process race
+// between the sweep and a simultaneous answer can't be manufactured in a
+// single-process sequential doctest without invasive mocking of the transition
+// internals; the observable case here is the simpler one: a question answered
+// before the sweep runs never appears in its pending scan at all, so it's
+// untouched.
+void test("The shared withQuestionTransition primitive (question-transition.ts) re-check...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      delete process.env.BBX_TIME;
+      await fs.rm(storeDir, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L252
+  const box = await makeTmpBox({ git: true });
+  await seedBox(box);
+  await box.write(
+    "_bookkeeping/questions/AlreadyAnswered.question.card",
+    question({ prompt: "Still open?", askedAt: ASKED_AT.toISOString() })
+      .replace("---\n", "---\nanswered-at: 2026-01-02T00:00:00Z\nanswer:\n  text: Yes\n"),
+  );
+  box.commitAll("seed question");
+
+  // doctest:L261
+  setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
+  t.check(await ageQuestions(box.root), {
+    nudged: [],
+    expired: [],
+  });
+
+  // doctest:L265
+  const card = await box.read("_bookkeeping/questions/AlreadyAnswered.question.card");
+  await t.checkText(card.includes("expired-at"), "false");
+});

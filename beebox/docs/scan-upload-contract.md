@@ -14,7 +14,7 @@ Breadcrumbed sites: the server routes (`src/webapp/routes/scan-upload/*.ts`),
 the Node client's HTTP layer (`scan-uploader/src/`), the Mac client
 (`mac-app/Sources/BeeBoxMacCore/Scan/ScanWire.swift`, `ScanSweep.swift`,
 `ScanFiles.swift` and `ContractVersion.swift`), and the server route doctests
-(`test/webapp/routes/scan-upload.doctest.md`) — the doctests exercise this
+(`test/webapp/routes/scan-upload.test.ts`) — the doctests exercise this
 contract exactly as the client sends it and are its executable form. Design
 history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
 

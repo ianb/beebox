@@ -575,7 +575,7 @@ cards, that change carries the audit.)
    `assertBatchAlignment`): `ScanVisionService` interface +
    `ScanVisionBatchError`, `GeminiScanVision` wrapper,
    `createFakeScanVision`, backend selection helper, +
-   `test/services/scan-vision.doctest.md`.
+   `test/services/scan-vision.test.ts`.
 2. **Claude backend** — `src/services/scan-vision-claude.ts`
    (normalization, Zod-generated tightened schema, outline note,
    post-conditions incl. slot invariant + legibility→flag folding,

@@ -1,0 +1,39 @@
+// # `/healthz` surfaces engine version mismatches (Track E, chunk E2)
+//
+// A v2 box pins its own `beebox` dependency; `/healthz` rolls up any box
+// whose pinned version differs from the engine actually serving it, the same
+// way it already rolls up parked template updates and schema load failures.
+// The comparison itself lives in `getEngineVersionReport`
+// (`src/core/engine-version.js`), covered directly by
+// `test/core/engine-version.doctest.md` — this doctest only checks the field
+// is wired into the route.
+//
+// A test box with no separately-installed engine — what `makeTestServer`
+// scaffolds (a v2 box without a `node_modules/beebox`) — reports a null
+// installed version, so it never contributes a mismatch:
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { makeTestServer } from "../helpers/doctest-server.js";
+import { bodyField } from "../helpers/doctest-helpers.js";
+
+process.env.BBX_DIAG_API_KEY = "test-diag-key";
+
+void test("line 22", async (t) => {
+  t.teardown(async () => {
+    try {
+      delete process.env.BBX_DIAG_API_KEY;
+      await server.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  // doctest:L23
+  const server = await makeTestServer();
+  const headers = { authorization: "Bearer test-diag-key" };
+  const response = await server.rootRequest({ method: "GET", url: "/healthz", headers });
+  t.check(bodyField(response.body, "engineVersionMismatch"), {
+    total: 0,
+    byBox: {},
+  });
+});

@@ -353,7 +353,7 @@ The agent-facing navigation description changes: where Dashboard, Browse, Histor
 ## What will hold this after it ships
 
 - Pure doctests: `routingDisposition`, the record reader, the box screen reducer, the landmarks filter.
-- Router doctests with the fake Jev service (`createFakeJev`, `jev.ts:135`) and the caller pattern in `test/webapp/trpc/routers/quick-chat.doctest.md`: every row of the failure table that names one.
+- Router doctests with the fake Jev service (`createFakeJev`, `jev.ts:135`) and the caller pattern in `test/webapp/trpc/routers/quick-chat.test.ts`: every row of the failure table that names one.
 - Send-route doctests, unchanged, cover the route after the extraction. They do not cover the shared state, so one new doctest sends the same message id through `POST /api/chat/send` and through `quickChat.submit` against one runtime, in both orders, and expects one chat message.
 - Mobile-contract fixtures for the four procedures, parsed by both the Swift and TypeScript sides, and a `ChatWebViewRequestTests` case for the intercepted navigation.
 - XCTest: `initialSurface`, `QuickChatOutbox`, `QuickChatAPI` request shapes, the two draft stores.

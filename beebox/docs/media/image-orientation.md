@@ -24,7 +24,7 @@ The oracle is [`src/shared/image-orientation.ts`](../../src/shared/image-orienta
 `isOrientationNormalized(bytes)` is the contract predicate. It is pure and shared
 by the backend and frontend. Tested across all eight values (both TIFF byte
 orders) and hostile inputs in
-[`test/shared/image-orientation.doctest.md`](../../test/shared/image-orientation.doctest.md).
+[`test/shared/image-orientation.test.ts`](../../test/shared/image-orientation.test.ts).
 
 ## Ingress inventory
 

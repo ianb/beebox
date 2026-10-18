@@ -5,7 +5,7 @@
  * GENERATED DATA — do not hand-edit. Run `pnpm template-stock:update` after
  * changing one of these template constants; it moves the superseded hash into
  * `superseded[]` and records the new `current`. A test
- * (`test/core/template-stock-hashes.doctest.md`) fails if a template constant
+ * (`test/core/template-stock-hashes.test.ts`) fails if a template constant
  * changes without this ledger being updated, which is the forcing function that
  * keeps `priorStockHashes` complete: a field box carrying ANY superseded version
  * is then recognized as unmodified stock and cleanly overwritten on `bbx init`

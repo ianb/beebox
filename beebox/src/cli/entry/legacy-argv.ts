@@ -16,7 +16,7 @@
  *
  * Rewriting argv, rather than registering hidden top-level aliases, keeps the
  * command tree honest: these verbs stay absent from `bbx --help` and from the
- * surface table, and `test/cli/entry.surface.doctest.md` goes on asserting that no
+ * surface table, and `test/cli/entry.surface.test.ts` goes on asserting that no
  * engine verb is reachable at the top level. The compatibility lives at the
  * entry point, which is where the foreign caller actually is.
  *

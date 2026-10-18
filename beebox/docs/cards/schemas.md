@@ -307,7 +307,7 @@ there, and readers expect it to mean something. Before adding one:
 2. **Don't use a reserved name.** Global field names (`title`, `contains`, …)
    and the banned names `status`, `created`, `summary`, `date`, `modified` and
    `source` are rejected: `reservedFieldProblems` (`src/cards/reserved-fields.ts`)
-   fails the built-in registry test (`test/cards/reserved-fields.doctest.md`)
+   fails the built-in registry test (`test/cards/reserved-fields.test.ts`)
    and gives box-local schemas a `box-schema-fields` health warning. Each
    message says what to write instead. The one allowed redeclaration is
    `title: z.string()`, which makes the title required.

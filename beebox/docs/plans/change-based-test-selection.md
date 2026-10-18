@@ -368,7 +368,7 @@ worktree, so one ledger serves them all.
   "changed": ["beebox/src/..."],
   "ranFiles": "sha256:ab12…",                  // key into the sidecar manifest
   "implicated": "sha256:ef56…",                // what the graph alone points at
-  "durations": { "test/webapp/routes/scan-upload.doctest.md": 58177 },
+  "durations": { "test/webapp/routes/scan-upload.test.ts": 58177 },
   "failures": [{ "file": "test/...", "class": "attached" }] }
 ```
 
@@ -847,10 +847,10 @@ JSX text contents are masked does not select its importers.
   changed code, so the filter would not change them.
 - **It drops tests that fail on text edits.** In user-facing-language, a
   text-only edit to `briefing.tsx` failed
-  `test/core/template-stock-hashes.doctest.md` (the template's stock hash
-  changed) and `test/scripts/migrate/briefing-openers.doctest.md`. Both import
+  `test/core/template-stock-hashes.test.ts` (the template's stock hash
+  changed) and `test/scripts/migrate/briefing-openers.test.ts`. Both import
   the changed file directly, so a "keep direct importers" exception would keep
-  them. `test/core/agent-guide/lint.doctest.md` failed on four branches whose
+  them. `test/core/agent-guide/lint.test.ts` failed on four branches whose
   landing diffs had text-only edits. It reads text through generated docs, so
   no import-depth rule finds it. The exception would become a hand-maintained
   list of tests that read text. Track 3 avoided that kind of list.
@@ -860,7 +860,7 @@ JSX text contents are masked does not select its importers.
   full run on `main` would catch a failure that the filter skipped. Since
   2026-10-09, almost every hourly run has been red: 15 of 68 runs since
   2026-10-05 failed `test/hub/supervisor.doctest.md`, and 12 failed
-  `test/scripts/release.manifest.doctest.md`. A new failure there would be
+  `test/scripts/release.manifest.test.ts`. A new failure there would be
   hard to see among the old ones.
 
 ### Mechanism — the estimate line
