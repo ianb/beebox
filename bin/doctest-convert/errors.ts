@@ -22,7 +22,7 @@ export class ToolOutputError extends DriverError {
   }
 }
 
-const USAGE = "usage: doctest-convert prepare <dir> | verify <dir|file>... | progress";
+const USAGE = "usage: doctest-convert prepare <dir> | verify|check <dir|file>... | slots | dispatch <dir|file>... --model luna|haiku | progress";
 
 /** The command line is wrong; the CLI prints the usage line after it. */
 export class UsageError extends DriverError {
@@ -71,5 +71,33 @@ export class NoTestRootError extends DriverError {
   public constructor(file: string) {
     super(`${file}: no test root in bin/test-roots.ts contains it`);
     this.name = "NoTestRootError";
+  }
+}
+
+export class SlotBusyError extends DriverError {
+  public constructor(dir: string) {
+    super(`every slot in ${dir} is in use or missing; run \`slots\` to create them, or remove a stale slot-N.lock`);
+    this.name = "SlotBusyError";
+  }
+}
+
+export class NothingToDispatchError extends DriverError {
+  public constructor(paths: readonly string[]) {
+    super(`nothing to dispatch: no converted, unverified file under ${paths.join(" ")}`);
+    this.name = "NothingToDispatchError";
+  }
+}
+
+export class BatchNotCommittedError extends DriverError {
+  public constructor(dirty: readonly string[]) {
+    super(`commit the batch first (a slot starts from HEAD); uncommitted: ${dirty.join(" ")}`);
+    this.name = "BatchNotCommittedError";
+  }
+}
+
+export class ModelArgError extends UsageError {
+  public constructor(model: string | undefined) {
+    super(`--model must be luna or haiku, not ${model ?? "(none)"}`);
+    this.name = "ModelArgError";
   }
 }

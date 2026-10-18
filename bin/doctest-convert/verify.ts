@@ -47,8 +47,11 @@ function runtimeProblems(file: FileState, got: { failures: number; assertions: n
   return got.assertions === want ? [] : [`${got.assertions} assertions, want ${want}`];
 }
 
-/** Verify the selected files; updates and saves their state entries. */
-export function verify(selected: readonly Selected[]): void {
+/**
+ * Verify the selected files and update their state entries; with `save`,
+ * write the state files (a worker's `check` does not).
+ */
+export function verify(selected: readonly Selected[], opts: { save: boolean }): void {
   const tests = selected.map((s) => s.file.test);
   const problems = new Map<string, string[]>(tests.map((t) => [t, []]));
   const add = (test: string, p: string): void => void problems.get(test)?.push(p);
@@ -103,5 +106,5 @@ export function verify(selected: readonly Selected[]): void {
     if (s.file.problems.length > 0 && s.file.status === "verified") s.file.status = "converted";
     touched.add(s.state);
   }
-  for (const state of touched) save(state);
+  if (opts.save) for (const state of touched) save(state);
 }
