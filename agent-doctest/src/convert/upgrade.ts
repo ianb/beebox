@@ -31,7 +31,14 @@ function wildcardType(token: string): string {
   return parseWildcardToken(token.slice(1, -1)).type;
 }
 
-/** The pattern a whole-value wildcard becomes, or null when none fits. */
+/**
+ * The pattern a whole-value wildcard becomes, or null when none fits.
+ *
+ * Known, accepted widening (cross-model review, 2026-10-18): `uuid()`
+ * accepts an uppercase UUID where the text wildcard was lowercase-only, and
+ * `.int()` accepts 1e21, which JSON prints in exponent form. Neither occurs
+ * in values the code under test produces (randomUUID is lowercase).
+ */
 function valuePattern(token: string, patterns: Set<string>): string | null {
   switch (wildcardType(token)) {
     case "int":

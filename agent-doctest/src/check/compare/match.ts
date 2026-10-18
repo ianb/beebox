@@ -188,7 +188,7 @@ class Walker {
   private items({ actual, expected, path }: { actual: readonly unknown[]; expected: readonly unknown[]; path: string }): { shown: unknown[]; suggested: unknown[] } {
     const shown: unknown[] = [];
     const suggested: unknown[] = [];
-    if (sameItemsReordered(actual, expected)) this.miss({ path, expected: "", problem: REORDERED_PROBLEM });
+    const missesBefore = this.mismatches.length;
     const length = Math.max(actual.length, expected.length);
     for (let i = 0; i < length; i++) {
       const at = `${path}[${i}]`;
@@ -203,6 +203,11 @@ class Walker {
         shown.push(node.shown);
         suggested.push(node.suggested);
       }
+    }
+    // Only after a real positional mismatch: the hint's comparison is by JSON
+    // text, which sees key order the walk does not.
+    if (this.mismatches.length > missesBefore && sameItemsReordered(actual, expected)) {
+      this.mismatches.splice(missesBefore, 0, { path, expected: "", problem: REORDERED_PROBLEM });
     }
     return { shown, suggested };
   }

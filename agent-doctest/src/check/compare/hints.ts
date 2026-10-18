@@ -53,8 +53,13 @@ export function sameItemsReordered(actual: readonly unknown[], expected: readonl
   // JSON.stringify gives no text for these.
   const text = (v: unknown): string => (v === undefined || typeof v === "function" || typeof v === "symbol" ? String(v) : JSON.stringify(v));
   const key = (items: readonly unknown[]): string => items.map(text).toSorted().join("\n");
-  const inOrder = actual.every((v, i) => text(v) === text(expected[i]));
-  return !inOrder && key(actual) === key(expected);
+  try {
+    const inOrder = actual.every((v, i) => text(v) === text(expected[i]));
+    return !inOrder && key(actual) === key(expected);
+  } catch {
+    // A value JSON cannot write (a BigInt, a cycle) gets no hint.
+    return false;
+  }
 }
 
 export const REORDERED_PROBLEM = "the same items in another order; if order does not matter, write unordered([...])";

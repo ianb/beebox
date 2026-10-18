@@ -102,7 +102,7 @@ Patterns are imported from `agent-doctest/check`. Each pattern is typed:
 | `containing([...])` | an array that holds these items, in any order, among others |
 | `[others]: p` | in an object: every key not listed must match `p` |
 | `capture(p)` | matches `p` and keeps the value as `.value` |
-| `anything()` | any value; refused as the whole expected value |
+| `anything()` | any value except `undefined`; refused as the whole expected value |
 
 A key the expected object does not list fails, unless the object has
 `[others]`:

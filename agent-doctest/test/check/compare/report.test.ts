@@ -318,6 +318,12 @@ $.id — UUID string
 $.created — ISO timestamp`);
 });
 
+void test("anything() matches any value except undefined", async (t) => {
+  t.ok(passes({ y: null }, { y: anything() }));
+  t.ok(passes({ y: [1] }, { y: anything() }));
+  t.notOk(passes({ y: undefined }, { y: anything() }));
+});
+
 void test("anything() as the whole expected value is refused", async (t) => {
   t.checkText(report({ a: 1 }, anything()), `check(x, anything()) checks nothing; write the expected value
 suggested:
@@ -455,4 +461,8 @@ void test("mismatches name the likely fix", async (t) => {
   // The right items in another order point at unordered().
   t.match(report(["new", "trial"], ["trial", "new"]), /\$: the same items in another order; if order does not matter, write unordered/);
   t.notMatch(report(["a", "b"], ["b", "c"]), /another order/);
+  // The hint never fails a passing check: objects equal in another key order,
+  // and values JSON cannot write.
+  t.ok(passes([{ a: 1, b: 2 }, { b: 2, a: 1 }], [{ b: 2, a: 1 }, { a: 1, b: 2 }]));
+  t.ok(passes([1n, 2n], [1n, 2n]));
 });

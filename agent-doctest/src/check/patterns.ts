@@ -130,9 +130,14 @@ export function any<C extends PrimitiveConstructor>(type: C): AnyOf<C> {
   return pattern as AnyOf<C>;
 }
 
-/** Any value at all. A check whose whole expected value is `anything()` is refused. */
+/**
+ * Any value except `undefined`, as Jest's `expect.anything()`. A key whose
+ * value turned `undefined` is a change worth failing on; `optional()` is for
+ * a key that may be absent. A check whose whole expected value is
+ * `anything()` is refused.
+ */
 export function anything(): Pattern<never> {
-  return new Pattern<never>("anything()", () => OK);
+  return new Pattern<never>("anything()", (v) => (v === undefined ? fail("a value (not undefined; use optional() for a key that may be absent)") : OK));
 }
 
 export const UUID_RE = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
