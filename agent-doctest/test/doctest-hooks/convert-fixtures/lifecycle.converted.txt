@@ -1,8 +1,8 @@
 // # Lifecycle
 
-import { after, test } from "tap";
+import tap, { test } from "tap";
 
-after(async () => {
+tap.teardown(async () => {
   console.log("all done");
 });
 

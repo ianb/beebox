@@ -2,13 +2,13 @@
 //
 // Setup that declares `t` and `after`: the converted file binds tap's under other names.
 
-import { after as tapAfter, test } from "tap";
+import tapRoot, { test } from "tap";
 import type { ParsedPath } from "node:path";
 
 const t = { label: "mine" };
 const after = "later";
 
-tapAfter(async () => {
+tapRoot.teardown(async () => {
   void after;
 });
 

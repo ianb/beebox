@@ -12,7 +12,7 @@
  * - Setup blocks run at module level, before every test, in file order.
  * - A plain block and its `continue` blocks are one `test(...)`.
  * - `cleanup` blocks register a `t.teardown` at the start of their test;
- *   `teardown` blocks register a module-level `after`.
+ *   `teardown` blocks register a teardown on tap's root test.
  * - `print()` and `eventually` come from `agent-doctest/check`.
  * - Dropped: the still-running notice, and the ReferenceError hint.
  *
@@ -228,9 +228,15 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const setupDeclares = (name: string): boolean => declaresName(setupText, name);
   // tap's `test` and `after` are imported under another name when setup already uses the name.
   const testName = setupDeclares("test") ? "tapTest" : "test";
-  const afterName = setupDeclares("after") ? "tapAfter" : "after";
   const tapImport = (name: string, local: string): string => (name === local ? name : `${name} as ${local}`);
   const tName = setupDeclares("t") ? "tap" : "t";
+  // A teardown block registers on tap's root test, as the runtime did. tap's
+  // exported after() would wait for the root test to end, which a server the
+  // file keeps open prevents.
+  const rootName = tName === "tap" || setupDeclares("tap") ? "tapRoot" : "tap";
+  // The doctest's own code may use the helper's name for something else.
+  const authorText = blocks.map((b) => b.block.content).join("\n");
+  const printedName = uses(authorText, "printed") ? "doctestPrinted" : "printed";
   const examples: ManifestExample[] = [];
 
   const setupLines: string[] = [];
@@ -248,7 +254,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
       continue;
     }
     if (info.kind === "teardown") {
-      afters.push(...prose, `${afterName}(async () => {`, ...indent(rewriteImports(content), "  "), "});", "");
+      afters.push(...prose, `${rootName}.teardown(async () => {`, ...indent(rewriteImports(content), "  "), "});", "");
       continue;
     }
     if (info.kind === "prose") continue;
@@ -284,7 +290,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
     const printName = uses(text, "out") ? "printLog" : "out";
     const out = !setupDeclares("print") && uses(text, "print") ? printName : null;
     const body: string[] = [];
-    if (out !== null) body.push(`const ${out} = printed();`, `const print = ${out}.print;`);
+    if (out !== null) body.push(`const ${out} = ${printedName}();`, `const print = ${out}.print;`);
     for (const { prose, code } of test.teardowns) {
       body.push(...prose, `${tName}.teardown(async () => {`, "  try {", ...indent(code, "    "), "  } catch (error) {", `    ${tName}.error(error);`, "  }", "});");
     }
@@ -325,9 +331,8 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const allCode = [setupText, ...tests.flatMap((tt) => [...tt.body.map(textOf), ...tt.teardowns.map((c) => c.code)])].join("\n");
   const helpers: string[] = [];
   if (!setupDeclares("eventually") && uses(allCode, "eventually")) helpers.push("eventually");
-  if (testLines.some((l) => /= printed\(\);$/.test(l.trim()))) helpers.push("printed");
-  const tapNames = [...(afters.length > 0 ? [tapImport("after", afterName)] : []), tapImport("test", testName)];
-  const imports = [`import { ${tapNames.join(", ")} } from "tap";`];
+  if (testLines.some((l) => l.trim().endsWith(`= ${printedName}();`))) helpers.push(tapImport("printed", printedName));
+  const imports = [`import ${afters.length > 0 ? `${rootName}, ` : ""}{ ${tapImport("test", testName)} } from "tap";`];
   if (helpers.length > 0) imports.push(`import { ${helpers.join(", ")} } from "agent-doctest/check";`);
   imports.push(...typeImports);
 

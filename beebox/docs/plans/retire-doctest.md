@@ -478,11 +478,11 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   | Statement examples (2,370) | verbatim, with no generated line between a statement and the next example (`doctest-emit.ts:69-73`) |
   | `print()` | a per-test `const out = printed(); const print = out.print;`; each check in that test becomes `await t.checkText(out.with(expr), …)`, reproducing `doctest-runtime.ts:171` |
   | `cleanup` | `t.teardown(async () => { try { … } catch (e) { t.error(e) } })` at the runtime's registration point |
-  | `teardown` | module-level `after(async () => { … })` |
+  | `teardown` | `tap.teardown(async () => { … })` on the root test, as the runtime did; tap's `after()` waits for the root test to end, which an open server prevents |
   | `eventually`, `printed` | imported from `agent-doctest/check` |
   | Type-only imports in an example | hoisted to module-level `import type`, as the doctest typecheck does |
   | Setup that declares `t` | the callback parameter is named `tap` |
-  | Setup that declares `test` or `after` | tap's is imported as `tapTest` or `tapAfter` |
+  | Setup that declares `test`, `tap`, or `printed` | the import is renamed (`tapTest`, `tapRoot`, `doctestPrinted`) |
 
   - Test names come from the first sentence of the prose just before the
     block, cut to 80 characters; a heading often covers several blocks.
