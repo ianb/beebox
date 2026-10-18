@@ -21,7 +21,7 @@ import { isRecord } from "../../card-io.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
 import { titleFromFilename, truncateTitle } from "../../file-summary.js";
 import { cardTitle } from "../../loader-registry.js";
-import { splitMarkdownSections } from "./markdown-sections.js";
+import { splitMarkdownSections } from "../../../shared/markdown-sections.js";
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
 
 /** One Orama document. `fragment` is "" for the card's own document. */
@@ -151,26 +151,12 @@ export function extractCardDocs(input: ExtractInput): SearchDoc[] {
     fragment: s.fragment,
     content: normalizeContent(s.text),
   }));
-  return dedupeDocIds([cardDoc, ...sectionDocs]);
+  // Section paths are unique (`uniqueSectionPaths`) and never "", so ids are too.
+  return [cardDoc, ...sectionDocs];
 }
 
 function docId(path: string, fragment: string): string {
   return `${path}#${fragment}`;
-}
-
-/**
- * Repeated headings produce identical fragment paths; ids must be unique
- * within the index, so duplicates get a ~N suffix.
- */
-function dedupeDocIds(docs: SearchDoc[]): SearchDoc[] {
-  const seen = new Map<string, number>();
-  return docs.map((d) => {
-    const n = seen.get(d.id) ?? 0;
-    seen.set(d.id, n + 1);
-    if (n === 0) return d;
-    const fragment = `${d.fragment}~${String(n + 1)}`;
-    return { ...d, fragment, id: docId(d.path, fragment) };
-  });
 }
 
 /**
@@ -196,7 +182,7 @@ export function extractMarkdownFileDocs(input: {
     return [{ ...base, id: docId(path, ""), fragment: "", content: normalizeContent(content) }];
   }
   const { preamble, sections } = splitMarkdownSections(content);
-  return dedupeDocIds([
+  return [
     { ...base, id: docId(path, ""), fragment: "", content: normalizeContent(preamble) },
     ...sections.map((s): SearchDoc => ({
       ...base,
@@ -204,7 +190,7 @@ export function extractMarkdownFileDocs(input: {
       fragment: s.fragment,
       content: normalizeContent(s.text),
     })),
-  ]);
+  ];
 }
 
 /** The markdown text a card's content documents are built from. */

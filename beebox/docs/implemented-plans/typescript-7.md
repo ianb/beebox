@@ -400,7 +400,7 @@ Where the build differs from the tracks above, and why:
   peer. `lint:circular` passes on 6.0; a root `peerDependencyRules` entry
   allows `madge>typescript` 6.
 - **`pnpm smoke`** fails on two pre-existing bugs (filed:
-  `issues/bugs/2026-10-17-release-smoke-imports-wildcard-exports-and-calls-engine-serve.md`).
+  `issues/closed/bugs/2026-10-17-release-smoke-imports-wildcard-exports-and-calls-engine-serve.md`; fixed after landing).
   With the first skipped locally, every TypeScript step passed from the
   release tarball.
 

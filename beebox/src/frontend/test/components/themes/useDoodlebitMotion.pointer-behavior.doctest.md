@@ -5,7 +5,7 @@ travel across exposed desk. They hold their frame while the pointer is still or
 over cards, labels, and controls.
 
 ```ts setup
-import { mount } from "../helpers/dom-harness.js";
+import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { useDoodlebitMotion } from "../../../src/components/themes/useDoodlebitMotion.js";
 

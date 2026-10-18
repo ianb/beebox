@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-18T00:28:14Z
+Generated: 2026-10-18T02:34:06Z
 Total documents: 543
 
 ## Issues
@@ -93,7 +93,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -1297,6 +1296,7 @@ Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:100 (mention) — **Principle 4 — resilient AND never silent** (`docs/engineering-principles.md:49`):
 - docs/implemented-plans/scanner-ingest.md:33 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
 - docs/implemented-plans/scheduled-workstreams.md:41 (mention) — - `beebox/docs/engineering-principles.md:37` — *3. Validate at
+- docs/implemented-plans/search-section-destination.md:78 (mention) — - `docs/engineering-principles.md` §8, *"One way to do each thing"*: one
 - docs/implemented-plans/secret-custody.md:148 (mention) — - `docs/engineering-principles.md` — validate-at-boundaries (grant checks at
 - docs/implemented-plans/secret-entry-guidance.md:39 (mention) — (`docs/engineering-principles.md:151`): *"An affordance may display only what
 - docs/implemented-plans/see-as-the-user.md:28 (mention) — - `beebox/docs/engineering-principles.md` — traced by number below.
@@ -6585,6 +6585,17 @@ References:
 - → docs/cards/schemas.md (mention)
 - → code-style.md (mention)
 
+#### docs/implemented-plans/search-section-destination.md
+
+Title: "Search section results open at their heading" | 377 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:15 (mention) — > `beebox/docs/plans/search-section-destination.md`. gdoc hits stay card-level.
+
+References:
+- → ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+
 #### docs/implemented-plans/secret-custody.md
 
 Title: "Secret custody" | 803 lines | shipped history | implemented
@@ -8706,7 +8717,7 @@ References:
 Title: "Search cards and quick search" | 480 lines | proposal | draft
 
 Referenced by:
-- ../issues/bugs/2026-09-21-search-section-results-drop-their-destination.md:48 (mention) — - `beebox/docs/plans/search-card.md` (lines 117-121, 282-286) chose card-level
+- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:54 (mention) — - `beebox/docs/plans/search-card.md` (lines 117-121, 282-286) chose card-level
 
 References:
 - → ../issues/features/2026-08-08-no-visible-search-or-home.md (frontmatter)
@@ -9912,14 +9923,6 @@ References:
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
 
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 21 lines
-
-No references in or out.
-
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
@@ -10424,12 +10427,12 @@ Referenced by:
 - ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (link) — Seen again in [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../be
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (link) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md:37 (link) — Report: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R5.
 - ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:85 (link) — Seen in [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R1). The agent tested its own r
 - ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:47 (link) — Seen again in two walks. [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45):
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Se
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../bee
+- ../issues/closed/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md:42 (link) — Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R5.
 - ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](.
 - ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:46 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R4,
 - ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md:39 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) rows 24, 37, and 62,
@@ -10464,7 +10467,7 @@ References:
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
-- → ../issues/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md (link)
+- → ../issues/closed/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md (link)
 - → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/closed/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md (link)
@@ -10691,10 +10694,10 @@ References:
 Title: "C-reconnecting, 2026-09-21" | 151 lines
 
 Referenced by:
-- ../issues/bugs/2026-09-21-search-section-results-drop-their-destination.md:28 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:29 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/closed/bugs/2026-09-21-browse-name-guard-refuses-visible-search-results.md:98 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:38 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:34 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:42 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:58 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 
@@ -10749,7 +10752,6 @@ References:
 - → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (mention)
 - → ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md (mention)
 - → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (mention)
-- → ../issues/bugs/2026-09-21-search-section-results-drop-their-destination.md (mention)
 
 #### test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md
 

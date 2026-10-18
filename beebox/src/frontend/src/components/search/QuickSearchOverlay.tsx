@@ -3,6 +3,7 @@ import { TextField } from "../ui/fields/field";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { SearchResults, type SearchResult } from "./SearchResults";
+import { searchResultTarget } from "./target";
 import { trpc } from "../../lib/trpc/client";
 import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
 
@@ -32,7 +33,7 @@ export function QuickSearchOverlay() {
         workspace?.open({ path: query, viewer: null, params: {}, viewState: null }, { label: query }); close(); return;
       }
     }
-    if (item) workspace?.open({ path: item.path, viewer: null, params: {}, viewState: null }, { label: item.path });
+    if (item) workspace?.open(searchResultTarget(item), { label: item.path });
     else return;
     close();
   };

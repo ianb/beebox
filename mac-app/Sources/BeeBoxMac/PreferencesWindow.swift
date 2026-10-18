@@ -143,7 +143,7 @@ private final class TitledTabViewController: NSTabViewController {
         super.tabView(tabView, didSelect: tabViewItem)
         // The tab controller resets the title while it swaps the page in; set
         // it once that has finished.
-        let label = tabViewItem?.label ?? "Bee Box"
+        let label = tabViewItem?.label ?? "Bee Box Desktop"
         DispatchQueue.main.async { [weak self] in
             self?.view.window?.title = label
         }
@@ -151,7 +151,7 @@ private final class TitledTabViewController: NSTabViewController {
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        view.window?.title = tabView.selectedTabViewItem?.label ?? "Bee Box"
+        view.window?.title = tabView.selectedTabViewItem?.label ?? "Bee Box Desktop"
     }
 }
 
@@ -203,7 +203,7 @@ struct BoxesTab: View {
 
     var body: some View {
         TabPage(explanation: """
-            A paired box opens from the Bee Box menu and can receive files from watched folders. \
+            A paired box opens from the Bee Box Desktop menu and can receive files from watched folders. \
             To pair, open the box in a browser, go to Settings → Companion Apps, choose Copy Link (Mac), \
             then choose Pair with a Box… here. Each box lists this Mac under its paired devices, where you can remove it.
             """) {
@@ -355,7 +355,7 @@ struct PairingSheet: View {
             PreviewLine(preview: preview)
             Text(message).foregroundStyle(.red)
         case .paired(let label):
-            Text("Added \(label). It is in the Bee Box menu.")
+            Text("Added \(label). It is in the Bee Box Desktop menu.")
         }
     }
 
@@ -389,7 +389,7 @@ struct LocalBoxTab: View {
 
     var body: some View {
         TabPage(explanation: """
-            Bee Box can run a box on this Mac, in a small virtual machine, instead of (or as well as) \
+            Bee Box Desktop can run a box on this Mac, in a small virtual machine, instead of (or as well as) \
             pairing with a box that runs somewhere else. Its files are in \(Paths.box.path.replacingOccurrences(of: Paths.home.path, with: "~")), \
             and it opens in your browser at a localhost address that only this Mac can reach. \
             It needs the Mac to be awake; for a box your phone can reach all day, run it on a server instead.
@@ -397,7 +397,7 @@ struct LocalBoxTab: View {
             Form {
                 Section {
                     Toggle("Run a box on this Mac", isOn: Binding(get: { hosting.enabled }, set: { hosting.setEnabled($0) }))
-                    Text("The first start downloads about 1 GB and unpacks it to a few GB. While this is off, Bee Box downloads nothing and runs no virtual machine.")
+                    Text("The first start downloads about 1 GB and unpacks it to a few GB. While this is off, Bee Box Desktop downloads nothing and runs no virtual machine.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if hosting.enabled {
@@ -447,11 +447,11 @@ struct GeneralTab: View {
     @State private var notifications = "…"
 
     var body: some View {
-        TabPage(explanation: "Bee Box lives in the menu bar. It needs to be running to watch folders and to run a box on this Mac.") {
+        TabPage(explanation: "Bee Box Desktop lives in the menu bar. It needs to be running to watch folders and to run a box on this Mac.") {
             Form {
                 Section {
                     Toggle("Open at Login", isOn: Binding(get: { hosting.opensAtLogin }, set: { hosting.setOpensAtLogin($0) }))
-                    Text("Starts Bee Box when you log in, so watched folders keep sending after a restart.")
+                    Text("Starts Bee Box Desktop when you log in, so watched folders keep sending after a restart.")
                         .font(.caption).foregroundStyle(.secondary)
                     if let error = hosting.loginItemError {
                         Text(error).font(.caption).foregroundStyle(.red)
@@ -463,12 +463,12 @@ struct GeneralTab: View {
                         Spacer()
                         Button("Open Notification Settings") { UploadNotifications.openSettings() }
                     }
-                    Text("Bee Box sends one notification when a watched folder sends files or a box refuses one. Problems that last show in the menu instead.")
+                    Text("Bee Box Desktop sends one notification when a watched folder sends files or a box refuses one. Problems that last show in the menu instead.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Updates") {
                     HStack {
-                        Text("Bee Box \(BundleConfig.version)")
+                        Text("Bee Box Desktop \(BundleConfig.version)")
                         Spacer()
                         Button("Check for Updates…") { updates.checkForUpdates() }
                             .disabled(!updates.enabled)
@@ -479,10 +479,10 @@ struct GeneralTab: View {
                 }
                 Section {
                     HStack {
-                        Text("Removes Bee Box, its downloaded image, and its settings. You choose whether your box files go too.")
+                        Text("Removes Bee Box Desktop, its downloaded image, and its settings. You choose whether your box files go too.")
                             .font(.caption).foregroundStyle(.secondary)
                         Spacer()
-                        Button("Uninstall Bee Box…", action: uninstall)
+                        Button("Uninstall Bee Box Desktop…", action: uninstall)
                     }
                 }
             }

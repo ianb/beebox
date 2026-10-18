@@ -10,7 +10,7 @@
 #   - the `beebox-notary` notarytool profile;
 #   - the Sparkle private key in the keychain (generate_keys --account beebox).
 #
-# Publishes BeeBox-X.Y.Z.dmg, its .sha256, and appcast.xml to the vX.Y.Z
+# Publishes BeeBoxDesktop-X.Y.Z.dmg, its .sha256, and appcast.xml to the vX.Y.Z
 # GitHub Release, marked latest: the app's feed URL is
 # releases/latest/download/appcast.xml, and GitHub's "latest" skips
 # pre-releases.
@@ -38,8 +38,8 @@ IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n '
 VERSION="$VERSION" SIGN_IDENTITY="$IDENTITY" scripts/build-app.sh
 SIGN_IDENTITY="$IDENTITY" NOTARY_PROFILE="${NOTARY_PROFILE:-beebox-notary}" scripts/make-dmg.sh
 
-DMG="build/BeeBox-$VERSION.dmg"
-(cd build && shasum -a 256 "BeeBox-$VERSION.dmg" > "BeeBox-$VERSION.dmg.sha256")
+DMG="build/BeeBoxDesktop-$VERSION.dmg"
+(cd build && shasum -a 256 "BeeBoxDesktop-$VERSION.dmg" > "BeeBoxDesktop-$VERSION.dmg.sha256")
 
 # The appcast lists this release only; Sparkle offers it to every older
 # install. generate_appcast signs the enclosure with the keychain key.
@@ -56,9 +56,9 @@ if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
   [[ -n "${NOTES_FILE:-}" ]] && edit+=(--notes-file "$NOTES_FILE")
   gh release edit "$TAG" -R "$REPO" "${edit[@]}"
 else
-  notes=(--notes "Bee Box $VERSION for macOS 26 on Apple silicon.")
+  notes=(--notes "Bee Box Desktop $VERSION for macOS 26 on Apple silicon.")
   [[ -n "${NOTES_FILE:-}" ]] && notes=(--notes-file "$NOTES_FILE")
-  gh release create "$TAG" -R "$REPO" --latest --title "Bee Box $VERSION" "${notes[@]}" \
+  gh release create "$TAG" -R "$REPO" --latest --title "Bee Box Desktop $VERSION" "${notes[@]}" \
     "$DMG" "$DMG.sha256" build/appcast.xml
 fi
 echo "Released $TAG: https://github.com/$REPO/releases/tag/$TAG"

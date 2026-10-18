@@ -1,7 +1,7 @@
 // A fenced block in rendered Markdown carries a Copy button that copies the
 // block's text, not the button's label, and says "Copied" after.
 // First, and bare: React DOM must load after the happy-dom window exists.
-import { mount } from "../helpers/dom-harness.js";
+import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
 import "agent-doctest/tap";
