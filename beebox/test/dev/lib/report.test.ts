@@ -64,20 +64,22 @@ void test("The delta clause compares a baseline to the prior run", async (t) => 
 void test("alpha shrank 3k since its last run; beta has no prior entry, so its delta is...", async (t) => {
   // doctest:L69
   const out = renderContextSummary([res("beta", 38000), res("alpha", 41000)], { alpha: prior(44000) });
-  await t.checkText(out.filter((l) => l.startsWith("|")).join("\n"), `| Audit | Initial | Δ last run |
-|---|--:|--:|
-| alpha | 41k | -3k |
-| beta | 38k | — |`);
-
   // The lowest baseline is called out as the cleanest estimate of the pure
   // always-on tier.
-
-  // doctest:L81
-  t.check(out[out.length - 2], "Lowest baseline ≈ pure always-on tier: 38k (`beta`).");
+  t.check(out, [
+    "## Context baselines",
+    "",
+    "| Audit | Initial | Δ last run |",
+    "|---|--:|--:|",
+    "| alpha | 41k | -3k |",
+    "| beta | 38k | — |",
+    "",
+    "Lowest baseline ≈ pure always-on tier: 38k (`beta`).",
+    "",
+  ]);
 });
 
 // ## No measured context → no summary section
 void test("No measured context → no summary section", async (t) => {
-  // doctest:L88
-  await t.checkText(renderContextSummary([res("x", null)], {}).length, "0");
+  t.check(renderContextSummary([res("x", null)], {}), []);
 });

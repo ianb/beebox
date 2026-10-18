@@ -15,6 +15,17 @@ function scanOne(text: string) {
   return scanBundle(new Map([["index.html", text]]), { ownerEmail: null, allowedEmails: [] });
 }
 
+// The expected report for a scan of the single file `index.html`.
+const none: string[] = [];
+type Finding = ReturnType<typeof scanOne>["findings"][number];
+function reportOf(findings: Omit<Finding, "file" | "line">[]) {
+  return {
+    findings: findings.map((f): Finding => ({ ...f, file: "index.html", line: 1 })),
+    scannedFiles: ["index.html"],
+    skippedBinaries: none,
+  };
+}
+
 // A real home path, built by concatenation so the literal `/Users/<name>/`
 // never appears in this file (which would trip the repo's own path-leak-check
 // hook — the very shape this fixture is here to exercise).
@@ -28,13 +39,7 @@ const REAL_HOME = "/Users/" + "janedoe" + "/";
 void test("The /Users/<name>/ and /home/<name>/ shapes are document-copied from bin/path...", async (t) => {
   // doctest:L30
   const home = scanOne("Saved to " + REAL_HOME + "secrets/notes.md and /Users/me/ok.md");
-  await t.checkText(home.findings.length, "1");
-
-  // doctest:L34
-  t.check(home.findings[0]?.kind, "home-path");
-
-  // doctest:L37
-  await t.checkText(home.findings[0]?.match === REAL_HOME, "true");
+  t.check(home, reportOf([{ id: "2a33cf589d25", kind: "home-path", match: REAL_HOME, detail: "home directory path" }]));
 });
 
 // ## A foreign email is flagged; the owner and allowlist are not
@@ -47,7 +52,7 @@ void test("The publication's own allowlist and the box owner are passed in and t
   const res = scanBundle(files, { ownerEmail: "owner@box.test", allowedEmails: ["viewer@allowed.test"] });
 
   // doctest:L50
-  t.check(res.findings.map((f) => f.kind + ":" + f.match).join(", "), "email:stranger@elsewhere.test");
+  t.check(res, reportOf([{ id: "e0b1c1ab2799", kind: "email", match: "stranger@elsewhere.test", detail: "email address" }]));
 });
 
 // ## Each credential shape is flagged
@@ -56,32 +61,32 @@ void test("The publication's own allowlist and the box owner are passed in and t
 // construction so each matches exactly its intended pattern.
 void test("One fixture per shape in the named credential table.", async (t) => {
   // doctest:L60
-  t.check(scanOne("key=" + "AIza" + "a".repeat(35)).findings[0]?.detail, "Google API key");
+  t.check(scanOne("key=" + "AIza" + "a".repeat(35)), reportOf([{ id: "109b0356f00c", kind: "credential", match: "AIza" + "a".repeat(35), detail: "Google API key" }]));
 
   // doctest:L63
-  t.check(scanOne("token " + "sk-" + "a".repeat(24)).findings[0]?.detail, "OpenAI API key");
+  t.check(scanOne("token " + "sk-" + "a".repeat(24)), reportOf([{ id: "6e1f7c148c9a", kind: "credential", match: "sk-" + "a".repeat(24), detail: "OpenAI API key" }]));
 
   // doctest:L66
-  t.check(scanOne("auth " + "ghp_" + "a".repeat(36)).findings[0]?.detail, "GitHub token");
+  t.check(scanOne("auth " + "ghp_" + "a".repeat(36)), reportOf([{ id: "86422a219376", kind: "credential", match: "ghp_" + "a".repeat(36), detail: "GitHub token" }]));
 
   // doctest:L69
-  t.check(scanOne("slack " + "xoxb-" + "a".repeat(20)).findings[0]?.detail, "Slack token");
+  t.check(scanOne("slack " + "xoxb-" + "a".repeat(20)), reportOf([{ id: "9c942bc97256", kind: "credential", match: "xoxb-" + "a".repeat(20), detail: "Slack token" }]));
 
   // doctest:L72
-  t.check(scanOne("jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r").findings[0]?.detail, "JWT");
+  t.check(
+    scanOne("jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r"),
+    reportOf([{ id: "ec064c5c4a08", kind: "credential", match: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r", detail: "JWT" }]),
+  );
 
   // doctest:L75
-  t.check(scanOne("blob " + "a".repeat(48)).findings[0]?.detail, "long base64/hex run");
+  t.check(scanOne("blob " + "a".repeat(48)), reportOf([{ id: "dfc81d1343c8", kind: "credential", match: "a".repeat(48), detail: "long base64/hex run" }]));
 });
 
 // ## An absolute http(s) reference is flagged (the self-containment / CSP check)
 void test("An absolute http(s) reference is flagged (the self-containment / CSP check)", async (t) => {
   // doctest:L82
   const url = scanOne('See <a href="https://evil.example.com/x">here</a>.');
-  t.check(url.findings[0]?.kind, "external-url");
-
-  // doctest:L86
-  t.check(url.findings[0]?.match, "https://evil.example.com/x");
+  t.check(url, reportOf([{ id: "da7d7bb454a3", kind: "external-url", match: "https://evil.example.com/x", detail: "absolute http(s) reference" }]));
 });
 
 // An inlined `data:` image does NOT trip the base64 catch-all — the payload is
@@ -89,20 +94,14 @@ void test("An absolute http(s) reference is flagged (the self-containment / CSP 
 // scans clean.
 void test("An inlined data: image does NOT trip the base64 catch-all — the payload is ma...", async (t) => {
   // doctest:L95
-  await t.checkText(scanOne('<img src="data:image/png;base64,' + "A".repeat(200) + '">').findings.length, "0");
+  t.check(scanOne('<img src="data:image/png;base64,' + "A".repeat(200) + '">'), reportOf([]));
 });
 
 // ## A clean bundle produces no findings
 void test("A clean bundle produces no findings", async (t) => {
   // doctest:L102
   const clean = scanOne("<h1>Build Journal</h1><p>Plain prose, nothing sensitive.</p>");
-  await t.checkText(clean.findings.length, "0");
-
-  // doctest:L106
-  t.check(clean.scannedFiles.join(","), "index.html");
-
-  // doctest:L109
-  await t.checkText(clean.skippedBinaries.length, "0");
+  t.check(clean, reportOf([]));
 });
 
 // ## Binary entries are skipped and listed, never scanned
@@ -119,13 +118,7 @@ void test("A screenshot of a key ships clean (the plan's finding-#8 blind spot):
   const mixed = scanBundle(bundle, { ownerEmail: null, allowedEmails: [] });
 
   // doctest:L126
-  await t.checkText(mixed.findings.length, "0");
-
-  // doctest:L129
-  t.check(mixed.scannedFiles.join(","), "index.html");
-
-  // doctest:L132
-  t.check(mixed.skippedBinaries.join(","), "assets/shot.png");
+  t.check(mixed, { findings: [], scannedFiles: ["index.html"], skippedBinaries: ["assets/shot.png"] });
 });
 
 // ## Finding ids are stable
@@ -139,8 +132,6 @@ void test("The id is a hash of (kind, file, match), so the same input yields the
   const b = scanOne("home " + REAL_HOME + "x/");
 
   // doctest:L146
-  t.check(/^[\da-f]{12}$/.test(a.findings[0]?.id ?? ""), true);
-
-  // doctest:L149
-  await t.checkText(a.findings[0]?.id === b.findings[0]?.id, "true");
+  t.check(a, reportOf([{ id: "2a33cf589d25", kind: "home-path", match: REAL_HOME, detail: "home directory path" }]));
+  t.check(b, a);
 });

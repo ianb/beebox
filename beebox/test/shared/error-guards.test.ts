@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { instanceOf, is } from "agent-doctest/check";
 import {
   errnoCode,
   isErrnoException,
@@ -68,7 +69,7 @@ void test("A type guard for callers that need the fuller ErrnoException shape (.
 void test("An Error passes through unchanged — same identity, so a caller can rethrow it...", async (t) => {
   // doctest:L74
   const original = new TypeError("bad type");
-  await t.checkText(toError(original) === original, "true");
+  t.check(toError(original), is(original));
 });
 
 // A non-Error throwable is wrapped in a `NonError`, with the original preserved as
@@ -76,13 +77,10 @@ void test("An Error passes through unchanged — same identity, so a caller can 
 void test("A non-Error throwable is wrapped in a NonError, with the original preserved a...", async (t) => {
   // doctest:L83
   const wrapped = toError("plain string throw");
-  await t.checkText(wrapped instanceof Error, "true");
+  t.check(wrapped, instanceOf(Error));
 
   // doctest:L87
-  t.check(wrapped.name, "NonError");
-
-  // doctest:L90
-  t.check(wrapped.message, "plain string throw");
+  t.check(wrapped, { name: "NonError", message: "plain string throw" });
 
   // doctest:L93
   t.check(wrapped.cause, "plain string throw");
@@ -94,13 +92,22 @@ void test("A non-Error throwable is wrapped in a NonError, with the original pre
 // stringifies:
 void test("Non-string throwables render best-effort — an error-shaped object (a plain ob...", async (t) => {
   // doctest:L103
-  t.check(toError({ message: "boom", status: 500 }).message, "boom");
+  t.check(toError({ message: "boom", status: 500 }), {
+    name: "NonError",
+    message: "boom",
+  });
 
   // doctest:L106
-  await t.checkText(toError({ code: "ENOENT", path: "/x" }).message, "{\"code\":\"ENOENT\",\"path\":\"/x\"}");
+  t.check(toError({ code: "ENOENT", path: "/x" }), {
+    name: "NonError",
+    message: "{\"code\":\"ENOENT\",\"path\":\"/x\"}",
+  });
 
   // doctest:L109
-  await t.checkText(toError(undefined).message, "undefined");
+  t.check(toError(undefined), {
+    name: "NonError",
+    message: "undefined",
+  });
 });
 
 // The `.message` is a best-effort string, but `.cause` is the live original
@@ -109,7 +116,7 @@ void test("Non-string throwables render best-effort — an error-shaped object (
 void test("The .message is a best-effort string, but .cause is the live original throwab...", async (t) => {
   // doctest:L118
   const objThrow = { code: "EEXIST" };
-  await t.checkText(toError(objThrow).cause === objThrow, "true");
+  t.check(toError(objThrow).cause, is(objThrow));
 });
 
 // ## errorMessage

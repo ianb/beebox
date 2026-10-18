@@ -17,6 +17,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -70,8 +71,12 @@ const healthzSchema = z.object({
   boxes: z.array(z.object({ slug: z.string(), status: z.string(), consecutiveFailures: z.number() })),
 });
 type BoxRow = z.infer<typeof healthzSchema>["boxes"][number];
-const canarySchema = z.object({ status: z.string(), slug: z.string() });
-const proxiedSchema = z.object({ checks: z.unknown() });
+const canarySchema = z.object({ status: z.string(), slug: z.string() }).strict();
+const proxiedSchema = z.object({
+  status: z.string(),
+  checks: z.array(z.object({ name: z.string(), ok: z.boolean(), message: z.string(), severity: z.string() })),
+}).strict();
+type CheckRow = z.infer<typeof proxiedSchema>["checks"][number];
 
 function pidAlive(pid: number): boolean {
   try {
@@ -182,12 +187,10 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
       t.error(error);
     }
   });
-  // doctest:L163
   await execFileP("node", ["src/scripts/build-cli/build/bundle.ts"], { cwd: PACKAGE_ROOT });
 
   // ## The hub starts the box, `/healthz` reports it running, and traffic reaches it
 
-  // doctest:L169
   fixture = await makeFixtureBox();
   hubConfigPath = path.join(fixture.target, "..", `hub-e2e-config-${path.basename(fixture.target)}.json`);
   const requestedPort = await pickFreePort();
@@ -196,7 +199,6 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
     JSON.stringify({ port: requestedPort, boxes: { fixture: { path: fixture.boxRoot } } }, null, 2)
   );
 
-  // doctest:L177
   const hubBin = path.join(PACKAGE_ROOT, "bin", "bbx");
   const hub = execFile(hubBin, ["engine", "hub", "--config", hubConfigPath], { cwd: PACKAGE_ROOT });
   hubProcess = hub;
@@ -207,7 +209,6 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
   hub.stderr?.on("data", (d) => (hubStderr += d.toString()));
   hub.on("exit", (code, signal) => (hubExited = `code=${code} signal=${signal}`));
 
-  // doctest:L187
   const hubPort = await waitFor(() => {
     // A hub that cannot bind exits within milliseconds. Waiting out the full
     // startup timeout for it teaches nothing and hides the cause: the hub's own
@@ -221,14 +222,9 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
     return m ? Number(m[1]) : null;
   }, { timeoutMs: STARTUP_TIMEOUT_MS, intervalMs: 200, label: "the hub to report its listening port" });
 
-  // doctest:L200
-  await t.checkText(
-    // Also the assertion that `hub.json`'s `port` is honored at all.
-    hubPort === requestedPort,
-    "true",
-  );
+  // Also the assertion that `hub.json`'s `port` is honored at all.
+  t.check(hubPort, requestedPort);
 
-  // doctest:L204
   // The supervisor records why a start failed in the box's `lastError`, and
   // `/healthz` carries it. Polling only for `status === "running"` throws that
   // away and leaves a bare timeout: an unadmittable box (no Git repository, so
@@ -249,31 +245,20 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
     label: () => `the fixture box to report status=running via /healthz; last row: ${JSON.stringify(lastBoxRow)}`,
   });
 
-  // doctest:L224
-  t.check(health.status, "running");
+  t.check(health, { slug: "fixture", status: "running", consecutiveFailures: 0 });
 
-  // doctest:L227
   // `/healthz`'s per-box status is derived from supervisor state, not the raw
   // process, so read the child's own pid file to prove it's a real running
   // process — `bbx serve` writes `.bbx-serve.pid` into the box root.
   const childPid = Number((await fs.readFile(path.join(fixture.boxRoot, ".bbx-serve.pid"), "utf-8")).trim());
-  await t.checkText(Number.isInteger(childPid) && childPid > 0, "true");
-
-  // doctest:L234
-  t.check(health.consecutiveFailures, 0);
+  t.check(childPid, any(Number).int().positive());
 
   // The diag-gated canary cold-starts a box and confirms it serves — the deploy's
   // child-level check. The fixture box is already running here, so `ensureRunning`
   // resolves immediately and the canary reports it ready.
 
-  // doctest:L243
   const canaryRes = await fetch(`http://127.0.0.1:${hubPort}/healthz/canary`, diagAuth);
-  const canaryBody = canarySchema.parse(await canaryRes.json());
-  t.check({ status: canaryRes.status, box: canaryBody.status, slug: canaryBody.slug }, {
-    status: 200,
-    box: "ok",
-    slug: "fixture",
-  });
+  t.check({ status: canaryRes.status, body: canarySchema.parse(await canaryRes.json()) }, { status: 200, body: { status: "ok", slug: "fixture" } });
 
   // Traffic actually reaches the box through the hub (its own Fastify instance
   // serves itself at `/fixture/...`, same as standalone `bbx serve --slug`).
@@ -281,15 +266,21 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
   // hub has no route of its own there, so a `{ status, checks }` body proves the
   // request reached the CHILD process, not the hub answering on its own behalf:
 
-  // doctest:L256
   const proxied = await fetch(`http://127.0.0.1:${hubPort}/fixture/api/health`, {
     headers: { cookie: ownerCookie },
   });
-  t.check(proxied.status, 200);
-
-  // doctest:L262
-  const proxiedBody = proxiedSchema.parse(await proxied.json());
-  t.check(Array.isArray(proxiedBody.checks), true);
+  // The checks themselves depend on the machine (git-annex version, annex state), so
+  // the body is pinned to its shape plus the two writability checks every box passes.
+  t.check({ status: proxied.status, body: proxiedSchema.parse(await proxied.json()) }, {
+    status: 200,
+    body: {
+      status: any(String),
+      checks: containing<CheckRow>([
+        { name: "inbox-writable", ok: true, message: "_content/inbox/ is writable", severity: "error" },
+        { name: "git-writable", ok: true, message: ".git/objects is writable", severity: "error" },
+      ]),
+    },
+  });
 
   // ## SIGTERM kills the hub AND its child -- no orphan
   //
@@ -299,7 +290,6 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
   // wait here is the window plus margin. A fixed 5 s wait failed under load: a
   // child still finishing startup work took 6–13 s to exit, inside the contract.
 
-  // doctest:L276
   const shutdownBudgetMs = BOX_KILL_GRACE_MS + 15_000;
   hub.kill("SIGTERM");
   await waitFor(() => (hub.pid === undefined || !pidAlive(hub.pid) ? true : null), { timeoutMs: shutdownBudgetMs, intervalMs: 100, label: "the hub process to exit after SIGTERM" });
@@ -307,9 +297,8 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
   // unless a child escaped its process group; the short wait covers reaping.
   await waitFor(() => (pidAlive(childPid) ? null : true), { timeoutMs: 5000, intervalMs: 100, label: "the bbx serve child to exit with its hub" });
 
-  // doctest:L283
-  await t.checkText(hub.pid !== undefined && pidAlive(hub.pid), "false");
+  const hubAlive = hub.pid !== undefined && pidAlive(hub.pid);
+  t.check(hubAlive, false);
 
-  // doctest:L286
   t.check(pidAlive(childPid), false);
 });

@@ -10,9 +10,11 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { MODEL_ID } from "../../src/shared/model-ids.js";
 import {
   loadFieldScenario,
   fieldScenarioDir,
@@ -46,24 +48,71 @@ const HEADER = [
   "checklist:",
 ].join("\n") + "\n";
 
+/** The error `loadFieldScenario` throws for a scenario that parses but does not hang together. */
+function invalid(dir: string, problem: string) {
+  return {
+    name: "FieldScenarioInvalidError",
+    message: `Field scenario ${dir}:\n  - ${problem}`,
+    problems: [problem],
+  };
+}
+
+/** What `makeScenario` loads as: the default models, and the persona it writes. */
+function tempScenario(dir: string, checklist: { id: string; brief: string }[]) {
+  return {
+    dir,
+    name: "temp",
+    description: "A temporary scenario.",
+    startTime: "2026-08-10T09:15:00Z",
+    models: { operator: "opus" as const, chat: MODEL_ID.opus },
+    persona: "You are a person.\n",
+    assetsDir: join(dir, "assets"),
+    checksDir: join(dir, "checks"),
+    emailsDir: join(dir, "emails"),
+    checklist: checklist.map((item) => ({ ...item, pre: [], cleanup: "keep" as const, checks: [], questions: [] })),
+  };
+}
+
+/** A checklist item of the checked-in corpus. Brief and question wording is
+ *  authored prose, so it stays a wildcard; the structure is what the loader owns. */
+function corpusItem(item: { id: string; pre: ({ type: "advance-days"; days: number } | { type: "inject-email"; fixture: string })[]; checks: string[]; questions: number }) {
+  return {
+    id: item.id,
+    brief: any(String),
+    pre: item.pre,
+    cleanup: "keep" as const,
+    checks: item.checks,
+    questions: Array.from({ length: item.questions }, () => any(String)),
+  };
+}
+
+/** The scenario fields every corpus scenario shares, for the directory it loads from. */
+function corpusScenario(name: string) {
+  const dir = fieldScenarioDir(name);
+  return {
+    dir,
+    name,
+    description: any(String),
+    models: { operator: "opus" as const, chat: MODEL_ID.opus },
+    // The knowledge dial (what this person was told the app is) is persona content
+    // the harness never rewrites, so the persona must reach the scenario verbatim.
+    persona: any(String).includes('"an AI chat and knowledge-base app for family and household management tasks."'),
+    assetsDir: join(dir, "assets"),
+    checksDir: join(dir, "checks"),
+    emailsDir: join(dir, "emails"),
+  };
+}
+
 // ## The spine scenario loads
 void test("The spine scenario loads", async (t) => {
-  // doctest:L52
   const spine = await loadFieldScenario(fieldScenarioDir("spine"));
-  t.check([spine.name, spine.startTime, spine.checklist.length].join(" | "), "spine | 2026-08-10T09:15:00Z | 1");
-
   // Its one item carries the check script, the extra debrief question, and the
-  // default cleanup policy:
-
-  // doctest:L61
-  const item = spine.checklist[0]!;
-  t.check([item.id, item.cleanup, item.checks.join(","), item.questions.length, item.pre.length].join(" | "), "save-recipe | keep | save-recipe-card-exists.sh | 1 | 0");
-
-  // The persona is read verbatim — the knowledge dial (what this person was told
-  // the app is) is scenario content the harness never rewrites:
-
-  // doctest:L70
-  await t.checkText(spine.persona.includes('"an AI chat and knowledge-base app for family and household management tasks."'), "true");
+  // default cleanup policy.
+  t.check(spine, {
+    ...corpusScenario("spine"),
+    startTime: "2026-08-10T09:15:00Z",
+    checklist: [corpusItem({ id: "save-recipe", pre: [], checks: ["save-recipe-card-exists.sh"], questions: 1 })],
+  });
 });
 
 // ## The onboarding scenario loads
@@ -72,21 +121,21 @@ void test("The spine scenario loads", async (t) => {
 // a run: every check script, every asset a brief mentions, and every email fixture
 // a `pre` action names has to exist.
 void test("The real corpus scenario, checked here rather than discovered at minute forty...", async (t) => {
-  // doctest:L81
   const onboarding = await loadFieldScenario(fieldScenarioDir("onboarding-first-days"));
-  t.check([onboarding.name, onboarding.startTime, onboarding.checklist.length].join(" | "), "onboarding-first-days | 2026-08-10T08:40:00Z | 6");
-
-  // doctest:L85
-  t.check(onboarding.checklist.map((i) => i.id).join(","), "first-contact,save-recipe,upload-photos,recall-recipe,dentist-email,whats-needed");
-
   // Three simulated days, one arriving email, and a check on every item that claims
-  // something happened:
-
-  // doctest:L93
-  t.check(onboarding.checklist.flatMap((i) => i.pre.map((p) => `${i.id}:${p.type}`)).join(" "), "recall-recipe:advance-days dentist-email:inject-email whats-needed:advance-days");
-
-  // doctest:L96
-  await t.checkText(onboarding.checklist.filter((i) => i.checks.length > 0).length, "5");
+  // something happened.
+  t.check(onboarding, {
+    ...corpusScenario("onboarding-first-days"),
+    startTime: "2026-08-10T08:40:00Z",
+    checklist: [
+      corpusItem({ id: "first-contact", pre: [], checks: [], questions: 2 }),
+      corpusItem({ id: "save-recipe", pre: [], checks: ["save-recipe-card-exists.sh"], questions: 1 }),
+      corpusItem({ id: "upload-photos", pre: [], checks: ["uploaded-photos-present.sh"], questions: 1 }),
+      corpusItem({ id: "recall-recipe", pre: [{ type: "advance-days", days: 1 }], checks: ["save-recipe-card-exists.sh"], questions: 1 }),
+      corpusItem({ id: "dentist-email", pre: [{ type: "inject-email", fixture: "dentist-reminder" }], checks: ["email-thread-card-exists.sh"], questions: 2 }),
+      corpusItem({ id: "whats-needed", pre: [{ type: "advance-days", days: 1 }], checks: ["dentist-followup-exists.sh"], questions: 2 }),
+    ],
+  });
 });
 
 // ## Models default to opus, in code
@@ -108,13 +157,12 @@ void test("A scenario may omit models: entirely; both halves still come back pin
       t.error(error);
     }
   });
-  // doctest:L113
   const dir = await makeScenario(HEADER + [
     "  - id: only-item",
     "    brief: Do the thing.",
   ].join("\n") + "\n", {});
   const scenario = await loadFieldScenario(dir);
-  t.check([scenario.models.operator, scenario.models.chat !== "opus", scenario.models.chat.startsWith("claude-"), scenario.checklist[0]!.cleanup].join(" | "), "opus | true | true | keep");
+  t.check(scenario, tempScenario(dir, [{ id: "only-item", brief: "Do the thing." }]));
 });
 
 // ## A model name no engine knows is rejected
@@ -129,12 +177,14 @@ void test("models.chat is validated at load, not at seed time:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L132
   const badModelDir = await makeScenario(HEADER.replace("checklist:", "models:\n  chat: turbo\nchecklist:") + [
     "  - id: only-item",
     "    brief: Do the thing.",
   ].join("\n") + "\n", {});
-  t.check(await loadFieldScenario(badModelDir).then(() => "loaded", (e) => e.problems.join(",")), "models.chat: \"turbo\" is not a model tier or a known model id");
+  t.check(
+    await loadFieldScenario(badModelDir).catch((e: unknown) => e),
+    invalid(badModelDir, 'models.chat: "turbo" is not a model tier or a known model id'),
+  );
 });
 
 // ## Duplicate ids are rejected
@@ -149,7 +199,6 @@ void test("Ids name checkpoint tags and report rows; two items sharing one would
       t.error(error);
     }
   });
-  // doctest:L150
   const dupDir = await makeScenario(HEADER + [
     "  - id: same",
     "    brief: First.",
@@ -157,7 +206,6 @@ void test("Ids name checkpoint tags and report rows; two items sharing one would
     "    brief: Second.",
   ].join("\n") + "\n", {});
 
-  // doctest:L157
   await t.checkThrows(async () => (await loadFieldScenario(dupDir)), "FieldScenarioInvalidError");
 });
 
@@ -177,7 +225,6 @@ void test("The checks are the spine of the tier — a missing one would otherwis
       t.error(error);
     }
   });
-  // doctest:L171
   const missingCheckDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: Do the thing.",
@@ -186,14 +233,12 @@ void test("The checks are the spine of the tier — a missing one would otherwis
     "      - absent.sh",
   ].join("\n") + "\n", { checks: ["present.sh"] });
 
-  // doctest:L179
   const error = await loadFieldScenario(missingCheckDir).catch((e: unknown) => e);
-  await t.checkText(String(error).includes("checks/absent.sh does not exist"), "true");
+  t.check(error, invalid(missingCheckDir, "item: check script checks/absent.sh does not exist"));
 
   // So is an email fixture a `pre` action names — the fixture's *shape* is Track 1's
   // business, but a run must not discover a misspelled fixture name on day two:
 
-  // doctest:L188
   const missingEmailDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: Do the thing.",
@@ -201,45 +246,38 @@ void test("The checks are the spine of the tier — a missing one would otherwis
     "      - inject-email: dentist",
   ].join("\n") + "\n", {});
 
-  // doctest:L195
   const emailError = await loadFieldScenario(missingEmailDir).catch((e: unknown) => e);
-  await t.checkText(String(emailError).includes("emails/dentist.yaml, which does not exist"), "true");
+  t.check(emailError, invalid(missingEmailDir, "item: pre inject-email names emails/dentist.yaml, which does not exist"));
 
   // An asset a brief points at is held to the same rule:
 
-  // doctest:L203
   const missingAssetDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: The file is at `assets/nope.txt`, go find it.",
   ].join("\n") + "\n", {});
 
-  // doctest:L208
   const assetError = await loadFieldScenario(missingAssetDir).catch((e: unknown) => e);
-  await t.checkText(String(assetError).includes("brief references assets/nope.txt"), "true");
+  t.check(assetError, invalid(missingAssetDir, "item: brief references assets/nope.txt, which does not exist"));
 
   // A reference that leaves the corpus is rejected even though the file it lands on
   // exists — the operator is told `assets/` is everything it has:
 
-  // doctest:L217
   const escapingDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: The file is at `assets/../persona.md`.",
   ].join("\n") + "\n", {});
 
-  // doctest:L222
   const escapeError = await loadFieldScenario(escapingDir).catch((e: unknown) => e);
-  await t.checkText(String(escapeError).includes("escapes assets/"), "true");
+  t.check(escapeError, invalid(escapingDir, "item: brief references assets/../persona.md, which escapes assets/"));
 
   // A word merely *ending* in `assets/` is not a reference:
 
-  // doctest:L230
   const notARefDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: Look in myassets/nope.txt on your old laptop.",
   ].join("\n") + "\n", {});
 
-  // doctest:L235
-  await t.checkText((await loadFieldScenario(notARefDir)).checklist.length, "1");
+  t.check(await loadFieldScenario(notARefDir), tempScenario(notARefDir, [{ id: "item", brief: "Look in myassets/nope.txt on your old laptop." }]));
 });
 
 // ## Valid `pre` actions normalize to a tagged union
@@ -254,7 +292,6 @@ void test("The single-key YAML mappings the plan specifies become a discriminate
       t.error(error);
     }
   });
-  // doctest:L253
   const preDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: Read `assets/note.txt` and do the thing.",
@@ -263,7 +300,6 @@ void test("The single-key YAML mappings the plan specifies become a discriminate
     "      - inject-email: dentist",
   ].join("\n") + "\n", { assets: ["note.txt"], emails: ["dentist.yaml"] });
 
-  // doctest:L261
   const preScenario = await loadFieldScenario(preDir);
   t.check(preScenario.checklist[0]!.pre, [
     {
@@ -290,17 +326,14 @@ void test("Strict schemas throughout:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L276
   const unknownFieldDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: Do the thing.",
     "    cleanupPolicy: reset",
   ].join("\n") + "\n", {});
 
-  // doctest:L282
   await t.checkThrows(async () => (await loadFieldScenario(unknownFieldDir)), "FieldScenarioParseError");
 
-  // doctest:L285
   const unknownPreDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: Do the thing.",
@@ -308,7 +341,6 @@ void test("Strict schemas throughout:", async (t) => {
     "      - restart-server: true",
   ].join("\n") + "\n", {});
 
-  // doctest:L292
   await t.checkThrows(async () => (await loadFieldScenario(unknownPreDir)), "FieldScenarioParseError");
 });
 
@@ -322,18 +354,14 @@ void test("Malformed YAML and a missing persona fail closed", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L304
   const badYamlDir = await makeScenario("name: [unclosed\n", {});
 
-  // doctest:L306
   await t.checkThrows(async () => (await loadFieldScenario(badYamlDir)), "FieldScenarioParseError");
 
-  // doctest:L309
   const noPersonaDir = await makeScenario(HEADER + [
     "  - id: item",
     "    brief: Do the thing.",
   ].join("\n") + "\n", { persona: false });
 
-  // doctest:L314
   await t.checkThrows(async () => (await loadFieldScenario(noPersonaDir)), "FieldScenarioInvalidError");
 });

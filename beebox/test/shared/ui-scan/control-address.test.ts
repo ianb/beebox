@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { controlAddress, isControlAddress, MAX_CONTROL_ID_LENGTH } from "../../../src/shared/ui-scan/control-address.js";
 
 // ## What the grammar admits
@@ -63,10 +64,9 @@ void test("A #-selector is the reason:", async (t) => {
   t.check(controlAddress("bbx-card-properties", ":r0:"), "bbx-card-properties-hjzdaoq");
 
   // doctest:L66
-  await t.checkText(
-    controlAddress("bbx-settings-drive-unmount-id", "Folder_A-1")
-      === controlAddress("bbx-settings-drive-unmount-id", "folder_a-1"),
-    "false",
+  t.check(
+    controlAddress("bbx-settings-drive-unmount-id", "Folder_A-1"),
+    not(controlAddress("bbx-settings-drive-unmount-id", "folder_a-1")),
   );
 
   // Whatever goes in, what comes out is an address — that is the whole contract, so
@@ -74,7 +74,7 @@ void test("A #-selector is the reason:", async (t) => {
   // tidy sample.
 
   // doctest:L76
-  await t.checkText(
+  t.check(
     [
       "_config/interface/browse.card",
       ":r0:",
@@ -82,8 +82,8 @@ void test("A #-selector is the reason:", async (t) => {
       "a card with spaces & punctuation!.card",
       "café/naïve.card",
       "",
-    ].every((value) => isControlAddress(controlAddress("bbx-probe", value))),
-    "true",
+    ].map((value) => isControlAddress(controlAddress("bbx-probe", value))),
+    [true, true, true, true, true, true],
   );
 
   // The empty string is the one value base32 spells as nothing, so it gets a
@@ -102,10 +102,7 @@ void test("A #-selector is the reason:", async (t) => {
 
   // doctest:L104
   const long = controlAddress("bbx-workspace-tab", "x".repeat(400));
-  t.check([long.length > MAX_CONTROL_ID_LENGTH, isControlAddress(long)], [
-    true,
-    false,
-  ]);
+  t.check({ length: long.length, valid: isControlAddress(long) }, { length: any(Number).above(MAX_CONTROL_ID_LENGTH), valid: false });
 
   // A path long enough to hit it is well past anything a box carries: the cap
   // leaves room for roughly 170 bytes under a prefix.

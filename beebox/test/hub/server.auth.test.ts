@@ -379,7 +379,7 @@ async function healthzAndWebhooks(t: Test) {
 
   // doctest:L326
   const unauthedUpgrade = await rawUpgradeRequest({ port: portOf(hubServer), path: "/test1/ws" });
-  await t.checkText(unauthedUpgrade.startsWith("HTTP/1.1 401"), "true");
+  t.check(unauthedUpgrade, "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
 
 }
 

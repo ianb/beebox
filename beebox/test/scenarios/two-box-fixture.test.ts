@@ -12,7 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { not } from "agent-doctest/check";
 import { createTwoBoxTestServer } from "../helpers/test-server.js";
 
 // ## Both scopes answer under their own slug, with an agent bearer
@@ -20,8 +20,6 @@ import { createTwoBoxTestServer } from "../helpers/test-server.js";
 // The server is booted `openAccess: false` by default, so an unauthenticated
 // request 401s and the box's own agent bearer clears the wall.
 void test("The server is booted openAccess:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -29,30 +27,23 @@ void test("The server is booted openAccess:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L23
   const ctx = await createTwoBoxTestServer();
 
-  // doctest:L25
   const alphaAnon = await ctx.server.inject({ method: "GET", url: "/alpha/api/health" });
-  print(`alpha anonymous: ${alphaAnon.statusCode}`);
-
-  // doctest:L28
   const alphaAuthed = await ctx.server.inject({
     method: "GET",
     url: "/alpha/api/health",
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  print(`alpha with its own bearer: ${alphaAuthed.statusCode}`);
-
-  // doctest:L35
   const betaAuthed = await ctx.server.inject({
     method: "GET",
     url: "/beta/api/health",
     headers: { authorization: ctx.b.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`beta with its own bearer: ${betaAuthed.statusCode}`)), `alpha anonymous: 401
-alpha with its own bearer: 200
-beta with its own bearer: 200`);
+  t.check(
+    { alphaAnon: alphaAnon.statusCode, alphaAuthed: alphaAuthed.statusCode, betaAuthed: betaAuthed.statusCode },
+    { alphaAnon: 401, alphaAuthed: 200, betaAuthed: 200 },
+  );
 
   // ## Box A's agent bearer does not reach box B's scope
   //
@@ -61,15 +52,11 @@ beta with its own bearer: 200`);
   // unrecognized string on beta's wall — and the wall then finds no session
   // cookie either, so it falls through to the plain 401.
 
-  // doctest:L55
   const crossBox = await ctx.server.inject({
     method: "GET",
     url: "/beta/api/health",
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  print(`alpha's bearer on beta: ${crossBox.statusCode}`);
-
-  // doctest:L62
   // The same bearer keeps working on its own box, proving the token itself is
   // valid — the rejection above is box-scoping, not a broken token.
   const stillWorksOnAlpha = await ctx.server.inject({
@@ -77,13 +64,13 @@ beta with its own bearer: 200`);
     url: "/alpha/api/health",
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`alpha's bearer on alpha: ${stillWorksOnAlpha.statusCode}`)), `alpha's bearer on beta: 401
-alpha's bearer on alpha: 200`);
+  t.check(
+    { crossBox: crossBox.statusCode, stillWorksOnAlpha: stillWorksOnAlpha.statusCode },
+    { crossBox: 401, stillWorksOnAlpha: 200 },
+  );
 
   // ## The two boxRoots are independent clones
 
-  // doctest:L78
-  print(`different roots: ${ctx.a.boxRoot !== ctx.b.boxRoot}`);
-  await t.checkText(out.with(print(`different slugs: ${ctx.a.slug} / ${ctx.b.slug}`)), `different roots: true
-different slugs: alpha / beta`);
+  t.check(ctx.a.boxRoot, not(ctx.b.boxRoot));
+  t.check([ctx.a.slug, ctx.b.slug], ["alpha", "beta"]);
 });

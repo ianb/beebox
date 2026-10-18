@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { mkdir, readFile, symlink, truncate, writeFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -66,7 +67,7 @@ void test("Static mode copies only safe files and uses canonical release identit
   assert.ok(result.ok);
 
   // doctest:L60
-  await t.checkText(result.prepared.contentHash === await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }]))), "true");
+  t.check(result.prepared.contentHash, await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }]))));
 
   // doctest:L63
   t.check(result.prepared.preview.map((file) => file.path), [
@@ -75,7 +76,7 @@ void test("Static mode copies only safe files and uses canonical release identit
   ]);
 
   // doctest:L66
-  await t.checkText(result.prepared.files.some((file) => file.path.includes("NOTES.md") || file.path.includes("CLAUDE.md")), "false");
+  t.check(result.prepared.files.map((file) => file.path), ["index.html", "styles/main.css"]);
 
   // doctest:L69
   t.check((await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8")), "<h1>Example</h1>");
@@ -244,22 +245,8 @@ void test("A failed build returns no staged release", async (t) => {
   });
 
   // doctest:L216
-  t.check(result.ok, false);
-
-  // doctest:L219
-  assert.ok(!result.ok);
-
-  // doctest:L221
-  t.check(result.reason, "project-command-failed");
-
-  // doctest:L224
-  t.check(result.step, "build");
-
-  // doctest:L227
-  await t.checkText(result.message.includes("credential-value"), "false");
-
-  // doctest:L230
-  await t.checkText(result.message.includes("CLOUDFLARE_API_TOKEN=[redacted]"), "true");
+  // The message must carry the redaction marker and not the credential value.
+  t.check(result, { ok: false, reason: "project-command-failed", step: "build", timedOut: false, message: "build failed: script failed CLOUDFLARE_API_TOKEN=[redacted]" });
 
   // doctest:L233
   t.check(await box.read("_publish/abcdefghijklmnop2345672345/manifest.json"), "existing live pointer must not change");
@@ -278,13 +265,7 @@ void test("Internal release paths and public slug aliases are reserved", async (
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
   // doctest:L248
-  t.check(result.ok, false);
-
-  // doctest:L251
-  assert.ok(!result.ok);
-
-  // doctest:L253
-  await t.checkText(result.message.includes("public alias"), "true");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "output path 'p/example' collides with this publication's /p/example/ public alias" });
 
   // doctest:L256
   await box.cleanup();
@@ -309,13 +290,7 @@ void test("Private notes, metadata, and uncompiled source cannot enter a release
   });
 
   // doctest:L277
-  t.check(result.ok, false);
-
-  // doctest:L280
-  assert.ok(!result.ok);
-
-  // doctest:L282
-  await t.checkText(result.message.includes("CLAUDE.md"), "true");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "sensitive output filename 'CLAUDE.md' is not publishable" });
 
   // doctest:L285
   await box.cleanup();
@@ -340,13 +315,7 @@ void test("A box's instruction file is AGENTS.md now, and it is just as private.
   });
 
   // doctest:L306
-  t.check(result.ok, false);
-
-  // doctest:L309
-  assert.ok(!result.ok);
-
-  // doctest:L311
-  await t.checkText(result.message.includes("AGENTS.md"), "true");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "sensitive output filename 'AGENTS.md' is not publishable" });
 
   // doctest:L314
   await box.cleanup();
@@ -424,32 +393,26 @@ void test("Each .md file becomes a sibling .html page styled by the box's Markdo
   ]);
 
   // doctest:L380
-  await t.checkText(result.prepared.contentHash === await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }]))), "true");
+  t.check(result.prepared.contentHash, await releaseIdForFiles(Object.fromEntries(result.prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }]))));
 
   // doctest:L383
   const index = await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8");
-  await t.checkText(index.includes("<title>Trip notes</title>"), "true");
-
-  // doctest:L387
-  await t.checkText(index.includes('href="packing.html#tents"') && index.includes('href="days/one.html?print=1"'), "true");
-
-  // doctest:L390
-  await t.checkText(
-    index.includes('href="https://example.com/a.md"') && index.includes('src="assets/map.svg"')
-    ,
-    "true",
-  );
-
-  // doctest:L393
-  await t.checkText(index.includes("<script"), "false");
+  // The rendered pages are generated HTML, so these checks keep the one fragment each names.
+  t.check(index, any(String).includes("<title>Trip notes</title>"));
+  t.check(index, any(String).includes('href="packing.html#tents"'));
+  t.check(index, any(String).includes('href="days/one.html?print=1"'));
+  t.check(index, any(String).includes('href="https://example.com/a.md"'));
+  t.check(index, any(String).includes('src="assets/map.svg"'));
+  t.check(index, not(any(String).includes("<script")));
 
   // doctest:L396
   const packing = await readFile(path.join(result.prepared.stagedDir, "packing.html"), "utf-8");
-  await t.checkText(packing.includes("<title>Packing list</title>"), "true");
+  t.check(packing, any(String).includes("<title>Packing list</title>"));
 
   // doctest:L400
   const dayOne = await readFile(path.join(result.prepared.stagedDir, "days/one.html"), "utf-8");
-  await t.checkText(dayOne.includes("<title>one</title>") && dayOne.includes('href="../index.html"'), "true");
+  t.check(dayOne, any(String).includes("<title>one</title>"));
+  t.check(dayOne, any(String).includes('href="../index.html"'));
 
   // doctest:L404
   t.check(result.prepared.scan.findings.filter((finding) => finding.match === "someone@example.org").map((finding) => finding.file), [
@@ -464,10 +427,8 @@ void test("Each .md file becomes a sibling .html page styled by the box's Markdo
 
   // doctest:L414
   const again = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
-  await t.checkText(again.ok && again.prepared.contentHash === result.prepared.contentHash, "true");
-
-  // doctest:L418
   assert.ok(again.ok);
+  t.check(again.prepared.contentHash, result.prepared.contentHash);
 
   // doctest:L420
   await again.prepared.cleanup();
@@ -501,7 +462,7 @@ void test("A Markdown page and an authored HTML page for the same path is an err
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
   // doctest:L448
-  t.check(result.ok ? "ok" : `${result.reason}: ${result.message.includes("'index.md:3' has invalid Markdoc")}`, "bundle-policy: true");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "Markdown file 'index.md:3' has invalid Markdoc: Node 'no-such-tag' is missing closing" });
 
   // doctest:L451
   await box.cleanup();
@@ -530,13 +491,15 @@ void test("Box Markdoc tags render to app components, which a static page cannot
   ].join("\n"));
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
   const index = result.ok ? await readFile(path.join(result.prepared.stagedDir, "index.html"), "utf-8") : result.message;
-  await t.checkText(index.includes('<label><input type="checkbox" disabled="" checked="">Tent</label>') && index.includes('<label><input type="checkbox" disabled="">Stove</label>') && !index.includes("<Task"), "true");
+  t.check(index, any(String).includes('<label><input type="checkbox" disabled="" checked="">Tent</label>'));
+  t.check(index, any(String).includes('<label><input type="checkbox" disabled="">Stove</label>'));
+  t.check(index, not(any(String).includes("<Task")));
 
   // doctest:L480
-  await t.checkText(index.includes("The answer is ."), "true");
+  t.check(index, any(String).includes("The answer is ."));
 
   // doctest:L483
-  t.check(/forty-two|hidden paragraph|redacted/i.test(index), false);
+  t.check(index, not(any(String).matches(/forty-two|hidden paragraph|redacted/i)));
 
   // doctest:L486
   if (result.ok) await result.prepared.cleanup();
@@ -568,7 +531,8 @@ void test("Rendering belongs to static mode.", async (t) => {
   });
 
   // doctest:L514
-  t.check(result.ok && result.prepared.preview.map((file) => file.path), [
+  assert.ok(result.ok);
+  t.check(result.prepared.preview.map((file) => file.path), [
     "index.html",
     "readme.md",
   ]);
@@ -591,16 +555,7 @@ void test("Hidden files, source maps, exact sensitive filenames, symlinks, and n
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
   // doctest:L533
-  t.check(result.ok, false);
-
-  // doctest:L536
-  assert.ok(!result.ok);
-
-  // doctest:L538
-  t.check(result.reason, "bundle-policy");
-
-  // doctest:L541
-  await t.checkText(result.message.includes("hidden output path"), "true");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "hidden output path '.env' is not publishable" });
 
   // doctest:L544
   await box.cleanup();
@@ -621,19 +576,7 @@ void test("The collector checks stat size before reading and refuses a file once
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
   // doctest:L561
-  t.check(result.ok, false);
-
-  // doctest:L564
-  assert.ok(!result.ok);
-
-  // doctest:L566
-  t.check(result.reason, "bundle-policy");
-
-  // doctest:L569
-  t.check(result.observed, 26214401);
-
-  // doctest:L572
-  t.check(result.limit, 26214400);
+  t.check(result, { ok: false, reason: "bundle-policy", message: "file 'large.bin' is 26214401 bytes; per-file limit is 26214400 bytes", observed: 26214401, limit: 26214400 });
 
   // doctest:L575
   await box.cleanup();
@@ -659,16 +602,7 @@ void test("The total-byte guard stops before opening the first file that would c
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
   // doctest:L597
-  t.check(result.ok, false);
-
-  // doctest:L600
-  assert.ok(!result.ok);
-
-  // doctest:L602
-  t.check(result.observed, 104857601);
-
-  // doctest:L605
-  t.check(result.limit, 104857600);
+  t.check(result, { ok: false, reason: "bundle-policy", message: "bundle would be 104857601 bytes; total limit is 104857600 bytes", observed: 104857601, limit: 104857600 });
 
   // doctest:L608
   await box.cleanup();
@@ -686,16 +620,7 @@ void test("Total bytes and file count are bounded", async (t) => {
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
   // doctest:L621
-  t.check(result.ok, false);
-
-  // doctest:L624
-  assert.ok(!result.ok);
-
-  // doctest:L626
-  t.check(result.observed, 2001);
-
-  // doctest:L629
-  t.check(result.limit, 2000);
+  t.check(result, { ok: false, reason: "bundle-policy", message: "bundle has more than 2000 files (observed at least 2001)", observed: 2001, limit: 2000 });
 
   // doctest:L632
   await box.cleanup();
@@ -714,16 +639,7 @@ void test("The error result carries no server-owned staging path, so a failed sc
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
   // doctest:L647
-  t.check(result.ok, false);
-
-  // doctest:L650
-  assert.ok(!result.ok);
-
-  // doctest:L652
-  t.check(result.reason, "bundle-policy");
-
-  // doctest:L655
-  await t.checkText("prepared" in result, "false");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "symlink 'index-copy.html' is not publishable" });
 
   // doctest:L658
   await box.cleanup();
@@ -844,10 +760,8 @@ void test("An invalid card field names the card", async (t) => {
   const box = await makeTmpBox();
   await writeFixture(box, { connection: "", files: { "index.html": "x" } });
   const badConnection = await prepareError(box);
-  await t.checkText(badConnection.startsWith("invalid-definition: publication card _content/Example.publication.card cannot be used"), "true");
-
-  // doctest:L769
-  await t.checkText(badConnection.includes("connection"), "true");
+  t.checkText(badConnection, `invalid-definition: publication card _content/Example.publication.card cannot be used: _content/Example.publication.card: invalid publication frontmatter:
+  - connection: must start with a lowercase letter and contain only lowercase letters, digits, or hyphens (up to 40 characters)`);
 
   // doctest:L772
   await box.cleanup();

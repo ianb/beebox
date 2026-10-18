@@ -8,10 +8,9 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { eventually } from "agent-doctest/check";
+import { any, eventually } from "agent-doctest/check";
 import { collectAudio, createTtsService } from "../../src/services/tts.js";
 import assert from "node:assert/strict";
-import { z } from "zod";
 
 // ## Gemini: one key, one host, style beside the text
 //
@@ -19,14 +18,21 @@ import { z } from "zod";
 // its only route (`src/core/tts/resolve.ts` says why OpenRouter is not one).
 // These tests stand in for the network with a recording `fetch`, so what Google
 // would receive is visible.
-/** The parts of a recorded Interactions request the checks below read. */
-const InteractionRequest = z.object({
-  model: z.string(),
-  stream: z.boolean(),
-  store: z.boolean(),
-  input: z.array(z.object({ content: z.array(z.unknown()) })),
-  generation_config: z.object({ speech_config: z.array(z.object({ voice: z.string() })) }),
+/** The request Gemini's Interactions API should receive for `text`. */
+const interactionCall = (text: string, { style, voice }: { style: string; voice: string }) => ({
+  url: "https://generativelanguage.googleapis.com/v1beta/interactions",
+  headers: { "content-type": "application/json", "x-goog-api-key": "AIza-test" },
+  body: {
+    model: "gemini-3.8-flash-lite-tts",
+    stream: true,
+    store: false,
+    input: [{ type: "user_input", content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style }] }] }],
+    generation_config: { speech_config: [{ voice }] },
+  },
 });
+
+/** The request for the default style and voice. */
+const defaultCall = (text: string) => interactionCall(text, { style: "Fast and concise, but with a friendly lilting tone.", voice: "Zephyr" });
 
 /** An MP3-looking buffer of `bytes` bytes: a frame header, padded. */
 const mp3Head = (bytes: number) => Buffer.concat([Buffer.from([0xff, 0xf3, 0x84, 0xc4]), Buffer.alloc(bytes - 4)]);
@@ -92,45 +98,17 @@ void test("The request sends the key in Google's own header, puts style in the s
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: direct.fetch });
   const audio = await tts.streamSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
   const out = await collectAudio(audio);
-  const call = direct.calls[0];
-  const requestBody = InteractionRequest.parse(call?.body);
-  t.check(
-    ({
-      url: call?.url,
-      key: call?.headers["x-goog-api-key"],
-      authorization: call?.headers.authorization ?? "(none)",
-      model: requestBody.model,
-      stream: requestBody.stream,
-      store: requestBody.store,
-      content: requestBody.input[0]?.content[0],
-      voice: requestBody.generation_config.speech_config[0]?.voice,
-      stylable: tts.stylable,
-      contentType: audio.contentType,
-      frameSync: out[0] === 0xff && ((out[1] ?? 0) & 0xe0) === 0xe0,
-    }),
-    {
-    url: "https://generativelanguage.googleapis.com/v1beta/interactions",
-    key: "AIza-test",
-    authorization: "(none)",
-    model: "gemini-3.8-flash-lite-tts",
-    stream: true,
-    store: false,
-    content: {
-      type: "text",
-      text: "The delivery is late.",
-      annotations: [
-        {
-          type: "speech_metadata",
-          style: "Speak warmly.",
-        },
-      ],
-    },
-    voice: "Kore",
+  t.check({
+    calls: direct.calls,
+    stylable: tts.stylable,
+    contentType: audio.contentType,
+    frameSync: [out[0], (out[1] ?? 0) & 0xe0],
+  }, {
+    calls: [interactionCall("The delivery is late.", { style: "Speak warmly.", voice: "Kore" })],
     stylable: true,
     contentType: "audio/mpeg",
-    frameSync: true,
-  },
-  );
+    frameSync: [0xff, 0xe0],
+  });
 });
 
 // Gemini has been observed answering HTTP 200 with a zero-length body. A clip
@@ -164,11 +142,11 @@ void test("ky honors Retry-After in full.", async (t) => {
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: quota.fetch });
   const started = Date.now();
   const failure = await tts.streamSpeech("Hello there.").catch((e) => e);
-  t.check(({ error: failure.name, status: failure.response.status, requests: quota.calls.length, fast: Date.now() - started < 1000 }), {
+  t.check({ error: failure.name, status: failure.response.status, requests: quota.calls, elapsedMs: Date.now() - started }, {
     error: "HTTPError",
     status: 429,
-    requests: 1,
-    fast: true,
+    requests: [defaultCall("Hello there.")],
+    elapsedMs: any(Number).below(1000),
   });
 });
 
@@ -184,8 +162,8 @@ void test("A short wait is still worth it:", async (t) => {
   });
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: brief.fetch });
   const out = await tts.streamSpeech("Hello there.");
-  t.check(({ requests: brief.calls.length, contentType: out.contentType }), {
-    requests: 2,
+  t.check({ requests: brief.calls, contentType: out.contentType }, {
+    requests: [defaultCall("Hello there."), defaultCall("Hello there.")],
     contentType: "audio/mpeg",
   });
 });
@@ -201,14 +179,11 @@ void test("The point of streaming:", async (t) => {
   const held = heldBody(delta(pcm));
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: async () => new Response(held.body) });
   const audio = await tts.streamSpeech("The delivery is late.");
-  const headFirst = { headBytes: audio.head.length >= 512, providerStillOpen: !held.state.cancelled };
+  const headLength = audio.head.length;
+  const providerOpen = { ...held.state };
   held.release(delta(pcm) + "event: done\ndata: [DONE]\n\n");
   const total = (await collectAudio(audio)).length;
-  t.check(({ ...headFirst, moreAfterHead: total > audio.head.length }), {
-    headBytes: true,
-    providerStillOpen: true,
-    moreAfterHead: true,
-  });
+  t.check({ headLength, providerOpen, total }, { headLength: any(Number).between(512, Infinity), providerOpen: { cancelled: false }, total: 8448 });
 });
 
 // OpenAI already answers MP3, so its body passes through unchanged, and its head
@@ -219,12 +194,10 @@ void test("OpenAI already answers MP3, so its body passes through unchanged, and
   const held = heldBody(first);
   const tts = createTtsService({ backend: "openai", apiKey: "sk-test", fetch: async () => new Response(held.body) });
   const audio = await tts.streamSpeech("The delivery is late.");
-  const headIsFirstChunk = audio.head.equals(first);
+  const head = audio.head.toString("base64");
   held.release(Buffer.alloc(300, 1));
-  t.check(({ headIsFirstChunk, total: (await collectAudio(audio)).length }), {
-    headIsFirstChunk: true,
-    total: 904,
-  });
+  const body = (await collectAudio(audio)).toString("base64");
+  t.check({ head, body }, { head: first.toString("base64"), body: Buffer.concat([first, Buffer.alloc(300, 1)]).toString("base64") });
 });
 
 // ## A failure after the head comes out of the rest
@@ -252,5 +225,5 @@ void test("A consumer that stops reading (the route, when the browser leaves) st
   const audio = await tts.streamSpeech("The delivery is late.");
   audio.cancel();
   await eventually(() => held.state.cancelled === true, { label: "provider body cancelled" });
-  t.check(held.state.cancelled, true);
+  t.check(held.state, { cancelled: true });
 });

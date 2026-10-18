@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -155,6 +156,17 @@ function makeServeSim(state: SimState) {
   return { deps, calls, sleeps };
 }
 
+const HOST_443 = "box.tail1234.ts.net:443";
+
+/** A serve config with one root handler proxying to loopback `port` on `hostPort`. */
+const frontingServe = (port: number, hostPort: string) => ({
+  Web: { [hostPort]: { Handlers: { "/": { Proxy: `http://127.0.0.1:${port}` } } } },
+});
+
+/** The exposure-file entries for one loopback port. */
+const exposed = (port: number) => loadExposureFile().targets.filter((target) => target.port === port);
+const exposureEntry = (port: number) => ({ port, dnsName: "box.tail1234.ts.net", configuredAt: isoDate() });
+
 // Non-interactive I/O: `--no-wait`. Never blocks on a prompt.
 const noWaitIo: SetupIo = { interactive: false, log: () => {}, waitForContinue: () => Promise.resolve() };
 
@@ -177,16 +189,7 @@ void test("A {error:…} 401 or an authenticated-user body (email + isOwner + bo
       classifyAuthPosture({ reachable: true, status: 200, body: "not json" }),
       classifyAuthPosture({ reachable: true, status: 503, body: "" }),
     ],
-    [
-    "unreachable",
-    "enforced",
-    "ambiguous",
-    "open",
-    "enforced",
-    "ambiguous",
-    "ambiguous",
-    "ambiguous",
-  ],
+    ["unreachable", "enforced", "ambiguous", "open", "enforced", "ambiguous", "ambiguous", "ambiguous"],
   );
 });
 
@@ -199,39 +202,18 @@ void test("Serve unconfigured, auth enforced:", async (t) => {
   const state: SimState = { status: runningStatus, serve: {}, probe: enforced401 };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
-  t.check(
-    [result.ok, result.message.includes("https://box.tail1234.ts.net/")]
-    ,
-    [
-    true,
-    true,
-  ],
-  );
+  t.check(result, { ok: true, message: "Exposed at https://box.tail1234.ts.net/ (loopback:3210). Serve config + exposure intent recorded." });
 
-  // doctest:L209
-  t.check(
-    // Serve now fronts loopback:3210 on the node's host:443.
-    state.serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy,
-    "http://127.0.0.1:3210",
-  );
+  // Serve now fronts loopback:3210 on the node's host:443, with no Funnel key.
+  t.check(state.serve, { Web: { "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3210" } } } } });
 
-  // doctest:L213
   // The exposure intent was recorded with port + dnsName.
-  const entry = loadExposureFile().targets.find((target) => target.port === 3210);
-  t.check([entry?.port, entry?.dnsName], [
-    3210,
-    "box.tail1234.ts.net",
-  ]);
+  t.check(exposed(3210), [exposureEntry(3210)]);
 
   // ## Funnel is NEVER enabled by setup
   //
   // Setup issues no `funnel` command and writes no `AllowFunnel`.
-
-  // doctest:L227
-  await t.checkText(sim.calls.some((c) => c.includes("funnel")), "false");
-
-  // doctest:L230
-  await t.checkText(JSON.stringify(state.serve).includes("Funnel"), "false");
+  t.check(sim.calls, ["tailscale status --json", "tailscale serve status --json", "tailscale serve --bg --https=443 --set-path=/ http://127.0.0.1:3210", "tailscale status --json", "tailscale serve status --json"]);
 });
 
 // ## F1: intent is recorded BEFORE the serve write (survives a mid-write failure)
@@ -243,18 +225,14 @@ void test("If the tailscale serve write fails AFTER intent is recorded, the inte
   const state: SimState = { status: runningStatus, serve: {}, probe: enforced401, bgCode: 1 };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3230 }, io: noWaitIo });
-  t.check(
-    [
-      result.ok,                                              // the serve write failed
-      sim.calls.some((c) => c.includes("--bg")),             // it WAS attempted
-      loadExposureFile().targets.some((target) => target.port === 3230), // yet intent is recorded (fail closed)
+  // The serve write failed, yet intent is recorded (fail closed).
+  t.check({ result, calls: sim.calls, exposure: exposed(3230) }, {
+    result: { ok: false, message: "`tailscale serve` failed (exit 1): serve write failed" },
+    calls: ["tailscale status --json", "tailscale serve status --json", "tailscale serve --bg --https=443 --set-path=/ http://127.0.0.1:3230"],
+    exposure: [
+      exposureEntry(3230),
     ],
-    [
-    false,
-    true,
-    true,
-  ],
-  );
+  });
 });
 
 // ## Idempotent: a second run reaches the same state, no duplicate intent
@@ -264,10 +242,12 @@ void test("Idempotent: a second run reaches the same state, no duplicate intent"
   const sim = makeServeSim(state);
   await runTailscaleSetup(sim.deps, { target: { port: 3211 }, io: noWaitIo });
   const first = await runTailscaleSetup(sim.deps, { target: { port: 3211 }, io: noWaitIo });
-  t.check([first.ok, loadExposureFile().targets.filter((target) => target.port === 3211).length], [
-    true,
-    1,
-  ]);
+  t.check({ first, exposure: exposed(3211) }, {
+    first: { ok: true, message: "Exposed at https://box.tail1234.ts.net/ (loopback:3211). Serve config + exposure intent recorded." },
+    exposure: [
+      exposureEntry(3211),
+    ],
+  });
 });
 
 // ## Preserve unrelated serve mappings
@@ -282,16 +262,24 @@ void test("A pre-existing foreign mapping (another service on host:8443) survive
   const state: SimState = { status: runningStatus, serve: foreign, probe: enforced401 };
   const sim = makeServeSim(state);
   await runTailscaleSetup(sim.deps, { target: { port: 3212 }, io: noWaitIo });
-  t.check(
-    [
-      state.serve.Web?.["box.tail1234.ts.net:8443"]?.Handlers?.["/"]?.Proxy,
-      state.serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy,
-    ],
-    [
-    "http://127.0.0.1:5000",
-    "http://127.0.0.1:3212",
-  ],
-  );
+  t.check(state.serve, {
+    Web: {
+      "box.tail1234.ts.net:8443": {
+        Handlers: {
+          "/": {
+            Proxy: "http://127.0.0.1:5000",
+          },
+        },
+      },
+      "box.tail1234.ts.net:443": {
+        Handlers: {
+          "/": {
+            Proxy: "http://127.0.0.1:3212",
+          },
+        },
+      },
+    },
+  });
 });
 
 // ## Guard: refuse to expose an OPEN (unauthenticated) box
@@ -307,20 +295,11 @@ void test("The loopback /auth/me probe reports { open:", async (t) => {
   };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3220 }, io: noWaitIo });
-  t.check(
-    [
-      result.ok,
-      result.message.includes("UNAUTHENTICATED"),
-      sim.calls.some((c) => c.includes("--bg")),
-      loadExposureFile().targets.some((target) => target.port === 3220),
-    ],
-    [
-    false,
-    true,
-    false,
-    false,
-  ],
-  );
+  t.check({ result, calls: sim.calls, exposure: exposed(3220) }, {
+    result: { ok: false, message: "REFUSING to expose loopback:3220 — it reports open (UNAUTHENTICATED) mode at http://127.0.0.1:3220/auth/me. Fronting it with Tailscale Serve would hand the whole tailnet an unauthenticated box. Give the server real authentication first." },
+    calls: ["tailscale status --json", "tailscale serve status --json"],
+    exposure: [],
+  });
 });
 
 // ## Guard: refuse on an unreachable, ambiguous, generic-401, or random-JSON probe
@@ -333,18 +312,13 @@ void test("Guard: refuse on an unreachable, ambiguous, generic-401, or random-JS
   const generic401 = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: true, status: 401, body: "Unauthorized" } });
   const r2 = await runTailscaleSetup(generic401.deps, { target: { port: 3222 }, io: noWaitIo });
 
-  // doctest:L327
   const randomEmail = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: true, status: 200, body: JSON.stringify({ email: "x" }) } });
   const r3 = await runTailscaleSetup(randomEmail.deps, { target: { port: 3223 }, io: noWaitIo });
 
-  // doctest:L330
-  t.check([r1.ok, r1.message.includes("nothing answered"), r2.ok, r3.ok, r2.message.includes("recognizable"), r3.message.includes("recognizable")], [
-    false,
-    true,
-    false,
-    false,
-    true,
-    true,
+  t.check([r1, r2, r3], [
+    { ok: false, message: "REFUSING to expose loopback:3221 — nothing answered at http://127.0.0.1:3221/auth/me. Start the auth-gated bbx serve/hub on that port first, then re-run `bbx tailscale setup`." },
+    { ok: false, message: "REFUSING to expose loopback:3222 — http://127.0.0.1:3222/auth/me did not report a recognizable beebox auth posture (neither a `{error:…}` 401, nor an authenticated-user body, nor open mode). Refusing to assume it is a protected beebox." },
+    { ok: false, message: "REFUSING to expose loopback:3223 — http://127.0.0.1:3223/auth/me did not report a recognizable beebox auth posture (neither a `{error:…}` 401, nor an authenticated-user body, nor open mode). Refusing to assume it is a protected beebox." },
   ]);
 });
 
@@ -362,11 +336,10 @@ void test("If /router/status answers with the dev router's status JSON, setup re
   };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
-  t.check([result.ok, result.message.includes("dev router"), sim.calls.some((c) => c.includes("--bg"))], [
-    false,
-    true,
-    false,
-  ]);
+  t.check({ result, calls: sim.calls }, {
+    result: { ok: false, message: "REFUSING to expose loopback:3210 — it answers `/__router/status` 200 with the dev router's own status JSON, which means this router is NOT running the Track-B auth gate (a pre-Track-B build). Update/rebuild the router so its gate denies anonymous access (a guarded router answers `/__router/status` with 401), then re-run `bbx tailscale setup` — a guarded dev router is exposable, an ungated one is not." },
+    calls: ["tailscale status --json", "tailscale serve status --json"],
+  });
 });
 
 // ## Track C: expose the GUARDED dev router (proof over Serve, then record)
@@ -380,20 +353,14 @@ void test("A Track-B-guarded router (loopback /router/status denies anonymously 
   const state: SimState = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
-  t.check(
-    [
-      result.ok,
-      result.message.includes("guarded dev router"),
-      state.serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy, // serve fronts the router
-      loadExposureFile().targets.some((target) => target.port === 3210),              // exposure recorded (after proof)
+  t.check({ result, serve: state.serve, calls: sim.calls, exposure: exposed(3210) }, {
+    result: { ok: true, message: "Exposed the guarded dev router at https://box.tail1234.ts.net/ (loopback:3210). Anonymous `/__router/status` over Serve returned 401 — the auth gate is live end-to-end. Serve config + exposure intent recorded." },
+    serve: frontingServe(3210, HOST_443),
+    calls: ["tailscale status --json", "tailscale serve status --json", "tailscale serve --bg --https=443 --set-path=/ http://127.0.0.1:3210"],
+    exposure: [
+      exposureEntry(3210),
     ],
-    [
-    true,
-    true,
-    "http://127.0.0.1:3210",
-    true,
-  ],
-  );
+  });
 });
 
 // ## Track C: first-serve cert race → retry the served probe until guarded → succeed
@@ -425,20 +392,16 @@ void test("The FIRST tailscale serve --https=443 triggers Let's Encrypt cert iss
   };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3272 }, io: noWaitIo });
-  t.check(
-    [
-      result.ok,
-      result.message.includes("guarded dev router"),
-      sim.sleeps.length,                                        // retried past 2 unreachable probes
-      loadExposureFile().targets.some((target) => target.port === 3272),  // exposure recorded after proof
+  t.check({ result, sleeps: sim.sleeps, exposure: exposed(3272) }, {
+    result: { ok: true, message: "Exposed the guarded dev router at https://box.tail1234.ts.net/ (loopback:3272). Anonymous `/__router/status` over Serve returned 401 — the auth gate is live end-to-end. Serve config + exposure intent recorded." },
+    sleeps: [
+      2000,
+      2000,
     ],
-    [
-    true,
-    true,
-    2,
-    true,
-  ],
-  );
+    exposure: [
+      exposureEntry(3272),
+    ],
+  });
 });
 
 // ## Track C: served anonymous probe returns 200 → tear down, refuse, record nothing
@@ -457,26 +420,16 @@ void test("The gate classifies guarded on loopback but is NOT isolated over Serv
   };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3270 }, io: noWaitIo });
-  t.check(
-    [
-      result.ok,
-      result.message.includes("NOT proven denied"),
-      sim.calls.some((c) => c.includes("--bg")),                             // Serve WAS configured
-      sim.calls.includes("tailscale serve --https=443 --set-path=/ off"),    // then torn down
-      state.serve.Web?.["box.tail1234.ts.net:443"] ?? null,                  // mapping gone
-      loadExposureFile().targets.some((target) => target.port === 3270),               // NO exposure recorded
-      sim.sleeps.length,                                                     // reachable-but-wrong: NO retry spin
-    ],
-    [
-    false,
-    true,
-    true,
-    true,
-    null,
-    false,
-    0,
-  ],
-  );
+  // Serve WAS configured, then torn down; the reachable-but-wrong answer gets no retry spin.
+  t.check({ result, calls: sim.calls, serve: state.serve, sleeps: sim.sleeps, exposure: exposed(3270) }, {
+    result: { ok: false, message: "REFUSING to expose loopback:3270 — the served https://box.tail1234.ts.net/__router/status returned 200 WITHOUT the guarded-router 401+header, so anonymous access is NOT proven denied end-to-end over Serve. Tore the serve mapping back down (confirmed removed); no exposure recorded." },
+    calls: ["tailscale status --json", "tailscale serve status --json", "tailscale serve --bg --https=443 --set-path=/ http://127.0.0.1:3270", "tailscale serve --https=443 --set-path=/ off", "tailscale serve status --json"],
+    serve: {
+      Web: {},
+    },
+    sleeps: [],
+    exposure: [],
+  });
 });
 
 // ## Track C: proof fails AND teardown fails → record intent + loud failure (fail closed)
@@ -503,22 +456,14 @@ void test("The served proof fails (200, no header) and the serve … off teardow
   };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3271 }, io: noWaitIo });
-  t.check(
-    [
-      result.ok,
-      result.message.includes("could NOT be proven torn down"),
-      result.message.includes("bbx tailscale stop --target 3271"),
-      state.serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy ?? null, // mapping STILL live
-      loadExposureFile().targets.some((target) => target.port === 3271),                       // intent RECORDED (tracked)
+  // The mapping is STILL live, and the intent is RECORDED so it is tracked.
+  t.check({ result, serve: state.serve, exposure: exposed(3271) }, {
+    result: { ok: false, message: "REFUSING to expose loopback:3271 — the served https://box.tail1234.ts.net/__router/status returned 200 WITHOUT the guarded-router 401+header, so anonymous access is NOT proven denied over Serve. The serve mapping could NOT be proven torn down (it still fronts the port) — it may still be LIVE fronting a router whose gate is unproven. Recorded exposure intent so it is tracked; remove it NOW with `bbx tailscale stop --target 3271` (or `tailscale serve status`)." },
+    serve: frontingServe(3271, HOST_443),
+    exposure: [
+      exposureEntry(3271),
     ],
-    [
-    false,
-    true,
-    true,
-    "http://127.0.0.1:3271",
-    true,
-  ],
-  );
+  });
 });
 
 // ## Track C: setup enables no Funnel for the router either
@@ -529,10 +474,10 @@ void test("The guarded-router path issues no funnel command and writes no AllowF
   const state: SimState = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
   const sim = makeServeSim(state);
   await runTailscaleSetup(sim.deps, { target: { port: 3271 }, io: noWaitIo });
-  t.check([sim.calls.some((c) => c.includes("funnel")), JSON.stringify(state.serve).includes("Funnel")], [
-    false,
-    false,
-  ]);
+  t.check({ calls: sim.calls, serve: state.serve }, {
+    calls: ["tailscale status --json", "tailscale serve status --json", "tailscale serve --bg --https=443 --set-path=/ http://127.0.0.1:3271"],
+    serve: frontingServe(3271, HOST_443),
+  });
 });
 
 // ## Guard: refuse a server that also answers on a non-loopback interface
@@ -550,11 +495,10 @@ void test("The same port answers on 10.0.0.5 — the server is bound to a public
   };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3240 }, io: noWaitIo });
-  t.check([result.ok, result.message.includes("10.0.0.5"), loadExposureFile().targets.some((target) => target.port === 3240)], [
-    false,
-    true,
-    false,
-  ]);
+  t.check({ result, exposure: exposed(3240) }, {
+    result: { ok: false, message: "REFUSING to expose loopback:3240 — this server also answers on 10.0.0.5:3240, so it is bound to a public interface, not 127.0.0.1 only. Bind it to loopback before exposing it over Tailscale (a non-loopback bind is already reachable without Serve)." },
+    exposure: [],
+  });
 });
 
 // ## `--no-wait` at a human-action state: print and exit nonzero
@@ -567,11 +511,10 @@ void test("At needs-login (a human step) with --no-wait, setup prints the instru
   const io: SetupIo = { interactive: false, log: (l) => { logged.push(l); }, waitForContinue: () => Promise.resolve() };
   const sim = makeServeSim({ status: { BackendState: "NeedsLogin", Self: null, CertDomains: null }, serve: {}, probe: { reachable: false, status: null } });
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3224 }, io });
-  t.check([result.ok, logged.some((l) => l.startsWith("Next:")), result.message.includes("re-run")], [
-    false,
-    true,
-    true,
-  ]);
+  t.check({ result, logged }, {
+    result: { ok: false, message: "Not done yet — do the step above, then re-run `bbx tailscale setup`." },
+    logged: ["Next: Interactive: run `tailscale up`. Headless: run `tailscale up --auth-key=<key>` with a single-use key from the admin console.", "Docs: https://tailscale.com/kb/1085/auth-keys"],
+  });
 });
 
 // ## Interactive wait: do the human step, loop advances to the URL
@@ -588,14 +531,7 @@ void test("With a TTY, setup waits at needs-login; when the operator completes t
     waitForContinue: () => { state.status = runningStatus; return Promise.resolve(); },
   };
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3225 }, io });
-  t.check(
-    [result.ok, result.message.includes("https://box.tail1234.ts.net/")]
-    ,
-    [
-    true,
-    true,
-  ],
-  );
+  t.check(result, { ok: true, message: "Exposed at https://box.tail1234.ts.net/ (loopback:3225). Serve config + exposure intent recorded." });
 });
 
 // ## Stop: remove only this target's mapping, preserve others, clear intent
@@ -610,20 +546,11 @@ void test("Set up two mappings (foreign on :8443, ours on :443 via setup), then 
   const sim = makeServeSim(state);
   await runTailscaleSetup(sim.deps, { target: { port: 3226 }, io: noWaitIo });
   const stop = await runTailscaleStop(sim.deps, { target: { port: 3226 } });
-  await t.checkText(
-    [
-      stop.ok,
-      state.serve.Web?.["box.tail1234.ts.net:443"], // our mapping gone
-      state.serve.Web?.["box.tail1234.ts.net:8443"]?.Handlers?.["/"]?.Proxy, // foreign preserved
-      loadExposureFile().targets.some((target) => target.port === 3226), // intent cleared
-    ],
-    `[
-  true,
-  null,
-  "http://127.0.0.1:5000",
-  false
-]`,
-  );
+  t.check({ stop, serve: state.serve, exposure: exposed(3226) }, {
+    stop: { ok: true, message: "Removed box.tail1234.ts.net:443/ → loopback:3226 and cleared its exposure intent." },
+    serve: frontingServe(5000, "box.tail1234.ts.net:8443"),
+    exposure: [],
+  });
 });
 
 // ## F6: stop tears down the target's path only, not a hardcoded `/`
@@ -632,7 +559,7 @@ void test("Set up two mappings (foreign on :8443, ours on :443 via setup), then 
 // (a different port). Stop removes `/foo` and leaves `/` untouched.
 void test("The target is mapped at /foo on :443 alongside an UNRELATED / handler (a diff...", async (t) => {
   // doctest:L610
-  const serve = {
+  const serve: ServeConfigJson = {
     Web: {
       "box.tail1234.ts.net:443": {
         Handlers: {
@@ -645,22 +572,12 @@ void test("The target is mapped at /foo on :443 alongside an UNRELATED / handler
   const sim = makeServeSim({ status: runningStatus, serve, probe: enforced401 });
   await recordExposure({ port: 3250, dnsName: "box.tail1234.ts.net" });
   const stop = await runTailscaleStop(sim.deps, { target: { port: 3250 } });
-  t.check(
-    [
-      stop.ok,
-      sim.calls.includes("tailscale serve --https=443 --set-path=/foo off"), // exactly /foo
-      sim.calls.includes("tailscale serve --https=443 --set-path=/ off"),    // NOT /
-      serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy,         // / preserved
-      Object.keys(serve.Web?.["box.tail1234.ts.net:443"]?.Handlers ?? {}).join(","), // only / remains
-    ],
-    [
-    true,
-    true,
-    false,
-    "http://127.0.0.1:5000",
-    "/",
-  ],
-  );
+  // Exactly `/foo` is torn down, not `/`, and the unrelated `/` handler is preserved.
+  t.check({ stop, calls: sim.calls, serve }, {
+    stop: { ok: true, message: "Removed box.tail1234.ts.net:443/foo → loopback:3250 and cleared its exposure intent." },
+    calls: ["tailscale status --json", "tailscale serve status --json", "tailscale serve --https=443 --set-path=/foo off", "tailscale serve status --json"],
+    serve: frontingServe(5000, HOST_443),
+  });
 });
 
 // ## Stop scans EVERY host: a pre-rename mapping keeps the guard armed
@@ -681,7 +598,7 @@ void test("A mapping created before a node rename lives under the OLD hostname (
     }
   });
   // doctest:L650
-  const serve = {
+  const serve: ServeConfigJson = {
     Web: {
       "old-name.tail1234.ts.net:8443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3260" } } },
       "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3260" } } },
@@ -690,24 +607,15 @@ void test("A mapping created before a node rename lives under the OLD hostname (
   const sim = makeServeSim({ status: runningStatus, serve, probe: enforced401 });
   await recordExposure({ port: 3260, dnsName: "box.tail1234.ts.net" });
   const stop = await runTailscaleStop(sim.deps, { target: { port: 3260 } });
-  t.check(
-    [
-      stop.ok,                                                              // proof failed: fail closed
-      stop.message.includes("still present"),
-      sim.calls.includes("tailscale serve --https=8443 --set-path=/ off"), // teardown attempted old mapping
-      sim.calls.includes("tailscale serve --https=443 --set-path=/ off"),  // current mapping torn down
-      Object.keys(serve.Web ?? {}).join(","),                               // stale host survives
-      loadExposureFile().targets.some((target) => target.port === 3260),              // guard KEPT
+  // Proof failed (fail closed): the stale host survives, and the guard is KEPT.
+  t.check({ stop, calls: sim.calls, serve, exposure: exposed(3260) }, {
+    stop: { ok: false, message: "A serve mapping for loopback:3260 is still present after teardown — KEEPING the exposure intent (fail closed). Remove it manually with `tailscale serve status`." },
+    calls: ["tailscale status --json", "tailscale serve status --json", "tailscale serve --https=8443 --set-path=/ off", "tailscale serve --https=443 --set-path=/ off", "tailscale serve status --json"],
+    serve: frontingServe(3260, "old-name.tail1234.ts.net:8443"),
+    exposure: [
+      exposureEntry(3260),
     ],
-    [
-    false,
-    true,
-    true,
-    true,
-    "old-name.tail1234.ts.net:8443",
-    true,
-  ],
-  );
+  });
 });
 
 // ## F2: stop KEEPS the intent when removal can't be proven (tailscale absent)
@@ -719,11 +627,12 @@ void test("Intent is recorded, then tailscale is unavailable — stop cannot pro
   await recordExposure({ port: 3260, dnsName: "box.tail1234.ts.net" });
   const sim = makeServeSim({ status: runningStatus, serve: {}, probe: enforced401, binaryPresent: false });
   const stop = await runTailscaleStop(sim.deps, { target: { port: 3260 } });
-  t.check([stop.ok, stop.message.includes("KEEPING"), loadExposureFile().targets.some((target) => target.port === 3260)], [
-    false,
-    true,
-    true,
-  ]);
+  t.check({ stop, exposure: exposed(3260) }, {
+    stop: { ok: false, message: "Could not prove the Tailscale serve mapping for loopback:3260 is gone (the `tailscale` CLI is not on PATH). KEEPING the exposure intent for loopback:3260 (fail closed). Re-run `bbx tailscale stop --target 3260` once Tailscale is reachable." },
+    exposure: [
+      exposureEntry(3260),
+    ],
+  });
 });
 
 // ## Stop when nothing is configured is a clean no-op (exit 0)
@@ -731,10 +640,7 @@ void test("Stop when nothing is configured is a clean no-op (exit 0)", async (t)
   // doctest:L701
   const sim = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: false, status: null } });
   const stop = await runTailscaleStop(sim.deps, { target: { port: 3299 } });
-  t.check([stop.ok, stop.message.includes("nothing to stop")], [
-    true,
-    true,
-  ]);
+  t.check(stop, { ok: true, message: "Nothing configured for loopback:3299 — nothing to stop." });
 });
 
 // ## F7: the exposure RMW takes the project file lock (cross-process mutual exclusion)
@@ -763,9 +669,15 @@ void test("While another process holds the exposure lock, recordExposure refuses
   }
   await releaseLock(lockPath);
   await recordExposure({ port: 4002, dnsName: "b.ts.net" });
-  t.check([blockedName, loadExposureFile().targets.some((target) => target.port === 4001), loadExposureFile().targets.some((target) => target.port === 4002)], [
-    "LockHeldError",
-    false,
-    true,
-  ]);
+  t.check({ blockedName, blocked: exposed(4001), recorded: exposed(4002) }, {
+    blockedName: "LockHeldError",
+    blocked: [],
+    recorded: [
+      {
+        port: 4002,
+        dnsName: "b.ts.net",
+        configuredAt: isoDate(),
+      },
+    ],
+  });
 });

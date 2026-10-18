@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { pubIdSchema } from "../../src/publish/manifest.js";
 import { definitionFromCard, publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
 import { readPublicationCardSource, resolvePublicationCardPath } from "../../src/publish/prepare/card-source.js";
 import { createPublicationCardTemplate } from "../../src/schemas/publication.js";
@@ -78,7 +79,7 @@ void test("The attach folder derives the content mode and source root", async (t
   t.check(staticSource.definition.content, "static");
 
   // doctest:L78
-  await t.checkText(staticSource.sourceRoot === box.path("_content/Example.attach/static"), "true");
+  t.check(staticSource.sourceRoot, box.path("_content/Example.attach/static"));
 
   // doctest:L81
   await box.write("_content/Site.publication.card", createPublicationCardTemplate({ pubId: "bcdefghijklmnop234567abcde", title: "Site", connection: "personal", tier: "secret" }));
@@ -87,7 +88,7 @@ void test("The attach folder derives the content mode and source root", async (t
   t.check(projectSource.definition.content, "project");
 
   // doctest:L87
-  await t.checkText(projectSource.sourceRoot === box.path("_content/Site.attach/project"), "true");
+  t.check(projectSource.sourceRoot, box.path("_content/Site.attach/project"));
 
   // doctest:L90
   await box.cleanup();
@@ -104,10 +105,8 @@ void test("A malformed card gets a field-specific error", async (t) => {
   await box.cleanup();
 
   // doctest:L103
-  await t.checkText(loaded.startsWith("publication card _content/Example.publication.card cannot be used"), "true");
-
-  // doctest:L106
-  await t.checkText(loaded.includes("tier"), "true");
+  t.checkText(loaded, `publication card _content/Example.publication.card cannot be used: _content/Example.publication.card: invalid publication frontmatter:
+  - tier: Invalid option: expected one of "public"|"secret"|"accounts"|"any-account"`);
 });
 
 // ## Card paths cannot become arbitrary paths
@@ -133,11 +132,24 @@ void test("Card paths cannot become arbitrary paths", async (t) => {
   // validates the result once, through the definition schema.
 
   // doctest:L134
-  const cardPubId = "abcdefghijklmnopqrstuvwxyz";
-  await t.checkText(JSON.stringify(definitionFromCard({ type: "publication", title: "Team", pubId: cardPubId, connection: "cf", tier: "accounts", emails: ["Kim@Example.com", "ari@example.com"] }, "static")), "{\"pubId\":\"abcdefghijklmnopqrstuvwxyz\",\"connection\":\"cf\",\"content\":\"static\",\"title\":\"Team\",\"tier\":\"accounts\",\"emails\":[\"ari@example.com\",\"kim@example.com\"]}");
+  const cardPubId = pubIdSchema.parse("abcdefghijklmnopqrstuvwxyz");
+  t.check(definitionFromCard({ type: "publication", title: "Team", pubId: cardPubId, connection: "cf", tier: "accounts", emails: ["Kim@Example.com", "ari@example.com"] }, "static"), {
+    pubId: cardPubId,
+    connection: "cf",
+    content: "static",
+    title: "Team",
+    tier: "accounts",
+    emails: ["ari@example.com", "kim@example.com"],
+  });
 
-  // doctest:L138
-  await t.checkText(JSON.stringify(definitionFromCard({ title: "Home", pubId: cardPubId, connection: "cf", tier: "public", slug: "home" }, "project")), "{\"pubId\":\"abcdefghijklmnopqrstuvwxyz\",\"connection\":\"cf\",\"content\":\"project\",\"title\":\"Home\",\"tier\":\"public\",\"slug\":\"home\"}");
+  t.check(definitionFromCard({ title: "Home", pubId: cardPubId, connection: "cf", tier: "public", slug: "home" }, "project"), {
+    pubId: cardPubId,
+    connection: "cf",
+    content: "project",
+    title: "Home",
+    tier: "public",
+    slug: "home",
+  });
 
   // A card that breaks a rule throws with the field named.
 

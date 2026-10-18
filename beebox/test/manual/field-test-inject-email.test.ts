@@ -20,6 +20,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing } from "agent-doctest/check";
 import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -92,13 +93,10 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   t.check(await fileExists(join(box.boxRoot, "_config/connectors/gmail.json")), true);
 
   // doctest:L88
-  await t.checkText(
-    // The scenario's chat model is pinned as the box's model policy
-    // (`agentModel` in `_config/box.json`), which `seedFieldBox` writes and commits
-    // as part of the baseline (`src/field-test/run/seed.ts`).
-    JSON.parse(await readFile(join(box.boxRoot, "_config/box.json"), "utf8")).agentModel === scenario.models.chat,
-    "true",
-  );
+  // The scenario's chat model is pinned as the box's model policy
+  // (`agentModel` in `_config/box.json`), which `seedFieldBox` writes and commits
+  // as part of the baseline (`src/field-test/run/seed.ts`).
+  t.check(JSON.parse(await readFile(join(box.boxRoot, "_config/box.json"), "utf8")).agentModel, scenario.models.chat);
 
   // A baseline sync comes first, and it is not optional: a track rule's first sync
   // only sets the history checkpoint and baselines the rule against the mail already
@@ -114,7 +112,7 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   });
 
   // doctest:L108
-  await t.checkText((await tree(box.boxRoot)).filter((f) => f.endsWith(".email-thread.card")).length, "0");
+  t.check((await tree(box.boxRoot)).filter((f) => f.endsWith(".email-thread.card")), []);
 
   // Injecting then appends the message plus its `messagesAdded` history record — the
   // cursor is not derived from array length — and the connector-scoped wakeup turns
@@ -133,16 +131,41 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
 
   // doctest:L128
   const state = await loadFakeGmailState(statePath);
-  t.check([state.messages.length, state.historyRecords.length].join(" "), "1 1");
+  t.check(state, {
+    version: 1,
+    messages: [
+      {
+        id: "hello",
+        threadId: "t-hello",
+        labelIds: ["INBOX"],
+        snippet: "Your appointment is on Thursday at 3:40pm.",
+        internalDate: "1786352400000",
+        payload: {
+          mimeType: "text/plain",
+          headers: [
+            { name: "Message-ID", value: "<hello@example.com>" },
+            { name: "From", value: "Riverside Clinic <appointments@example.com>" },
+            { name: "To", value: "boxholder@example.com" },
+            { name: "Subject", value: "Reminder about Thursday" },
+            { name: "Date", value: "Mon, 10 Aug 2026 09:00:00 GMT" },
+          ],
+          body: { data: "WW91ciBhcHBvaW50bWVudCBpcyBvbiBUaHVyc2RheSBhdCAzOjQwcG0uCg", size: 43 },
+        },
+      },
+    ],
+    labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
+    attachments: {},
+    historyId: 2,
+    oldestValidHistoryId: 1,
+    historyRecords: [{ id: "2", messagesAdded: [{ message: { id: "hello", threadId: "t-hello", labelIds: ["INBOX"] } }] }],
+  });
 
   // The real proof: the box now holds email cards it did not have a moment ago.
+  // Card paths carry generated ids, so each check keeps the card-type suffix.
 
   // doctest:L136
   const files = await tree(box.boxRoot);
-  await t.checkText(files.some((f) => f.endsWith(".email-thread.card")), "true");
-
-  // doctest:L140
-  await t.checkText(files.some((f) => f.endsWith(".email-message.card")), "true");
+  t.check(files, containing([any(String).endsWith(".email-thread.card"), any(String).endsWith(".email-message.card")]));
 
   // And it leaves no reactor job pending. A single wakeup runs one reactor cycle, so
   // the intake job the arrival creates — or a follow-up it spawns — can outlive the

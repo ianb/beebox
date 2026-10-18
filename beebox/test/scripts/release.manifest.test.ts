@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { containing } from "agent-doctest/check";
 import { readFile, access, glob } from "node:fs/promises";
 import * as path from "node:path";
 
@@ -76,25 +77,19 @@ async function findMissing(entries: string[]) {
 
 // ## Every `exports` map target is covered by `files`
 void test("Every `exports` map target is covered by `files`", async (t) => {
-  // doctest:L80
   const pkg = await loadPackageJson();
   const targets = exportTargets(pkg.exports);
 
-  // doctest:L83
-  await t.checkText(targets.length > 0, "true");
+  t.check(targets, containing(["./dist/exports/cards.js"]));
 
-  // doctest:L86
   t.check(targets.filter((target) => !coveredByFiles(target, pkg.files)), []);
 
   // ## Every `bin` target is covered by `files`
 
-  // doctest:L93
   const binTargets = Object.values(pkg.bin);
 
-  // doctest:L95
-  await t.checkText(binTargets.length > 0, "true");
+  t.check(binTargets, containing(["./bin/bbx"]));
 
-  // doctest:L98
   t.check(binTargets.filter((target) => !coveredByFiles(target, pkg.files)), []);
 
   // ## `files` names no checked-in entry that doesn't exist
@@ -107,16 +102,10 @@ void test("Every `exports` map target is covered by `files`", async (t) => {
   // ship nothing for that entry rather than fail loudly — catch it here instead
   // of at `pnpm pack` time.
 
-  // doctest:L113
   const checkedIn = pkg.files.filter((f) => f !== "dist" && f !== "src/frontend/dist");
 
-  // doctest:L115
-  await t.checkText(
-    // Nonempty, so the check below cannot pass by checking nothing.
-    checkedIn.length > 0,
-    "true",
-  );
+  // Nonempty, so the check below cannot pass by checking nothing.
+  t.check(checkedIn, containing(["bin"]));
 
-  // doctest:L121
   t.check(await findMissing(checkedIn), []);
 });

@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, str } from "agent-doctest/check";
 import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -88,26 +89,135 @@ async function writeScenario(dir: string, checklist: string): Promise<string> {
   return dir;
 }
 
+const GIT_SHA = any(String).matches(/^[\da-f]{40}$/);
+const QUIET = { quiescent: true, waitedMs: any(Number).positive(), stuck: [] };
+
+function answered(id: string, answer: string) {
+  return { id, question: any(String), answer, reAsked: false };
+}
+
+/** The standard questionnaire, answered by the scripted operator, plus any extra question ids. */
+function smoothDebrief(extraIds: string[]) {
+  const standard = ["accomplished", "first-attempt", "hesitations", "surprises", "missing", "wording", "rendering", "screenshots"];
+  return {
+    answers: [
+      ...[...standard, ...extraIds].map((id) => answered(id, "Answering from what I saw.")),
+      answered("outcome", "smooth\n\nIt did what I expected."),
+    ],
+    outcome: "smooth",
+    outcomeReason: null,
+    unanswered: [],
+    screenshotRefs: [],
+    missingScreenshots: [],
+  } as const;
+}
+
+function cleanedUp(c: { policy: "keep" | "reset"; tag: string; resetTo: string | null }) {
+  return { policy: c.policy, tag: c.tag, head: GIT_SHA, resetTo: c.resetTo, serverRestarted: c.resetTo !== null, error: null };
+}
+
+/** The whole result of the four-item loop run in `tmp`. */
+function expectedLoopResult(tmp: string) {
+  const completed = { status: "completed", turns: 0, note: "Worked through it. See 01-start.png.", error: null } as const;
+  const diedMessage = 'activity ended with status "error" (SDK result error_during_execution)';
+  return {
+    scenario: "loop-fixture",
+    scenarioDir: join(tmp, "scenario"),
+    runDir: join(tmp, "runs", "run"),
+    startedAt: isoDate(),
+    finishedAt: isoDate(),
+    boxTimeStart: "2026-08-10T09:00:00Z",
+    boxTimeEnd: "2026-08-10T09:00:00Z",
+    models: { operator: "opus", chat: MODEL_ID.opus },
+    serverBaseUrl: str`http://127.0.0.1:${any(String)}/box`,
+    browseSession: "field-run",
+    items: [
+      {
+        id: "first",
+        brief: "Look around and tell me what this is.",
+        screenshotsDir: "screenshots/first",
+        pre: [],
+        activity: completed,
+        debrief: smoothDebrief(["extra-1"]),
+        debriefSkipped: null,
+        quiescence: QUIET,
+        checks: [
+          { script: "passes.sh", passed: true, exitCode: 0, stdout: "looked around", stderr: "" },
+          { script: "fails.sh", passed: false, exitCode: 3, stdout: "", stderr: "no such card" },
+        ],
+        cleanup: cleanedUp({ policy: "keep", tag: "field-run/01-first", resetTo: null }),
+        events: [],
+      },
+      {
+        id: "busted",
+        brief: "This one dies mid-activity.",
+        screenshotsDir: "screenshots/busted",
+        pre: [],
+        activity: { status: "error", turns: 0, note: "", error: "SDK result error_during_execution" },
+        debrief: null,
+        debriefSkipped: diedMessage,
+        quiescence: QUIET,
+        checks: [],
+        cleanup: cleanedUp({ policy: "keep", tag: "field-run/02-busted", resetTo: null }),
+        events: [diedMessage],
+      },
+      {
+        id: "messy",
+        brief: "Make a mess (leave-junk).",
+        screenshotsDir: "screenshots/messy",
+        pre: [],
+        activity: completed,
+        debrief: smoothDebrief([]),
+        debriefSkipped: null,
+        quiescence: QUIET,
+        checks: [],
+        cleanup: cleanedUp({ policy: "reset", tag: "field-run/03-messy", resetTo: "field-run/02-busted" }),
+        events: ["box reset to field-run/02-busted; server restarted"],
+      },
+      {
+        id: "broken-setup",
+        brief: "This one never reaches the operator.",
+        screenshotsDir: "screenshots/broken-setup",
+        pre: [
+          {
+            type: "inject-email",
+            detail: "broken",
+            ok: false,
+            error: `Email fixture ${join(tmp, "scenario", "emails", "broken.yaml")}: does not match the format — to: Invalid input: expected string, received undefined; subject: Invalid input: expected string, received undefined; body: Invalid input: expected string, received undefined`,
+          },
+        ],
+        activity: { status: "harness-skipped", turns: 0, note: "", error: "setup failed: inject-email broken" },
+        debrief: null,
+        debriefSkipped: "setup failed: inject-email broken",
+        quiescence: QUIET,
+        checks: [],
+        cleanup: cleanedUp({ policy: "keep", tag: "field-run/04-broken-setup", resetTo: null }),
+        events: ["setup failed: inject-email broken"],
+      },
+    ],
+    aborted: null,
+    events: [],
+  } as const;
+}
+
 // ## Quiescence is composite, and names what stayed busy
 //
 // Everything must read idle twice, `settleMs` apart — a single all-idle reading
 // can land in the gap between two stages of one reactor cycle.
 void test("Everything must read idle twice, settleMs apart — a single all-idle reading c...", async (t) => {
-  // doctest:L97
   const outcome = await waitForQuiescence({
     probes: [scriptedProbe("chat", [{ busy: false, detail: null }]), scriptedProbe("jobs", [{ busy: false, detail: null }])],
     timeoutMs: 5_000,
     pollMs: 10,
     settleMs: 10,
   });
-  t.check([outcome.quiescent, outcome.stuck.length].join(" "), "true 0");
+  t.check(outcome, { quiescent: true, waitedMs: any(Number).positive(), stuck: [] });
 });
 
 // A component that never goes idle times out — and the report says which one, and
 // why. A timeout that only said "not quiescent" would make every run's triage
 // start from scratch.
 void test("A component that never goes idle times out — and the report says which one, a...", async (t) => {
-  // doctest:L112
   const stuck = await waitForQuiescence({
     probes: [
       scriptedProbe("chat", [{ busy: false, detail: null }]),
@@ -117,10 +227,11 @@ void test("A component that never goes idle times out — and the report says wh
     pollMs: 10,
     settleMs: 10,
   });
-  t.check(stuck.quiescent, false);
-
-  // doctest:L124
-  t.check(stuck.stuck.map((s) => `${s.name}: ${s.detail}`).join("; "), "jobs: 1 pending job card: intake.job.card");
+  t.check(stuck, {
+    quiescent: false,
+    waitedMs: any(Number).positive(),
+    stuck: [{ name: "jobs", detail: "1 pending job card: intake.job.card" }],
+  });
 });
 
 // ## Setup is arranged, never operated
@@ -138,7 +249,6 @@ void test("A scenario that involves email starts with the connector already conf
       t.error(error);
     }
   });
-  // doctest:L137
   const seedTmp = await mkdtemp(join(tmpdir(), "bbx-field-seed-"));
   const seedScenarioDir = join(seedTmp, "scenario");
   await mkdir(join(seedScenarioDir, "emails"), { recursive: true });
@@ -164,21 +274,16 @@ void test("A scenario that involves email starts with the connector already conf
     ].join("\n"),
   );
 
-  // doctest:L162
   const seedScenario = await loadFieldScenario(seedScenarioDir);
   t.check(scenarioNeedsGmail(seedScenario), true);
 
-  // doctest:L166
   const seedBox = await createFieldBox(join(seedTmp, "run"));
   await seedFieldBox({ box: seedBox, scenario: seedScenario });
 
-  // doctest:L169
   t.check(await fileExists(join(seedBox.boxRoot, "_config/connectors/gmail.json")), true);
 
-  // doctest:L172
-  await t.checkText((await loadBoxModel(seedBox.boxRoot)) === MODEL_ID.sonnet, "true");
+  t.check(await loadBoxModel(seedBox.boxRoot), MODEL_ID.sonnet);
 
-  // doctest:L175
   // The connector config and the pinned model (_config/box.json) are both part of the committed baseline.
   const seedStatus = await execa("git", ["status", "--porcelain"], { cwd: seedBox.boxRoot });
   t.check(seedStatus.stdout, "");
@@ -186,7 +291,6 @@ void test("A scenario that involves email starts with the connector already conf
   // A scenario with no mail in it gets no connector at all — the box is as bare as a
   // new boxholder's.
 
-  // doctest:L185
   t.check(scenarioNeedsGmail({ ...seedScenario, checklist: [{ ...seedScenario.checklist[0]!, pre: [] }] }), false);
 });
 
@@ -204,7 +308,6 @@ void test("One run covers the cases worth a real server:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L201
   const tmp = await mkdtemp(join(tmpdir(), "bbx-field-loop-"));
   const scenarioDir = await writeScenario(join(tmp, "scenario"), [
     "  - id: first",
@@ -227,7 +330,6 @@ void test("One run covers the cases worth a real server:", async (t) => {
     "",
   ].join("\n"));
 
-  // doctest:L223
   const runsRoot = join(tmp, "runs");
   const boxRoot = join(runsRoot, "run", "box");
   const backend = createFakeChatBackend();
@@ -241,7 +343,6 @@ void test("One run covers the cases worth a real server:", async (t) => {
     errorOn: (text) => text.includes("This one dies mid-activity"),
   });
 
-  // doctest:L236
   const result = await runFieldScenario({
     scenarioDir,
     runsRoot,
@@ -255,112 +356,51 @@ void test("One run covers the cases worth a real server:", async (t) => {
   });
   driver.stop();
 
-  // doctest:L249
-  t.check(result.items.map((i) => i.id).join(","), "first,busted,messy,broken-setup");
-
-  // The first item ran everything: both checks, verbatim, exit codes and all.
-
-  // doctest:L256
-  const first = result.items[0]!;
-  t.check([first.activity.status, first.debrief?.outcome, String(first.debriefSkipped)].join(" | "), "completed | smooth | null");
-
-  // doctest:L260
-  t.check(
-    // The box really went quiet, which means the chat probe reached the run
-    // server's `chat.statusAll` with the run's diagnostic key — an unreachable or
-    // unauthorized probe reports busy forever and would time out here.
-    [first.quiescence.quiescent, first.quiescence.stuck.length].join(" "),
-    "true 0",
-  );
-
-  // doctest:L266
-  t.check(first.checks.map((c) => `${c.script}=${String(c.exitCode)}`).join(" "), "passes.sh=0 fails.sh=3");
-
-  // doctest:L269
-  t.check(
-    // The failing check's own stderr survives into the result — that is what the
-    // report shows a human.
-    first.checks[1]!.stderr.trim(),
-    "no such card",
-  );
-
-  // doctest:L274
-  t.check(
-    // The item's extra question was asked alongside the standard nine.
-    first.debrief!.answers.map((a) => a.id).join(","),
-    "accomplished,first-attempt,hesitations,surprises,missing,wording,rendering,screenshots,extra-1,outcome",
-  );
+  // Every item's quiescence reads quiet, which means the chat probe reached the run
+  // server's `chat.statusAll` with the run's diagnostic key (an unreachable or
+  // unauthorized probe reports busy forever and would time out here) — and, for the
+  // item after the reset, that the probe reached the RESTARTED server.
+  t.check(result, expectedLoopResult(tmp));
 
   // An activity that ended in `error` gets NO debrief: nine questions into a dead
   // session collect the same error nine times, at a real Opus turn each.
-
-  // doctest:L283
-  const busted = result.items[1]!;
-  t.check([busted.activity.status, String(busted.debrief), busted.debriefSkipped].join(" | "), "error | null | activity ended with status \"error\" (SDK result error_during_execution)");
-
-  // doctest:L287
   t.check(await fileExists(join(result.runDir, "questionnaires", "busted.md")), false);
 
-  // doctest:L290
-  t.check(
-    // The activity note is still written — a failed activity is still evidence.
-    await fileExists(join(result.runDir, "activities", "busted.md")),
-    true,
-  );
+  // The activity note is still written — a failed activity is still evidence.
+  t.check(await fileExists(join(result.runDir, "activities", "busted.md")), true);
 
   // `reset` rewinds the box to the previous checkpoint and restarts the server, so
   // nothing is left serving state that no longer exists.
 
-  // doctest:L299
-  const messy = result.items[2]!;
-  t.check([messy.cleanup.policy, messy.cleanup.resetTo, String(messy.cleanup.serverRestarted)].join(" | "), "reset | field-run/02-busted | true");
-
-  // doctest:L303
-  t.check(
-    // The residue the messy attempt left is gone.
-    await fileExists(join(boxRoot, "junk-residue.txt")),
-    false,
-  );
-
-  // The item after the reset still went quiescent, which means the chat probe
-  // reached the RESTARTED server — a restart is not a run-ending event.
-
-  // doctest:L312
-  t.check(result.items[3]!.quiescence.quiescent, true);
-
-  // An item whose `pre` action failed never reaches the operator at all, and its
-  // checks do not run: the world is not what the brief assumes, so an activity there
-  // would spend a real operator on a question the harness already broke — and the
-  // report would read as a product failure.
-
-  // doctest:L322
-  const broken = result.items[3]!;
-  t.check([broken.activity.status, broken.checks.length, broken.pre[0]!.ok].join(" | "), "harness-skipped | 0 | false");
-
-  // doctest:L326
-  await t.checkText(broken.debriefSkipped!.startsWith("setup failed: inject-email broken"), "true");
+  // The residue the messy attempt left is gone.
+  t.check(await fileExists(join(boxRoot, "junk-residue.txt")), false);
 
   // Every item leaves a checkpoint tag whatever its policy — that is what makes
   // `reset` and post-hoc inspection cheap.
 
-  // doctest:L334
   const tags = await execa("git", ["tag", "--list"], { cwd: join(runsRoot, "run", "box") });
-  t.check(tags.stdout.split("\n").toSorted().join(" "), "field-run/01-first field-run/02-busted field-run/03-messy field-run/04-broken-setup field-run/baseline");
+  t.check(tags.stdout.split("\n").toSorted(), [
+    "field-run/01-first",
+    "field-run/02-busted",
+    "field-run/03-messy",
+    "field-run/04-broken-setup",
+    "field-run/baseline",
+  ]);
 
   // The raw result is on disk for the report writer, written after every item so a
   // run that dies part-way still leaves the completed items behind.
 
-  // doctest:L343
-  const onDisk = JSON.parse(await readFile(join(result.runDir, "results.json"), "utf-8"));
-  t.check([onDisk.scenario, onDisk.items.length, onDisk.models.chat === MODEL_ID.opus, String(onDisk.aborted)].join(" | "), "loop-fixture | 4 | true | null");
+  t.check(JSON.parse(await readFile(join(result.runDir, "results.json"), "utf-8")), result);
 
   // The run also writes `report.md` in the same `finally`, so a triage read never
   // needs to regenerate one by hand — `bbx field-test report <run-dir>` exists for
   // the rare case a run directory moves or the writer's format changes later.
 
-  // doctest:L353
   const reportMd = await readFile(join(result.runDir, "report.md"), "utf-8");
-  t.check([reportMd.includes("# Field test report: loop-fixture"), reportMd.includes("| first | completed | smooth |")].join(" | "), "true | true");
+  // The report is large generated markdown (its full text is pinned in report.test.ts), so
+  // these two checks keep to its title and the first item's table row.
+  t.check(reportMd, any(String).startsWith("# Field test report: loop-fixture"));
+  t.check(reportMd, any(String).includes("| first | completed | smooth |"));
 });
 
 // ## A setup failure after the server starts still tears down and reports
@@ -378,7 +418,6 @@ void test("The box and server exist before the operator session opens, so a fail
       t.error(error);
     }
   });
-  // doctest:L371
   const bootTmp = await mkdtemp(join(tmpdir(), "bbx-field-boot-"));
   const bootScenarioDir = await writeScenario(join(bootTmp, "scenario"), [
     "  - id: never-runs",
@@ -387,7 +426,6 @@ void test("The box and server exist before the operator session opens, so a fail
     "",
   ].join("\n"));
 
-  // doctest:L379
   // A backend whose start() throws is exactly the operator-session boot failure
   // this guards: it happens after prepareRun has a real box and server live.
   const throwingBackend: ChatBackend = {
@@ -396,7 +434,6 @@ void test("The box and server exist before the operator session opens, so a fail
     },
   };
 
-  // doctest:L387
   const bootResult = await runFieldScenario({
     scenarioDir: bootScenarioDir,
     runsRoot: join(bootTmp, "runs"),
@@ -407,22 +444,30 @@ void test("The box and server exist before the operator session opens, so a fail
     onEvent: () => {},
   });
 
-  // doctest:L397
-  t.check(
-    // No item ran; the abort is recorded with a null item id (the report renders
-    // that as "(setup)"), and the run resolved rather than threw.
-    [bootResult.items.length, String(bootResult.aborted?.itemId), bootResult.aborted?.reason].join(" | "),
-    "0 | null | operator boot failed",
-  );
+  // No item ran; the abort is recorded with a null item id (the report renders
+  // that as "(setup)"), and the run resolved rather than threw.
+  t.check(bootResult, {
+    scenario: "loop-fixture",
+    scenarioDir: bootScenarioDir,
+    runDir: join(bootTmp, "runs", "run"),
+    startedAt: isoDate(),
+    finishedAt: isoDate(),
+    boxTimeStart: "2026-08-10T09:00:00Z",
+    boxTimeEnd: "2026-08-10T09:00:00Z",
+    models: { operator: "opus", chat: MODEL_ID.opus },
+    serverBaseUrl: str`http://127.0.0.1:${any(String)}/box`,
+    browseSession: "field-run",
+    items: [],
+    aborted: { itemId: null, reason: "operator boot failed" },
+    events: [],
+  });
 
   // Both artifacts are on disk — the teardown `finally` ran even though nothing
   // after the operator boot did.
 
-  // doctest:L407
-  const bootOnDisk = JSON.parse(await readFile(join(bootResult.runDir, "results.json"), "utf-8"));
-  t.check([await fileExists(join(bootResult.runDir, "report.md")), String(bootOnDisk.aborted.itemId)].join(" | "), "true | null");
+  t.check(JSON.parse(await readFile(join(bootResult.runDir, "results.json"), "utf-8")), bootResult);
+  t.check(await fileExists(join(bootResult.runDir, "report.md")), true);
 
-  // doctest:L411
   const bootReport = await readFile(join(bootResult.runDir, "report.md"), "utf-8");
-  await t.checkText(bootReport.includes("Aborted** at item `(setup)`: operator boot failed"), "true");
+  t.check(bootReport, any(String).includes("Aborted** at item `(setup)`: operator boot failed"));
 });

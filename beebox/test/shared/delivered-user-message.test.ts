@@ -39,7 +39,7 @@ const fixtures = {
 const captureWire = serializeDeliveredUserMessage(fixtures.capture);
 const uploadWire = serializeDeliveredUserMessage(fixtures.upload);
 
-function partSummary(parts: DeliveredUserMessagePart[]): object[] {
+function partSummary(parts: DeliveredUserMessagePart[]) {
   return parts.map((part) => part.kind === "text"
     ? { kind: part.kind, text: part.text }
     : { kind: part.kind, doc: part.doc });
@@ -60,14 +60,15 @@ function parsedFixtures(): Record<string, DeliveredUserMessagePart[]> {
   );
 }
 
-function everyFixtureRoundTrips(): boolean {
-  return Object.values(fixtures).every((message) => {
-    const wire = serializeDeliveredUserMessage(message);
-    const parts = parseDeliveredUserMessageParts(wire);
-    const parsed = parts.length === 1 ? parts.at(0) : undefined;
-    return parsed !== undefined && parsed.kind !== "text" &&
-      serializeDeliveredUserMessage(parsed) === wire;
-  });
+/** Each fixture serialized, parsed, and serialized again; undefined unless it parses to one chip. */
+function roundTrippedFixtures(): Record<string, string | undefined> {
+  return Object.fromEntries(
+    Object.entries(fixtures).map(([kind, message]) => {
+      const parts = parseDeliveredUserMessageParts(serializeDeliveredUserMessage(message));
+      const parsed = parts.length === 1 ? parts.at(0) : undefined;
+      return [kind, parsed !== undefined && parsed.kind !== "text" ? serializeDeliveredUserMessage(parsed) : undefined];
+    }),
+  );
 }
 
 // ## Every kind has canonical wire bytes and parses back to the same model
@@ -117,10 +118,11 @@ Reference documents.
   });
 
   // doctest:L88
-  await t.checkText(JSON.stringify([...DELIVERED_USER_MESSAGE_KINDS].toSorted()) === JSON.stringify(Object.keys(fixtures).toSorted()), "true");
+  const kinds: string[] = [...DELIVERED_USER_MESSAGE_KINDS].toSorted();
+  t.check(kinds, Object.keys(fixtures).toSorted());
 
   // doctest:L91
-  t.check(everyFixtureRoundTrips(), true);
+  t.check(roundTrippedFixtures(), serializedFixtures());
 });
 
 // The serializer rejects every delimiter that would truncate a `doc` attribute.
@@ -137,7 +139,7 @@ void test("The serializer rejects every delimiter that would truncate a doc attr
 void test("This sanitized fixture has the exact structure observed in a real session JSONL:", async (t) => {
   // doctest:L109
   const persisted = '<chat-app narration="off" prose="on" local-time="Tuesday 2026-08-04 13:42 CDT (afternoon)"/>\n' + captureWire;
-  await t.checkText(JSON.stringify(partSummary(parseDeliveredUserMessageParts(persisted))), "[{\"kind\":\"capture\",\"doc\":\"tmp-capture/x.capture-session.card\"}]");
+  t.check(partSummary(parseDeliveredUserMessageParts(persisted)), [{ kind: "capture", doc: "tmp-capture/x.capture-session.card" }]);
 });
 
 // ## Queue-combined text and multiple deliveries remain in source order
@@ -147,7 +149,7 @@ void test("This sanitized fixture has the exact structure observed in a real ses
 void test("ChatSession joins queued sends with blank lines.", async (t) => {
   // doctest:L120
   const combined = "Please keep these together.\n\n" + captureWire + "\n\n" + uploadWire + "\n\nThen compare them.";
-  await t.checkText(JSON.stringify(partSummary(parseDeliveredUserMessageParts(combined))), "[{\"kind\":\"text\",\"text\":\"Please keep these together.\\n\\n\"},{\"kind\":\"capture\",\"doc\":\"tmp-capture/x.capture-session.card\"},{\"kind\":\"text\",\"text\":\"\\n\\n\"},{\"kind\":\"upload\",\"doc\":\"tmp-upload/b/Batch.upload-batch.card\"},{\"kind\":\"text\",\"text\":\"\\n\\nThen compare them.\"}]");
+  t.check(partSummary(parseDeliveredUserMessageParts(combined)), [{ kind: "text", text: "Please keep these together.\n\n" }, { kind: "capture", doc: "tmp-capture/x.capture-session.card" }, { kind: "text", text: "\n\n" }, { kind: "upload", doc: "tmp-upload/b/Batch.upload-batch.card" }, { kind: "text", text: "\n\nThen compare them." }]);
 });
 
 // ## Invalid blocks stay visible without hiding later valid blocks
@@ -157,7 +159,7 @@ void test("ChatSession joins queued sends with blank lines.", async (t) => {
 void test("A known tag with no doc is not a chip.", async (t) => {
   // doctest:L131
   const malformed = '<capture images="1" audio="0:05">\nbroken\n</capture>';
-  await t.checkText(JSON.stringify(partSummary(parseDeliveredUserMessageParts(malformed + "\n\n" + uploadWire))), "[{\"kind\":\"text\",\"text\":\"<capture images=\\\"1\\\" audio=\\\"0:05\\\">\\nbroken\\n</capture>\\n\\n\"},{\"kind\":\"upload\",\"doc\":\"tmp-upload/b/Batch.upload-batch.card\"}]");
+  t.check(partSummary(parseDeliveredUserMessageParts(malformed + "\n\n" + uploadWire)), [{ kind: "text", text: "<capture images=\"1\" audio=\"0:05\">\nbroken\n</capture>\n\n" }, { kind: "upload", doc: "tmp-upload/b/Batch.upload-batch.card" }]);
 });
 
 // ## Prose mentions and unknown tags are ordinary text
@@ -167,11 +169,11 @@ void test("A known tag with no doc is not a chip.", async (t) => {
 void test("Only standalone registered blocks become structured parts.", async (t) => {
   // doctest:L142
   const mention = "see this: " + captureWire;
-  await t.checkText(JSON.stringify(partSummary(parseDeliveredUserMessageParts(mention))), "[{\"kind\":\"text\",\"text\":\"see this: <capture doc=\\\"tmp-capture/x.capture-session.card\\\" images=\\\"2\\\" audio=\\\"0:00\\\">\\nTwo reference photos.\\n</capture>\"}]");
+  t.check(partSummary(parseDeliveredUserMessageParts(mention)), [{ kind: "text", text: "see this: <capture doc=\"tmp-capture/x.capture-session.card\" images=\"2\" audio=\"0:00\">\nTwo reference photos.\n</capture>" }]);
 
   // doctest:L146
   const unknown = "<new-delivery doc=\"x.card\">\nhello\n</new-delivery>";
-  await t.checkText(JSON.stringify(partSummary(parseDeliveredUserMessageParts(unknown))), "[{\"kind\":\"text\",\"text\":\"<new-delivery doc=\\\"x.card\\\">\\nhello\\n</new-delivery>\"}]");
+  t.check(partSummary(parseDeliveredUserMessageParts(unknown)), [{ kind: "text", text: "<new-delivery doc=\"x.card\">\nhello\n</new-delivery>" }]);
 });
 
 // ## A rejected opener cannot hide a later valid delivery
@@ -182,9 +184,9 @@ void test("Only standalone registered blocks become structured parts.", async (t
 void test("After rejecting a prose opener, scanning resumes inside the rejected span so...", async (t) => {
   // doctest:L158
   const proseOpener = "does the <capture> tag work?\n\n" + captureWire;
-  await t.checkText(JSON.stringify(partSummary(parseDeliveredUserMessageParts(proseOpener))), "[{\"kind\":\"text\",\"text\":\"does the <capture> tag work?\\n\\n\"},{\"kind\":\"capture\",\"doc\":\"tmp-capture/x.capture-session.card\"}]");
+  t.check(partSummary(parseDeliveredUserMessageParts(proseOpener)), [{ kind: "text", text: "does the <capture> tag work?\n\n" }, { kind: "capture", doc: "tmp-capture/x.capture-session.card" }]);
 
   // doctest:L162
   const unterminated = '<capture doc="broken.card">\nunfinished\n\n' + captureWire;
-  await t.checkText(JSON.stringify(partSummary(parseDeliveredUserMessageParts(unterminated))), "[{\"kind\":\"text\",\"text\":\"<capture doc=\\\"broken.card\\\">\\nunfinished\\n\\n\"},{\"kind\":\"capture\",\"doc\":\"tmp-capture/x.capture-session.card\"}]");
+  t.check(partSummary(parseDeliveredUserMessageParts(unterminated)), [{ kind: "text", text: "<capture doc=\"broken.card\">\nunfinished\n\n" }, { kind: "capture", doc: "tmp-capture/x.capture-session.card" }]);
 });

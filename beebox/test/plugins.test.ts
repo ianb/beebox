@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import { pluginByName, pluginNames, plugins } from "../src/plugins.js";
 import { definePlugin } from "../src/cards/plugin-definition.js";
 import { access } from "node:fs/promises";
@@ -105,7 +106,7 @@ void test("Every name the registry lists resolves to a definition carrying that 
   t.check(plugins.directory, "./plugins");
 
   // doctest:L20
-  await t.checkText(pluginNames().every((name) => pluginByName(name)?.name === name), "true");
+  t.check(pluginNames().map((name) => pluginByName(name)?.name), pluginNames());
 
   // doctest:L23
   t.check(pluginByName("no-such-plugin"), undefined);
@@ -115,8 +116,8 @@ void test("Every name the registry lists resolves to a definition carrying that 
 // `export default definePlugin({...})` is what the registry imports.
 void test("definePlugin is an identity with a type check:", async (t) => {
   // doctest:L31
-  const def = definePlugin({ name: "example", description: "An example plugin", docs: "src/plugins/example/README.md", schemas: undefined });
-  await t.checkText(def, "{ name: \"example\", description: \"An example plugin\", docs: \"src/plugins/example/README.md\" }");
+  const input = { name: "example", description: "An example plugin", docs: "src/plugins/example/README.md", schemas: undefined };
+  t.check(definePlugin(input), is(input));
 });
 
 void test("Every plugin follows the mechanical conventions", async (t) => {

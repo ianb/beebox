@@ -38,13 +38,14 @@ async function grantedBox() {
 // written for RELAY: the box agent reads it out to the boxholder".
 // `getBoxGoogleClientCreds` dropped them. Now one reaches the surface.
 void test("resolveSecret returns typed refusals carrying, in its own words, \"a message w...", async (t) => {
-  // doctest:L42
   const bare = await makeTmpBox();
   delete process.env.BBX_GOOGLE_TOKENS_FILE;
   const ungranted = await explainGoogleAuthGap(bare.root);
-  t.check([ungranted.startsWith("Google auth unavailable:"), ungranted.includes("google-oauth-client-id")].join(","), "true,true");
+  t.checkText(
+    ungranted,
+    'Google auth unavailable: No secret named "google-oauth-client-id" exists on this machine. It can be declared (bbx secrets declare google-oauth-client-id), but only the boxholder can supply its value.',
+  );
 
-  // doctest:L50
   await bare.cleanup();
 
   // ## The expensive case: credentials fine, no token file HERE
@@ -53,40 +54,28 @@ void test("resolveSecret returns typed refusals carrying, in its own words, \"a 
   // somewhere else. The message has to say so, and has to say that authorizing again
   // will not help — that is the sentence that was missing.
 
-  // doctest:L60
   const box = await grantedBox();
   delete process.env.BBX_GOOGLE_TOKENS_FILE;
   const gap = await explainGoogleAuthGap(box.root);
-  t.check(
-    [
-      gap.includes("no token file where this process looks"),
-      gap.includes("BBX_GOOGLE_TOKENS_FILE is not set in this process"),
-      gap.includes("reauthorizing will not help"),
-    ].join(","),
-    "true,true,true",
-  );
-
-  // It never tells this caller to run `bbx google-auth`, which is the whole point:
-
-  // doctest:L74
-  await t.checkText(gap.includes("Run: bbx google-auth"), "false");
+  // It also never tells this caller to run `bbx google-auth`, which is the whole point.
+  t.checkText(gap, `Google auth unavailable: no token file where this process looks — ${box.root}/_config/connectors/google.secret.json (BBX_GOOGLE_TOKENS_FILE is not set in this process). If the services authenticate fine, the grant is healthy and reauthorizing will not help: this process is looking somewhere else. Run it with the box service's environment.`);
 
   // ## A token file that exists but cannot be read is a different problem
   //
   // Present-but-unparseable is a machine problem, not a grant problem, so it does not
   // borrow either of the other two answers.
 
-  // doctest:L84
   process.env.BBX_GOOGLE_TOKENS_FILE = path.join(tmp, "broken-tokens.json");
   await writeFile(process.env.BBX_GOOGLE_TOKENS_FILE, "{ not json");
   const broken = await explainGoogleAuthGap(box.root);
-  t.check([broken.includes("could not be read"), broken.includes("reauthorizing will not help")].join(","), "true,false");
+  t.checkText(
+    broken,
+    `Google auth unavailable: a token file exists but could not be read — looked in ${path.join(tmp, "broken-tokens.json")} (from BBX_GOOGLE_TOKENS_FILE), or ${box.root}/_config/connectors/google.secret.json.`,
+  );
 
   // ## Called without a box, it says that rather than guessing
 
-  // doctest:L94
   t.check(await explainGoogleAuthGap(undefined), "Google auth needs a box; this command ran without one.");
 
-  // doctest:L99
   await box.cleanup();
 });

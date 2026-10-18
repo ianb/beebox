@@ -87,23 +87,23 @@ void test("findPrivateLinkViolations flags inline links and reference-style defi
 void test("Prose mentions and inline-code examples stay clean", async (t) => {
   // doctest:L69
   const prose = findPrivateLinkViolations("issues/AGENTS.md", "private-issues is a separate private repo; see the private README for details.");
-  await t.checkText(prose.length, "0");
+  t.check(prose, []);
 
   // doctest:L73
   const code = findPrivateLinkViolations("issues/AGENTS.md", "the forbidden form looks like `[t](private-issues/foo.md)` — do not write this in a public file.");
-  await t.checkText(code.length, "0");
+  t.check(code, []);
 
   // doctest:L77
   const fence = "```\n[t](private-issues/foo.md)\n```";
   const fenced = findPrivateLinkViolations("issues/AGENTS.md", fence);
-  await t.checkText(fenced.length, "0");
+  t.check(fenced, []);
 });
 
 // ## A legal private→public link (the other direction) stays clean
 void test("A legal private→public link (the other direction) stays clean", async (t) => {
   // doctest:L86
   const legal = findPrivateLinkViolations("issues/features/x.md", "[public doc](../../beebox/docs/testing.md)");
-  await t.checkText(legal.length, "0");
+  t.check(legal, []);
 });
 
 // ## Angle-bracket inline link destinations are unwrapped (CommonMark form)
@@ -149,7 +149,7 @@ void test("Doctest files (.doctest.md) are public tracked markdown — doc-check
   // doctest:L118
   const fence = "```ts\nconst x = \"[t](private-issues/thread.md)\";\n```";
   const doctestFenced = findPrivateLinkViolations("test/example.doctest.md", fence);
-  await t.checkText(doctestFenced.length, "0");
+  t.check(doctestFenced, []);
 });
 
 // ## The reason string names the rule and the fix

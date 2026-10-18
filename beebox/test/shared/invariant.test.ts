@@ -72,5 +72,10 @@ void test("Same compile-time exhaustiveness demand as assertNever, but never thr
   // eslint-disable-next-line no-restricted-syntax -- deliberately feeding an off-union value to exercise the runtime guard
   const result = tolerateNever("z" as never, "vendorSwitch: unhandled member");
   console.warn = originalWarn;
-  await t.checkText(JSON.stringify({ result, logged: warnings }), "{\"logged\":[\"vendorSwitch: unhandled member: unhandled union member (degrading gracefully): z\"]}");
+  t.check({ result, logged: warnings }, {
+    result: undefined,
+    logged: [
+      "vendorSwitch: unhandled member: unhandled union member (degrading gracefully): z",
+    ],
+  });
 });

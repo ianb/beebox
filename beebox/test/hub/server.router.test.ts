@@ -266,7 +266,7 @@ void test("An unconfigured slug 404s without touching any endpoint.", async (t) 
   t.check(rootResponse.status, 200);
 
   // doctest:L233
-  await t.checkText((await rootResponse.text()).length > 0, "true");
+  t.checkText(await rootResponse.text(), "<!DOCTYPE html>\n<html>\n<head>\n  <title>Bee Box Hub</title>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }\n    h1 { color: #333; }\n    ul { padding-left: 1.25rem; }\n    li { margin: 0.25rem 0; }\n  </style>\n</head>\n<body>\n  <h1>Boxes</h1>\n  <ul>\n    <li><a href=\"/test1/\">test1</a></li>\n  </ul>\n</body>\n</html>");
 
   // ## A request under a configured slug is proxied unchanged (no prefix stripping)
   //
@@ -372,9 +372,9 @@ void test("WebSocket upgrades and a lazy provider cold-start HTTP requests only"
   // doctest:L298
   const upgradeResponse = await rawUpgradeRequest({ port: hub.port, path: "/test1/ws" });
   const rejectedUpgrade = await rawUpgradeRequest({ port: hub.port, path: "/nope/ws" });
-  t.check([upgradeResponse.startsWith("HTTP/1.1 101"), rejectedUpgrade.startsWith("HTTP/1.1 404")], [
-    true,
-    true,
+  t.check([upgradeResponse, rejectedUpgrade], [
+    "HTTP/1.1 101 Switching Protocols\r\nupgrade: websocket\r\nconnection: Upgrade\r\nsec-websocket-accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n",
+    "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n",
   ]);
 
   // ## A lazy provider's `ensureRunning` cold-starts an HTTP request; WS upgrades never trigger it
@@ -419,7 +419,7 @@ void test("WebSocket upgrades and a lazy provider cold-start HTTP requests only"
   // doctest:L347
   lazyProvider.stop();
   const idleUpgrade = await rawUpgradeRequest({ port: lazyHub.port, path: "/lazybox/ws" });
-  await t.checkText(idleUpgrade.startsWith("HTTP/1.1 503"), "true");
+  t.check(idleUpgrade, "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
 
   // doctest:L352
   t.check(lazyProvider.ensureCalls, 2);
@@ -498,7 +498,7 @@ void test("The Google-services OAuth callback routes to the box named in state",
     boxes: [{ slug: "test1", boxRoot: ownedBox.root }],
     openAccess: false,
   });
-  const requestsBeforeDenial = box.sockets.length;
+  const socketsBeforeDenial = box.sockets.map((socket) => socket.remotePort);
 
   // doctest:L413
   const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
@@ -510,7 +510,7 @@ void test("The Google-services OAuth callback routes to the box named in state",
   // The denial never reaches the child -- no new connection to the fake box:
 
   // doctest:L424
-  await t.checkText(box.sockets.length === requestsBeforeDenial, "true");
+  t.check(box.sockets.map((socket) => socket.remotePort), socketsBeforeDenial);
 
   // An email on the box's own `allowedEmails` is forwarded, same as any other authorized request:
 
@@ -589,21 +589,13 @@ void test("The Google-services callback cold-starts an idle box and authenticate
     const res = await fetch(`${preAuthHub.base}${CALLBACK}${state}`, { redirect: "manual" });
     outcomes.push({
       status: res.status,
-      toLogin: (res.headers.get("location") ?? "").startsWith("/auth/login"),
+      location: res.headers.get("location"),
       ensureCalls: preAuthProvider.ensureCalls,
     });
   }
   t.check(outcomes, [
-    {
-      status: 302,
-      toLogin: true,
-      ensureCalls: 0,
-    },
-    {
-      status: 302,
-      toLogin: true,
-      ensureCalls: 0,
-    },
+    { status: 302, location: "/auth/login?returnTo=%2Fauth%2Fgoogle-services%2Fcallback%3Fcode%3Dabc123%26state%3Dpreauthbox%3Aadmin", ensureCalls: 0 },
+    { status: 302, location: "/auth/login?returnTo=%2Fauth%2Fgoogle-services%2Fcallback%3Fcode%3Dabc123%26state%3Dnosuchbox%3Aadmin", ensureCalls: 0 },
   ]);
 
   // doctest:L491
@@ -767,7 +759,7 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
   t.check(canaryNoKey.status, 401);
 
   // doctest:L599
-  await t.checkText(canaryProvider.ensureCalls === callsBefore, "true");
+  t.check(canaryProvider.ensureCalls, callsBefore);
 
   // doctest:L602
   await stopHub(canaryHub);
@@ -849,14 +841,17 @@ void test("A known slug with no endpoint is never a 404 (the 2026-09-16 incident
   Date.now = () => leaseStart;
   const closedResponse = await fetch(`${closedHub.base}/closed/api/x`);
   const closedBody = HubJson.parse(await closedResponse.json());
-  // Retry-After counts down from the 600 s maintenance lease, so allow a loaded run a few seconds.
   const retryAfter = closedResponse.headers.get("retry-after");
-  t.check({ status: closedResponse.status, retryAfterNearLease: Number(retryAfter) > 580 && Number(retryAfter) <= 600, error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner?.pid === process.pid }, {
+  t.check({ status: closedResponse.status, retryAfter, body: closedBody }, {
     status: 503,
-    retryAfterNearLease: true,
-    error: "box_closed",
-    reason: "migration",
-    ownerIsThisProcess: true,
+    retryAfter: "600",
+    body: {
+      error: "box_closed",
+      reason: "migration",
+      owner: { pid: process.pid, since: isoDate() },
+      since: isoDate(),
+      message: str`Box closed is closed for migration (pid ${String(process.pid)}, since ${isoDate()}); it reopens when that process finishes or exits`,
+    },
   });
 
   // doctest:L677
@@ -864,16 +859,16 @@ void test("A known slug with no endpoint is never a 404 (the 2026-09-16 incident
   // sign that swings once, the sentence, and a refresh after Retry-After.
   const page = await fetch(`${closedHub.base}/closed/chat`, { headers: { accept: "text/html,application/xhtml+xml" } });
   const html = await page.text();
-  t.check({ status: page.status, type: page.headers.get("content-type"), refreshIsRetryAfter: Number(html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1]) > 580, headline: html.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), swings: html.includes('class="bbx-sign swing"'), script: html.includes("<script"), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1]?.replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") }, {
+  t.check({ status: page.status, type: page.headers.get("content-type"), refresh: html.match(/<meta http-equiv="refresh" content="(\d+)">/u)?.[1], headline: html.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1><p>([^<]*)<\/p>/u)?.slice(1), sign: html.match(/<div class="(bbx-sign[^"]*)">/u)?.[1], scripts: html.match(/<script/gu), detail: html.match(/<p class="detail">([^<]*)<\/p>/u)?.[1]?.replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") }, {
     status: 503,
     type: "text/html; charset=utf-8",
-    refreshIsRetryAfter: true,
+    refresh: "600",
     headline: [
       "Closed",
       "for migration",
     ],
-    swings: true,
-    script: false,
+    sign: "bbx-sign swing",
+    scripts: null,
     detail: "Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits",
   });
 
@@ -944,10 +939,10 @@ Retry in <n> seconds.
 void test("A retry shorter than the swing would restart it on every reload, so a short r...", async (t) => {
   // doctest:L729
   const quick = renderUnavailablePage({ status: 503, retryAfter: 3, body: { error: "box_unavailable", message: "Box <b> is not running" } });
-  t.check({ refresh: quick.match(/content="(\d+)">/u)?.[1], swings: quick.includes("sign swing"), headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], escaped: quick.includes("Box &lt;b&gt; is not running") }, {
+  t.check({ refresh: quick.match(/content="(\d+)">/u)?.[1], sign: quick.match(/<div class="(bbx-sign[^"]*)">/u)?.[1], headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], detail: quick.match(/<p class="detail">([^<]*)<\/p>/u)?.[1] }, {
     refresh: "3",
-    swings: false,
+    sign: "bbx-sign",
     headline: "Not open",
-    escaped: true,
+    detail: "Box &lt;b&gt; is not running",
   });
 });
