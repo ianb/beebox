@@ -27,7 +27,16 @@ item, and two items swapped.
 | Typed check failed where the text check passed (stricter) | 3,286 |
 
 No typed check was looser than its text check, which is the gate's first
-criterion. The stricter cases are expected: a number and its string print
+criterion.
+
+**Key order** (rerun at 52b62f21d with a "reverse key order" mutation,
+33,681 mutated values): 1,645 typed checks pass where the doctest's text
+check fails, all of them on key order alone; 1,608 are unwrapped
+`JSON.stringify(x)` checks. No typed check is looser on any other mutation.
+`t.check` compares objects without regard to key order by design, so these
+checks stop asserting the order in which the code built an object. Whether
+any of them meant to assert it is a boxholder decision; the alternative is
+to keep those 1,645 as `checkText`. The stricter cases are expected: a number and its string print
 the same text, and a text wildcard can span what the typed form checks.
 
 A first run (converter 9365791de, before the unwrap) kept 2,824 checks as
@@ -193,7 +202,7 @@ recorded in the plan:
 |---|---|
 | Correct Luna's T5 gate entry (one `max-lines` left) | done |
 | Rerun T1/T3/T5 with the exact worker brief before the gate closes | added to the gate |
-| Count the key order the `JSON.stringify` unwrap stops checking | key-order mutation added; result below |
+| Count the key order the `JSON.stringify` unwrap stops checking | measured: 1,645 checks (below); boxholder decision |
 | Flag edited checked expressions for review | added to `verify` |
 | Measure phase 3 gains with held-out weak forms | added to track 5 |
 | A typed assertion for exactly `undefined` (98 checks stay text) | boxholder decision |
