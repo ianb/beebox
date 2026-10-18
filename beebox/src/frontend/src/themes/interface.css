@@ -111,6 +111,15 @@
   }
 }
 
+/* "Updating…" while a chat turn edits the open document. Empty otherwise,
+   so the live region stays mounted without showing a blank pill. */
+.bbx-companion-updating[data-editing] {
+  padding: 4px 12px;
+  color: var(--bbx-ink-soft);
+  background: var(--bbx-paper);
+  border: 1px solid var(--bbx-edge);
+}
+
 /* A selected card's tab grows from the sheet's top edge. The desk surrounds
    the whole tab-and-card assembly rather than cutting between its parts. */
 .bbx-companion-desk[data-active-card] {
