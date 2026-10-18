@@ -45,19 +45,21 @@ text. Their first mismatches were 2,557 "expected an object or array" and
 `JSON.stringify(x)` and `JSON.stringify(x, null, n)` brought the count to
 236. The typed check ignores key order, which the JSON text compared.
 
-**Where all 12,319 doctest checks land** (with the lint loop: a typed check
-lint rejects is kept as text with the reason):
+**Where all 12,319 doctest checks land** (rerun at 5d64af3f9, after the
+`&&`/`||` lint rule, frontend lint from its own directory, and explicit
+`undefined` arguments allowed; with the lint loop: a typed check lint
+rejects is kept as text with the reason):
 
 | Form | Checks |
 |---|---|
-| `t.check`, typed | 9,338 |
-| text: lossy actual (`.length`, `===`, `.includes`); phase 3 strengthens | 1,466 |
+| `t.check`, typed | 9,317 |
+| text: lossy actual (`.length`, `===`, `.includes`, `&&` over them); phase 3 strengthens | 1,583 |
 | text: printed output (`print()`) | 710 |
 | text: multi-line text | 381 |
 | text: typed check failed on the real value | 236 |
-| text: expected `undefined` (lint rejects `t.check(x, undefined)`) | 98 |
 | text: structure that is not a literal (`Map(1) {…}`, a wildcard key) | 46 |
 | text: type error | 37 |
+| text: `() => undefined` inside the checked expression (the pipeline's lint loop counts any `no-useless-undefined` finding in a check) | 2 |
 | text: a whole-value wildcard, `«show»` | 7 |
 
 Runtime fidelity at the same commit: 1,089 of 1,094 files pass with tap's
@@ -178,7 +180,7 @@ boxholder's reactions:
 
 - Hidden regression mutants in trials: done (section 3).
 - A zero-model conversion path: done; the converter's output passes with
-  no worker for 560 of 1,094 files on lint, and fidelity holds for all.
+  no worker for 581 of 1,094 files on lint, and fidelity holds for all.
 - Complete HTTP and CLI observations: `TestServer.response()` and
   `runCommand`/`tsxCommand` (track 1a).
 - Failures that name the violated constraint: per-path mismatch lists,
@@ -205,7 +207,7 @@ recorded in the plan:
 | Count the key order the `JSON.stringify` unwrap stops checking | measured: 1,645 checks (below); boxholder decision |
 | Flag edited checked expressions for review | added to `verify` |
 | Measure phase 3 gains with held-out weak forms | added to track 5 |
-| A typed assertion for exactly `undefined` (98 checks stay text) | boxholder decision |
+| A typed assertion for exactly `undefined` | decided 2026-10-18: lint allows `undefined` arguments; 76 such checks are now typed |
 | A cross-root pilot before calibration | added to track 3 |
 | Classify the 3,286 stricter cases | not yet: they make tests stricter, never looser |
 | Reconcile the two runtime counts | done (the two "count-mismatch" files equal their doctests) |

@@ -798,11 +798,11 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     differential run shows its typed form failing on the real value, when
     tsc rejects it, or when lint rejects it (a lossy actual value, or an
     expected `undefined`, until the boxholder exempted arguments from
-    `unicorn/no-useless-undefined` on 2026-10-18). Result: 9,338 of 12,319
+    `unicorn/no-useless-undefined` on 2026-10-18). Result: 9,317 of 12,319
     checks typed
     (`bin/doctest-convert/TRIALS.md`).
   - **Workers then handle the judgment cases:**
-    - the 1,466 lossy checks kept as text: `a === b` checked against
+    - the 1,583 lossy checks kept as text: `a === b` checked against
       `true` → `t.check(a, b)`; `.length` or `.includes()` → the whole
       value;
     - printed output and multi-line text that is really a value;
@@ -832,7 +832,7 @@ Decided with the boxholder on 2026-10-18, after the generative review:
 - **Measure gains, not only preservation** (generative review): one
   held-out file per common weak form (field read, `.length`, equality
   boolean, printed structure), each with hidden mutants; phase 3 reports
-  mutants newly caught. 9,338 typed checks is a conversion count, not a
+  mutants newly caught. 9,317 typed checks is a conversion count, not a
   strength result.
 - **First implementation chunk:** the phase 3 worker brief and its review
   rule, on the lossy checks in `beebox/test/lib/`.
