@@ -2,7 +2,10 @@
  * The differential test for the typed upgrade (plan retire-doctest.md, track
  * V item 2), as a preload for a scratch run of converted tests:
  *
- *   tap --node-arg=--import=<repo>/bin/doctest-convert/differential.ts <files>
+ *   tap --node-arg=--import=tsx \
+ *     --node-arg=--import=<repo>/bin/doctest-convert/differential.ts <files>
+ *
+ * (tsx first: tap puts command-line node args ahead of .taprc's.)
  *
  * A file converted with `differential` calls `__doctestDifferential(actual,
  * probe)` for each check that has a typed form. The probe runs the doctest's
