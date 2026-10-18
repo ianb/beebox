@@ -1,5 +1,5 @@
 /**
- * Rule typescript-imports (`docs/plans/typescript-7.md`, Track C): only
+ * Rule typescript-imports (`docs/implemented-plans/typescript-7.md`, Track C): only
  * `src/lib/typescript/` imports `typescript`, `@typescript/native`, or a
  * subpath of either, type-only imports included. It is the one TypeScript 7
  * boundary, in the beebox package only. Doctests (`*.doctest.md`) are exempt:
@@ -37,7 +37,7 @@ export const typescriptImportsRule: LayoutRule = {
           path: file.path,
           message:
             `imports ${edge.specifier}; use ${boundary}/ ` +
-            "(the one TypeScript 7 boundary; see docs/plans/typescript-7.md)",
+            "(the one TypeScript 7 boundary; see docs/implemented-plans/typescript-7.md)",
         });
       }
     }

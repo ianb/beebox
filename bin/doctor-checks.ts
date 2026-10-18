@@ -177,7 +177,7 @@ export function checkSdkBinary(deps: Pick<DoctorDeps, "resolveSdkBinary">): Chec
 /**
  * `tsc` is TypeScript 7 (`@typescript/native`) and `tsc6` the 6.0 compatibility
  * package that the `typescript` name points at for typescript-eslint
- * (`beebox/docs/plans/typescript-7.md`). An install that linked them the other
+ * (`beebox/docs/implemented-plans/typescript-7.md`). An install that linked them the other
  * way would typecheck on 6.0 or crash lint, with nothing naming the cause.
  */
 export async function checkTypescriptCompilers(deps: Pick<DoctorDeps, "run" | "repoRoot">): Promise<CheckResult> {

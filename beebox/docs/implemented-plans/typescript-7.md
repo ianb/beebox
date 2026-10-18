@@ -1,9 +1,9 @@
 ---
 title: "Move the repo to TypeScript 7, except typescript-eslint"
-status: active
+status: implemented
 workstream: ts7
 issues:
-  - ../../../issues/exploration/2026-10-17-try-typescript-7-native-compiler.md
+  - ../../../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md
 ---
 # Move the repo to TypeScript 7, except typescript-eslint
 

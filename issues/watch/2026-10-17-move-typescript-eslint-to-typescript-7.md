@@ -8,7 +8,7 @@ discovered-by: Ian
 discovered-in: worktree-ts7 — the TypeScript 7 move kept these tools on the 6.0 API
 ---
 
-The [TypeScript 7 plan](../../beebox/docs/plans/typescript-7.md) moves every
+The [TypeScript 7 plan](../../beebox/docs/implemented-plans/typescript-7.md) moves every
 compile, typecheck and beebox runtime use of TypeScript to 7.0. Two users of
 the old JavaScript compiler API stay on the `typescript` name, which points at
 `@typescript/typescript6` (6.0):

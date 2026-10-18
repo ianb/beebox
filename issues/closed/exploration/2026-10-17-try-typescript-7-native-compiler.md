@@ -1,12 +1,15 @@
 ---
 title: "Try the TypeScript 7 native compiler (`tsgo`) beside `tsc` 5.9"
 workstream: ts7
+resolution: implemented
 area: beebox
 labels: [tooling, typecheck]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder asked whether the repo uses TypeScript 7
 ---
+
+**Closed:** implemented on branch worktree-ts7 (plan `beebox/docs/implemented-plans/typescript-7.md`). The repo uses TypeScript 7.0.2 for compile and typecheck; typescript-eslint and agent-doctest's doctest typecheck stay on 6.0. Follow-up: `issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md`.
 
 The repo uses TypeScript 5.9.3. The root `package.json` pins `^5.9.3`.
 `beebox/` and `workstreams-app/` pin `^5.7.0`. `personal-vibe-check` peers on
@@ -15,7 +18,7 @@ The repo uses TypeScript 5.9.3. The root `package.json` pins `^5.9.3`.
 
 TypeScript 7 is the native (Go) port of the compiler. Its main claim is a large
 typecheck speedup. Typecheck time is part of every finish run (see
-[speed up lint and typecheck](../closed/code-quality/2026-08-12-speed-up-lint-and-typecheck.md)).
+[speed up lint and typecheck](../code-quality/2026-08-12-speed-up-lint-and-typecheck.md)).
 
 ## Questions
 
@@ -165,6 +168,6 @@ The 7.0 node API matches 5.9 for what our walkers use (`kind`, `parent`,
 the `unstable/` prefix.
 
 The decision and the work are in the
-[TypeScript 7 plan](../../beebox/docs/plans/typescript-7.md). The tools that
+[TypeScript 7 plan](../../../beebox/docs/implemented-plans/typescript-7.md). The tools that
 stay on the 6.0 API are in
-[the follow-up](../watch/2026-10-17-move-typescript-eslint-to-typescript-7.md).
+[the follow-up](../../watch/2026-10-17-move-typescript-eslint-to-typescript-7.md).

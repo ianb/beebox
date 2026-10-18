@@ -1,7 +1,7 @@
 # TypeScript imports rule
 
 `typescriptImportsRule` keeps the TypeScript compiler behind
-`src/lib/typescript/` (`docs/plans/typescript-7.md`, Track C): no other module
+`src/lib/typescript/` (`docs/implemented-plans/typescript-7.md`, Track C): no other module
 or `.test.ts` imports `typescript`, `@typescript/native`, or a subpath of
 either, type-only imports included, in the package named `beebox`. Doctests are
 exempt. The fixture is a real package scanned from disk, so import resolution is the scanner's.
@@ -47,8 +47,8 @@ typescript-imports beebox/src/dev/old.ts
 findings.map((f) => f.message)
 =>
 [
-  "imports @typescript/native/unstable/ast; use beebox/src/lib/typescript/ (the one TypeScript 7 boundary; see docs/plans/typescript-7.md)",
-  "imports typescript; use beebox/src/lib/typescript/ (the one TypeScript 7 boundary; see docs/plans/typescript-7.md)",
+  "imports @typescript/native/unstable/ast; use beebox/src/lib/typescript/ (the one TypeScript 7 boundary; see docs/implemented-plans/typescript-7.md)",
+  "imports typescript; use beebox/src/lib/typescript/ (the one TypeScript 7 boundary; see docs/implemented-plans/typescript-7.md)",
 ]
 ```
 

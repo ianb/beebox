@@ -1,6 +1,6 @@
 /**
  * The TypeScript 7 `tsc` binary, for callers that emit JavaScript: the 7.0 API
- * has no transpile call (`docs/plans/typescript-7.md`, Track C).
+ * has no transpile call (`docs/implemented-plans/typescript-7.md`, Track C).
  */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
