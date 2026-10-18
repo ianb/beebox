@@ -161,7 +161,9 @@ async function textPasses(value: unknown, text: string): Promise<boolean> {
 function typedPasses(value: unknown, expected: unknown): { pass: boolean; message?: string } {
   try {
     const outcome = checkValue(value, expected);
-    return outcome.pass ? { pass: true } : { pass: false, message: outcome.message };
+    // The first mismatch says why: the counts by kind are the API's gaps.
+    const first = outcome.pass ? "" : (outcome.mismatches ?? "").split("\n").slice(0, 3).join(" | ");
+    return outcome.pass ? { pass: true } : { pass: false, message: `${outcome.message}: ${first}` };
   } catch (e) {
     return { pass: false, message: `threw: ${e instanceof Error ? e.message : String(e)}` };
   }
