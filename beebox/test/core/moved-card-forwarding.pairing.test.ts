@@ -22,6 +22,16 @@ t.test("a card added to trash is not a successor", async (st) => {
   st.equal(pairedSuccessor([D("loans/Mystery.loan.card"), A("_bookkeeping/trash/2026/Mystery.loan.card")], "loans/Mystery.loan.card"), null);
 });
 
+t.test("a trashed card has no successor, even with one same-type add", async (st) => {
+  const source = "loans/Mystery.loan.card";
+  st.equal(pairedSuccessor([D(source), A("_bookkeeping/trash/2026/Mystery.loan.card"), A("loans/Piranesi.loan.card")], source), null,
+    "trash add with the source's name");
+  st.equal(pairedSuccessor([D(source), R(source, "_bookkeeping/trash/2026/Mystery.loan.card"), A("loans/Piranesi.loan.card")], source), null,
+    "rename into trash");
+  st.equal(pairedSuccessor([D(source), A("_bookkeeping/trash/2026/Other.loan.card"), A("loans/Piranesi.loan.card")], source),
+    "loans/Piranesi.loan.card", "trashing a different card does not block pairing");
+});
+
 t.test("two same-type adds are ambiguous unless the attach folder follows one", async (st) => {
   const base = [D("loans/Mystery.loan.card"), A("loans/Piranesi.loan.card"), A("loans/Other.loan.card")];
   st.equal(pairedSuccessor(base, "loans/Mystery.loan.card"), null);

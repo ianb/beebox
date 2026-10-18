@@ -146,10 +146,13 @@ and line counting across frontmatter were checked by running them.
 
 - `src/core/search/extract/markdown-sections.ts` →
   `src/shared/markdown-sections.ts` (`git mv`).
-- `MarkdownSection` gains `line`. The splitter applies `~N` itself (the Nth
-  emitted section with an equal path, N ≥ 2), so the view and the indexer
-  share numbering. `dedupeDocIds` stays as an id-uniqueness guard for a
-  heading whose own text collides with a numbered path.
+- `MarkdownSection` gains `line`. The splitter numbers sections itself with
+  `uniqueSectionPaths`: the Nth emitted section with an equal path gets `~N`
+  (N ≥ 2), skipping any number already taken, so `/Notes`, an automatic
+  `/Notes~2`, and a literal `## Notes~2` heading never share a path (the
+  literal becomes `/Notes~2~2`). This is the only numbering; search's
+  `dedupeDocIds` was removed because ids are now unique by construction.
+  Bodies without such a collision index exactly as before.
 - `sectionLines(source): Map<string, number>`.
 - Search output is unchanged: `SEARCH_SCHEMA_VERSION` stays 5, and the
   existing extract doctest passes with only its import path changed.
@@ -186,8 +189,10 @@ and line counting across frontmatter were checked by running them.
 - `lib/fragment-target.ts` `resolveFragment(root, { fragment, source })` →
   `element | top | pending | missing`:
   - Section path: look it up in `sectionLines(source)`; absent → `missing`.
-    If only blank lines precede it → `top` (covers a title heading that
-    `CardBody` blanks). Else the last owned `h1`–`h6[data-line]` with
+    An owned heading whose `data-line` is exactly line + 1 → that heading.
+    Otherwise, if only blank lines precede the line, the heading is a title
+    that `CardBody` blanked → `top` (once any heading has rendered, or at the
+    deadline). Otherwise the last owned `h1`–`h6[data-line]` with
     `data-line` ≤ line + 1; no owned headings yet → `pending`.
     Repeated headings resolve by distinct lines; headings with markup by
     line, not text; a fenced `# comment` pseudo-section lands on the heading
@@ -197,8 +202,9 @@ and line counting across frontmatter were checked by running them.
   the root, and gives up after 2 s (renderers load lazily behind their own
   Suspense fallback). One attempt per `path#fragment`; `element` →
   `scrollIntoView({ block: "start" })`, `top` → the root's top; `missing` or
-  still `pending` at the deadline → miss + `console.warn`. Returns the miss
-  flag.
+  still `pending` at the deadline → miss + `console.warn`. After a miss, a
+  source change re-resolves; if the section now exists the miss clears
+  without scrolling. Returns the miss flag.
 - `FileView`: wraps the body in the fragment root (a block `div`, `h-full`
   for a workspace PDF; `contents` and no jump in embed mode), calls the hook
   with `source = data.body ?? data.content`, and shows "Couldn't find that
@@ -257,6 +263,9 @@ None.
 | Section renamed or deleted after indexing | `useFragmentJump.test.ts` (miss) | Note + `console.warn` | Clear (browser: screenshot 0005) |
 | Link id names no element | Resolver returns `pending`; deadline → miss | Note after 2 s | Clear |
 | View splitter and indexer disagree | `markdown-sections.test.ts` compares with `extractCardDocs` | One shared module | n/a |
+| A literal `## Notes~2` collides with an automatic `~2` | `markdown-sections.test.ts` (paths, lines, unique ids) | `uniqueSectionPaths` | n/a |
+| A body opening with a blank line then `## Status` | `useFragmentJump.test.ts` | Exact `data-line` match before `top` | n/a |
+| Miss notice stays after an edit adds the section | `useFragmentJump.test.ts` | Re-resolve on source change, no scroll | n/a |
 | `CardBody` blanks the title heading | `useFragmentJump.test.ts` through `MarkdownCardView` | `top` rule + line match | n/a |
 | Fenced `#` line | `useFragmentJump.test.ts` | Nearest heading above | Clear |
 | Embedded card's headings | `useFragmentJump.test.ts` (nested root) | Ownership by nearest root | n/a |

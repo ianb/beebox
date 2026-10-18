@@ -13,7 +13,8 @@
  * re-picking the same section while the tab already holds it does not jump
  * again (accepted; a different fragment, or a fresh mount, does).
  *
- * Returns whether the last attempt missed, for the view's one-line notice.
+ * Returns whether the last attempt missed, for the view's one-line notice. A
+ * later edit that adds the missing section clears it without scrolling.
  */
 
 import { useEffect, useState } from "react";
@@ -39,8 +40,16 @@ export function useFragmentJump({ root, fragment, source, path }: {
       if (attempted !== null) setAttempted(null);
       return;
     }
-    if (fragment === undefined || attempted?.key === key) return;
-    if (root === null || source === null) return;
+    if (fragment === undefined || root === null || source === null) return;
+    if (attempted?.key === key) {
+      // Already tried. After a miss, an edit that adds the section clears the
+      // notice; it does not scroll the reader.
+      if (attempted.missed) {
+        const now = resolveFragment(root, { fragment, source, atDeadline: true });
+        if (now.kind === "element" || now.kind === "top") setAttempted({ key, missed: false });
+      }
+      return;
+    }
     const watch: { observer: MutationObserver | null; timer: number | undefined } = { observer: null, timer: undefined };
     const stop = (): void => {
       watch.observer?.disconnect();
@@ -54,7 +63,7 @@ export function useFragmentJump({ root, fragment, source, path }: {
       setAttempted({ key, missed: result.kind === "missing" || result.kind === "pending" });
     };
     const attempt = (final: boolean): boolean => {
-      const result = resolveFragment(root, { fragment, source });
+      const result = resolveFragment(root, { fragment, source, atDeadline: final });
       if (result.kind === "pending" && !final) return false;
       finish(result);
       return true;

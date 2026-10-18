@@ -151,28 +151,12 @@ export function extractCardDocs(input: ExtractInput): SearchDoc[] {
     fragment: s.fragment,
     content: normalizeContent(s.text),
   }));
-  return dedupeDocIds([cardDoc, ...sectionDocs]);
+  // Section paths are unique (`uniqueSectionPaths`) and never "", so ids are too.
+  return [cardDoc, ...sectionDocs];
 }
 
 function docId(path: string, fragment: string): string {
   return `${path}#${fragment}`;
-}
-
-/**
- * Ids must be unique within the index. The splitter already numbers repeated
- * section paths (`~N`, `shared/markdown-sections.ts`), which is the numbering
- * the web view resolves; this guard only catches a heading whose own text
- * collides with a numbered path (a literal `## Notes~2` after two `## Notes`).
- */
-function dedupeDocIds(docs: SearchDoc[]): SearchDoc[] {
-  const seen = new Map<string, number>();
-  return docs.map((d) => {
-    const n = seen.get(d.id) ?? 0;
-    seen.set(d.id, n + 1);
-    if (n === 0) return d;
-    const fragment = `${d.fragment}~${String(n + 1)}`;
-    return { ...d, fragment, id: docId(d.path, fragment) };
-  });
 }
 
 /**
@@ -198,7 +182,7 @@ export function extractMarkdownFileDocs(input: {
     return [{ ...base, id: docId(path, ""), fragment: "", content: normalizeContent(content) }];
   }
   const { preamble, sections } = splitMarkdownSections(content);
-  return dedupeDocIds([
+  return [
     { ...base, id: docId(path, ""), fragment: "", content: normalizeContent(preamble) },
     ...sections.map((s): SearchDoc => ({
       ...base,
@@ -206,7 +190,7 @@ export function extractMarkdownFileDocs(input: {
       fragment: s.fragment,
       content: normalizeContent(s.text),
     })),
-  ]);
+  ];
 }
 
 /** The markdown text a card's content documents are built from. */

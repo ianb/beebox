@@ -88,6 +88,7 @@ export function pairedSuccessor(records: NameStatusRecord[], source: string): st
   const type = cardTypeFromName(source);
   if (type === undefined) return null;
   if (!records.some(({ status, paths }) => status === "D" && paths[0] === source)) return null;
+  if (trashedInCommit(records, source)) return null;
 
   const added = records
     .filter(({ status }) => status === "A")
@@ -107,6 +108,18 @@ export function pairedSuccessor(records: NameStatusRecord[], source: string): st
     return arrivals.some(path => path?.startsWith(attach) === true);
   });
   return withAttach.length === 1 ? withAttach[0] ?? null : null;
+}
+
+/**
+ * Whether this commit moved `source` into trash: an add under
+ * `_bookkeeping/trash/` with the source's file name, or a rename from it into
+ * trash. A trashed card has no successor, whatever else the commit added.
+ */
+function trashedInCommit(records: NameStatusRecord[], source: string): boolean {
+  const name = source.slice(source.lastIndexOf("/") + 1);
+  return records.some(({ status, paths: [first, second] }) =>
+    (status === "A" && first !== undefined && isTrashedCard(first) && first.slice(first.lastIndexOf("/") + 1) === name)
+    || (status === "R" && first === source && second !== undefined && isTrashedCard(second)));
 }
 
 function uniqueRenameDestination(records: RenameRecord[], source: string): string | null {

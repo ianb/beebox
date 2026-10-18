@@ -5,7 +5,7 @@
 import { test } from "tap";
 import { loadCardFromText, type LoadCardContext } from "../../src/core/card-io.js";
 import { extractCardDocs } from "../../src/core/search/extract/core.js";
-import { sectionLines, splitMarkdownSections } from "../../src/shared/markdown-sections.js";
+import { sectionLines, splitMarkdownSections, uniqueSectionPaths } from "../../src/shared/markdown-sections.js";
 import { createCardSchemaMap } from "../../src/schemas.js";
 
 const filler = "Lorem ipsum dolor sit amet. ".repeat(30);
@@ -50,4 +50,18 @@ test("sectionLines maps each path to its 0-based heading line", (t) => {
   t.equal(lines.get("/install deps/Where **things** stand [now](x.card)"), 17);
   t.equal(lines.get("/install deps/Notes~2"), 21);
   t.end();
+});
+
+test("a literal ~N heading never shares a path with a numbered repeat", async (t) => {
+  t.same(uniqueSectionPaths(["/Notes", "/Notes", "/Notes~2"]), ["/Notes", "/Notes~2", "/Notes~2~2"]);
+  t.same(uniqueSectionPaths(["/Notes~2", "/Notes", "/Notes"]), ["/Notes~2", "/Notes", "/Notes~3"]);
+  const source = ["## Notes", "a " + filler, "## Notes", "b " + filler, "## Notes~2", "c " + filler].join("\n");
+  const lines = sectionLines(source);
+  t.same([...lines], [["/Notes", 0], ["/Notes~2", 2], ["/Notes~2~2", 4]], "each path names its own heading");
+  const ctx: LoadCardContext = { cardSchemas: await createCardSchemaMap() };
+  const path = "_content/Collide.doc.card";
+  const card = await loadCardFromText({ content: `---\ntitle: Collide\n---\n${source}`, source: path, ctx });
+  const docs = extractCardDocs({ path, card, contentHash: "h" });
+  t.same(docs.map((d) => d.fragment).filter((f) => f !== ""), [...lines.keys()], "search indexes the same paths");
+  t.equal(new Set(docs.map((d) => d.id)).size, docs.length, "ids are unique");
 });

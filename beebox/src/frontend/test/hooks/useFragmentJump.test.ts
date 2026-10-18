@@ -50,10 +50,10 @@ function Controller({ initial }: { initial: Props }): ReactNode {
   return h(Host, props);
 }
 
-async function render(fragment: string | null): Promise<{ view: Mounted; rerender: (next: Props) => Promise<void> }> {
+async function render(fragment: string | null, source: string): Promise<{ view: Mounted; rerender: (next: Props) => Promise<void> }> {
   // No gc timer: an idle one keeps the test process alive.
   const queryClient = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
-  const controller = h(Controller, { initial: { fragment, source: body } });
+  const controller = h(Controller, { initial: { fragment, source } });
   const routeTree = createRootRoute({ component: () => h(BoxSlugProvider, { boxSlug: "test1", children: controller }) });
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
@@ -68,7 +68,7 @@ const isRoot = (el: Element | undefined) => el?.hasAttribute(FRAGMENT_ROOT_ATTRI
 
 test("the repeated title heading and the title section", async (t) => {
   scrolled = [];
-  const { view, rerender } = await render("/Weekly plan/Weekly plan");
+  const { view, rerender } = await render("/Weekly plan/Weekly plan", body);
   t.equal(view.container.querySelectorAll("h1").length, 0, "CardBody blanked the title heading");
   t.equal(headingText(scrolled.at(-1)), "Weekly plan", "the repeat");
   t.equal(scrolled.at(-1)?.tagName, "H2");
@@ -79,7 +79,7 @@ test("the repeated title heading and the title section", async (t) => {
 
 test("repeats, markup, and a fenced # line", async (t) => {
   scrolled = [];
-  const { view, rerender } = await render("/install deps/Notes");
+  const { view, rerender } = await render("/install deps/Notes", body);
   t.equal(scrolled.at(-1)?.getAttribute("data-line"), "17", "the second Notes, by line");
   await rerender(at("/install deps/Where **things** stand [now](x.card)"));
   t.equal(headingText(scrolled.at(-1)), "Where things stand now");
@@ -92,7 +92,7 @@ test("repeats, markup, and a fenced # line", async (t) => {
 
 test("a missing section shows the miss; a live edit does not re-jump", async (t) => {
   scrolled = [];
-  const { view, rerender } = await render("/Weekly plan/Gone");
+  const { view, rerender } = await render("/Weekly plan/Gone", body);
   t.equal(scrolled.length, 0);
   t.equal(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
   await rerender(at("/Weekly plan/Notes"));
@@ -110,7 +110,26 @@ test("an embedded root's headings are not the host's", (t) => {
   const root = document.createElement("div");
   root.setAttribute(FRAGMENT_ROOT_ATTRIBUTE, "");
   root.innerHTML = `<div ${FRAGMENT_ROOT_ATTRIBUTE}><h2 id="a" data-line="3">embedded</h2></div><p>x</p>`;
-  t.same(resolveFragment(root, { fragment: "a", source: "x" }), { kind: "pending" });
-  t.same(resolveFragment(root, { fragment: "/B", source: "text\n\n## B\nbody\n" }), { kind: "pending" }, "no owned headings yet");
+  t.same(resolveFragment(root, { fragment: "a", source: "x", atDeadline: false }), { kind: "pending" });
+  t.same(resolveFragment(root, { fragment: "/B", source: "text\n\n## B\nbody\n", atDeadline: false }), { kind: "pending" }, "no owned headings yet");
   t.end();
+});
+
+test("a body that opens with a blank line jumps to its first heading, not the top", async (t) => {
+  scrolled = [];
+  const source = ["", "## Status", "", filler, "", "## Next", "", filler].join("\n");
+  const { view } = await render("/Status", source);
+  t.equal(scrolled.at(-1)?.tagName, "H2", "the heading, not the root above it");
+  t.equal(headingText(scrolled.at(-1)), "Status");
+  await view.unmount();
+});
+
+test("an edit that adds the missing section clears the notice without scrolling", async (t) => {
+  scrolled = [];
+  const { view, rerender } = await render("/install deps/Later", body);
+  t.equal(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
+  await rerender({ fragment: "/install deps/Later", source: `${body}\n## Later\n\n${filler}\n` });
+  t.equal(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "false", "notice cleared");
+  t.equal(scrolled.length, 0, "the reader is not moved");
+  await view.unmount();
 });
