@@ -801,6 +801,12 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     produced no "typing needed" file (prepare keeps a typed check that
     fails typecheck as text) and no route-test file, so those classes are
     not calibrated yet.
+  - End to end, without `--trial`: Haiku on four more files; all four
+    were copied back and verified in the checkout (28 of 41 verified).
+  - Two Codex rounds on `dispatch`: 13 findings, 11 fixed. Accepted and
+    noted in the code: a worker's background process outliving the
+    timeout; `--trial` running the slot's node_modules; two drivers taking
+    over one stale lock at the same moment.
   - Open: `max-lines` (57 converted files in the full run). A worker
     cannot fix it without a second test file, which the one-doctest,
     one-test-file state does not allow. Boxholder decision.
