@@ -16,10 +16,10 @@ struct UploadsTab: View {
 
     var body: some View {
         TabPage(explanation: """
-            Bee Box watches these folders and sends each new file to a box, where it is filed like a scan. \
+            Bee Box Desktop watches these folders and sends each new file to a box, where it is filed like a scan. \
             Add the folder your scanner saves to, or a Photos album: new photos in the album are copied to a folder \
             in ~/Pictures/Bee Box and sent from there. Each file is sent once, and stays in the folder unless you choose \
-            otherwise. Bee Box must be running to watch (see General → Open at Login).
+            otherwise. Bee Box Desktop must be running to watch (see General → Open at Login).
             """) {
             if let failure = folders.loadFailure {
                 Text("Watched folder settings could not be read, so nothing will be saved: \(failure)").foregroundStyle(.red)

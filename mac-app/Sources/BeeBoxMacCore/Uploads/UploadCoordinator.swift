@@ -48,7 +48,7 @@ public enum FolderProblem: Error, Equatable, Sendable {
         case .scanTokenUnavailable(let detail): "Could not set up the scanner credential: \(detail)"
         case .credentialNotSaved: "Could not save the scanner credential in the Keychain."
         case .oldUploaderWatching: "The command-line uploader already watches this folder. Remove it with `bin/scan-uploader schedule uninstall` first."
-        case .photos(.accessDenied): "Bee Box has no access to Photos. Allow it in System Settings → Privacy & Security → Photos."
+        case .photos(.accessDenied): "Bee Box Desktop has no access to Photos. Allow it in System Settings → Privacy & Security → Photos."
         case .photos(.albumMissing): "The Photos album is gone."
         case .photos(.failed(let detail)): "Photos export failed: \(detail)"
         }
