@@ -12,7 +12,7 @@ resolution: implemented
 > **Closed 2026-10-17** (`48dcb3f39`, review fixes `1cb1d347e`): a section
 > result opens the card at its heading, from Cmd-K and the search page, and a
 > `Card.card#heading` link does the same. Plan:
-> `beebox/docs/plans/search-section-destination.md`. gdoc hits stay card-level.
+> `beebox/docs/implemented-plans/search-section-destination.md`. gdoc hits stay card-level.
 
 Journey C searched for its saved friends page and selected the result labelled
 `Section: /Reconnecting with friends/Where things stand right now`. The document
