@@ -3,6 +3,7 @@
 // Setup runs once, at module level.
 
 import { test } from "tap";
+import "agent-doctest/tap";
 
 const base = 10;
 

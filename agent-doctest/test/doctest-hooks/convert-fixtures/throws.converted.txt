@@ -1,6 +1,7 @@
 // # Throws
 
 import { test } from "tap";
+import "agent-doctest/tap";
 
 function fail(message: string): never {
   throw new TypeError(message);

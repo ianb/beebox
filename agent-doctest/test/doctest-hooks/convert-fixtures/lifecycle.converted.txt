@@ -1,6 +1,7 @@
 // # Lifecycle
 
 import tap, { test } from "tap";
+import "agent-doctest/tap";
 
 tap.teardown(async () => {
   try {

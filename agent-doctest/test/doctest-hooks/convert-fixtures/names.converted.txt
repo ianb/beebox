@@ -3,6 +3,7 @@
 // Setup that declares `t` and `after`: the converted file binds tap's under other names.
 
 import tapRoot, { test } from "tap";
+import "agent-doctest/tap";
 import type { ParsedPath } from "node:path";
 
 const t = { label: "mine" };

@@ -366,6 +366,9 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   if (!setupDeclares("eventually") && uses(allCode, "eventually")) helpers.push("eventually");
   if (testLines.some((l) => l.trim().endsWith(`= ${printedName}();`))) helpers.push(tapImport("printed", printedName));
   const imports = [`import ${afters.length > 0 ? `${rootName}, ` : ""}{ ${tapImport("test", testName)} } from "tap";`];
+  // The tap preload adds t.checkText at run time; this import gives the
+  // type checker its declaration.
+  imports.push('import "agent-doctest/tap";');
   if (helpers.length > 0) imports.push(`import { ${helpers.join(", ")} } from "agent-doctest/check";`);
   imports.push(...setupImports, ...typeImports);
 

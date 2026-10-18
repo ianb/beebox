@@ -4,6 +4,7 @@
 // converter's own names must not collide with them.
 
 import tap3, { test } from "tap";
+import "agent-doctest/tap";
 import { printed as printed2 } from "agent-doctest/check";
 import type { Stats } from "node:fs";
 

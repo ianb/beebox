@@ -1,6 +1,7 @@
 // # Print and eventually
 
 import { test } from "tap";
+import "agent-doctest/tap";
 import { eventually, printed } from "agent-doctest/check";
 
 void test("line 3", async (t) => {

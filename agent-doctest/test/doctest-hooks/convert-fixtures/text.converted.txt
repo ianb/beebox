@@ -1,6 +1,7 @@
 // # Text
 
 import { test } from "tap";
+import "agent-doctest/tap";
 
 // Multi-line expected text with backticks, `${`, and backslashes:
 void test("Multi-line expected text with backticks, ${, and backslashes:", async (t) => {
