@@ -94,7 +94,15 @@ pnpm build                     # only needed for the copy-the-bundle path
 needs no build. Tests use a fake HTTP server (`test/cli/fake-scan-server.ts`) and
 package-local temp dirs (`test/tmp/`) — never the real network, never `/tmp`.
 
-Doctests here use bare fences (` ``` `, ` ```continue `, ` ```cleanup `), not
+> **Testing cutover (since 2026-10-18).** Write new tests as `.test.ts` files that
+> use `t.check` ([reference](../beebox/docs/testing/check.md)). Do not create `.doctest.md` files;
+> pre-commit rejects them. Existing doctests are being converted (plan
+> [retire-doctest](../beebox/docs/plans/retire-doctest.md)). If your change affects an existing doctest, edit
+> it in place; the conversion picks up your edit. If git reports a
+> modify/delete conflict on a doctest that was converted, convert your
+> version with `node ../agent-doctest/bin/doctest-to-ts.mjs <file>`.
+
+Existing doctests here use bare fences (` ``` `, ` ```continue `, ` ```cleanup `), not
 beebox's `ts`-tagged convention. Read
 [`../agent-doctest/docs/syntax.md`](../agent-doctest/docs/syntax.md) first —
 in particular that a `cleanup` block tears down the block it follows, so a

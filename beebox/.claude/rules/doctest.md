@@ -3,6 +3,14 @@ paths:
   - "**/*.doctest.md"
 ---
 
+> **Testing cutover (since 2026-10-18).** Write new tests as `.test.ts` files that
+> use `t.check` ([reference](../../docs/testing/check.md)). Do not create `.doctest.md` files;
+> pre-commit rejects them. Existing doctests are being converted (plan
+> [retire-doctest](../../docs/plans/retire-doctest.md)). If your change affects an existing doctest, edit
+> it in place; the conversion picks up your edit. If git reports a
+> modify/delete conflict on a doctest that was converted, convert your
+> version with `node ../agent-doctest/bin/doctest-to-ts.mjs <file>`.
+
 A doctest is documentation whose code runs. Full reference:
 `agent-doctest/docs/syntax.md` (monorepo-relative); the `doctest` skill covers
 running and triage. The rules that matter most:

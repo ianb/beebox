@@ -9,7 +9,7 @@ testing as a whole.
 Tests serve three purposes in this project, in order of importance:
 
 1. **Forcing decomposition** — Making something testable creates clean boundaries. Writing a test first helps identify a function's purpose and isolate it from its surroundings.
-2. **Documentation** — Tests as literate documents that tell a story about how things work. Doctests are the primary format: readable markdown that happens to be executable.
+2. **Documentation** — Tests that tell a story about how things work: a comment says what each test shows, and each check states the whole value.
 3. **Regression anchors** — Specific bug prevention at the moment of a fix.
 
 What tests are NOT for: validating types (the type system does that), achieving coverage percentages, or comprehensive verification for its own sake. Types with strict settings already act as smoke tests for structural correctness.
@@ -18,7 +18,7 @@ What tests are NOT for: validating types (the type system does that), achieving 
 - **No mock libraries.** Injectability should be built into code. Prefer dependency injection over mocking frameworks.
 - **No server spin-up for testing.** Route tests use Fastify's `inject()`, not a running server. State-in → render → check output.
 - **TAP over fancy test runners.** TAP's text protocol is agent-readable and zero-dependency.
-- **Doctests are the default.** If it can be explained with examples in markdown, it should be a doctest. Traditional `.test.ts` files are for things that genuinely need complex setup or meta-testing.
+- **`.test.ts` with `t.check` is the default** (since 2026-10-18; [reference](testing/check.md)). Do not create `.doctest.md` files; existing doctests are being converted ([retire-doctest](plans/retire-doctest.md)) and the rest of this guide still describes them.
 
 **Iteration runs the selected tests, not the suite.** `pnpm test:changed`
 selects and runs the tests the diff implicates; `pnpm typecheck` and
