@@ -515,7 +515,9 @@ Decided with the boxholder on 2026-10-18, after the generative review:
 - **Result (2026-10-18, converter at d2da6ab1f, scratch worktree).** All
   1,094 doctests (four hand-converted ones excluded) convert.
   - **Runtime:** 1,091 pass with tap's assertion count equal to the
-    manifest's. The other three: two `test/manual/` files need real
+    doctest's (1,089 match the manifest-derived count exactly; two,
+    `natural-sort` and `history.path-forms`, differ from that formula but
+    equal their doctests' own counts). The other three: two `test/manual/` files need real
     services and fail as doctests too; `codex-chat.failure-reporting`
     checks that a stack names its own `.doctest` file, so a worker must
     change that expected text (an exception to "checks are not edited").
@@ -619,9 +621,11 @@ Decided with the boxholder on 2026-10-18, after the generative review:
 - **Gate status (2026-10-18, evidence in `bin/doctest-convert/TRIALS.md`).**
   - Differential: met. 0 looser cases over 31,470 mutated values.
   - Haiku completes T1, T3, and T5 with no help: met.
-  - Luna completes T1, T3, and T5: T1 and T5 met; T3 failed once with the
-    plain brief because Luna did not run the test, and passed in two reruns
-    and with the verify sentence. Luna does not run tests unless the brief
+  - Luna completes T1, T3, and T5: T1 met. T5 nearly: in round 4 it left
+    one `max-lines` finding (the file needs a split, a judgment the brief
+    did not cover). T3 failed once with the plain brief because Luna did
+    not run the test, and passed in two reruns and with the verify
+    sentence. Luna does not run tests unless the brief
     says to. Every worker brief names its verify command, so phase 2 is not
     affected; the boxholder decides whether that counts as "no help".
   - No field-only checks where the whole value was available: one case,
@@ -629,6 +633,11 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     now shows `capture()` for it. Luna's T6 checked each directive exactly
     rather than the whole policy, which the brief invited; T6b fixed the
     brief.
+  - Before the gate closes (generative review, codex gpt-6-sol): one fresh
+    T1/T3/T5 run of each model with the exact phase 2 worker brief and
+    verify commands; and the key-order count (the differential's new
+    "reverse key order" mutation), since unwrapping `JSON.stringify(x)`
+    stops checking key order.
   - Assignments: every task to either model, with the verify command in
     the brief. T6 (strengthening) uses the whole-value brief: with it, Luna
     caught 4/4 mutants in both runs (T6b).
@@ -711,7 +720,10 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     inside checks (a callback parameter `t` shadowing the test's, `.sort()`,
     an `undefined` argument, a generic `Error` in a fake).
   - **Not allowed:** editing an expected value or a `// doctest:` marker.
-    `verify` enforces this; runtime fidelity covers the checked expression.
+    `verify` enforces this. Runtime fidelity alone cannot show that an
+    edited checked expression still observes the same thing, so `verify`
+    lists every check whose expression changed, and the batch review reads
+    those (Luna reported "no check changed" in T5 when three had).
   - **Brief:** edit only the batch; run the given verify command, one per
     test root's lint and typecheck program; no git, pnpm, rm, kill or pkill,
     and no subagents.
@@ -722,6 +734,10 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   - lint-only;
   - typing needed;
   - route tests.
+- **Pilot across roots** (generative review): before calibrating by model,
+  run `prepare`, `verify`, and one worker task on five to eight files that
+  span test roots (frontend, `bin/test`, workstreams-app, scan-uploader,
+  browse) and shapes (`print`, `continue`, `teardown` together).
 - **First implementation chunk:** `prepare` and `verify`, with static and
   runtime fidelity, run over `beebox/test/lib/`.
 
@@ -794,6 +810,11 @@ Decided with the boxholder on 2026-10-18, after the generative review:
       together.
   - **Landing:** phase 3 lands per directory. It can pause at any directory,
     because phase 2 already retired the format.
+- **Measure gains, not only preservation** (generative review): one
+  held-out file per common weak form (field read, `.length`, equality
+  boolean, printed structure), each with hidden mutants; phase 3 reports
+  mutants newly caught. 9,338 typed checks is a conversion count, not a
+  strength result.
 - **First implementation chunk:** the phase 3 worker brief and its review
   rule, on the lossy checks in `beebox/test/lib/`.
 
