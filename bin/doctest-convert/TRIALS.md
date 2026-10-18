@@ -214,3 +214,18 @@ recorded in the plan:
 **Adversarial review of the upgrade** (same reviewer; 5 findings): fixed
 `anything()` matching `undefined` and two reorder-hint bugs; documented
 `uuid()`/`.int()` widening; key order is the boxholder decision above.
+
+## 5. Fresh gate run
+
+At a6119b0db, every brief with the verify sentence (T5's brief also names
+the verify commands), Haiku and Luna:
+
+| Task | Haiku | Luna |
+|---|---|---|
+| T1 | pass, 4/4 | pass, 3/4 |
+| T3 | pass, 4/4 | pass, 4/4 |
+| T5 | clean, no expected value or marker changed | clean, no expected value or marker changed |
+
+Haiku ran `pnpm install` in T1 (its second time across the trials). A first
+attempt at this T5 run was discarded: the key-order differential had left
+probe-mode files in the scratch conversion that the T5 setup copies from.

@@ -633,11 +633,18 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     now shows `capture()` for it. Luna's T6 checked each directive exactly
     rather than the whole policy, which the brief invited; T6b fixed the
     brief.
-  - Before the gate closes (generative review, codex gpt-6-sol): one fresh
-    T1/T3/T5 run of each model with the exact phase 2 worker brief and
-    verify commands; and the key-order count (the differential's new
-    "reverse key order" mutation), since unwrapping `JSON.stringify(x)`
-    stops checking key order.
+  - Fresh gate run (asked for by the generative review), at a6119b0db, every
+    brief naming its verify step: Haiku and Luna both complete T1, T3, and
+    T5. T5 came back lint- and type-clean from both, with every expected
+    value and marker kept and no edits outside the batch. Mutants: Haiku
+    4/4 and 4/4; Luna 3/4 on T1 (the slash-less key case again) and 4/4 on
+    T3. Haiku ran `pnpm install` in an installed slot again (T1); the
+    worker brief forbids it, and the driver should reject a batch whose
+    transcript shows it.
+  - Key order: 1,645 typed checks no longer assert the order the code
+    built an object in (1,608 of them unwrapped `JSON.stringify`); no
+    other loosening over 33,681 mutated values. Boxholder decision: accept
+    (the recommendation: order was incidental), or keep those as text.
   - Assignments: every task to either model, with the verify command in
     the brief. T6 (strengthening) uses the whole-value brief: with it, Luna
     caught 4/4 mutants in both runs (T6b).
