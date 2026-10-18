@@ -55,6 +55,10 @@ export interface ResolvedWorktree {
    *  another package. */
   viteBin: string;
   boxes: string[];
+  /** Entries of `boxes` that are test boxes (`TEST_BOXES=`): each gets its own
+   *  secret store, apart from the boxholder's real one. Only `main` reads the
+   *  line; a worktree's whole process is already on an isolated store. */
+  testBoxes: string[];
 }
 
 /**

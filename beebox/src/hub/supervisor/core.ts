@@ -409,6 +409,7 @@ export class Supervisor implements EndpointProvider {
     try {
       const { child, port, boxRoot } = await spawnBoxChild({
         root: box.entry.path, slug: box.slug, hubSecret: this.hubSecret, spawn: this.spawnChild,
+        ...(box.entry.secretsFile !== undefined && { secretsFile: box.entry.secretsFile }),
       });
       const spawnMs = Math.round(performance.now() - launchStart);
       // Swallow the execa promise rejection here (not just via .on("exit")) --
