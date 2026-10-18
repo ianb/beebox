@@ -20,6 +20,9 @@
  *   node --import tsx bin/doctest-convert.ts revert <dir|file>...
  *       Undo the conversion of each selected file that is not verified (its
  *       doctest returns), so only verified files are left to commit.
+ *   node --import tsx bin/doctest-convert.ts repoint
+ *       Point references to every converted doctest at its test file
+ *       (prepare does this for the files it converts).
  *   node --import tsx bin/doctest-convert.ts progress
  *       Rewrite bin/doctest-convert/PROGRESS.md.
  *
@@ -30,7 +33,7 @@ import { relative, resolve } from "node:path";
 import { dispatch, initSlots, type Model } from "./doctest-convert/dispatch.ts";
 import { stateLockPath, withLock } from "./doctest-convert/locks.ts";
 import { DriverError, ModelArgError, NothingConvertedError, PrepareArgsError, UnknownCommandError, VerifyArgsError } from "./doctest-convert/errors.ts";
-import { prepare } from "./doctest-convert/prepare.ts";
+import { prepare, repoint } from "./doctest-convert/prepare.ts";
 import { revert } from "./doctest-convert/revert.ts";
 import { loadAll, writeProgress } from "./doctest-convert/state.ts";
 import { REPO } from "./doctest-convert/tools.ts";
@@ -100,6 +103,10 @@ function main(argv: readonly string[]): boolean {
         writeProgress(loadAll());
         return true;
       });
+    }
+    case "repoint": {
+      repoint([...loadAll().values()].flatMap((s) => Object.keys(s.files)), (s) => console.log(s));
+      return true;
     }
     case "progress": {
       writeProgress(loadAll());

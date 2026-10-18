@@ -1224,7 +1224,7 @@ See §1.3 (full request/response/errors).
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/push-token`, `PushTokenBody` |
   | box device store | `src/core/mobile/pairing.ts` — `registerDevicePush`, `pruneDevicePush`, `listMobileDevices` |
 - **Fixtures:** `test/mobile-contract/fixtures/push-token/`, run through `PushTokenBody` by
-  `src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.doctest.md`, posted at the route by
+  `src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.test.ts`, posted at the route by
   `test/webapp/routes/pairing.push-token.doctest.md`, and matched against the request iOS builds by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the

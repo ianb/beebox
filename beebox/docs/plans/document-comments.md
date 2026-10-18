@@ -310,7 +310,7 @@ into the doomed tree."*
 containment, the two namespaces, YAML read/write behind a Zod schema, in-process
 per-file locking, atomic replace) and `bin/comments` (`show` / `list` /
 `list --workstream` / `clear`), covered by
-`beebox/test/dev/comments-store.doctest.md` (moved to `bin/test/lib/comments-store.doctest.md`). No UI, no HTTP.
+`beebox/test/dev/comments-store.doctest.md` (moved to `bin/test/lib/comments-store.test.ts`). No UI, no HTTP.
 
 ### Track 2 — The document viewer
 
@@ -423,7 +423,7 @@ separate design problems in the earlier draft.
 highlighting via the CSS Custom Highlight API so nothing fights React's
 ownership of the rendered markdown. Comments whose fragment does not resolve are
 listed with their quoted text and counted as "not anchored to a span" — never
-dropped. Covered by `workstreams-app/test/selection-anchor.doctest.md` (moved to `workstreams-app/test/frontend/lib/selection-anchor.doctest.md`).
+dropped. Covered by `workstreams-app/test/selection-anchor.doctest.md` (moved to `workstreams-app/test/frontend/lib/selection-anchor.test.ts`).
 
 ### Track 4 — Spoken comments
 
@@ -520,7 +520,7 @@ store write, which the split makes unnecessary. See the gap note below.
 (input schema, byte cap, three failure classes), `transcribe-openai.ts` (the
 call and its fake), the `comments.transcribe` mutation, and `lib/recorder.ts`
 with the mic control that states its own availability. Covered by
-`workstreams-app/test/transcribe.doctest.md` (moved to `workstreams-app/test/server/main/transcribe-openai.doctest.md`).
+`workstreams-app/test/transcribe.doctest.md` (moved to `workstreams-app/test/server/main/transcribe-openai.test.ts`).
 
 **One deviation from the plan, deliberate.** This does NOT call
 `transcribeAudioHq`, and so does not need the `apiKey` field the plan specified.
@@ -648,7 +648,7 @@ an open question because it adds a hook the boxholder may not want.
 `bin/lib/worktree-create.sh` (best-effort, so a failed mount never blocks a
 session), and the `.gitignore` entry `/comments` — no trailing slash, the
 symlink lesson recorded at `workstream-exhibits.md:250`. Covered by
-`beebox/test/dev/comments-mount.doctest.md` (moved to `bin/test/comments-mount.doctest.md`). The `AGENTS.md` sentence and
+`beebox/test/dev/comments-mount.doctest.md` (moved to `bin/test/comments-mount.test.ts`). The `AGENTS.md` sentence and
 the reference doc are still Track 5 layer 3.
 
 ## Could this be simpler?
@@ -898,7 +898,7 @@ surfaces go in `workstreams-app/test/` beside the existing suites
 infrastructure use the repository's primary doctest format… Existing
 `bin/*.test.ts` files predate this rule and are not precedent."*
 
-- `beebox/test/dev/comments-store.doctest.md` (moved to `bin/test/lib/comments-store.doctest.md`) — **written; 12 examples
+- `beebox/test/dev/comments-store.doctest.md` (moved to `bin/test/lib/comments-store.test.ts`) — **written; 12 examples
   passing.** Root derivation and override, marker refusal, both namespaces,
   every path-escape shape, concurrent appends, malformed-file reporting, refusal
   to append over an unreadable file, listing, and clearing.

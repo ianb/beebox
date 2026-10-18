@@ -250,7 +250,7 @@ browser; the `kind` union members.
 union, containment re-checked after realpath, the text-size and binary
 refusals), wired through `DocumentsService.readDocument` and the
 `documents.read` tRPC query. Covered by
-`workstreams-app/test/document-read.doctest.md` (moved to `workstreams-app/test/server/document-read.doctest.md`) and driven over HTTP against a
+`workstreams-app/test/document-read.doctest.md` (moved to `workstreams-app/test/server/document-read.test.ts`) and driven over HTTP against a
 standalone app.
 
 ### Track 2 — Renderers
@@ -332,7 +332,7 @@ rather than as "changed nothing". `documents.read` carries `changedIn` and
 `changesUnavailable`; `documents.changedFiles` answers the other direction and
 distinguishes a quiet workstream from one that does not exist. The viewer shows
 "changed in …" with each name linking to that workstream's version of the same
-address. Covered by `workstreams-app/test/workstream-changes.doctest.md` (moved to `workstreams-app/test/server/workstream-changes.doctest.md`).
+address. Covered by `workstreams-app/test/workstream-changes.doctest.md` (moved to `workstreams-app/test/server/workstream-changes.test.ts`).
 
 ### Track 3 — Finding things
 
@@ -399,7 +399,7 @@ reach a session to focus or resume). All three views land together: aggregate,
 `?workstream=` filtered, and the distribution. A branch is asked only for
 `main..HEAD` — asking a worktree for "everything recent" returns main's month
 again under the workstream's name, which made every workstream look identically
-busy. Covered by `workstreams-app/test/recency.doctest.md` (moved to `workstreams-app/test/server/main/recency.doctest.md`). Quick-open and the
+busy. Covered by `workstreams-app/test/recency.doctest.md` (moved to `workstreams-app/test/server/main/recency.test.ts`). Quick-open and the
 sidebar are still to come.
 
 ### Track 4 — `file:` provenance, and the source overlay

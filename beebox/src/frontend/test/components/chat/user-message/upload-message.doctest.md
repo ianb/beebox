@@ -18,7 +18,7 @@ import { parseUploadWrapper } from "../../../../src/components/chat/user-message
 
 ## An introduced batch: the note is the user's words, the summary is the machine's
 
-This is the real wrapper shape from the estate box's second batch.
+This is the real wrapper shape from a box's second batch.
 
 ```ts
 const model = parseUploadWrapper(`<upload doc="_content/documents/property/shop/tmp-upload/upload-20260801T0035-a56e0530/Batch.upload-batch.card" files="16" bytes="135 MB">

@@ -145,28 +145,84 @@ function lintLoop(w: Work, log: (s: string) => void): void {
   }
 }
 
-/** Path-keyed lists that name a doctest; prepare points them at its test file. */
-const PATH_LISTS = ["bin/retired-product-name-allowlist.json"];
+/**
+ * Path-keyed lists that name a doctest, each with the directory its paths
+ * are relative to; prepare points them at the test files.
+ */
+const PATH_LISTS: readonly { file: string; base: string }[] = [
+  { file: "bin/retired-product-name-allowlist.json", base: "" },
+  // One path per line, relative to beebox/: the files the careful tier runs.
+  { file: "beebox/test/careful.txt", base: "beebox" },
+];
 
 /**
  * Point path-keyed lists at the converted files, and report other tracked
  * files that still name a converted doctest by path.
  */
-function repoint(converted: readonly string[], log: (s: string) => void): void {
+export function repoint(converted: readonly string[], log: (s: string) => void): void {
   if (converted.length === 0) return;
   for (const list of PATH_LISTS) {
-    const path = join(REPO, list);
+    const path = join(REPO, list.file);
     const before = readFileSync(path, "utf8");
     let after = before;
-    for (const d of converted) after = after.replaceAll(JSON.stringify(d), JSON.stringify(testOf(d)));
+    for (const d of converted) {
+      const from = relative(join(REPO, list.base), join(REPO, d));
+      const to = relative(join(REPO, list.base), join(REPO, testOf(d)));
+      // Whole entries only: a JSON string, or a line of its own.
+      after = after
+        .replaceAll(JSON.stringify(from), JSON.stringify(to))
+        .split("\n")
+        .map((line) => (line === from ? to : line))
+        .join("\n");
+    }
     if (after !== before) {
       writeFileSync(path, after);
-      log(`  ${list}: pointed at the converted files`);
+      log(`  ${list.file}: pointed at the converted files`);
     }
   }
+  const lists = new Set(PATH_LISTS.map((l) => l.file));
+  const rewritten = new Set<string>();
   for (const d of converted) {
-    for (const f of mentions(d)) if (!f.startsWith("bin/doctest-convert/") && !PATH_LISTS.includes(f)) log(`  ${f} names ${d}`);
+    for (const { from, to } of pathForms(d)) {
+      for (const f of mentions(from)) {
+        // A test names a path as data (a fixture, an input), not as a reference.
+        if (lists.has(f) || HISTORY.some((h) => f.startsWith(h)) || /\.(?:test\.ts|doctest\.md)$/.test(f)) continue;
+        const path = join(REPO, f);
+        const before = readFileSync(path, "utf8");
+        const after = replacePath(before, { from, to });
+        if (after !== before) {
+          writeFileSync(path, after);
+          rewritten.add(f);
+        }
+      }
+    }
   }
+  for (const f of rewritten) log(`  ${f}: references pointed at the converted files`);
+}
+
+/** Records of what was: their references to a doctest stay as written. */
+const HISTORY = ["bin/doctest-convert/", "issues/closed/", "beebox/docs/implemented-plans/", "dev/devprocess-talk/"];
+
+/**
+ * The ways a file can name a doctest: its repo path, and its path from the
+ * package or frontend directory that holds it. Longest first.
+ */
+function pathForms(doctest: string): { from: string; to: string }[] {
+  const bases = ["", doctest.split("/")[0] ?? "", "beebox/src/frontend"].filter((b) => b === "" || doctest.startsWith(`${b}/`));
+  const forms = [...new Set(bases.map((b) => relative(join(REPO, b), join(REPO, doctest))))];
+  return forms.map((from) => ({ from, to: testOf(from) }));
+}
+
+/** Replace `from` where it is a whole path: not preceded by a path character. */
+export function replacePath(text: string, change: { from: string; to: string }): string {
+  let out = "";
+  let at = 0;
+  for (let i = text.indexOf(change.from); i !== -1; i = text.indexOf(change.from, i + 1)) {
+    if (/[\w./-]/.test(text[i - 1] ?? "")) continue;
+    out += text.slice(at, i) + change.to;
+    at = i + change.from.length;
+  }
+  return out + text.slice(at);
 }
 
 function testsIn(source: string): number {

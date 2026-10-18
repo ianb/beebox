@@ -96,7 +96,7 @@ view has not yet been wired to read it.
 
 ### Tests
 
-`src/frontend/test/machines/composerMachine.composer-machine.doctest.md` covers
+`src/frontend/test/machines/composerMachine.composer-machine.test.ts` covers
 voice, HQ, and keyboard transitions. The React wiring lives in
 `src/frontend/src/components/chat/everywhere/InteractiveChat/voice.ts`, and the
 remaining component-owned keyboard state lives in `InteractiveChat/shell.tsx`

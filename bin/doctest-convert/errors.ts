@@ -22,7 +22,7 @@ export class ToolOutputError extends DriverError {
   }
 }
 
-const USAGE = "usage: doctest-convert prepare <dir> | verify|check|revert <dir|file>... | slots | dispatch <dir|file>... --model luna|haiku | progress";
+const USAGE = "usage: doctest-convert prepare <dir> | verify|check|revert <dir|file>... | repoint | slots | dispatch <dir|file>... --model luna|haiku | progress";
 
 /** The command line is wrong; the CLI prints the usage line after it. */
 export class UsageError extends DriverError {

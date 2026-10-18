@@ -196,3 +196,10 @@ export function mentions(needle: string): string[] {
   const r = run({ cmd: "git", args: ["grep", "-l", "-F", "-e", needle], cwd: "." });
   return r.stdout.split("\n").filter((f) => f !== "");
 }
+
+/** The files `runFrom`'s tap config runs, repo-relative. */
+export function tapList(runFrom: string): Set<string> {
+  const r = run({ cmd: "pnpm", args: ["-s", "exec", "tap", "list"], cwd: runFrom });
+  if (r.status !== 0) throw new ToolOutputError({ what: ["tap list in", runFrom], output: r.stdout + r.stderr });
+  return new Set(r.stdout.split("\n").filter((l) => l !== "").map((l) => back(runFrom, l)));
+}

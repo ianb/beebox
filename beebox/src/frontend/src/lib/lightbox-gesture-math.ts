@@ -10,7 +10,7 @@
  * `t' = p − (p − t)·(s'/s)` holds for both double-tap and pinch.
  *
  * Every function is pure and doctested in
- * `src/frontend/test/lib/lightbox-gesture-math.doctest.md`.
+ * `src/frontend/test/lib/lightbox-gesture-math.test.ts`.
  */
 
 export interface Point {
