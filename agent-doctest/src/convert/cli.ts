@@ -11,9 +11,10 @@
  *
  * `--upgrade` emits `t.check` for expected text that reads as a value;
  * `--differential` emits the differential probes instead (scratch runs
- * only). `--text-only` and `--awaited` name JSON files mapping a
- * cwd-relative doctest path to doctest lines: checks to keep as text, and
- * checks whose value is a promise.
+ * only). `--text-only` and `--awaited` name JSON files keyed by
+ * cwd-relative doctest path: for `--text-only`, `{ "<line>": "<reason>" }`
+ * per file, the checks to keep as text; for `--awaited`, a list of lines
+ * whose value is a promise.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -25,9 +26,23 @@ interface Args {
   force: boolean;
   upgrade: boolean;
   differential: boolean;
-  textOnly: Record<string, number[]>;
+  textOnly: Record<string, Record<string, string>>;
   awaited: Record<string, number[]>;
   files: string[];
+}
+
+/** A JSON file mapping doctest paths to `{ line: reason }`. */
+function readReasons(file: string): Record<string, Record<string, string>> {
+  const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
+  if (typeof parsed !== "object" || parsed === null) throw new Error(`${file}: expected an object per doctest`);
+  const out: Record<string, Record<string, string>> = {};
+  for (const [path, lines] of Object.entries(parsed)) {
+    if (typeof lines !== "object" || lines === null || !Object.values(lines).every((r) => typeof r === "string")) {
+      throw new Error(`${file}: ${path} is not an object of line reasons`);
+    }
+    out[path] = Object.fromEntries(Object.entries(lines).map(([line, reason]) => [line, String(reason)]));
+  }
+  return out;
 }
 
 /** A JSON file mapping doctest paths to line numbers. */
@@ -50,7 +65,7 @@ function parseArgs(argv: string[]): Args {
     else if (arg === "--force") args.force = true;
     else if (arg === "--upgrade") args.upgrade = true;
     else if (arg === "--differential") args.differential = true;
-    else if (arg === "--text-only") args.textOnly = readLines(argv[++i] ?? "");
+    else if (arg === "--text-only") args.textOnly = readReasons(argv[++i] ?? "");
     else if (arg === "--awaited") args.awaited = readLines(argv[++i] ?? "");
     else if (arg.startsWith("--")) throw new Error(`unknown option ${arg}`);
     else args.files.push(resolve(arg));
@@ -70,7 +85,7 @@ for (const file of args.files) {
       filePath: file,
       upgrade: args.upgrade,
       differential: args.differential,
-      textOnly: new Set(args.textOnly[rel]),
+      textOnly: new Map(Object.entries(args.textOnly[rel] ?? {}).map(([line, reason]) => [Number(line), reason])),
       awaited: new Set(args.awaited[rel]),
     });
     writeFileSync(target, source);

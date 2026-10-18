@@ -24,8 +24,12 @@ export interface ConvertOptions {
   filePath: string;
   /** Emit `t.check` for each expected text that reads as a value (doctest-upgrade.ts). */
   upgrade?: boolean;
-  /** Doctest lines whose check stays `t.checkText`: its typed form failed typecheck or the run. */
-  textOnly?: ReadonlySet<number>;
+  /**
+   * Doctest lines whose check stays `t.checkText`, with the reason: the typed
+   * form failed typecheck or the run, or lint rejects it (a lossy actual
+   * value, which phase 3 strengthens).
+   */
+  textOnly?: ReadonlyMap<number, string>;
   /** Doctest lines whose actual value is a promise, so their `t.check` is awaited. */
   awaited?: ReadonlySet<number>;
   /**
@@ -124,7 +128,8 @@ export function emitExample(ex: Example | ThrowsExample, ctx: EmitContext): { ma
   const { options } = ctx;
   if (options.upgrade !== true) return textCheck();
   if (ctx.out !== null) return textCheck("printed output");
-  if (options.textOnly?.has(ctx.md) === true) return textCheck("failed as t.check");
+  const kept = options.textOnly?.get(ctx.md);
+  if (kept !== undefined) return textCheck(kept);
   const upgrade = upgradeExpected(expected);
   if (upgrade.kind === "text") return textCheck(upgrade.reason);
   if ([...upgrade.patterns].some((p) => ctx.taken.has(p))) return textCheck("pattern name taken");
