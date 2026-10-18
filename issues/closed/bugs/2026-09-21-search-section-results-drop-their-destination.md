@@ -6,7 +6,13 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey C and independent verification
 priority: normal
+resolution: implemented
 ---
+
+> **Closed 2026-10-17** (`48dcb3f39`, review fixes `1cb1d347e`): a section
+> result opens the card at its heading, from Cmd-K and the search page, and a
+> `Card.card#heading` link does the same. Plan:
+> `beebox/docs/implemented-plans/search-section-destination.md`. gdoc hits stay card-level.
 
 Journey C searched for its saved friends page and selected the result labelled
 `Section: /Reconnecting with friends/Where things stand right now`. The document
@@ -25,9 +31,9 @@ this is not a claim that the document failed to open. It opened successfully
 without using the section destination. Wire the existing section identity
 through navigation and verify both search entry points.
 
-Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 37–40, screenshots 20–22. Related history:
-[box search](../closed/features/2026-05-11-box-search.md).
+[box search](../features/2026-05-11-box-search.md).
 
 ## 2026-10-17: not a small fix; needs a decision
 

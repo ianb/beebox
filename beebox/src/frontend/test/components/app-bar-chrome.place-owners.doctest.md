@@ -12,7 +12,7 @@ above it and the pill named the chat (fixed in `e22c56ead`). Only effect
 ordering shows this bug, so this is a DOM doctest.
 
 ```ts setup
-import { mount } from "./helpers/dom-harness.js";
+import { mount } from "../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { AppBarChromeProvider, useAppBarPlace, useAppBarPublishedPlace } from "../../src/components/app-bar-chrome.js";
 
