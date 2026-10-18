@@ -61,8 +61,8 @@ description: "Documentation for Bee Box: a personal assistant built from a codin
 > is early: self-hosted, one maintainer, changing fast. The AI services it
 > uses are all ones you set up yourself: the coding agent's own model
 > provider, and optionally transcription (Mistral, Deepgram, or OpenAI),
-> spoken replies (OpenAI, or Gemini through OpenRouter), embeddings for search
-> (OpenAI), and Gemini for a few audio and scanning tasks; the contributor
+> spoken replies (OpenAI or Gemini), embeddings for search (OpenAI), and
+> Gemini for a few audio and scanning tasks; the contributor
 > pages list them in full. It is also developed
 > in an unusually agentic way, with coding agents doing much of the work
 > under the maintainer's direction, and the plans, issues, and process kept

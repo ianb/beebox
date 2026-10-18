@@ -1416,6 +1416,13 @@ Stored source refs are resolved through the shared containment helper and checke
 against the box's real path before source reads or transcription updates; an
 escaping ref fails closed.
 Material without authored input is saved without inventing an agent task.
+Saved image, URL and clipping material with no words is then filed: two
+minutes after the owner's last such capture, the server queues the doc on the
+box's intake job and starts a box cycle, whose agent titles, describes and
+moves it, or leaves it in `_content/captures/` when no place fits. The state
+stays `saved`. If six cycles pass without filing, `error` reads "Filing is
+waiting for the box's next cycle." until a cycle files it; Retry starts the
+attempts again. Context added before queuing takes the capture out of filing.
 Voice audio persists before asynchronous transcription; empty/failed transcript
 retains playable audio and an explicit retry state. An empty transcript has no
 automatic paid retry; Retry remains available. External-input framing names

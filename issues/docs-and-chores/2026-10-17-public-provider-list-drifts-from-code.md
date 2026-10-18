@@ -20,8 +20,9 @@ Checked against the code on 2026-10-17:
 - **Gemini speech goes to Google directly.** `technologies.md` and the README
   preamble say "Gemini through OpenRouter". `beebox/src/services/tts.ts`
   calls `generativelanguage.googleapis.com` with the box's `gemini` key and
-  calls it "the only route". The preamble is a maintainer blockquote, so an
-  agent must not edit it; the developer corrects it.
+  calls it "the only route". **Fixed 2026-10-17** in both places, with the
+  developer's approval for the blockquote: OpenRouter proved too slow and
+  unreliable as a proxy for speech.
 - **Replicate is missing.** `beebox/src/core/secrets/guide-registry.ts` has a
   `replicate` key "used only by box views that call it through the
   server-side adapter". No public page names Replicate.

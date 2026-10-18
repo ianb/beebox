@@ -32,7 +32,8 @@ documented in [secrets.md](../secrets.md).
 
 Transcription has four backends: OpenAI Whisper, Mistral's Voxtral, Deepgram,
 and Microsoft's diarized service, the last reachable only through OpenRouter.
-Text to speech uses OpenAI, or Gemini through OpenRouter. Search embeddings use
+Text to speech uses OpenAI, or Gemini on Google's own API (OpenRouter proved too
+slow and unreliable as a proxy for it, and drops speaking style). Search embeddings use
 OpenAI. Scan and image understanding defaults to Claude, with a Gemini backend
 available, and Gemini also handles audio questions. Google OAuth and
 an R2 publish target are connector credentials rather than model services. The

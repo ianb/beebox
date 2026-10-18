@@ -4,24 +4,46 @@ import type { Services } from "../../../services/container.js";
 import { withoutBoxWork, withBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { getBoxTime } from "../../../lib/time.js";
-import { listCaptures } from "../../../core/quick-capture/store.js";
+import { listCaptures, type CaptureRecord } from "../../../core/quick-capture/store.js";
 import { processCapture, type CaptureWorkerContext } from "../../../core/quick-capture/worker.js";
 import { quickChatChat } from "../../trpc/quick-chat-delivery.js";
+import { runFilingSweep } from "../../../core/quick-capture/filing-sweep.js";
+import { runBbxWakeup } from "../../../core/commands/wakeup.js";
 
 export function captureWorkerContext(args: { boxRoot: string; services: Services; owner: string | null }): CaptureWorkerContext {
   return { boxRoot: args.boxRoot, jev: args.services.jev,
     chat: quickChatChat({ boxRoot: args.boxRoot, user: args.owner === null ? null : { email: args.owner, name: args.owner } }) };
 }
 const pending = new Map<string, Set<Promise<unknown>>>();
-export function scheduleCaptureProcessing(args: { boxRoot: string; services: Services; owner: string | null; id: string }): void {
-  const task = withoutBoxWork(() => withBoxWork({ boxRoot: args.boxRoot, reason: "quick capture processing" },
-    () => processCapture(captureWorkerContext(args), args.id))).catch((error: unknown) => {
-    console.error(`[quick-capture] processing admission failed for ${args.id}:`, error);
-  });
-  let tasks = pending.get(args.boxRoot);
-  if (tasks === undefined) { tasks = new Set(); pending.set(args.boxRoot, tasks); }
+function track(boxRoot: string, task: Promise<unknown>): void {
+  let tasks = pending.get(boxRoot);
+  if (tasks === undefined) { tasks = new Set(); pending.set(boxRoot, tasks); }
   tasks.add(task);
   void task.finally(() => { tasks.delete(task); });
+}
+export function scheduleCaptureProcessing(args: { boxRoot: string; services: Services; owner: string | null; id: string }): void {
+  track(args.boxRoot, withoutBoxWork(() => withBoxWork({ boxRoot: args.boxRoot, reason: "quick capture processing" },
+    () => processCapture(captureWorkerContext(args), args.id))).catch((error: unknown) => {
+    console.error(`[quick-capture] processing admission failed for ${args.id}:`, error);
+  }));
+}
+/** Boxes with a filing sweep, and with a filing wakeup, in flight. A wakeup can take minutes; sweeps go on meanwhile. */
+const sweeping = new Set<string>();
+const waking = new Set<string>();
+function admitted(boxRoot: string, fn: () => Promise<unknown>): Promise<unknown> {
+  return withoutBoxWork(() => withBoxWork({ boxRoot, reason: "quick capture filing" }, fn));
+}
+function scheduleFilingSweep(boxRoot: string, records: CaptureRecord[]): void {
+  if (sweeping.has(boxRoot)) return;
+  sweeping.add(boxRoot);
+  track(boxRoot, admitted(boxRoot, async () => {
+    if (!(await runFilingSweep({ boxRoot, wakeupRunning: waking.has(boxRoot), records }))) return;
+    waking.add(boxRoot);
+    track(boxRoot, admitted(boxRoot, () => runBbxWakeup({ boxRoot, triggeredBy: "quick-capture filing" }))
+      .catch((error: unknown) => { console.error("[quick-capture] filing wakeup failed:", error); })
+      .finally(() => { waking.delete(boxRoot); }));
+  }).catch((error: unknown) => { console.error("[quick-capture] filing sweep failed:", error); })
+    .finally(() => { sweeping.delete(boxRoot); }));
 }
 export function startQuickCaptureLifecycle(args: { server: FastifyInstance; boxRoot: string; services: Services }): void {
   let timer: AwakeTimeout | undefined;
@@ -39,6 +61,7 @@ export function startQuickCaptureLifecycle(args: { server: FastifyInstance; boxR
           || (record.state === "failed" && record.nextAttemptAt !== undefined && Date.parse(record.nextAttemptAt) <= now);
         if (eligible) await withBoxWork({ boxRoot: args.boxRoot, reason: "quick capture recovery" }, () => processCapture(captureWorkerContext({ ...args, owner: record.owner }), record.id));
       }
+      if (records.some(record => record.filingRequested === true)) scheduleFilingSweep(args.boxRoot, records);
     } finally { running = false; }
   };
   const run = (): void => {
