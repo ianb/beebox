@@ -778,6 +778,32 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     source (`fn.toString()`) changes that text without a failing check.
   - Next chunk: `dispatch` and the worker slots, then calibration on the
     41 lint-only files.
+- **Result, slots and calibration (2026-10-18).**
+  - `slots` makes four git worktrees with node_modules
+    (`$DOCTEST_CONVERT_SLOTS`). `dispatch` resets one to HEAD, copies in the
+    batch and the state files from the working tree (an unverified
+    conversion cannot be committed: pre-commit lints it), runs the worker
+    with the brief in `bin/doctest-convert/dispatch.ts`, rejects a
+    forbidden command in the transcript or a change outside the batch, and
+    then copies the batch back and verifies it here. `check` is `verify`
+    without recording; it is the worker's one verify command. `--trial`
+    checks in the slot and applies nothing.
+  - Calibration, the same 10 `beebox/test/lib` files to each model:
+    Haiku and Luna each verified 9 of 10 on the first run, without a
+    retry. The 10th, `file-lock.test.ts`, has only `max-lines`, which no
+    worker can fix inside its file. Every changed checked expression keeps
+    its value (renames, `.sort()` → `.toSorted()`, `.join()` →
+    `.join(",")`). Luna added one justified `eslint-disable-next-line
+    max-params`; Haiku fixed the same code without one. The brief now
+    forbids suppressions and `verify` refuses an added one. Haiku took 6
+    minutes and $0.15 for the batch.
+  - By the calibration rule, Haiku takes the lint-only class. The pilot
+    produced no "typing needed" file (prepare keeps a typed check that
+    fails typecheck as text) and no route-test file, so those classes are
+    not calibrated yet.
+  - Open: `max-lines` (57 converted files in the full run). A worker
+    cannot fix it without a second test file, which the one-doctest,
+    one-test-file state does not allow. Boxholder decision.
 
 ### Track 4 — phase 2 bulk conversion
 
