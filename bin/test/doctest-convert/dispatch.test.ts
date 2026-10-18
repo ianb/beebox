@@ -16,26 +16,28 @@ void test("commands from Claude and Codex transcripts", async (t) => {
 });
 
 void test("git may only read; file names that contain git are not git", async (t) => {
-  const commands = [
-    "node --import tsx bin/doctest-convert.ts check beebox/test/lib/git-stale-lock.test.ts",
-    "git diff beebox/test/lib/env.test.ts",
-    "git -C . status",
-    "git diff && git commit -am x",
-    "git -C . reset --hard",
-    "cd beebox; git mv a b",
-    "pnpm install",
-    "rm beebox/test/lib/env.test.ts",
-  ];
-  t.check(commands.map((c) => [c, forbidden(c)]), [
-    [commands[0], false],
-    [commands[1], false],
-    [commands[2], false],
-    [commands[3], true],
-    [commands[4], true],
-    [commands[5], true],
-    [commands[6], true],
-    [commands[7], true],
-  ]);
+  const verdicts = Object.fromEntries(
+    [
+      "node --import tsx bin/doctest-convert.ts check beebox/test/lib/git-stale-lock.test.ts",
+      "git diff beebox/test/lib/env.test.ts",
+      "git -C . status",
+      "git diff && git commit -am x",
+      "git -C . reset --hard",
+      "cd beebox; git mv a b",
+      "pnpm install",
+      "rm beebox/test/lib/env.test.ts",
+    ].map((c) => [c, forbidden(c)]),
+  );
+  t.check(verdicts, {
+    "node --import tsx bin/doctest-convert.ts check beebox/test/lib/git-stale-lock.test.ts": false,
+    "git diff beebox/test/lib/env.test.ts": false,
+    "git -C . status": false,
+    "git diff && git commit -am x": true,
+    "git -C . reset --hard": true,
+    "cd beebox; git mv a b": true,
+    "pnpm install": true,
+    "rm beebox/test/lib/env.test.ts": true,
+  });
 });
 
 void test("status paths: NUL-separated, with both ends of a rename", async (t) => {
