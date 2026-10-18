@@ -7,7 +7,7 @@ Written by `bin/doctest-convert.ts` after each command; do not edit. Plan:
 |---|---|---|---|---|---|---|
 | `agent-doctest` | 3 | 0 | 3 | 0 | 0 | 0 |
 | `beebox/src/frontend/test` | 200 | 0 | 200 | 0 | 0 | 0 |
-| `beebox/test` | 809 | 0 | 809 | 0 | 0 | 0 |
+| `beebox/test` | 811 | 0 | 811 | 0 | 0 | 0 |
 | `bin` | 36 | 0 | 36 | 0 | 0 | 0 |
 | `bin/test` | 1 | 0 | 1 | 0 | 0 | 0 |
 | `browse` | 6 | 0 | 6 | 0 | 0 | 0 |

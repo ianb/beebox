@@ -206,6 +206,277 @@
    "problems": [],
    "changedActuals": []
   },
+  "beebox/test/cards/extend-schema.doctest.md": {
+   "test": "beebox/test/cards/extend-schema.test.ts",
+   "blob": "66d7f24623d0db956c571458d673da519fe92051",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 62,
+     "kind": "check"
+    },
+    {
+     "line": 70,
+     "kind": "check"
+    },
+    {
+     "line": 77,
+     "kind": "check"
+    },
+    {
+     "line": 87,
+     "kind": "check"
+    },
+    {
+     "line": 98,
+     "kind": "check"
+    },
+    {
+     "line": 110,
+     "kind": "check"
+    },
+    {
+     "line": 121,
+     "kind": "check"
+    },
+    {
+     "line": 133,
+     "kind": "check"
+    },
+    {
+     "line": 144,
+     "kind": "check"
+    },
+    {
+     "line": 152,
+     "kind": "check"
+    },
+    {
+     "line": 157,
+     "kind": "check"
+    },
+    {
+     "line": 160,
+     "kind": "check"
+    },
+    {
+     "line": 167,
+     "kind": "check"
+    },
+    {
+     "line": 186,
+     "kind": "check"
+    },
+    {
+     "line": 204,
+     "kind": "check"
+    },
+    {
+     "line": 224,
+     "kind": "check"
+    },
+    {
+     "line": 231,
+     "kind": "check"
+    },
+    {
+     "line": 249,
+     "kind": "check"
+    },
+    {
+     "line": 262,
+     "kind": "check"
+    },
+    {
+     "line": 318,
+     "kind": "check"
+    },
+    {
+     "line": 338,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {
+    "87": "lossy actual value (strengthen in phase 3)"
+   },
+   "awaited": [],
+   "checks": {
+    "62": [
+     {
+      "method": "check",
+      "actual": "6eb0327624fd342d",
+      "expected": "309a397facb36568",
+      "line": 105
+     }
+    ],
+    "70": [
+     {
+      "method": "check",
+      "actual": "daa2d7ad3724b06e",
+      "expected": "cf3f5a32c2e0a78c",
+      "line": 116
+     }
+    ],
+    "77": [
+     {
+      "method": "check",
+      "actual": "0e8c25fd70f24904",
+      "expected": "694abc751252a6cd",
+      "line": 129
+     }
+    ],
+    "87": [
+     {
+      "method": "checkText",
+      "actual": "e94e1b22b1e18cc3",
+      "expected": "18d10c7d2b4b04aa",
+      "line": 138
+     }
+    ],
+    "98": [
+     {
+      "method": "check",
+      "actual": "02d75fec1d242df0",
+      "expected": "f4c84081c4c6ed12",
+      "line": 157
+     }
+    ],
+    "110": [
+     {
+      "method": "check",
+      "actual": "43cfe6eeba7db9f7",
+      "expected": "b5bea41b6c623f7c",
+      "line": 164
+     }
+    ],
+    "121": [
+     {
+      "method": "check",
+      "actual": "a4a5e23c1ddb4ebe",
+      "expected": "937b9c62fccbff63",
+      "line": 178
+     }
+    ],
+    "133": [
+     {
+      "method": "check",
+      "actual": "2c5abfc0c46750ff",
+      "expected": "a69dc7524da5860a",
+      "line": 194
+     }
+    ],
+    "144": [
+     {
+      "method": "check",
+      "actual": "0eaa3027454522b1",
+      "expected": "5141a11a633e3848",
+      "line": 204
+     }
+    ],
+    "152": [
+     {
+      "method": "checkText",
+      "actual": "3ef1fff4580477ae",
+      "expected": "151eec2061a8dfca",
+      "line": 216
+     }
+    ],
+    "157": [
+     {
+      "method": "check",
+      "actual": "21fa9568f768622f",
+      "expected": "c8a35d6e911ac5ce",
+      "line": 221
+     }
+    ],
+    "160": [
+     {
+      "method": "check",
+      "actual": "e8ff57068b1bad99",
+      "expected": "7750131b11b78af1",
+      "line": 224
+     }
+    ],
+    "167": [
+     {
+      "method": "check",
+      "actual": "2e09d5210db84177",
+      "expected": "a6e2202d955212b7",
+      "line": 237
+     }
+    ],
+    "186": [
+     {
+      "method": "check",
+      "actual": "d59c2a5f721ce135",
+      "expected": "1b3e29b150a5d478",
+      "line": 251
+     }
+    ],
+    "204": [
+     {
+      "method": "check",
+      "actual": "f4d00e65bb0d9d76",
+      "expected": "58cc91c51ba14fa6",
+      "line": 276
+     }
+    ],
+    "224": [
+     {
+      "method": "check",
+      "actual": "9fa6e82361b2a6f0",
+      "expected": "ec24269e375bf3f8",
+      "line": 287
+     }
+    ],
+    "231": [
+     {
+      "method": "check",
+      "actual": "4dfc7b69add00c3c",
+      "expected": "c77c0de05742f502",
+      "line": 301
+     }
+    ],
+    "249": [
+     {
+      "method": "check",
+      "actual": "0a6f554a56378043",
+      "expected": "87cdef08de7204b2",
+      "line": 318
+     }
+    ],
+    "262": [
+     {
+      "method": "check",
+      "actual": "543994329dcab080",
+      "expected": "38f5779a4430c014",
+      "line": 324
+     }
+    ],
+    "318": [
+     {
+      "method": "check",
+      "actual": "1b77f628d1fe566a",
+      "expected": "ebf21b937aed9be1",
+      "line": 319
+     }
+    ],
+    "338": [
+     {
+      "method": "check",
+      "actual": "e30cfb7a8786be04",
+      "expected": "7af848df22b14e50",
+      "line": 362
+     }
+    ]
+   },
+   "assertions": 37,
+   "leafAssertions": 42,
+   "expectedAssertions": 37,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
   "beebox/test/cards/ref-fields.doctest.md": {
    "test": "beebox/test/cards/ref-fields.test.ts",
    "blob": "9e1ead3cd3bca11db697752f4028f6609701ff0d",
@@ -95801,6 +96072,59 @@
    },
    "assertions": 8,
    "expectedAssertions": 8,
+   "suppressions": [],
+   "problems": [],
+   "changedActuals": []
+  },
+  "beebox/test/plugins/courseware/plugin.types.doctest.md": {
+   "test": "beebox/test/plugins/courseware/plugin.types.test.ts",
+   "blob": "82b7f5908f918e287b0eb38e807625959f605370",
+   "status": "verified",
+   "examples": [
+    {
+     "line": 71,
+     "kind": "check"
+    },
+    {
+     "line": 91,
+     "kind": "check"
+    },
+    {
+     "line": 117,
+     "kind": "check"
+    }
+   ],
+   "textOnly": {},
+   "awaited": [],
+   "checks": {
+    "71": [
+     {
+      "method": "check",
+      "actual": "fec5f800ea661d4c",
+      "expected": "ce8124bc1b0fbc0c",
+      "line": 73
+     }
+    ],
+    "91": [
+     {
+      "method": "check",
+      "actual": "097ad8c153baff4b",
+      "expected": "425021da47e06b04",
+      "line": 97
+     }
+    ],
+    "117": [
+     {
+      "method": "check",
+      "actual": "564032aa5b5495eb",
+      "expected": "668a1eca26656799",
+      "line": 127
+     }
+    ]
+   },
+   "assertions": 6,
+   "leafAssertions": 6,
+   "expectedAssertions": 6,
    "suppressions": [],
    "problems": [],
    "changedActuals": []
