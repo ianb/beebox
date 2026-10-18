@@ -7,7 +7,7 @@
  * `test-graph-cache.test.ts` (the content-keyed cache over it).
  */
 
-import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { testEntrypoints, type GraphConfig } from "./test-graph.js";
@@ -20,8 +20,9 @@ export interface Fixture {
 
 /** Write a fixture package: `files` maps package-relative path -> contents. */
 export function fixture(files: Record<string, string>): Fixture {
-  // esbuild reports importers by real path; macOS's tmpdir is a symlink.
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "test-graph-")));
+  // Not realpath'd: macOS's tmpdir is a symlink, so the fixture also covers a
+  // checkout reached through one.
+  const root = mkdtempSync(join(tmpdir(), "test-graph-"));
   const packageRoot = join(root, "pkg");
   for (const [rel, contents] of Object.entries(files)) {
     const abs = join(packageRoot, rel);

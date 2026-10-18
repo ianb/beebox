@@ -7,7 +7,10 @@ labels: [tooling, hooks]
 filed-by: agent
 discovered-by: agent
 discovered-in: doctest-typecheck — a test file with a type error committed cleanly
+resolution: implemented
 ---
+
+Fixed by the commit that carries this issue's `Issue:` trailer: `.husky/pre-commit` runs the root `pnpm typecheck` when staged `bin/` or `schedules/` TypeScript exists and the `beebox/src/` branch did not already run it.
 
 `.husky/pre-commit` runs the root `pnpm typecheck` (whose program includes
 `bin/**/*.ts`, `tsconfig.json:24`) only inside the `beebox/src/` branch:
