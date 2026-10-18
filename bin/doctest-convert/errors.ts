@@ -88,13 +88,6 @@ export class NothingToDispatchError extends DriverError {
   }
 }
 
-export class BatchNotCommittedError extends DriverError {
-  public constructor(dirty: readonly string[]) {
-    super(`commit the batch first (a slot starts from HEAD); uncommitted: ${dirty.join(" ")}`);
-    this.name = "BatchNotCommittedError";
-  }
-}
-
 export class ModelArgError extends UsageError {
   public constructor(model: string | undefined) {
     super(`--model must be luna or haiku, not ${model ?? "(none)"}`);

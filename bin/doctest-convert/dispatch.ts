@@ -4,21 +4,23 @@
  * "phase 2 worker task").
  *
  * The worker runs in a slot: a dedicated git worktree with node_modules
- * installed, reset to this checkout's HEAD before each batch. Afterward the
- * driver rejects the batch if the worker ran a forbidden command or changed
- * a path outside the batch, then copies the batch's files here and verifies
- * them in this checkout, which records the result. Applying is serial: one
- * dispatch at a time holds the apply lock.
+ * installed, reset to this checkout's HEAD before each batch, with the
+ * batch's files and the state files copied in from this working tree
+ * (unverified conversions cannot be committed: pre-commit lints them).
+ * Afterward the driver rejects the batch if the worker ran a forbidden
+ * command or changed anything but the batch, then copies the batch's files
+ * back and verifies them in this checkout, which records the result.
+ * Applying is serial: one dispatch at a time holds the apply lock.
  */
 
 import { spawnSync } from "node:child_process";
-import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, copyFileSync, cpSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { BatchNotCommittedError, NothingToDispatchError, SlotBusyError, ToolOutputError } from "./errors.ts";
+import { dirname, join, relative } from "node:path";
+import { NothingToDispatchError, SlotBusyError, ToolOutputError } from "./errors.ts";
 import { REPO } from "./tools.ts";
 import { select, verify, type Selected } from "./verify.ts";
-import { loadAll, writeProgress } from "./state.ts";
+import { loadAll, STATE_DIR, writeProgress } from "./state.ts";
 
 export const SLOT_COUNT = 4;
 const WORKER_TIMEOUT_MS = 30 * 60 * 1000;
@@ -166,6 +168,10 @@ export interface DispatchResult {
   selected: Selected[];
 }
 
+function contentOf(path: string): string | null {
+  return existsSync(path) ? readFileSync(path, "utf8") : null;
+}
+
 /** Paths `git status` reports changed in a worktree. */
 function changedPaths(cwd: string): string[] {
   return git(cwd, ["status", "--porcelain", "--untracked-files=all"])
@@ -179,8 +185,6 @@ export function dispatch(batch: { paths: readonly string[]; model: Model }, log:
   const selected = select(paths).filter((s) => s.file.status === "converted");
   const tests = selected.map((s) => s.file.test);
   if (tests.length === 0) throw new NothingToDispatchError(paths);
-  const dirty = changedPaths(REPO).filter((p) => tests.includes(p));
-  if (dirty.length > 0) throw new BatchNotCommittedError(dirty);
   const head = git(REPO, ["rev-parse", "HEAD"]).trim();
   const { slot, release } = claimSlot();
   try {
@@ -188,6 +192,15 @@ export function dispatch(batch: { paths: readonly string[]; model: Model }, log:
     git(slot, ["checkout", "-qf", "--detach", head]);
     git(slot, ["clean", "-fdq"]);
     install(slot);
+    for (const t of tests) {
+      mkdirSync(dirname(join(slot, t)), { recursive: true });
+      copyFileSync(join(REPO, t), join(slot, t));
+    }
+    const stateRel = relative(REPO, STATE_DIR);
+    rmSync(join(slot, stateRel), { recursive: true, force: true });
+    cpSync(STATE_DIR, join(slot, stateRel), { recursive: true });
+    // What the slot holds before the worker starts; anything else it changes is outside the batch.
+    const before = new Map(changedPaths(slot).map((p) => [p, contentOf(join(slot, p))]));
     const { cmd, args } = workerCommand(model, slot);
     const r = spawnSync(cmd, args, { cwd: slot, input: brief(tests), encoding: "utf8", timeout: WORKER_TIMEOUT_MS, maxBuffer: 256 * 1024 * 1024 });
     const transcript = r.stdout;
@@ -202,7 +215,11 @@ export function dispatch(batch: { paths: readonly string[]; model: Model }, log:
     for (const c of commandsIn(transcript)) {
       if (RULE_BREAKS.some((re) => re.test(c))) reasons.push(`ran a forbidden command: ${c.slice(0, 200)}`);
     }
-    for (const p of changedPaths(slot)) if (!tests.includes(p)) reasons.push(`changed a path outside the batch: ${p}`);
+    for (const p of changedPaths(slot)) {
+      if (tests.includes(p)) continue;
+      if (before.has(p) && before.get(p) === contentOf(join(slot, p))) continue;
+      reasons.push(`changed a path outside the batch: ${p}`);
+    }
     if (reasons.length > 0) return { accepted: false, reasons, transcript: transcriptPath, selected };
 
     withApplyLock(() => {
