@@ -807,9 +807,11 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     noted in the code: a worker's background process outliving the
     timeout; `--trial` running the slot's node_modules; two drivers taking
     over one stale lock at the same moment.
-  - Open: `max-lines` (57 converted files in the full run). A worker
-    cannot fix it without a second test file, which the one-doctest,
-    one-test-file state does not allow. Boxholder decision.
+  - `max-lines`: a worker cannot fix it without a second test file.
+    Boxholder (2026-10-18): the limit can be longer for tests, though past
+    some length a file still needs a split. Test files now allow 600 lines
+    (`personal-vibe-check/preset.ts`). Of the 73 converted files over 300,
+    8 are over 600; those go to a split by hand in track 4.
 
 ### Track 4 — phase 2 bulk conversion
 

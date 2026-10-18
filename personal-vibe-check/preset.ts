@@ -672,11 +672,17 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
       // test receives, from a fake that simulates a failure or must not be
       // called, or as a guard that narrows setup. A custom error class for
       // each adds nothing; converted doctests had 297 such lines.
+      //
+      // max-lines is 600 in tests, not 300 — boxholder decision 2026-10-18:
+      // a test file holds a setup and many examples, so it runs longer than
+      // the module it tests, though past some length it still needs a split.
+      // Of 1,094 converted doctests, 73 were over 300 lines and 8 over 600.
       files: ["**/test/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
       rules: {
         "error/no-generic-error": "off",
         "error/require-custom-error": "off",
         "error/no-literal-error-message": "off",
+        "max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
       },
     },
     {
