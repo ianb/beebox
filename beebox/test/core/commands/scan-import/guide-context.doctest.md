@@ -90,13 +90,13 @@ lowercase filename variant is honored too.
 
 ```ts
 const root = await makeBoxDir();
-await fs.writeFile(path.join(root, "CLAUDE_SCANS.md"), "# Scan Context\n- Dave (born 1950)\n");
+await fs.writeFile(path.join(root, "CLAUDE_SCANS.md"), "# Scan Context\n- Walter (born 1950)\n");
 const resolved = await resolveScanGuideContext(root);
 assert.ok(resolved);
 resolved.source
 => claude-scans
 
-resolved.text.includes("Dave (born 1950)")
+resolved.text.includes("Walter (born 1950)")
 => true
 
 resolved.warnings[0]?.includes("deprecated")

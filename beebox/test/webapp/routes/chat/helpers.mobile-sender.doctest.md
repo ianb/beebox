@@ -33,16 +33,16 @@ has a matching local user, so the sender gets that user's display name.
 
 ```ts
 const box = await makeTmpBox();
-await createFirstUser({ email: "ada@example.com", password: "correct-horse", name: "Ada Lovelace" });
+await createFirstUser({ email: "rosa@example.com", password: "correct-horse", name: "Rosa Okafor" });
 
-const ticket = createMobilePairingTicket(box.root, { createdBy: "ada@example.com" });
+const ticket = createMobilePairingTicket(box.root, { createdBy: "rosa@example.com" });
 const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "iPhone" });
 device !== null
 => true
 
 const sender = await resolveMobileSender(box.root, { authorization: `Bearer ${device?.deviceToken}` });
 JSON.stringify(sender)
-=> {"email":"ada@example.com","name":"Ada Lovelace"}
+=> {"email":"rosa@example.com","name":"Rosa Okafor"}
 ```
 
 That identity is what flows into the message tag, so the transcript shows a real
@@ -51,7 +51,7 @@ sender instead of an unattributed `<typed>`:
 ```ts continue
 if (sender === null) throw new Error("expected a sender");
 injectUserAttr("<typed>hello from my phone</typed>", sender)
-=> <typed user="Ada Lovelace" user-email="ada@example.com">hello from my phone</typed>
+=> <typed user="Rosa Okafor" user-email="rosa@example.com">hello from my phone</typed>
 ```
 
 Attributes already on the wrapper stay, after the sender. The box screen's
@@ -73,10 +73,10 @@ Google-only login) still attributes — the display name degrades to the email
 rather than failing.
 
 ```ts continue
-const ticket2 = createMobilePairingTicket(box.root, { createdBy: "grace@example.com" });
+const ticket2 = createMobilePairingTicket(box.root, { createdBy: "tomas@example.com" });
 const device2 = await redeemMobilePairingTicket(box.root, { pairingToken: ticket2.token, deviceLabel: "iPad" });
 JSON.stringify(await resolveMobileSender(box.root, { authorization: `Bearer ${device2?.deviceToken}` }))
-=> {"email":"grace@example.com","name":"grace@example.com"}
+=> {"email":"tomas@example.com","name":"tomas@example.com"}
 ```
 
 ## No identity to attribute returns null

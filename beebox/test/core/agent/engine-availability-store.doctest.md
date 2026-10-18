@@ -69,7 +69,7 @@ second.episodeStartedAt === t0.toISOString()
 => true
 ```
 
-A detection well past the previous record's `retryAt` (plus grace) is a new
+A detection well past the previous record's `retryAt` (plus slack) is a new
 episode, with a fresh `episodeStartedAt`.
 
 ```ts continue

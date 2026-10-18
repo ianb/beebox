@@ -119,18 +119,18 @@ that dropped it would silently weaken cross-user isolation.
 
 ```ts
 const box2 = await makeTmpBox();
-const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "ada@example.com" });
+const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "rosa@example.com" });
 const device = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "doctest" });
 if (!device) throw new Error("pairing failed");
 
 const viaBearer = await resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
 JSON.stringify({ deviceId: viaBearer?.deviceId === device.deviceId, createdBy: viaBearer?.createdBy, source: viaBearer?.source })
-=> {"deviceId":true,"createdBy":"ada@example.com","source":"bearer"}
+=> {"deviceId":true,"createdBy":"rosa@example.com","source":"bearer"}
 
-const cookie = signMobileSession(box2.root, { deviceId: device.deviceId, createdBy: "ada@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
+const cookie = signMobileSession(box2.root, { deviceId: device.deviceId, createdBy: "rosa@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
 const viaCookie = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
 JSON.stringify({ deviceId: viaCookie?.deviceId === device.deviceId, createdBy: viaCookie?.createdBy, source: viaCookie?.source })
-=> {"deviceId":true,"createdBy":"ada@example.com","source":"cookie"}
+=> {"deviceId":true,"createdBy":"rosa@example.com","source":"cookie"}
 ```
 
 A request carrying neither resolves to nothing, and a bogus cookie does not

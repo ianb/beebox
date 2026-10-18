@@ -129,14 +129,14 @@ const webLog = getSessionLogPath(box.root, web);
 await mkdir(dirname(webLog), { recursive: true });
 await writeFile(webLog, JSON.stringify({
   type: "user",
-  message: { role: "user", content: [{ type: "text", text: '<chat-app narration="off" channel="web-desktop"/>\n<typed user="Ada Lovelace" user-email="ada@example.com">where did I put the drawer key?</typed>' }] },
+  message: { role: "user", content: [{ type: "text", text: '<chat-app narration="off" channel="web-desktop"/>\n<typed user="Rosa Okafor" user-email="rosa@example.com">where did I put the drawer key?</typed>' }] },
 }) + "\n");
 const webHusk = await ensureChatHusk(box.root, { sessionId: web, date: new Date("2026-08-23T12:00:00Z") });
 const card = await box.read(webHusk);
 JSON.stringify({
   firstMessage: card.split("\n").find((l) => l.startsWith("first-message:")),
   hasTitle: card.includes("title:"),
-  leaksEmail: card.includes("ada@example.com"),
+  leaksEmail: card.includes("rosa@example.com"),
 })
 => {"firstMessage":"first-message: where did I put the drawer key?","hasTitle":false,"leaksEmail":false}
 ```

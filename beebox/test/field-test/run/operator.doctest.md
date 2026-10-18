@@ -262,7 +262,7 @@ await session.stop();
 ```
 
 An interrupt that never produces a result would leave the stream ambiguous
-forever, so the drain has its own grace and the session is abandoned rather
+forever, so the drain has its own time limit and the session is abandoned rather
 than reused — loudly, and only after the capped turn has been reported.
 
 ```ts

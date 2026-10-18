@@ -35,7 +35,7 @@ const samples = {
   "question-dismissed": { path: "Q.question.card", timestamp: TS },
   "question-expired": { path: "Q.question.card", timestamp: TS },
   "cards-changed": { source: "gmail" },
-  "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Ada" }, timestamp: TS },
+  "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Rosa" }, timestamp: TS },
   "chat-complete": { sessionId: "s1", timestamp: TS },
   "chat-task": { sessionId: "s1", task: { phase: "started", taskId: "t1", status: "running", description: "Generate image" } },
   "chat-features-changed": { sessionId: "s1", features: { theme: "dark" } },

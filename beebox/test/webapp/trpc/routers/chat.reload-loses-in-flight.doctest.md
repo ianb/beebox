@@ -167,7 +167,7 @@ function callerAs(server: TestServer, email: string) {
   });
   return appRouter.createCaller(ctx);
 }
-const anyReader = await callerAs(ctx, "grace@example.com").chat.bootstrap({ slice: TAIL });
+const anyReader = await callerAs(ctx, "tomas@example.com").chat.bootstrap({ slice: TAIL });
 anyReader.pending.length
 => 1
 ```
@@ -180,18 +180,18 @@ not show them each other's unsent questions:
 ```ts continue
 ctx.eventBus.emit("chat-user-message", {
   sessionId: null,
-  message: "<typed user=\"Ada Lovelace\">is the loft key on the hook?</typed>",
-  user: { email: "ada@example.com", name: "Ada Lovelace" },
+  message: "<typed user=\"Rosa Okafor\">is the loft key on the hook?</typed>",
+  user: { email: "rosa@example.com", name: "Rosa Okafor" },
   timestamp: new Date().toISOString(),
 });
 
-const asGrace = await callerAs(ctx, "grace@example.com").chat.bootstrap({ slice: TAIL });
-const asAda = await callerAs(ctx, "ada@example.com").chat.bootstrap({ slice: TAIL });
+const asTomas = await callerAs(ctx, "tomas@example.com").chat.bootstrap({ slice: TAIL });
+const asRosa = await callerAs(ctx, "rosa@example.com").chat.bootstrap({ slice: TAIL });
 JSON.stringify({
-  grace: userText(asGrace.pending).some((t) => t.includes("loft key")),
-  ada: userText(asAda.pending).some((t) => t.includes("loft key")),
+  tomas: userText(asTomas.pending).some((t) => t.includes("loft key")),
+  rosa: userText(asRosa.pending).some((t) => t.includes("loft key")),
 })
-=> {"grace":false,"ada":true}
+=> {"tomas":false,"rosa":true}
 ```
 
 ```ts cleanup

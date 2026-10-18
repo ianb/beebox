@@ -88,10 +88,10 @@ result.status
 => timeout
 ```
 
-## Registry: a "none" answer resolves after the grace window
+## Registry: a "none" answer resolves after the wait window
 
 A tab reporting "no audio cached" doesn't settle immediately — another tab
-might still hold the recording — but once the grace window passes with no
+might still hold the recording — but once the wait window passes with no
 audio, the request resolves `none`. `{none:true}` answers aren't targeted
 (a tab can only say "I don't have it"), so this is unaffected by echo-and-verify.
 
@@ -106,7 +106,7 @@ reported: true
 status: none
 ```
 
-## Registry: audio arriving within the grace window still wins
+## Registry: audio arriving within the wait window still wins
 
 ```ts
 const reg = createLastAudioPending({ graceMs: 1000 });
@@ -118,12 +118,12 @@ result.status
 => audio
 ```
 
-## Registry: production default — a "none" grace is the request's OWN timeoutMs, not a fixed short window
+## Registry: production default — a "none" wait is the request's OWN timeoutMs, not a fixed short window
 
 Fix (2026-08): a targeted request fans out to every connected tab, and most
 of them don't hold this exact recording — they answer `none` almost
-instantly. Without a per-request grace, that instant chorus of "none"s used
-to cut the requested wait down to a fixed short grace window (2s), so a
+instantly. Without a per-request wait, that instant chorus of "none"s used
+to cut the requested wait down to a fixed short wait window (2s), so a
 background-throttled tab that DOES hold the recording could lose even though
 plenty of the caller's requested timeout remained. With no factory-level
 `graceMs` override (the production shape), a "none" arriving well within the
@@ -133,7 +133,7 @@ window still leaves room for a slower correct answer to win.
 const reg = createLastAudioPending();
 const { requestId, outcome } = reg.create({ timeoutMs: 300, messageId: "msg-slow" });
 reg.reportNone(requestId); // an early "none" from a tab that doesn't hold it
-await new Promise((r) => setTimeout(r, 150)); // 150ms in: past the old fixed grace, still inside this request's own 300ms window
+await new Promise((r) => setTimeout(r, 150)); // 150ms in: past the old fixed wait, still inside this request's own 300ms window
 reg.fulfill(requestId, { audio: Buffer.from("late-but-in-window"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-slow", sessionId: null });
 const result = await outcome;
 print(`status: ${result.status}`);

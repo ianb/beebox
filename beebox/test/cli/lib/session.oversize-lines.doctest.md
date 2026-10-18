@@ -1,8 +1,8 @@
 # Oversize transcript lines are stubbed, not parsed
 
 Bounded *retention* (`session-retention.doctest.md`) does not bound *allocation*:
-`parseSessionLog` still `JSON.parse`d every line to decide what to keep. Prod's
-box-family session was 15.5 MB across 1 587 lines with **14 lines over 1 MB**
+`parseSessionLog` still `JSON.parse`d every line to decide what to keep. A production
+box's session was 15.5 MB across 1 587 lines with **14 lines over 1 MB**
 each (capture-image and tool payloads), so one `chat.history` request cost
 ~50 MB of transient heap, and concurrent requests stacked linearly into the
 1.9 GB V8 cap — four `bbx serve` OOMs on 2026-08-03/04.
@@ -359,7 +359,7 @@ const turn = JSON.stringify({
   message: {
     role: "user",
     content: [
-      { type: "text", text: "<typed user=\"Ada Lovelace\" user-email=\"ada@example.com\">here is the drawer</typed>" },
+      { type: "text", text: "<typed user=\"Rosa Okafor\" user-email=\"rosa@example.com\">here is the drawer</typed>" },
       { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photo } },
     ],
   },

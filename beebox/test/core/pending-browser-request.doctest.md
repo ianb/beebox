@@ -104,10 +104,10 @@ result.status
 => timeout
 ```
 
-## `reportNone` resolves `none` after the grace window
+## `reportNone` resolves `none` after the wait window
 
 A tab reporting "nothing here" doesn't settle immediately — another tab might
-still answer — but once the grace window passes it resolves `none`. An ack
+still answer — but once the wait window passes it resolves `none`. An ack
 window, if any, is cancelled too (the reporting client clearly received the
 request).
 
@@ -122,7 +122,7 @@ reported: true
 status: none
 ```
 
-## An answer within the grace window still wins over `none`
+## An answer within the wait window still wins over `none`
 
 ```ts
 const reg = createPendingBrowserRequests<ScreenshotAnswer>({ graceMs: 1000 });

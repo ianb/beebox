@@ -149,8 +149,8 @@ print(`${h.status}, pending: ${formatDurationShort(h.pendingMs ?? 0)}`);
 => overdue, pending: 2d
 ```
 
-But a task only a little past its occurrence is still within grace — an
-hourly task 40 minutes late (grace floor is 30m, half-cadence for an
+But a task only a little past its occurrence is still within its allowance — an
+hourly task 40 minutes late (the allowance floor is 30m, half-cadence for an
 hourly task is 30m):
 
 ```ts
@@ -170,7 +170,7 @@ statusOf({ fields: hourly, cardMtime: new Date("2026-06-05T00:00:00Z") })
 ```
 
 `not-before` postpones due-ness — an hourly cron with `not-before: 30m`
-that ran 35 minutes ago has an occurrence pending but well within grace:
+that ran 35 minutes ago has an occurrence pending but well within its allowance:
 
 ```ts
 statusOf({ fields: { ...hourly, "not-before": "30m" }, state: ran("2026-06-09T11:25:00Z") })

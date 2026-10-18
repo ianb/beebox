@@ -33,13 +33,13 @@ Verification returns the device identity and no longer un-revokes anything.
 
 ```ts
 const box = await makeTmpBox();
-const ticket = createMobilePairingTicket(box.root, { createdBy: "ada@example.com" });
+const ticket = createMobilePairingTicket(box.root, { createdBy: "rosa@example.com" });
 const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "phone" });
 assert.ok(device);
 
 const identity = await resolveMobileBearerIdentity(box.root, `Bearer ${device.deviceToken}`);
 identity?.createdBy
-=> ada@example.com
+=> rosa@example.com
 ```
 
 A revoked device stops verifying, and stays revoked on the next verify attempt.
@@ -60,7 +60,7 @@ the post-revoke record instead of clobbering it with a stale one.
 
 ```ts continue
 const box2 = await makeTmpBox();
-const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "grace@example.com" });
+const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "tomas@example.com" });
 const device2 = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "phone2" });
 assert.ok(device2);
 

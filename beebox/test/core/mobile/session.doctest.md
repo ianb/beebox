@@ -39,7 +39,7 @@ MOBILE_SESSION_TTL_MS
 const box = await makeTmpBox();
 clearMobileSessionSecretCache();
 
-const cookie = signMobileSession(box.root, { deviceId: "device-1", createdBy: "ada@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
+const cookie = signMobileSession(box.root, { deviceId: "device-1", createdBy: "rosa@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
 const session = verifyMobileSession(box.root, cookie);
 session?.deviceId
 => device-1
@@ -52,7 +52,7 @@ check.
 
 ```ts continue
 session?.createdBy
-=> ada@example.com
+=> rosa@example.com
 ```
 
 The secret is created on first use, inside the box's `.beebox/` directory
