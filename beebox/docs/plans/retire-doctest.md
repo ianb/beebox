@@ -750,6 +750,34 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   browse) and shapes (`print`, `continue`, `teardown` together).
 - **First implementation chunk:** `prepare` and `verify`, with static and
   runtime fidelity, run over `beebox/test/lib/`.
+- **Result, first chunk (2026-10-18).** `bin/doctest-convert.ts prepare`
+  and `verify` (modules in `bin/doctest-convert/`), tried in a scratch
+  worktree at 659167f78, nothing committed from the run:
+  - `prepare` folds in the pipeline TRIALS.md section 1 measured, per
+    directory: the doctests' own tap counts as the runtime baseline, the
+    differential run, typecheck and lint loops, then eslint's layout fixes
+    (`--fix-type layout`, which removed every `quotes` finding). It
+    records each file in the state file before deleting its doctest, and
+    skips a doctest with uncommitted changes or an existing test file the
+    state does not record (`beebox/test/lib/box-slug`).
+  - The state file keeps a hash of each check's arguments, not their text
+    (120 KB for `beebox/test/lib`'s 41 files).
+  - `beebox/test/lib/` plus the cross-root pilot (`browse/test`,
+    `browse/packages/agent-browser-typed/test`, `scan-uploader/test`,
+    `workstreams-app/test/shared`, `workstreams-app/test/frontend/main`, a
+    frontend directory, `bin/test/lib`, `agent-doctest/test`): 42 of 83
+    files verify with no worker. Every remaining problem is a lint finding:
+    `max-params` 15, `security/detect-non-literal-fs-filename` 15 (all in
+    `agent-doctest/test`), unused variables 11, `no-shadow` 8,
+    `no-useless-escape` 8, `max-lines` 7, and smaller kinds. No file failed
+    static or runtime fidelity.
+  - `verify` refused a changed expected value and listed the changed
+    actual; a lint fix verified.
+  - Two Codex review rounds: 10 findings, 9 fixed (`git log` from
+    4d74c8355). Accepted: a layout fix inside code that reads its own
+    source (`fn.toString()`) changes that text without a failing check.
+  - Next chunk: `dispatch` and the worker slots, then calibration on the
+    41 lint-only files.
 
 ### Track 4 — phase 2 bulk conversion
 
