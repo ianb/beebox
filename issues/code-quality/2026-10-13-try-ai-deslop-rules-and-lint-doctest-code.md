@@ -53,7 +53,7 @@ configured, and the code blocks are not part of any `tsc` project. Doctests
 run through tsx, which strips types without checking them. Doctest code
 can therefore hold patterns the linter rejects everywhere else. Example: a
 helper with untyped parameters in
-`beebox/src/frontend/test/components/themes/ThemedFileCard/view/PropertiesFace.order-appearance.doctest.md`.
+`beebox/src/frontend/test/components/themes/ThemedFileCard/view/PropertiesFace.order-appearance.test.ts`.
 
 The mechanism (checking the module agent-doctest generates, with its line
 map) has its own issue:

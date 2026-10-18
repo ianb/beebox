@@ -1,0 +1,80 @@
+// # handleTurnMessage — streaming block dedup
+//
+// `handleTurnMessage` maps a turn's SDK frames onto the chat machine's
+// `STREAM_*` events. The SDK emits **one assistant message per content
+// block**, and a streamed text block's `text_delta` events always arrive
+// immediately before that block's own assistant frame. So the assistant
+// frame's text is a *duplicate* of what the deltas already surfaced —
+// except when a block arrives with **no deltas at all** (atomic
+// delivery), which is common for post-tool text and `![](…)` embeds.
+//
+// The `sawTextPartial` latch must therefore be scoped to the *current*
+// block: it's reset after every assistant frame. A turn-global latch
+// dropped every atomic block after the first streamed one — the
+// "intermediate text/embeds vanish, only the last block renders" bug.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { printed } from "agent-doctest/check";
+import { handleTurnMessage } from "../../src/machines/chatMachine/chat-actors.js";
+import type { ChatMessage } from "../../../core/chat/session/messages.js";
+import type { ChatEvent } from "../../src/machines/chat-types.js";
+
+function delta(text: string): ChatMessage {
+  return { type: "stream_event", session_id: "s", parent_tool_use_id: null, event: { type: "content_block_delta", delta: { type: "text_delta", text } } };
+}
+function asstText(text: string): ChatMessage {
+  return { type: "assistant", session_id: "s", message: { role: "assistant", content: [{ type: "text", text }] } };
+}
+function asstTool(id: string): ChatMessage {
+  return { type: "assistant", session_id: "s", message: { role: "assistant", content: [{ type: "tool_use", id, name: "Read", input: {} }] } };
+}
+
+// Drive a sequence of frames through one turn's shared state and return the
+// text the machine would accumulate (STREAM_TEXT joined) plus the tool count.
+function runTurn(frames: ChatMessage[]): { text: string; tools: number } {
+  const state = { sawTextPartial: false };
+  const events: ChatEvent[] = [];
+  const sink = (event: ChatEvent): void => { events.push(event); };
+  for (const msg of frames) {
+    handleTurnMessage(msg, { sessionInput: "s", sendBack: sink, terminal: sink, state });
+  }
+  const text = events.flatMap((e) => (e.type === "STREAM_TEXT" ? [e.text] : [])).join("");
+  const tools = events.filter((e) => e.type === "STREAM_TOOL").length;
+  return { text, tools };
+}
+
+// ## Interleaved turn: atomic post-tool text/embeds all survive
+//
+// This is the regression. Opening narration streams via deltas; two
+// embed blocks arrive atomically after tool calls; a third arrives via
+// deltas; a final line arrives atomically. Every block must appear
+// exactly once — none dropped, none duplicated.
+void test("This is the regression.", async (t) => {
+  const out = printed();
+  const print = out.print;
+  // doctest:L54
+  const { text, tools } = runTurn([
+    delta("Opening narration."),
+    asstText("Opening narration."),           // dup of deltas — skipped
+    asstTool("t1"),
+    asstText("![Embed A](/a.png)"),            // atomic — kept
+    asstTool("t2"),
+    delta("![Embed B](/b.png)"),
+    asstText("![Embed B](/b.png)"),            // dup of deltas — skipped
+    asstText("Final narration line."),         // atomic — kept
+  ]);
+  print(`tools: ${tools}`);
+  await t.checkText(out.with(text), `tools: 2
+Opening narration.![Embed A](/a.png)![Embed B](/b.png)Final narration line.`);
+});
+
+// ## Two consecutive atomic blocks both survive
+void test("Two consecutive atomic blocks both survive", async (t) => {
+  // doctest:L74
+  const { text } = runTurn([
+    asstText("First atomic."),
+    asstText("Second atomic."),
+  ]);
+  t.check(text, "First atomic.Second atomic.");
+});

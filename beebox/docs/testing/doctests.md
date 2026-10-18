@@ -163,7 +163,7 @@ Rules:
   starts rendering.
 - End each example with `unmount()`, so the component's cleanups run.
 - A component that calls `useParams` needs a router around it, as in
-  `src/frontend/test/components/PersonView.person-view.doctest.md`.
+  `src/frontend/test/components/PersonView.person-view.test.ts`.
 
 ````markdown
 ```ts setup

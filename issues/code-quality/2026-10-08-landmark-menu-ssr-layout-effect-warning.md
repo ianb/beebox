@@ -11,7 +11,7 @@ The frontend doctest run emits React's `useLayoutEffect does nothing on the
 server` warning from `AppNav/PlacePill-landmarks.tsx`. The assertions pass, but
 the warning obscures actionable test diagnostics.
 
-`beebox/src/frontend/test/components/AppNav/PlacePill.menus.doctest.md` renders
+`beebox/src/frontend/test/components/AppNav/PlacePill.menus.test.ts` renders
 `SwitchMenuBody` with `renderToString`. That component renders the landmark
 list in `beebox/src/frontend/src/components/AppNav/PlacePill-landmarks.tsx`.
 The list calls `useLayoutEffect` unconditionally, including when search is

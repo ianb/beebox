@@ -172,6 +172,12 @@ export interface DispatchResult {
   checkOutput?: string;
 }
 
+/** A unified diff of two files; empty when they are the same. */
+function diffOf(before: string, after: string): string {
+  // git diff --no-index exits 1 when the files differ.
+  return spawnSync("git", ["diff", "--no-index", "--", before, after], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).stdout;
+}
+
 function contentOf(path: string): string | null {
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
@@ -212,7 +218,11 @@ export function dispatch(batch: { paths: readonly string[]; model: Model; trial:
     git(slot, ["checkout", "-qf", "--detach", head]);
     git(slot, ["clean", "-fdq"]);
     install(slot);
-    for (const t of tests) {
+    // The batch, and any tracked file this checkout has modified (a fix the
+    // batch needs that cannot be committed while conversions are on disk).
+    const modified = parseStatus(git(REPO, ["status", "--porcelain", "-z", "--untracked-files=no"]))
+      .filter((p) => existsSync(join(REPO, p)) && !p.startsWith(relative(REPO, STATE_DIR)));
+    for (const t of [...tests, ...modified]) {
       mkdirSync(dirname(join(slot, t)), { recursive: true });
       copyFileSync(join(REPO, t), join(slot, t));
     }
@@ -250,6 +260,11 @@ export function dispatch(batch: { paths: readonly string[]; model: Model; trial:
       return { accepted: passed, reasons, transcript: transcriptPath, selected, checkOutput: c.stdout + c.stderr };
     }
 
+    // The worker's edits, for the batch review: changed checked expressions
+    // are read against what the converter wrote.
+    const diffPath = transcriptPath.replace(/\.jsonl$/, ".diff");
+    writeFileSync(diffPath, tests.map((t) => diffOf(join(REPO, t), join(slot, t))).join(""));
+    log(`diff: ${diffPath}`);
     withLock(stateLockPath(), () => {
       for (const t of tests) copyFileSync(join(slot, t), join(REPO, t));
       // Reselect: another dispatch may have saved the state files meanwhile.

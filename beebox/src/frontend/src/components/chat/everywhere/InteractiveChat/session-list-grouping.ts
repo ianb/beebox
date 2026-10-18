@@ -8,7 +8,7 @@
  * and trail under "Done", still listed and still resumable.
  *
  * Pure so the affordance is testable without a router/DOM
- * (src/frontend/test/components/chat/everywhere/InteractiveChat/session-list-grouping.doctest.md).
+ * (src/frontend/test/components/chat/everywhere/InteractiveChat/session-list-grouping.test.ts).
  */
 
 import type { ChatSessionInfo } from "../../../../api";

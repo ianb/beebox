@@ -113,11 +113,11 @@ let notifyCount = 0;
 consultStore.subscribe("msg-2", () => { notifyCount += 1; });
 consultStore.applyConsulted("msg-2", "did I say can or cannot?");
 consultStore.applyConsulted("msg-2", "did I say can or cannot?");
-consultStore.applyConsulted("msg-2", "how did I pronounce Bicking?");
+consultStore.applyConsulted("msg-2", "how did I pronounce Ostrowski?");
 print(`entry: ${JSON.stringify(consultStore.getEntry("msg-2"))}`);
 print(`notified: ${notifyCount}`);
 =>
-entry: {"consulted":{"questions":["did I say can or cannot?","how did I pronounce Bicking?"]}}
+entry: {"consulted":{"questions":["did I say can or cannot?","how did I pronounce Ostrowski?"]}}
 notified: 3
 ```
 

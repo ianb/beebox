@@ -1,0 +1,60 @@
+// # Naming what a Drive pointer points at
+//
+// A `.glink.card` records a `mime` because nothing was copied — the mime is the
+// box's whole answer to "what is this?". `driveMimeLabel`
+// (`frontend/src/lib/drive-card-display.ts`) is what the `glink` view shows in
+// its place.
+//
+// The rule is: name it when we know the name, and otherwise show the raw mime.
+// A friendly-but-wrong label ("Document" for anything unrecognized) would hide
+// what the item actually is, and the raw string is what `bbx drive inspect`
+// prints anyway.
+
+import { test } from "tap";
+import "agent-doctest/tap";
+import { driveMimeLabel } from "../../src/lib/drive-card-display.js";
+
+// ## Google's own types read as products, not as vendor strings
+void test("Google's own types read as products, not as vendor strings", async (t) => {
+  // doctest:L20
+  t.check(driveMimeLabel("application/vnd.google-apps.document"), "Google Doc");
+
+  // doctest:L23
+  t.check(driveMimeLabel("application/vnd.google-apps.folder"), "Drive folder");
+});
+
+// ## The everyday attachments a mirror leaves pointers for
+//
+// A PDF, a scan, an Office file — the children a folder mirror cannot sync, which
+// is exactly when a pointer gets written.
+void test("A PDF, a scan, an Office file — the children a folder mirror cannot sync, whi...", async (t) => {
+  // doctest:L33
+  t.check(driveMimeLabel("application/pdf"), "PDF");
+});
+
+// ## A family stands in when the exact subtype would not help
+//
+// `image/heic` and `image/png` are both "an image" to someone deciding whether to
+// open it, and the subtype list would never finish.
+void test("image/heic and image/png are both \"an image\" to someone deciding whether to o...", async (t) => {
+  // doctest:L43
+  t.check(driveMimeLabel("image/heic"), "Image");
+
+  // doctest:L46
+  t.check(driveMimeLabel("video/quicktime"), "Video");
+});
+
+// ## Anything else keeps its mime, verbatim
+void test("Anything else keeps its mime, verbatim", async (t) => {
+  // doctest:L53
+  t.check(driveMimeLabel("application/x-sqlite3"), "application/x-sqlite3");
+});
+
+// ## A missing mime says it is missing
+//
+// A hand-written pointer the connector has not stamped yet has no mime. Rendering
+// nothing where a kind belongs would read as "no kind"; say the field is absent.
+void test("A hand-written pointer the connector has not stamped yet has no mime.", async (t) => {
+  // doctest:L63
+  t.check(driveMimeLabel(""), "Unknown type");
+});

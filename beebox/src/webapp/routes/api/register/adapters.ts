@@ -17,8 +17,17 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { Readable } from "node:stream";
+import { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { errorMessage } from "../../../../shared/error-guards.js";
 import { resolveSecret } from "../../../../core/secrets/resolve.js";
+
+/** fetch returned a body that is not a Node web stream, which Node's fetch never does. */
+class UpstreamBodyError extends Error {
+  public constructor() {
+    super("the upstream response body is not a Node ReadableStream");
+    this.name = "UpstreamBodyError";
+  }
+}
 
 interface AdapterDef {
   /** Default upstream base URL; BBX_ADAPTER_BASE_<NAME> overrides (tests). */
@@ -118,6 +127,10 @@ export function registerApiAdapterRoutes(options: RegisterApiAdapterRoutesOption
       if (contentType !== null) void reply.header("content-type", contentType);
       // Stream the body through (SSE and large responses included).
       if (upstream.body === null) return reply.send();
+      // Node's fetch body is always node:stream/web's ReadableStream. The
+      // check narrows it for a program that also loads the DOM's
+      // ReadableStream type (the frontend's tests import this server).
+      if (!(upstream.body instanceof NodeReadableStream)) throw new UpstreamBodyError();
       return reply.send(Readable.fromWeb(upstream.body));
     },
   });

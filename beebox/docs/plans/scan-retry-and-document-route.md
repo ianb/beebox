@@ -381,7 +381,7 @@ gets a `knows_directly` entry before it ships.
   part is the policy, not the I/O. Keep the policy a pure function over
   (attempt count, last outcome) so a doctest reaches it directly, the same
   shape used for the uploader's settle-retry policy in
-  `scan-uploader/test/settle-retry.doctest.md` (moved to `scan-uploader/test/cli/settle.retry.doctest.md`). No new tier, no mock.
+  `scan-uploader/test/settle-retry.doctest.md` (moved to `scan-uploader/test/cli/settle.retry.test.ts`). No new tier, no mock.
 - **Track 2** is covered by the existing route doctests plus a new case
   asserting that a wakeup reporting connector errors, with intake drained, is
   *not* retried.
