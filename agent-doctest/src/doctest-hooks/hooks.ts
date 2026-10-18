@@ -18,7 +18,10 @@ import { fileURLToPath } from "node:url";
 // main thread, which runs under `--import=tsx`). Its own relative imports
 // must therefore name the real `.ts` extension so Node's native loader can
 // find them — which is why this package's tsconfig sets
-// `allowImportingTsExtensions`.
+// `allowImportingTsExtensions`. The same thread strips types without tsx, so
+// nothing reachable from here may use parameter properties or enums. Code
+// that needs check/ or tap-check/ (the converter, src/convert/) imports this
+// module; this module never imports it.
 import { tsxOnlyFallback } from "./resolve-rules.ts";
 import { loadDoctestBody, doctestEntrySource, BODY_QUERY } from "./doctest-load.ts";
 
