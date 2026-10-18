@@ -190,3 +190,9 @@ export function isCommitted(file: string): boolean {
   if (run({ cmd: "git", args: ["ls-files", "--error-unmatch", "--", file], cwd: "." }).status !== 0) return false;
   return run({ cmd: "git", args: ["diff", "--quiet", "HEAD", "--", file], cwd: "." }).status === 0;
 }
+
+/** Tracked files whose text contains `needle`. */
+export function mentions(needle: string): string[] {
+  const r = run({ cmd: "git", args: ["grep", "-l", "-F", "-e", needle], cwd: "." });
+  return r.stdout.split("\n").filter((f) => f !== "");
+}

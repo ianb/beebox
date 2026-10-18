@@ -45,7 +45,12 @@ const RULE_BREAKS: readonly RegExp[] = [
 const GIT = /(?:^|[\s&(;|])git\s/g;
 const GIT_READ = /(?:^|[\s&(;|])git\s+(?:-C\s+\S+\s+)?(?:diff|status|log|show|ls-files|grep|blame)\b/g;
 
-export function forbidden(command: string): boolean {
+/** A heredoc's body: text fed to a command, not run by the shell. */
+const HEREDOC = /<<-?\s*(["']?)(\w+)\1[^\n]*\n[\S\s]*?\n\s*\2(?=\n|$)/g;
+
+export function forbidden(fullCommand: string): boolean {
+  // An edit script's text names git or rm freely; only the shell part counts.
+  const command = fullCommand.replaceAll(HEREDOC, "<<heredoc");
   if (RULE_BREAKS.some((re) => re.test(command))) return true;
   return [...command.matchAll(GIT)].length !== [...command.matchAll(GIT_READ)].length;
 }

@@ -667,6 +667,16 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
       rules: { "single-export/single-export": "off" },
     },
     {
+      // disabledRules are rules reviewed and rejected, each with its reason.
+      // The main block reaches only root-scoped files, so a package whose
+      // test/ is not in its file patterns (browse, agent-doctest) still had
+      // them from eslint-config-agent's base: a converted test exported its
+      // stub classes for class-export, and a fixture-writing test met
+      // detect-non-literal-fs-filename on every fs call (boxholder,
+      // 2026-10-18). Applied with no `files` key, as the retirements above.
+      rules: disabledRules,
+    },
+    {
       // The error/* rules are off in tests — boxholder decision 2026-10-18.
       // A test throws a plain Error on purpose: as the input the code under
       // test receives, from a fake that simulates a failure or must not be
