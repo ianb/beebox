@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp } from "node:fs/promises";
@@ -26,6 +25,8 @@ process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id";
 process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
+// markGoogleAuthDead stamps `since` from the box clock, not from the `now` option.
+process.env.BBX_TIME = NOW.toISOString();
 
 // ## A live grant records nothing
 void test("A live grant records nothing", async (t) => {
@@ -33,6 +34,7 @@ void test("A live grant records nothing", async (t) => {
     try {
       await box.cleanup();
       delete process.env.BBX_GOOGLE_TOKENS_FILE;
+      delete process.env.BBX_TIME;
       delete process.env.GOOGLE_OAUTH_CLIENT_ID;
       delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
     } catch (error) {
@@ -53,7 +55,7 @@ void test("A live grant records nothing", async (t) => {
   await markGoogleAuthDead({ reason: "Token has been expired or revoked." });
 
   // doctest:L45
-  t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: isoDate() });
+  t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: NOW.toISOString() });
 
   // doctest:L48
   t.check(await refreshGoogleAuth(box.root, { now: NOW }), null);
@@ -69,5 +71,5 @@ void test("A live grant records nothing", async (t) => {
 
   // doctest:L62
   await markGoogleAuthDead({ reason: "revoked again" });
-  t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: isoDate() });
+  t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: NOW.toISOString() });
 });

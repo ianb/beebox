@@ -13,7 +13,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import assert from "node:assert/strict";
+import { isoDate, unordered } from "agent-doctest/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
@@ -26,6 +26,23 @@ function caller(boxRoot: string) {
   const ctx: TrpcContext = trpcContext({ boxRoot });
   return appRouter.createCaller(ctx);
 }
+
+// A listed row; lastUsedAt is the transcript file's mtime, so it varies.
+function row(fields: { sessionId: string; label: string; contextDir?: string; landmarkLabel?: string }) {
+  return {
+    sessionId: fields.sessionId,
+    source: "chat",
+    label: fields.label,
+    lastUsedAt: isoDate(),
+    isActive: false,
+    contextDir: fields.contextDir ?? "",
+    landmarkLabel: fields.landmarkLabel ?? "Root",
+    done: false,
+  } as const;
+}
+
+const TITLED = row({ sessionId: "titled01", label: "Chasing down a duplicate charge" });
+const UNTITLED = row({ sessionId: "untitled1", label: "“what's on my calendar tomorrow”" });
 
 async function seedTranscript(boxRoot: string, { sessionId, firstMessage }: { sessionId: string; firstMessage: string }) {
   const logPath = getSessionLogPath(boxRoot, sessionId);
@@ -65,8 +82,7 @@ void test("A husk title beats the first-message snippet", async (t) => {
 
   // doctest:L57
   const { sessions } = await caller(box.root).chat.sessions();
-  await t.checkText(sessions.map((s) => `${s.sessionId}: ${s.label}`).toSorted().join("\n"), `titled01: Chasing down a duplicate charge
-untitled1: “what's on my calendar tomorrow”`);
+  t.check(sessions, unordered([TITLED, UNTITLED]));
 
   // ## Husks are the enumeration, so the two lists can't drift
   //
@@ -82,7 +98,7 @@ untitled1: “what's on my calendar tomorrow”`);
 
   // doctest:L76
   const listed = await caller(box.root).chat.sessions();
-  await t.checkText(listed.sessions.some((s) => s.sessionId === "huskless"), "false");
+  t.check(listed.sessions, unordered([TITLED, UNTITLED]));
 
   // A husk whose transcript is gone is skipped too — there's nothing to resume,
   // though the card stays browsable.
@@ -93,7 +109,7 @@ untitled1: “what's on my calendar tomorrow”`);
 
   // doctest:L88
   const stillGone = await caller(box.root).chat.sessions();
-  await t.checkText(stillGone.sessions.some((s) => s.sessionId === "notrans1"), "false");
+  t.check(stillGone.sessions, unordered([TITLED, UNTITLED]));
 
   // A session whose transcript exists but can't be parsed still lists — it falls
   // back to the id prefix rather than failing the whole list. (Expect a
@@ -107,7 +123,7 @@ untitled1: “what's on my calendar tomorrow”`);
 
   // doctest:L103
   const garbled = await caller(box.root).chat.sessions();
-  t.check(garbled.sessions.find((s) => s.sessionId === "garbled9")?.label, "garbled9");
+  t.check(garbled.sessions, unordered([TITLED, UNTITLED, row({ sessionId: "garbled9", label: "garbled9" })]));
 });
 
 // ## Each row carries its landmark, so the dropdown can group by it
@@ -143,8 +159,10 @@ void test("contextDir is the session's binding (\"\" for root-bound and for lega
 
   // doctest:L133
   const { sessions } = await caller(box.root).chat.sessions();
-  await t.checkText(sessions.map((s) => `${s.sessionId} [${s.contextDir}] ${s.landmarkLabel}`).toSorted().join("\n"), `inrecipe1 [_content/recipes] Recipes
-rootchat1 [] Root`);
+  t.check(sessions, unordered([
+    row({ sessionId: "inrecipe1", label: "“what can I make with lentils”", contextDir: "_content/recipes", landmarkLabel: "Recipes" }),
+    row({ sessionId: "rootchat1", label: "“how's my week looking”" }),
+  ]));
 
   // A session bound to a directory with no landmark card (deleted, or never one)
   // still says where it lives — the directory itself is the fallback label.
@@ -156,7 +174,9 @@ rootchat1 [] Root`);
 
   // doctest:L148
   const after = await caller(box.root).chat.sessions();
-  const orphan = after.sessions.find((s) => s.sessionId === "orphaned1");
-  assert.ok(orphan);
-  t.check(`${orphan.contextDir} / ${orphan.landmarkLabel}`, "_content/orphan / _content/orphan");
+  t.check(after.sessions, unordered([
+    row({ sessionId: "orphaned1", label: "“leftover thread”", contextDir: "_content/orphan", landmarkLabel: "_content/orphan" }),
+    row({ sessionId: "inrecipe1", label: "“what can I make with lentils”", contextDir: "_content/recipes", landmarkLabel: "Recipes" }),
+    row({ sessionId: "rootchat1", label: "“how's my week looking”" }),
+  ]));
 });

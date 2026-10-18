@@ -38,6 +38,16 @@ const authDir = await mkdtemp(path.join(os.tmpdir(), "bbx-session-gen-"));
 const AUTH_FILE = path.join(authDir, "auth.json");
 process.env.BBX_AUTH_FILE = AUTH_FILE;
 
+// `verifySession` returns `picture: undefined` as a present key, which its
+// `picture?: string` type (exactOptionalPropertyTypes) cannot state in an
+// expected value. This drops the key only when it is undefined.
+function claimsOf(cookie: string) {
+  const session = verifySession(cookie);
+  if (session === null) return null;
+  const { picture, ...rest } = session;
+  return picture === undefined ? rest : { ...rest, picture };
+}
+
 // A minimal request carrying just the session cookie (the shape the resolver reads).
 function reqWithCookie(cookieValue: string | undefined) {
   return { headers: {}, cookies: cookieValue ? { [COOKIE_NAME]: cookieValue } : {} };
@@ -50,7 +60,7 @@ function reqWithCookie(cookieValue: string | undefined) {
 void test("New cookies canonicalize at signing, so password and Google identities use th...", async (t) => {
   // doctest:L52
   const canonicalCookie = signSession({ email: " Person@Example.COM ", name: "Person" });
-  t.check(verifySession(canonicalCookie)?.email, "person@example.com");
+  t.check(claimsOf(canonicalCookie), { email: "person@example.com", name: "Person" });
 });
 
 // ## Login mints a `gen`-bearing cookie for an email with a local record
@@ -71,10 +81,10 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
 
   // doctest:L63
   const cookie1 = signSession({ email: "owner@example.com", name: "Owner" });
-  await t.checkText(
+  t.check(
     // The signed payload carries the record's current generation (1).
-    JSON.stringify(verifySession(cookie1)),
-    "{\"email\":\"owner@example.com\",\"name\":\"Owner\",\"gen\":1}",
+    claimsOf(cookie1),
+    { email: "owner@example.com", name: "Owner", gen: 1 },
   );
 
   // doctest:L68
@@ -92,17 +102,17 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
   // logged 500 instead of a clean "no session."
 
   // doctest:L80
-  await t.checkText(
+  t.check(
     // `e30` is base64url for `{}`; `x` is a 1-char signature (32 bytes expected).
-    JSON.stringify(verifySession("e30.x")),
-    "null",
+    verifySession("e30.x"),
+    null,
   );
 
   // doctest:L84
-  await t.checkText(
+  t.check(
     // A signature of the right hex form but wrong length is also just invalid.
-    JSON.stringify(verifySession("e30.abcd")),
-    "null",
+    verifySession("e30.abcd"),
+    null,
   );
 
   // ## Changing the password bumps `gen`, so the old cookie is unauthenticated
@@ -112,10 +122,10 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
   resetLocalUserCache();
 
   // doctest:L95
-  await t.checkText(
+  t.check(
     // The pre-change cookie still carries gen 1; the record is now gen 2 → revoked.
-    JSON.stringify(resolveRequestIdentity(reqWithCookie(cookie1), { openAccess: false })),
-    "{\"email\":null,\"name\":null,\"source\":null}",
+    resolveRequestIdentity(reqWithCookie(cookie1), { openAccess: false }),
+    { email: null, name: null, source: null },
   );
 
   // doctest:L99
@@ -144,20 +154,20 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
   // doctest:L115
   await removeUser({ email: "member@example.com" });
   resetLocalUserCache();
-  await t.checkText(
+  t.check(
     // Record gone, but the cookie still carries a gen → dead (removal revokes it).
-    JSON.stringify(resolveRequestIdentity(reqWithCookie(memberCookie), { openAccess: false })),
-    "{\"email\":null,\"name\":null,\"source\":null}",
+    resolveRequestIdentity(reqWithCookie(memberCookie), { openAccess: false }),
+    { email: null, name: null, source: null },
   );
 
   // ## A Google-only email (no record) with a `gen`-less cookie stays valid
 
   // doctest:L125
   const googleCookie = signSession({ email: "google@example.com", name: "Google Person", picture: "https://example.com/p.png" });
-  await t.checkText(
+  t.check(
     // No local record for this email, so no gen is stamped.
-    JSON.stringify(verifySession(googleCookie)),
-    "{\"email\":\"google@example.com\",\"name\":\"Google Person\",\"picture\":\"https://example.com/p.png\"}",
+    verifySession(googleCookie),
+    { email: "google@example.com", name: "Google Person", picture: "https://example.com/p.png" },
   );
 
   // doctest:L130
@@ -173,11 +183,11 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
   // doctest:L138
   await addUser({ email: "google@example.com", name: "Google Person", password: "pw-google-1", role: "member" });
   resetLocalUserCache();
-  await t.checkText(
+  t.check(
     // The old gen-less cookie predates the record; now a record exists and the
     // cookie carries no gen → mismatch → dead (one re-login required, intended).
-    JSON.stringify(resolveRequestIdentity(reqWithCookie(googleCookie), { openAccess: false })),
-    "{\"email\":null,\"name\":null,\"source\":null}",
+    resolveRequestIdentity(reqWithCookie(googleCookie), { openAccess: false }),
+    { email: null, name: null, source: null },
   );
 
   // ## A corrupt auth file yields the distinct `unavailable` outcome — not a plain 401
@@ -191,12 +201,9 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
   t.check(
     // Distinct fail-closed outcome (→ 503), NOT source:null (which is the 401 case)
     // and NOT a fall-through to "no record" (which would fail OPEN for revoked sessions).
-    corruptIdentity.source,
-    "unavailable",
+    corruptIdentity,
+    { email: null, name: null, source: "unavailable" },
   );
-
-  // doctest:L158
-  await t.checkText(corruptIdentity.source === null, "false");
 
   // At the request boundary that outcome answers `503`, not `401`: `GET /auth/me`
   // with a signature-valid cookie against the corrupt store returns 503.
@@ -208,7 +215,7 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
     url: "/auth/me",
     headers: { cookie: `${COOKIE_NAME}=${cookie2}` },
   });
-  t.check(me.statusCode, 503);
+  t.check(me, { statusCode: 503, body: { error: "Authentication temporarily unavailable" } });
 
   // doctest:L175
   await server.cleanup();

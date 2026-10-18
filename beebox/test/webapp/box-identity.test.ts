@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { str, any } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -62,8 +62,6 @@ async function setAgentBrowsing(box: { root: string }, value: unknown) {
 // The name comes from the local user record, so an attributed chat message reads
 // as the boxholder rather than as an email string.
 void test("The name comes from the local user record, so an attributed chat message read...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await optedIn.cleanup();
@@ -82,7 +80,7 @@ void test("The name comes from the local user record, so an attributed chat mess
   await setAgentBrowsing(optedIn, "owner");
 
   // doctest:L68
-  await t.checkText(out.with(JSON.stringify(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: false }))), "{\"email\":\"owner@example.com\",\"name\":\"Owner\",\"source\":\"browse\"}");
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: false }), { email: "owner@example.com", name: "Owner", source: "browse" });
 
   // ## The same key on a box that never opted in is nobody
   //
@@ -94,14 +92,14 @@ void test("The name comes from the local user record, so an attributed chat mess
   const plainBox = await makeTmpBox();
 
   // doctest:L81
-  await t.checkText(out.with(JSON.stringify(await resolveBoxIdentity({ boxRoot: plainBox.root, request: withKey, openAccess: false }))), "{\"email\":null,\"name\":null,\"source\":null}");
+  t.check(await resolveBoxIdentity({ boxRoot: plainBox.root, request: withKey, openAccess: false }), { email: null, name: null, source: null });
 
   // ## The field without the key grants nothing
   //
   // The opt-in is not a credential — it only says what a credential means here.
 
   // doctest:L90
-  await t.checkText(out.with(JSON.stringify(await resolveBoxIdentity({ boxRoot: optedIn.root, request: noKey, openAccess: false }))), "{\"email\":null,\"name\":null,\"source\":null}");
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: noKey, openAccess: false }), { email: null, name: null, source: null });
 
   // ## A bad value is treated as absent, and warned once per box
   //
@@ -120,9 +118,10 @@ void test("The name comes from the local user record, so an attributed chat mess
   console.warn = originalWarn;
 
   // doctest:L110
-  print(JSON.stringify(first));
-  await t.checkText(out.with(print(`warned ${warnings.length}x, names the box and the value: ${warnings[0]?.includes(badBox.root) && warnings[0]?.includes('"yes"')}`)), `{"email":null,"name":null,"source":null}
-warned 1x, names the box and the value: true`);
+  t.check(first, { email: null, name: null, source: null });
+  t.check(warnings, [
+    `[box-identity] Ignoring agentBrowsing: "yes" in ${path.join(badBox.root, "_config", "box.json")} — the only supported value is "owner".`,
+  ]);
 
   // ## An opted-in box with no owner to act as stays unauthenticated
   //
@@ -146,9 +145,10 @@ warned 1x, names the box and the value: true`);
   resetLocalUserCache();
 
   // doctest:L138
-  print(JSON.stringify(ownerlessIdentity));
-  await t.checkText(out.with(print(`warned about the box: ${noOwnerWarnings.length === 1 && noOwnerWarnings[0]?.includes(ownerless.root)}`)), `{"email":null,"name":null,"source":null}
-warned about the box: true`);
+  t.check(ownerlessIdentity, { email: null, name: null, source: null });
+  t.check(noOwnerWarnings, [
+    `[box-identity] ${ownerless.root} sets agentBrowsing: "owner", but this deployment has no owner to act as; agent browsing stays unauthenticated.`,
+  ]);
 
   // ## A real signed-in identity wins over the rung
   //
@@ -161,7 +161,7 @@ warned about the box: true`);
   const both = { headers: { authorization: `Bearer ${KEY}` }, cookies: { [COOKIE_NAME]: cookie } };
 
   // doctest:L155
-  await t.checkText(out.with(JSON.stringify(await resolveBoxIdentity({ boxRoot: optedIn.root, request: both, openAccess: false }))), "{\"email\":\"owner@example.com\",\"name\":\"Owner\",\"source\":\"cookie\"}");
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: both, openAccess: false }), { email: "owner@example.com", name: "Owner", source: "cookie" });
 
   // ## `open` is returned as-is
   //
@@ -169,7 +169,7 @@ warned about the box: true`);
   // openness into a named person.
 
   // doctest:L165
-  await t.checkText(out.with(JSON.stringify(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: true }))), "{\"email\":null,\"name\":null,\"source\":\"open\"}");
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: true }), { email: null, name: null, source: "open" });
 
   // ## A corrupt credential store is never masked by the key
   //
@@ -195,7 +195,8 @@ warned about the box: true`);
   console.error = originalError;
 
   // doctest:L192
-  print(JSON.stringify(corrupt));
-  await t.checkText(out.with(print(`logged the outage: ${errors.length === 1 && errors[0]?.includes("auth store unavailable")}`)), `{"email":null,"name":null,"source":"unavailable"}
-logged the outage: true`);
+  t.check(corrupt, { email: null, name: null, source: "unavailable" });
+  t.check(errors, [
+    str`[auth] auth store unavailable while verifying a session cookie; failing closed (503): AuthFileCorruptError: Auth file at ${path.join(authDir, "auth.json")} is corrupt: ${any(String)}`,
+  ]);
 });

@@ -37,7 +37,6 @@ void test("checkHashes parses the per-hash state map, including a rejected entry
       t.error(error);
     }
   });
-  // doctest:L34
   const server1: FakeScanServer = await startFakeScanServer({
     checkState: (sha) => {
       if (sha === "aaa") return { state: "unknown" };
@@ -77,7 +76,6 @@ void test("putFile sends the bearer token, the sanitized-server-side filename he
       t.error(error);
     }
   });
-  // doctest:L73
   const server2: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
@@ -88,15 +86,9 @@ void test("putFile sends the bearer token, the sanitized-server-side filename he
     status: "accepted",
   });
 
-  // doctest:L84
-  const [sent] = server2.putRequests;
-  t.check(sent?.authorization, "Bearer secret-123");
-
-  // doctest:L90
-  t.check(sent?.filename, "page1.pdf");
-
-  // doctest:L95
-  t.check(sent?.body.toString("utf-8"), "scan bytes");
+  t.check(server2.putRequests.map((sent) => ({ authorization: sent.authorization, filename: sent.filename, body: sent.body.toString("utf-8") })), [
+    { authorization: "Bearer secret-123", filename: "page1.pdf", body: "scan bytes" },
+  ]);
 });
 
 // A PUT that hits the rate limit reports `rate-limited` with the server's
@@ -110,7 +102,6 @@ void test("A PUT that hits the rate limit reports rate-limited with the server's
       t.error(error);
     }
   });
-  // doctest:L108
   const server3: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 429, retryAfterSeconds: 2 }),
@@ -135,7 +126,6 @@ void test("An unexpected check status whose body carries a reason gets that reas
       t.error(error);
     }
   });
-  // doctest:L128
   const server4: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     checkFailure: () => ({
@@ -146,12 +136,7 @@ void test("An unexpected check status whose body carries a reason gets that reas
   });
   const connection4 = { serverUrl: server4.url, box: "family", token: "t" };
   const checkFailureMessage = await rejectedMessage(checkHashes(connection4, ["aaa"]));
-  t.check(
-    checkFailureMessage.endsWith(
-      "check returned HTTP 503 — server says: box is not annex-converted; scan upload disabled",
-    ),
-    true,
-  );
+  t.check(checkFailureMessage, `Unexpected response from ${server4.url}/family/api/scan/check: check returned HTTP 503 — server says: box is not annex-converted; scan upload disabled`);
 });
 
 // A `reason` longer than ~200 chars is truncated rather than dumped whole
@@ -165,7 +150,6 @@ void test("A reason longer than ~200 chars is truncated rather than dumped whole
       t.error(error);
     }
   });
-  // doctest:L153
   const longReason = "x".repeat(250);
   const server5: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
@@ -174,10 +158,7 @@ void test("A reason longer than ~200 chars is truncated rather than dumped whole
   });
   const connection5 = { serverUrl: server5.url, box: "family", token: "t" };
   const longReasonMessage = await rejectedMessage(checkHashes(connection5, ["aaa"]));
-  t.check(longReasonMessage.includes("x".repeat(200) + "…"), true);
-
-  // doctest:L166
-  t.check(longReasonMessage.includes("x".repeat(201)), false);
+  t.check(longReasonMessage, `Unexpected response from ${server5.url}/family/api/scan/check: check returned HTTP 503 — server says: ${"x".repeat(200)}…`);
 });
 
 // `putFile` gets the same treatment for a status it has no specific case for
@@ -192,14 +173,13 @@ void test("putFile gets the same treatment for a status it has no specific case 
       t.error(error);
     }
   });
-  // doctest:L179
   const server6: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 500, body: { message: "database is in read-only mode" } }),
   });
   const connection6 = { serverUrl: server6.url, box: "family", token: "t" };
   const putFailureMessage = await rejectedMessage(putFile(connection6, { hash: "abc123", filePath }));
-  t.check(putFailureMessage.endsWith("unexpected HTTP status 500 — server says: database is in read-only mode"), true);
+  t.check(putFailureMessage, `Unexpected response from ${server6.url}/family/api/scan/files/abc123: unexpected HTTP status 500 — server says: database is in read-only mode`);
 });
 
 // ## Client identity rides both routes
@@ -228,7 +208,6 @@ void test("The uploader volunteers which contract it speaks and which build it i
       t.error(error);
     }
   });
-  // doctest:L212
   const server7: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
@@ -238,32 +217,29 @@ void test("The uploader volunteers which contract it speaks and which build it i
   const identityFile = join(identityDir, "page1.pdf");
   await writeFile(identityFile, "scan bytes");
   await checkHashes(connection7, ["aaa"]);
-  await t.checkText(JSON.stringify(server7.checkRequests[0]?.identity), "{\"contract\":\"1\",\"build\":\"source\"}");
+  t.check(server7.checkRequests[0]?.identity, { contract: "1", build: "source", builtAt: undefined });
 
   // The PUT carries the same identity — a box that only ever sees uploads still
   // learns what is talking to it:
 
-  // doctest:L229
   await putFile(connection7, { hash: "abc123", filePath: identityFile });
-  await t.checkText(JSON.stringify(server7.putRequests[0]?.identity), "{\"contract\":\"1\",\"build\":\"source\"}");
+  t.check(server7.putRequests[0]?.identity, { contract: "1", build: "source", builtAt: undefined });
 
   // A box that reports no contract version reads as `undefined` — which is what
   // every real box looks like until it deploys the field, and is why that case
   // means "no opinion" rather than "drifted":
 
-  // doctest:L239
-  t.check((await checkHashes(connection7, [])).contractVersion, undefined);
+  t.check(await checkHashes(connection7, []), { states: new Map(), contractVersion: undefined });
 
   // A box that does report one is read back as a number:
 
-  // doctest:L246
   const server8: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
     contractVersion: () => 7,
   });
   const checked8 = await checkHashes({ serverUrl: server8.url, box: "family", token: "t" }, []);
-  t.check(checked8.contractVersion, 7);
+  t.check(checked8, { states: new Map(), contractVersion: 7 });
 
   // An unknown *state* still throws — the state vocabulary is closed — but an
   // unreadable *version* is treated as absent rather than fatal. A diagnostic
@@ -272,7 +248,7 @@ void test("The uploader volunteers which contract it speaks and which build it i
   // (zero included — a box legitimately at contract 0 is not a box with no
   // opinion):
 
-  // doctest:L264
   const unreadable = [undefined, "seven", 1.5, -1, null, {}];
-  t.check(`${unreadable.map((v) => String(parseContractVersion(v))).join(",")} | ${String(parseContractVersion(0))} ${String(parseContractVersion(12))}`, "undefined,undefined,undefined,undefined,undefined,undefined | 0 12");
+  t.check(unreadable.map((v) => parseContractVersion(v)), [undefined, undefined, undefined, undefined, undefined, undefined]);
+  t.check([parseContractVersion(0), parseContractVersion(12)], [0, 12]);
 });

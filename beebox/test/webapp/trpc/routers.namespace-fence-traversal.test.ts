@@ -58,23 +58,16 @@ function cardsOf(body: unknown): { name: string; conflict?: boolean }[] {
   return body.cards;
 }
 
-/** Whether `card.get(cardPath)` throws (any error — the fence rejects with BAD_REQUEST). */
-async function cardGetThrows(ctx: TrpcContext, cardPath: string): Promise<boolean> {
-  try {
-    await cardRouter.createCaller(ctx).get({ path: cardPath });
-    return false;
-  } catch (_e) {
-    return true;
-  }
-}
-
 const server = await makeTestServer();
-async function writePackageMarker(boxRoot: string, marker: string): Promise<void> {
+/** Rewrites the box's package.json name to `marker`; returns the file's new text. */
+async function writePackageMarker(boxRoot: string, marker: string): Promise<string> {
   const packagePath = join(boxRoot, "package.json");
   const packageJson = await readFile(packagePath, "utf-8");
-  await writeFile(packagePath, packageJson.replace(/"name": "[^"]+"/, `"name": "${marker}"`));
+  const marked = packageJson.replace(/"name": "[^"]+"/, `"name": "${marker}"`);
+  await writeFile(packagePath, marked);
+  return marked;
 }
-await writePackageMarker(server.boxRoot, "secret-marker");
+const markedPackageJson = await writePackageMarker(server.boxRoot, "secret-marker");
 
 // ## `/api/files/*` (GET, PUT, POST, DELETE)
 //
@@ -109,7 +102,7 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // doctest:L105
   const pkgJsonPath = join(server.boxRoot, "package.json");
   const packageJsonAfter = await readFile(pkgJsonPath, "utf-8");
-  await t.checkText(packageJsonAfter.includes("secret-marker"), "true");
+  t.check(packageJsonAfter, markedPackageJson);
 
   // ## `/api/files-commit`
 
@@ -163,7 +156,7 @@ void test("A traversal form that starts inside content/ but resolves to package.
 
   // doctest:L172
   const ctx = ownerCtx(server.boxRoot);
-  t.check(await cardGetThrows(ctx, "_content/../package.json"), true);
+  t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "_content/../package.json" })), "Invalid card path");
 
   // ## `status.browse` (tRPC)
 
@@ -188,7 +181,7 @@ void test("A traversal form that starts inside content/ but resolves to package.
   const summarizeRes = await filesRouterModule.filesRouter.createCaller(ctx).summarize({
     paths: ["_content/../package.json"],
   });
-  t.check(summarizeRes[0], null);
+  t.check(summarizeRes, [null]);
 
   // ## `card.get` suggests the bare display form's canonical path on refusal
   //
@@ -268,7 +261,7 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
   });
   // doctest:L278
   const symServer = await makeTestServer();
-  await writePackageMarker(symServer.boxRoot, "secret-marker-2");
+  const symMarkedPackageJson = await writePackageMarker(symServer.boxRoot, "secret-marker-2");
   await symlink("..", join(symServer.boxRoot, "_content/pkg"));
 
   // doctest:L282
@@ -288,7 +281,7 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
   // doctest:L298
   const symPkgJsonPath = join(symServer.boxRoot, "package.json");
   const symPkgJsonAfter = await readFile(symPkgJsonPath, "utf-8");
-  await t.checkText(symPkgJsonAfter.includes("secret-marker-2"), "true");
+  t.check(symPkgJsonAfter, symMarkedPackageJson);
 
   // Browsing straight into the symlinked directory (the browse target itself IS
   // the symlink) is refused too — not just deeper paths through it:
@@ -305,7 +298,7 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
 
   // doctest:L320
   const symCtx = ownerCtx(symServer.boxRoot);
-  t.check(await cardGetThrows(symCtx, "_content/pkg/package.json"), true);
+  t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(symCtx).get({ path: "_content/pkg/package.json" })), "Invalid card path");
 
   // `status.browse` (tRPC) refuses it too — an empty listing, not the package
   // directory's contents:
@@ -328,7 +321,7 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
   const symSummarizeRes = await symFilesRouterModule.filesRouter.createCaller(symCtx).summarize({
     paths: ["_content/pkg/package.json"],
   });
-  t.check(symSummarizeRes[0], null);
+  t.check(symSummarizeRes, [null]);
 });
 
 // ## Annex-style leaf symlinks still serve on read (no regression)

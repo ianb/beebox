@@ -79,26 +79,22 @@ void test("A landmark's freshCount is every chat bound to it inside the 7-day wi
 
   // doctest:L71
   const menu = await caller(box.root).chat.placeMenu();
-  t.check(menu.landmarks, [
-    {
-      path: "_content/recipes/Recipes.landmark.card",
-      dir: "_content/recipes",
-      label: "Recipes",
-      symbol: {
-        glyph: "🍳",
-      },
-      freshCount: 2,
-    },
-  ]);
-
   // Nothing session-shaped rides along — that's the whole point of the split.
-
-  // doctest:L79
-  t.check(Object.keys(menu).toSorted(), [
-    "landmarks",
-    "problems",
-    "rootFreshCount",
-  ]);
+  t.check(menu, {
+    landmarks: [
+      {
+        path: "_content/recipes/Recipes.landmark.card",
+        dir: "_content/recipes",
+        label: "Recipes",
+        symbol: {
+          glyph: "🍳",
+        },
+        freshCount: 2,
+      },
+    ],
+    problems: [],
+    rootFreshCount: 0,
+  });
 });
 
 // ## `rootFreshCount` feeds the synthetic root row, and only when it's needed
@@ -134,7 +130,14 @@ void test("The box root is always switchable, landmark card or not.", async (t) 
 
   // doctest:L111
   const withRoot = await caller(box.root).chat.placeMenu();
-  t.check(`${withRoot.rootFreshCount} / ${withRoot.landmarks.find((l) => l.dir === "")?.freshCount}`, "0 / 2");
+  t.check(withRoot, {
+    landmarks: [
+      { path: "Box.landmark.card", dir: "", label: "Home", symbol: null, freshCount: 2 },
+      { path: "_content/recipes/Recipes.landmark.card", dir: "_content/recipes", label: "Recipes", symbol: null, freshCount: 0 },
+    ],
+    rootFreshCount: 0,
+    problems: [],
+  });
 });
 
 // ## Ordering matches `chat.byLandmark`'s, including the stale-but-used case
@@ -169,14 +172,20 @@ void test("The menu's row order is a duplicated contract now, so it gets its own
 
   // doctest:L141
   const menu = await caller(box.root).chat.placeMenu();
-  t.check(menu.landmarks.map((l) => `${l.label}:${l.freshCount}`).join(" > "), "Fresh:1 > Stale:0 > Home:0 > Absent:0 > Never:0");
+  t.check(menu.landmarks.map((l) => ({ label: l.label, freshCount: l.freshCount })), [
+    { label: "Fresh", freshCount: 1 },
+    { label: "Stale", freshCount: 0 },
+    { label: "Home", freshCount: 0 },
+    { label: "Absent", freshCount: 0 },
+    { label: "Never", freshCount: 0 },
+  ]);
 
   // The same box through `chat.byLandmark` orders its rows identically — the
   // duplication is the risk, so the two are compared directly rather than trusted.
 
   // doctest:L150
   const full = await caller(box.root).chat.byLandmark();
-  await t.checkText(full.landmarks.map((l) => l.label).join(" > ") === menu.landmarks.map((l) => l.label).join(" > "), "true");
+  t.check(full.landmarks.map((l) => l.label), menu.landmarks.map((l) => l.label));
 });
 
 // ## A landmark card that doesn't parse still reaches the menu
@@ -202,5 +211,11 @@ void test("The menu shows a warning row from problems; without it a hand-edit th
 
   // doctest:L172
   const broken = await caller(box.root).chat.placeMenu();
-  t.check(`${broken.landmarks.map((l) => l.label).join(",")} | ${broken.problems.map((p) => p.path).join(",")}`, "Recipes | _content/trips/Trips.landmark.card");
+  t.check(broken, {
+    landmarks: [
+      { path: "_content/recipes/Recipes.landmark.card", dir: "_content/recipes", label: "Recipes", symbol: null, freshCount: 0 },
+    ],
+    rootFreshCount: 0,
+    problems: [{ kind: "landmark-parse", path: "_content/trips/Trips.landmark.card" }],
+  });
 });

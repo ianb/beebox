@@ -10,7 +10,6 @@
 import * as tapModule from "tap";
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -67,16 +66,10 @@ tapModule.default.teardown(async () => {
 // (here `a` was retired), followed by the branch's new entries with their
 // comments.
 void test("Deployed boxes have run main's list in main's order.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L64
-  await t.checkText(
-    out.with(// The lines between `MIGRATIONS = [` and `];`; the text around them is main's, unchanged.
-    print(appendBranchMigrations({ base, ours, theirs })?.split("\n").slice(3, -2).map((line) => line.trim()).join("\n"))),
-    `{ name: "a", script: "retired.ts" },
-{ name: "main-new", script: "m.ts" },
-// The branch's migration.
-{ name: "branch-new", script: "b.ts" },`,
+  t.check(
+    appendBranchMigrations({ base, ours, theirs }),
+    migrations(entry("a"), entry("main-new", "m.ts"), "  // The branch's migration.", entry("branch-new", "b.ts")),
   );
 });
 
@@ -111,8 +104,6 @@ void test("The ledger rule likewise applies only to appends.", async (t) => {
 // driver, keeps those shared lines once and leaves one row without them. The
 // ledger rule merges parsed rows instead and sorts them by date.
 void test("Both sides append a ledger row and a migration.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L103
   git("init", "-q", "-b", "main");
   git("config", "user.email", "test@example.com");
@@ -133,17 +124,30 @@ void test("Both sides append a ledger row and a migration.", async (t) => {
   git("checkout", "-q", "worktree-demo");
   const run = preflight();
   const sheet = JSON.parse(run.stdout);
-  await t.checkText(out.with([run.status, sheet.merge.status, sheet.merge.resolved, git("status", "--porcelain")]), "[0, \"merged\", [\"beebox/src/core/migrations.ts (main's list + branch entries)\", \"beebox/src/dev/context-history.yaml (both sides' rows)\"], \"\"]");
+  t.check(run.status, 0);
+  t.check(sheet.merge, {
+    status: "merged",
+    broughtPaths: ["beebox/src/core/migrations.ts", "beebox/src/dev/context-history.yaml"],
+    resolved: [
+      "beebox/src/core/migrations.ts (main's list + branch entries)",
+      "beebox/src/dev/context-history.yaml (both sides' rows)",
+    ],
+  });
+  t.check(git("status", "--porcelain"), "");
 
   // The ledger keeps all three rows, each complete, oldest first.
 
   // doctest:L129
-  await t.checkText(out.with(print(fs.readFileSync(path.join(root, "beebox/src/dev/context-history.yaml"), "utf8").split("\n").filter((line) => /date|turns/.test(line)).map((line) => line.trim()).join("\n"))), `- date: 2026-10-01T00:00:00Z
-turns: 1
-- date: 2026-10-02T00:00:00Z
-turns: 1
-- date: 2026-10-03T00:00:00Z
-turns: 1`);
+  t.checkText(
+    fs.readFileSync(path.join(root, "beebox/src/dev/context-history.yaml"), "utf8"),
+    [
+      "# Context-size history — auto-appended by `knowledge-audit run`.",
+      "# box basename → audit id → entries (oldest first). See lib/context-history.ts.",
+      "test1:",
+      "  audit:",
+      ...[100, 200, 300].map((initial) => row(`2026-10-0${initial / 100}T00:00:00Z`, initial).trimEnd()),
+    ].join("\n"),
+  );
 });
 
 // ## Any other conflict still stops the finish
@@ -160,8 +164,6 @@ void test("A conflict in a file with no rule exits 3 and leaves the merge in pro
   commitAll("main notes");
   git("checkout", "-q", "worktree-other");
   const blocked = preflight();
-  t.check([blocked.status, git("diff", "--name-only", "--diff-filter=U")], [
-    3,
-    "notes.txt",
-  ]);
+  t.check(blocked.status, 3);
+  t.check(git("diff", "--name-only", "--diff-filter=U"), "notes.txt");
 });

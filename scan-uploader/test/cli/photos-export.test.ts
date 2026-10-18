@@ -5,7 +5,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { exportPhotos } from "../../src/cli/photos-export.js";
@@ -41,15 +40,12 @@ void test("An export adds files to the target folder and reports only newly-crea
       t.error(error);
     }
   });
-  // doctest:L34
   t.check(await exportPhotos(target), 1);
 
-  // doctest:L39
-  t.check((await readFile(log, "utf-8")).trim().split("\n").join("|"), str`export|${any(String)}|--album|Bee Box|--update|--convert-to-jpeg|--download-missing|--skip-live`);
+  t.check((await readFile(log, "utf-8")).trim().split("\n"), ["export", folder, "--album", "Bee Box", "--update", "--convert-to-jpeg", "--download-missing", "--skip-live"]);
 
   // An unchanged second export reports no newly found photos:
 
-  // doctest:L46
   await writeFile(fake, "#!/bin/sh\nexit 0\n");
   await chmod(fake, 0o755);
   t.check(await exportPhotos(target), 0);
@@ -57,20 +53,15 @@ void test("An export adds files to the target folder and reports only newly-crea
   // Full Disk Access failures are named explicitly so they cannot look like a
   // quiet album:
 
-  // doctest:L56
   await writeFile(fake, "#!/bin/sh\necho 'Operation not permitted: Photos library' >&2\nexit 1\n");
   await chmod(fake, 0o755);
   const accessMessage = await errorMessageFor(exportPhotos(target));
-  t.check(accessMessage.includes("grant Full Disk Access"), true);
-
-  // doctest:L64
-  t.check(accessMessage.includes("Automation"), true);
+  t.check(accessMessage, "Apple Photos access denied for album \"Bee Box\"; grant Full Disk Access to the app running scan-uploader and allow the requesting app listed under System Settings → Privacy & Security → Automation to control Photos. Run one export manually first to approve any macOS permission prompts.");
 
   // If osxphotos is not found on PATH, the error gives both supported install
   // commands:
 
-  // doctest:L72
   process.env.PATH = join(root, "empty-path");
   const missingTool = await errorMessageFor(exportPhotos(target));
-  t.check(missingTool.includes("uv tool install osxphotos") && missingTool.includes("pipx install osxphotos"), true);
+  t.check(missingTool, "osxphotos is not installed; install it with `uv tool install osxphotos` or `pipx install osxphotos`");
 });

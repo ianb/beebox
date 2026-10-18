@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { instanceOf } from "agent-doctest/check";
 import {
   updateTransientState,
   loadTransientState,
@@ -121,7 +122,7 @@ void test("Two overlapping updates each express their change as a delta against 
     connectorName: "gmail",
     defaultValue: { count: -1 },
   });
-  t.check(onDisk.count, 2);
+  t.check(onDisk, { count: 2 });
 
   // doctest:L117
   t.check(
@@ -151,7 +152,7 @@ void test("Ten overlapping increments over the same file all land — the strong
     connectorName: "drive",
     defaultValue: { count: -1 },
   });
-  t.check(onDisk.count, 10);
+  t.check(onDisk, { count: 10 });
 });
 
 // ## A corrupt state file fails closed — it is not "missing"
@@ -179,7 +180,12 @@ void test("Missing and corrupt mean opposite things here.", async (t) => {
   const readBack = await tryCall(() => loadTransientState<{ historyId: string | null }>({
     boxRoot: box.root, connectorName: "gmail", defaultValue: { historyId: null },
   }));
-  await t.checkText(readBack instanceof TransientStateCorruptError, "true");
+  t.check(readBack, {
+    name: "TransientStateCorruptError",
+    message: `Transient state at ${gmailState} exists but could not be read or parsed. Refusing to fall back to defaults — inspect the file, or delete it to resync from scratch.`,
+    statePath: gmailState,
+  });
+  t.check(readBack, instanceOf(TransientStateCorruptError));
 
   // The RMW aborts too, so the damaged bytes are still on disk for a human to look
   // at rather than replaced by a one-field default.
@@ -193,11 +199,11 @@ void test("Missing and corrupt mean opposite things here.", async (t) => {
   }));
   t.check(
     {
-      threw: updated instanceof TransientStateCorruptError,
+      threw: updated,
       onDisk: await readFile(transientStatePath(box.root, "gmail"), "utf-8"),
     },
     {
-    threw: true,
+    threw: instanceOf(TransientStateCorruptError),
     onDisk: "{\"historyId\": \"trunca",
   },
   );
@@ -237,5 +243,5 @@ void test("saveTransientState replaces the file by temp-write + fsync + atomic r
     update: (state) => ({ count: state.count + 1 }),
   });
   const dir = path.dirname(transientStatePath(box.root, "drive"));
-  await t.checkText((await readdir(dir)).filter((f) => f.includes(".tmp-")).length, "0");
+  t.check(await readdir(dir), [".gitkeep", "drive.state.json"]);
 });

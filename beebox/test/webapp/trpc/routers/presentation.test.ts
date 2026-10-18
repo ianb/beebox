@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
@@ -160,14 +161,15 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
   // doctest:L78
   await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\nsystem-theme:\n  name: post-it\n---\n");
   const invalidLandmarkTheme = await caller(box.root).presentation.get({ boxKey: "invalid-landmark", contextDir: "_content/recipes" });
-  t.check([invalidLandmarkTheme.chrome.origin, invalidLandmarkTheme.chrome.choice, invalidLandmarkTheme.chrome.problem?.message.includes("does not provide app chrome")], [
-    "landmark",
-    {
-      name: "plain",
-      stock: "neutral",
+  t.check(invalidLandmarkTheme.chrome, {
+    choice: { name: "plain", stock: "neutral" },
+    origin: "landmark",
+    problem: {
+      location: "system theme",
+      message: "Theme \"post-it\" does not provide app chrome",
+      requested: { name: "post-it" },
     },
-    true,
-  ]);
+  });
 
   // doctest:L83
   t.check([invalidLandmarkTheme.systemTheme.boxHasOverride, invalidLandmarkTheme.systemTheme.landmark?.hasOverride, invalidLandmarkTheme.systemTheme.landmark?.explicitTheme], [
@@ -194,13 +196,13 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
     [
       (await loadBoxConfig(box.root)).timezone,
       invalidPresentation.presentation.status,
-      invalidPresentation.configProblems[0]?.includes("expected string"),
+      invalidPresentation.configProblems,
       invalidPresentation.chrome.choice,
     ],
     [
     "America/Chicago",
     "invalid",
-    true,
+    ["presentation.default.name: Invalid input: expected string, received number"],
     {
       name: "plain",
       stock: "neutral",
@@ -376,18 +378,15 @@ void test("Anyone signed in to the box may set themes; only an anonymous caller 
   // doctest:L196
   await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: { name: "plain" } });
   const landmarkAfterSet = await cardBox.read(landmarkPath);
-  t.check(
-    [
-      landmarkAfterSet.includes("# landmark comment"),
-      landmarkAfterSet.includes("future-field: retained"),
-      (await caller(cardBox.root).presentation.get({ boxKey: "landmark-theme", contextDir: "_content/notes" })).chrome.origin,
-    ],
-    [
-    true,
-    true,
-    "landmark",
-  ],
-  );
+  t.checkText(landmarkAfterSet, `---
+# landmark comment
+navigation:
+  label: Notes
+future-field: retained
+system-theme:
+  name: plain
+---`);
+  t.check((await caller(cardBox.root).presentation.get({ boxKey: "landmark-theme", contextDir: "_content/notes" })).chrome.origin, "landmark");
 
   // doctest:L205
   t.check(
@@ -426,27 +425,16 @@ void test("Anyone signed in to the box may set themes; only an anonymous caller 
     theme: { name: "paper", stock: "blue" },
   });
   const afterSet = await cardBox.read(cardPath);
-  t.check(
-    [
-      set.theme,
-      typeof set.commit === "string",
-      afterSet.includes("# keep this comment"),
-      afterSet.includes("future-field: still here"),
-      afterSet.includes("name: paper"),
-      afterSet.endsWith("Body stays here.\n"),
-    ],
-    [
-    {
-      name: "paper",
-      stock: "blue",
-    },
-    true,
-    true,
-    true,
-    true,
-    true,
-  ],
-  );
+  t.check(set, { theme: { name: "paper", stock: "blue" }, commit: any(String), commitWarning: null });
+  t.checkText(afterSet, `---
+# keep this comment
+title: Keep
+future-field: still here
+theme:
+  name: paper
+  stock: blue
+---
+Body stays here.`);
 
   // An unrecognized stock is a box-authored choice, not an error — it is accepted
   // and written as given.
@@ -461,23 +449,25 @@ void test("Anyone signed in to the box may set themes; only an anonymous caller 
   );
 
   // doctest:L249
-  await t.checkText((await cardBox.read(cardPath)).includes("stock: purple"), "true");
+  t.checkText(await cardBox.read(cardPath), `---
+# keep this comment
+title: Keep
+future-field: still here
+theme:
+  name: paper
+  stock: purple
+---
+Body stays here.`);
 
   // doctest:L254
   await caller(cardBox.root).card.setTheme({ path: cardPath, theme: null });
   const afterClear = await cardBox.read(cardPath);
-  t.check(
-    [
-      afterClear.includes("theme:"),
-      afterClear.includes("future-field: still here"),
-      afterClear.endsWith("Body stays here.\n"),
-    ],
-    [
-    false,
-    true,
-    true,
-  ],
-  );
+  t.checkText(afterClear, `---
+# keep this comment
+title: Keep
+future-field: still here
+---
+Body stays here.`);
 
   // doctest:L265
   t.check(
@@ -502,16 +492,14 @@ void test("Anyone signed in to the box may set themes; only an anonymous caller 
     path: cardPath,
     theme: { name: "post-it", stock: "rose" },
   });
-  t.check(
-    [
-      partial.commit,
-      partial.commitWarning,
-      (await cardBox.read(cardPath)).includes("name: post-it"),
-    ],
-    [
-    null,
-    "Saved, but the Git commit failed.",
-    true,
-  ],
-  );
+  t.check(partial, { theme: { name: "post-it", stock: "rose" }, commit: null, commitWarning: "Saved, but the Git commit failed." });
+  t.checkText(await cardBox.read(cardPath), `---
+# keep this comment
+title: Keep
+future-field: still here
+theme:
+  name: post-it
+  stock: rose
+---
+Body stays here.`);
 });

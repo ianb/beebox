@@ -6,6 +6,7 @@
 // refresh. A command failure surfaces as a `BAD_REQUEST` TRPCError.
 
 import { test } from "tap";
+import { isoDate } from "agent-doctest/check";
 import "agent-doctest/tap";
 import { actionsRouter } from "../../../../src/webapp/trpc/routers/actions.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
@@ -66,16 +67,31 @@ void test("answer resolves the card and emits `question-answered`", async (t) =>
 
   // doctest:L60
   const res = await caller.answer({ questionPath: "_bookkeeping/questions/Color.question.card", answer: "Red" });
-  t.check(res.success, true);
-
-  // doctest:L64
-  t.check(res.message, "Question answered");
+  t.check(res, { success: true, message: "Question answered", path: "_bookkeeping/questions/Color.question.card" });
 
   // doctest:L67
-  await t.checkText((await box.read("_bookkeeping/questions/Color.question.card")).includes("selected: red"), "true");
+  t.checkText(await box.read("_bookkeeping/questions/Color.question.card"), `---
+type: question
+prompt: Pick one
+input:
+  type: select
+  options:
+    - id: red
+      label: Red
+    - id: blue
+      label: Blue
+directive: Use the picked color
+answer:
+  text: Red
+  selected: red
+answered-at: «date»
+answered-via: web
+---`);
 
   // doctest:L70
-  t.check(events.map((e) => e.event).join(","), "question-answered");
+  t.check(events, [
+    { event: "question-answered", data: { path: "_bookkeeping/questions/Color.question.card", answer: "Red", selectedId: undefined, timestamp: isoDate() } },
+  ]);
 });
 
 // ## answer surfaces a command failure as BAD_REQUEST
@@ -96,7 +112,7 @@ void test("Answering a card that doesn't exist fails in the command; the procedu
 
   // doctest:L87
   const out = await attempt(() => caller.answer({ questionPath: "_bookkeeping/questions/Nope.question.card", answer: "Red" }));
-  await t.checkText(String(out).startsWith("THREW:BAD_REQUEST:"), "true");
+  t.check(out, "THREW:BAD_REQUEST:Could not load card: _bookkeeping/questions/Nope.question.card");
 });
 
 // ## dismiss flips the card and emits `question-dismissed`
@@ -115,16 +131,25 @@ void test("dismiss flips the card and emits `question-dismissed`", async (t) => 
 
   // doctest:L103
   const res = await caller.dismiss({ questionPath: "_bookkeeping/questions/Color.question.card" });
-  t.check(res.success, true);
-
-  // doctest:L107
-  t.check(res.message, "Question dismissed");
+  t.check(res, { success: true, message: "Question dismissed", path: "_bookkeeping/questions/Color.question.card" });
 
   // doctest:L110
-  await t.checkText((await box.read("_bookkeeping/questions/Color.question.card")).includes("dismissed-at:"), "true");
+  t.checkText(await box.read("_bookkeeping/questions/Color.question.card"), `---
+type: question
+prompt: Pick one
+input:
+  type: select
+  options:
+    - id: red
+      label: Red
+    - id: blue
+      label: Blue
+directive: Use the picked color
+dismissed-at: «date»
+---`);
 
   // doctest:L113
-  t.check(events.map((e) => e.event).join(","), "question-dismissed");
+  t.check(events, [{ event: "question-dismissed", data: { path: "_bookkeeping/questions/Color.question.card", timestamp: isoDate() } }]);
 });
 
 // ## dismiss rejects a non-pending question as BAD_REQUEST
@@ -150,7 +175,7 @@ void test("dismiss rejects a non-pending question as BAD_REQUEST", async (t) => 
 
   // doctest:L135
   const out = await attempt(() => caller.dismiss({ questionPath: "_bookkeeping/questions/Color.question.card" }));
-  await t.checkText(String(out).startsWith("THREW:BAD_REQUEST:"), "true");
+  t.check(out, "THREW:BAD_REQUEST:Question is answered, not pending; only a pending question can be dismissed");
 });
 
 // ## Absolute paths are rejected at the web boundary
@@ -177,12 +202,28 @@ void test("The tRPC input is box-relative only:", async (t) => {
 
   // doctest:L158
   const ans = await attempt(() => caller.answer({ questionPath: absPath, answer: "Red" }));
-  await t.checkText(String(ans).startsWith("THREW:BAD_REQUEST:"), "true");
+  t.check(ans, `THREW:BAD_REQUEST:[
+  {
+    "code": "custom",
+    "path": [
+      "questionPath"
+    ],
+    "message": "questionPath must be box-relative, not absolute"
+  }
+]`);
 
   // doctest:L162
   const dis = await attempt(() => caller.dismiss({ questionPath: absPath }));
-  await t.checkText(String(dis).startsWith("THREW:BAD_REQUEST:"), "true");
+  t.check(dis, `THREW:BAD_REQUEST:[
+  {
+    "code": "custom",
+    "path": [
+      "questionPath"
+    ],
+    "message": "questionPath must be box-relative, not absolute"
+  }
+]`);
 
   // doctest:L166
-  await t.checkText((await box.read("_bookkeeping/questions/Color.question.card")).includes("-at:"), "false");
+  t.check(await box.read("_bookkeeping/questions/Color.question.card"), SELECT);
 });

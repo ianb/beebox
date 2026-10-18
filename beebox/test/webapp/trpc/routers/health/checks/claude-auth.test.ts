@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { runHealthChecks, type HealthCheck } from "../../../../../../src/webapp/trpc/routers/health/router.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../../../../src/services/claude-cli.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
@@ -65,8 +64,6 @@ void test("Logged out → the check fails with an actionable message (on every p
 // re-authenticate for a problem they don't have, so an unusable probe gets its
 // own message and drops to `warning`.
 void test("claude auth status intermittently comes back empty on a machine that is genui...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -83,8 +80,10 @@ void test("claude auth status intermittently comes back empty on a machine that 
     authSubmitCode: async () => ({ accepted: false }),
   };
   const checks = await runHealthChecks(box.root, { claudeCli });
-  const c = claudeCheck(checks);
-  print(`${c?.severity} / ok=${c?.ok}`);
-  await t.checkText(out.with(print(c?.message)), `warning / ok=false
-Claude Code auth could not be determined — \`claude auth status\` returned no usable answer. Agent operations may still work; re-run this check before acting on it`);
+  t.check(claudeCheck(checks), {
+    name: "claude-credentials",
+    ok: false,
+    message: "Claude Code auth could not be determined — `claude auth status` returned no usable answer. Agent operations may still work; re-run this check before acting on it",
+    severity: "warning",
+  });
 });

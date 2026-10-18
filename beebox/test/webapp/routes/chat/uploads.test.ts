@@ -14,7 +14,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { readFile, stat } from "node:fs/promises";
+import { any, str } from "agent-doctest/check";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
@@ -59,32 +60,23 @@ void test("The bytes are stored as sent:", async (t) => {
   const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   const body = multipart({ filename: "receipt (1).png", mimetype: "image/png", bytes });
   const res = await ctx.request({ method: "POST", url: "/api/chat/upload-file", ...body });
-  t.check(res.statusCode, 200);
+  // The filename is sanitized (unsafe characters become `_`), timestamp-
+  // prefixed, and never contains a path component.
+  t.check(res, {
+    statusCode: 200,
+    body: {
+      path: str`_tmp/${any(String).matches(/^\d{4}-\d{2}-\d{2}T[\d-]+\.\d{3}Z$/)}_receipt__1_.png`,
+      originalName: "receipt (1).png",
+      size: 14,
+      mimetype: "image/png",
+    },
+  });
 
   // doctest:L53
   const uploaded = UploadedFile.parse(res.body);
-  await t.checkText(uploaded.path.startsWith("_tmp/"), "true");
-
-  // doctest:L57
-  t.check(
-    // The filename is sanitized (unsafe characters become `_`), timestamp-
-    // prefixed, and never contains a path component.
-    uploaded.path.replace(/\d{4}-\d{2}-\d{2}T[\d-]+\.\d{3}Z/, "<ts>"),
-    "_tmp/<ts>_receipt__1_.png",
-  );
-
-  // doctest:L62
-  t.check({ originalName: uploaded.originalName, size: uploaded.size, mimetype: uploaded.mimetype }, {
-    originalName: "receipt (1).png",
-    size: 14,
-    mimetype: "image/png",
-  });
-
-  // doctest:L65
-  await t.checkText((await stat(join(ctx.boxRoot, uploaded.path))).size, "14");
 
   // doctest:L68
-  t.check(Buffer.compare(await readFile(join(ctx.boxRoot, uploaded.path)), bytes), 0);
+  t.check((await readFile(join(ctx.boxRoot, uploaded.path))).toString("hex"), bytes.toString("hex"));
 });
 
 // ## No file field is a 400
@@ -104,7 +96,7 @@ void test("No file field is a 400", async (t) => {
     payload: Buffer.from("------x--\r\n"),
     headers: { "content-type": "multipart/form-data; boundary=----x" },
   });
-  t.check(res.statusCode, 400);
+  t.check(res, { statusCode: 400, body: { error: "No file uploaded" } });
 });
 
 // ## A batch groups one message's attachments in one directory
@@ -151,17 +143,12 @@ void test("Two uploads with the same batch land side by side under tmp/chat/<bat
   ]);
 
   // doctest:L125
-  t.check((await Promise.all(paths.map((p) => readFile(join(ctx.boxRoot, p), "utf8")))).toSorted().join(","), "copy-1,copy-2,copy-3");
+  t.check((await Promise.all(paths.map((p) => readFile(join(ctx.boxRoot, p), "utf8")))).toSorted(), ["copy-1", "copy-2", "copy-3"]);
 
   // A batch id is a directory name the client minted, never a path: anything
   // outside `[A-Za-z0-9_-]{8,64}` is refused, not sanitized.
 
   // doctest:L133
   const bad = await ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "x.txt", mimetype: "text/plain", bytes, batch: "../escape" }) });
-  t.check([bad.statusCode, bad.body], [
-    400,
-    {
-      error: "Invalid batch id",
-    },
-  ]);
+  t.check(bad, { statusCode: 400, body: { error: "Invalid batch id" } });
 });

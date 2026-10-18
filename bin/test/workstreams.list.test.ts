@@ -45,7 +45,6 @@ void test("Removed records appear only when requested", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L42
   const root = await mkdtemp(join(tmpdir(), "workstream-list-doctest-"));
   const stateDir = join(root, "state");
   const worktreeRoot = join(root, "worktrees");
@@ -59,10 +58,13 @@ void test("Removed records appear only when requested", async (t) => {
     updatedAt: "2026-08-09T00:00:00Z",
     removed: { at: "2026-08-09T00:00:00Z", finalSha: "abc", merged: true },
   }));
+  const pendingStartedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  // The launch lease lasts one hour.
+  const pendingExpiresAt = new Date(Date.parse(pendingStartedAt) + 3600_000).toISOString().replace(/\.\d{3}Z$/, "Z");
   await writeFile(join(stateDir, "workstreams/pending-launch.json"), JSON.stringify({
     name: "pending-launch",
     branch: "worktree-pending-launch",
-    launch: { token: "pending-token", startedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") },
+    launch: { token: "pending-token", startedAt: pendingStartedAt },
   }));
   await writeFile(join(stateDir, "workstreams/expired-launch.json"), JSON.stringify({
     name: "expired-launch",
@@ -70,22 +72,68 @@ void test("Removed records appear only when requested", async (t) => {
     launch: { token: "expired-token", startedAt: "2026-01-01T00:00:00Z" },
   }));
   const ordinary = await list(stateDir, { worktreeRoot, includeRemoved: false });
-  t.check(ordinary.map((row: { name: string; agent: { state: string }; routing: { state: string; action: string } }) => [row.name, row.agent.state, row.routing.state, row.routing.action]), [
-    [
-      "expired-launch",
-      "none",
-      "uncertain",
-      "investigate",
-    ],
-    [
-      "pending-launch",
-      "launching",
-      "launching",
-      "wait-for-launch",
-    ],
-  ]);
+  const launchRows = [
+    {
+      name: "expired-launch",
+      branch: "worktree-expired-launch",
+      path: null,
+      box: null,
+      url: null,
+      git: null,
+      runtime: { state: "absent" },
+      agent: { state: "none", reason: "launch=expired" },
+      session: {
+        agent: null,
+        hasSession: false,
+        tty: null,
+        baseSha: null,
+        removed: null,
+        archived: null,
+        description: null,
+        launch: {
+          state: "expired",
+          startedAt: "2026-01-01T00:00:00Z",
+          expiresAt: "2026-01-01T01:00:00Z",
+          failedAt: null,
+          reason: "launch-lease-expired",
+        },
+      },
+      routing: { state: "uncertain", action: "investigate", lastActivityAt: null },
+      boxState: { testSetup: false, keepUnmerged: false, pristine: null },
+      schedule: null,
+    },
+    {
+      name: "pending-launch",
+      branch: "worktree-pending-launch",
+      path: null,
+      box: null,
+      url: null,
+      git: null,
+      runtime: { state: "absent" },
+      agent: { state: "launching", reason: "signal=launch-lease" },
+      session: {
+        agent: null,
+        hasSession: false,
+        tty: null,
+        baseSha: null,
+        removed: null,
+        archived: null,
+        description: null,
+        launch: {
+          state: "active",
+          startedAt: pendingStartedAt,
+          expiresAt: pendingExpiresAt,
+          failedAt: null,
+          reason: null,
+        },
+      },
+      routing: { state: "launching", action: "wait-for-launch", lastActivityAt: null },
+      boxState: { testSetup: false, keepUnmerged: false, pristine: null },
+      schedule: null,
+    },
+  ];
+  t.check(ordinary, launchRows);
 
-  // doctest:L69
   const rows = await list(stateDir, { worktreeRoot, includeRemoved: true });
   t.check(rows.find((row: { name: string }) => row.name === "culled"), {
     name: "culled",
@@ -136,11 +184,10 @@ void test("Removed records appear only when requested", async (t) => {
 
   // ## Stray directories are visible anomalies, not rows
 
-  // doctest:L77
   await mkdir(join(worktreeRoot, "scratch"));
   const stray = await listResult(stateDir, worktreeRoot);
-  t.check({ rows: JSON.parse(stray.stdout).length, warned: stray.stderr.includes("ignoring non-worktree directory") }, {
-    rows: 2,
-    warned: true,
+  t.check({ rows: JSON.parse(stray.stdout), stderr: stray.stderr }, {
+    rows: launchRows,
+    stderr: `workstreams list: ignoring non-worktree directory: ${join(worktreeRoot, "scratch")}\n`,
   });
 });

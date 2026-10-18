@@ -76,11 +76,8 @@ void test("Disabling writes enabled:", async (t) => {
 
   // doctest:L70
   const fmOff = await frontmatter(box, "digest");
-  await t.checkText(
-    // enabled explicitly false; sibling fields untouched.
-    JSON.stringify([fmOff.enabled, fmOff.cron, fmOff.runs]),
-    "[false,\"0 6 * * *\",\"true\"]",
-  );
+  // enabled explicitly false; sibling fields untouched.
+  t.check(fmOff, { cron: "0 6 * * *", description: "Morning digest", runs: "true", enabled: false });
 
   // doctest:L77
   const head = (await newestCommit(box.root));
@@ -99,11 +96,8 @@ void test("Disabling writes enabled:", async (t) => {
   });
 
   // doctest:L90
-  await t.checkText(
-    // Re-enabling drops the key entirely (absence == enabled).
-    "enabled" in (await frontmatter(box, "digest")),
-    "false",
-  );
+  // Re-enabling drops the key entirely (absence == enabled).
+  t.check(await frontmatter(box, "digest"), { cron: "0 6 * * *", description: "Morning digest", runs: "true" });
 
   // doctest:L94
   t.check((await newestCommit(box.root)).subject, "Enable schedule: digest");
@@ -146,7 +140,7 @@ void test("A second setEnabled(true) on an already-enabled card produces byte-id
   });
 
   // doctest:L127
-  await t.checkText(before === after, "true");
+  t.check(after, before);
 });
 
 // ## setEnabled failure paths: missing schedule, empty name
@@ -233,11 +227,8 @@ void test("Enable and disable launched together against the same card.", async (
     c.scheduler.setEnabled({ name: "race", enabled: false }),
     c.scheduler.setEnabled({ name: "race", enabled: true }),
   ]);
-  await t.checkText(
-    // Both calls resolved without a concurrent-write crash.
-    JSON.stringify([ra, rb]),
-    "[{\"enabled\":false},{\"enabled\":true}]",
-  );
+  // Both calls resolved without a concurrent-write crash.
+  t.check([ra, rb], [{ enabled: false }, { enabled: true }]);
 
   // doctest:L205
   // Both RMWs ran to completion: an Enable and a Disable commit both landed.
@@ -254,7 +245,6 @@ void test("Enable and disable launched together against the same card.", async (
   // would mean one call's write and another's commit interleaved.
   const newest = (await newestCommit(box.root)).subject;
   const fm = await frontmatter(box, "race");
-  const diskEnabled = !("enabled" in fm);
-  const newestEnabled = newest.startsWith("Enable");
-  await t.checkText(newestEnabled === diskEnabled, "true");
+  const enabledFm = { cron: "0 6 * * *", description: "Morning digest", runs: "true" };
+  t.check(fm, newest === "Enable schedule: race" ? enabledFm : { ...enabledFm, enabled: false });
 });

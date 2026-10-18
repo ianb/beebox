@@ -47,14 +47,14 @@ void test("The quiet case enumerates each check as ok, so bbx health's pass coun
   // doctest:L41
   const quiet = await makeTmpBox();
   const checks = await pluginHealthChecks(quiet.root);
-  t.check(checks.map((c) => `${c.name}:${c.ok ? "ok" : "FAIL"}`), [
-    "plugin-config:ok",
-    "plugin-type-unprovided:ok",
-    "plugin-declared-missing:ok",
-    "plugin-stub-inactive:ok",
-    "plugin-stub-missing:ok",
-    "skill-name-conflict:ok",
-    "legacy-exposition-rules:ok",
+  t.check(checks, [
+    { name: "plugin-config", ok: true, message: "Every plugins entry in _config/box.json names an installed plugin", severity: "error" },
+    { name: "plugin-type-unprovided", ok: true, message: "Every card type a plugin declares has a schema", severity: "error" },
+    { name: "plugin-declared-missing", ok: true, message: "Every active plugin's declared types and views have stubs", severity: "error" },
+    { name: "plugin-stub-inactive", ok: true, message: "Every plugin a stub imports is active", severity: "warning" },
+    { name: "plugin-stub-missing", ok: true, message: "Every plugin stub names an installed plugin and loads", severity: "error" },
+    { name: "skill-name-conflict", ok: true, message: "No managed skill name collides with a box skill", severity: "warning" },
+    { name: "legacy-exposition-rules", ok: true, message: "No exposition-plan card carries a legacy `rules` field", severity: "warning" },
   ]);
 });
 
@@ -230,7 +230,7 @@ void test("The engine marks every skill file it writes (guidance-sync/skills.ts)
   // doctest:L172
   const relativePath = ".claude/skills/courseware/SKILL.md";
   await owned.write(relativePath, withDocId({ relativePath, content: "---\nname: courseware\n---\nMirrored.\n" }));
-  await t.checkText(failing(await pluginHealthChecks(owned.root)).some((c) => c.name === "skill-name-conflict"), "false");
+  t.check(failing(await pluginHealthChecks(owned.root)).filter((c) => c.name === "skill-name-conflict"), []);
 });
 
 // ## A plugin's own checks are prefixed; a throw is one failing row

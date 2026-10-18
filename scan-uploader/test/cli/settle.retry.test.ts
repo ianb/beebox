@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { runAllTargets, type RunAllDeps } from "../../src/cli/run-all.js";
 import type { TargetConfig, UploaderConfig } from "../../src/cli/config.js";
 import type { RunSummary } from "../../src/cli/run-target.js";
@@ -64,31 +65,28 @@ const config: UploaderConfig = { targets: [target("/receipts"), target("/family"
 
 // A run with nothing unsettled visits each target once and never waits:
 void test("A run with nothing unsettled visits each target once and never waits:", async (t) => {
-  // doctest:L68
   const settled = scripted({});
   await runAllTargets(config, { retryRejected: false, deps: settled.deps });
-  t.check(`${settled.calls.join(" ")} | waits=${String(settled.waits.length)}`, "/receipts /family | waits=0");
+  t.check({ calls: settled.calls, waits: settled.waits }, { calls: ["/receipts", "/family"], waits: [] });
 });
 
 // A target that skipped an unsettled file is retried — and *only* that target;
 // the settled one is not re-walked:
 void test("A target that skipped an unsettled file is retried — and only that target; th...", async (t) => {
-  // doctest:L78
   const one = scripted({ "/receipts": [summary({ skippedUnsettled: 1 }), summary({ uploaded: 1 })] });
   const oneResult = await runAllTargets(config, { retryRejected: false, deps: one.deps });
-  t.check(`${one.calls.join(" ")} | waits=${String(one.waits.length)} | exit=${String(oneResult.exitCode)}`, "/receipts /family /receipts | waits=1 | exit=0");
-
   // The wait covers the whole settle window rather than landing exactly on its
   // boundary:
-
-  // doctest:L88
-  t.check((one.waits[0] ?? 0) >= 10_000, true);
+  t.check({ calls: one.calls, waits: one.waits, exitCode: oneResult.exitCode }, {
+    calls: ["/receipts", "/family", "/receipts"],
+    waits: [any(Number).between(10_000, Infinity)],
+    exitCode: 0,
+  });
 });
 
 // A file that never settles does not retry forever: three rounds, then the run
 // ends and leaves it for the next interval sweep. Four calls, three waits.
 void test("A file that never settles does not retry forever:", async (t) => {
-  // doctest:L96
   const forever = scripted({});
   const stuck: RunAllDeps = {
     runOne: (job) => {
@@ -98,15 +96,21 @@ void test("A file that never settles does not retry forever:", async (t) => {
     wait: forever.deps.wait,
   };
   await runAllTargets({ targets: [target("/receipts")] }, { retryRejected: false, deps: stuck });
-  t.check(`calls=${String(forever.calls.length)} waits=${String(forever.waits.length)}`, "calls=4 waits=3");
+  t.check({ calls: forever.calls, waits: forever.waits }, {
+    calls: ["/receipts", "/receipts", "/receipts", "/receipts"],
+    waits: [any(Number).between(10_000, Infinity), any(Number).between(10_000, Infinity), any(Number).between(10_000, Infinity)],
+  });
 });
 
 // An unsettled skip is not a failure — the file is simply not ready yet, so the
 // exit code stays 0. A rejection still fails the run:
 void test("An unsettled skip is not a failure — the file is simply not ready yet, so the...", async (t) => {
-  // doctest:L113
   const rejectedRun = scripted({ "/receipts": [summary({ rejected: 1 })] });
-  t.check((await runAllTargets({ targets: [target("/receipts")] }, { retryRejected: false, deps: rejectedRun.deps })).exitCode, 1);
+  t.check(await runAllTargets({ targets: [target("/receipts")] }, { retryRejected: false, deps: rejectedRun.deps }), {
+    exitCode: 1,
+    boxes: [{ box: "b", summary: summary({ rejected: 1 }) }],
+    photosFound: [],
+  });
 });
 
 // ## Per-box totals, for the desktop notification
@@ -117,18 +121,13 @@ void test("An unsettled skip is not a failure — the file is simply not ready y
 // uploaded in round 2 is one upload for the box, not two events to report. Both
 // targets in `config` point at box `b`:
 void test("The run also hands back what each box actually took in, which is all src/cli/...", async (t) => {
-  // doctest:L127
   const counted = scripted({
     "/receipts": [summary({ skippedUnsettled: 1 }), summary({ uploaded: 2, rejectedOnUpload: 1, rejected: 1 })],
     "/family": [summary({ uploaded: 1 })],
   });
   const countedResult = await runAllTargets(config, { retryRejected: false, deps: counted.deps });
-  t.check(countedResult.boxes.map((b) => [b.box, b.summary.uploaded, b.summary.rejectedOnUpload]), [
-    [
-      "b",
-      3,
-      1,
-    ],
+  t.check(countedResult.boxes, [
+    { box: "b", summary: summary({ uploaded: 3, rejected: 1, rejectedOnUpload: 1, skippedUnsettled: 1 }) },
   ]);
 });
 
@@ -138,7 +137,6 @@ void test("The run also hands back what each box actually took in, which is all 
 // the contract-version verdict depend on target order, one endpoint's answer
 // silently overwriting the other's:
 void test("Two targets can carry the same box slug against different servers — configure...", async (t) => {
-  // doctest:L143
   const twoServers: UploaderConfig = {
     targets: [
       { ...target("/receipts"), serverUrl: "https://old.test", box: "b" },
@@ -150,27 +148,20 @@ void test("Two targets can carry the same box slug against different servers —
     "/family": [summary({ contractVersion: 2 })],
   });
   const twoResult = await runAllTargets(twoServers, { retryRejected: false, deps: versions.deps });
-  t.check(twoResult.boxes.map((b) => [b.box, b.summary.contractVersion]), [
-    [
-      "b",
-      1,
-    ],
-    [
-      "b",
-      2,
-    ],
+  t.check(twoResult.boxes, [
+    { box: "b", summary: summary({ contractVersion: 1 }) },
+    { box: "b", summary: summary({ contractVersion: 2 }) },
   ]);
 });
 
 // A target that threw contributes no entry at all — there is no summary to
 // count, and the failure is already on stderr and in the exit code:
 void test("A target that threw contributes no entry at all — there is no summary to coun...", async (t) => {
-  // doctest:L162
   const brokenOnly = await runAllTargets(
     { targets: [target("/gone")] },
     { retryRejected: false, deps: { runOne: () => Promise.reject(new Error("ENOENT")), wait: () => Promise.resolve() } },
   );
-  t.check(brokenOnly.boxes.length, 0);
+  t.check(brokenOnly, { exitCode: 1, boxes: [], photosFound: [] });
 });
 
 // A target whose folder is missing or unreadable fails that target alone.
@@ -179,7 +170,6 @@ void test("A target that threw contributes no entry at all — there is no summa
 // abandon the whole run, so a stale first target meant the second never swept.
 // The run reports it, exits non-zero, and keeps going:
 void test("A target whose folder is missing or unreadable fails that target alone.", async (t) => {
-  // doctest:L177
   const thrown: RunAllDeps = {
     runOne: (job) => {
       if (job.folder === "/gone") return Promise.reject(new Error("ENOENT: no such directory"));
@@ -201,13 +191,15 @@ void test("A target whose folder is missing or unreadable fails that target alon
       },
     },
   );
-  t.check(`${swept.join(" ")} | exit=${String(result.exitCode)}`, "/gone /still-here | exit=1");
+  t.check({ swept, result }, {
+    swept: ["/gone", "/still-here"],
+    result: { exitCode: 1, boxes: [{ box: "b", summary: summary({ uploaded: 1 }) }], photosFound: [] },
+  });
 });
 
 // A throwing target is not retried as unsettled — it produced no summary at all,
 // so it fails this run and waits for the next trigger rather than spinning:
 void test("A throwing target is not retried as unsettled — it produced no summary at all...", async (t) => {
-  // doctest:L206
   const waits: number[] = [];
   const allThrow: RunAllDeps = {
     runOne: () => Promise.reject(new Error("ENOENT")),
@@ -217,5 +209,5 @@ void test("A throwing target is not retried as unsettled — it produced no summ
     },
   };
   await runAllTargets({ targets: [target("/gone")] }, { retryRejected: false, deps: allThrow });
-  t.check(waits.length, 0);
+  t.check(waits, []);
 });

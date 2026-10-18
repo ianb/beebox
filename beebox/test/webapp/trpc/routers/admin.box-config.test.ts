@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext, TrpcUser } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -47,9 +47,9 @@ void test("Invite minting requires a concrete signed-in box owner", async (t) =>
 
   // doctest:L36
   const invite = await caller(inviteBox.root).admin.createInvite({ email: " Member@Example.COM " });
-  t.check({ path: invite.invitePath.startsWith("/auth/invite?token="), future: invite.expiresAt > Date.now() }, {
-    path: true,
-    future: true,
+  t.check(invite, {
+    invitePath: str`/auth/invite?token=${any(String).matches(/^[\w-]+$/)}`,
+    expiresAt: any(Number).above(Date.now()),
   });
 
   // Open/test owner authorization without a human identity cannot mint a bearer
@@ -113,16 +113,33 @@ void test("The configured Google owner can mint before any local-password accoun
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
   const noOwnerBox = await makeTmpBox({ git: true });
   const noOwnerResult = await caller(noOwnerBox.root).admin.createInvite({ email: "member@example.com" });
-  await t.checkText(noOwnerResult.invitePath.startsWith("/auth/invite?token="), "true");
+  t.check(noOwnerResult, {
+    invitePath: str`/auth/invite?token=${any(String).matches(/^[\w-]+$/)}`,
+    expiresAt: any(Number).above(Date.now()),
+  });
 
   // doctest:L105
-  t.check((await caller(noOwnerBox.root).admin.boxConfig()).localPasswordStatus, "ready");
+  t.check(await caller(noOwnerBox.root).admin.boxConfig(), {
+    boxSlug: "test",
+    allowedEmails: [],
+    allowedUserDetails: [],
+    localPasswordStatus: "ready",
+    passwordResetEligibleEmails: [],
+    publicUrl: null,
+    ownerEmail: "owner@example.com",
+    googleLoginConfigured: false,
+    googleServices: {},
+    agentEngine: "claude",
+    agentModel: null,
+    openrouterModels: [],
+    engines: { claude: true },
+    claudeCodeTelemetry: "on",
+    codexTelemetry: "off",
+  });
 });
 
 // ## updateBoxConfig writes googleServices and commits
 void test("updateBoxConfig writes googleServices and commits", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(memberAuthDir, { recursive: true, force: true });
@@ -138,35 +155,61 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
   // doctest:L119
   const box = await makeTmpBox({ git: true });
   const res = await caller(box.root).admin.updateBoxConfig({ googleServices: { calendar: true, gmail: false } });
-  print(`ok: ${res.success}`);
-  print(`services: ${JSON.stringify(res.googleServices)}`);
   // The change was committed (a new commit exists on top of the box's initial one).
   const subject = (await simpleGit(box.root).log({ maxCount: 1 })).latest?.message;
-  await t.checkText(out.with(print(`commit: ${subject}`)), `ok: true
-services: {"calendar":true,"gmail":false}
-commit: Update box config: googleServices`);
+  t.check(
+    { res, subject },
+    {
+      res: {
+        success: true,
+        commitWarning: null,
+        allowedEmails: [],
+        googleServices: { calendar: true, gmail: false },
+        agentEngine: "claude",
+        agentModel: null,
+        engines: { claude: true },
+        claudeCodeTelemetry: "on",
+        codexTelemetry: "off",
+      },
+      subject: "Update box config: googleServices",
+    },
+  );
 
   // ## boxConfig round-trips googleServices and exposes ownerEmail
 
   // doctest:L135
   const cfg = await caller(box.root).admin.boxConfig();
-  print(`services: ${JSON.stringify(cfg.googleServices)}`);
-  await t.checkText(out.with(print(`hasOwnerEmailField: ${"ownerEmail" in cfg}`)), `services: {"calendar":true,"gmail":false}
-hasOwnerEmailField: true`);
+  t.check(cfg, {
+    boxSlug: "test",
+    allowedEmails: [],
+    allowedUserDetails: [],
+    localPasswordStatus: "ready",
+    passwordResetEligibleEmails: [],
+    publicUrl: null,
+    ownerEmail: null,
+    googleLoginConfigured: false,
+    googleServices: { calendar: true, gmail: false },
+    agentEngine: "claude",
+    agentModel: null,
+    openrouterModels: [],
+    engines: { claude: true },
+    claudeCodeTelemetry: "on",
+    codexTelemetry: "off",
+  });
 
   // Missing engine configuration defaults to Claude, while a Codex selection is
   // persisted and returned through the same owner-only mutation.
 
   // doctest:L147
-  await t.checkText(out.with(cfg.agentEngine), "claude");
+  t.check(cfg.agentEngine, "claude");
 
   // doctest:L150
   const engineResult = await caller(box.root).admin.updateBoxConfig({ agentEngine: "codex" });
   const engineConfig = JSON.parse(await box.read("_config/box.json"));
-  await t.checkText(out.with(JSON.stringify({ returned: engineResult.agentEngine, saved: engineConfig.agentEngine })), "{\"returned\":\"codex\",\"saved\":\"codex\"}");
+  t.check({ returned: engineResult.agentEngine, saved: engineConfig.agentEngine }, { returned: "codex", saved: "codex" });
 
   // doctest:L155
-  await t.checkText(out.with((await caller(box.root).admin.boxConfig()).agentEngine), "codex");
+  t.check((await caller(box.root).admin.boxConfig()).agentEngine, "codex");
 
   // Retired model pins are shown as the current model in Admin, matching the model
   // the runtime will use instead of presenting a working pin as unavailable.
@@ -176,7 +219,7 @@ hasOwnerEmailField: true`);
     agentEngine: "codex",
     agentModel: "gpt-5.6-sol",
   }));
-  await t.checkText(out.with((await caller(box.root).admin.boxConfig()).agentModel), "gpt-6.1-sol");
+  t.check((await caller(box.root).admin.boxConfig()).agentModel, "gpt-6.1-sol");
 
   // An invalid configured engine is not presented as a valid Claude default. The
   // runtime rejects this value too, so Admin must surface the same configuration
@@ -191,7 +234,7 @@ hasOwnerEmailField: true`);
     (error) => `${error.code}: ${error.message}`,
   );
   console.warn = originalConsoleWarn;
-  await t.checkText(out.with(invalidConfigResult), "PRECONDITION_FAILED: Box configuration is unreadable.");
+  t.check(invalidConfigResult, "PRECONDITION_FAILED: Box configuration is unreadable.");
 
   // doctest:L187
   await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
@@ -202,16 +245,16 @@ hasOwnerEmailField: true`);
   // doctest:L194
   delete process.env.GOOGLE_OAUTH_CLIENT_ID;
   delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-  await t.checkText(out.with((await caller(box.root).admin.boxConfig()).googleLoginConfigured), "false");
+  t.check((await caller(box.root).admin.boxConfig()).googleLoginConfigured, false);
 
   // doctest:L199
   process.env.GOOGLE_OAUTH_CLIENT_ID = "login-client";
-  await t.checkText(out.with((await caller(box.root).admin.boxConfig()).googleLoginConfigured), "false");
+  t.check((await caller(box.root).admin.boxConfig()).googleLoginConfigured, false);
 
   // doctest:L203
   process.env.GOOGLE_OAUTH_CLIENT_ID = "login-client";
   process.env.GOOGLE_OAUTH_CLIENT_SECRET = "login-secret";
-  await t.checkText(out.with((await caller(box.root).admin.boxConfig()).googleLoginConfigured), "true");
+  t.check((await caller(box.root).admin.boxConfig()).googleLoginConfigured, true);
 
   // ## updateBoxConfig still accepts allowedEmails and filters non-emails
 
@@ -219,7 +262,17 @@ hasOwnerEmailField: true`);
   const res2 = await caller(box.root).admin.updateBoxConfig({
     allowedEmails: [" A@Example.COM ", "a@example.com", "not-an-email"],
   });
-  await t.checkText(out.with(print(JSON.stringify(res2.allowedEmails))), "[\"a@example.com\"]");
+  t.check(res2, {
+    success: true,
+    commitWarning: null,
+    allowedEmails: ["a@example.com"],
+    googleServices: {},
+    agentEngine: "codex",
+    agentModel: null,
+    engines: { codex: true },
+    claudeCodeTelemetry: "on",
+    codexTelemetry: "off",
+  });
 
   // Only allowed local members are exposed as password-reset targets. The owner and
   // allowed addresses without a local account are excluded.
@@ -239,7 +292,15 @@ hasOwnerEmailField: true`);
     status: memberConfig.localPasswordStatus,
     details: memberConfig.allowedUserDetails,
   };
-  await t.checkText(out.with(JSON.stringify(memberConfigSummary)), "{\"eligible\":[\"member@example.com\"],\"status\":\"ready\",\"details\":[{\"email\":\"member@example.com\",\"kind\":\"local-member\",\"resetEligible\":true},{\"email\":\"invited@example.com\",\"kind\":\"access-only\",\"resetEligible\":false},{\"email\":\"owner@example.com\",\"kind\":\"owner-entry\",\"resetEligible\":false}]}");
+  t.check(memberConfigSummary, {
+    eligible: ["member@example.com"],
+    status: "ready",
+    details: [
+      { email: "member@example.com", kind: "local-member", resetEligible: true },
+      { email: "invited@example.com", kind: "access-only", resetEligible: false },
+      { email: "owner@example.com", kind: "owner-entry", resetEligible: false },
+    ],
+  });
 
   // A local owner remains described as a local account when a different configured
   // owner identity makes its allowlist entry non-redundant. It is still ineligible
@@ -250,7 +311,7 @@ hasOwnerEmailField: true`);
   process.env.BBX_OWNER_EMAIL = "google-owner@example.com";
   const localOwnerDetail = (await caller(box.root).admin.boxConfig()).allowedUserDetails
     .find((user) => user.email === "owner@example.com");
-  await t.checkText(out.with(JSON.stringify(localOwnerDetail)), "{\"email\":\"owner@example.com\",\"kind\":\"local-owner\",\"resetEligible\":false}");
+  t.check(localOwnerDetail, { email: "owner@example.com", kind: "local-owner", resetEligible: false });
 
   // doctest:L254
   delete process.env.BBX_OWNER_EMAIL;
@@ -260,21 +321,17 @@ hasOwnerEmailField: true`);
 
   // doctest:L261
   const reset = await caller(box.root).admin.createPasswordReset({ email: " MEMBER@EXAMPLE.COM " });
-  await t.checkText(
-    out.with(JSON.stringify({
-      path: reset.resetPath.startsWith("/auth/reset-password?token="),
-      leaksEmail: reset.resetPath.includes("member@example.com"),
-      future: reset.expiresAt > Date.now(),
-    })),
-    "{\"path\":true,\"leaksEmail\":false,\"future\":true}",
-  );
+  t.check(reset, {
+    resetPath: str`/auth/reset-password?token=${any(String).matches(/^[\w-]+$/)}`,
+    expiresAt: any(Number).above(Date.now()),
+  });
 
   // doctest:L269
-  await t.checkText(
-    out.with(await caller(box.root).admin.createPasswordReset({ email: "invited@example.com" }).then(
+  t.check(
+    await caller(box.root).admin.createPasswordReset({ email: "invited@example.com" }).then(
       () => "allowed",
       (error) => error.code,
-    )),
+    ),
     "NOT_FOUND",
   );
 
@@ -282,7 +339,7 @@ hasOwnerEmailField: true`);
 
   // doctest:L288
   const err = await caller(box.root).admin.updateBoxConfig({}).then(() => "none", (e) => e.code);
-  await t.checkText(out.with(print(err)), "BAD_REQUEST");
+  t.check(err, "BAD_REQUEST");
 });
 
 // ## Claude Code telemetry defaults on and the owner can turn it off
@@ -297,16 +354,22 @@ void test("The setting governs first-party runs only.", async (t) => {
   const saved = await caller(box.root).admin.updateBoxConfig({ claudeCodeTelemetry: "off" });
   const subject = (await simpleGit(box.root).log({ maxCount: 1 })).latest?.message;
   const env = await providerEnvAdditions({ boxRoot: box.root, model: "claude-opus-5-5", purpose: "test" });
-  t.check([before, saved.claudeCodeTelemetry, (await caller(box.root).admin.boxConfig()).claudeCodeTelemetry, subject, env], [
-    "on",
-    "off",
-    "off",
-    "Update box config: claudeCodeTelemetry",
+  t.check(
     {
-      DISABLE_TELEMETRY: "1",
-      DISABLE_ERROR_REPORTING: "1",
+      before,
+      saved: saved.claudeCodeTelemetry,
+      after: (await caller(box.root).admin.boxConfig()).claudeCodeTelemetry,
+      subject,
+      env,
     },
-  ]);
+    {
+      before: "on",
+      saved: "off",
+      after: "off",
+      subject: "Update box config: claudeCodeTelemetry",
+      env: { DISABLE_TELEMETRY: "1", DISABLE_ERROR_REPORTING: "1" },
+    },
+  );
 
   // doctest:L309
   await box.cleanup();
@@ -342,7 +405,7 @@ void test("A Git failure does not falsely report that the saved config rolled ba
   await rejectedCommitBox.write(".git/hooks/pre-commit", "#!/bin/sh\nexit 1\n");
   await chmod(join(rejectedCommitBox.root, ".git/hooks/pre-commit"), 0o755);
   const originalConsoleError = console.error;
-  const commitErrors = [];
+  const commitErrors: unknown[][] = [];
   console.error = (...args) => commitErrors.push(args);
   const degraded = await caller(rejectedCommitBox.root).admin.updateBoxConfig({
     allowedEmails: ["member@example.com"],
@@ -350,19 +413,29 @@ void test("A Git failure does not falsely report that the saved config rolled ba
   console.error = originalConsoleError;
   const savedAfterRejection = JSON.parse(await rejectedCommitBox.read("_config/box.json"));
   t.check(
+    { degraded, saved: savedAfterRejection.allowedEmails, logged: commitErrors },
     {
-      success: degraded.success,
-      warning: degraded.commitWarning,
-      saved: savedAfterRejection.allowedEmails,
-      logged: commitErrors.length,
+      degraded: {
+        success: true,
+        commitWarning: "Saved, but the Git commit failed.",
+        allowedEmails: ["member@example.com"],
+        googleServices: {},
+        agentEngine: "claude",
+        agentModel: null,
+        engines: { claude: true },
+        claudeCodeTelemetry: "on",
+        codexTelemetry: "off",
+      },
+      saved: ["member@example.com"],
+      logged: [
+        [
+          `[admin] box config was saved but its Git commit failed for ${rejectedCommitBox.root}:`,
+          {
+            name: "CommitDidNotLandError",
+            message: `commit reported success but HEAD did not move in ${rejectedCommitBox.root} — a pre-commit or commit-msg hook most likely rejected it. Run \`git commit\` by hand to see the hook's output.`,
+          },
+        ],
+      ],
     },
-    {
-    success: true,
-    warning: "Saved, but the Git commit failed.",
-    saved: [
-      "member@example.com",
-    ],
-    logged: 1,
-  },
   );
 });

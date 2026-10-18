@@ -13,14 +13,35 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { instanceOf } from "agent-doctest/check";
 import { mkdir, symlink } from "node:fs/promises";
+import { dirname } from "node:path";
 import assert from "node:assert/strict";
 import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
+
+/** A landmark row with no links, groups, or features: what `list` returns for a bare card. */
+function bareRow(fields: { path: string; label: string; glyph?: string; dir?: string }) {
+  return {
+    path: fields.path,
+    dir: fields.dir ?? dirname(fields.path),
+    label: fields.label,
+    symbol: fields.glyph === undefined ? null : { glyph: fields.glyph },
+    prominence: null,
+    links: [],
+    groups: [],
+    depth: 0,
+    features: {},
+    openers: [],
+    arrival: fields.path,
+  };
+}
+
+const RECIPES = bareRow({ path: "_content/recipes/Recipes.landmark.card", label: "Recipes", glyph: "🍳" });
+const TRIPS = bareRow({ path: "_content/trips/Trips.landmark.card", label: "Trips" });
 
 function caller(boxRoot: string) {
   const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
@@ -29,8 +50,6 @@ function caller(boxRoot: string) {
 
 // ## The good landmarks load; the broken one is named
 void test("The good landmarks load; the broken one is named", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -47,10 +66,10 @@ void test("The good landmarks load; the broken one is named", async (t) => {
   await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
   // doctest:L38
-  const { landmarks, problems } = await caller(box.root).landmarks.list();
-  print(`landmarks: ${landmarks.map((l) => `${l.label} (${l.dir})`).join(" | ")}`);
-  await t.checkText(out.with(print(`problems: ${problems.map((p) => p.path).join(",")}`)), `landmarks: Recipes (_content/recipes)
-problems: _content/trips/Trips.landmark.card`);
+  t.check(await caller(box.root).landmarks.list(), {
+    landmarks: [RECIPES],
+    problems: [{ kind: "landmark-parse", path: "_content/trips/Trips.landmark.card" }],
+  });
 
   // Fixing the card empties `problems` — the report tracks the file, it isn't
   // sticky.
@@ -61,9 +80,7 @@ problems: _content/trips/Trips.landmark.card`);
 
   // doctest:L53
   const fixed = await caller(box.root).landmarks.list();
-  print(`landmarks: ${fixed.landmarks.map((l) => l.label).join(",")}`);
-  await t.checkText(out.with(print(`problems: ${fixed.problems.length}`)), `landmarks: Recipes,Trips
-problems: 0`);
+  t.check(fixed, { landmarks: [RECIPES, TRIPS], problems: [] });
 
   // A label-less card (e.g. a destinations-only triage landmark) falls back to
   // its filename basename — the label is never empty, so the app bar's pill
@@ -75,7 +92,7 @@ problems: 0`);
 
   // doctest:L69
   const withArchive = await caller(box.root).landmarks.list();
-  await t.checkText(out.with(withArchive.landmarks.map((l) => l.label).join(",")), "Old_Mail,Recipes,Trips");
+  t.check(withArchive.landmarks, [bareRow({ path: "_bookkeeping/archive/Old_Mail.landmark.card", label: "Old_Mail" }), RECIPES, TRIPS]);
 });
 
 // ## A box with nothing broken reports an empty list
@@ -96,8 +113,10 @@ void test("A box with nothing broken reports an empty list", async (t) => {
   await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
 
   // doctest:L88
-  const { landmarks, problems } = await caller(box.root).landmarks.list();
-  t.check(`${landmarks.length} landmark(s), ${problems.length} problem(s)`, "1 landmark(s), 0 problem(s)");
+  t.check(await caller(box.root).landmarks.list(), {
+    landmarks: [bareRow({ path: "_content/Box.landmark.card", label: "Home", dir: "" })],
+    problems: [],
+  });
 });
 
 // ## Nested landmarks: each payload is the same one `forDir` resolves
@@ -195,12 +214,10 @@ void test("list resolves every landmark in one request, several at once, and wal
   // payload matches it in everything but depth, which only `list` computes.
 
   // doctest:L158
-  const mismatched = [];
   for (const lm of landmarks) {
     const { landmark } = await caller(box.root).landmarks.forDir({ dir: lm.dir });
-    if (JSON.stringify({ ...landmark, depth: lm.depth }) !== JSON.stringify(lm)) mismatched.push(lm.label);
+    t.check({ ...landmark, depth: lm.depth }, lm);
   }
-  t.check(mismatched, []);
 });
 
 // ## `forDir({ dir: "" })` finds the root landmark under `_content/`
@@ -223,14 +240,7 @@ void test("The one-root layout put the ROOT landmark card at content/Box.landmar
 
   // doctest:L182
   const { landmark } = await caller(box.root).landmarks.forDir({ dir: "" });
-  t.check({ path: landmark?.path, dir: landmark?.dir, label: landmark?.label, symbol: landmark?.symbol }, {
-    path: "_content/Box.landmark.card",
-    dir: "",
-    label: "Kitchen",
-    symbol: {
-      glyph: "🍳",
-    },
-  });
+  t.check(landmark, bareRow({ path: "_content/Box.landmark.card", label: "Kitchen", glyph: "🍳", dir: "" }));
 });
 
 // ## `forDir` rejects a `dir` outside the box namespace
@@ -255,17 +265,9 @@ void test("Finding 3 (Track E hardening review, round 3):", async (t) => {
   await box.write("src/templates/Private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
 
   // doctest:L205
-  async function throwsBadRequest(fn: () => Promise<unknown>): Promise<boolean> {
-    try {
-      await fn();
-      return false;
-    } catch (e) {
-      return (e instanceof TRPCError && e.code === "BAD_REQUEST") || `${e}`.includes("BAD_REQUEST");
-    }
-  }
-
-  // doctest:L214
-  t.check(await throwsBadRequest(() => caller(box.root).landmarks.forDir({ dir: "src/templates" })), true);
+  const refused = await caller(box.root).landmarks.forDir({ dir: "src/templates" }).then(() => null, (e: unknown) => e);
+  t.check(refused, instanceOf(TRPCError));
+  t.check(refused, { name: "TRPCError", message: "dir is outside the box namespace: src/templates", cause: undefined, code: "BAD_REQUEST" });
 });
 
 // ## A symlinked landmark card that escapes the box namespace is skipped, not read through
@@ -292,11 +294,9 @@ void test("Finding 2 (round 4 hardening):", async (t) => {
 
   // doctest:L237
   const { landmarks, problems } = await caller(box.root).landmarks.list();
-  t.check({ labels: landmarks.map((l) => l.label).toSorted(), problemCount: problems.length }, {
-    labels: [
-      "Recipes",
-    ],
-    problemCount: 0,
+  t.check({ labels: landmarks.map((l) => l.label).toSorted(), problems }, {
+    labels: ["Recipes"],
+    problems: [],
   });
 
   // `forDir` on the escaping symlink's directory answers `null` (same as any
@@ -306,10 +306,7 @@ void test("Finding 2 (round 4 hardening):", async (t) => {
   // doctest:L247
   const { landmark: escaped } = await caller(box.root).landmarks.forDir({ dir: "_content/escape" });
   const { landmark: recipes } = await caller(box.root).landmarks.forDir({ dir: "_content/recipes" });
-  t.check({ escaped, recipesLabel: recipes?.label }, {
-    escaped: null,
-    recipesLabel: "Recipes",
-  });
+  t.check({ escaped, recipes }, { escaped: null, recipes: bareRow({ path: "_content/recipes/Recipes.landmark.card", label: "Recipes" }) });
 });
 
 // ## `forDir` still answers null for a broken card
@@ -331,5 +328,5 @@ void test("The here menu asks for one directory's landmark.", async (t) => {
 
   // doctest:L267
   const { landmark } = await caller(box.root).landmarks.forDir({ dir: "_content/trips" });
-  await t.checkText(`${landmark}`, "null");
+  t.check(landmark, null);
 });

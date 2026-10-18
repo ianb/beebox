@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { execFile } from "node:child_process";
 import {
   chmod,
@@ -35,6 +36,12 @@ async function expectFailure(attempt: Promise<unknown>): Promise<Failure> {
   }
   throw new Error("expected the command to fail");
 }
+/** A generated script that contains `text`. */
+const has = (text: string) => any(String).includes(text);
+const lacks = (text: string) => not(has(text));
+/** The script text before the first `text`: what ran by the time `text` starts. */
+const upTo = (script: string, text: string) => script.slice(0, script.indexOf(text));
+
 const repoRoot = resolve(process.cwd(), "..");
 const launchLib = join(repoRoot, "bin/lib/launch-session.sh");
 const registryLib = join(repoRoot, "bin/lib/session-registry.sh");
@@ -126,36 +133,18 @@ void test("Claude uses the managed worktree without claiming native ownership", 
     resume: false,
     issue: "issues/bugs/2026-08-11-example.md",
   });
-  t.check(
-    [
-      claudeScript.includes('./bin/workstreams create "seam"'),
-      claudeScript.includes('cd "$wt_path"'),
-      claudeScript.includes('session_registry_complete_launch "seam" "token-seam"'),
-      claudeScript.includes('claude --name "seam" --model opus --remote-control seam'),
-      !claudeScript.includes("claude --worktree"),
-      claudeScript.includes("merge-base main HEAD"),
-      claudeScript.indexOf('cd "$wt_path"') < claudeScript.indexOf('claude --name "seam"'),
-      issueScript.includes("assign-issue-workstream.ts"),
-      issueScript.includes("issues/bugs/2026-08-11-example.md"),
-      issueScript.includes('if [ -n "issues/bugs/2026-08-11-example.md" ]'),
-      claudeScript.includes('if [ -n "" ]'),
-      issueScript.indexOf("assign-issue-workstream.ts") < issueScript.indexOf('claude --name "seam"'),
-    ],
-    [
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-  ],
-  );
+  t.check(claudeScript, has('./bin/workstreams create "seam"'));
+  t.check(claudeScript, has('cd "$wt_path"'));
+  t.check(claudeScript, has('session_registry_complete_launch "seam" "token-seam"'));
+  t.check(claudeScript, has('claude --name "seam" --model opus --remote-control seam'));
+  t.check(claudeScript, lacks("claude --worktree"));
+  t.check(claudeScript, has("merge-base main HEAD"));
+  t.check(upTo(claudeScript, 'claude --name "seam"'), has('cd "$wt_path"'));
+  t.check(issueScript, has("assign-issue-workstream.ts"));
+  t.check(issueScript, has("issues/bugs/2026-08-11-example.md"));
+  t.check(issueScript, has('if [ -n "issues/bugs/2026-08-11-example.md" ]'));
+  t.check(claudeScript, has('if [ -n "" ]'));
+  t.check(upTo(issueScript, 'claude --name "seam"'), has("assign-issue-workstream.ts"));
 
   // When the launch skill takes on an existing issue, the generated script assigns
   // that issue inside the new checkout before the agent starts.
@@ -182,11 +171,8 @@ void test("Claude uses the managed worktree without claiming native ownership", 
   const invalid = await expectFailure(execFileAsync(invalidScriptPath, [], {
     env: { ...process.env, BBX_STATE_DIR: invalidStateDir },
   }));
-  t.check({ code: invalid.code, message: invalid.stderr.includes("invalid worktree path"), launch: (await launchState(invalidStateDir, "seam")).state }, {
-    code: 1,
-    message: true,
-    launch: "failed",
-  });
+  t.check({ code: invalid.code, stderr: invalid.stderr }, { code: 1, stderr: "launch-worktree-session: invalid worktree path for seam: ''\n" });
+  t.check((await launchState(invalidStateDir, "seam")).state, "failed");
 
   // doctest:L174
   const resolvedScript = await buildScript(root, {
@@ -194,16 +180,8 @@ void test("Claude uses the managed worktree without claiming native ownership", 
     resume: true,
     worktreePath: "/resolved/seam",
   });
-  t.check(
-    [
-      resolvedScript.includes('if [ -n "/resolved/seam" ]'),
-      resolvedScript.includes('wt_path="/resolved/seam"'),
-    ],
-    [
-    true,
-    true,
-  ],
-  );
+  t.check(resolvedScript, has('if [ -n "/resolved/seam" ]'));
+  t.check(resolvedScript, has('wt_path="/resolved/seam"'));
 
 });
 
@@ -223,18 +201,9 @@ void test("Claude continues a recorded conversation instead of starting one", as
     claudeSession: "40009a22-c9b5-49f8-b166-f16937403e8d",
   });
   const freshScript = await buildScript(root, { agent: "claude", resume: false });
-  t.check(
-    [
-      continuedScript.includes('claude --name "seam" --model opus --remote-control seam --resume 40009a22-c9b5-49f8-b166-f16937403e8d --dangerously-skip-permissions "$(cat'),
-      continuedScript.indexOf('cd "$wt_path"') < continuedScript.indexOf("--resume 40009a22"),
-      !freshScript.includes('claude --name "seam" --model opus --remote-control seam --resume'),
-    ],
-    [
-    true,
-    true,
-    true,
-  ],
-  );
+  t.check(continuedScript, has('claude --name "seam" --model opus --remote-control seam --resume 40009a22-c9b5-49f8-b166-f16937403e8d --dangerously-skip-permissions "$(cat'));
+  t.check(upTo(continuedScript, "--resume 40009a22"), has('cd "$wt_path"'));
+  t.check(freshScript, lacks('claude --name "seam" --model opus --remote-control seam --resume'));
 
   // doctest:L209
   const badSession = await expectFailure(buildScript(root, {
@@ -242,10 +211,7 @@ void test("Claude continues a recorded conversation instead of starting one", as
     resume: false,
     claudeSession: "--dangerously-skip-permissions",
   }));
-  t.check({ code: badSession.code, message: badSession.stderr.includes("is not a uuid") }, {
-    code: 1,
-    message: true,
-  });
+  t.check({ code: badSession.code, stderr: badSession.stderr }, { code: 1, stderr: "launch-session: LS_CLAUDE_RESUME_SESSION is not a uuid: --dangerously-skip-permissions\n" });
 
 });
 
@@ -258,57 +224,26 @@ void test("Codex preserves creation, flags, and teardown behavior", async (t) =>
     model: "",
     resume: false,
   });
-  t.check(
-    [
-      codexScript.includes('./bin/workstreams create "seam"'),
-      codexScript.includes("-s danger-full-access -a never"),
-      codexScript.includes('-m "gpt-test"'),
-      codexScript.includes("bin/codex-session-end"),
-      defaultCodexScript.includes('-m "gpt-6-sol"'),
-      defaultCodexScript.includes('--arg model "gpt-6-sol"'),
-      codexScript.includes('session_registry_complete_launch "seam" "token-seam"'),
-      codexScript.indexOf('session_registry_complete_launch "seam" "token-seam"') < codexScript.indexOf('codex "${codex_args[@]}"'),
-    ],
-    [
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-  ],
-  );
+  t.check(codexScript, has('./bin/workstreams create "seam"'));
+  t.check(codexScript, has("-s danger-full-access -a never"));
+  t.check(codexScript, has('-m "gpt-test"'));
+  t.check(codexScript, has("bin/codex-session-end"));
+  t.check(defaultCodexScript, has('-m "gpt-6-sol"'));
+  t.check(defaultCodexScript, has('--arg model "gpt-6-sol"'));
+  t.check(codexScript, has('session_registry_complete_launch "seam" "token-seam"'));
+  t.check(upTo(codexScript, 'codex "${codex_args[@]}"'), has('session_registry_complete_launch "seam" "token-seam"'));
 
   // doctest:L239
   const codexResumeScript = await buildScript(root, { agent: "codex", resume: true });
-  t.check(
-    [
-      codexResumeScript.includes('codex resume --last "${codex_args[@]}" "$(cat'),
-      codexResumeScript.indexOf("codex resume --last") < codexResumeScript.indexOf("codex_status=$?"),
-    ],
-    [
-    true,
-    true,
-  ],
-  );
+  t.check(codexResumeScript, has('codex resume --last "${codex_args[@]}" "$(cat'));
+  t.check(upTo(codexResumeScript, "codex_status=$?"), has("codex resume --last"));
 
   // doctest:L246
   const describedScript = await buildScript(root, { agent: "codex", resume: false, description: "Workstream routing" });
   const undescribedScript = await buildScript(root, { agent: "codex", resume: false });
-  t.check(
-    [
-      describedScript.includes('if $description == "" then {} else {description:$description} end'),
-      describedScript.includes("codex-fresh-description.txt"),
-      undescribedScript.includes('if $description == "" then {} else {description:$description} end'),
-    ],
-    [
-    true,
-    true,
-    true,
-  ],
-  );
+  t.check(describedScript, has('if $description == "" then {} else {description:$description} end'));
+  t.check(describedScript, has("codex-fresh-description.txt"));
+  t.check(undescribedScript, has('if $description == "" then {} else {description:$description} end'));
 
   // doctest:L255
   const resolvedCodexScript = await buildScript(root, {
@@ -316,7 +251,7 @@ void test("Codex preserves creation, flags, and teardown behavior", async (t) =>
     resume: true,
     worktreePath: "/resolved/seam",
   });
-  t.check(resolvedCodexScript.includes('wt_path="/resolved/seam"'), true);
+  t.check(resolvedCodexScript, has('wt_path="/resolved/seam"'));
 
 });
 
@@ -374,9 +309,9 @@ void test("A superseded token aborts before the agent starts", async (t) => {
     env: { ...process.env, AGENT_OBSERVATION: staleObservation, BBX_STATE_DIR: boundaryStateDir, PATH: `${agentBin}:${process.env.PATH ?? ""}` },
   }));
   const staleAgentStarted = await readFile(staleObservation).then(() => true, () => false);
-  t.check({ code: stale.code, superseded: stale.stderr.includes("was superseded"), agentStarted: staleAgentStarted, owner: JSON.parse(await readFile(join(boundaryStateDir, "workstreams/seam.json"), "utf8")).launch.token }, {
+  t.check({ code: stale.code, stderr: stale.stderr, agentStarted: staleAgentStarted, owner: JSON.parse(await readFile(join(boundaryStateDir, "workstreams/seam.json"), "utf8")).launch.token }, {
     code: 1,
-    superseded: true,
+    stderr: "session-registry: launch token for seam was superseded; refusing stale update\nlaunch-worktree-session: launch for seam was superseded — refusing to start a second agent\n",
     agentStarted: false,
     owner: "newer-token",
   });
@@ -419,10 +354,9 @@ printf '%s\n' "$@" > "$AGENT_OBSERVATION.args"
   // Codex gets the session preamble as developer instructions, oriented to the
   // worktree.
   const codexArgs = await readFile(`${codexObservation}.args`, "utf8");
-  t.check({ preamble: codexArgs.includes("developer_instructions=\"# Codex session preamble"), worktree: codexArgs.includes("~/src/box-worktrees/seam/test1") }, {
-    preamble: true,
-    worktree: true,
-  });
+  // The preamble is a long generated document, so only its heading and the worktree path it names are pinned.
+  t.check(codexArgs, has('developer_instructions="# Codex session preamble'));
+  t.check(codexArgs, has("~/src/box-worktrees/seam/test1"));
 
   // doctest:L339
   // A tracked Claude subagent without a generated Codex mirror refuses the launch,
@@ -436,9 +370,9 @@ printf '%s\n' "$@" > "$AGENT_OBSERVATION.args"
   }));
   const unmirroredStarted = await readFile(unmirroredObservation).then(() => true, () => false);
   await rm(join(validWorktree, ".claude"), { recursive: true });
-  t.check({ code: unmirrored.code, refused: unmirrored.stderr.includes("missing Codex mirror for agent finish"), agentStarted: unmirroredStarted }, {
+  t.check({ code: unmirrored.code, stderr: unmirrored.stderr, agentStarted: unmirroredStarted }, {
     code: 1,
-    refused: true,
+    stderr: "launch-worktree-session: missing Codex mirror for agent finish — refusing to launch codex without its pinned model\n",
     agentStarted: false,
   });
 
@@ -461,10 +395,8 @@ session_registry_fail_launch() { printf '%s' "$3" > "$LAUNCH_FAILURE_MARKER"; }
   const ioFailure = await execFileAsync(ioFailureScript, [], {
     env: { ...process.env, AGENT_OBSERVATION: join(root, "io-agent-observation"), BBX_STATE_DIR: join(root, "io-state"), LAUNCH_FAILURE_MARKER: failureMarker, PATH: `${agentBin}:${process.env.PATH ?? ""}` },
   });
-  t.check({ warned: ioFailure.stderr.includes("could not complete launch registry"), trapped: (await readFile(failureMarker, "utf8")).startsWith("setup-exited-status-") }, {
-    warned: true,
-    trapped: true,
-  });
+  t.checkText(ioFailure.stderr, "launch-worktree-session: could not complete launch registry for seam — starting agent with process liveness only");
+  t.checkText(await readFile(failureMarker, "utf8"), "setup-exited-status-0");
 
 });
 
@@ -531,12 +463,12 @@ void test("Terminal automation failures reach the CLI caller", async (t) => {
   t.check(
     {
       code: failedOpen.code,
-      message: failedOpen.stderr.includes("Terminal automation denied"),
+      stderr: failedOpen.stderr,
       launch: (await launchState(openStateDir, "failed-open")).state,
     },
     {
     code: 17,
-    message: true,
+    stderr: "Terminal automation denied\nworkstreams launch: Terminal automation failed\n",
     launch: "failed",
   },
   );
@@ -555,9 +487,9 @@ void test("Terminal automation failures reach the CLI caller", async (t) => {
     { env: { ...process.env, BBX_STATE_DIR: blockedStatePath, OPEN_MARKER: openMarker, PATH: `${markerBin}:${process.env.PATH ?? ""}` } },
   ));
   const terminalOpened = await readFile(openMarker).then(() => true, () => false);
-  t.check({ code: blockedOpen.code, refused: blockedOpen.stderr.includes("Terminal was not opened"), terminalOpened }, {
+  t.check({ code: blockedOpen.code, stderr: blockedOpen.stderr, terminalOpened }, {
     code: 1,
-    refused: true,
+    stderr: `mkdir: ${blockedStatePath}: Not a directory\nsession-registry: could not create registry directory ${blockedStatePath}/workstreams\nworkstreams launch: could not record launch intent; Terminal was not opened\n`,
     terminalOpened: false,
   });
 });

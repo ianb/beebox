@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -59,27 +60,21 @@ void test("Only sealed/preparing/failed sessions for the chat are returned", asy
 
   // doctest:L48
   const { pending } = await caller(box.root).capture.pendingSessions({ sessionId: "chat-1" });
-  t.check(pending.map((p) => p.state).join(","), "preparing,failed:deliver");
-
   // The pending entries carry each capture's media counts:
-
-  // doctest:L56
-  t.check(pending.map((p) => ({ state: p.state, counts: p.counts })), [
+  t.check(pending, [
     {
+      id: s1.id,
       state: "preparing",
-      counts: {
-        photos: 1,
-        files: 0,
-        audioSegments: 0,
-      },
+      counts: { photos: 1, files: 0, audioSegments: 0 },
+      startedAt: isoDate(),
+      lastActivityAt: isoDate(),
     },
     {
+      id: s4.id,
       state: "failed:deliver",
-      counts: {
-        photos: 0,
-        files: 0,
-        audioSegments: 0,
-      },
+      counts: { photos: 0, files: 0, audioSegments: 0 },
+      startedAt: isoDate(),
+      lastActivityAt: isoDate(),
     },
   ]);
 
@@ -87,7 +82,15 @@ void test("Only sealed/preparing/failed sessions for the chat are returned", asy
 
   // doctest:L63
   const other = await caller(box.root).capture.pendingSessions({ sessionId: "chat-2" });
-  t.check(other.pending.map((p) => p.state).join(","), "preparing");
+  t.check(other.pending, [
+    {
+      id: s5.id,
+      state: "preparing",
+      counts: { photos: 0, files: 0, audioSegments: 0 },
+      startedAt: isoDate(),
+      lastActivityAt: isoDate(),
+    },
+  ]);
 });
 
 // ## A chat with no staging sessions returns an empty list
@@ -101,6 +104,5 @@ void test("A chat with no staging sessions returns an empty list", async (t) => 
   });
   // doctest:L75
   const box = await makeTmpBox();
-  const { pending } = await caller(box.root).capture.pendingSessions({ sessionId: "chat-none" });
-  await t.checkText(pending.length, "0");
+  t.check(await caller(box.root).capture.pendingSessions({ sessionId: "chat-none" }), { pending: [] });
 });

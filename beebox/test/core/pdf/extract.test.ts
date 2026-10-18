@@ -403,10 +403,10 @@ void test("Nothing is lost:", async (t) => {
   const box = await makeTmpBox({ git: true });
   const docling = createFakeDocling({ failWith: "Docling exited 1: killed by the OOM killer" });
   const result = await importPdf(box, { docling });
-  t.check(result.success, true);
-
-  // doctest:L356
-  t.check(importData(result), { extracted: false, sessionCardPath, intakeJobPath });
+  t.check({ success: result.success, data: importData(result) }, {
+    success: true,
+    data: { extracted: false, sessionCardPath, intakeJobPath },
+  });
 
   // doctest:L359
   t.check(await attachContents(box), "source.pdf");

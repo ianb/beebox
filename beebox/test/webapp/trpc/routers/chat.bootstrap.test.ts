@@ -15,7 +15,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import assert from "node:assert/strict";
+import { any } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -58,6 +59,25 @@ function shape(r: Bootstrap) {
 // The chat page's request shape: a bounded tail window.
 const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 } as const;
 
+// The idle `chat.status` payload of a fresh box, which offers only `claude`.
+// Model ids rotate, so they are patterns.
+function idleStatus(sessionId: string | null) {
+  return {
+    sessionId,
+    running: false,
+    busy: false,
+    model: any(String),
+    source: "default" as const,
+    boxDefault: any(String),
+    pendingModel: null,
+    engine: "claude" as const,
+    enabledEngines: ["claude" as const],
+    boxEngine: "claude" as const,
+    glmAvailable: false,
+    addedModels: [],
+  };
+}
+
 const TRANSCRIPT = [
   JSON.stringify({
     type: "user",
@@ -94,8 +114,6 @@ async function setDefaultSession(server: TestServer, sessionId: string) {
 // `history` is null exactly when `sessionId` is null — there is nothing to load —
 // and `status` reports the idle shape rather than failing.
 void test("history is null exactly when sessionId is null — there is nothing to load — a...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -112,13 +130,20 @@ void test("history is null exactly when sessionId is null — there is nothing t
 
   // doctest:L101
   const empty = await caller(server).chat.bootstrap({ slice: TAIL });
-  await t.checkText(out2.with(shape(empty)), "{ kind: \"empty\", sessionId: null, history: null, label: null, status: { sessionId: null, running: false, busy: false }, pending: [] }");
+  t.check(shape(empty), {
+    kind: "empty",
+    sessionId: null,
+    history: null,
+    label: null,
+    status: { sessionId: null, running: false, busy: false },
+    pending: [],
+  });
 
   // The full idle `status` payload, once: the engine fields show a fresh box offers
   // only `claude`. Model ids rotate, so they are wildcards.
 
   // doctest:L110
-  await t.checkText(out2.with(empty.status), "{ sessionId: null, running: false, busy: false, model: \"«*»\", source: \"default\", boxDefault: \"«*»\", pendingModel: null, engine: \"claude\", enabledEngines: [\"claude\"], boxEngine: \"claude\", glmAvailable: false, addedModels: [] }");
+  t.check(empty.status, idleStatus(null));
 
   // ## An explicit session id returns that session's history and status
 
@@ -127,15 +152,22 @@ void test("history is null exactly when sessionId is null — there is nothing t
 
   // doctest:L119
   const got = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: TAIL });
-  print(`sessionId: ${got.sessionId}`);
-  print(`total: ${got.history?.total}`);
-  print(`entries: ${got.history?.entries.map((e) => `${e.type}:${e.content[0]?.text}`).join(", ")}`);
-  print(`label: ${got.label}`);
-  await t.checkText(out2.with(print(`status: running=${got.status.running} busy=${got.status.busy} id=${got.status.sessionId}`)), `sessionId: sess-explicit
-total: 2
-entries: user:Hello, assistant:Hi there!
-label: null
-status: running=false busy=false id=sess-explicit`);
+  t.check(got, {
+    kind: "resumable",
+    sessionId: "sess-explicit",
+    history: {
+      sessionId: "sess-explicit",
+      entries: [
+        { uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "Hello" }] },
+        { uuid: "a1", type: "assistant", timestamp: "2026-01-01T00:00:01Z", content: [{ type: "text", text: "Hi there!" }] },
+      ],
+      total: 2,
+    },
+    label: null,
+    contextDir: "",
+    status: idleStatus("sess-explicit"),
+    pending: [],
+  });
 
   // `label` is null here even though the transcript has messages: it is the
   // session's *editorial* title (husk `title` only — see the husk section
@@ -146,9 +178,21 @@ status: running=false busy=false id=sess-explicit`);
 
   // doctest:L141
   const tailed = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: { mode: "tail", tail: 1 } });
-  print(`kept: ${tailed.history?.entries.length} of ${tailed.history?.total}`);
-  await t.checkText(out2.with(print(`text: ${tailed.history?.entries[0]?.content[0]?.text}`)), `kept: 1 of 2
-text: Hi there!`);
+  t.check(tailed, {
+    kind: "resumable",
+    sessionId: "sess-explicit",
+    history: {
+      sessionId: "sess-explicit",
+      entries: [
+        { uuid: "a1", type: "assistant", timestamp: "2026-01-01T00:00:01Z", content: [{ type: "text", text: "Hi there!" }] },
+      ],
+      total: 2,
+    },
+    label: null,
+    contextDir: "",
+    status: idleStatus("sess-explicit"),
+    pending: [],
+  });
 
   // ## It matches the procedures it replaces
   //
@@ -173,17 +217,16 @@ text: Hi there!`);
   // `label` and `pending` are bootstrap's own additions — the three procedures it
   // replaces have no equivalent (`pending` reads the acceptance record on the
   // event bus, not the transcript) — so they sit out the comparison.
+  assert.equal(atomic.kind, "resumable");
+  assert.ok(viaDefault.sessionId);
   const { label: _label, pending: _pending, ...composed } = atomic;
-  await t.checkText(
-    out2.with(JSON.stringify(composed) === JSON.stringify({
-      kind: "resumable",
-      sessionId: viaDefault.sessionId,
-      history: viaHistory,
-      contextDir: viaDirectory.contextDir,
-      status: viaStatus,
-    })),
-    "true",
-  );
+  t.check(composed, {
+    kind: "resumable",
+    sessionId: viaDefault.sessionId,
+    history: viaHistory,
+    contextDir: viaDirectory.contextDir,
+    status: viaStatus,
+  });
 
   // ## A session id with no transcript reads as empty, not an error
   //
@@ -198,17 +241,27 @@ text: Hi there!`);
 
   // doctest:L193
   const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
-  await t.checkText(out2.with(shape(missing)), "{ kind: \"unavailable\", reason: \"missing-local-transcript\", transcript: { state: \"unknown\" }, huskPath: null, sessionId: \"no-such-session\", history: null, label: null, status: { sessionId: \"no-such-session\", running: false, busy: false }, pending: [] }");
+  t.check(shape(missing), {
+    kind: "unavailable",
+    reason: "missing-local-transcript",
+    transcript: { state: "unknown" },
+    huskPath: null,
+    sessionId: "no-such-session",
+    history: null,
+    label: null,
+    status: { sessionId: "no-such-session", running: false, busy: false },
+    pending: [],
+  });
 
   // Input still validates: a non-string session is rejected before any work, and so
   // is an empty one — `""` is not a session id, and accepting it would report
   // `sessionId: ""` next to a status that correctly says there is no session.
 
   // doctest:L203
-  await t.checkText(out2.with(await caller(server).chat.bootstrap(wire(`{ "session": 42, "slice": ${JSON.stringify(TAIL)} }`)).then(() => "no error", (e) => e.code)), "BAD_REQUEST");
+  t.check(await caller(server).chat.bootstrap(wire(`{ "session": 42, "slice": ${JSON.stringify(TAIL)} }`)).then(() => "no error", (e) => e.code), "BAD_REQUEST");
 
   // doctest:L206
-  await t.checkText(out2.with(await caller(server).chat.bootstrap({ session: "", slice: TAIL }).then(() => "no error", (e) => e.code)), "BAD_REQUEST");
+  t.check(await caller(server).chat.bootstrap({ session: "", slice: TAIL }).then(() => "no error", (e) => e.code), "BAD_REQUEST");
 
   // The slice is a discriminated union with hard bounds, and each arm is strict —
   // a tail request carrying page fields is a different request, not a tail request
@@ -219,13 +272,15 @@ text: Hi there!`);
   const c2 = caller(server);
   // A fresh object literal would be refused at compile time; a variable is not.
   const tailWithPageFields = { mode: "tail", tail: 1, offset: 0, limit: 40 } as const;
-  print(await c2.chat.history({ session: "sess-explicit", slice: tailWithPageFields }).then(() => "no error", (e) => e.code));
-  print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 50_000 } }).then(() => "no error", (e) => e.code));
-  print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "page", offset: -1, limit: 10 } }).then(() => "no error", (e) => e.code));
-  await t.checkText(out2.with(print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 1.5 } }).then(() => "no error", (e) => e.code))), `BAD_REQUEST
-BAD_REQUEST
-BAD_REQUEST
-BAD_REQUEST`);
+  t.check(
+    [
+      await c2.chat.history({ session: "sess-explicit", slice: tailWithPageFields }).then(() => "no error", (e) => e.code),
+      await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 50_000 } }).then(() => "no error", (e) => e.code),
+      await c2.chat.history({ session: "sess-explicit", slice: { mode: "page", offset: -1, limit: 10 } }).then(() => "no error", (e) => e.code),
+      await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 1.5 } }).then(() => "no error", (e) => e.code),
+    ],
+    ["BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST"],
+  );
 
   // ## The label comes from the husk, like every other session list
   //
@@ -242,7 +297,7 @@ BAD_REQUEST`);
 
   // doctest:L243
   const titled = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: TAIL });
-  await t.checkText(out2.with(titled.label), "Chasing down a duplicate charge");
+  t.check(titled.label, "Chasing down a duplicate charge");
 
   // A husk can be renamed freely — the `session` field is what identifies it, and
   // the pickers enumerate by that field. So a husk whose filename no longer carries
@@ -257,12 +312,19 @@ BAD_REQUEST`);
 
   // doctest:L259
   const renamed = await caller(server).chat.bootstrap({ session: "sess-renamed", slice: TAIL });
-  await t.checkText(out2.with(renamed.label), "Renamed husk still names its chat");
+  t.check(renamed.label, "Renamed husk still names its chat");
 
   // An empty id in the persisted default-session pointer means "none" too, rather
   // than a session named `""`:
 
   // doctest:L268
   await setDefaultSession(server, "");
-  await t.checkText(out2.with(shape(await caller(server).chat.bootstrap({ slice: TAIL }))), "{ kind: \"empty\", sessionId: null, history: null, label: null, status: { sessionId: null, running: false, busy: false }, pending: [] }");
+  t.check(shape(await caller(server).chat.bootstrap({ slice: TAIL })), {
+    kind: "empty",
+    sessionId: null,
+    history: null,
+    label: null,
+    status: { sessionId: null, running: false, busy: false },
+    pending: [],
+  });
 });

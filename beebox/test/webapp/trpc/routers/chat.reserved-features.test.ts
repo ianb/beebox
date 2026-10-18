@@ -7,7 +7,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
@@ -39,8 +38,6 @@ function caller(server: TestServer) {
 // The root landmark seeds narration `on`. The page immediately receives a
 // reserved id; reading that id must still report the seeded value.
 void test("The root landmark seeds narration on.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await server.cleanup();
@@ -64,16 +61,15 @@ void test("The root landmark seeds narration on.", async (t) => {
   // doctest:L54
   const inherited = "11111111-1111-4111-8111-111111111111";
   await api.chat.reserveSession({ sessionId: inherited, contextDir: "", engine: "claude" });
-  await t.checkText(out.with(JSON.stringify(await api.chat.features({ session: inherited }))), "{\"features\":{\"narration\":\"on\",\"prose\":\"on\"}}");
+  t.check(await api.chat.features({ session: inherited }), { features: { narration: "on", prose: "on" } });
 
   // An explicit per-chat `off` overrides the seeded `on` and survives the same
   // reload read even though the chat has not started and still has no history row.
 
   // doctest:L64
   await api.chat.setFeature({ session: inherited, feature: "narration", value: "off" });
-  print(`reload: ${JSON.stringify(await api.chat.features({ session: inherited }))}`);
-  await t.checkText(out.with(print(`history: ${JSON.stringify(await getFeaturesForSession(server.boxRoot, inherited))}`)), `reload: {"features":{"narration":"off","prose":"on"}}
-history: null`);
+  t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on" } });
+  t.check(await getFeaturesForSession(server.boxRoot, inherited), null);
 
   // ## A changed landmark seeds only new chats
   //
@@ -89,9 +85,8 @@ history: null`);
   // doctest:L83
   const proseOff = "22222222-2222-4222-8222-222222222222";
   await api.chat.reserveSession({ sessionId: proseOff, contextDir: "", engine: "claude" });
-  print(`earlier chat: ${(await api.chat.features({ session: inherited })).features.prose}`);
-  await t.checkText(out.with(print(`new landmark chat: ${(await api.chat.features({ session: proseOff })).features.prose}`)), `earlier chat: on
-new landmark chat: off`);
+  t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on" } });
+  t.check(await api.chat.features({ session: proseOff }), { features: { narration: "off", prose: "off" } });
 
   // Once that reserved chat starts, later toggles leave the reservation path and
   // persist to history. The now-released reservation must not keep swallowing
@@ -112,11 +107,9 @@ new landmark chat: off`);
       && (await getFeaturesForSession(server.boxRoot, proseOff))?.prose === "off"
   );
   await api.chat.setFeature({ session: proseOff, feature: "prose", value: "on" });
-  print(`accepted: ${accepted.statusCode}`);
-  print(`reload: ${(await api.chat.features({ session: proseOff })).features.prose}`);
-  await t.checkText(out.with(print(`history: ${(await getFeaturesForSession(server.boxRoot, proseOff))?.prose}`)), `accepted: 200
-reload: on
-history: on`);
+  t.check(accepted.statusCode, 200);
+  t.check(await api.chat.features({ session: proseOff }), { features: { narration: "off", prose: "on" } });
+  t.check(await getFeaturesForSession(server.boxRoot, proseOff), { prose: "on" });
 
   // ## Persisted state outranks an unloaded live session
   //
@@ -133,5 +126,5 @@ history: on`);
     engine: "claude",
   });
   await api.chat.setModel({ session: started, model: "claude-sonnet-5-5" });
-  await t.checkText(out.with((await api.chat.features({ session: started })).features.narration), "on");
+  t.check(await api.chat.features({ session: started }), { features: { narration: "on", prose: "on" } });
 });

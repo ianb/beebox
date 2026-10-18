@@ -43,7 +43,7 @@ void test("subscribe records the endpoint under the box; idempotent on re-subscr
   // doctest:L35
   await caller("alpha").push.subscribe(SUB);
   await caller("alpha").push.subscribe(SUB);
-  await t.checkText((await endpointsForBox("alpha")).length, "1");
+  t.check(await endpointsForBox("alpha"), [SUB]);
 
   // ## Same endpoint under a second box is stored once with both opt-ins
 
@@ -51,20 +51,13 @@ void test("subscribe records the endpoint under the box; idempotent on re-subscr
   await caller("beta").push.subscribe(SUB);
   const a = await endpointsForBox("alpha");
   const b = await endpointsForBox("beta");
-  t.check([a.length, b.length, a[0]?.endpoint === b[0]?.endpoint], [
-    1,
-    1,
-    true,
-  ]);
+  t.check([a, b], [[SUB], [SUB]]);
 
   // ## disable removes it from one box only
 
   // doctest:L54
   await caller("alpha").push.disable({ endpoint: SUB.endpoint });
-  t.check([(await endpointsForBox("alpha")).length, (await endpointsForBox("beta")).length], [
-    0,
-    1,
-  ]);
+  t.check([await endpointsForBox("alpha"), await endpointsForBox("beta")], [[], [SUB]]);
 
   // ## vapidPublicKey reports null when the server has no VAPID key
 

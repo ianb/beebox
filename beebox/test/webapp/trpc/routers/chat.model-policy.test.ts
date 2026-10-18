@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str, printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TestServer } from "../../../helpers/test-route-server.js";
@@ -67,20 +67,20 @@ void test("A pin is visible to the next status read:", async (t) => {
   // doctest:L61
   await caller(server).chat.setDefaultModel({ model: null });
   clearBoxConfigCache(server.boxRoot);
-  await t.checkText((await caller(server).chat.status({})).boxDefault === initial.boxDefault, "true");
+  t.check((await caller(server).chat.status({})).boxDefault, initial.boxDefault);
 
   // A model the box's engine cannot run is refused at the boundary rather than
   // stored and silently ignored later.
 
   // doctest:L71
   const foreign = "gpt-6.1-sol";
-  t.check(await caller(server).chat.setDefaultModel({ model: foreign }).catch((e: Error) => e.message === `Model ${foreign} is unavailable for claude chats`), true);
+  await t.checkThrows(() => caller(server).chat.setDefaultModel({ model: foreign }), `TRPCError: Model ${foreign} is unavailable for claude chats`);
 
   // A model no engine offers is refused by the settings path too, rather than being
   // saved and then dropped on every read.
 
   // doctest:L80
-  t.check(await caller(server).admin.updateBoxConfig({ agentModel: "sonnet" }).catch((e) => e.message.includes("Unknown model id")), true);
+  await t.checkThrows(() => caller(server).admin.updateBoxConfig({ agentModel: "sonnet" }), "TRPCError: Unknown model id sonnet");
 
   // Pinning is the owner's call.
 
@@ -100,8 +100,6 @@ void test("A pin is visible to the next status read:", async (t) => {
 // conversation that never existed, on whichever engine the box defaulted to. They
 // answer `NOT_FOUND` instead.
 void test("chat.setModel and chat.setFeature change a setting on a conversation that exi...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await server.cleanup();
@@ -117,19 +115,16 @@ void test("chat.setModel and chat.setFeature change a setting on a conversation 
   const unknown = "11111111-2222-3333-4444-555555555555";
 
   // doctest:L109
-  await t.checkText(
-    out.with(JSON.stringify([
-      await api.chat.setModel({ session: unknown, model: "claude-sonnet-5-5" }).catch((e) => e.code),
-      await api.chat.setFeature({ session: unknown, feature: "narration", value: "on" }).catch((e) => e.code),
-    ])),
-    "[\"NOT_FOUND\",\"NOT_FOUND\"]",
-  );
+  t.check([
+    await api.chat.setModel({ session: unknown, model: "claude-sonnet-5-5" }).catch((e) => e.code),
+    await api.chat.setFeature({ session: unknown, feature: "narration", value: "on" }).catch((e) => e.code),
+  ], ["NOT_FOUND", "NOT_FOUND"]);
 
   // The id is also not left behind in the registry — refusing it and registering it
   // anyway would leave the ghost the next reader has to disbelieve:
 
   // doctest:L120
-  await t.checkText(out.with(getChatRuntime(server.boxRoot)?.registry.get(unknown) === null), "true");
+  t.check(getChatRuntime(server.boxRoot)?.registry.get(unknown), null);
 
   // A reservation IS a record, so a coined chat still takes settings before its
   // first message, and the engine that answers is the reservation's rather than the
@@ -144,12 +139,8 @@ void test("chat.setModel and chat.setFeature change a setting on a conversation 
     engine: "claude",
     model: claudeDefault,
   });
-  print(`reserved: ${receipt.kind}`);
-  const setOnCoined = await api.chat
-    .setModel({ session: "22222222-3333-4444-8555-666666666666", model: "claude-sonnet-5-5" })
-    .then((r) => `ok model=${String(r.model)}`, (e) => `${String(e.code)}: ${String(e.message)}`);
-  await t.checkText(out.with(print(setOnCoined)), `reserved: reserved
-ok model=claude-sonnet-5-5`);
+  t.check(receipt.kind, "reserved");
+  t.check(await api.chat.setModel({ session: "22222222-3333-4444-8555-666666666666", model: "claude-sonnet-5-5" }), { ok: true, model: "claude-sonnet-5-5", restarted: false });
 
   // A reservation that names a model but no engine records the engine the model
   // was checked against. Leaving it implicit let a Claude model validate and then
@@ -158,7 +149,6 @@ ok model=claude-sonnet-5-5`);
   // doctest:L152
   const { resolveChatEngine } = await import("../../../../src/core/chat/session/engine.js");
   const implicit = "33333333-4444-4555-8666-777777777777";
-  print(`reserved: ${(await api.chat.reserveSession({ sessionId: implicit, model: claudeDefault })).kind}`);
-  await t.checkText(out.with(print(`engine: ${await resolveChatEngine(server.boxRoot, { sessionId: implicit })}`)), `reserved: reserved
-engine: claude`);
+  t.check((await api.chat.reserveSession({ sessionId: implicit, model: claudeDefault })).kind, "reserved");
+  t.check(await resolveChatEngine(server.boxRoot, { sessionId: implicit }), "claude");
 });

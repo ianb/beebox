@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { execFileSync } from "node:child_process";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -33,36 +34,54 @@ void test("Close, then reopen", async (t) => {
   });
   // doctest:L28
   const closed = await caller(box.root).browserTask.setClosed({ path: cardPath, closed: true });
-  t.check([closed.closed, typeof closed.commit === "string", closed.commitWarning], [
-    true,
-    true,
-    null,
-  ]);
+  t.check(closed, { closed: true, commit: any(String).matches(/^[\da-f]{40}$/), commitWarning: null });
 
   // doctest:L32
-  await t.checkText((await box.read(cardPath)).includes("closed: true"), "true");
+  t.checkText(
+    await box.read(cardPath),
+    `---
+type: browser-task
+title: Scan
+start:
+  href: https://example.test/feed
+closed: true
+---
+Find shows.`,
+  );
 
   // doctest:L35
-  await t.checkText(execFileSync("git", ["log", "-1", "--format=%B"], { cwd: box.root }).toString().includes("Endpoint: browserTask.setClosed"), "true");
+  t.checkText(execFileSync("git", ["log", "-1", "--format=%B"], { cwd: box.root }).toString(), `Close browser task: _content/tasks/Task.browser-task.card
+«blankline»
+Source: webapp
+Endpoint: browserTask.setClosed`);
 
   // doctest:L38
   const reopened = await caller(box.root).browserTask.setClosed({ path: cardPath, closed: false });
-  t.check([reopened.closed, (await box.read(cardPath)).includes("closed")], [
-    false,
-    false,
-  ]);
+  t.check(reopened, { closed: false, commit: any(String).matches(/^[\da-f]{40}$/), commitWarning: null });
+  t.checkText(
+    await box.read(cardPath),
+    `---
+type: browser-task
+title: Scan
+start:
+  href: https://example.test/feed
+---
+Find shows.`,
+  );
 
   // The body and the other fields survive the round trip:
 
   // doctest:L46
   const after = await box.read(cardPath);
-  t.check(
-    [after.includes("start:\n  href: https://example.test/feed\n"), after.trim().endsWith("Find shows.")]
-    ,
-    [
-    true,
-    true,
-  ],
+  t.checkText(
+    after,
+    `---
+type: browser-task
+title: Scan
+start:
+  href: https://example.test/feed
+---
+Find shows.`,
   );
 
   // ## Listing tasks with their state
@@ -74,24 +93,33 @@ void test("Close, then reopen", async (t) => {
   await box.write("_content/tasks/Weekly.browser-task.card", "---\ntype: browser-task\ntitle: Weekly feed\nstart:\n  href: https://example.test/w\nrescan-after: P7D\nlast-upload: 2020-01-01T00:00:00Z\n---\nScan it.\n");
   box.commitAll("seed weekly");
   const listed = await caller(box.root).browserTask.list();
-  t.check(listed.items.map((item) => [item.path, item.title, item.closed, item.state.kind, item.inboxCount, item.runCount]), [
-    [
-      "_content/tasks/Task.browser-task.card",
-      "Scan",
-      false,
-      "never-scanned",
-      0,
-      0,
+  t.check(listed, {
+    items: [
+      {
+        path: "_content/tasks/Task.browser-task.card",
+        title: "Scan",
+        start: "https://example.test/feed",
+        closed: false,
+        state: { kind: "never-scanned" },
+        inboxCount: 0,
+        runCount: 0,
+      },
+      {
+        path: "_content/tasks/Weekly.browser-task.card",
+        title: "Weekly feed",
+        start: "https://example.test/w",
+        closed: false,
+        state: {
+          kind: "due",
+          lastAt: "2020-01-01T00:00:00Z",
+          dueAt: "2020-01-08T00:00:00.000Z",
+          overdueMs: any(Number).positive(),
+        },
+        inboxCount: 0,
+        runCount: 0,
+      },
     ],
-    [
-      "_content/tasks/Weekly.browser-task.card",
-      "Weekly feed",
-      false,
-      "due",
-      0,
-      0,
-    ],
-  ]);
+  });
 
   // ## Refusals
   //

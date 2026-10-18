@@ -10,7 +10,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createTwoBoxTestServer } from "../../helpers/test-server.js";
@@ -33,10 +32,13 @@ async function writeTaskOutput({ tmpRoot, cwd, session, file, content }: { tmpRo
   return filePath;
 }
 
+/** The status and body of an injected response. */
+function reply(res: { statusCode: number; payload: string }) {
+  return { statusCode: res.statusCode, payload: res.payload };
+}
+
 // ## Alpha reads its own task output; beta cannot read it through beta's own request
 void test("Alpha reads its own task output; beta cannot read it through beta's own request", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -58,7 +60,6 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
     url: `/alpha/api/task-output?file=${encodeURIComponent(alphaFile)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  print(`alpha reads its own: ${alphaReadsOwn.statusCode} ${alphaReadsOwn.payload}`);
 
   // doctest:L50
   const betaReadsAlpha = await ctx.server.inject({
@@ -66,8 +67,10 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
     url: `/beta/api/task-output?file=${encodeURIComponent(alphaFile)}`,
     headers: { authorization: ctx.b.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`beta reads alpha's: ${betaReadsAlpha.statusCode}`)), `alpha reads its own: 200 alpha's output
-beta reads alpha's: 403`);
+  t.check({ alphaReadsOwn: reply(alphaReadsOwn), betaReadsAlpha: reply(betaReadsAlpha) }, {
+    alphaReadsOwn: { statusCode: 200, payload: "alpha's output" },
+    betaReadsAlpha: { statusCode: 403, payload: "{\"error\":\"Access denied\"}" },
+  });
 
   // ## A `..` traversal and a foreign encoded-cwd are both refused without touching disk
 
@@ -78,7 +81,6 @@ beta reads alpha's: 403`);
     url: `/alpha/api/task-output?file=${encodeURIComponent(traversal)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  print(`traversal: ${traversalRes.statusCode}`);
 
   // doctest:L72
   const foreignCwdPath = path.join(tmpRoot, encodeProjectDir(ctx.b.boxRoot), "sess-1", "tasks", "t1.output");
@@ -87,8 +89,10 @@ beta reads alpha's: 403`);
     url: `/alpha/api/task-output?file=${encodeURIComponent(foreignCwdPath)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`foreign encoded cwd: ${foreignCwdRes.statusCode}`)), `traversal: 403
-foreign encoded cwd: 403`);
+  t.check({ traversal: reply(traversalRes), foreignCwd: reply(foreignCwdRes) }, {
+    traversal: { statusCode: 403, payload: "{\"error\":\"Access denied\"}" },
+    foreignCwd: { statusCode: 403, payload: "{\"error\":\"Access denied\"}" },
+  });
 
   // ## A symlink inside alpha's own shape that resolves into beta's task output is refused
   //
@@ -108,7 +112,7 @@ foreign encoded cwd: 403`);
     url: `/alpha/api/task-output?file=${encodeURIComponent(symlinkPath)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`symlink into beta's output: ${symlinkRes.statusCode}`)), "symlink into beta's output: 403");
+  t.check(reply(symlinkRes), { statusCode: 403, payload: "{\"error\":\"Access denied\"}" });
 
   // ## A missing file under alpha's own directory 404s; a request with no `file` 400s
 
@@ -119,7 +123,6 @@ foreign encoded cwd: 403`);
     url: `/alpha/api/task-output?file=${encodeURIComponent(missingPath)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  print(`missing file: ${missingRes.statusCode}`);
 
   // doctest:L117
   const noFileRes = await ctx.server.inject({
@@ -127,6 +130,8 @@ foreign encoded cwd: 403`);
     url: "/alpha/api/task-output",
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`no file param: ${noFileRes.statusCode}`)), `missing file: 404
-no file param: 400`);
+  t.check({ missing: reply(missingRes), noFile: reply(noFileRes) }, {
+    missing: { statusCode: 404, payload: "{\"error\":\"Output file not found\"}" },
+    noFile: { statusCode: 400, payload: "{\"error\":\"Missing file parameter\"}" },
+  });
 });

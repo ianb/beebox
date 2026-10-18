@@ -9,9 +9,9 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { eventually } from "agent-doctest/check";
+import { any, eventually, isoDate } from "agent-doctest/check";
 import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { basename, join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { spawn, execFileSync } from "node:child_process";
@@ -95,9 +95,16 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
 
   // doctest:L88
   const views = await listViews(box.contentRoot);
-  t.check(views.map((v) => v.slug), [
-    "widget-view",
-  ]);
+  t.check(views, [{
+    name: "Widget View",
+    slug: "widget-view",
+    description: "renders a CardLink from beebox/view-widgets",
+    dependencies: [],
+    modes: ["page"],
+    layout: "inset",
+    rendersCardTypes: [],
+    lastModified: isoDate(),
+  }]);
 
   // ## Its metadata comes from the real module exports, not regex
   //
@@ -106,24 +113,30 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
 
   // doctest:L99
   const meta = views[0];
-  t.check({ name: meta?.name, description: meta?.description, modes: meta?.modes }, {
+  t.check(meta, {
     name: "Widget View",
+    slug: "widget-view",
     description: "renders a CardLink from beebox/view-widgets",
-    modes: [
-      "page",
-    ],
+    dependencies: [],
+    modes: ["page"],
+    layout: "inset",
+    rendersCardTypes: [],
+    lastModified: isoDate(),
   });
 
   // ## `bbx view test` renders it, resolving `beebox/view-widgets` and `react` through the box's own real `node_modules`
 
   // doctest:L107
   const r = await runViewTest(box.contentRoot, "widget-view");
-  t.check(r.code, 0);
+  t.check(r, {
+    code: 0,
+    stdout: `<html><head></head><body><div><a href="/${basename(box.root)}/views/_content/inbox/Test.doc.card" class="bbx-theme-link">Test</a></div></body></html>\n`,
+    stderr: "",
+  });
 
   // The rendered `<CardLink>` derives its label from the ref's filename (`Test`):
 
   // doctest:L115
-  await t.checkText(r.stdout.includes(">Test<"), "true");
 });
 
 // ## A broken view still appears in the listing, degraded to an error marker
@@ -147,10 +160,16 @@ export default function Broken() {
 
   const views = await listViews(box.contentRoot);
   // doctest:L135
-  t.check([views[0]?.slug, views[0]?.description], [
-    "broken",
-    "Failed to compile",
-  ]);
+  t.check(views, [{
+    name: "broken",
+    slug: "broken",
+    description: "Failed to compile",
+    dependencies: [],
+    modes: ["page"],
+    layout: "inset",
+    rendersCardTypes: [],
+    lastModified: isoDate(),
+  }]);
 });
 
 // ## A view whose module scope never resolves can't hang the lister
@@ -178,11 +197,17 @@ export default function Hangs() { return null; }
   const views = await listViews(box.contentRoot);
   const elapsedMs = Date.now() - start;
   // doctest:L158
-  t.check([views[0]?.slug, views[0]?.description, elapsedMs < 10000], [
-    "hangs",
-    "Failed to compile",
-    true,
-  ]);
+  t.check(views, [{
+    name: "hangs",
+    slug: "hangs",
+    description: "Failed to compile",
+    dependencies: [],
+    modes: ["page"],
+    layout: "inset",
+    rendersCardTypes: [],
+    lastModified: isoDate(),
+  }]);
+  t.check(elapsedMs, any(Number).below(10000));
 });
 
 // ## A spinning import does not outlive the lister

@@ -4,9 +4,9 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { z } from "zod";
+import { any, str } from "agent-doctest/check";
+import { join, relative } from "node:path";
 import { makeTestServer } from "../../helpers/test-route-server.js";
-import { bodyField } from "../../helpers/test-helpers.js";
 
 const VIEW_SOURCE = `
 export const name = "Test View";
@@ -41,12 +41,10 @@ void test("The module endpoint returns compiled JavaScript (not JSON), so we use
 
   // doctest:L35
   const res = await ctx.rawRequest({ method: "GET", url: "/api/views/test/module.js" });
+  // The compiled output externalizes React via the window shim. The payload embeds
+  // the shared react-shim runtime, so the check names the shim use, not the whole file.
   t.check(res.statusCode, 200);
-
-  // The compiled output externalizes React via the window shim:
-
-  // doctest:L43
-  await t.checkText(res.payload.includes("__bbxReact"), "true");
+  t.check(res.payload, any(String).includes("var React = window.__bbxReact;"));
 });
 
 // A view with a syntax error returns an error module (not a 500):
@@ -64,18 +62,19 @@ void test("A view with a syntax error returns an error module (not a 500):", asy
 
   // doctest:L57
   const res = await ctx.rawRequest({ method: "GET", url: "/api/views/broken/module.js" });
-  t.check(res.statusCode, 200);
-
-  // doctest:L63
-  await t.checkText(res.payload.includes("ErrorView"), "true");
-
-  // doctest:L66
-  await t.checkText(res.payload.includes("Compile error"), "false");
-
   // The error module contains the actual error message:
-
-  // doctest:L73
-  await t.checkText(res.payload.includes("Expected"), "true");
+  t.check({ statusCode: res.statusCode, payload: res.payload }, {
+    statusCode: 200,
+    payload: `export default function ErrorView() {
+  return window.__bbxReact.createElement("pre", {style:{color:"red",whiteSpace:"pre-wrap",padding:"1rem"}}, \`Build failed with 1 error:
+${relative(process.cwd(), join(ctx.boxRoot, "src/views/broken.tsx"))}:1:39: ERROR: Expected ">" but found end of file\`);
+}
+export const name = "Error";
+export const description = "Failed to compile";
+export const dependencies = [];
+export const modes = ["page", "chat"];
+`,
+  });
 });
 
 // ## Fetching cards
@@ -97,22 +96,14 @@ void test("The cards endpoint returns cards matching a view's dependency globs:"
 
   // doctest:L91
   const res = await ctx.request({ method: "GET", url: "/api/views/test/cards" });
-  t.check(res.statusCode, 200);
-
-  // doctest:L97
-  t.check(bodyField(res.body, "cards", "length"), 1);
-
-  // doctest:L100
-  t.check(bodyField(res.body, "cards", 0, "type"), "doc");
-
-  // doctest:L103
-  t.check(bodyField(res.body, "cards", 0, "path"), "_content/inbox/Test.doc.card");
-
-  // doctest:L106
-  t.check(bodyField(res.body, "cards", 0, "frontmatter", "title"), "Test doc");
-
-  // doctest:L109
-  t.check(bodyField(res.body, "files"), []);
+  const doc = {
+    path: "_content/inbox/Test.doc.card",
+    type: "doc",
+    frontmatter: { title: "Test doc" },
+    bodyLineOffset: 3,
+    body: "Test doc content\n",
+  };
+  t.check(res, { statusCode: 200, body: { cards: [doc], files: [] } });
 
   // Non-card files matching the globs arrive in `files` as metadata (content
   // can be huge or binary, so it's fetched separately), and each card carries a
@@ -129,53 +120,38 @@ export default function P({ cards, files }) { return <div>{files.length}</div>; 
   await ctx.seedView("playground.tsx", PLAYGROUND_VIEW);
   await ctx.seed("_content/inbox/Test.attach/sessions/history.jsonl", '{"summary":"first run"}\n{"summary":"second run"}\n');
   const res2 = await ctx.request({ method: "GET", url: "/api/views/playground/cards" });
-  t.check(res2.statusCode, 200);
-
-  // doctest:L131
-  t.check(z.array(z.looseObject({ path: z.string() })).parse(bodyField(res2.body, "cards", 0, "attachments")).map((a) => a.path).join(", "), "_content/inbox/Test.attach/sessions/history.jsonl");
-
-  // doctest:L134
-  await t.checkText(Number(bodyField(res2.body, "cards", 0, "attachments", 0, "size")) > 0, "true");
-
-  // doctest:L137
-  t.check(bodyField(res2.body, "files", "length"), 1);
-
-  // doctest:L140
-  t.check(bodyField(res2.body, "files", 0, "path"), "_content/inbox/Test.attach/sessions/history.jsonl");
-
-  // doctest:L143
-  await t.checkText(typeof bodyField(res2.body, "files", 0, "content"), "undefined");
-
-  // doctest:L146
-  t.check(typeof bodyField(res2.body, "files", 0, "mtimeMs"), "number");
+  // Size and path are exact; the timestamp and etag come from the file system.
+  const history = {
+    path: "_content/inbox/Test.attach/sessions/history.jsonl",
+    size: 49,
+    mtimeMs: any(Number).positive(),
+    etag: str`W/"${any(String)}"`,
+    gitStatus: "untracked",
+  };
+  t.check(res2, { statusCode: 200, body: { cards: [{ ...doc, attachments: [history] }], files: [history] } });
 
   // Content comes from `/api/files/*`, which supports byte ranges — a view
   // tails a large log instead of downloading it (suffix form `bytes=-N`):
 
   // doctest:L154
   const full = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl" });
-  t.check(full.statusCode, 200);
-
-  // doctest:L158
-  t.check(full.headers["accept-ranges"], "bytes");
+  t.check({ statusCode: full.statusCode, acceptRanges: full.headers["accept-ranges"] }, { statusCode: 200, acceptRanges: "bytes" });
 
   // doctest:L161
   const tail = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=-25" } });
-  t.check(tail.statusCode, 206);
-
-  // doctest:L165
-  t.check(tail.headers["content-range"], "bytes 24-48/49");
-
-  // doctest:L168
-  t.check(JSON.parse(tail.payload.trim()).summary, "second run");
+  t.check({ statusCode: tail.statusCode, contentRange: tail.headers["content-range"], payload: tail.payload }, {
+    statusCode: 206,
+    contentRange: "bytes 24-48/49",
+    payload: "{\"summary\":\"second run\"}\n",
+  });
 
   // doctest:L171
   const mid = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=0-22" } });
-  await t.checkText(mid.payload, "{\"summary\":\"first run\"}");
+  t.check({ statusCode: mid.statusCode, payload: mid.payload }, { statusCode: 206, payload: "{\"summary\":\"first run\"}" });
 
   // doctest:L175
   const past = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=999-" } });
-  t.check(past.statusCode, 416);
+  t.check({ statusCode: past.statusCode, payload: past.payload }, { statusCode: 416, payload: "{\"error\":\"Range not satisfiable\"}" });
 });
 
 // A view with no dependencies returns an empty card list:
@@ -202,10 +178,7 @@ export default function Empty() { return null; }
 
   // doctest:L198
   const res = await ctx.request({ method: "GET", url: "/api/views/empty/cards" });
-  t.check(res.statusCode, 200);
-
-  // doctest:L202
-  t.check(bodyField(res.body, "cards", "length"), 0);
+  t.check(res, { statusCode: 200, body: { cards: [], files: [] } });
 });
 
 // Cards endpoint returns 404 for a nonexistent view:
@@ -220,5 +193,5 @@ void test("Cards endpoint returns 404 for a nonexistent view:", async (t) => {
   // doctest:L213
   const ctx = await makeTestServer();
   const res = await ctx.request({ method: "GET", url: "/api/views/nonexistent/cards" });
-  t.check(res.statusCode, 404);
+  t.check(res, { statusCode: 404, body: { error: "View not found" } });
 });

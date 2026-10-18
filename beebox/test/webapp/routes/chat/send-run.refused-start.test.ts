@@ -18,10 +18,10 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { uuid } from "agent-doctest/check";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
-import { bodyField } from "../../../helpers/test-helpers.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
 
@@ -67,17 +67,18 @@ void test("A refused run answers 409 with the reason, and nothing is recorded", 
     url: "/api/chat/send",
     payload: { session: "new", message: "did you water the plants", messageId: "m1" },
   }));
-  t.check(({ status: res.statusCode, refused: typeof bodyField(res.body, "error"), recorded: recorded.length, runs: backend.runs.length }), {
-    status: 409,
-    refused: "string",
-    recorded: 0,
-    runs: 0,
+  // The reason names the missing setup, not a busy chat.
+  t.check({ res, recorded, runs: backend.runs.map((run) => run.startOptions.resumeSessionId) }, {
+    res: {
+      statusCode: 409,
+      body: {
+        error: "This run uses the OpenRouter model qwen/qwen3-coder, but no usable OpenRouter key is available for this box (No secret named \"openrouter\" exists on this machine. It can be declared (bbx secrets declare openrouter), but only the boxholder can supply its value.). Add one in Admin → Secrets and grant it to this box.",
+      },
+    },
+    recorded: [],
+    runs: [],
   });
 
-  // The reason names the missing setup, not a busy chat.
-
-  // doctest:L68
-  await t.checkText(bodyField(res.body, "error"), "This run uses the OpenRouter model qwen/qwen3-coder, but no usable OpenRouter key is available for this box (No secret named \"openrouter\" exists on this machine. It can be declared (bbx secrets declare openrouter), but only the boxholder can supply its value.). Add one in Admin → Secrets and grant it to this box.");
 
   // ## Once the cause is fixed, the same message id is sent
   //
@@ -91,10 +92,8 @@ void test("A refused run answers 409 with the reason, and nothing is recorded", 
     payload: { session: "new", message: "did you water the plants", messageId: "m1" },
   });
   await awaitFakeRuns(backend, 1);
-  t.check(({ status: retry.statusCode, turn: typeof bodyField(retry.body, "turnId"), deduplicated: bodyField(retry.body, "deduplicated") ?? false, recorded: recorded.length }), {
-    status: 200,
-    turn: "string",
-    deduplicated: false,
-    recorded: 1,
+  t.check({ retry, recorded }, {
+    retry: { statusCode: 200, body: { turnId: uuid() } },
+    recorded: ["did you water the plants"],
   });
 });

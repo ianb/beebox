@@ -9,7 +9,8 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
 import { writeFile, utimes, symlink, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import { realpathSync } from "node:fs";
 
 // A p5 figure sketch: native-style, imports nothing (the harness provides p5),
 // default-exports the (lib, mount, figure) => teardown factory.
@@ -66,6 +67,17 @@ function moduleFor(ctx: TestServer, rel: string) {
   return ctx.rawRequest({ method: "GET", url: `/api/figure/module.js?path=${rel}` });
 }
 
+// The status, type and body of a raw response.
+function page(res: { statusCode: number; headers: Record<string, unknown>; payload: string }) {
+  return { statusCode: res.statusCode, contentType: res.headers["content-type"], payload: res.payload };
+}
+
+// esbuild heads its output with the source path relative to the working directory,
+// resolved through symlinks (the temp box lives under `/var`, really `/private/var`).
+function sourcePath(ctx: TestServer, rel: string) {
+  return relative(process.cwd(), join(realpathSync(ctx.boxRoot), rel));
+}
+
 async function compile(ctx: TestServer, sketch: Sketch) {
   const { name } = sketch;
   await seedSketch(ctx, sketch);
@@ -88,12 +100,22 @@ void test("A valid sketch in an attach scope compiles to a JavaScript module (no
   // doctest:L76
   const ctx = await makeTestServer();
   const res = await compile(ctx, { name: "Demo", source: P5_SKETCH });
-  t.check([res.statusCode, res.headers["content-type"], res.payload.includes("createCanvas"), res.payload.includes("figureError")], [
-    200,
-    "application/javascript",
-    true,
-    false,
-  ]);
+  t.check(page(res), {
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `// ${sourcePath(ctx, "_content/inbox/Demo.attach/sketch.ts")}
+function sketch_default(p5, mount, figure) {
+  const instance = new p5((p) => {
+    p.setup = () => p.createCanvas(figure.params.size ?? 300, 300);
+    p.draw = () => p.background(figure.data.bg ?? 200);
+  }, mount);
+  return () => instance.remove();
+}
+export {
+  sketch_default as default
+};
+`,
+  });
 
   // A canvas-loop entry type-imports `@ianbicking/canvas-loop`, which is not
   // resolvable from a box directory. esbuild erases type-only imports at parse
@@ -102,22 +124,31 @@ void test("A valid sketch in an attach scope compiles to a JavaScript module (no
 
   // doctest:L88
   const orbit = await compile(ctx, { name: "Orbit", source: CANVAS_LOOP_SKETCH });
-  t.check(
-    ({
-      status: orbit.statusCode,
-      figureError: orbit.payload.includes("figureError"),
-      canvasLoopSpecifier: orbit.payload.includes("@ianbicking/canvas-loop"),
-      mountSketch: orbit.payload.includes("mountSketch"),
-      update: orbit.payload.includes("update"),
-    }),
-    {
-    status: 200,
-    figureError: false,
-    canvasLoopSpecifier: false,
-    mountSketch: true,
-    update: true,
-  },
-  );
+  t.check(page(orbit), {
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `// ${sourcePath(ctx, "_content/inbox/Orbit.attach/sketch.ts")}
+var params = { speed: { type: "number", min: 0, max: 5, default: 1 } };
+function init() {
+  return { angle: 0 };
+}
+function update(model, msg, u) {
+  return msg.type === "tick" ? { angle: model.angle + 0.03 * u.params.speed } : model;
+}
+function draw(v, model, p) {
+  v.background("#0b0e17");
+  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 24);
+}
+var sketch_default = (cl, { mount, figure }) => cl.mountSketch(mount, { module: { params, init, update, draw }, initialParams: figure.params });
+export {
+  sketch_default as default,
+  draw,
+  init,
+  params,
+  update
+};
+`,
+  });
 
   // The instructions say `import type` ONLY. A sketch that value-imports the
   // package instead hits esbuild's resolve error (the package genuinely isn't
@@ -126,30 +157,24 @@ void test("A valid sketch in an attach scope compiles to a JavaScript module (no
 
   // doctest:L105
   const wrong = await compile(ctx, { name: "Wrong", source: VALUE_IMPORT_SKETCH });
-  t.check(
-    ({
-      status: wrong.statusCode,
-      figureError: wrong.payload.includes("figureError"),
-      couldNotResolve: wrong.payload.includes("Could not resolve"),
-      names: wrong.payload.includes("@ianbicking/canvas-loop/browser"),
-    }),
-    {
-    status: 200,
-    figureError: true,
-    couldNotResolve: true,
-    names: true,
-  },
-  );
+  t.check(page(wrong), {
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `export const figureError = "Build failed with 1 error:\\n${sourcePath(ctx, "_content/inbox/Wrong.attach/sketch.ts")}:2:28: ERROR: Could not resolve \\"@ianbicking/canvas-loop/browser\\"";
+`,
+  });
 
   // A syntax error does not 500 — it returns a module exporting `figureError`, which
   // the harness checks before treating `default` as the sketch factory:
 
   // doctest:L119
   const broken = await compile(ctx, { name: "Broken", source: "export default function( {" });
-  t.check([broken.statusCode, broken.payload.includes("figureError")], [
-    200,
-    true,
-  ]);
+  t.check(page(broken), {
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `export const figureError = "Build failed with 1 error:\\n${sourcePath(ctx, "_content/inbox/Broken.attach/sketch.ts")}:1:26: ERROR: Expected identifier but found end of file";
+`,
+  });
 });
 
 // ## An edit is never served stale — even same length, same mtime
@@ -180,7 +205,20 @@ void test("The figure route compiles with cache:", async (t) => {
 
   // doctest:L147
   const first = await moduleFor(ctx, rel);
-  await t.checkText(first.payload.includes("AAA"), "true");
+  const cacheModule = (marker: string) => ({
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `// ${sourcePath(ctx, rel)}
+function sketch_default(p5, mount, figure) {
+  const marker = "${marker}";
+  return () => marker;
+}
+export {
+  sketch_default as default
+};
+`,
+  });
+  t.check(page(first), cacheModule("AAA"));
 
   // Rewrite to a SAME-LENGTH marker and re-pin the same mtime (mtime and size both
   // unchanged) — the re-request still returns the NEW output, not the cached "AAA":
@@ -191,10 +229,7 @@ void test("The figure route compiles with cache:", async (t) => {
 
   // doctest:L159
   const second = await moduleFor(ctx, rel);
-  t.check([second.payload.includes("BBB"), second.payload.includes("AAA")], [
-    true,
-    false,
-  ]);
+  t.check(page(second), cacheModule("BBB"));
 });
 
 // ## A symlink escaping the box is refused without leaking the target
@@ -222,11 +257,11 @@ void test("A figure source path is contained to the box by string prefix, but st
 
   // doctest:L183
   const res = await moduleFor(ctx, "_content/inbox/Evil.attach/escape.ts");
-  t.check([res.statusCode, res.payload.includes("TOPSECRET"), res.payload.includes("Path outside box")], [
-    400,
-    false,
-    true,
-  ]);
+  t.check(page(res), {
+    statusCode: 400,
+    contentType: "application/json; charset=utf-8",
+    payload: "{\"error\":\"Path outside box\"}",
+  });
 
   // A dangling symlink (target absent) is a clean 404, not a 500:
 
@@ -235,7 +270,11 @@ void test("A figure source path is contained to the box by string prefix, but st
     join(ctx.boxRoot, "_content/inbox/Evil.attach/nonexistent-target.ts"),
     join(ctx.boxRoot, "_content/inbox/Evil.attach/broken.ts"),
   );
-  t.check((await moduleFor(ctx, "_content/inbox/Evil.attach/broken.ts")).statusCode, 404);
+  t.check(page(await moduleFor(ctx, "_content/inbox/Evil.attach/broken.ts")), {
+    statusCode: 404,
+    contentType: "application/json; charset=utf-8",
+    payload: "{\"error\":\"Source not found\"}",
+  });
 });
 
 // ## Guard rails
@@ -292,7 +331,17 @@ void test("A card filename carries its type — Cube.figure.card — while its a
   const ctx = await makeTestServer();
   await ctx.seed("_content/figures/Cube.figure.card", "");
   await ctx.seed("_content/figures/Cube.attach/sketch.ts", "export default () => () => {};");
-  t.check((await moduleFor(ctx, "_content/figures/Cube.attach/sketch.ts")).statusCode, 200);
+  t.check(page(await moduleFor(ctx, "_content/figures/Cube.attach/sketch.ts")), {
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `// ${sourcePath(ctx, "_content/figures/Cube.attach/sketch.ts")}
+var sketch_default = () => () => {
+};
+export {
+  sketch_default as default
+};
+`,
+  });
 
   // A positional card — a bare `<type>.card`, "the ‹type› of this directory" — owns
   // `<type>.attach/` by the same rule.
@@ -300,7 +349,17 @@ void test("A card filename carries its type — Cube.figure.card — while its a
   // doctest:L256
   await ctx.seed("_content/figures/gallery.card", "");
   await ctx.seed("_content/figures/gallery.attach/sketch.ts", "export default () => () => {};");
-  t.check((await moduleFor(ctx, "_content/figures/gallery.attach/sketch.ts")).statusCode, 200);
+  t.check(page(await moduleFor(ctx, "_content/figures/gallery.attach/sketch.ts")), {
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `// ${sourcePath(ctx, "_content/figures/gallery.attach/sketch.ts")}
+var sketch_default = () => () => {
+};
+export {
+  sketch_default as default
+};
+`,
+  });
 
   // An attach-named directory is not enough: it must be the sibling attach scope of
   // an existing card. This prevents arbitrary box files from becoming compilable
@@ -309,8 +368,9 @@ void test("A card filename carries its type — Cube.figure.card — while its a
   // doctest:L267
   await ctx.seed("_content/inbox/Loose.attach/sketch.ts", "export default () => {};");
   const loose = await moduleFor(ctx, "_content/inbox/Loose.attach/sketch.ts");
-  t.check([loose.statusCode, JSON.parse(loose.payload).error], [
-    400,
-    "Attach scope has no owning card",
-  ]);
+  t.check(page(loose), {
+    statusCode: 400,
+    contentType: "application/json; charset=utf-8",
+    payload: "{\"error\":\"Attach scope has no owning card\"}",
+  });
 });

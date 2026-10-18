@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { makeTestServer } from "../../helpers/test-route-server.js";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
@@ -54,19 +55,13 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
   // doctest:L44
   const lines = logLines();
   const parsed = JSON.parse(lines[lines.length - 1] ?? "");
-  await t.checkText(
-    // Field is capped well under its original 5021 chars (2048 + ellipsis).
-    parsed.doc.length <= 2049,
-    "true",
-  );
-
-  // doctest:L50
-  await t.checkText(parsed.doc.length < bigDoc.length, "true");
+  // Field is capped well under its original 5021 chars (2048 + ellipsis).
+  t.check(parsed, { ts: isoDate(), directive: "img-src", blocked: "https://x/y", doc: bigDoc.slice(0, 2048) + "…" });
 
   // ## A body over the small dedicated limit is rejected (413), nothing logged
 
   // doctest:L57
-  const before = logLines().length;
+  const linesBefore = logLines();
   // 20 KB body — over the 16 KB CSP-report limit (but far under the server-wide
   // 50 MB JSON limit that used to apply).
   const huge = JSON.stringify({ "csp-report": { "document-uri": "https://x/" + "B".repeat(20_000) } });
@@ -74,10 +69,10 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
   t.check(status, 413);
 
   // doctest:L65
-  await t.checkText(
+  t.check(
     // The oversized report never reached the log — no new line appended.
-    logLines().length === before,
-    "true",
+    logLines(),
+    linesBefore,
   );
 
   // ## An oversized `application/json` body is also rejected (413) — content-type can't bypass the bound
@@ -88,29 +83,34 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
   // body for every content-type.
 
   // doctest:L78
-  const beforeJson = logLines().length;
+  const linesBeforeJson = logLines();
   const hugeJson = JSON.stringify({ "csp-report": { "document-uri": "https://x/" + "C".repeat(20_000) } });
   const jsonStatus = await postCsp("application/json", hugeJson);
   t.check(jsonStatus, 413);
 
   // doctest:L84
-  await t.checkText(
+  t.check(
     // Nothing logged from the rejected oversized JSON body.
-    logLines().length === beforeJson,
-    "true",
+    logLines(),
+    linesBeforeJson,
   );
 
   // ## A batch POST logs at most the per-request cap
 
   // doctest:L92
-  const beforeBatch = logLines().length;
+  const linesBeforeBatch = logLines();
   const batch = Array.from({ length: 50 }, (_v, i) => ({ type: "csp-violation", body: { effectiveDirective: "script-src", blockedURL: "https://cdn/" + i + ".js", documentURL: "https://app/p" } }));
   t.check(await postCsp("application/reports+json", batch), 204);
 
   // doctest:L97
   t.check(
     // 50 reports posted, but only the first 20 are logged.
-    logLines().length - beforeBatch,
-    20,
+    logLines().slice(linesBeforeBatch.length).map((line) => JSON.parse(line)),
+    Array.from({ length: 20 }, (_v, i) => ({
+      ts: isoDate(),
+      directive: "script-src",
+      blocked: `https://cdn/${i}.js`,
+      doc: "https://app/p",
+    })),
   );
 });

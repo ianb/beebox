@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { readFile, rm } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -34,8 +33,6 @@ async function attempt(fn: () => Promise<unknown>) {
 
 // ## An authenticated non-owner is refused, and nothing is written
 void test("An authenticated non-owner is refused, and nothing is written", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(boxRoot, { recursive: true, force: true });
@@ -48,21 +45,19 @@ void test("An authenticated non-owner is refused, and nothing is written", async
   const boxRoot = fixtureBox.root;
 
   // doctest:L40
-  print(await attempt(() => caller(boxRoot, { authed: true }).setService({ service: "deepgram" })));
-  print(await attempt(() => caller(boxRoot, { authed: true }).setHqService({ hqService: "voxtral" })));
-  const stillDefault = await caller(boxRoot, { authed: true }).config();
-  await t.checkText(out.with(print(JSON.stringify(stillDefault))), `THREW:FORBIDDEN
-THREW:FORBIDDEN
-{"service":"voxtral","hqService":"whisper"}`);
+  t.check(await attempt(() => caller(boxRoot, { authed: true }).setService({ service: "deepgram" })), "THREW:FORBIDDEN");
+  t.check(await attempt(() => caller(boxRoot, { authed: true }).setHqService({ hqService: "voxtral" })), "THREW:FORBIDDEN");
+  t.check(await caller(boxRoot, { authed: true }).config(), { service: "voxtral", hqService: "whisper" });
 
   // ## The owner repoints it, and the change lands on disk
 
   // doctest:L53
-  print(JSON.stringify(await caller(boxRoot, { isOwner: true }).setService({ service: "deepgram" })));
-  print(JSON.stringify(await caller(boxRoot, { isOwner: true }).setHqService({ hqService: "voxtral-diarized" })));
-  await t.checkText(out.with(print((await readFile(join(boxRoot, "_config/transcription.json"), "utf-8")).trim())), `{"service":"deepgram"}
-{"hqService":"voxtral-diarized","warning":"This box has no key for voxtral-diarized yet; grant mistral in Admin → Secrets or it will fail on every pass."}
-{
+  t.check(await caller(boxRoot, { isOwner: true }).setService({ service: "deepgram" }), { service: "deepgram" });
+  t.check(await caller(boxRoot, { isOwner: true }).setHqService({ hqService: "voxtral-diarized" }), {
+    hqService: "voxtral-diarized",
+    warning: "This box has no key for voxtral-diarized yet; grant mistral in Admin → Secrets or it will fail on every pass.",
+  });
+  t.checkText((await readFile(join(boxRoot, "_config/transcription.json"), "utf-8")).trim(), `{
   "service": "deepgram",
   "hqService": "voxtral-diarized"
 }`);

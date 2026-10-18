@@ -16,7 +16,6 @@ const dir = await makeTmpDir("hash");
 
 // A known test vector: SHA-256 of the empty string.
 void test("A known test vector:", async (t) => {
-  // doctest:L21
   const emptyFile = join(dir, "empty.bin");
   await writeFile(emptyFile, Buffer.alloc(0));
   t.check(await sha256File(emptyFile), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
@@ -24,7 +23,6 @@ void test("A known test vector:", async (t) => {
 
 // And of the ASCII string `abc` (the standard SHA-256 test vector):
 void test("And of the ASCII string abc (the standard SHA-256 test vector):", async (t) => {
-  // doctest:L30
   const abcFile = join(dir, "abc.bin");
   await writeFile(abcFile, "abc");
   t.check(await sha256File(abcFile), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
@@ -40,10 +38,9 @@ void test("A larger, non-trivial file hashes consistently across repeated reads 
       t.error(error);
     }
   });
-  // doctest:L40
   const bigFile = join(dir, "big.bin");
   await writeFile(bigFile, Buffer.alloc(5 * 1024 * 1024, 7));
   const first = await sha256File(bigFile);
   const second = await sha256File(bigFile);
-  t.check(first === second, true);
+  t.check(second, first);
 });

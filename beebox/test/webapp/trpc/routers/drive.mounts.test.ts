@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { containing, isoDate } from "agent-doctest/check";
 import { TRPCError } from "@trpc/server";
 import type { TrpcActor, TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
@@ -76,6 +77,22 @@ function caller(boxRoot: string, options?: { drive?: GoogleDriveService; actor?:
   return appRouter.createCaller(ctx);
 }
 
+/** What mounting the Recipes folder reports: the Sheet synced, the PDF a pointer. */
+const RECIPES_MOUNTED = {
+  cardPath: "_content/drive/recipes/Recipes.gfolder.card",
+  name: "Recipes",
+  created: [
+    "_content/drive/recipes/Budget_2026.attach/Sheet1.json",
+    "_content/drive/recipes/Budget_2026.gsheet.card",
+    "_content/drive/recipes/Scanpdf.glink.card",
+  ],
+  updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+  pushed: [],
+  failures: [],
+  notes: [],
+  scheduleHint: null,
+};
+
 /** The `Triggered-By` trailer on the box's most recent commit, or "none". */
 async function lastTrigger(boxRoot: string) {
   const entry = (await getLog(boxRoot, 1))[0];
@@ -139,77 +156,44 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
     url: "https://drive.google.com/drive/folders/folder-1",
     dir: "_content/drive/recipes",
   });
-  t.check({ cardPath: mounted.cardPath, name: mounted.name, failures: mounted.failures }, {
-    cardPath: "_content/drive/recipes/Recipes.gfolder.card",
-    name: "Recipes",
-    failures: [],
-  });
+  t.check(mounted, RECIPES_MOUNTED);
 
   // doctest:L133
   const listed = await c.drive.mounts();
-  t.check(
-    listed.mounts.map((m) => ({
-      cardPath: m.cardPath,
-      dir: m.dir,
-      driveId: m.driveId,
-      name: m.name,
-      children: m.children,
-      problems: m.problems,
-      error: m.error,
-    })),
-    [
-    {
-      cardPath: "_content/drive/recipes/Recipes.gfolder.card",
-      dir: "_content/drive/recipes",
-      driveId: "folder-1",
-      name: "Recipes",
-      children: {
-        files: 1,
-        links: 1,
+  t.check(listed, {
+    connected: true,
+    mounts: [
+      {
+        cardPath: "_content/drive/recipes/Recipes.gfolder.card",
+        dir: "_content/drive/recipes",
+        driveId: "folder-1",
+        name: "Recipes",
+        link: "https://drive.google.com/file/d/folder-1/view",
+        // Stamped, so the row can say when Drive was last heard from.
+        lastSync: isoDate(),
+        error: null,
+        children: { files: 1, links: 1 },
+        problems: { notInFolder: 0, unknown: 0 },
       },
-      problems: {
-        notInFolder: 0,
-        unknown: 0,
-      },
-      error: null,
-    },
-  ],
-  );
+    ],
+  });
 
   // An injected service is a connected one: the page shows the mount manager, not
   // the connect-Google prompt.
-
-  // doctest:L150
-  t.check(listed.connected, true);
-
-  // doctest:L153
-  t.check(
-    // `last-sync` is stamped, so the row can say when Drive was last heard from.
-    typeof listed.mounts[0]?.lastSync,
-    "string",
-  );
 
   // `syncFolder` mirrors that same mount again on demand. Nothing changed upstream,
   // so the pass creates nothing and re-stamps the card.
 
   // doctest:L162
   const synced = await c.drive.syncFolder({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
-  t.check(
-    {
-      cardPath: synced.cardPath,
-      created: synced.created,
-      updated: synced.updated,
-      failures: synced.failures,
-    },
-    {
-    cardPath: "_content/drive/recipes/Recipes.gfolder.card",
+  t.check(synced, {
     created: [],
-    updated: [
-      "_content/drive/recipes/Recipes.gfolder.card",
-    ],
+    updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+    pushed: [],
     failures: [],
-  },
-  );
+    notes: [],
+    cardPath: "_content/drive/recipes/Recipes.gfolder.card",
+  });
 
   // `link` writes a pointer to any Drive item, copying nothing. It is a separate
   // mount from the mirror, so it can sit anywhere in the box.
@@ -297,20 +281,17 @@ void test("Unmounting is bbx rm on the mount card.", async (t) => {
 
   // doctest:L249
   const removed = await c.drive.unmount({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
-  t.check({ cardPath: removed.cardPath, trashed: removed.trashedTo.startsWith("_bookkeeping/trash/") }, {
-    cardPath: "_content/drive/recipes/Recipes.gfolder.card",
-    trashed: true,
-  });
+  t.check(removed, { cardPath: "_content/drive/recipes/Recipes.gfolder.card", trashedTo: "_bookkeeping/trash/Recipes.gfolder.card" });
 
   // doctest:L255
   t.check((await c.drive.mounts()).mounts, []);
 
   // doctest:L258
-  await t.checkText(
-    // The Sheet and the pointer are untouched.
-    JSON.stringify((await box.list()).split("\n").filter((p) => p.startsWith("_content/drive/recipes/") && p.endsWith(".card"))),
-    "[\"_content/drive/recipes/Budget_2026.gsheet.card\",\"_content/drive/recipes/Scanpdf.glink.card\"]",
-  );
+  // The Sheet and the pointer are untouched.
+  t.check((await box.list()).split("\n").filter((p) => p.startsWith("_content/drive/recipes/") && p.endsWith(".card")), [
+    "_content/drive/recipes/Budget_2026.gsheet.card",
+    "_content/drive/recipes/Scanpdf.glink.card",
+  ]);
 });
 
 // ## A refusal is a BAD_REQUEST carrying its own message
@@ -388,7 +369,7 @@ void test("Everything the mount operations refuse is something the person who as
     url: "https://drive.google.com/drive/folders/folder-1",
     dir: "/_content/drive/recipes",
   });
-  t.check(rooted.cardPath, "_content/drive/recipes/Recipes.gfolder.card");
+  t.check(rooted, RECIPES_MOUNTED);
 });
 
 // ## inspect answers "what is this, and do we already have it"
@@ -412,11 +393,16 @@ void test("The verification step the 2026-09-14 incident lacked.", async (t) => 
 
   // doctest:L346
   const folder = await c.drive.inspect({ url: "https://drive.google.com/drive/folders/folder-1" });
-  t.check({ name: folder.name, mimeType: folder.mimeType, cardType: folder.cardType, claimedBy: folder.claimedBy }, {
+  t.check(folder, {
+    id: "folder-1",
     name: "Recipes",
     mimeType: "application/vnd.google-apps.folder",
+    modifiedTime: "2026-08-26T10:00:00Z",
+    owner: "test@example.com",
+    webViewLink: "https://drive.google.com/file/d/folder-1/view",
     cardType: null,
     claimedBy: [],
+    details: null,
   });
 
   // A Sheet names the card type a sync would write, and the handler's own preview
@@ -424,22 +410,17 @@ void test("The verification step the 2026-09-14 incident lacked.", async (t) => 
 
   // doctest:L355
   const sheet = await c.drive.inspect({ url: "https://drive.google.com/file/d/sheet-1/view" });
-  t.check(
-    {
-      id: sheet.id,
-      cardType: sheet.cardType,
-      owner: sheet.owner,
-      webViewLink: sheet.webViewLink,
-      tabs: Array.isArray(sheet.details?.tabs) ? sheet.details.tabs.length : null,
-    },
-    {
+  t.check(sheet, {
     id: "sheet-1",
-    cardType: "gsheet",
+    name: "Budget 2026",
+    mimeType: "application/vnd.google-apps.spreadsheet",
+    modifiedTime: "2026-08-26T10:00:00Z",
     owner: "test@example.com",
     webViewLink: "https://drive.google.com/file/d/sheet-1/view",
-    tabs: 1,
-  },
-  );
+    cardType: "gsheet",
+    claimedBy: [],
+    details: { tabs: [{ title: "Sheet1", gid: 0 }], comments: 0 },
+  });
 
   // Once the folder is mirrored, the same inspect names the card that claims it —
   // so "is this already mounted?" stops being a guess.
@@ -484,14 +465,15 @@ void test("The file verb.", async (t) => {
 
   // doctest:L397
   const added = await c.drive.add({ url: "https://drive.google.com/file/d/sheet-1/view", path: "_content/budget" });
-  t.check({ cardPath: added.cardPath, name: added.name, cardType: added.cardType }, {
+  t.check(added, {
     cardPath: "_content/budget.gsheet.card",
     name: "Budget 2026",
     cardType: "gsheet",
+    written: ["_content/budget.attach/Sheet1.json", "_content/budget.gsheet.card"],
   });
 
   // doctest:L403
-  await t.checkText((await box.list()).split("\n").includes("_content/budget.gsheet.card"), "true");
+  t.check((await box.list()).split("\n"), containing(["_content/budget.gsheet.card"]));
 
   // A second card for one Drive id is refused: transient state is keyed by id while
   // attachments are per-card, so two cards are two working copies that overwrite
