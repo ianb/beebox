@@ -21,7 +21,7 @@ import { isRecord } from "../../card-io.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
 import { titleFromFilename, truncateTitle } from "../../file-summary.js";
 import { cardTitle } from "../../loader-registry.js";
-import { splitMarkdownSections } from "./markdown-sections.js";
+import { splitMarkdownSections } from "../../../shared/markdown-sections.js";
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
 
 /** One Orama document. `fragment` is "" for the card's own document. */
@@ -159,8 +159,10 @@ function docId(path: string, fragment: string): string {
 }
 
 /**
- * Repeated headings produce identical fragment paths; ids must be unique
- * within the index, so duplicates get a ~N suffix.
+ * Ids must be unique within the index. The splitter already numbers repeated
+ * section paths (`~N`, `shared/markdown-sections.ts`), which is the numbering
+ * the web view resolves; this guard only catches a heading whose own text
+ * collides with a numbered path (a literal `## Notes~2` after two `## Notes`).
  */
 function dedupeDocIds(docs: SearchDoc[]): SearchDoc[] {
   const seen = new Map<string, number>();

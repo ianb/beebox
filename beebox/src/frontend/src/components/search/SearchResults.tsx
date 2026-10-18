@@ -2,6 +2,7 @@ import { Badge } from "../ui/Badge";
 import { Text } from "../ui/Text";
 import type { RouterOutput } from "../../lib/trpc/client";
 import { toDisplayPath } from "@shared/display-path";
+import { sectionDestination } from "./target";
 
 /** Highlight the first occurrence of `query` in `text` (shared with the chat list's search rows). */
 export function Highlight({ text, query }: { text: string; query?: string }) {
@@ -13,6 +14,13 @@ export function Highlight({ text, query }: { text: string; query?: string }) {
 }
 
 export type SearchResult = RouterOutput["search"]["query"]["results"][number];
+
+/** A section result names its section only when opening it goes there (`sectionDestination`). */
+function placeLabel(result: SearchResult): string {
+  if (result.fragment === "") return " · Card summary";
+  const section = sectionDestination(result);
+  return section === null ? " · Synced document text" : ` · Section: ${section}`;
+}
 
 export function SearchResults({ results, onOpen, activeIndex, query }: {
   results: SearchResult[];
@@ -32,7 +40,7 @@ export function SearchResults({ results, onOpen, activeIndex, query }: {
       onClick={() => onOpen(result)}
     >
       <div className="flex items-center gap-2"><Text weight="semibold" truncate>{result.title || toDisplayPath(result.path)}</Text><Badge size="sm" tone="info">{result.kind}</Badge></div>
-      <Text as="div" size="sm" tone="muted" truncate>{toDisplayPath(result.path)}{result.fragment ? ` · Section: ${result.fragment}` : " · Card summary"}</Text>
+      <Text as="div" size="sm" tone="muted" truncate>{toDisplayPath(result.path)}{placeLabel(result)}</Text>
       <Text as="div" size="sm" className="mt-1 line-clamp-2"><Highlight text={result.excerpt} query={query} /></Text>
     </button>)}
   </div>;

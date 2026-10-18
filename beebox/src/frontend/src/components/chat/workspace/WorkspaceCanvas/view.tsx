@@ -18,6 +18,7 @@ import type { SidecarTab } from "../../sidecar-tabs";
 import type { PaneId } from "../state-types.js";
 import type { AddSelectionInput } from "../../../../lib/selection/position";
 import type { ActivityKind } from "@core/chat/card-activity";
+import { withoutFragment } from "../../../../lib/view-url";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
@@ -51,10 +52,10 @@ function WorkspaceCard({ tab, pane, visible, onAddSelection, reportActivity }: C
         reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
       }}>
       <CardVisibilityProvider visible={visible}><WorkspacePaneContext.Provider value={pane}>
-        <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState}
+        <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState} fragment={tab.target.fragment}
           canPushViewState={visible}
           onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
-          onSelectRenderer={(viewer) => workspace.updateTarget({ ...tab.target, viewer, viewState: null })}
+          onSelectRenderer={(viewer) => workspace.updateTarget({ ...withoutFragment(tab.target), viewer, viewState: null })}
           onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
           onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
           onAddSelection={onAddSelection} reportActivity={reportActivity} />

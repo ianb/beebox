@@ -11,7 +11,7 @@ made the ack, and a second user message. A reply to the second message
 streams in.
 
 ```ts setup
-import { mount } from "../../../helpers/dom-harness.js";
+import { mount } from "../../../../helpers/dom-harness.js";
 import { createElement as h, useState, type ComponentProps } from "react";
 import type { SessionEntry } from "../../../../../src/api-chat.js";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";

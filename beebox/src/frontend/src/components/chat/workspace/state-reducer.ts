@@ -1,4 +1,4 @@
-import { serializeViewUrl } from "../../../lib/view-url";
+import { serializeViewUrl, withoutFragment } from "../../../lib/view-url";
 import type { SidecarTab } from "../sidecar-tabs";
 import {
   activateWorkspacePath, evictWorkspaceToCap, InvalidWorkspaceActionError,
@@ -21,9 +21,14 @@ function openCard(state: WorkspaceState, action: Action<"openCard">): WorkspaceT
       paths: orderedWorkspacePaths([...next.panes[destination].paths, action.target.path], tabs) } } };
   } else {
     const explicitView = action.target.viewer !== null || action.target.viewState !== null || Object.keys(action.target.params).length > 0;
-    if (explicitView && serializeViewUrl(existing.target) !== serializeViewUrl(action.target)) {
+    // A fragment names a place in the card. A plain open keeps the tab's view
+    // but takes the incoming fragment, so it clears an old one.
+    const { fragment } = action.target;
+    const kept = withoutFragment(existing.target);
+    const target = explicitView ? action.target : fragment === undefined ? kept : { ...kept, fragment };
+    if (serializeViewUrl(existing.target) !== serializeViewUrl(target)) {
       next = { ...next, tabs: { ...next.tabs,
-        [action.target.path]: { ...existing, target: action.target, label: action.label } } };
+        [action.target.path]: { ...existing, target, label: explicitView ? action.label : existing.label } } };
     }
     next = moveWorkspacePath(next, { path: action.target.path, destination });
   }

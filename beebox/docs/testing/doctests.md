@@ -140,7 +140,7 @@ A frontend doctest can render a component two ways. `renderToStaticMarkup`
 (`react-dom/server`) shows the first render's HTML and runs no effects. A DOM
 doctest mounts the component in a [happy-dom](https://github.com/capricorn86/happy-dom)
 document with `mount()`, from
-`src/frontend/test/components/helpers/dom-harness.ts`. Use it for what only a
+`src/frontend/test/helpers/dom-harness.ts`. Use it for what only a
 live tree shows: effects and their cleanups, event handlers, state across
 re-renders, and which components re-render.
 
