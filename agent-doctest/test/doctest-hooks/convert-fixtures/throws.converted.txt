@@ -1,0 +1,19 @@
+// # Throws
+
+import { test } from "tap";
+
+function fail(message: string): never {
+  throw new TypeError(message);
+}
+
+// Name only, name and message, and a message with a bare colon:
+void test("Name only, name and message, and a message with a bare colon:", async (t) => {
+  // doctest:L12
+  await t.checkThrows(async () => fail("x"), "TypeError");
+
+  // doctest:L15
+  await t.checkThrows(async () => fail("bad input"), "TypeError: bad input");
+
+  // doctest:L18
+  await t.checkThrows(async () => fail("a:b"), { expected: "TypeError:«*»", mode: "full" });
+});

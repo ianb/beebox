@@ -19,7 +19,7 @@
  * Plan: beebox/docs/plans/retire-doctest.md, track 2.
  */
 
-import { type CodeBlock, parseCodeBlocks, parseExamples, type Example, type ThrowsExample } from "./doctest-parse.ts";
+import { bracketBalance, type CodeBlock, parseCodeBlocks, parseExamples, type Example, type ThrowsExample } from "./doctest-parse.ts";
 import { parseFenceInfo, type FenceInfo } from "./doctest-info.ts";
 import { doctestOracle } from "./doctest-load.ts";
 import { oracleSplit, rewriteImports, splitExpression, typeOnlyImports } from "./doctest-split.ts";
@@ -69,11 +69,17 @@ interface ExampleRef {
   md: number;
 }
 
+/** A cleanup block: registered as a `t.teardown` at the start of its test. */
+interface Cleanup {
+  prose: string[];
+  code: string;
+}
+
 interface OpenTest {
   name: string;
   prose: string[];
   timeoutMs: number | null;
-  teardowns: string[][];
+  teardowns: Cleanup[];
   /** Prose comment lines and examples, in file order. */
   body: Array<string | ExampleRef>;
 }
@@ -164,23 +170,27 @@ function classify(markdown: string): { blocks: Classified[]; trailing: string[];
     cursor = end + 1;
   }
   const trailing = commentLines(take(lines.length));
-  // The title and opening prose are the file header: the prose of the first block.
+  // The title and opening prose are the file header. When the first block
+  // is an example, the last paragraph before it stays with it: that one
+  // says what the example shows.
   const first = out[0];
-  const title = first ? first.prose : [];
-  if (first) first.prose = [];
+  if (!first) return { blocks: out, trailing, title: [] };
+  const lastBreak = first.info.kind === "example" ? first.prose.lastIndexOf("//") : -1;
+  const title = lastBreak === -1 ? first.prose : first.prose.slice(0, lastBreak);
+  first.prose = lastBreak === -1 ? [] : first.prose.slice(lastBreak + 1);
   return { blocks: out, trailing, title };
 }
 
 /** One example's lines in a test body, and its manifest entry. */
-function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: ReadonlySet<number>; tName: string; out: string | null }): { code: string; entry: ManifestExample } {
+function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: ReadonlySet<number>; tName: string; out: string | null }): { marker: string; setup: string; code: string; entry: ManifestExample } {
   const marker = `// doctest:L${ctx.md}`;
   if (ex.expected === null) {
     // ex.source keeps the author's trailing `;`, which the parser strips from the expression.
-    return { code: `${marker}\n${rewriteImports(ex.source.trim())}`, entry: { line: ctx.md, kind: "statement", expected: null } };
+    return { marker, setup: rewriteImports(ex.source.trimEnd()), code: "", entry: { line: ctx.md, kind: "statement", expected: null } };
   }
   const expression = rewriteImports(ex.expression);
   const split = (ctx.oracle.has(ctx.md) ? oracleSplit(expression) : null) ?? splitExpression(expression);
-  const setup = split.setup.length > 0 ? `${split.setup.join("\n")}\n` : "";
+  const setup = split.setup.join("\n");
   if ("throws" in ex) {
     const fn = `async () => ${split.expr.trimStart().startsWith("{") ? `(${split.expr})` : split.expr}`;
     // checkThrows reads "Name: message" as name and message; the doctest
@@ -189,13 +199,17 @@ function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: Rea
       ? `{ expected: ${JSON.stringify(ex.expected)}, mode: "full" }`
       : JSON.stringify(ex.expected);
     return {
-      code: `${marker}\n${setup}${call({ prefix: `await ${ctx.tName}.checkThrows`, expr: fn, arg: expected })}`,
+      marker,
+      setup,
+      code: call({ prefix: `await ${ctx.tName}.checkThrows`, expr: fn, arg: expected }),
       entry: { line: ctx.md, kind: "throws", expected: ex.expected },
     };
   }
   const actual = ctx.out === null ? split.expr : `${ctx.out}.with(${split.expr})`;
   return {
-    code: `${marker}\n${setup}${call({ prefix: `await ${ctx.tName}.checkText`, expr: actual, arg: templateLiteral(ex.expected) })}`,
+    marker,
+    setup,
+    code: call({ prefix: `await ${ctx.tName}.checkText`, expr: actual, arg: templateLiteral(ex.expected) }),
     entry: { line: ctx.md, kind: "check", expected: ex.expected },
   };
 }
@@ -212,34 +226,35 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   const { blocks, trailing, title } = classify(markdown);
   const setupText = blocks.filter((b) => b.info.kind === "setup").map((b) => b.block.content).join("\n");
   const setupDeclares = (name: string): boolean => declaresName(setupText, name);
-  for (const name of ["test", "after"]) {
-    if (setupDeclares(name)) throw new ConvertError(`setup declares \`${name}\`, which the converted file imports from tap`);
-  }
+  // tap's `test` and `after` are imported under another name when setup already uses the name.
+  const testName = setupDeclares("test") ? "tapTest" : "test";
+  const afterName = setupDeclares("after") ? "tapAfter" : "after";
+  const tapImport = (name: string, local: string): string => (name === local ? name : `${name} as ${local}`);
   const tName = setupDeclares("t") ? "tap" : "t";
   const examples: ManifestExample[] = [];
 
-  const setup: string[] = [];
+  const setupLines: string[] = [];
   const typeImports = new Set<string>();
   const afters: string[] = [];
   const tests: OpenTest[] = [];
   let open: OpenTest | null = null;
-  let pendingCleanup: string[][] = [];
+  let pendingCleanup: Cleanup[] = [];
   const usedNames = new Map<string, number>();
 
   for (const { block, info, prose, heading } of blocks) {
     const content = block.content;
     if (info.kind === "setup") {
-      setup.push(...prose, content, "");
+      setupLines.push(...prose, content, "");
       continue;
     }
     if (info.kind === "teardown") {
-      afters.push(...prose, "after(async () => {", ...indent(rewriteImports(content), "  "), "});", "");
+      afters.push(...prose, `${afterName}(async () => {`, ...indent(rewriteImports(content), "  "), "});", "");
       continue;
     }
     if (info.kind === "prose") continue;
     for (const t of typeOnlyImports(content)) typeImports.add(t.statement);
     if (info.kind === "cleanup" || info.kind === "continue-cleanup") {
-      const registration = [...prose, rewriteImports(content)];
+      const registration = { prose, code: rewriteImports(content) };
       if (open) open.teardowns.push(registration);
       else pendingCleanup.push(registration);
       continue;
@@ -255,7 +270,7 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
       open = { name: seen === 0 ? base : `${base} (line ${block.line - 1})`, prose, timeoutMs: info.timeoutMs, teardowns: pendingCleanup, body: [] };
       pendingCleanup = [];
       tests.push(open);
-    } else if (open) {
+    } else if (open && prose.length > 0) {
       open.body.push("", ...prose);
     }
     if (!open) throw new ConvertError(`the continue block at line ${block.line - 1} has no test to continue`);
@@ -265,40 +280,58 @@ export function convertDoctest(markdown: string, opts: { filePath: string }): Co
   // Second pass: tests know their whole text now, so print() can be bound.
   const testLines: string[] = [];
   for (const test of tests) {
-    const text = [...test.body.map(textOf), ...test.teardowns.flat()].join("\n");
+    const text = [...test.body.map(textOf), ...test.teardowns.map((c) => c.code)].join("\n");
     const printName = uses(text, "out") ? "printLog" : "out";
     const out = !setupDeclares("print") && uses(text, "print") ? printName : null;
     const body: string[] = [];
     if (out !== null) body.push(`const ${out} = printed();`, `const print = ${out}.print;`);
-    for (const lines of test.teardowns) {
-      body.push(`${tName}.teardown(async () => {`, "  try {", ...indent(lines.join("\n"), "    "), "  } catch (error) {", `    ${tName}.error(error);`, "  }", "});");
+    for (const { prose, code } of test.teardowns) {
+      body.push(...prose, `${tName}.teardown(async () => {`, "  try {", ...indent(code, "    "), "  } catch (error) {", `    ${tName}.error(error);`, "  }", "});");
     }
+    // A statement example may be the first half of a statement that
+    // continues past a blank line. Its marker waits until the statement's
+    // brackets close, so no marker sits inside a statement.
+    let depth = 0;
+    let deferred: string[] = [];
     let first = true;
     for (const r of test.body) {
       if (typeof r === "string") {
         body.push(r);
         continue;
       }
-      const { code, entry } = emitExample(r.ex, { md: r.md, oracle, tName, out });
+      const { marker, setup, code, entry } = emitExample(r.ex, { md: r.md, oracle, tName, out });
       examples.push(entry);
       if (!first) body.push("");
       first = false;
-      body.push(code);
+      if (depth > 0) deferred.push(marker);
+      else body.push(marker);
+      if (setup !== "") {
+        body.push(setup);
+        depth += bracketBalance(setup.split("\n"));
+      }
+      if (depth <= 0) {
+        body.push(...deferred);
+        deferred = [];
+        depth = 0;
+      }
+      if (code !== "") body.push(code);
     }
+    body.push(...deferred);
     testLines.push(...test.prose);
     if (test.timeoutMs !== null) testLines.push(`// The doctest gave each example ${test.timeoutMs / 1000}s before a still-running notice.`);
-    testLines.push(`void test(${JSON.stringify(test.name)}, async (${tName}) => {`, ...indent(body.join("\n"), "  "), "});", "");
+    testLines.push(`void ${testName}(${JSON.stringify(test.name)}, async (${tName}) => {`, ...indent(body.join("\n"), "  "), "});", "");
   }
 
-  const allCode = [setupText, ...tests.flatMap((tt) => [...tt.body.map(textOf), ...tt.teardowns.flat()])].join("\n");
+  const allCode = [setupText, ...tests.flatMap((tt) => [...tt.body.map(textOf), ...tt.teardowns.map((c) => c.code)])].join("\n");
   const helpers: string[] = [];
   if (!setupDeclares("eventually") && uses(allCode, "eventually")) helpers.push("eventually");
   if (testLines.some((l) => /= printed\(\);$/.test(l.trim()))) helpers.push("printed");
-  const imports = [`import { ${afters.length > 0 ? "after, " : ""}test } from "tap";`];
+  const tapNames = [...(afters.length > 0 ? [tapImport("after", afterName)] : []), tapImport("test", testName)];
+  const imports = [`import { ${tapNames.join(", ")} } from "tap";`];
   if (helpers.length > 0) imports.push(`import { ${helpers.join(", ")} } from "agent-doctest/check";`);
   imports.push(...typeImports);
 
-  const parts = [title.join("\n"), imports.join("\n"), setup.join("\n").trimEnd(), afters.join("\n").trimEnd(), testLines.join("\n").trimEnd(), trailing.join("\n")]
+  const parts = [title.join("\n"), imports.join("\n"), setupLines.join("\n").trimEnd(), afters.join("\n").trimEnd(), testLines.join("\n").trimEnd(), trailing.join("\n")]
     .filter((p) => p.trim() !== "");
   return {
     source: `${parts.join("\n\n")}\n`,

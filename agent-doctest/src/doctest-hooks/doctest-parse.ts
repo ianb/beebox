@@ -183,7 +183,7 @@ function arrowValue(line: string): string | null {
 }
 
 /** Net bracket depth of some lines, ignoring brackets inside quoted strings. */
-function bracketBalance(lines: string[]): number {
+export function bracketBalance(lines: string[]): number {
   let depth = 0;
   for (const line of lines) {
     let quote: string | null = null;
