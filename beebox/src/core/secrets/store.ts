@@ -28,7 +28,7 @@ import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { withFileLock } from "../../lib/file-lock.js";
 import { err, ok, type Result } from "../../shared/result.js";
-import { SecretStoreAccessError } from "./errors.js";
+import { RealSecretStoreInTestError, SecretStoreAccessError } from "./errors.js";
 
 /** How long a mutation waits for a contending writer before giving up. */
 const LOCK_WAIT_MS = 10_000;
@@ -155,9 +155,34 @@ export function secretsFilePath(): string {
   return defaultSecretsFilePath();
 }
 
-/** The store's location when nothing overrides it: the boxholder's real keys. */
+/**
+ * The store's location when nothing overrides it: the boxholder's real keys.
+ *
+ * A test process must never reach that file. `.taprc` preloads point the store
+ * and `HOME` somewhere disposable, but a test run any other way (`node` on a
+ * `.test.ts` file, `tap` from a directory without `beebox/.taprc`) skipped
+ * them, and on 2026-10-18 `adapters.test.ts` overwrote the boxholder's real
+ * `replicate` key five times. So the fallback refuses when the process is a
+ * test and `HOME` is still the account's real home directory.
+ * `BBX_TEST_REAL_HOME=1` (the manual suite) opts out.
+ */
 function defaultSecretsFilePath(): string {
+  const file = homeSecretsFilePath();
+  if (isTestProcess() && process.env.BBX_TEST_REAL_HOME !== "1" && path.resolve(os.homedir()) === path.resolve(os.userInfo().homedir)) {
+    throw new RealSecretStoreInTestError(file);
+  }
+  return file;
+}
+
+function homeSecretsFilePath(): string {
   return path.join(os.homedir(), ".config", "beebox", "secrets.json");
+}
+
+/** Whether this process is a test: under tap or `node --test`, or `node` run directly on a test file. */
+function isTestProcess(): boolean {
+  if (process.env.TAP === "1" || process.env.NODE_TEST_CONTEXT !== undefined) return true;
+  const entry = process.argv[1] ?? "";
+  return /\.test\.[cm]?[jt]sx?$|\.doctest\.md$/.test(entry);
 }
 
 /**
@@ -178,7 +203,7 @@ export function secretsStoreIsIsolated(): boolean {
   if (process.env.BBX_SECRETS_STORE_ISOLATED !== "1") return false;
   const override = process.env.BBX_SECRETS_FILE;
   if (override === undefined || override === "") return false;
-  return path.resolve(override) !== defaultSecretsFilePath();
+  return path.resolve(override) !== homeSecretsFilePath();
 }
 
 /** The access log's directory: a `secrets-log/` sibling of the store file. */
