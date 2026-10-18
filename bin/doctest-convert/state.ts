@@ -4,7 +4,7 @@
  * holding each doctest's conversion. A new session resumes from it.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, fsyncSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, writeSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { z } from "zod";
 import { StateFileError } from "./errors.ts";
@@ -84,7 +84,17 @@ export function save(state: StateFile): void {
   const path = statePath(state.dir);
   mkdirSync(dirname(path), { recursive: true });
   const files = Object.fromEntries(Object.entries(state.files).toSorted(([a], [b]) => a.localeCompare(b)));
-  writeFileSync(path, `${JSON.stringify({ dir: state.dir, files }, null, 1)}\n`);
+  // Written aside, flushed, and renamed: prepare deletes a doctest once its
+  // entry is saved, so a half-written state file would lose it.
+  const aside = `${path}.tmp`;
+  const fd = openSync(aside, "w");
+  try {
+    writeSync(fd, `${JSON.stringify({ dir: state.dir, files }, null, 1)}\n`);
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+  renameSync(aside, path);
 }
 
 /** The state entry for a doctest, and the state file holding it. */

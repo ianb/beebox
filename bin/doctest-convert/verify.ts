@@ -80,11 +80,14 @@ export function verify(selected: readonly Selected[]): void {
     }
   }
 
-  // An error in a converted file outside the batch belongs to that file's
-  // batch. Any other error fails the whole batch: a helper a worker added,
-  // or a program that was already broken.
+  // An error in an unfinished converted file outside the batch belongs to
+  // that file's batch. Any other error fails the whole batch: a helper a
+  // worker added, a verified file the batch broke, or a program that was
+  // already broken.
   const testSet = new Set(tests);
-  const otherConverted = new Set([...loadAll().values()].flatMap((st) => Object.values(st.files).map((f) => f.test)));
+  const otherConverted = new Set(
+    [...loadAll().values()].flatMap((st) => Object.values(st.files).filter((f) => f.status === "converted").map((f) => f.test)),
+  );
   for (const program of programsOf(tests)) {
     const inProgram = tests.filter((t) => programsOf([t]).some((p) => p.dir === program.dir && p.script === program.script));
     for (const e of typecheck(program)) {

@@ -12,7 +12,9 @@
  * 4. Lint; a `check-whole-value` finding on a typed check keeps it as text
  *    for phase 3 to strengthen.
  * 5. Apply eslint's layout fixes (quotes, spacing), which workers would
- *    otherwise make by hand.
+ *    otherwise make by hand. A known gap, accepted: code that reads its own
+ *    source (`fn.toString()`) sees the new spelling, and a check comparing
+ *    two such strings still passes.
  */
 
 import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync, existsSync } from "node:fs";
