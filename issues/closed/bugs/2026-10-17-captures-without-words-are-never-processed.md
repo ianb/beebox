@@ -1,13 +1,16 @@
 ---
 title: "A shared image or link with no words is saved and then ignored: nothing reads, titles, or files it"
-workstream: unattached
+workstream: fabric-research
 area: beebox
 needs: [design]
+resolution: implemented
 labels: [capture, ios]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-fabric-research — comparing Fabric's phone photo sync, which reads every synced image
 ---
+
+**Closed 2026-10-17:** implemented on `worktree-fabric-research` (commits fa73c9c10 through 854813bb, plan `beebox/docs/implemented-plans/file-wordless-captures.md`): a settled burst of word-less captures is queued for an intake job that reads, retitles and files them. Divergence: the plan's knowledge audit was not added, because built-in intake-job instructions are inlined into the reactor prompt, which an audit does not exercise; live reactor runs on a throwaway box stood in for it.
 
 A phone capture with no typed or dictated words is committed to
 `_content/captures/` on arrival and is never routed
@@ -60,6 +63,6 @@ shape for captures:
 - Recordings are committed to `_content/captures/` even with words; check
   whether they share this gap.
 
-Related: [quick drop entry points](../features/2026-09-25-quick-drop-entry-points.md),
-[capture success is invisible](2026-08-20-capture-success-is-invisible.md),
-[Fabric review](../../research/fabric-review.md).
+Related: [quick drop entry points](../../features/2026-09-25-quick-drop-entry-points.md),
+[capture success is invisible](../../bugs/2026-08-20-capture-success-is-invisible.md),
+[Fabric review](../../../research/fabric-review.md).
