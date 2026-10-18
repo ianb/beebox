@@ -13,8 +13,9 @@
 // this file covers what one card contributes and what a card that cannot
 // contribute reports.
 
-import { test } from "tap";
+import { test, type Test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { runTodoQuery } from "../../../src/core/todo/query.js";
 import { formatTodoLocation } from "../../../src/core/todo/collect-types.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -70,30 +71,17 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     )
   );
   const result1 = await collectTodos(box.root);
-  await t.checkText(JSON.stringify(result1.todos.map((todo) => ({ locator: todo.locator, id: todo.id, text: todo.text })), null, 2), `[
-  {
-    "locator": {
-      "kind": "body",
-      "line": 10
-    },
-    "id": "vet-refill",
-    "text": "Call the vet"
-  },
-  {
-    "locator": {
-      "kind": "frontmatter",
-      "index": 0
-    },
-    "text": "Renew parking permit"
-  }
-]`);
+  t.check(result1.todos.map((todo) => ({ locator: todo.locator, id: todo.id, text: todo.text })), [
+    { locator: { kind: "body", line: 10 }, id: "vet-refill", text: "Call the vet" },
+    { locator: { kind: "frontmatter", index: 0 }, id: undefined, text: "Renew parking permit" },
+  ]);
 
   // `locator.line` is the true FILE line, not the body-relative one: the
   // frontmatter block's line count (`splitCardContent`'s `lineOffset`) is added
   // to the tag's body-relative line before reporting it.
 
   // doctest:L92
-  await t.checkText(result1.issues.length, "0");
+  t.check(result1.issues, []);
 
   // ## Nested `{% see-also %}` is pulled out, not left in the main text
 
@@ -106,10 +94,30 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     )
   );
   const result2 = await collectTodos(box.root, { glob: "store/b.doc.card" });
-  await t.checkText(JSON.stringify(result2.todos[0]?.seeAlso), "[{\"ref\":\"store/a.doc.card\",\"note\":\"he offered to help\"}]");
-
   // doctest:L110
-  t.check(result2.todos[0]?.text, "Ping Marcus about the quote.");
+  t.check(result2.todos, [
+    {
+      path: "store/b.doc.card",
+      locator: { kind: "body", line: 5 },
+      id: "with-see-also",
+      text: "Ping Marcus about the quote.",
+      status: "open",
+      assigned: undefined,
+      by: undefined,
+      created: undefined,
+      due: undefined,
+      start: undefined,
+      recheck: undefined,
+      seeAlso: [{ ref: "store/a.doc.card", href: undefined, note: "he offered to help" }],
+      sectionPath: [],
+      parent: null,
+      annotation: "",
+      refs: [],
+      plateState: "on-plate",
+      stirring: false,
+      matching: true,
+    },
+  ]);
 
   // ## Plate-state derivation around the frozen time (2026-07-28, box-local)
   //
@@ -142,6 +150,11 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     "p-parked": "parked",
   });
 
+  await invalidAndUnreadable(t);
+  await scopeAndOrdering(t);
+});
+
+async function invalidAndUnreadable(t: Test) {
   // ## A `{% todo %}` with an invalid `status` is a visible-invalid result, not a silent drop
 
   // doctest:L155
@@ -150,15 +163,16 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     doc("", '{% todo status="Done" %}Bad status{% /todo %}\n')
   );
   const badStatusResult = await collectTodos(box.root, { glob: "store/bad-status.doc.card" });
-  await t.checkText(badStatusResult.todos.length, "0");
+  t.check(badStatusResult.todos, []);
 
   // doctest:L163
-  t.check(badStatusResult.issues.map((i) => i.kind), [
-    "validate",
+  t.check(badStatusResult.issues, [
+    {
+      kind: "validate",
+      path: "store/bad-status.doc.card",
+      message: "line 1: Attribute 'status' must match one of [\"open\",\"done\",\"dropped\",\"parked\"]. Got 'Done' instead.",
+    },
   ]);
-
-  // doctest:L166
-  t.check(badStatusResult.issues[0]?.message, "line 1: Attribute 'status' must match one of [\"open\",\"done\",\"dropped\",\"parked\"]. Got 'Done' instead.");
 
   // ## A multi-line `{% todo %}` block with an invalid `status` is also visible-invalid, not silently coerced to `open`
   //
@@ -177,11 +191,15 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     doc("", '{% todo status="Done" %}\nBad status, multi-line\n{% /todo %}\n')
   );
   const badStatusMultiline = await collectTodos(box.root, { glob: "store/bad-status-multiline.doc.card" });
-  await t.checkText(badStatusMultiline.todos.length, "0");
+  t.check(badStatusMultiline.todos, []);
 
   // doctest:L190
-  t.check(badStatusMultiline.issues.map((i) => i.kind), [
-    "validate",
+  t.check(badStatusMultiline.issues, [
+    {
+      kind: "validate",
+      path: "store/bad-status-multiline.doc.card",
+      message: "line 1: Attribute 'status' must match one of [\"open\",\"done\",\"dropped\",\"parked\"]. Got 'Done' instead.",
+    },
   ]);
 
   // ## A card whose type has no registered schema is a visible `unknown-type` issue, not a silent skip
@@ -192,13 +210,12 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     doc("", "{% todo %}Never collected — unregistered type{% /todo %}\n")
   );
   const unknownTypeResult = await collectTodos(box.root, { glob: "store/unknown-type.memmo.card" });
-  await t.checkText(unknownTypeResult.todos.length, "0");
+  t.check(unknownTypeResult.todos, []);
 
   // doctest:L205
-  t.check(unknownTypeResult.issues[0]?.kind, "unknown-type");
-
-  // doctest:L208
-  t.check(unknownTypeResult.issues[0]?.message, "no registered schema for card type \"memmo\"");
+  t.check(unknownTypeResult.issues, [
+    { kind: "unknown-type", path: "store/unknown-type.memmo.card", message: 'no registered schema for card type "memmo"' },
+  ]);
 
   // ## Unparseable frontmatter is a visible `load` issue
 
@@ -208,34 +225,83 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     "---\ntitle: [unclosed\n---\n{% todo %}Never collected{% /todo %}\n"
   );
   const badLoadResult = await collectTodos(box.root, { glob: "store/bad-frontmatter.doc.card" });
-  await t.checkText(badLoadResult.todos.length, "0");
+  t.check(badLoadResult.todos, []);
 
   // doctest:L223
-  t.check(badLoadResult.issues[0]?.kind, "load");
+  t.check(badLoadResult.issues, [
+    {
+      kind: "load",
+      path: "store/bad-frontmatter.doc.card",
+      message: str`store/bad-frontmatter.doc.card: invalid YAML frontmatter: ${any(String)}`,
+    },
+  ]);
+}
 
+async function scopeAndOrdering(t: Test) {
   // ## Duplicate `id` across cards is reported, but both todos still come back
 
   // doctest:L230
   await box.write("store/dup1.doc.card", doc("", '{% todo id="shared" %}First{% /todo %}\n'));
   await box.write("store/dup2.doc.card", doc("", '{% todo id="shared" %}Second{% /todo %}\n'));
   const dupResult = await collectTodos(box.root, { glob: "store/dup{1,2}.doc.card" });
-  t.check(dupResult.todos.map((todo) => todo.text).join(", "), "First, Second");
-
-  // doctest:L236
-  await t.checkText(dupResult.issues.length, "1");
-
-  // doctest:L239
-  t.check(dupResult.issues[0]?.kind, "duplicate-id");
-
-  // doctest:L242
-  t.check(dupResult.issues[0]?.message, "duplicate todo id \"shared\" used at: store/dup1.doc.card:5, store/dup2.doc.card:5");
+  t.check(dupResult.todos, [
+    {
+      path: "store/dup1.doc.card",
+      locator: { kind: "body", line: 5 },
+      id: "shared",
+      text: "First",
+      status: "open",
+      assigned: undefined,
+      by: undefined,
+      created: undefined,
+      due: undefined,
+      start: undefined,
+      recheck: undefined,
+      seeAlso: [],
+      sectionPath: [],
+      parent: null,
+      annotation: "",
+      refs: [],
+      plateState: "on-plate",
+      stirring: false,
+      matching: true,
+    },
+    {
+      path: "store/dup2.doc.card",
+      locator: { kind: "body", line: 5 },
+      id: "shared",
+      text: "Second",
+      status: "open",
+      assigned: undefined,
+      by: undefined,
+      created: undefined,
+      due: undefined,
+      start: undefined,
+      recheck: undefined,
+      seeAlso: [],
+      sectionPath: [],
+      parent: null,
+      annotation: "",
+      refs: [],
+      plateState: "on-plate",
+      stirring: false,
+      matching: true,
+    },
+  ]);
+  t.check(dupResult.issues, [
+    {
+      kind: "duplicate-id",
+      path: "store/dup1.doc.card:5, store/dup2.doc.card:5",
+      message: 'duplicate todo id "shared" used at: store/dup1.doc.card:5, store/dup2.doc.card:5',
+    },
+  ]);
 
   // ## `--glob` scopes which cards are scanned
 
   // doctest:L249
   await box.write("other/c.doc.card", doc("", '{% todo id="outside-scope" %}Not scoped in{% /todo %}\n'));
   const scoped = await collectTodos(box.root, { glob: "store/dup1.doc.card" });
-  t.check(scoped.todos.map((todo) => todo.id).join(", "), "shared");
+  t.check(scoped.todos.map((todo) => todo.id), ["shared"]);
 
   // ## A directory-shaped glob scopes to cards; non-card files are not "unreadable cards"
   //
@@ -249,11 +315,23 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
 
   // doctest:L266
   await box.write("store/notes.md", "Not a card at all.\n");
+  const allTodoLocations = [
+    "other/c.doc.card#other/c.doc.card:5",
+    "store/a.doc.card#store/a.doc.card:10",
+    "store/a.doc.card#store/a.doc.card#todos[0]",
+    "store/b.doc.card#store/b.doc.card:5",
+    "store/dup1.doc.card#store/dup1.doc.card:5",
+    "store/dup2.doc.card#store/dup2.doc.card:5",
+    "store/plate.doc.card#store/plate.doc.card:5",
+    "store/plate.doc.card#store/plate.doc.card:7",
+    "store/plate.doc.card#store/plate.doc.card:9",
+    "store/plate.doc.card#store/plate.doc.card:11",
+  ];
   const wideOpen = await collectTodos(box.root, { glob: "**" });
   t.check(wideOpen.issues.filter((i) => i.path === "store/notes.md" || i.path === "_config/box.json"), []);
 
   // doctest:L271
-  await t.checkText(wideOpen.todos.length > 0, "true");
+  t.check(wideOpen.todos.map((todo) => `${todo.path}#${formatTodoLocation(todo)}`), allTodoLocations);
 
   // ## A malformed box timezone degrades instead of crashing the whole collector
   //
@@ -273,7 +351,7 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     doc("", '{% todo id="survives" %}Should still collect{% /todo %}\n')
   );
   const badTzResult = await collectTodos(badTzBox.root);
-  t.check(badTzResult.todos.map((todo) => todo.id).join(", "), "survives");
+  t.check(badTzResult.todos.map((todo) => todo.id), ["survives"]);
 
   // doctest:L296
   await badTzBox.cleanup();
@@ -286,14 +364,5 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
 
   // doctest:L306
   const full = await collectTodos(box.root);
-  await t.checkText(full.todos.map((todo) => `${todo.path}#${formatTodoLocation(todo)}`).join("\n"), `other/c.doc.card#other/c.doc.card:5
-store/a.doc.card#store/a.doc.card:10
-store/a.doc.card#store/a.doc.card#todos[0]
-store/b.doc.card#store/b.doc.card:5
-store/dup1.doc.card#store/dup1.doc.card:5
-store/dup2.doc.card#store/dup2.doc.card:5
-store/plate.doc.card#store/plate.doc.card:5
-store/plate.doc.card#store/plate.doc.card:7
-store/plate.doc.card#store/plate.doc.card:9
-store/plate.doc.card#store/plate.doc.card:11`);
-});
+  t.check(full.todos.map((todo) => `${todo.path}#${formatTodoLocation(todo)}`), allTodoLocations);
+}

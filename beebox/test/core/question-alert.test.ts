@@ -73,7 +73,7 @@ void test("A newly-pending question notifies once, then latches", async (t) => {
 apns skipped: no-audience`);
 
   // doctest:L68
-  await t.checkText(push.sent.length, "0");
+  t.check(push.sent, []);
 
   // A second sweep finds nothing new (the question is latched):
 
@@ -102,7 +102,20 @@ apns skipped: no-audience
 web-push sent`);
 
   // doctest:L102
-  await t.checkText(push.sent[0]?.payload.url === `/${await boxSlug(box.root)}/browse/_bookkeeping/questions/Form.question.card`, "true");
+  const slug = await boxSlug(box.root);
+  t.check(push.sent, [
+    {
+      endpoint: "https://push.example/d1",
+      payload: {
+        icon: `${slug}/icon-192.png`,
+        title: "❓ A question needs an answer",
+        body: "- Sign the form by Friday?",
+        url: `/${slug}/browse/_bookkeeping/questions/Form.question.card`,
+        tag: undefined,
+        silent: true,
+      },
+    },
+  ]);
 });
 
 // ## No reachable channel → no sweep

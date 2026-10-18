@@ -5,7 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
@@ -26,8 +26,6 @@ const describeModel = (model: string | undefined) => {
 // The `createAgent` option lets tests replace the real Claude Code subprocess
 // with a fake agent that simulates agent behavior.
 void test("The createAgent option lets tests replace the real Claude Code subprocess wit...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -78,38 +76,25 @@ steps:
     procedureNameOrPath: "agent-test",
     options: { createAgent: mockCreateAgent },
   });
-  print(`success: ${result.ok}`);
-
   // Agent was called exactly once
   const fakeAgent = fakeAgents[0];
   assert.ok(fakeAgent);
-  print(`agent calls: ${fakeAgent.invocations.length}`);
 
-  // The system prompt includes the context block with precheck output
+  // Model was mapped from friendly name; the agent's file was preserved
+  t.check(
+    { result, agentCalls: fakeAgent.invocations.length, model: describeModel(fakeAgent.invocations[0]?.options.model), agentWrote: (await box.read("_bookkeeping/output/agent-result.txt")).trim() },
+    { result: {
+      ok: true,
+      value: { status: "completed", procedure: "agent-test", inconclusive: [] },
+    }, agentCalls: 1, model: "anthropic efficient", agentWrote: "processed 3 items" },
+  );
+
+  // The system prompt (a large generated text) includes the context block with precheck output
   const systemPrompt = fakeAgent.invocations[0]?.systemPrompt;
   assert.ok(systemPrompt);
-  print(`has precheck output: ${systemPrompt.includes("3 items to process")}`);
-  print(`has step ref: ${systemPrompt.includes("agent-step")}`);
-  print(`has agent instructions: ${systemPrompt.includes("Process the items")}`);
-
-  // Model was mapped from friendly name
-  print(`model: ${describeModel(fakeAgent.invocations[0]?.options.model)}`);
-
-  // Agent's file was preserved
-  const agentFile = await box.read("_bookkeeping/output/agent-result.txt");
-  // doctest:L57
-  // doctest:L72
-  // doctest:L80
-  // doctest:L85
-  // doctest:L92
-  // doctest:L95
-  await t.checkText(out.with(print(`agent wrote: ${agentFile.trim()}`)), `success: true
-agent calls: 1
-has precheck output: true
-has step ref: true
-has agent instructions: true
-model: anthropic efficient
-agent wrote: processed 3 items`);
+  t.check(systemPrompt, any(String).includes("3 items to process"));
+  t.check(systemPrompt, any(String).includes("agent-step"));
+  t.check(systemPrompt, any(String).includes("Process the items"));
 });
 
 // ## The same portable tier resolves for a Codex box
@@ -118,8 +103,6 @@ agent wrote: processed 3 items`);
 // factory, so a recording fake proves the box engine affects the invocation—not
 // only an isolated mapping helper.
 void test("Model resolution happens on the real procedure path before the injected agent...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -157,12 +140,16 @@ steps:
     procedureNameOrPath: "codex-tier",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
   const fakeAgent = fakeAgents[0];
   assert.ok(fakeAgent);
   // doctest:L133
-  await t.checkText(out.with(print(`model: ${describeModel(fakeAgent.invocations[0]?.options.model)}`)), `success: true
-model: openai efficient`);
+  t.check({ result, model: describeModel(fakeAgent.invocations[0]?.options.model) }, {
+    result: {
+      ok: true,
+      value: { status: "completed", procedure: "codex-tier", inconclusive: [] },
+    },
+    model: "openai efficient",
+  });
 });
 
 // ## An OpenRouter default carries every agent step
@@ -171,8 +158,6 @@ model: openai efficient`);
 // small model takes `efficient`, the default takes `strong`, and a step that
 // names no model takes the default too. None of them needs a Claude login.
 void test("An added OpenRouter model has no tier, so the box's two slots stand in:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -214,12 +199,14 @@ steps:
   };
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await startProcedure({ ctx, procedureNameOrPath: "openrouter-tiers", options: { createAgent } });
-  print(`success: ${result.ok}`);
   // doctest:L192
-  await t.checkText(out.with(print(models.join("\n"))), `success: true
-moonshotai/kimi-k2-0905:exacto
-deepseek/deepseek-v3.2
-moonshotai/kimi-k2-0905:exacto`);
+  t.check({ result, models }, {
+    result: {
+      ok: true,
+      value: { status: "completed", procedure: "openrouter-tiers", inconclusive: [] },
+    },
+    models: ["moonshotai/kimi-k2-0905:exacto", "deepseek/deepseek-v3.2", "moonshotai/kimi-k2-0905:exacto"],
+  });
 });
 
 // ## Invocation rejection stays primary while finalizers still run
@@ -228,8 +215,6 @@ moonshotai/kimi-k2-0905:exacto`);
 // response. The procedure runs its declared shells (some are cleanup/finalizers),
 // then gates before validation and records the exact agent error.
 void test("A native harness can reject a model or fail without a usable assistant response.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -276,18 +261,30 @@ steps:
   const runDir = runs.split("\n").find((file) => file.includes("rejected_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
   const outputFiles = await box.list("_bookkeeping/output");
-  print(`success: ${result.ok}`);
-  print(`error returned: ${result.ok ? "" : result.error.message}`);
-  print(`step: ${run?.steps[0]?.status}`);
-  print(`error recorded: ${run?.steps[0]?.run?.error}`);
-  print(`finalizer ran: ${outputFiles.includes("finalized.txt")}`);
   // doctest:L241
-  await t.checkText(out.with(print(`validation ran: ${outputFiles.includes("validated.txt")}`)), `success: false
-error returned: Procedure rejected failed at step: work — Agent invocation failed: Model gpt-retired is not supported
-step: failed
-error recorded: Model gpt-retired is not supported
-finalizer ran: true
-validation ran: false`);
+  // The session id and git ref are minted per run.
+  t.check({ result, step: run?.steps[0], outputFiles }, {
+    result: {
+      ok: false,
+      error: {
+        cause: "step-failed",
+        message: "Procedure rejected failed at step: work — Agent invocation failed: Model gpt-retired is not supported",
+      },
+    },
+    step: {
+      id: "work",
+      status: "failed",
+      "started-at": isoDate(),
+      "completed-at": isoDate(),
+      run: {
+        "session-id": any(String).startsWith("fake-"),
+        error: "Model gpt-retired is not supported",
+        "git-ref": any(String).matches(/^[\da-f]{40}$/),
+      },
+    },
+    outputFiles: `_bookkeeping/output/.gitkeep
+_bookkeeping/output/finalized.txt`,
+  });
 });
 
 // ## Judge invocation rejection is not reduced to a validation symptom
@@ -296,8 +293,6 @@ validation ran: false`);
 // the native judge harness rejected the invocation. The step fails with the
 // engine cause in both the validate record and the CLI result.
 void test("Even a warn instruction check cannot claim a usable validation result when th...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -339,22 +334,32 @@ steps:
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find((file) => file.includes("judge-rejected_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`success: ${result.ok}`);
-  print(`error returned: ${result.ok ? "" : result.error.message}`);
-  print(`step: ${run?.steps[0]?.status}`);
-  print(`validation status: ${run?.steps[0]?.validate?.status}`);
   // doctest:L301
-  await t.checkText(out.with(print(`validation error: ${run?.steps[0]?.validate?.error}`)), `success: false
-error returned: Procedure judge-rejected failed at step: work — Agent invocation failed: Model claude-retired is not supported
-step: failed
-validation status: warn
-validation error: Model claude-retired is not supported`);
+  t.check({ result, step: run?.steps[0] }, {
+    result: {
+      ok: false,
+      error: {
+        cause: "step-failed",
+        message: "Procedure judge-rejected failed at step: work — Agent invocation failed: Model claude-retired is not supported",
+      },
+    },
+    step: {
+      id: "work",
+      status: "failed",
+      "started-at": isoDate(),
+      "completed-at": isoDate(),
+      run: { stdout: "work complete", "git-ref": any(String).matches(/^[\da-f]{40}$/) },
+      validate: {
+        status: "warn",
+        review: "Instruction validation could not run: Model claude-retired is not supported",
+        error: "Model claude-retired is not supported",
+      },
+    },
+  });
 });
 
 // ## Directive passed to agent context
 void test("Directive passed to agent context", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -398,12 +403,9 @@ steps:
   assert.ok(fakeAgent);
   const prompt = fakeAgent.invocations[0]?.systemPrompt;
   assert.ok(prompt);
-  print(`has directive: ${prompt.includes("<directive>")}`);
-  // doctest:L352
-  // doctest:L362
-  // doctest:L369
-  await t.checkText(out.with(print(`directive text: ${prompt.includes("Focus on technical content")}`)), `has directive: true
-directive text: true`);
+  // The system prompt is a large generated text; check for the directive block and its text.
+  t.check(prompt, any(String).includes("<directive>"));
+  t.check(prompt, any(String).includes("Focus on technical content"));
 });
 
 // ## Fallback commit for uncommitted agent changes
@@ -411,8 +413,6 @@ directive text: true`);
 // When an agent leaves uncommitted changes, the engine creates a
 // fallback commit to keep git clean between steps.
 void test("When an agent leaves uncommitted changes, the engine creates a fallback commi...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -451,21 +451,21 @@ steps:
     procedureNameOrPath: "messy",
     options: { createAgent: mockCreateAgent },
   });
-  print(`success: ${result.ok}`);
-
   // The file is there — engine made a fallback commit
   const content = await box.read("_bookkeeping/output/uncommitted.txt");
-  print(`file preserved: ${content.trim() === "forgot to commit this"}`);
+  t.check({ result, content }, { result: {
+      ok: true,
+      value: { status: "completed", procedure: "messy", inconclusive: [] },
+    }, content: "forgot to commit this" });
 
   // Git log shows a fallback commit
   const log = execSync("git log --oneline", { cwd: box.root, encoding: "utf-8" });
-  // doctest:L404
-  // doctest:L414
-  // doctest:L422
-  // doctest:L426
-  await t.checkText(out.with(print(`has fallback: ${log.includes("[procedure] forgetful:")}`)), `success: true
-file preserved: true
-has fallback: true`);
+  await t.checkText(log, `«*» Complete procedure: messy
+«*» [procedure] Complete step: forgetful
+«*» [procedure] forgetful: update uncommitted.txt
+«*» Start procedure: messy
+«*» Add messy procedure
+«*» init`);
 });
 
 // ## Agent then shell in one run phase (split is order-preserving)
@@ -475,8 +475,6 @@ has fallback: true`);
 // into `runRunAgents` + `runRunShells`. The shell reads the file the agent wrote,
 // so its output shows the agent ran first.
 void test("A run phase with both an agents: and a shells: entry runs the agent first, th...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -504,7 +502,7 @@ steps:
   await box.write("_bookkeeping/output/.gitkeep", "");
   box.commitAll("Add mixed procedure");
 
-  let agentRan;
+  let agentRan = false;
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
     act: async () => {
@@ -521,16 +519,18 @@ steps:
     procedureNameOrPath: "mixed",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-  print(`agent ran: ${agentRan}`);
-
-  const files = await box.list("_bookkeeping/output");
-  print(`agent.txt: ${files.includes("agent.txt")}`);
-  // doctest:L466
-  // doctest:L477
-  // doctest:L486
-  await t.checkText(out.with(print(`shell.txt: ${(await box.read("_bookkeeping/output/shell.txt")).replace(/\s+/g, " ").trim()}`)), `success: true
-agent ran: true
-agent.txt: true
-shell.txt: agent-ran then shell-ran`);
+  t.check(
+    { result, agentRan, files: await box.list("_bookkeeping/output"), shell: (await box.read("_bookkeeping/output/shell.txt")).replace(/\s+/g, " ").trim() },
+    {
+      result: {
+      ok: true,
+      value: { status: "completed", procedure: "mixed", inconclusive: [] },
+    },
+      agentRan: true,
+      files: `_bookkeeping/output/.gitkeep
+_bookkeeping/output/agent.txt
+_bookkeeping/output/shell.txt`,
+      shell: "agent-ran then shell-ran",
+    },
+  );
 });

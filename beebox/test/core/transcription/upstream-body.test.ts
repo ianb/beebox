@@ -30,17 +30,14 @@ void test("Short bodies pass through unchanged", async (t) => {
 void test("A 600-character body keeps its first 500 characters and nothing else — no ell...", async (t) => {
   // doctest:L33
   const long = "x".repeat(600);
-  await t.checkText(truncateUpstreamBody(long).length, "500");
-
-  // doctest:L37
-  await t.checkText(long.startsWith(truncateUpstreamBody(long)), "true");
+  t.check(truncateUpstreamBody(long), "x".repeat(500));
 });
 
 // Exactly 500 is not truncated; 501 is.
 void test("Exactly 500 is not truncated; 501 is.", async (t) => {
   // doctest:L44
-  await t.checkText(truncateUpstreamBody("y".repeat(500)).length, "500");
+  t.check(truncateUpstreamBody("y".repeat(500)), "y".repeat(500));
 
   // doctest:L47
-  await t.checkText(truncateUpstreamBody("y".repeat(501)).length, "500");
+  t.check(truncateUpstreamBody("y".repeat(501)), "y".repeat(500));
 });

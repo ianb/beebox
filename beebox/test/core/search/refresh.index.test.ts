@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+
 import { search } from "@orama/orama";
 import { rename, writeFile } from "node:fs/promises";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
@@ -38,10 +39,7 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
   await box.write("_bookkeeping/jobs/job-1.intake-job.card", "---\nstatus: pending\n---\nTriage the dentist email\n");
   await box.write("_bookkeeping/trash/Old.doc.card", DOC("trashed dentist note"));
   const opened = await openSearchIndex(box.root);
-  t.check(opened.warnings, []);
-
-  // doctest:L37
-  t.check(opened.stale, false);
+  t.check({ warnings: opened.warnings, stale: opened.stale }, { warnings: [], stale: false });
 
   // doctest:L40
   t.check(await find(opened.db, "dentist"), "_content/inbox/Dentist.doc.card");
@@ -75,7 +73,7 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
   // doctest:L75
   const before = await find((await openSearchIndex(box.root)).db, "tomatoes");
   const after = await find((await openSearchIndex(box.root)).db, "tomatoes");
-  await t.checkText(before === after, "true");
+  t.check(before, "_content/notes/Garden.doc.card");
 
   // doctest:L80
   t.check(after, "_content/notes/Garden.doc.card");
@@ -106,20 +104,20 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
   // doctest:L112
   await box.write("_content/notes/Broken.doc.card", "---\ntitle: [unclosed\n---\nbroken body\n");
   const withBad = await openSearchIndex(box.root);
-  await t.checkText(withBad.warnings.length, "1");
+  t.check(withBad.warnings, [
+    `_content/notes/Broken.doc.card: skipped (invalid YAML frontmatter: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 17:
 
-  // doctest:L117
-  t.check(withBad.warnings[0]?.startsWith("_content/notes/Broken.doc.card: skipped"), true);
+title: [unclosed
+                ^
+)`,
+  ]);
 
   // doctest:L120
   t.check(await find(withBad.db, "tomatoes"), "_content/notes/Garden.doc.card");
 
   // doctest:L123
-  await t.checkText(
-    // An unchanged broken card warns once, not on every search.
-    (await openSearchIndex(box.root)).warnings.length,
-    "0",
-  );
+  // An unchanged broken card warns once, not on every search.
+  t.check((await openSearchIndex(box.root)).warnings, []);
 
   // doctest:L127
   await box.write("_content/notes/Broken.doc.card", DOC("fixed broken body"));
@@ -140,10 +138,14 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
 
   // doctest:L146
   const mdHit = await search(withMd.db, { term: "distribution letter", properties: ["title", "content"] });
-  t.check(mdHit.hits[0]?.document.kind, "markdown");
-
-  // doctest:L150
-  t.check(mdHit.hits[0]?.document.title, "Ledger Distribution Letter");
+  const mdDoc = mdHit.hits[0]?.document;
+  t.check({ path: mdDoc?.path, kind: mdDoc?.kind, title: mdDoc?.title, contains: mdDoc?.contains, content: mdDoc?.content }, {
+    path: "_content/finances/Distribution_Letter.md",
+    kind: "markdown",
+    title: "Ledger Distribution Letter",
+    contains: "",
+    content: "# Ledger Distribution Letter\n\nEach heir receives an apportioned share.",
+  });
 
   // ## The engine's package docs index as kind "engine-doc"
   //
@@ -160,7 +162,14 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
 
   // doctest:L168
   const docHit = await search(withDocs.db, { term: "rendersCardTypes", properties: ["content"] });
-  t.check(docHit.hits[0]?.document.kind, "engine-doc");
+  const engineDoc = docHit.hits[0]?.document;
+  t.check({ path: engineDoc?.path, kind: engineDoc?.kind, title: engineDoc?.title, contains: engineDoc?.contains, content: engineDoc?.content }, {
+    path: "node_modules/beebox/box-docs/views.md",
+    kind: "engine-doc",
+    title: "Views",
+    contains: "",
+    content: "# Views\n\nA view exports rendersCardTypes to attach itself to a card type.",
+  });
 
   // ## Gdoc snapshots are watched input files: editing only the attachment re-indexes
 

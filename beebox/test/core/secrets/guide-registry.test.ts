@@ -20,14 +20,27 @@ void test("This is the assertion that stops the two registries drifting:", async
   t.check(unguidedSecretNames(), []);
 
   // doctest:L23
-  await t.checkText(listSecretGuides().length === builtinSecretNames().length, "true");
+  t.check(listSecretGuides().map(({ key }) => key).toSorted(), builtinSecretNames().toSorted());
 });
 
 // ## A guide says what the credential is and where it comes from
 void test("A guide says what the credential is and where it comes from", async (t) => {
   // doctest:L30
   const or = secretGuideFor("openrouter");
-  t.check(or === null ? "none" : `${or.key} | ${or.guide.title} | ${or.guide.obtainUrl} | ${String(or.guide.obtainSteps.length)} steps`, "openrouter | OpenRouter API key | https://openrouter.ai/settings/keys | 4 steps");
+  t.check(or, {
+    key: "openrouter",
+    guide: {
+      title: "OpenRouter API key",
+      what: "One account that fronts many model providers, billed together. A single OpenRouter key stands in for separate OpenAI, Google and Mistral keys for every service listed below — one key and one bill instead of four.",
+      obtainUrl: "https://openrouter.ai/settings/keys",
+      obtainSteps: [
+        "Sign in at openrouter.ai and add a few dollars of credit — usage is pay-as-you-go and these services cost cents",
+        "Open Settings → Keys and choose Create key; a name like \"bee box\" is enough, and a spending limit is optional",
+        "Copy the key — it starts with sk-or-v1- and is shown once",
+        "Paste it below",
+      ],
+    },
+  });
 });
 
 // The last step of a pasteable key's guide is always the paste itself, because
@@ -35,7 +48,19 @@ void test("A guide says what the credential is and where it comes from", async (
 void test("The last step of a pasteable key's guide is always the paste itself, because...", async (t) => {
   // doctest:L39
   const pasteable = listSecretGuides().filter(({ key }) => !key.endsWith("/"));
-  await t.checkText(pasteable.every(({ guide }) => /paste/i.test(guide.obtainSteps.at(-1) ?? "")), "true");
+  t.check(pasteable.map(({ guide }) => guide.obtainSteps.at(-1)), [
+    "Paste it below",
+    "Paste it below",
+    "Paste it below",
+    "Paste it below",
+    "Paste it below",
+    "Paste it below",
+    "Paste both below as JSON: {\"apiKey\": \"…\", \"projectId\": \"…\"}",
+    "Paste it below",
+    "Copy the token and paste it below",
+    "Copy the client id — it ends in .apps.googleusercontent.com — and paste it below; add the client secret as its own entry",
+    "Copy the client secret and paste it below",
+  ]);
 });
 
 // ## A name the engine does not know has no guide
@@ -44,5 +69,5 @@ void test("The last step of a pasteable key's guide is always the paste itself, 
 // plain fields rather than inventing guidance.
 void test("That is the honest answer for an ad-hoc secret — the form falls back to its p...", async (t) => {
   // doctest:L50
-  await t.checkText(String(secretGuideFor("weatherapi")), "null");
+  t.check(secretGuideFor("weatherapi"), null);
 });

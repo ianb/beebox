@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { addSubscription, endpointsForBox } from "../../src/core/push-subscriptions.js";
 import { sendPush } from "../../src/core/send-push.js";
@@ -47,11 +48,8 @@ void test("Same endpoint under two boxes is stored once", async (t) => {
   // doctest:L38
   const forSlug = await endpointsForBox(slug);
   const forOther = await endpointsForBox("other");
-  t.check([forSlug.length, forOther.length, forSlug[0]?.endpoint === forOther[0]?.endpoint], [
-    1,
-    1,
-    true,
-  ]);
+  t.check(forSlug, [SUB_A]);
+  t.check(forOther, [SUB_A]);
 
   // ## sendPush delivers healthy endpoints and prunes gone ones
 
@@ -76,18 +74,21 @@ void test("Same endpoint under two boxes is stored once", async (t) => {
   https://push.example/b → Health: task overdue`);
 
   // doctest:L67
-  await t.checkText(stillOther.length, "0");
+  t.check(stillOther, []);
 
   // ## A payload-only debug line was written (no endpoints or keys)
 
   // doctest:L74
   const log = await fs.readFile(path.join(box.root, ".beebox", "push-debug.log"), "utf-8");
   const entry = JSON.parse(log.trim());
-  t.check([entry.title, entry.sent, entry.pruned, entry.body, entry.endpoint ?? "no-endpoint-field"], [
-    "Health",
-    1,
-    1,
-    "task overdue",
-    "no-endpoint-field",
-  ]);
+  t.check(entry, {
+    sentAt: isoDate(),
+    boxSlug: slug,
+    title: "Health",
+    body: "task overdue",
+    url: `/${slug}/health`,
+    sent: 1,
+    pruned: 1,
+    failed: 0,
+  });
 });

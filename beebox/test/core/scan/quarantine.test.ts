@@ -51,16 +51,12 @@ void test("An entry round-trips, and quarantine lives under the box's swept tmp 
   });
   // doctest:L46
   const box = await makeTmpBox();
-  await t.checkText(quarantineDir(box.root) === path.join(box.root, "_tmp", "scan-quarantine"), "true");
+  t.check(quarantineDir(box.root), path.join(box.root, "_tmp", "scan-quarantine"));
 
   // doctest:L50
   await recordQuarantineEntry(box.root, entry(HASH_A));
   const read = await readQuarantineEntry(box.root, HASH_A);
-  t.check({ state: read?.state, name: read?.originalFilename, token: read?.tokenName }, {
-    state: "pending",
-    name: "Invoice_001.pdf",
-    token: "laptop-scansnap",
-  });
+  t.check(read, entry(HASH_A));
 
   // A hash quarantine has never seen is `null`, not a throw — "unknown" is a normal
   // answer, not an error:
@@ -90,28 +86,16 @@ void test("The promote worker drives pending → promoting → imported, and rec
   // doctest:L79
   const promoting = await updateQuarantineState(box.root, { sha256: HASH_A, state: "promoting" });
   const flagged = await updateQuarantineState(box.root, { sha256: HASH_B, state: "rejected", questionRef: "questions/Bad_Scan.question.card" });
-  t.check({ a: promoting?.state, b: [flagged?.state, flagged?.questionRef, flagged?.reason] }, {
-    a: "promoting",
-    b: [
-      "rejected",
-      "questions/Bad_Scan.question.card",
-      "magic bytes say image/png but the extension is .pdf",
-    ],
-  });
+  t.check(promoting, entry(HASH_A, { state: "promoting" }));
+  t.check(flagged, entry(HASH_B, { state: "rejected", reason: "magic bytes say image/png but the extension is .pdf", questionRef: "questions/Bad_Scan.question.card" }));
 
   // Reading them all back gives the promote worker its work list, hash-sorted:
 
   // doctest:L88
   const all = await readAllQuarantineEntries(box.root);
-  t.check(all.map((e) => [e.sha256.slice(0, 4), e.state]), [
-    [
-      "aaaa",
-      "promoting",
-    ],
-    [
-      "bbbb",
-      "rejected",
-    ],
+  t.check(all, [
+    entry(HASH_A, { state: "promoting" }),
+    entry(HASH_B, { state: "rejected", reason: "magic bytes say image/png but the extension is .pdf", questionRef: "questions/Bad_Scan.question.card" }),
   ]);
 
   // Updating a hash that isn't in quarantine reports `null` rather than inventing an
@@ -142,9 +126,7 @@ void test("The file's bytes are still on disk and a re-PUT rewrites the verdict,
 
   // doctest:L117
   const all = await readAllQuarantineEntries(box.root);
-  t.check(all.map((e) => e.sha256.slice(0, 4)), [
-    "aaaa",
-  ]);
+  t.check(all, [entry(HASH_A)]);
 
   // The stored file itself sits beside the sidecar under its hash name — the promote
   // worker materializes it under `originalFilename` later, because scan-import's

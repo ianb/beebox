@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { runOneCycle } from "../../../../src/core/reactor/engine/cycle.js";
 import type { RunCycleParams } from "../../../../src/core/reactor/engine/cycle.js";
 import { runReactor } from "../../../../src/core/reactor/engine/core.js";
@@ -225,14 +226,10 @@ void test("The cap applies only to the deadline path.", async (t) => {
   );
   const [offered] = prompts;
   invariant(offered, "the agent was offered a prompt");
-  await t.checkText(
-    ({
-      ...summary(mixed),
-      hasNormal: offered.includes(normal),
-      normalListedFirst: offered.indexOf("2026-06-01T00-00-00-now") < offered.indexOf("2020-01-01T00-00-00-b"),
-    }),
-    "{ success: true, jobsProcessed: 0, jobsRemaining: 8, invoked: 1, hasNormal: true, normalListedFirst: true }",
-  );
+  t.check(summary(mixed), { success: true, jobsProcessed: 0, jobsRemaining: 8, invoked: 1 });
+  // The prompt is large generated text. The normal job appears, and before the first low-priority job.
+  t.check(offered, str`${any(String)}${normal}${any(String)}2020-01-01T00-00-00-b${any(String)}`);
+  t.check(offered.split("2020-01-01T00-00-00-b")[0], any(String).includes("2026-06-01T00-00-00-now"));
 });
 
 // ## A `todo-review-job` alone is processed under `skipLowPriority`, not stuck forever

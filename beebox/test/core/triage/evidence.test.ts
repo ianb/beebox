@@ -57,7 +57,7 @@ void test("Complete scope enumeration includes unsupported bytes.", async (t) =>
   t.check(prepared.status, "partial");
 
   // doctest:L36
-  await t.checkText(prepared.parts[2]?.text, `Notice
+  t.check(prepared.parts[2]?.text, `Notice
 Boundary hearing
 Case details (https://example.invalid/case)`);
 
@@ -98,15 +98,14 @@ void test("An analyzed PDF card owns its generated direct page renders.", async 
   const pageParts = pageEvidence.parts.filter((part) => /\/page-\d{3,}\.(?:avif|webp)$/u.test(part.ref));
   const figurePart = pageEvidence.parts.find((part) => part.ref.endsWith("/figure-001.avif"));
   const submittedImages = pageVision.calls.flatMap((call) => call.imagePaths.map((file) => path.basename(file))).toSorted();
-  t.check([pageEvidence.status, pageParts.length, pageParts.every((part) => part.method === "representation-selected" && part.duplicateOf === "/_content/inbox/staged/Rendered.attach/source.pdf.card"), figurePart?.method, submittedImages, serializeTriageRequest({ evidence: pageEvidence, instructions: pageInstructions }).length <= JEV_MAX_REQUEST_CHARS], [
+  t.check([pageEvidence.status, pageParts.map((part) => [part.method, part.duplicateOf]), figurePart?.method, submittedImages, serializeTriageRequest({ evidence: pageEvidence, instructions: pageInstructions }).length], [
     "ready",
-    12,
-    true,
+    Array.from({ length: 12 }, () => ["representation-selected", "/_content/inbox/staged/Rendered.attach/source.pdf.card"]),
     "scan-vision",
     [
       "figure-001.avif",
     ],
-    true,
+    any(Number).between(0, JEV_MAX_REQUEST_CHARS),
   ]);
 
   // doctest:L78
@@ -119,7 +118,7 @@ void test("An analyzed PDF card owns its generated direct page renders.", async 
   await fs.writeFile(path.join(innerAttach, "page-012.webp"), "changed page bytes");
   let stalePage = "";
   await (async () => { try { await verifyEvidence(box.root, pageEvidence); } catch (error) { stalePage = String(error); } })();
-  await t.checkText(stalePage.includes("stale-decision: changed evidence /_content/inbox/staged/Rendered.attach/source.attach/page-012.webp; prepare again"), "true");
+  t.check(stalePage, "InvariantError: stale-decision: changed evidence /_content/inbox/staged/Rendered.attach/source.attach/page-012.webp; prepare again");
 });
 
 // Missing usable structured text or a body excluded by the text budget sends its
@@ -141,10 +140,9 @@ void test("Missing usable structured text or a body excluded by the text budget 
   await fs.writeFile(path.join(attach, "Empty.attach/page-001.avif"), "empty-owner page");
   const emptyVision = createFakeScanVision();
   const emptyOwner = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Empty.pdf.card", vision: emptyVision });
-  t.check([emptyOwner.parts.find((part) => part.ref.endsWith("Empty.attach/page-001.avif"))?.method, emptyVision.calls.length, path.basename(emptyVision.calls[0]?.imagePaths[0] ?? "")], [
+  t.check([emptyOwner.parts.find((part) => part.ref.endsWith("Empty.attach/page-001.avif"))?.method, emptyVision.calls.map((call) => call.imagePaths.map((file) => path.basename(file)))], [
     "scan-vision",
-    1,
-    "page-001.avif",
+    [["page-001.avif"]],
   ]);
 
   // doctest:L107
@@ -154,10 +152,10 @@ void test("Missing usable structured text or a body excluded by the text budget 
   await fs.writeFile(path.join(attach, "Oversized.attach/page-001.webp"), "excluded-owner page");
   const oversizedVision = createFakeScanVision();
   const oversizedOwner = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Oversized.pdf.card", maxTextChars: 100, vision: oversizedVision });
-  t.check([oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.pdf.card"))?.status, oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.attach/page-001.webp"))?.method, oversizedVision.calls.length], [
+  t.check([oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.pdf.card"))?.status, oversizedOwner.parts.find((part) => part.ref.endsWith("Oversized.attach/page-001.webp"))?.method, oversizedVision.calls.map((call) => call.imagePaths.map((file) => path.basename(file)))], [
     "unavailable",
     "scan-vision",
-    1,
+    [["page-001.webp"]],
   ]);
 
   // doctest:L116
@@ -191,7 +189,8 @@ void test("Native text is read directly; junk and absent layers go through diffe
   t.check(native.parts[0]?.method, "pdf-native-text");
 
   // doctest:L140
-  t.check(native.parts[0]?.text.includes("property"), true);
+  // Text from the PDF extractor: its spacing and page marks are the tool's, so only the content is pinned.
+  t.check(native.parts[0]?.text, any(String).includes("property"));
 
   // doctest:L143
   const fake = createFakeDocling({ markdown: "Recovered household statement" });
@@ -220,7 +219,7 @@ void test("Native text is read directly; junk and absent layers go through diffe
 
   // doctest:L159
   const reused = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/junk.pdf", docling, previousEvidence: junk });
-  await t.checkText(fake.calls.length, "2");
+  t.check(fake.calls.map((call) => call.ocr), ["replace", "regions"]);
 
   // doctest:L163
   t.check(reused.parts[0]?.text, "Recovered household statement");
@@ -232,7 +231,7 @@ void test("Native text is read directly; junk and absent layers go through diffe
   t.check(failure.status, "unavailable");
 
   // doctest:L172
-  t.check(failure.parts[0]?.omissions.includes("OCR unavailable"), true);
+  t.check(failure.parts[0]?.omissions, ["OCR unavailable", "No readable content prepared"]);
 
   // doctest:L175
   t.check(await Promise.all(failureDirs.map(async (dir) => fs.access(dir).then(() => true, () => false))), [
@@ -255,38 +254,38 @@ void test("Image analysis supplies objects and text, using the existing injectab
   await box.write("_content/inbox/staged/photo.png", "fake image bytes");
   const vision = createFakeScanVision();
   const image = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/photo.png", vision });
-  t.check([image.status, image.parts[0]?.method, image.parts[0]?.text, vision.calls.length], [
+  t.check([image.status, image.parts[0]?.method, image.parts[0]?.text, vision.calls.map((call) => call.imagePaths.map((file) => path.basename(file)))], [
     "ready",
     "scan-vision",
     "Fake photo 0",
-    1,
+    [["photo.png"]],
   ]);
 
   // doctest:L194
   const blankVision = createFakeScanVision({ analyze: () => [{ index: 0, kind: "photo", paired_with_index: null, description: "", title: "", rotation: 0, subject_bbox: null, has_text: false, text_blocks: [], date_hint: null, flag_for_review: false, flag_reason: null }] });
   const emptyImage = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/photo.png", vision: blankVision });
-  t.check([emptyImage.status, emptyImage.parts[0]?.omissions.includes("Vision returned no semantic description or text")], [
+  t.check([emptyImage.status, emptyImage.parts[0]?.omissions], [
     "unavailable",
-    true,
+    ["Vision returned no semantic description or text", "No readable content prepared"],
   ]);
 
   // doctest:L199
   await box.write("_content/inbox/staged/mail.eml", "From: =?UTF-8?Q?Jos=C3=A9?= <jose@example.invalid>\r\nContent-Type: multipart/alternative; boundary=abc\r\n\r\n--abc\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\nHello=2C household notice\r\n--abc\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<p>Hello household notice</p>\r\n--abc\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"bill.pdf\"\r\n\r\nnot decoded\r\n--abc--\r\n");
   const mail = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/mail.eml" });
-  t.check([mail.parts[0]?.method, mail.parts[0]?.text, mail.status, mail.parts[0]?.omissions.some((item) => item.includes("Raw MIME is not decoded"))], [
+  t.check([mail.parts[0]?.method, mail.parts[0]?.text, mail.status, mail.parts[0]?.omissions], [
     "mime-unparsed",
     "",
     "unavailable",
-    true,
+    ["Raw MIME is not decoded; encoded bodies and attachments require research", "No readable content prepared"],
   ]);
 
   // doctest:L204
   await box.write("_content/inbox/staged/long.txt", "Early irrelevant information. Later important qualification.");
   const bounded = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/long.txt", maxTextChars: 10 });
-  t.check([bounded.status, bounded.parts[0]?.text, bounded.parts[0]?.omissions[0]?.startsWith("Text budget excluded all")], [
+  t.check([bounded.status, bounded.parts[0]?.text, bounded.parts[0]?.omissions], [
     "unavailable",
     "",
-    true,
+    ["Text budget excluded all 60 characters of this part"],
   ]);
 
   const { docling, structuredInstructions } = await checkCaptureSession(t, box);
@@ -338,9 +337,9 @@ async function checkCaptureSession(t: Test, box: TmpBox) {
   ]);
 
   // doctest:L225
-  t.check([structured.status, (structured.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.text.length ?? 0) > 48_000, structured.parts.filter((part) => part.method === "representation-selected").map((part) => part.duplicateOf)], [
+  t.check([structured.status, structured.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.text.length, structured.parts.filter((part) => part.method === "representation-selected").map((part) => part.duplicateOf)], [
     "ready",
-    true,
+    any(Number).above(48_000),
     [
       "/_content/inbox/staged/capture-session.attach/source.pdf.card",
       "/_content/inbox/staged/capture-session.attach/source.pdf.card",
@@ -349,24 +348,22 @@ async function checkCaptureSession(t: Test, box: TmpBox) {
 
   // doctest:L228
   const serializedTriageRequest = serializeTriageRequest({ evidence: structured, instructions: structuredInstructions });
-  t.check([serializedTriageRequest.length <= JEV_MAX_REQUEST_CHARS, serializedTriageRequest.length, structured.recipe.steps.length === structured.parts.length && structured.recipe.steps.every((step, index) => step === `${structured.parts[index]?.ref}: ${structured.parts[index]?.method}`)], [
-    true,
-    any(Number).int(),
-    true,
-  ]);
+  // eslint-disable-next-line agent-doctest/check-whole-value -- the request's size budget is the contract; the JSON itself is ~48KB of generated text
+  t.check(serializedTriageRequest.length, any(Number).between(0, JEV_MAX_REQUEST_CHARS));
+  t.check(structured.recipe.steps, structured.parts.map((part) => `${part.ref}: ${part.method}`));
 
   // doctest:L232
   const recognizedSidecar = structured.parts.find((part) => part.ref.endsWith("docling.json.gz"));
-  t.check([structured.status, recognizedSidecar?.method, recognizedSidecar?.status, recognizedSidecar?.text, recognizedSidecar?.omissions.length], [
+  t.check([structured.status, recognizedSidecar?.method, recognizedSidecar?.status, recognizedSidecar?.text, recognizedSidecar?.omissions], [
     "ready",
     "provenance-only",
     "ready",
     "",
-    0,
+    [],
   ]);
 
   // doctest:L236
-  await t.checkText(docling.calls.length, "0");
+  t.check(docling.calls, []);
 
   return { docling, structuredInstructions };
 }
@@ -378,11 +375,11 @@ async function checkStrayAndPairedCards(t: Test, { box, structuredInstructions }
   await box.write("_content/inbox/staged/Unknown.attach/stray.json.gz", "unreferenced sidecar bytes");
   const unknownGzip = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Unknown.doc.card", instructions: structuredInstructions });
   const stray = unknownGzip.parts.find((part) => part.ref.endsWith("stray.json.gz"));
-  t.check([unknownGzip.status, stray?.method, stray?.status, stray?.omissions.includes("Unsupported media: .gz")], [
+  t.check([unknownGzip.status, stray?.method, stray?.status, stray?.omissions], [
     "partial",
     "unsupported",
     "unavailable",
-    true,
+    ["Unsupported media: .gz", "No readable content prepared"],
   ]);
 
   // doctest:L247
@@ -391,22 +388,10 @@ async function checkStrayAndPairedCards(t: Test, { box, structuredInstructions }
   await box.write("_content/inbox/staged/CardPair.attach/a.doc.card", "---\ntitle: First\n---\nSame useful body");
   await box.write("_content/inbox/staged/CardPair.attach/b.doc.card", "---\ntitle: Second\n---\nSame useful body");
   const cardPair = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/CardPair.doc.card", instructions: structuredInstructions });
-  t.check(cardPair.parts.filter((part) => part.ref.endsWith(".doc.card")).map((part) => [part.method, part.duplicateOf ?? null, part.text.includes("Same useful body")]), [
-    [
-      "utf8",
-      null,
-      false,
-    ],
-    [
-      "utf8",
-      null,
-      true,
-    ],
-    [
-      "utf8",
-      null,
-      true,
-    ],
+  t.check(cardPair.parts.filter((part) => part.ref.endsWith(".doc.card")).map((part) => [part.method, part.duplicateOf ?? null, part.text]), [
+    ["utf8", null, "Pair"],
+    ["utf8", null, "---\ntitle: First\n---\nSame useful body"],
+    ["utf8", null, "---\ntitle: Second\n---\nSame useful body"],
   ]);
 
   // doctest:L255
@@ -416,23 +401,10 @@ async function checkStrayAndPairedCards(t: Test, { box, structuredInstructions }
   await box.write("_content/inbox/staged/TextPair.attach/b.txt", "One retained passage");
   const textPair = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/TextPair.doc.card", instructions: structuredInstructions });
   const textCopies = textPair.parts.filter((part) => part.ref.endsWith(".txt"));
-  t.check([textCopies.map((part) => [part.digest.length, part.method, part.duplicateOf ?? null, part.text]), textCopies[0]?.digest === textCopies[1]?.digest, textCopies[1]?.duplicateOf === textCopies[0]?.ref], [
-    [
-      [
-        64,
-        "utf8",
-        null,
-        "One retained passage",
-      ],
-      [
-        64,
-        "duplicate-text",
-        "/_content/inbox/staged/TextPair.attach/a.txt",
-        "",
-      ],
-    ],
-    true,
-    true,
+  const DIGEST = "5426ffdd8de70adf072e5e559becbe6f5d4e90806ee7be1fb30c0625696afd31";
+  t.check(textCopies.map((part) => [part.ref, part.digest, part.method, part.duplicateOf ?? null, part.text]), [
+    ["/_content/inbox/staged/TextPair.attach/a.txt", DIGEST, "utf8", null, "One retained passage"],
+    ["/_content/inbox/staged/TextPair.attach/b.txt", DIGEST, "duplicate-text", "/_content/inbox/staged/TextPair.attach/a.txt", ""],
   ]);
 
 }
@@ -445,31 +417,31 @@ async function checkFallbacks(t: Test, { box, docling, structuredInstructions }:
   await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(box.root, "_content/inbox/staged/Empty.attach/source.pdf"));
   await box.write("_content/inbox/staged/Empty.attach/text-layer.txt", "L".repeat(42_000));
   const emptyPdf = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Empty.pdf.card", maxTextChars: 43_000, docling: createFakeDocling({ markdown: "Should not replace available text layer" }), instructions: structuredInstructions });
-  t.check([emptyPdf.status, emptyPdf.parts.find((part) => part.ref.endsWith("Empty.attach/text-layer.txt"))?.text.length, emptyPdf.parts.find((part) => part.ref.endsWith("Empty.attach/source.pdf"))?.duplicateOf, emptyPdf.parts.find((part) => part.ref.endsWith("Empty.pdf.card"))?.text.includes("status: analyzed")], [
+  t.check([emptyPdf.status, emptyPdf.parts.find((part) => part.ref.endsWith("Empty.attach/text-layer.txt"))?.text, emptyPdf.parts.find((part) => part.ref.endsWith("Empty.attach/source.pdf"))?.duplicateOf, emptyPdf.parts.find((part) => part.ref.endsWith("Empty.pdf.card"))?.text], [
     "ready",
-    42000,
+    "L".repeat(42_000),
     "/_content/inbox/staged/Empty.attach/text-layer.txt",
-    true,
+    "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n",
   ]);
 
   // doctest:L273
   const fallback = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/capture-session.card", maxTextChars: 43_000, vision: createFakeScanVision(), docling });
-  t.check([fallback.status, fallback.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.status, fallback.parts.find((part) => part.ref.endsWith("text-layer.txt"))?.text.length, fallback.parts.find((part) => part.ref.endsWith("/source.pdf"))?.duplicateOf], [
+  t.check([fallback.status, fallback.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.status, fallback.parts.find((part) => part.ref.endsWith("text-layer.txt"))?.text, fallback.parts.find((part) => part.ref.endsWith("/source.pdf"))?.duplicateOf], [
     "partial",
     "unavailable",
-    42000,
+    "T".repeat(42_000),
     "/_content/inbox/staged/capture-session.attach/source.attach/text-layer.txt",
   ]);
 
   // doctest:L277
-  await t.checkText(docling.calls.length, "0");
+  t.check(docling.calls, []);
 
   // doctest:L280
   // If neither existing representation fits, the deferred PDF is extracted once.
   await fs.rm(path.join(box.root, "_content/inbox/staged/capture-session.attach/source.attach/text-layer.txt"));
   const extractedFallback = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/capture-session.card", maxTextChars: 43_000, vision: createFakeScanVision(), docling });
-  t.check([docling.calls.length, extractedFallback.parts.find((part) => part.ref.endsWith("/source.pdf"))?.method, extractedFallback.parts.find((part) => part.ref.endsWith("/source.pdf"))?.text], [
-    1,
+  t.check([docling.calls, extractedFallback.parts.find((part) => part.ref.endsWith("/source.pdf"))?.method, extractedFallback.parts.find((part) => part.ref.endsWith("/source.pdf"))?.text], [
+    [{ sourcePath: box.path("_content/inbox/staged/capture-session.attach/source.attach/source.pdf"), ocr: "regions", languages: null }],
     "docling-regions",
     "Should not re-extract analyzed card",
   ]);
@@ -482,7 +454,7 @@ async function checkBudgetAndAnnex(t: Test, box: TmpBox) {
   const escapedInstructions: InstructionSnapshot = { version: 1, compilerVersion: 1, policy: '"'.repeat(40_000), trial: true, sources: [], destinations: [] };
   let requestBudgetError = "";
   await (async () => { try { await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/budget.txt", instructions: escapedInstructions }); } catch (error) { requestBudgetError = String(error); } })();
-  await t.checkText(requestBudgetError.includes("Serialized Jev request exceeds request budget"), "true");
+  t.check(requestBudgetError, "InvariantError: Serialized Jev request exceeds request budget 80000 characters even with all evidence parts excluded");
 
   // doctest:L293
   await box.write("_content/inbox/staged/Missing.pdf.card", "---\nfile: attach/missing.pdf\n---\nDocument title only");
@@ -490,14 +462,14 @@ async function checkBudgetAndAnnex(t: Test, box: TmpBox) {
   t.check(missing.status, "partial");
 
   // doctest:L298
-  t.check(missing.parts[0]?.omissions.includes("Missing referenced attachment: attach/missing.pdf"), true);
+  t.check(missing.parts[0]?.omissions, ["Missing referenced attachment: attach/missing.pdf"]);
 
   // doctest:L301
   await box.write("_content/inbox/staged/Lost.doc.card", "Body");
   await box.write("_content/inbox/intake/Lost.attach/source.txt", "Stranded");
   let stranded = "";
   try { await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Lost.doc.card" }); } catch (error) { stranded = String(error); };
-  await t.checkText(stranded.includes("Stranded attachment scope"), "true");
+  t.check(stranded, `InvariantError: Stranded attachment scope: ${box.path("_content/inbox/intake/Lost.attach")}; repair before preparation`);
 
   // doctest:L308
   await box.write("_content/inbox/staged/Shared.doc.card", "Shared");
@@ -505,7 +477,7 @@ async function checkBudgetAndAnnex(t: Test, box: TmpBox) {
   await fs.symlink("/etc/hosts", path.join(box.root, "_content/inbox/staged/Shared.attach/external.txt"));
   let escapedBox = "";
   try { await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Shared.doc.card" }); } catch (error) { escapedBox = String(error); };
-  await t.checkText(escapedBox.includes("Evidence escapes box"), "true");
+  t.check(escapedBox, `InvariantError: Evidence escapes box: ${box.path("_content/inbox/staged/Shared.attach/external.txt")}`);
 
   // doctest:L316
   await fs.rm(path.join(box.root, "_content/inbox/staged/Shared.attach/external.txt"));

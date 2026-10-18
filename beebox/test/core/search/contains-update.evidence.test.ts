@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { setDerivedContains } from "../../../src/core/search/contains-update.js";
 import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
@@ -51,16 +52,18 @@ void test("This is the regression anchor for a real bug:", async (t) => {
     relPath: CARD,
     evidence: "- decision: booked the coast cottage",
   });
-  t.check(first.unchanged, false);
+  t.check(first, { unchanged: false });
 
   // doctest:L49
   const after = await readFile(box.path(CARD), "utf8");
-  await t.checkText(after.includes("contains-evidence:") && after.includes("booked the coast cottage"), "true");
+  t.checkText(after, `---
+title: Coast trip
+contains: A trip to the coast.
+contains-evidence: "- decision: booked the coast cottage"
+---
+Body text.`);
 
   // The `contains` sentence is left exactly as it was.
-
-  // doctest:L57
-  await t.checkText(after.includes("contains: A trip to the coast."), "true");
 
   // Writing the same evidence again is a no-op, so a nightly pass that finds nothing
   // new doesn't churn the card or its git history.
@@ -70,7 +73,7 @@ void test("This is the regression anchor for a real bug:", async (t) => {
     relPath: CARD,
     evidence: "- decision: booked the coast cottage",
   });
-  t.check(second.unchanged, true);
+  t.check(second, { unchanged: true });
 
   // Both fields move together when both are supplied.
 
@@ -81,7 +84,14 @@ void test("This is the regression anchor for a real bug:", async (t) => {
     evidence: "- decision: booked the coast cottage\n- follow-up: pack the tide table",
   });
   const both = await readFile(box.path(CARD), "utf8");
-  await t.checkText(both.includes("Planning a coast trip, now booked.") && both.includes("tide table"), "true");
+  t.checkText(both, `---
+title: Coast trip
+contains: Planning a coast trip, now booked.
+contains-evidence: |-
+  - decision: booked the coast cottage
+  - follow-up: pack the tide table
+---
+Body text.`);
 });
 
 // ## Writing evidence never moves the contains basis
@@ -117,19 +127,17 @@ void test("The staleness sidecar decides whether a card's contains still describ
   });
 
   // doctest:L122
-  await t.checkText(
-    // Bodied card: frontmatter is not in the basis at all.
-    computeContainsBasis({ card: bodied({ contains: "A trip." }) })
-      === computeContainsBasis({ card: bodied({ contains: "A trip.", "contains-evidence": "- learned: trains" }) }),
-    "true",
+  // Bodied card: frontmatter is not in the basis at all.
+  t.check(
+    computeContainsBasis({ card: bodied({ contains: "A trip." }) }),
+    computeContainsBasis({ card: bodied({ contains: "A trip.", "contains-evidence": "- learned: trains" }) }),
   );
 
   // doctest:L127
-  await t.checkText(
-    // Frontmatter-only card: the exclusion is what keeps the basis stable.
-    computeContainsBasis({ card: flat({ source: "voice", contains: "A trip." }) })
-      === computeContainsBasis({ card: flat({ source: "voice", contains: "A trip.", "contains-evidence": "- learned: trains" }) }),
-    "true",
+  // Frontmatter-only card: the exclusion is what keeps the basis stable.
+  t.check(
+    computeContainsBasis({ card: flat({ source: "voice", contains: "A trip." }) }),
+    computeContainsBasis({ card: flat({ source: "voice", contains: "A trip.", "contains-evidence": "- learned: trains" }) }),
   );
 
   // A field that is *not* excluded still moves the basis, so the check above is
@@ -137,10 +145,9 @@ void test("The staleness sidecar decides whether a card's contains still describ
   // itself basis-excluded, so it makes a poor control — use a content field.)
 
   // doctest:L138
-  await t.checkText(
-    computeContainsBasis({ card: flat({ source: "voice" }) })
-      === computeContainsBasis({ card: flat({ source: "email" }) }),
-    "false",
+  t.check(
+    computeContainsBasis({ card: flat({ source: "voice" }) }),
+    not(computeContainsBasis({ card: flat({ source: "email" }) })),
   );
 
   // A bodied card whose body is empty hashes its fields instead, like a
@@ -156,17 +163,15 @@ void test("The staleness sidecar decides whether a card's contains still describ
     schema: docSchema,
     fields: { body: "\n", ...fields },
   });
-  await t.checkText(
-    computeContainsBasis({ card: emptyBodied({ phone: "555-0100" }) })
-      === computeContainsBasis({ card: emptyBodied({ phone: "555-0199" }) }),
-    "false",
+  t.check(
+    computeContainsBasis({ card: emptyBodied({ phone: "555-0100" }) }),
+    not(computeContainsBasis({ card: emptyBodied({ phone: "555-0199" }) })),
   );
 
   // doctest:L160
-  await t.checkText(
-    computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris." }) })
-      === computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris.", "contains-evidence": "- met at the market" }) }),
-    "true",
+  t.check(
+    computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris." }) }),
+    computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris.", "contains-evidence": "- met at the market" }) }),
   );
 });
 
@@ -190,12 +195,18 @@ void test("An evidence field is expected to be long, so the lint budget stays sc
   await box.write(CARD, doc(`contains: ${longText}`));
   const ctx = await buildLoadContext(box.root);
   const overLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
-  t.check(overLong.results[0]?.warnings.filter((i) => i.type === "contains").length, 1);
+  t.check(overLong.results[0]?.warnings, [
+    {
+      type: "contains",
+      severity: "warning",
+      message: "contains: is 400 chars (budget 200) — tighten it to one sentence stating what can be found in this card",
+    },
+  ]);
 
   // The same length in `contains-evidence`, with a short `contains`, is clean.
 
   // doctest:L184
   await box.write(CARD, doc(`contains: A trip.\ncontains-evidence: ${longText}`));
   const evidenceLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
-  t.check(evidenceLong.results[0]?.warnings.filter((i) => i.type === "contains").length, 0);
+  t.check(evidenceLong.results[0]?.warnings, []);
 });

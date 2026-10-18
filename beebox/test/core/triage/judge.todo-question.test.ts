@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { compileTriageInstructions } from "../../../src/core/triage/instructions.js";
@@ -46,14 +47,15 @@ destinations:
   t.check(bills?.todoQuestion, "Does this bill still need payment or investigation?");
 
   // doctest:L41
-  await t.checkText(records?.todoQuestion === undefined, "true");
+  t.check(records?.todoQuestion, undefined);
 
   // doctest:L44
   invariant(bills && records, "fixture destinations compile");
   invariant(bills.todoQuestion, "bills destination has a todo question");
   const compiled = await compileTriageInstructions(box.root);
   const category = compiled.categories.find((destination) => destination.name === "bills");
-  await t.checkText(category?.todoQuestion === bills.todoQuestion && category?.landmarkRef === bills.ref && compiled.doc.includes(bills.todoQuestion), "true");
+  t.check({ todoQuestion: category?.todoQuestion, landmarkRef: category?.landmarkRef }, { todoQuestion: bills.todoQuestion, landmarkRef: bills.ref });
+  t.check(compiled.doc, any(String).includes(bills.todoQuestion));
 
   // doctest:L51
   t.check(LandmarkDestination.safeParse({ for: ["triage"], "todo-question": "   " }).success, false);
@@ -64,7 +66,7 @@ destinations:
   // doctest:L57
   const evidence: Evidence = { version: 1, source: { ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Household utility bill: payment is outstanding.", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
   const request = buildTriageRequest({ evidence, instructions: snapshot });
-  await t.checkText(Object.keys(request.questions).length, "2");
+  t.check(Object.keys(request.questions), ["destination", `todo_${bills.optionId}`]);
 
   // doctest:L62
   t.check(request.questions[`todo_${bills.optionId}`]?.type, "noul");
@@ -72,10 +74,34 @@ destinations:
   // doctest:L65
   const yes = createFakeJev({ answers: (name, { question }) => name === "destination" ? fixedAnswer(question, { yes: true }) : { type: "noul", probability: 0.9 } });
   const judgment = await judgeItem(box.root, { evidence, instructions: snapshot, jev: yes });
-  await t.checkText(judgment.destinationRef === bills.ref && judgment.todoAnswers?.[bills.optionId] === 0.9, "true");
+  t.check(judgment, {
+    todoAnswers: { [bills.optionId]: 0.9 },
+    outcome: "destination",
+    destinationRef: bills.ref,
+    requestHash: "b7c72e848f80259fe3b5d4601693218dd19aef25ac60f4568355d588ce0886d5",
+    requestedModel: "typesafe/jev-1.13",
+    returnedModel: "fake-jev",
+    answer: {
+      type: "choice",
+      choice: bills.optionId,
+      confidence: 1,
+      probabilities: {
+        [bills.optionId]: 1,
+        [records.optionId]: 0,
+        "no-match": 0,
+        unclear: 0,
+      },
+    },
+    reason: {
+      kind: "summary",
+      text: "Classifier summary: /_content/bills/Bills.landmark.card; leading probability 1.000, confidence 1.000; instructions: /_config/intake.guide.card, /_content/bills/Bills.landmark.card, /_content/records/Records.landmark.card.",
+      evidenceRefs: ["/_content/inbox/staged/Bill.doc.card"],
+    },
+  });
 
   // doctest:L70
-  await t.checkText(yes.judgeCalls.length, "1");
+  // One call carries the destination question and the follow-up question; the prompt wording is not pinned here.
+  t.check(yes.judgeCalls.map((call) => Object.keys(call.questions)), [["destination", `todo_${bills.optionId}`]]);
 
   // doctest:L73
   const no = createFakeJev({ answers: (name, { question }) => name === "destination" ? fixedAnswer(question, { yes: true }) : { type: "noul", probability: 0.1 } });
@@ -99,5 +125,5 @@ destinations:
 
   // doctest:L93
   const old = await judgeItem(box.root, { evidence, instructions: withoutQuestions, jev: createFakeJev({ answers: (_name, { question }) => fixedAnswer(question, { yes: true }) }) });
-  await t.checkText(old.todoAnswers === undefined, "true");
+  t.check(old.todoAnswers, undefined);
 });

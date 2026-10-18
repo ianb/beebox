@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp } from "node:fs/promises";
@@ -52,13 +53,13 @@ void test("A live grant records nothing", async (t) => {
   await markGoogleAuthDead({ reason: "Token has been expired or revoked." });
 
   // doctest:L45
-  await t.checkText((await refreshGoogleAuth(box.root, { now: NOW }))?.since !== undefined, "true");
+  t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: isoDate() });
 
   // doctest:L48
   t.check(await refreshGoogleAuth(box.root, { now: NOW }), null);
 
   // doctest:L51
-  await t.checkText((await readRecent(box.root, { days: 1, now: NOW })).length, "0");
+  t.check(await readRecent(box.root, { days: 1, now: NOW }), []);
 
   // ## Reconnecting clears the latch, so a relapse is a new episode
 
@@ -68,5 +69,5 @@ void test("A live grant records nothing", async (t) => {
 
   // doctest:L62
   await markGoogleAuthDead({ reason: "revoked again" });
-  await t.checkText((await refreshGoogleAuth(box.root, { now: NOW }))?.since !== undefined, "true");
+  t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: isoDate() });
 });

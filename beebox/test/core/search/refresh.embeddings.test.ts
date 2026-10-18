@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { search, getByID } from "@orama/orama";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import { loadManifest } from "../../../src/core/search/refresh/manifest.js";
@@ -43,40 +44,50 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   await box.write("store/notes/Plain.doc.card", DOC("Just a note with no contains yet."));
   const fake = createFakeEmbeddings();
   const built = await openSearchIndex(box.root, { embeddings: fake });
-  t.check(built.embeddingsReady, true);
-
-  // doctest:L40
-  t.check(built.warnings, []);
+  t.check({ embeddingsReady: built.embeddingsReady, warnings: built.warnings }, { embeddingsReady: true, warnings: [] });
 
   // doctest:L43
-  await t.checkText(
-    // Exactly one batched embed call for the one contains-bearing card.
-    fake.calls.length,
-    "1",
-  );
-
-  // doctest:L47
-  t.check(fake.calls[0], [
-    "Dentist moved to June 17.",
-  ]);
+  // Exactly one batched embed call for the one contains-bearing card.
+  t.check(fake.calls, [["Dentist moved to June 17."]]);
 
   // doctest:L50
   // The whole-card doc holds the fake's deterministic vector for that contains.
   const dentist = getByID(built.db, "_content/inbox/Dentist.doc.card#");
-  await t.checkText(JSON.stringify(dentist?.embedding) === JSON.stringify(await fakeVec("Dentist moved to June 17.")), "true");
+  t.check(dentist?.embedding, await fakeVec("Dentist moved to June 17."));
 
   // doctest:L55
   // A card with no contains gets no vector.
   const plain = getByID(built.db, "store/notes/Plain.doc.card#");
-  await t.checkText(plain?.embedding === undefined, "true");
+  t.check(
+    { path: plain?.path, kind: plain?.kind, title: plain?.title, contains: plain?.contains, content: plain?.content, embedding: plain?.embedding },
+    {
+      path: "store/notes/Plain.doc.card",
+      kind: "doc",
+      title: "Note",
+      contains: "",
+      content: "Just a note with no contains yet.",
+      embedding: undefined,
+    },
+  );
 
   // doctest:L60
   // The manifest records the embedded card's hash, and leaves the other's unset.
   const m1 = await loadManifest(box.root);
-  t.check(typeof m1.files["_content/inbox/Dentist.doc.card"]?.embeddedHash, "string");
+  t.check(m1.files["_content/inbox/Dentist.doc.card"], {
+    mtimeMs: any(Number).positive(),
+    size: 87,
+    contentHash: "592d4dfdf5ad9cdf",
+    docIds: ["_content/inbox/Dentist.doc.card#"],
+    embeddedHash: "71c146e97cf32ec7",
+  });
 
   // doctest:L65
-  await t.checkText(m1.files["store/notes/Plain.doc.card"]?.embeddedHash === undefined, "true");
+  t.check(m1.files["store/notes/Plain.doc.card"], {
+    mtimeMs: any(Number).positive(),
+    size: 54,
+    contentHash: "7c1182a5e8826f8a",
+    docIds: ["store/notes/Plain.doc.card#"],
+  });
 
   // ## Second refresh, nothing changed: no new embed call, still ready
 
@@ -85,11 +96,8 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   t.check(again.embeddingsReady, true);
 
   // doctest:L76
-  await t.checkText(
-    // Pending set is empty, so the fake is never called again.
-    fake.calls.length,
-    "1",
-  );
+  // Pending set is empty, so the fake is never called again.
+  t.check(fake.calls, [["Dentist moved to June 17."]]);
 
   // ## Editing a card's contains re-embeds exactly that text
 
@@ -99,16 +107,11 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   t.check(edited.embeddingsReady, true);
 
   // doctest:L89
-  await t.checkText(fake.calls.length, "2");
-
-  // doctest:L92
-  t.check(fake.calls[1], [
-    "Dentist moved to July 2 instead.",
-  ]);
+  t.check(fake.calls, [["Dentist moved to June 17."], ["Dentist moved to July 2 instead."]]);
 
   // doctest:L95
   const reDentist = getByID(edited.db, "_content/inbox/Dentist.doc.card#");
-  await t.checkText(JSON.stringify(reDentist?.embedding) === JSON.stringify(await fakeVec("Dentist moved to July 2 instead.")), "true");
+  t.check(reDentist?.embedding, await fakeVec("Dentist moved to July 2 instead."));
 
   // ## Persist → restore → vector search round-trip (pins oramasearch/orama#834)
   //
@@ -125,10 +128,7 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
 
   // doctest:L116
   const noService = await openSearchIndex(box.root);
-  t.check(noService.embeddingsReady, false);
-
-  // doctest:L120
-  t.check(noService.warnings, []);
+  t.check({ embeddingsReady: noService.embeddingsReady, warnings: noService.warnings }, { embeddingsReady: false, warnings: [] });
 
   // ## Embed failure degrades visibly, re-pends, and reports not-ready
 
@@ -137,13 +137,12 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   await box2.write("_content/inbox/Bill.doc.card", DOC("The electric bill is due.", "Electric bill due Friday."));
   const flaky = createFakeEmbeddings({ failTimes: 1 });
   const failed = await openSearchIndex(box2.root, { embeddings: flaky });
-  t.check(failed.embeddingsReady, false);
-
-  // doctest:L134
-  await t.checkText(failed.warnings.length, "1");
-
-  // doctest:L137
-  t.check(failed.warnings[0]?.startsWith("embeddings unavailable"), true);
+  t.check({ embeddingsReady: failed.embeddingsReady, warnings: failed.warnings }, {
+    embeddingsReady: false,
+    warnings: [
+      "embeddings unavailable (Embeddings error: scripted failure (attempt 1 of 1)) — semantic ranking degraded; ask the boxholder to grant the \"openai\" secret to this box",
+    ],
+  });
 
   // doctest:L140
   // Text search still answers, and the text side persisted.
@@ -152,7 +151,12 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
 
   // doctest:L145
   const failedManifest = await loadManifest(box2.root);
-  await t.checkText(failedManifest.files["_content/inbox/Bill.doc.card"]?.embeddedHash === undefined, "true");
+  t.check(failedManifest.files["_content/inbox/Bill.doc.card"], {
+    mtimeMs: any(Number).positive(),
+    size: 82,
+    contentHash: "36e17a35407359ad",
+    docIds: ["_content/inbox/Bill.doc.card#"],
+  });
 
   // doctest:L149
   // Same fake instance, next refresh: the card re-pends and this time succeeds.
@@ -161,7 +165,7 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
 
   // doctest:L154
   const bill = getByID(retried.db, "_content/inbox/Bill.doc.card#");
-  await t.checkText(JSON.stringify(bill?.embedding) === JSON.stringify(await fakeVec("Electric bill due Friday.")), "true");
+  t.check(bill?.embedding, await fakeVec("Electric bill due Friday."));
 
   // ## Lock contention fails closed on readiness
   //
@@ -185,8 +189,5 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   await releaseLock(searchLockPath(box3.root));
 
   // doctest:L179
-  t.check(contended.stale, true);
-
-  // doctest:L182
-  t.check(contended.embeddingsReady, false);
+  t.check({ stale: contended.stale, embeddingsReady: contended.embeddingsReady }, { stale: true, embeddingsReady: false });
 });

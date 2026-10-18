@@ -9,10 +9,11 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, anything } from "agent-doctest/check";
 import { search } from "@orama/orama";
 import { readFile, writeFile } from "node:fs/promises";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
-import { saveManifest, emptyManifest } from "../../../src/core/search/refresh/manifest.js";
+import { saveManifest, emptyManifest, loadManifest } from "../../../src/core/search/refresh/manifest.js";
 import {
   searchManifestPath,
   persistSearchIndex,
@@ -55,7 +56,19 @@ void test("Build an index over one card and snapshot the manifest that describes
   await box.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment is on June 17."));
   await openSearchIndex(box.root);
   const staleManifest = await readFile(searchManifestPath(box.root), "utf8");
-  await t.checkText(staleManifest.includes("Dentist.doc.card"), "true");
+  // The feedback AGENTS.md entry is scaffolding; the Dentist entry is the contract.
+  t.check(await loadManifest(box.root), {
+    schemaVersion: 5,
+    files: {
+      "_config/feedback/AGENTS.md": anything(),
+      "_content/inbox/Dentist.doc.card": {
+        mtimeMs: any(Number).positive(),
+        size: 59,
+        contentHash: "92059a0feb1ebbf8",
+        docIds: ["_content/inbox/Dentist.doc.card#"],
+      },
+    },
+  });
 
   // Edit that card and add another, then refresh so both the index and the manifest
   // now reflect the new state.
@@ -111,10 +124,13 @@ void test("The very first refresh over a box whose sole indexable file fails to 
   const box = await makeTmpBox();
   await box.write("store/notes/Broken.doc.card", "---\ntitle: [unclosed\n---\nbroken body\n");
   const opened = await openSearchIndex(box.root);
-  await t.checkText(opened.warnings.length, "1");
+  t.check(opened.warnings, [
+    `store/notes/Broken.doc.card: skipped (invalid YAML frontmatter: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 17:
 
-  // doctest:L108
-  t.check(opened.warnings[0]?.startsWith("store/notes/Broken.doc.card: skipped"), true);
+title: [unclosed
+                ^
+)`,
+  ]);
 
   // doctest:L111
   // A valid card added later indexes fine on top of the recorded skip.

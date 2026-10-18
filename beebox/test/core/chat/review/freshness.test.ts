@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { anything, isoDate } from "agent-doctest/check";
+import { anything } from "agent-doctest/check";
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
@@ -170,11 +170,11 @@ void test("The whole pipeline, with a fake Jev scripted to a confident yes:", as
   // doctest:L116
   const state = await loadReviewState(box.root);
   t.check(state, {
-    lastRunAt: isoDate(),
+    lastRunAt: NOW.toISOString(),
     sessions: {
       [sessionId]: {
         applied: {
-          title: { spanId: "db7b606421b296bd", endUuid: "g2", endIndex: 1, prefixHash: "b79b7403288d001a", at: isoDate() },
+          title: { spanId: "db7b606421b296bd", endUuid: "g2", endIndex: 1, prefixHash: "b79b7403288d001a", at: NOW.toISOString() },
         },
         titleOwner: "generated",
         titleHash: "47a6af6af3adc4d6",

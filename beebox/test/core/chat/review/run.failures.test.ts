@@ -5,7 +5,6 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
-import { isoDate } from "agent-doctest/check";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
@@ -284,7 +283,7 @@ first-message: ${FIRST_MESSAGE}
   const state = await loadReviewState(box.root);
   const crashSpan = { spanId: "c7a84bf64dc103ef", endUuid: "c2", endIndex: 1, prefixHash: "2fcfe70228a7f171", at: NOW.toISOString() };
   t.check(state, {
-    lastRunAt: isoDate(),
+    lastRunAt: NOW.toISOString(),
     sessions: {
       [sid("sesscrash")]: {
         applied: { metadata: crashSpan, title: crashSpan },
@@ -320,7 +319,7 @@ void test("A reviewer failure is counted, not fatal", async (t) => {
   // doctest:L250
   const state = await loadReviewState(box.root);
   t.check(state, {
-    lastRunAt: isoDate(),
+    lastRunAt: NOW.toISOString(),
     sessions: {
       [sid("sessfail")]: { applied: {}, titleOwner: "unmanaged", titleHash: null, attempts: 1, failedSpanId: "fe1d478d7e333eaf" },
     },
@@ -462,7 +461,7 @@ void test("A run spans one model call per session, so a session that was quiet w
   t.checkText(await readFile(box.path("_content/chat/web/2026-07-28_sesslive.chat.card"), "utf8"), `---\nsession: ${sid("sesslive")}\n---`);
   const firstSpan = { spanId: "66a91b9be85faa88", endUuid: "sessfirst2", endIndex: 1, prefixHash: "b3e536ea8b42aba9", at: NOW.toISOString() };
   t.check(state, {
-    lastRunAt: isoDate(),
+    lastRunAt: NOW.toISOString(),
     sessions: {
       [sid("sessfirst")]: {
         applied: { metadata: firstSpan, title: firstSpan },

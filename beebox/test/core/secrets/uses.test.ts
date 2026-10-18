@@ -10,7 +10,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,16 +32,18 @@ async function useTempStore() {
 // one the probe and format registries use — exact name first, then the longest
 // matching `family/` prefix.
 void test("Each line is derived from a real resolveSecret call site, so the boxholder ca...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L36
-  await t.checkText(out.with(print(builtinSecretUses("openai-thinking").join(" | "))), "speech generation for chat (text-to-speech) | audio transcription (Whisper) | minting short-lived realtime-transcription keys for the browser");
+  t.check(builtinSecretUses("openai-thinking"), [
+    "speech generation for chat (text-to-speech)",
+    "audio transcription (Whisper)",
+    "minting short-lived realtime-transcription keys for the browser",
+  ]);
 
   // A name the engine does not read has no built-in reasons — a guess would be
   // worse than silence:
 
   // doctest:L45
-  await t.checkText(out.with(JSON.stringify(builtinSecretUses("weatherapi"))), "[]");
+  t.check(builtinSecretUses("weatherapi"), []);
 });
 
 // ## Declared reasons are additive
@@ -51,8 +52,6 @@ void test("Each line is derived from a real resolveSecret call site, so the boxh
 // replaces what is already there. Declaring the same reason twice is a no-op
 // rather than a duplicate line, so a setup step can be re-run.
 void test("An agent that adds a trick spending an already-granted key appends why; it ne...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -65,16 +64,15 @@ void test("An agent that adds a trick spending an already-granted key appends wh
   await declareSecret({ name: "weatherapi", note: "from weatherapi.com", uses: ["forecasts in the morning brief"] });
   await declareSecret({ name: "weatherapi", uses: ["the umbrella reminder trick", "forecasts in the morning brief"] });
   const store = await loadSecretStore();
-  await t.checkText(out.with(JSON.stringify(store.ok ? store.value.secrets["weatherapi"]?.uses : null)), "[\"forecasts in the morning brief\",\"the umbrella reminder trick\"]");
+  t.check(store.ok ? store.value.secrets["weatherapi"]?.uses : null, ["forecasts in the morning brief", "the umbrella reminder trick"]);
 
   // `bbx secrets describe` is the same append, after the fact. Removing one names it
   // exactly; a reason the entry does not carry is an error rather than a silent
   // no-op, since the caller believes it just deleted something.
 
   // doctest:L69
-  print(JSON.stringify((await describeSecret({ name: "weatherapi", addUses: ["severe-weather alerts"] })).uses));
-  await t.checkText(out.with(print(JSON.stringify((await describeSecret({ name: "weatherapi", removeUses: ["the umbrella reminder trick"] })).uses))), `["forecasts in the morning brief","the umbrella reminder trick","severe-weather alerts"]
-["forecasts in the morning brief","severe-weather alerts"]`);
+  t.check((await describeSecret({ name: "weatherapi", addUses: ["severe-weather alerts"] })).uses, ["forecasts in the morning brief", "the umbrella reminder trick", "severe-weather alerts"]);
+  t.check((await describeSecret({ name: "weatherapi", removeUses: ["the umbrella reminder trick"] })).uses, ["forecasts in the morning brief", "severe-weather alerts"]);
 
   // doctest:L77
   await t.checkThrows(async () => (await describeSecret({ name: "weatherapi", removeUses: ["something nobody said"] })), "SecretUseNotFoundError");
@@ -96,7 +94,7 @@ void test("An agent that adds a trick spending an already-granted key appends wh
 
   // doctest:L99
   await setSecret({ name: "weatherapi", value: "placeholder-value-1", uses: ["tide times"] });
-  await t.checkText(out.with(JSON.stringify((await listSecrets())[0]?.uses.declared)), "[\"forecasts in the morning brief\",\"severe-weather alerts\",\"tide times\"]");
+  t.check((await listSecrets())[0]?.uses.declared, ["forecasts in the morning brief", "severe-weather alerts", "tide times"]);
 });
 
 // ## Observed purposes are recorded by real resolves
@@ -105,8 +103,6 @@ void test("An agent that adds a trick spending an already-granted key appends wh
 // time it is seen — a trick that runs once would otherwise never show up. Seeing
 // it again costs one lock-free read and no write.
 void test("lastUsed is stamped at most hourly, but a purpose label is written the first...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -126,14 +122,14 @@ void test("lastUsed is stamped at most hourly, but a purpose label is written th
   await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", purpose: "forecast-trick", access: "agent" });
   await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", purpose: "umbrella-reminder", access: "agent" });
   const store = await loadSecretStore();
-  await t.checkText(out.with(JSON.stringify(store.ok ? store.value.secrets["weatherapi"]?.purposes : null)), "[\"forecast-trick\",\"umbrella-reminder\"]");
+  t.check(store.ok ? store.value.secrets["weatherapi"]?.purposes : null, ["forecast-trick", "umbrella-reminder"]);
 
   // A refusal records nothing — only a real disclosure is a use:
 
   // doctest:L131
   await resolveSecret({ boxRoot: boxDir, slug: "other-box", name: "weatherapi", purpose: "snooping", access: "agent" });
   const afterRefusal = await loadSecretStore();
-  await t.checkText(out.with(JSON.stringify(afterRefusal.ok ? afterRefusal.value.secrets["weatherapi"]?.purposes : null)), "[\"forecast-trick\",\"umbrella-reminder\"]");
+  t.check(afterRefusal.ok ? afterRefusal.value.secrets["weatherapi"]?.purposes : null, ["forecast-trick", "umbrella-reminder"]);
 
   // The three sources reach a display side by side, labelled — observed is the one
   // that can contradict the other two, which is why it is never merged into them:
@@ -143,8 +139,7 @@ void test("lastUsed is stamped at most hourly, but a purpose label is written th
   const status = await boxSecretStatus("demo-box");
   const [granted] = status.granted;
   invariant(granted, "the box holds a grant");
-  await t.checkText(out.with(print(formatSecretUsesLines(granted.uses).join("\n"))), `also declared: forecasts in the morning brief
-observed: forecast-trick, umbrella-reminder`);
+  t.check(formatSecretUsesLines(granted.uses), ["also declared: forecasts in the morning brief", "observed: forecast-trick, umbrella-reminder"]);
 });
 
 // ## A declared reason that repeats a built-in one is not shown twice

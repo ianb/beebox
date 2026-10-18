@@ -12,12 +12,16 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate } from "agent-doctest/check";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
+
+// Session ids and git refs in a run card are minted per run.
+const sessionId = any(String).startsWith("fake-");
+const gitRef = any(String).matches(/^[\da-f]{40}$/);
 
 const QUOTA_ERROR = "Codex is out of usage quota until Aug 19, 11:34 PM (account-level: affects every box and task using this Codex account). Provider message: You've hit your usage limit.";
 
@@ -33,8 +37,6 @@ const UNAVAILABILITY = {
 
 // ## The step fails with the cause; nothing retries after it
 void test("The step fails with the cause; nothing retries after it", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -83,23 +85,34 @@ steps:
     procedureNameOrPath: "quota",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-  print(`agent runs: ${agentRuns}`);
-  print(`validate calls: ${validateCalls}`);
   const boxFiles = await box.list("box");
-  print(`shell ran: ${boxFiles.includes("shell-ran.txt")}`);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("quota_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`step status: ${run?.steps[0]?.status}`);
-  // doctest:L63
-  // doctest:L77
-  // doctest:L89
-  await t.checkText(out2.with(print(`step detail carries the cause: ${run?.steps[0]?.run?.stdout?.includes("out of usage quota until")}`)), `success: false
-agent runs: 1
-validate calls: 0
-shell ran: false
-step status: failed
-step detail carries the cause: true`);
+  // Neither the shell nor the validation ran, and the step detail carries the cause.
+  t.check({ result, agentRuns, validateCalls, boxFiles, step: run?.steps[0] }, {
+    result: {
+      ok: false,
+      error: {
+        cause: "step-failed",
+        message: `Procedure quota failed at step: work — ${QUOTA_ERROR}`,
+      },
+    },
+    agentRuns: 1,
+    validateCalls: 0,
+    boxFiles: "",
+    step: {
+      id: "work",
+      status: "failed",
+      "started-at": isoDate(),
+      "completed-at": isoDate(),
+      run: {
+        "session-id": sessionId,
+        stdout: QUOTA_ERROR,
+        error: QUOTA_ERROR,
+        "git-ref": gitRef,
+      },
+    },
+  });
 });

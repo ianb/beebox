@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { isoDate } from "agent-doctest/check";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,8 +42,6 @@ async function outcome(opts: ResolveSecretOptions) {
 
 // ## A granted server secret resolves, and the resolve is logged
 void test("A granted server secret resolves, and the resolve is logged", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -58,21 +56,13 @@ void test("A granted server secret resolves, and the resolve is logged", async (
   const slug = await boxSlug(box.root);
   await setSecret({ name: "mistral", value: "placeholder-value-1" });
   await grantSecret({ slug, name: "mistral", access: "server" });
-  await t.checkText(out.with(await outcome({ boxRoot: box.root, name: "mistral", purpose: "transcription", access: "server" })), "ok:placeholder-value-1");
+  t.check(await outcome({ boxRoot: box.root, name: "mistral", purpose: "transcription", access: "server" }), "ok:placeholder-value-1");
 
   // The log line names the box, the secret, and the purpose — never the value:
 
   // doctest:L57
   const line = JSON.parse((await readFile(accessLogSegmentPath(new Date().toISOString()), "utf-8")).trim());
-  print(`event: ${line.event}`);
-  print(`box matches: ${line.box === slug}`);
-  print(`secret: ${line.secret}`);
-  print(`purpose: ${line.purpose}`);
-  await t.checkText(out.with(print(`leaks the value: ${JSON.stringify(line).includes("placeholder-value-1")}`)), `event: resolve
-box matches: true
-secret: mistral
-purpose: transcription
-leaks the value: false`);
+  t.check(line, { ts: isoDate(), box: slug, secret: "mistral", purpose: "transcription", event: "resolve" });
 });
 
 // ## Access levels: `agent` includes server access, `server` does not include agent
@@ -80,8 +70,6 @@ leaks the value: false`);
 // The level lives on the GRANT, not on the secret: the same secret can be
 // server-only for one box and agent-resolvable for another.
 void test("The level lives on the GRANT, not on the secret:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -100,20 +88,26 @@ void test("The level lives on the GRANT, not on the secret:", async (t) => {
   await grantSecret({ slug, name: "agentok", access: "agent" });
 
   // doctest:L90
-  print(`server grant, server ask: ${await outcome({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "server" })}`);
-  print(`server grant, agent ask: ${await outcome({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "agent" })}`);
-  print(`agent grant, server ask: ${await outcome({ boxRoot: box.root, name: "agentok", purpose: "p", access: "server" })}`);
-  await t.checkText(out.with(print(`agent grant, agent ask: ${await outcome({ boxRoot: box.root, name: "agentok", purpose: "p", access: "agent" })}`)), `server grant, server ask: ok:placeholder-value-2
-server grant, agent ask: agent-access-not-granted
-agent grant, server ask: ok:placeholder-value-3
-agent grant, agent ask: ok:placeholder-value-3`);
+  t.check(await outcome({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "server" }), "ok:placeholder-value-2");
+  t.check(await outcome({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "agent" }), "agent-access-not-granted");
+  t.check(await outcome({ boxRoot: box.root, name: "agentok", purpose: "p", access: "server" }), "ok:placeholder-value-3");
+  t.check(await outcome({ boxRoot: box.root, name: "agentok", purpose: "p", access: "agent" }), "ok:placeholder-value-3");
 
   // The `agent-access-not-granted` message is written for relay — the agent reads it
   // out and the boxholder knows exactly which action fixes it:
 
   // doctest:L105
   const refused = await resolveSecret({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "agent" });
-  await t.checkText(out.with(refused.ok ? "resolved" : refused.error.message), "The secret \"serveronly\" is granted to this box (\"«*»\") for server use only, and box code asked for the value. Ask the boxholder to raise the grant to agent access.");
+  t.check(refused, {
+    ok: false,
+    error: {
+      name: "SecretAgentAccessNotGrantedError",
+      message: `The secret "serveronly" is granted to this box ("${slug}") for server use only, and box code asked for the value. Ask the boxholder to raise the grant to agent access.`,
+      secretName: "serveronly",
+      kind: "agent-access-not-granted",
+      boxSlug: slug,
+    },
+  });
 });
 
 // ## Every other refusal kind
@@ -121,8 +115,6 @@ agent grant, agent ask: ok:placeholder-value-3`);
 // Each condition is distinct because its remediation is: declare it, fill it,
 // grant it, clean up a stale grant, or call the boxholder.
 void test("Each condition is distinct because its remediation is:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -137,30 +129,26 @@ void test("Each condition is distinct because its remediation is:", async (t) =>
   const slug = await boxSlug(box.root);
 
   // doctest:L125
-  print(`no entry, no grant: ${await outcome({ boxRoot: box.root, name: "nothing", purpose: "p", access: "server" })}`);
+  t.check(await outcome({ boxRoot: box.root, name: "nothing", purpose: "p", access: "server" }), "unknown-secret");
 
   // doctest:L127
   await setSecret({ name: "ungranted", value: "placeholder-value-4" });
-  print(`entry, no grant: ${await outcome({ boxRoot: box.root, name: "ungranted", purpose: "p", access: "server" })}`);
+  t.check(await outcome({ boxRoot: box.root, name: "ungranted", purpose: "p", access: "server" }), "not-granted");
 
   // doctest:L130
   await declareSecret({ name: "declared", note: "awaiting a value" });
   await grantSecret({ slug, name: "declared", access: "server" });
-  print(`granted, no value: ${await outcome({ boxRoot: box.root, name: "declared", purpose: "p", access: "server" })}`);
+  t.check(await outcome({ boxRoot: box.root, name: "declared", purpose: "p", access: "server" }), "empty-slot");
 
   // doctest:L134
   await setSecret({ name: "doomed", value: "placeholder-value-5" });
   await grantSecret({ slug, name: "doomed", access: "server" });
   await removeSecret("doomed");
-  print(`grant outlived entry: ${await outcome({ boxRoot: box.root, name: "doomed", purpose: "p", access: "server" })}`);
+  t.check(await outcome({ boxRoot: box.root, name: "doomed", purpose: "p", access: "server" }), "dangling-grant");
 
   // doctest:L139
   await writeFile(secretsFile(), "{ not json");
-  await t.checkText(out.with(print(`store corrupt: ${await outcome({ boxRoot: box.root, name: "ungranted", purpose: "p", access: "server" })}`)), `no entry, no grant: unknown-secret
-entry, no grant: not-granted
-granted, no value: empty-slot
-grant outlived entry: dangling-grant
-store corrupt: store-unreadable`);
+  t.check(await outcome({ boxRoot: box.root, name: "ungranted", purpose: "p", access: "server" }), "store-unreadable");
 
   // Refusals are logged too, each carrying its kind:
 
@@ -168,9 +156,8 @@ store corrupt: store-unreadable`);
   const kinds = (await readFile(accessLogSegmentPath(new Date().toISOString()), "utf-8"))
     .trim()
     .split("\n")
-    .map((l) => JSON.parse(l).refusal)
-    .join(",");
-  await t.checkText(out.with(kinds), "unknown-secret,not-granted,empty-slot,dangling-grant,store-unreadable");
+    .map((l) => JSON.parse(l).refusal);
+  t.check(kinds, ["unknown-secret", "not-granted", "empty-slot", "dangling-grant", "store-unreadable"]);
 });
 
 // ## A failed probe makes a successful resolve `suspect`
@@ -203,8 +190,6 @@ void test("The probe machinery itself is a later chunk; the resolver only reads 
 // Summarized into the entry (hourly at most) so deleting an old log segment never
 // loses "is this still in use".
 void test("Summarized into the entry (hourly at most) so deleting an old log segment nev...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -221,9 +206,7 @@ void test("Summarized into the entry (hourly at most) so deleting an old log seg
   await grantSecret({ slug, name: "used", access: "server" });
   await resolveSecret({ boxRoot: box.root, name: "used", purpose: "p", access: "server" });
   const stamped = JSON.parse(await readFile(secretsFile(), "utf-8"));
-  print(`stamped: ${typeof stamped.secrets.used.lastUsed[slug] === "string"}`);
-  await t.checkText(out.with(print(`boxes: ${Object.keys(stamped.secrets.used.lastUsed).length}`)), `stamped: true
-boxes: 1`);
+  t.check(stamped.secrets.used.lastUsed, { [slug]: isoDate() });
 });
 
 // ## A status-only probe is logged, but is not a USE
@@ -235,8 +218,6 @@ boxes: 1`);
 // a dashboard polling health every minute would otherwise pin a dead key's
 // last-use to now forever.
 void test("observe:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -254,11 +235,9 @@ void test("observe:", async (t) => {
   await resolveSecret({ boxRoot: box.root, name: "probed", purpose: "health-check", access: "server", observe: false });
   const probed = JSON.parse(await readFile(secretsFile(), "utf-8")).secrets.probed;
   const logged = JSON.parse((await readFile(accessLogSegmentPath(new Date().toISOString()), "utf-8")).trim());
-  print(`logged: ${logged.event} ${logged.purpose}`);
-  print(`lastUsed: ${JSON.stringify(probed.lastUsed)}`);
-  await t.checkText(out.with(print(`purposes: ${JSON.stringify(probed.purposes)}`)), `logged: resolve health-check
-lastUsed: undefined
-purposes: undefined`);
+  t.check(logged, { ts: isoDate(), box: slug, secret: "probed", purpose: "health-check", event: "resolve" });
+  t.check(probed.lastUsed, undefined);
+  t.check(probed.purposes, undefined);
 
   // A real resolve — `observe` omitted — stamps both, and the probe's label is
   // nowhere in the observed list:
@@ -266,9 +245,8 @@ purposes: undefined`);
   // doctest:L245
   await resolveSecret({ boxRoot: box.root, name: "probed", purpose: "real-work", access: "server" });
   const used = JSON.parse(await readFile(secretsFile(), "utf-8")).secrets.probed;
-  print(`stamped: ${typeof used.lastUsed[slug] === "string"}`);
-  await t.checkText(out.with(print(`purposes: ${JSON.stringify(used.purposes)}`)), `stamped: true
-purposes: ["real-work"]`);
+  t.check(used.lastUsed, { [slug]: isoDate() });
+  t.check(used.purposes, ["real-work"]);
 });
 
 // ## `purpose` is a label, not free text

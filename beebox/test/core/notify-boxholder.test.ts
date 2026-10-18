@@ -85,10 +85,17 @@ web-push sent`);
 
   // doctest:L81
   const slug = await boxSlug(box.root);
-  t.check(push.sent[0]?.payload.url, `/${slug}/browse/_content/inbox/field-trip.email.card`);
-
-  // doctest:L85
-  t.check(push.sent[0]?.payload.silent, false);
+  t.check(push.sent, [{
+    endpoint: "https://push.example/phone",
+    payload: {
+      icon: `${slug}/icon-192.png`,
+      title: "Field trip form due Friday",
+      body: "The school emailed: the form is due Friday.",
+      url: `/${slug}/browse/_content/inbox/field-trip.email.card`,
+      tag: undefined,
+      silent: false,
+    },
+  }]);
 
   // The intent line is in the log under the id the result returns, and open apps
   // got the live bus event with the same id and url:

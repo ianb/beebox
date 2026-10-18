@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing } from "agent-doctest/check";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -131,7 +132,10 @@ void test("Every tsx example in the generated view guide (generateViewsDoc, src/
   const blocks = [...generateViewsDoc().matchAll(/`{3}tsx\n([\S\s]*?)`{3}/g)].flatMap((m) => m[1] ?? []);
   const failing: string[] = [];
   for (const block of blocks) if ((await checkViewMarkdown(block)).length > 0) failing.push(block.slice(0, 60));
-  t.check([blocks.length > 5, blocks.some((b) => b.includes("<Markdown card={card}>")), JSON.stringify(failing)].join(" "), "true true []");
+  // The guide holds more than five examples (a sixth block exists) and teaches `<Markdown card={card}>`.
+  t.check(blocks.slice(5), containing([any(String)]));
+  t.check(blocks, containing([any(String).includes("<Markdown card={card}>")]));
+  t.check(failing, []);
 });
 
 // ## The hook message
@@ -154,7 +158,7 @@ void test("lintViewMarkdown(path, { root }) is what bbx validate --hook and the 
   t.check(await lintViewMarkdown(join(dir, "clean.tsx"), { root: dir }), null);
 
   // doctest:L136
-  await t.checkText(await lintViewMarkdown(join(dir, "raw.tsx"), { root: dir }), `View renders Markdown by hand:
+  t.check(await lintViewMarkdown(join(dir, "raw.tsx"), { root: dir }), `View renders Markdown by hand:
   line 1: reads \`card.body\` outside \`<Markdown>\`
 Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks something this view needs, say so in \`_config/feedback/\`.`);
 });
@@ -194,7 +198,7 @@ export default ({ card }) => <Body card={card} />;`);
 export const Body = ({ card }) => card.body ? <Markdown card={card}>{card.body}</Markdown> : null;`);
 
   // doctest:L175
-  await t.checkText(await lintViewMarkdown(join(views, "event.tsx"), { root: box }), `View renders Markdown by hand:
+  t.check(await lintViewMarkdown(join(views, "event.tsx"), { root: box }), `View renders Markdown by hand:
   src/views/lib/prose.tsx line 3: reads \`card.body\` outside \`<Markdown>\`
   src/views/lib/strip.ts line 2: has the Markdoc delimiter \`{%\` in a literal
 Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks something this view needs, say so in \`_config/feedback/\`.`);
@@ -204,7 +208,7 @@ Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks som
   // against the helper itself:
 
   // doctest:L187
-  await t.checkText(await lintViewMarkdown(join(views, "lib", "strip.ts"), { root: box }), `View renders Markdown by hand:
+  t.check(await lintViewMarkdown(join(views, "lib", "strip.ts"), { root: box }), `View renders Markdown by hand:
   line 2: has the Markdoc delimiter \`{%\` in a literal
   src/views/lib/prose.tsx line 3: reads \`card.body\` outside \`<Markdown>\`
 Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks something this view needs, say so in \`_config/feedback/\`.`);

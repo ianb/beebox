@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { gcProcedureRuns } from "../../../src/core/procedure/gc.js";
 import { MAX_RUNS_PER_PROCEDURE } from "../../../src/core/procedure/run-expiry.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -28,8 +27,6 @@ function runCard(attrs: string): string {
 
 // ## Expired runs are deleted; newest, pinned, and unexpired survive
 void test("Expired runs are deleted; newest, pinned, and unexpired survive", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -69,21 +66,22 @@ void test("Expired runs are deleted; newest, pinned, and unexpired survive", asy
   const ctx = { boxRoot: box.root, writeLine: (s: string) => output.push(s), write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
-  print(`success: ${result.ok}`);
-  print(`removed: ${result.value.removed.toSorted().join(", ")}`);
 
   // doctest:L60
   const left = await box.list("_bookkeeping/procedure/runs");
   const dirs = left.split("\n").filter(f => !f.endsWith(".card") && !f.endsWith(".gitkeep")).map(f => f.replace("_bookkeeping/procedure/runs/", ""));
-  print(`kept: ${dirs.join(", ")}`);
 
   // doctest:L64
   // The deletions were committed in one sweep
   const log = await getLog(box.root, 1);
-  await t.checkText(out.with(print(`commit: ${log[0]?.subject}`)), `success: true
-removed: alpha_2025-01-01T0000, gamma_2025-01-01T0000
-kept: alpha_2025-02-01T0000, beta_2025-01-01T0000, beta_2026-06-01T0000, gamma_2099-01-01T0000
-commit: GC procedure runs: removed 2 expired run dir(s)`);
+  t.check(
+    { removed: result.value.removed.toSorted(), kept: dirs, commit: log[0]?.subject },
+    {
+      removed: ["alpha_2025-01-01T0000", "gamma_2025-01-01T0000"],
+      kept: ["alpha_2025-02-01T0000", "beta_2025-01-01T0000", "beta_2026-06-01T0000", "gamma_2099-01-01T0000"],
+      commit: "GC procedure runs: removed 2 expired run dir(s)",
+    },
+  );
 });
 
 // ## The per-procedure cap evicts oldest runs beyond the ceiling
@@ -93,8 +91,6 @@ commit: GC procedure runs: removed 2 expired run dir(s)`);
 // overflow is reclaimed. This bounds a procedure that fails (or completes)
 // every tick before the 90d/30d age clock ever kicks in.
 void test("Even when every run is unexpired, a procedure keeps at most MAXRUNSPERPROCEDU...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -109,8 +105,9 @@ void test("Even when every run is unexpired, a procedure keeps at most MAXRUNSPE
   // Seed cap+3 unexpired runs for one procedure. Dir names end in a sortable
   // timestamp; only the ceiling (not expiry) can prune these.
   const total = MAX_RUNS_PER_PROCEDURE + 3;
+  const stampOf = (i: number) => `2025-01-01T${String(i).padStart(4, "0")}`;
   for (let i = 0; i < total; i++) {
-    const stamp = `2025-01-01T${String(i).padStart(4, "0")}`;
+    const stamp = stampOf(i);
     await box.write(`_bookkeeping/procedure/runs/loop_${stamp}/run.procedure-run.card`,
       runCard("procedure=\"loop\" outcome=\"completed\" started-at=\"2025-01-01T00:00:00Z\" completed-at=\"2025-01-01T00:01:00Z\" expires=\"2099-01-01T00:00:00Z\""));
   }
@@ -123,12 +120,12 @@ void test("Even when every run is unexpired, a procedure keeps at most MAXRUNSPE
 
   // doctest:L102
   const left = await box.list("_bookkeeping/procedure/runs");
-  const kept = left.split("\n").filter(f => f.includes("loop_") && !f.endsWith(".card")).length;
-  print(`removed count: ${result.value.removed.length}`);
-  print(`oldest removed: ${result.value.removed.toSorted()[0]}`);
-  await t.checkText(out.with(print(`kept equals cap: ${kept === MAX_RUNS_PER_PROCEDURE}`)), `removed count: 3
-oldest removed: loop_2025-01-01T0000
-kept equals cap: true`);
+  const kept = left.split("\n").filter(f => f.includes("loop_") && !f.endsWith(".card")).map(f => f.replace("_bookkeeping/procedure/runs/", ""));
+  // The three oldest go; the newest MAX_RUNS_PER_PROCEDURE stay.
+  t.check({ removed: result.value.removed.toSorted(), kept: kept.toSorted() }, {
+    removed: [0, 1, 2].map((i) => `loop_${stampOf(i)}`),
+    kept: Array.from({ length: MAX_RUNS_PER_PROCEDURE }, (_, i) => `loop_${stampOf(i + 3)}`),
+  });
 });
 
 // ## Crashed runs expire on the failed-run clock
@@ -138,8 +135,6 @@ kept equals cap: true`);
 // it may genuinely be running — it expires at started-at plus the failed-run
 // default, since crash debris is failure-like.
 void test("A run card with no outcome (the engine crashed or was killed) has no complete...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -166,7 +161,7 @@ void test("A run card with no outcome (the engine crashed or was killed) has no 
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
-  await t.checkText(out.with(print(`removed: ${result.value.removed.join(", ")}`)), "removed: crash_2025-01-01T0000");
+  t.check(result.value.removed, ["crash_2025-01-01T0000"]);
 });
 
 // ## A fresh running card is never collected
@@ -174,8 +169,6 @@ void test("A run card with no outcome (the engine crashed or was killed) has no 
 // The same stuck-running card with a fresh mtime is treated as live work
 // and left alone, even though its started-at is ancient.
 void test("The same stuck-running card with a fresh mtime is treated as live work and le...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -197,13 +190,11 @@ void test("The same stuck-running card with a fresh mtime is treated as live wor
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
-  await t.checkText(out.with(print(`removed: ${result.value.removed.length}`)), "removed: 0");
+  t.check(result.value.removed, []);
 });
 
 // ## Empty and missing runs dirs are fine
 void test("Empty and missing runs dirs are fine", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -216,5 +207,5 @@ void test("Empty and missing runs dirs are fine", async (t) => {
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
-  await t.checkText(out.with(print(`success: ${result.ok}, removed: ${result.value.removed.length}`)), "success: true, removed: 0");
+  t.check(result.value.removed, []);
 });

@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import {
   runReactor,
 } from "../../../src/core/reactor/engine/core.js";
@@ -73,20 +74,15 @@ void test("Single batch job processed by agent", async (t) => {
   });
 
   // doctest:L73
-  t.check(result.success, true);
-
-  // doctest:L76
-  t.check(result.jobsProcessed, 1);
-
-  // doctest:L79
-  t.check(result.jobsRemaining, 0);
+  t.check(result, { success: true, jobsProcessed: 1, jobsRemaining: 0 });
 
   // doctest:L82
   // System prompt no longer carries the absolute box path (dropped so it
   // doesn't leak this machine's temp/home directory into agent context).
   const fakeAgent = created[0];
   invariant(fakeAgent, "the reactor created its agent");
-  t.check(fakeAgent.invocations[0]?.systemPrompt?.includes(box.root), false);
+  // The prompts are large generated text, so the check is on what the prompt must not hold.
+  t.check(fakeAgent.invocations.map((i) => i.systemPrompt), [not(any(String).includes(box.root))]);
 
   // doctest:L89
   await box.cleanup();
@@ -124,19 +120,14 @@ void test("Multiple batch jobs in one session", async (t) => {
   });
 
   // doctest:L121
-  t.check(result.jobsProcessed, 2);
+  t.check(result, { success: true, jobsProcessed: 2, jobsRemaining: 0 });
 
   // doctest:L124
   // Single agent session (one invocation with both jobs)
   const fakeAgent = created[0];
   invariant(fakeAgent, "the reactor created its agent");
-  await t.checkText(fakeAgent.invocations.length, "1");
-
-  // doctest:L130
-  t.check(fakeAgent.invocations[0]?.prompt.includes("Task one"), true);
-
-  // doctest:L133
-  t.check(fakeAgent.invocations[0]?.prompt.includes("Task two"), true);
+  // The prompt is large generated text: it holds both jobs.
+  t.check(fakeAgent.invocations.map((i) => i.prompt), [any(String).includes("Task one").includes("Task two")]);
 
   // doctest:L136
   await box.cleanup();
@@ -168,7 +159,7 @@ void test("Dry run does not invoke agent", async (t) => {
   t.check(agentCreated, false);
 
   // doctest:L162
-  t.check(result.jobsProcessed, 0);
+  t.check(result, { success: true, jobsProcessed: 0, jobsRemaining: 1 });
 
   // doctest:L165
   await box.cleanup();
@@ -200,7 +191,7 @@ void test("skipLowPriority skips when only low-priority jobs exist", async (t) =
   t.check(agentCreated, false);
 
   // doctest:L191
-  t.check(result.jobsRemaining, 1);
+  t.check(result, { success: true, jobsProcessed: 0, jobsRemaining: 1 });
 
   // doctest:L194
   await box.cleanup();
@@ -240,11 +231,8 @@ void test("Lock prevents concurrent runs", async (t) => {
   });
 
   // doctest:L220
-  t.check(
-    // Reactor bailed due to lock
-    result.jobsProcessed,
-    0,
-  );
+  // Reactor bailed due to lock
+  t.check(result, { success: true, jobsProcessed: 0, jobsRemaining: 0, skipped: "locked" });
 });
 
 // ### Stale lock is cleaned up
@@ -289,11 +277,8 @@ void test("Stale lock is cleaned up", async (t) => {
   });
 
   // doctest:L269
-  t.check(
-    // Stale lock was cleaned up and reactor ran
-    result.jobsProcessed,
-    1,
-  );
+  // Stale lock was cleaned up and reactor ran
+  t.check(result, { success: true, jobsProcessed: 1, jobsRemaining: 0 });
 
   // doctest:L273
   await box.cleanup();
@@ -336,10 +321,7 @@ void test("The reactor loops when jobs remain after a cycle.", async (t) => {
   });
 
   // doctest:L310
-  t.check(result.jobsProcessed, 2);
-
-  // doctest:L313
-  t.check(result.jobsRemaining, 0);
+  t.check(result, { success: true, jobsProcessed: 2, jobsRemaining: 0 });
 
   // doctest:L316
   t.check(
