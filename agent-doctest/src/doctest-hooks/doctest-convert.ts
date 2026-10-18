@@ -219,9 +219,13 @@ function emitExample(ex: Example | ThrowsExample, ctx: { md: number; oracle: Rea
   };
 }
 
-/** Code with its line comments and one-line string literals blanked out, to find names it uses. */
+/**
+ * Code with its line comments and quoted strings blanked out, to find names
+ * it uses. One left-to-right pass, so a `//` inside a string is not a
+ * comment. Template literals are kept: a `${print(...)}` inside one is a use.
+ */
 function withoutStringsAndComments(code: string): string {
-  return code.replace(/\/\/.*$/gm, "").replace(/"(?:[^\n"\\]|\\.)*"|'(?:[^\n'\\]|\\.)*'|`(?:[^\\`]|\\.)*`/g, '""');
+  return code.replace(/"(?:[^\n"\\]|\\.)*"|'(?:[^\n'\\]|\\.)*'|\/\/.*$/gm, (m) => (m.startsWith("//") ? "" : '""'));
 }
 
 /** A name the runtime binds unless setup declares it; the converted file must bind it the same way. */

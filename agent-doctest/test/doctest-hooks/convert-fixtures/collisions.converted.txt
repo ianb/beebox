@@ -61,3 +61,13 @@ void tapTest2("print passed along rather than called:", async (tap2) => {
   await tap2.checkText(out2.with(1), `x
 1`);
 });
+
+// A `//` inside a string is not a comment that hides a `print` after it:
+void tapTest2("A // inside a string is not a comment that hides a print after it:", async (tap2) => {
+  const out2 = printed2();
+  const print = out2.print;
+  // doctest:L61
+  const url = "http://example.com"; print("y");
+  await tap2.checkText(out2.with(url), `y
+http://example.com`);
+});

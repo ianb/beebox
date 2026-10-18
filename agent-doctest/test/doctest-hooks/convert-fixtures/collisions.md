@@ -54,3 +54,12 @@ p("x");
 => x
 1
 ```
+
+A `//` inside a string is not a comment that hides a `print` after it:
+
+```ts
+const url = "http://example.com"; print("y");
+url
+=> y
+http://example.com
+```
