@@ -32,8 +32,8 @@ A card whose frontmatter fails validation has no schema facts, so the front
 shows all its fields:
 
 ```ts continue
-await box.write("_content/Broken.memo.card", "---\nstatus: [not, a, status]\n---\nBody\n");
-const broken = await caller(box.root).card.get({ path: "_content/Broken.memo.card" });
+await box.write("_content/Broken.doc.card", "---\ntitle: [not, a, title]\n---\nBody\n");
+const broken = await caller(box.root).card.get({ path: "_content/Broken.doc.card" });
 [broken.validationError === undefined, broken.schema]
 => [false, null]
 ```

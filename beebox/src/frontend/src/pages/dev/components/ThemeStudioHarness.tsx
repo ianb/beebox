@@ -6,7 +6,15 @@ import { Button } from "../../../components/ui/Button";
 import { CalloutStack } from "../../../components/chat/CalloutBlock";
 import { ComposerSpecimen } from "./ComposerStatesHarness";
 
+import { useDoodlebitMotion } from "../../../components/themes/useDoodlebitMotion";
+
 const ROUTE = "/$boxSlug/dev-harness/dev/theme-studio";
+const LEGACY_STUDY_IDS: Record<string, string> = {
+  "phosphor-study": "phosphor",
+  "overprint-study": "overprint",
+  "posy-study": "posy",
+};
+function canonicalThemeId(name: string): string { return LEGACY_STUDY_IDS[name] ?? name; }
 const SAMPLE = `A small collection of ideas for a neighborhood seed exchange. **Bring something simple**, and leave room for surprises.
 
 ## Before Saturday
@@ -46,14 +54,16 @@ const FIELDS = [
 
 export function ThemeStudioHarness() {
   const search = useSearch({ from: ROUTE });
+  const systemName = canonicalThemeId(search.system);
+  const cardName = canonicalThemeId(search.card);
+  const surface = useDoodlebitMotion(systemName === "doodlebit");
   const navigate = useNavigate({ from: "/$boxSlug/dev/theme-studio" });
-  const system = THEME_CATALOG.find((theme) => theme.name === search.system);
-  const card = THEME_CATALOG.find((theme) => theme.name === search.card);
+  const system = THEME_CATALOG.find((theme) => theme.name === systemName);
+  const card = THEME_CATALOG.find((theme) => theme.name === cardName);
   return <div className="bbx-theme-studio min-h-screen">
     <section aria-label="Theme studio controls" className="bg-white text-warm-900 px-3 py-2 border-b border-warm-200">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2">
         <h1 className="text-base font-semibold">Theme studio</h1>
-        <p className="text-xs text-warm-600">Fixed samples. Composer and navigation are styling specimens.</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {FIELDS.map(({ key, label, list }) => <label key={key} className="flex flex-col gap-1 text-xs" htmlFor={`bbx-studio-${key}`}>
@@ -69,21 +79,21 @@ export function ThemeStudioHarness() {
       <datalist id="bbx-studio-system-names">
         {THEME_CATALOG.filter((theme) => theme.chrome).map((theme) => <option key={theme.name} value={theme.name}>{theme.label}</option>)}
         <option value="draft" />
-        <option value="undertow" /><option value="deck-study" /><option value="patina" />
+        <option value="undertow" /><option value="deck-study" /><option value="patina-study" /><option value="rose-trellis-study" /><option value="gold-thread-study" />
       </datalist>
       <datalist id="bbx-studio-card-names">
         {THEME_CATALOG.filter((theme) => !theme.systemOnly).map((theme) => <option key={theme.name} value={theme.name}>{theme.label}</option>)}
         <option value="draft" />
-        <option value="undertow" /><option value="deck-study" /><option value="patina" />
+        <option value="undertow" /><option value="deck-study" /><option value="patina-study" /><option value="rose-trellis-study" /><option value="gold-thread-study" />
       </datalist>
       <datalist id="bbx-studio-system-stocks">{(system?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
       <datalist id="bbx-studio-card-stocks">{(card?.stocks ?? ["neutral"]).map((stock) => <option key={stock} value={stock} />)}</datalist>
     </section>
-    <div className="bbx-box-presentation min-h-screen" data-chrome-theme={search.system} data-chrome-stock={search.systemStock}>
+    <div ref={surface} className="bbx-box-presentation min-h-screen" data-chrome-theme={systemName} data-chrome-stock={search.systemStock}>
       <NavigationSample />
       <div className="grid lg:grid-cols-2 gap-4 p-3 sm:p-5 items-start">
         <ConversationSample />
-        <CardSample name={search.card} stock={search.cardStock} />
+        <CardSample name={cardName} stock={search.cardStock} />
       </div>
     </div>
   </div>;
@@ -99,7 +109,6 @@ function ConversationSample() {
       <CalloutStack callouts={[{ context: "Ready to review", body: "The draft checklist is ready. **Bring spare envelopes** for new arrivals." }]} />
     </div>
     <ComposerSpecimen spec={COMPOSER} includeControlIds showHeader={false} material />
-    <p className="text-xs bg-white text-warm-600 px-3 py-2">Composer controls are visual samples; they do not send or record.</p>
   </section>;
 }
 
@@ -118,7 +127,7 @@ function CardSample({ name, stock }: { name: string; stock: string }) {
   return <div id="studio-reading" className="min-w-0">
     <CardThemeSurface theme={{ choice: { name, stock }, origin: { kind: "engine" }, problem: null }}
       title="A little room to grow" detail="Seed exchange · Saturday" symbol={null} boxSlug={undefined} mode="companion"
-      properties={<><h2>Properties</h2><p>Fixed sample content for checking the back of a card.</p><dl><dt>Theme</dt><dd>{name} / {stock}</dd><dt>File</dt><dd>Seed exchange.memo.card</dd></dl></>}
+      properties={<><h2>Properties</h2><p>Fixed sample content for checking the back of a card.</p><dl><dt>Theme</dt><dd>{name} / {stock}</dd><dt>File</dt><dd>Seed exchange.doc.card</dd></dl></>}
     >
       <ReadingSample />
     </CardThemeSurface>

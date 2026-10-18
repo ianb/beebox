@@ -96,7 +96,9 @@ process.env["BBX_NO_URLCHECK"] = "1";
 const STALE_MS = 2 * 60 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000;
 const SWEEP_MAX_REMOVALS = 2000;
-const SWEEP_PREFIXES = ["bbx-doctest-", "bbx-test-home-"];
+// `bbx-test-` covers every isolation preload's per-process dir (home, auth,
+// secrets, origin); see `process-temp-dir.ts`.
+const SWEEP_PREFIXES = ["bbx-doctest-", "bbx-test-"];
 
 function claimSweep(stamp: string): boolean {
   try {

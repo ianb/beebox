@@ -21,6 +21,10 @@
  *
  * The baseline is the ledger's own header line, not the installed pin: the
  * ledger records versions it has *reviewed*, which is ahead of what is applied.
+ * So a version reviewed while it was still settling has no newer release to
+ * start a session once it settles. `update-agent-sdk --check` compares the pins
+ * with the newest settled versions, and a family it reports behind starts a
+ * session too (2026-10-10 to 10-12 waited on this).
  *
  * Was the launchd half of `bin/update-agent-sdk-scheduled.sh`, which resumed
  * the session unconditionally, every day, whether or not anything had shipped.
@@ -126,16 +130,46 @@ for (const { channel, npmName } of PACKAGES) {
   );
 }
 
-// Nothing published since the last turn: exit 0, silently, and start no
-// session. This is the normal outcome most days.
-if (newCount === 0) process.exit(0);
+/**
+ * The families whose pin is behind the newest settled version, as
+ * `update-agent-sdk --check` words them. It exits 1 when any family is behind
+ * and 0 when none is; anything else is a check that could not run. An uncaught
+ * error also exits 1, so a behind report must end with the check's closing line.
+ */
+async function settledButUnapplied(): Promise<string[]> {
+  const result = await execa("node", ["--import", "tsx", path.join(REPO_ROOT, "bin", "update-agent-sdk.ts"), "--check"], {
+    cwd: REPO_ROOT,
+    reject: false,
+  });
+  if (result.exitCode === 0) return [];
+  if (result.exitCode !== 1) refuse(`update-agent-sdk --check exited ${String(result.exitCode)}: ${result.stderr.trim()}`);
+  if (!result.stdout.trimEnd().endsWith("Run `pnpm update-agent-sdk` to bump.")) {
+    refuse(`update-agent-sdk --check exited 1 without finishing: ${result.stderr.trim()}`);
+  }
+  const lines = result.stdout.split("\n").filter((line) => line.includes(" is behind: "));
+  if (lines.length === 0) refuse(`update-agent-sdk --check exited 1 but named no family behind: ${result.stdout.trim()}`);
+  return lines;
+}
 
-const title = `${String(newCount)} unreviewed release${newCount === 1 ? "" : "s"}`;
+const behind = await settledButUnapplied();
+
+// Nothing published since the last turn and every pin current: exit 0,
+// silently, and start no session. This is the normal outcome most days.
+if (newCount === 0 && behind.length === 0) process.exit(0);
+
+const titleParts = [
+  ...(newCount === 0 ? [] : [`${String(newCount)} unreviewed release${newCount === 1 ? "" : "s"}`]),
+  ...(behind.length === 0 ? [] : [`${String(behind.length)} settled bump${behind.length === 1 ? "" : "s"} not yet applied`]),
+];
+const title = titleParts.join(", ");
 const body = [
   "Published since the ledger's last reviewed versions:",
   "",
   ...sections,
   "",
+  ...(behind.length === 0
+    ? []
+    : ["Settled, not yet applied (`pnpm update-agent-sdk --check`):", "", ...behind.map((line) => `- ${line}`), ""]),
   "This head checked versions only — it read no changelogs and judged no",
   "relevance. Assess each one on its channel, update",
   "`schedules/sdk-update/agent-sdk-notes.md`, and bump the pin if the rules in",

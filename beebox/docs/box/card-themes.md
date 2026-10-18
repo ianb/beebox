@@ -24,8 +24,9 @@ theme:
 Choose **Use default** to remove the card override and let the box resolve the
 theme. The available card built-ins are `plain` (`neutral`), `paper` (`cream`,
 `manila`, `blue`), `post-it` (`yellow`, `rose`, `mint`), `letter-set`
-(`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), `ribbon` (`flow`), and
-`deck` (`panels`). The system-only `spectrum` (`gradient`) and
+(`strawberry`, `lemon`, `sky`), `bloom` (`cutouts`), `ribbon` (`flow`),
+`deck` (`panels`), `night-atlas` (`lights`), `rose-trellis` (`textile`), and
+`gold-thread` (`textile`). The system-only `spectrum` (`gradient`) and
 `candy` (`strawberry`) themes are available for app chrome. Name the theme and
 stock together; a stock from another theme is not inherited.
 
@@ -65,7 +66,7 @@ chrome choice:
   "presentation": {
     "default": { "name": "plain", "stock": "neutral" },
     "cardTypes": {
-      "memo": { "name": "paper", "stock": "cream" }
+      "doc": { "name": "paper", "stock": "cream" }
     },
     "rules": [
       {
@@ -73,7 +74,7 @@ chrome choice:
         "theme": { "name": "paper", "stock": "manila" }
       },
       {
-        "match": "_content/inbox/*.memo.card",
+        "match": "_content/inbox/*.doc.card",
         "theme": { "name": "post-it", "stock": "yellow" }
       }
     ],
@@ -99,8 +100,8 @@ The **system theme** styles the toolbar, shared background, user-message slips,
 text selection, and floating controls such as the selection “+”. It is
 independent of card themes; a card theme may set its own selection color.
 Choose the box default in **Settings → System theme**. The system swatches preview
-these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Bloom, Ribbon, and Deck support the
-system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
+these interface parts rather than a card. Flat, Spectrum, Paper, Candy, Bloom, Ribbon, Deck, Night Atlas,
+Rose Trellis, and Gold Thread support the system; Sticky note and Letter set are card themes only. Paper offers Slate, Terracotta, and Blue palettes
 (stored as `cream`, `manila`, and `blue` respectively). A saved system theme
 without chrome support, such as an unfamiliar name, falls back to Flat and is
 reported as a presentation problem.
@@ -194,10 +195,90 @@ system theme or an individual card. Explicit choices on other cards stay intact.
 
 ## Deck
 
-Deck combines a charcoal workspace with oversized rounded turquoise panels,
-printed grain, and offset teal outlines. Dark cards and assistant reply panels
-keep pale text clear; aqua user messages have petrol text and a firm offset
-shadow. The toolbar and composer use rounded controls with bright turquoise
-accents. Select `deck` with stock `panels` for the system or an individual card.
+Deck combines charcoal cloth with oversized rounded turquoise panels,
+uneven screen-printed ink, pale bands, and offset outlines. Fine woven fibers
+continue across dark cards and assistant reply panels without obscuring pale
+text. Aqua user messages have petrol text and soft dark offset shadows. The
+toolbar and composer use rounded controls with dyed turquoise accents. Select `deck` with stock `panels` for the system or an individual card.
 Its paired card choices are Deck, Paper, and Sticky note. Cards with an explicit
 choice keep their own material, including pale Paper on the dark workspace.
+
+
+## Night Atlas
+
+Night Atlas looks down over distant lights in turquoise and sea-green, with warm gold
+and peach highlights. The workspace drifts slowly across varied terrain while
+cards and controls stay still. Reduced-motion preferences keep the background
+static. Deep teal cards and reply panels provide quiet reading surfaces; pale
+mint user messages and warm gold controls carry the aerial palette into chat.
+Select `night-atlas` with stock `lights` for the system or an individual card. Its
+paired card choices are Night Atlas, Paper, and Sticky note. Explicit card choices
+keep their own material.
+
+Night Atlas’s background drifts slowly through field-like terrain, dense city
+lights, and open harbor water. The horizontal pan has a constant speed, with a
+thirty-minute traversal before returning; it does not accelerate midway. Only the decorative background moves;
+reduced-motion preferences keep it static.
+
+
+## Rose Trellis and Gold Thread
+
+Rose Trellis combines a woven botanical background with coral and raspberry
+color, warm cream reading surfaces, and olive-gold stems. Its patterned raspberry
+toolbar and sweeping leaf-shaped controls carry that motion into the interface.
+It has no rectangular background grid.
+
+Gold Thread is a patterned dark theme: ink-blue cloth, loose flax-colored waves,
+and matte blue controls with simple rounded corners. Its reading surfaces remain
+quiet and dark, with warm ivory text. The texture supplies the energy; controls
+have no metallic shine.
+
+Choose `rose-trellis` or `gold-thread`, both with stock `textile`, for the system
+or an individual card. Each pairs with its own card material, Paper, and Sticky
+note. Explicit card choices retain their own material. Both backgrounds are
+static, and print uses plain light surfaces.
+
+## Goldfish and Doodlebit
+
+Goldfish (`goldfish`, stock `water`) pairs large flowing goldfish illustrations
+with cream reading surfaces and teal/periwinkle controls. Water light moves
+slowly across the toolbar; the background illustration gently drifts as a whole.
+The fins are not independently animated. Reduced motion keeps both layers still.
+
+Doodlebit (`doodlebit`, stock `ink`) uses black-and-white pixel doodles, compact
+regular labels, square controls and sparse lime accents. User messages are
+white on black. A labeled Properties button replaces the folded corner.
+Small cellular walkers advance with mouse travel over exposed desk space and
+pause when the mouse stops; the larger doodles and reading surfaces stay still.
+Touch and reduced-motion users get a static background. Both themes support
+system and individual-card selection and respect explicit nested card themes.
+
+## Phosphor, Overprint, and Posy
+
+Phosphor (`phosphor`, stock `terminal`) is a dark green monochrome terminal
+with ANSI-style text controls and compact fixed-width typography. Overprint
+(`overprint`, stock `plate`) uses richly grained abstract print artwork; its
+reading panels keep that material while shifting toward gray beneath restrained
+color. Posy (`posy`, stock `paisley`) pairs a vivid hand-painted paisley field
+with cream panels, small painted accents, and a quiet line frame.
+
+All three support system and individual-card selection, pair with Paper and
+Sticky note, and preserve explicit card materials.
+
+## Tempest, Veil, and Gilt
+
+Tempest (`tempest`, stock `water`) combines luminous stormy ocean artwork with
+translucent dark reading surfaces. The water continues beneath the toolbar;
+blur softens detail behind text. The artwork remains still.
+
+Veil (`veil`, stock `pigment`) combines scraped fuchsia, jade and lime pigment
+with pale opaque painted cards. Color overlaps suggest translucence without
+making reading surfaces transparent. Controls use teal and lime; the folded
+Properties corner has a transparent fill.
+
+Gilt (`gilt`, stock `leaf`) uses worn goldleaf, mineral blue and oxblood abstract
+forms. Rich gold title strips and controls pair with dark blue reading surfaces,
+fine double card edges and narrow gilded message accents. Typography stays plain.
+
+All three support system and individual-card selection, pair with Paper and
+Sticky note, and preserve explicit card materials. Print uses light plain surfaces.

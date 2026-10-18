@@ -40,7 +40,7 @@ Concrete outputs, so you can evaluate whether to accept them:
 3. Creates `eslint.config.ts` importing `vibeCheck` (auto-detects React based on your `dependencies`).
 4. Creates `prettier.config.ts` re-exporting the shared Prettier config.
 5. Creates `tsconfig.json` extending `@ianbicking/personal-vibe-check/tsconfig.base.json` — only if no `tsconfig.json` exists.
-6. Creates `knip.json` with your entry point filled in.
+6. Creates `knip.json` with your entry point filled in, and `.madgerc` so `lint:circular` ignores type-only imports.
 7. Installs as devDependencies: `eslint@^9 prettier oxlint knip madge husky lint-staged`.
 8. Runs `npx husky init` and writes `.husky/pre-commit` with `npx lint-staged` + `npm run typecheck`.
 9. Adds a `PostToolUse` hook (`matcher: "Edit|Write"`, command: `npx vibe-check lint --hook`) to `.claude/settings.json`.
@@ -113,6 +113,19 @@ Remove `jsx` and `types` if the project has no JSX / no Node types. The base con
 ```
 
 Replace `src/index.ts` with the project's actual entry(ies). For a Vite/Next app, common entries include `src/main.tsx` or `src/app/**/page.tsx`.
+
+### 5b. Create `.madgerc`
+
+```json
+{
+  "detectiveOptions": {
+    "ts": { "skipTypeImports": true },
+    "tsx": { "skipTypeImports": true }
+  }
+}
+```
+
+Without it, madge counts `import type` edges, so every type-only back-edge into a barrel reads as a cycle. Type-only cycles are acceptable; this leaves only value cycles.
 
 ### 6. Add `package.json` scripts
 

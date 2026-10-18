@@ -5,9 +5,12 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import * as posixPath from "node:path/posix";
-import ts from "typescript";
+// json5 publishes one default export, named `lib` in its ESM build.
+import lib from "json5";
 import { isRecord } from "../../../shared/is-record.js";
 import { dirOf } from "../graph.js";
+
+const { parse: parseJson5 } = lib;
 
 /** Join `relative` onto `fromDir` and normalize; no existence check. */
 export function resolveRepoRelative(params: { fromDir: string; relative: string }): string {
@@ -33,11 +36,19 @@ function buildAliasEntry(key: string, targets: string[]): AliasEntry {
   return { prefix: key.slice(0, star), suffix: key.slice(star + 1), hasWildcard: true, targets };
 }
 
+/**
+ * The raw tsconfig (comments and trailing commas allowed), without following
+ * `extends`: `loadAliases` anchors `paths` at this package, so an inherited
+ * entry would resolve from the wrong directory. Null when absent or unparsable.
+ */
 function readTsconfig(absPath: string): unknown {
   if (!existsSync(absPath)) return null;
-  const result = ts.readConfigFile(absPath, (path) => readFileSync(path, "utf8"));
-  if (result.error !== undefined) return null;
-  return result.config;
+  try {
+    return parseJson5(readFileSync(absPath, "utf8"));
+  } catch (e) {
+    if (e instanceof SyntaxError) return null;
+    throw e;
+  }
 }
 
 function extractPaths(compilerOptions: Record<string, unknown>): Record<string, string[]> {

@@ -84,7 +84,7 @@ The numbers cited below are from that report.
   before any files are staged. `src/services/claude-chat.ts:28` (moved to `beebox/src/services/claude-chat/core.ts`) already
   imports `core/sdk-binary-path.js` from services, so the import
   direction is established precedent.
-- `src/shared/model-ids.ts` — `MODEL_ID.sonnet = "claude-sonnet-5"`.
+- `src/shared/model-ids.ts` — `MODEL_ID.sonnet` (now `"claude-sonnet-5-5"`).
   **Reused** for the model id.
 - `src/services/docling.ts:305-383` (moved to `beebox/src/services/docling/core.ts`) + `scan-import-document.ts:37,70`
   (`docling?: DoclingService`, `args.docling ?? createDoclingService()`) —

@@ -16,6 +16,7 @@ import {
   checkPnpm,
   checkSchedulesTick,
   checkSdkBinary,
+  checkTypescriptCompilers,
   checkWorkspaceInstalled,
 } from "./doctor-checks.js";
 import {
@@ -184,6 +185,16 @@ test("checkSdkBinary reports the resolved path or a remedy when null", () => {
   assert.match(missing.remedy ?? "", /pnpm install/);
 });
 
+test("checkTypescriptCompilers fails when tsc is not TypeScript 7", async () => {
+  const run = fakeRun({
+    "/repo/node_modules/.bin/tsc --version": ok("Version 5.9.3\n"),
+    "/repo/node_modules/.bin/tsc6 --version": ok("Version 6.0.3\n"),
+  });
+  const result = await checkTypescriptCompilers({ run, repoRoot: "/repo" });
+  assert.equal(result.ok, false);
+  assert.equal(result.detail, 'tsc reports "Version 5.9.3", tsc6 reports "Version 6.0.3"');
+});
+
 test("checkFrontendBuild fails with the build:frontend remedy when dist/index.html is absent", () => {
   const result = checkFrontendBuild({ fileExists: () => false, repoRoot: "/repo" });
   assert.equal(result.ok, false);
@@ -260,6 +271,8 @@ function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
     "git config --get filter.lfs.clean": ok("git-lfs clean -- %f\n"),
     "claude --version": ok("1.2.3"),
     "claude auth status": ok(JSON.stringify({ loggedIn: true, email: "dev@example.com" })),
+    "/repo/node_modules/.bin/tsc --version": ok("Version 7.0.2\n"),
+    "/repo/node_modules/.bin/tsc6 --version": ok("Version 6.0.3\n"),
   });
   return {
     run,

@@ -32,7 +32,7 @@ const unpinned = await resolveSessionModel(box.root, FOLLOW);
 JSON.stringify([(unpinned.model?.length ?? 0) > 0, unpinned.source])
 => [true,"default"]
 
-const pinned = "claude-sonnet-5";
+const pinned = "claude-sonnet-5-5";
 await pin(box.root, { agentModel: pinned });
 const followed = await resolveSessionModel(box.root, FOLLOW);
 JSON.stringify([followed.model === pinned, followed.source])

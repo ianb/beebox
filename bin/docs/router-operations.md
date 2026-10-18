@@ -126,8 +126,8 @@ reload and recover history on focus. HMR uses the page origin.
 Frontend code uses Vite HMR. If an edit does not show, compare `curl` of the
 module URL with and without `?t=<now>`; a difference means the file watcher
 missed the change (Vite polls on macOS for this reason). The hub runs checkout TypeScript without reload:
-backend changes are reported `ready (stale)`, and the human uses
-`bin/workstreams down <name>` at a safe moment. Bundled box children watch the
+backend changes are reported `ready (stale)`; the agent runs
+`bin/workstreams down <name>` and the next HTTP request starts fresh code. Bundled box children watch the
 exact CLI artifact identity, stop mutations, drain requests/chat/scheduled
 delivery, and exit for replacement. Timers re-arm from persisted state. After
 ten minutes an incomplete drain reopens mutations and keeps old code with a

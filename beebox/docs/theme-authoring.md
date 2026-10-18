@@ -22,7 +22,13 @@ bin/browse screenshot
 Edit `beebox/src/frontend/src/pages/dev/theme-studio-draft.css`; Vite refreshes
 it. The URL independently selects `system`, `systemStock`, `card`, and `cardStock`.
 Unknown names render base styles until CSS matches. Existing studies are
-`undertow`, `deck-study`, and `patina` in `theme-studio-studies.css`.
+`undertow`, `deck-study`, and `patina-study` in `theme-studio-studies.css`;
+`rose-trellis-study` and `gold-thread-study` are in `theme-studio-textiles.css`.
+Goldfish and Doodlebit are catalog themes, available in the studio as
+`goldfish` / `water` and `doodlebit` / `ink`. Tempest (`tempest` / `water`),
+Veil (`veil` / `pigment`), Gilt (`gilt` / `leaf`), Phosphor (`phosphor` /
+`terminal`), Overprint (`overprint` / `plate`), and Posy (`posy` / `paisley`)
+are also catalog themes.
 
 Scope every draft selector to `.bbx-theme-studio` and its draft attribute: lazy
 CSS stays loaded after navigation. Keep draft CSS under `pages/dev/`, out of
@@ -37,7 +43,13 @@ For an approved choice, move scoped production styles and assets into `themes/`,
 import the stylesheet in `main/app.tsx`, and register the theme/stock in
 `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 Check the real app visually; the studio does not exercise live navigation,
-portaled menus or chat state. Keep unrelated explicit card themes independent.
+portaled menus or chat state. On a phone, check composer dictation and disabled
+send, nav badges and focus rings. When a scoped selector gains specificity,
+emulate print media and confirm the print rules still win. A worktree backend
+started before a new system theme's catalog entry refuses to select it;
+`bin/workstreams list` shows it `ready (stale)` (see
+[router operations](../../bin/docs/router-operations.md)). Keep unrelated
+explicit card themes independent.
 
 At landing, run the required selected tests and relevant theme tours, typecheck,
 lint, review and commit gates. Tours omit color contrast, so check it separately.

@@ -16,7 +16,7 @@ Fields such as `created` and `status` slip into card schemas without a
 clear job. Agents then fill them in, readers expect them to mean something,
 and nothing reads them. The memo type shows both problems: its `status`
 never leaves `new`, and its `created` is misused
-([retire memo](../../code-quality/2026-09-27-retire-memo-card-type-into-doc.md)). The
+([retire memo](2026-09-27-retire-memo-card-type-into-doc.md)). The
 developer wants a review of the standard fields across all card types.
 
 ## Scope

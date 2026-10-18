@@ -33,22 +33,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.299`, Codex `0.162.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.300`, Codex `0.162.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.301` (SDK), `2.1.301` (Claude Code), `0.163.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.302` (SDK), `2.1.302` (Claude Code), `0.163.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.299` on 2026-10-15;
-  Codex stays at `0.162.1`. Next: `0.3.300` (settles 2026-10-16T14:28Z;
-  **check its transcript rows first**, see its entry), `0.3.301`
-  (2026-10-17T14:35Z), Codex `0.163.0` (2026-10-17T21:30Z; check Daybreak
-  default, see its entry). Settled versions start no session on a day with no
-  new release: `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
-  Open: `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Current recommendation:** Agent SDK moved to `0.3.300` on 2026-10-16
+  after its transcript-row check; Codex stays at `0.162.1`. Next: `0.3.301`
+  (settles 2026-10-17T14:35Z), Codex `0.163.0` (2026-10-17T21:30Z; check the
+  Daybreak default), `0.3.302` (2026-10-18T16:47Z; fork subagents on by
+  default, see its entry). A settled version that is not yet applied now
+  starts a session on its own, with no new release needed (2026-10-17).
+  The model aliases are current (2026-10-17): `sonnet`, `haiku`, and `sol` name Sonnet 5.5, Haiku 5.5, and GPT-6.1 Sol.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -74,6 +74,31 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.302 / Claude Code 2.1.302 — pending (published 2026-10-16T16:47Z, ~11h at this turn)
+
+- **RUNTIME behavior changes, check when taken:**
+  - Fork subagents (`subagent_type: "fork"`) are now on by default in SDK
+    sessions, and a subagent's own Agent calls run in the foreground by default.
+    beebox agent runs and chat (`bypassPermissions`) can now fork; the taking
+    run should confirm nothing in beebox's subagent/task rendering
+    (`core/chat/session/messages.ts` task events) mishandles a fork.
+    `CLAUDE_CODE_FORK_SUBAGENT=0` turns it off.
+  - An omitted `permissionMode` now starts in `default` on third-party providers
+    or with telemetry off. Checked: every beebox `query()` either passes
+    `bypassPermissions` (agent runs via `run.ts`, chat) or runs with
+    `tools: []` (`services/scan-vision-claude.ts`).
+- **Fixes:** structured output no longer delivers a refused response as
+  `structured_output`; Read refuses image sources over 128 MB instead of loading
+  them whole; "Prompt is too long" when stopping during compaction; prompt
+  cache miss when a mid-session tool is reloaded through ToolSearch.
+- **HARNESS:** worktree isolation no longer refuses to create or resume
+  worktrees under git 2.56+ when a stray `.git` file points at a missing
+  directory; `claude plugin` subcommands no longer exit before a queued
+  settings write finishes; prompt/agent hooks run at most 12 at a time;
+  `/config` gains an Idle compaction row.
+- **Action:** Settled path; takeable 2026-10-18T16:47Z.
+- **Sources:** [SDK 0.3.302](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03302), [Claude Code 2.1.302](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21302)
 
 ### Codex 0.163.0 — pending (published 2026-10-15T21:30Z, ~6h at this turn)
 
@@ -111,7 +136,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-10-17T14:35Z.
 - **Sources:** [SDK 0.3.301](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03301), [Claude Code 2.1.301](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21301)
 
-### 0.3.300 / Claude Code 2.1.300 — pending (published 2026-10-14T14:28Z); check before applying
+### 0.3.300 / Claude Code 2.1.300 — APPLIED 2026-10-16 (published 2026-10-14T14:28Z); transcript-row check passed
 
 - **Check before applying (RUNTIME):** 2.1.300 *"changed local session
   transcripts to also record each API request's system prompt, tools and
@@ -137,7 +162,14 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   the new worktree's branch; plugin `WorktreeCreate`/`WorktreeRemove` hooks now
   run with `--worktree` (this repo's are settings hooks); Claude stops polling
   or sleeping on a background command's output file.
-- **Action:** Settled path after the check above; takeable 2026-10-16T14:28Z.
+- **Check result (2026-10-16):** a fresh 2.1.300 SDK session (one Bash call)
+  wrote three new row types: `api-request-shape` (1 row, 28 KB),
+  `api-request-blob` (3 rows, 30 KB) and `api-request` (about 1.5 KB per
+  request), about 61 KB in total, beside 110 KB of existing `attachment` rows.
+  `core/usage.ts` keeps only `assistant` rows; `renderSessionCompact`
+  (`core/chat/transcript-render.ts`) rendered the transcript with no new-row
+  text. Transcripts grow, but no reader breaks.
+- **Action:** Applied 2026-10-16. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.300, `pnpm -C beebox test` (12,572 pass, 2 skip).
 - **Sources:** [SDK 0.3.300](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03300), [Claude Code 2.1.300](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21300)
 
 ### 0.3.299 / Claude Code 2.1.299 — APPLIED 2026-10-15 (published 2026-10-14T00:23Z); re-read 2026-10-14, not act-now

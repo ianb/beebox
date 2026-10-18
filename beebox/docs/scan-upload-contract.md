@@ -1,7 +1,8 @@
 # Scan Upload Wire Contract
 
-The HTTP contract between the stand-alone `scan-uploader/` package (laptop
-client) and beebox's scan routes (server). The two sides share **no
+The HTTP contract between beebox's scan routes (server) and its two clients:
+the stand-alone `scan-uploader/` package (laptop client) and the Mac app's
+upload client (`mac-app/Sources/BeeBoxMacCore/Scan/`). The sides share **no
 code** — this document is the single coordination point. Every implementation
 site that encodes part of this contract carries the breadcrumb comment:
 
@@ -10,7 +11,9 @@ site that encodes part of this contract carries the breadcrumb comment:
 ```
 
 Breadcrumbed sites: the server routes (`src/webapp/routes/scan-upload/*.ts`),
-the client's HTTP layer (`scan-uploader/src/`), and the server route doctests
+the Node client's HTTP layer (`scan-uploader/src/`), the Mac client
+(`mac-app/Sources/BeeBoxMacCore/Scan/ScanWire.swift`, `ScanSweep.swift`,
+`ScanFiles.swift` and `ContractVersion.swift`), and the server route doctests
 (`test/webapp/routes/scan-upload.doctest.md`) — the doctests exercise this
 contract exactly as the client sends it and are its executable form. Design
 history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
@@ -157,9 +160,11 @@ The uploader is a stand-alone package that never updates itself: a copied
 somebody copies a new one over it. So it volunteers who it is, and the box
 reports an uploader that has fallen behind.
 
-**`SCAN_CONTRACT_VERSION`** is one monotonic integer, spelled once on each side
-(`beebox/src/core/scan/contract-version.ts`,
-`scan-uploader/src/cli/contract-version.ts`). The client sends it as
+**`SCAN_CONTRACT_VERSION`** is one monotonic integer with three spellings: the
+box (`beebox/src/core/scan/contract-version.ts`), the Node uploader
+(`scan-uploader/src/cli/contract-version.ts`) and the Mac app
+(`mac-app/Sources/BeeBoxMacCore/Scan/ContractVersion.swift`, as
+`scanContractVersion`). Each client sends it as
 `X-Scan-Contract`; the box returns its own as `contractVersion` on the check
 response; the client compares them every sweep and reports which side is
 behind.
@@ -205,8 +210,8 @@ worse than having no version at all, because it answers the question wrongly
 rather than not at all. Nothing can test that a human bumped this, so the bump
 is part of the change discipline below rather than a separate obligation.
 
-Mechanically, a bump is: `+1` to **both** constants in the same change (they
-are two spellings of one number, never per-side versions), this document, and
+Mechanically, a bump is: `+1` to **all three** constants in the same change (they
+are three spellings of one number, never per-side versions), this document, and
 the route doctests. Bumping does not refuse anything — an old client keeps
 uploading and starts being reported. And never bump the build stamp: it is a
 build artifact, not a hand-maintained number.
@@ -260,7 +265,7 @@ wall), so such a header would silently never arrive.
 ## Change discipline
 
 Any change to routes, headers, states, statuses, limits, or hashing updates
-this doc, both breadcrumbed implementations, and the route doctests in the
+this doc, every breadcrumbed implementation (box, Node client, Mac client), and the route doctests in the
 same change. A change that alters the client obligations, the state vocabulary,
-or a route's shape also bumps `SCAN_CONTRACT_VERSION` on both sides (see
+or a route's shape also bumps `SCAN_CONTRACT_VERSION` in all three spellings (see
 "Client identity") — that bump is part of this same change, not a follow-up.

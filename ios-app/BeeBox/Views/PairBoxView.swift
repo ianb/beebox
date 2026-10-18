@@ -200,12 +200,12 @@ struct PairBoxView: View {
         pairingInProgress = true
         errorMessage = nil
         Task {
-            let paired = await store.pair(from: url)
+            let outcome = await store.pair(from: url)
             pairingInProgress = false
-            if paired {
+            if outcome == .paired {
                 dismiss()
             } else {
-                errorMessage = "Pairing failed. Create a fresh QR code and try again."
+                errorMessage = outcome.failureMessage
             }
         }
     }

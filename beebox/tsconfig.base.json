@@ -22,6 +22,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // TypeScript 6+ loads no @types package unless named here. These are the
+    // two a box installs (`src/core/box/package.ts`), as 5.x loaded them.
+    "types": ["node", "react"]
   }
 }

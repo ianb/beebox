@@ -15,6 +15,7 @@
  */
 
 import { toDisplayPath } from "@shared/display-path";
+import { ATTACH_SUFFIX, isAttachDirName } from "@shared/attach-path";
 
 /** A place the bar can name: a display label plus the dir it lives in. */
 export interface Place {
@@ -96,4 +97,16 @@ export function placeLabel({ pathname, boxSlug }: { pathname: string; boxSlug: s
   }
 
   return CHAT_PLACE;
+}
+
+/**
+ * Last segment of a box path, as the pill's folder half names it; the root
+ * reads as "/". A card's attach folder reads without its `.attach` suffix:
+ * "Intro_Chemistry", not "Intro_Chemistry.attach".
+ */
+export function dirBasename(dir: string): string {
+  if (dir === "") return "/";
+  const segments = dir.split("/");
+  const last = segments[segments.length - 1] ?? dir;
+  return isAttachDirName(last) ? last.slice(0, -ATTACH_SUFFIX.length) : last;
 }

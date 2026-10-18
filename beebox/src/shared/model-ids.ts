@@ -3,9 +3,10 @@
  * shared by engine-aware procedure tiers and the chat model picker. A model
  * version bump now changes one place.
  *
- * `opus` tracks the current Opus flagship — now Opus 5.5. Older selections
- * that still carry a retired ID (including Opus 5 and earlier `[1m]` context
- * variants Claude Code no longer exposes) are carried forward by
+ * `opus`, `sonnet`, and `haiku` track the current Claude models — now 5.5;
+ * `sol` tracks GPT-6.1 Sol. Older selections that still carry a retired ID
+ * (including Opus 5, Sonnet 5, Haiku 4.5, GPT-6 Sol, and earlier `[1m]`
+ * context variants Claude Code no longer exposes) are carried forward by
  * {@link normalizeModelId} at model admission and agent spawn boundaries, so
  * a persisted or procedure-card value keeps working.
  *
@@ -14,13 +15,13 @@
  * directly rather than re-declaring them.
  */
 export const MODEL_ID = {
-  haiku: "claude-haiku-4-5-20251001",
-  sonnet: "claude-sonnet-5",
+  haiku: "claude-haiku-5-5",
+  sonnet: "claude-sonnet-5-5",
   opus: "claude-opus-5-5",
   fable: "claude-fable-5-1",
   luna: "gpt-6-luna",
   terra: "gpt-5.6-terra",
-  sol: "gpt-6-sol",
+  sol: "gpt-6.1-sol",
   astra: "gpt-6-astra",
   // GLM family (Z.ai's Anthropic-compatible endpoint) — rides the claude
   // engine; the endpoint/token come from the machine secret store per run.
@@ -31,19 +32,23 @@ export const MODEL_ID = {
 /**
  * Retired model IDs that older persisted chat selections or box procedure cards
  * may still carry, mapped to their current replacement. Older Opus IDs fold
- * into Opus 5.5; GPT-5.6 Luna and Sol fold into their GPT-6 replacements;
- * Fable 5 and its `[1m]` variant fold into Fable 5.1 (1M context is native to
- * the 5-tier — the `[1m]` suffix was a Claude Code convention that no longer
- * exists).
+ * into Opus 5.5; Sonnet 5 folds into Sonnet 5.5; Haiku 4.5 folds into Haiku
+ * 5.5; GPT-5.6 Luna folds into GPT-6 Luna; GPT-5.6 and GPT-6 Sol fold into
+ * GPT-6.1 Sol; Fable 5 and its `[1m]` variant fold into Fable 5.1 (1M context
+ * is native to the 5-tier — the `[1m]` suffix was a Claude Code convention
+ * that no longer exists).
  */
 const RETIRED_MODEL_IDS: Record<string, string> = {
   "claude-opus-5": MODEL_ID.opus,
   "claude-opus-4-8": MODEL_ID.opus,
   "claude-opus-4-8[1m]": MODEL_ID.opus,
+  "claude-sonnet-5": MODEL_ID.sonnet,
+  "claude-haiku-4-5-20251001": MODEL_ID.haiku,
   "claude-fable-5": MODEL_ID.fable,
   "claude-fable-5[1m]": MODEL_ID.fable,
   "gpt-5.6-luna": MODEL_ID.luna,
   "gpt-5.6-sol": MODEL_ID.sol,
+  "gpt-6-sol": MODEL_ID.sol,
 };
 
 /**

@@ -20,7 +20,9 @@ enum Uninstaller {
         ]
     }
 
-    static func run(stopBox: @escaping () async -> Void) {
+    /// `revokeScanTokens` takes back the scan tokens this Mac minted on its
+    /// boxes and returns a line for each it could not revoke.
+    static func run(stopBox: @escaping () async -> Void, revokeScanTokens: @escaping () async -> [String]) {
         NSApp.activate()
         let boxes = boxFolders()
         let alert = NSAlert()
@@ -28,7 +30,8 @@ enum Uninstaller {
         alert.messageText = "Uninstall Bee Box?"
         alert.informativeText = """
             This stops your box, deletes Bee Box's shared data (\(sizeText(of: Paths.support))): the downloaded \
-            image, accounts, agent sign-ins, and logs. Then it moves Bee Box to the Trash.
+            image, accounts, agent sign-ins, logs, and the paired boxes and their credentials. Then it moves \
+            Bee Box to the Trash.
 
             Your boxes in \(displayPath(Paths.boxes)) are kept unless you choose otherwise.
             """
@@ -47,8 +50,21 @@ enum Uninstaller {
         let trashBoxes = deleteBoxes.state == .on
         Task { @MainActor in
             appLog("uninstalling\(trashBoxes ? " (boxes to the Trash)" : "")")
+            // Revoke before the Keychain is cleared (after that this Mac can no
+            // longer reach its boxes as itself) and before the local box stops
+            // (it cannot answer once stopped).
+            let unrevoked = await revokeScanTokens()
             await stopBox()
             var failures: [String] = []
+            for line in unrevoked {
+                appLog("scan token not revoked: \(line)")
+            }
+            // Paired boxes' credentials live in the Keychain, outside the
+            // shared data folder.
+            for store in MacKeychain.all {
+                let removed = store.purgeOrphanTokens(knownBoxIDs: [])
+                appLog("removed \(removed) Keychain item(s) for \(store.service)")
+            }
             let fm = FileManager.default
             if trashBoxes {
                 for box in boxes {
@@ -70,10 +86,19 @@ enum Uninstaller {
             } catch {
                 failures.append("\(Bundle.main.bundleURL.path): \(error.localizedDescription)")
             }
-            if !failures.isEmpty {
+            if !failures.isEmpty || !unrevoked.isEmpty {
                 let report = NSAlert()
                 report.messageText = "Bee Box could not remove everything"
-                report.informativeText = "Remove these by hand:\n\n" + failures.joined(separator: "\n")
+                var text = ""
+                if !failures.isEmpty {
+                    text += "Remove these by hand:\n\n" + failures.joined(separator: "\n")
+                }
+                if !unrevoked.isEmpty {
+                    if !text.isEmpty { text += "\n\n" }
+                    text += "These scanner credentials are still active. Revoke them in each box's Settings → Scan uploaders:\n\n"
+                        + unrevoked.joined(separator: "\n")
+                }
+                report.informativeText = text
                 report.runModal()
             }
             exit(0)

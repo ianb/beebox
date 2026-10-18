@@ -98,9 +98,9 @@ the same derivation `bbx todos` uses, reached through the shared collector. A
 
 ```ts continue
 await box.write(
-  "_content/notes/Plans.memo.card",
+  "_content/notes/Plans.doc.card",
   `---
-created: 2026-01-01T00:00:00Z
+title: Plans
 todos:
   - text: Undated, so on the plate
   - text: Already finished
@@ -126,9 +126,8 @@ card body rather than frontmatter.
 
 ```ts continue
 await box.write(
-  "_content/notes/Body.memo.card",
+  "_content/notes/Body.doc.card",
   `---
-created: 2026-01-01T00:00:00Z
 title: Body capture
 ---
 {% todo %}Written in the body{% /todo %}
@@ -158,9 +157,9 @@ number itself.
 ```ts
 const escBox = await makeTmpBox({ git: true });
 await escBox.write(
-  "_content/notes/Overdue.memo.card",
+  "_content/notes/Overdue.doc.card",
   `---
-created: 2026-01-01T00:00:00Z
+title: Overdue
 ---
 {% todo due="2026-07-01" %}Boxholder, overdue{% /todo %}
 

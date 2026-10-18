@@ -23,16 +23,16 @@ await writeFile(join(root, "_config/_template-updates/_config/CLAUDE.md"), "# Pa
 await writeFile(join(root, "CLAUDE.md"), "# Box\n");
 await writeFile(join(root, "nested/CLAUDE.md"), "# Nested\n");
 await writeFile(join(root, ".claude/skills/calendar/SKILL.md"), "# Calendar\n");
-await writeFile(join(root, ".claude/rules/card-memo.md"), `---
+await writeFile(join(root, ".claude/rules/card-doc.md"), `---
 paths:
-  - "**/*.memo.card"
+  - "**/*.doc.card"
 ---
 
-# Memo rules
+# Doc rules
 `);
 await writeFile(join(root, "node_modules/beebox/plugins/beebox-codex/hooks/hooks.json"), "{}");
-await mkdir(join(root, ".agents/skills/callback-box-rule-card-memo"), { recursive: true });
-await writeFile(join(root, ".agents/skills/callback-box-rule-card-memo/SKILL.md"), "retired mirror\n");
+await mkdir(join(root, ".agents/skills/callback-box-rule-card-doc"), { recursive: true });
+await writeFile(join(root, ".agents/skills/callback-box-rule-card-doc/SKILL.md"), "retired mirror\n");
 await generateAgentContextMirrors(root);
 ```
 
@@ -70,12 +70,12 @@ hooks.includes("$PLUGIN_ROOT")
 Rules are copied into provider-valid skills:
 
 ```ts
-(await readFile(join(root, ".agents/skills/beebox-rule-card-memo/SKILL.md"), "utf8")).includes("# Memo rules")
+(await readFile(join(root, ".agents/skills/beebox-rule-card-doc/SKILL.md"), "utf8")).includes("# Doc rules")
 => true
 
-(await readFile(join(root, ".agents/skills/beebox-rule-card-memo/SKILL.md"), "utf8")).includes("**/*.memo.card")
+(await readFile(join(root, ".agents/skills/beebox-rule-card-doc/SKILL.md"), "utf8")).includes("**/*.doc.card")
 => true
 
-await readFile(join(root, ".agents/skills/callback-box-rule-card-memo/SKILL.md"), "utf8").then(() => false, () => true)
+await readFile(join(root, ".agents/skills/callback-box-rule-card-doc/SKILL.md"), "utf8").then(() => false, () => true)
 => true
 ```

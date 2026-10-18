@@ -34,7 +34,7 @@ its type; a **box** is the directory of them. One page per capability is in
 Every card type has a reference page in
 [reference/cards/index.md](reference/cards/index.md).
 
-- Inputs: memo, image, audio, capture-session, upload-batch, file, pdf.
+- Inputs: image, audio, capture-session, upload-batch, file, pdf.
 - Web material: webpage, extfile, commentary, tab-arrangement.
 - Things you keep: record, doc, person, place, inventory, figure, todo-view, and recipe once the recipe add-on is on.
 - Mail and messages: email-thread, email-message, email-outbound, feedback, and chat-thread (a read-only record of conversations from a messaging app that older boxes may still hold).

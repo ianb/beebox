@@ -81,12 +81,12 @@ Existing targets request exact delivery; fresh Codex targets retain their
 engine and directory without pretending they have a reserved ID.
 
 ```ts
-const attention: AttentionSnapshot = { surface: "card", transcript: "hidden", focusedRef: "/house/report.memo.card" };
+const attention: AttentionSnapshot = { surface: "card", transcript: "hidden", focusedRef: "/house/report.doc.card" };
 JSON.stringify(boundTurnFields({ boxSlug: "test1", target: { kind: "session", sessionId: "kitchen", contextDir: "kitchen" }, attention }))
-=> {"session":"kitchen","exactSession":true,"viewContext":{"surface":"card","transcript":"hidden","focusedRef":"/house/report.memo.card"}}
+=> {"session":"kitchen","exactSession":true,"viewContext":{"surface":"card","transcript":"hidden","focusedRef":"/house/report.doc.card"}}
 
 JSON.stringify(boundTurnFields({ boxSlug: "test1", target: { kind: "start", clientConversationId: "client-start", contextDir: "garden", engine: "codex", model: "model-test" }, attention }))
-=> {"session":"new","exactSession":false,"contextDir":"garden","engine":"codex","model":"model-test","viewContext":{"surface":"card","transcript":"hidden","focusedRef":"/house/report.memo.card"}}
+=> {"session":"new","exactSession":false,"contextDir":"garden","engine":"codex","model":"model-test","viewContext":{"surface":"card","transcript":"hidden","focusedRef":"/house/report.doc.card"}}
 ```
 
 ## Voice capture refusal preserves the utterance and settles the mic path

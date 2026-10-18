@@ -14,11 +14,11 @@ import { mapV2Path, v2ContentPathsFor } from "../../../src/core/migrations/one-r
 ## Every v2 area maps to its documented v3 destination
 
 ```ts
-JSON.stringify(mapV2Path("box/inbox/Foo.memo.card"))
-=> {"kind":"move","newPath":"_content/inbox/Foo.memo.card"}
+JSON.stringify(mapV2Path("box/inbox/Foo.doc.card"))
+=> {"kind":"move","newPath":"_content/inbox/Foo.doc.card"}
 
-JSON.stringify(mapV2Path("box/inbox/triaged/_unsure/Bar.memo.card"))
-=> {"kind":"move","newPath":"_content/inbox/triaged/_unsure/Bar.memo.card"}
+JSON.stringify(mapV2Path("box/inbox/triaged/_unsure/Bar.doc.card"))
+=> {"kind":"move","newPath":"_content/inbox/triaged/_unsure/Bar.doc.card"}
 
 JSON.stringify(mapV2Path("box/jobs/2026.job.card"))
 => {"kind":"move","newPath":"_bookkeeping/jobs/2026.job.card"}

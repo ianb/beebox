@@ -63,7 +63,7 @@ nothing.
 
 ```ts
 JSON.stringify(
-  extractBodyRefs('{% source ref="/box/m.memo.card" usage="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
+  extractBodyRefs('{% source ref="/box/m.doc.card" usage="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
   null,
   2,
 )
@@ -71,7 +71,7 @@ JSON.stringify(
 [
   {
     "path": "body:1:source.ref",
-    "ref": "/box/m.memo.card"
+    "ref": "/box/m.doc.card"
   }
 ]
 ```

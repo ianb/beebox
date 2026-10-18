@@ -23,16 +23,16 @@ function ctxFor(boxRoot: string): TrpcContext {
 ## A card's own declared level, and a card's type default
 
 An `entry-point`/`primary`/`background`-declared card reports that level; an
-undeclared card falls back to its type's default — `ordinary` for a memo,
+undeclared card falls back to its type's default — `ordinary` for a doc,
 `background` for a landmark (its type default, per Track A) and for a chat
 husk (`docs/implemented-plans/place-shows-cards.md`, Track A), so Browse folds it into
 "more" when the folder has a primary card.
 
 ```ts
 const server = await makeTestServer();
-await server.seed("_content/Entry.memo.card", "---\nprominence: entry-point\n---\n");
-await server.seed("_content/Primary.memo.card", "---\nprominence: primary\n---\n");
-await server.seed("_content/Plain.memo.card", "---\n---\n");
+await server.seed("_content/Entry.doc.card", "---\ntitle: Entry\nprominence: entry-point\n---\n");
+await server.seed("_content/Primary.doc.card", "---\ntitle: Primary\nprominence: primary\n---\n");
+await server.seed("_content/Plain.doc.card", "---\ntitle: Plain\n---\n");
 await server.seed("_content/Log.contains-backfill-job.card", "---\ndescription: test\nitems: []\n---\n");
 await server.seed("_content/Box.landmark.card", "---\nnavigation:\n  label: Box\n---\n");
 await server.seed("_content/Hello.chat.card", "---\nsession: s1\n---\n");
@@ -68,8 +68,8 @@ const server2 = await makeTestServer();
 // `_content/recipes/`, and macOS's case-insensitive filesystem would
 // collide a same-named-but-cased directory into it.
 await server2.seed("_content/Cookbook/Cookbook.landmark.card", "---\nnavigation:\n  label: Cookbook\n---\n");
-await server2.seed("_content/Cookbook/Soup.memo.card", "---\nprominence: primary\n---\n");
-await server2.seed("_content/Plain/Notes.memo.card", "---\n---\n");
+await server2.seed("_content/Cookbook/Soup.doc.card", "---\ntitle: Soup\nprominence: primary\n---\n");
+await server2.seed("_content/Plain/Notes.doc.card", "---\ntitle: Notes\n---\n");
 
 const listing2 = await statusRouter.createCaller(ctxFor(server2.boxRoot)).browse({ path: "_content" });
 const byName = new Map(listing2.dirs.map((d) => [d.name, d]));
@@ -100,7 +100,7 @@ A directory whose own landmark is written `background` reports
 ```ts
 const server3 = await makeTestServer();
 await server3.seed("_content/Housekeeping/Housekeeping.landmark.card", "---\nprominence: background\n---\n");
-await server3.seed("_content/Housekeeping/Notable.memo.card", "---\nprominence: entry-point\n---\n");
+await server3.seed("_content/Housekeeping/Notable.doc.card", "---\ntitle: Notable\nprominence: entry-point\n---\n");
 
 const bgListing = await statusRouter.createCaller(ctxFor(server3.boxRoot)).browse({ path: "_content/Housekeeping" });
 bgListing.background
@@ -117,18 +117,18 @@ await server3.cleanup();
 ## A Drive conflict is the one card fact the entry carries
 
 A synced Doc marked `conflict: true` says so, for the Drive state column and
-the sidebar badge. Other frontmatter, such as a memo's `status`, is not
+the sidebar badge. Other frontmatter, such as a doc's `via`, is not
 copied into the entry.
 
 ```ts
 const server4 = await makeTestServer();
 await server4.seed("_content/Drive/Contended.gdoc.card", "---\ntitle: Contended\nconflict: true\n---\n");
 await server4.seed("_content/Drive/Settled.gdoc.card", "---\ntitle: Settled\n---\n");
-await server4.seed("_content/Drive/Note.memo.card", "---\nstatus: new\n---\n");
+await server4.seed("_content/Drive/Note.doc.card", "---\ntitle: Note\nvia:\n  channel: email\n---\n");
 
 const driveListing = await statusRouter.createCaller(ctxFor(server4.boxRoot)).browse({ path: "_content/Drive" });
-JSON.stringify(driveListing.cards.map((c) => ({ name: c.name, conflict: c.conflict, status: "status" in c })))
-=> [{"name":"Contended","conflict":true,"status":false},{"name":"Note","status":false},{"name":"Settled","status":false}]
+JSON.stringify(driveListing.cards.map((c) => ({ name: c.name, conflict: c.conflict, via: "via" in c })))
+=> [{"name":"Contended","conflict":true,"via":false},{"name":"Note","via":false},{"name":"Settled","via":false}]
 ```
 
 ```ts cleanup

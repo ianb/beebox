@@ -70,7 +70,7 @@ export async function loadViewCards(boxRoot: string, dependencies: string[]): Pr
   // Round-7 hardening finding 2: a dependency is box CONTENT by definition,
   // so (a) every glob's ROOT is restricted to the underscore areas —
   // `ignorePatterns` excludes every top-level entry that isn't one, so a
-  // box-wide pattern like `**/*.memo.card` can never reach `src/` (package
+  // box-wide pattern like `**/*.doc.card` can never reach `src/` (package
   // internals) even though `boxRoot` is now also the npm package root — and
   // (b) each surviving match still has to clear
   // `resolveBoxNamespacePathOnDisk` in READ mode before it's trusted: a

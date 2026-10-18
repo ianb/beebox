@@ -1,6 +1,6 @@
 ---
 title: "One pink bar flattens unrelated status and error states"
-workstream: unattached
+workstream: error-severity
 area: beebox
 labels: [journey-findings, ui-sensibility]
 filed-by: agent
@@ -56,3 +56,66 @@ so by evening's end the badge read 3+ with nothing wrong.
 
 Related: [implementation-vocab-leaks-into-ui](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
 (the wording of 1); the debug-log badge notes appended there on 2026-08-23.
+
+## Plan (2026-10-17, worktree-error-severity)
+
+Every source that reaches chat's status bar, by what it means for the person:
+
+| Source | What the person sees | Class |
+|---|---|---|
+| History failed to load (`fetchInitial` onError) | The conversation did not load | a — must act |
+| Send refused, or its start request failed (`STREAM_FAILED`, `accepted: false`; includes the "not logged in" refusal) | Message got no answer, as far as the page knows | a |
+| The box reported the turn failed (`STREAM_ERROR`) or the run died (turn-stream `error` frame) | Message got no answer | a |
+| Legacy `STREAM_BUSY` | Message was dropped | a |
+| Native composer did not confirm a selection | Selection was not added | a |
+| Live turn stream dropped (subscription `onError`, e.g. "Active connection is not open"; stream ended with no result) | The live text stopped; the reply may still land | c if the reply lands, b while the box is still working, a if the box stopped with no reply |
+| Recording did not start (start timeout, setup error) | Nothing was recorded | a |
+| Live transcription lost during recording, transcription timeout, microphone interruption or loss | Recording kept going or kept its text | b (interruption already clears itself on recovery: c) |
+
+Change:
+
+1. Chat machine: a dropped turn stream becomes its own event. It does not set
+   `error`. The refresh that follows decides: the reply is in history → clear
+   with no banner; the box is still busy → a warning that the reply will
+   appear; the box is idle with no reply → an error that the box stopped
+   before answering.
+2. Transcription machine: each error carries a level (`error` or `warning`).
+3. The status bar renders errors in the existing danger style and warnings in
+   the existing `warning-50` style used by settings and voice notices.
+
+Not changed: wording of server refusals (their own copy; see the vocab issue).
+
+### Outcome (2026-10-17)
+
+Implemented as planned, plus two fixes from the cross-model review (codex
+gpt-6-sol): a reply already in history clears the warning even while a queued
+later turn keeps the box busy, and *dismiss* clears only the message shown.
+Verified in the worktree's test box by making the turn-stream subscribe fail
+with "Active connection is not open": a short reply landed with no bar; a long
+turn showed the warning, which cleared when the reply landed; with the box's
+agent process killed mid-turn, the error showed.
+
+Residuals, left in their current class:
+
+- A send whose start request fails on the network (`accepted: false` with no
+  refusal) may still have been admitted by the box. It stays an error and the
+  optimistic message is dropped, as before this change. Telling the two apart
+  needs a receipt lookup.
+- If the history refresh after a dropped stream fails, and `chat-complete`
+  arrived during that refresh, the warning stays until the next send or
+  dismiss. Before this change the same case left the danger bar.
+- A message queued while the dropped turn's box is still busy sits after the
+  reply in history, so the warning stays until that later turn ends, then
+  clears. Identifying the dropped turn's own reply needs turn correlation.
+- Reviewer-reported, not reproduced: in a new chat, if the turn stream fails
+  before the box assigns the session id, the machine keeps `sessionInput:
+  "new"` and every refresh takes the no-history branch, so the warning could
+  stay until the next send, dismiss, or reload. Two test-box runs of a new
+  chat recovered. A reliable fix needs the session assignment tied to the
+  accepted turn (a protocol choice for Ian).
+- The legacy `STREAM_BUSY` text ("Agent is busy with another request") is
+  unchanged.
+
+Decided (Ian, 2026-10-17): server refusals keep their own words in the bar,
+e.g. "Claude Code is not logged in — run `claude auth login` on this machine".
+Repeating the server's error is acceptable; the chat bar does not remap them.

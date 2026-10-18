@@ -101,7 +101,7 @@ destinations:
 ---
 `,
 );
-await box.write("_content/inbox/staged/Bread.memo.card", "<memo>flour, water, salt</memo>");
+await box.write("_content/inbox/staged/Bread.doc.card", "<doc>flour, water, salt</doc>");
 
 const result = await runTriage({
   boxRoot: box.root,
@@ -119,14 +119,14 @@ JSON.stringify(result.applications, null, 2)
 =>
 [
   {
-    "file": "Bread.memo.card",
+    "file": "Bread.doc.card",
     "outcome": "routed",
     "destination": "_content/inbox/triaged/recipes"
   }
 ]
 
-await box.read("_content/inbox/triaged/recipes/Bread.memo.card")
-=> <memo>flour, water, salt</memo>
+await box.read("_content/inbox/triaged/recipes/Bread.doc.card")
+=> <doc>flour, water, salt</doc>
 ```
 
 ```ts cleanup
@@ -150,7 +150,7 @@ destinations:
 ---
 `,
 );
-await box.write("_content/inbox/staged/Maybe.memo.card", "<memo>could be a recipe</memo>");
+await box.write("_content/inbox/staged/Maybe.doc.card", "<doc>could be a recipe</doc>");
 
 await runTriage({
   boxRoot: box.root,
@@ -164,7 +164,7 @@ await runTriage({
   }),
 });
 
-await box.read("_content/inbox/triaged/recipes/Maybe.memo.card.probable.txt")
+await box.read("_content/inbox/triaged/recipes/Maybe.doc.card.probable.txt")
 =>
 Triage confidence: probable
 Reason: Vague ingredient mention.
@@ -207,7 +207,7 @@ destinations:
 ---
 `,
 );
-await box.write("_content/inbox/staged/Mystery.memo.card", "<memo>ambiguous</memo>");
+await box.write("_content/inbox/staged/Mystery.doc.card", "<doc>ambiguous</doc>");
 
 const result = await runTriage({
   boxRoot: box.root,
@@ -230,7 +230,7 @@ JSON.stringify(result.applications.map((a) => ({
 =>
 [
   {
-    "file": "Mystery.memo.card",
+    "file": "Mystery.doc.card",
     "outcome": "held",
     "destination": "_content/inbox/triaged/_unsure",
     "hasQuestion": true

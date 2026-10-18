@@ -56,6 +56,8 @@ export interface ChatBodyProps {
   processRunning: boolean;
   sessionId: string | null; totalEntries: number;
   pendingCount: number; error: string | null | undefined;
+  /** The turn's live view dropped and the reply has not landed yet (chat machine `replyLost`). */
+  replyLost: boolean;
   currentUserEmail: string | undefined; currentUserName: string | undefined;
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;

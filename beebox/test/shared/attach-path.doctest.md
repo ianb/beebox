@@ -54,7 +54,7 @@ attachDirFor("inbox/Foo.image.card")
 attachDirFor("/box/inbox/scan-001.capture-session.card")
 => /box/inbox/scan-001.attach
 
-attachDirFor("Foo.memo.card")
+attachDirFor("Foo.doc.card")
 => Foo.attach
 ```
 
@@ -126,10 +126,10 @@ resolveAttachRef("inbox/Foo.image.card", "attach/photo-001.jpg")
 resolveAttachRef("inbox/Foo.email-message.card", "attach/attachments/foo.pdf")
 => inbox/Foo.attach/attachments/foo.pdf
 
-resolveAttachRef("Foo.memo.card", "attach")
+resolveAttachRef("Foo.doc.card", "attach")
 => Foo.attach
 
-resolveAttachRef("Foo.memo.card", "store/some/path.jpg")
+resolveAttachRef("Foo.doc.card", "store/some/path.jpg")
 => null
 ```
 
@@ -185,7 +185,7 @@ isInsideAttachScope("inbox/Foo.attach/photo.jpg")
 isInsideAttachScope("inbox/Foo.attach/scan.image.attach/photo.jpg")
 => true
 
-isInsideAttachScope("inbox/Foo.memo.card")
+isInsideAttachScope("inbox/Foo.doc.card")
 => false
 
 isInsideAttachScope("store/regular/path/file.txt")

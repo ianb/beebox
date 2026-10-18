@@ -141,7 +141,7 @@ The ledger is in probate. Settled creditors include...
 
 **Do NOT put here:**
 
-- Individual items (those are record/memo cards).
+- Individual items (those are record/doc cards).
 - Processing rules (those go in guide cards).
 - Communication style preferences (those go in the personality card).`,
 });

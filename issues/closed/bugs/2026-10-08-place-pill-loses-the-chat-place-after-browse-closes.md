@@ -13,7 +13,7 @@ Fixed 2026-10-08: the app bar now keeps its published places as an owner stack (
 After a Browse panel is opened and closed, the top-left pill reads "Where you
 are: Chat" (the URL differs only by the removed `card` parameter), and the folder half (the "here" menu) is gone
 until a reload. Both walks reproduced it in a live session:
-[D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 32, shots 08 to 09;
+[D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 32, shots 08 to 09;
 a reload restored the pill in shot 20) and
 [B-inventory second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 63:
 open Browse from the here menu, open the briefing, close the panels). The

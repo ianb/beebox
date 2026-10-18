@@ -23,26 +23,38 @@ import type { ChatSchedule } from "@core/chat/schedules/core.js";
 
 export type { AttachmentItem, FileAttachmentItem };
 
+/**
+ * Chat's status bar shows one message at the severity it means for the
+ * person, like the logging levels in code-style.md: `error` when their message
+ * or recording was not handled and they must act (danger style), `warning`
+ * when something degraded but the work went on (warning style). A transient
+ * that recovered never reaches either. An error outranks a warning.
+ */
 export function ChatStatusBanners(props: {
   error: string | null | undefined;
-  transcriptionError: string | null | undefined;
+  warning: string | null | undefined;
   onDismissError: () => void;
   activeSchedules: ChatSchedule[];
   onCancelSchedule: (label: string) => void;
 }) {
-  const { error, transcriptionError, onDismissError, activeSchedules, onCancelSchedule } = props;
+  const { error, warning, onDismissError, activeSchedules, onCancelSchedule } = props;
+  const message = error || warning;
+  const tone = error
+    ? { bar: "bg-danger-50 border-danger-light text-danger-dark", button: "text-danger hover:text-danger-dark" }
+    // warm-800 text: warning-dark on warning-50 is 3.3:1, under AA for text-sm.
+    : { bar: "bg-warning-50 border-warning-light text-warm-800", button: "text-warm-700 hover:text-warm-900" };
   return (
     <>
-      {/* Error display */}
-      {error || transcriptionError ? (
-        <div className="px-4 py-2 bg-danger-50 border-t border-danger-light text-danger-dark text-sm">
+      {/* Error or warning display */}
+      {message ? (
+        <div className={`px-4 py-2 border-t text-sm ${tone.bar}`}>
           {/* Real space text node (not just margin) so a copy of the banner
               keeps the message and "dismiss" separated. */}
-          {error || transcriptionError}{"  "}
+          {message}{"  "}
           <button
             id="bbx-chat-error-dismiss"
             onClick={onDismissError}
-            className="text-danger hover:text-danger-dark underline"
+            className={`${tone.button} underline`}
           >
             dismiss
           </button>

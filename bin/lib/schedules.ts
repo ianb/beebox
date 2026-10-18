@@ -80,7 +80,7 @@ const durationSchema = z
 
 // ─── schedule.yaml ────────────────────────────────────────────────────────
 
-export const scheduleWorkstreamSchema = z.strictObject({
+const scheduleWorkstreamSchema = z.strictObject({
   agent: z.enum(["claude", "codex"]),
   model: z.string().min(1),
   /** Reasoning effort, passed through as `--effort`. Claude-only: codex has no
@@ -262,7 +262,7 @@ export async function loadSchedules(root: string): Promise<ScheduleEntry[]> {
 
 // ─── Store records ────────────────────────────────────────────────────────
 
-export const outcomeSchema = z.enum(["clean", "handoff", "failed"]);
+const outcomeSchema = z.enum(["clean", "handoff", "failed"]);
 export type Outcome = z.infer<typeof outcomeSchema>;
 
 /** `<store>/<name>/state.json` — the per-schedule due-ness input. */
@@ -329,7 +329,7 @@ export const PRIORITY_GUIDE = [
 
 /** Who closed an alert: a person (`ack`), the digest (an fyi it has shown),
  *  or the schedule (`resolve`: the condition cleared). */
-export const closedBySchema = z.enum(["person", "digest", "schedule"]);
+const closedBySchema = z.enum(["person", "digest", "schedule"]);
 export type ClosedBy = z.infer<typeof closedBySchema>;
 
 export const alertSchema = z.strictObject({

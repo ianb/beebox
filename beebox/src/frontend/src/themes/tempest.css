@@ -1,0 +1,126 @@
+/* Nocturnal pigment and distant sparks; translucent reading surfaces belong to Tempest chrome. */
+:is([data-chrome-theme="tempest"], .bbx-card-theme[data-card-theme="tempest"]) {
+  --tempest-paper: #0b1b2b;
+  --tempest-ink: #e0eef4;
+  --tempest-soft: #a4bac8;
+  --tempest-edge: #456477;
+  --tempest-accent: #a8d4e5;
+  --tempest-art: url("./tempest-surge.webp");
+}
+.bbx-box-presentation[data-chrome-theme="tempest"] {
+  background: var(--tempest-art) center bottom / cover, #041039;
+  color: var(--tempest-ink);
+  --bbx-selection: #edb49f;
+  --bbx-selection-ink: #152044;
+  --bbx-focus-ring: #c4ceff;
+}
+[data-chrome-theme="tempest"] .bbx-app-nav {
+  color: #ecedff;
+  background: #05172755;
+  backdrop-filter: blur(3px);
+  border-bottom: 0;
+  box-shadow: none;
+  padding-block: 5px;
+}
+[data-chrome-theme="tempest"] .bbx-app-nav button:not(#bbx-nav-errors) {
+  background: #101d40;
+  color: #dce4ff;
+  border: 1px solid #6376b0;
+  border-radius: 5px 3px 5px 3px;
+}
+[data-chrome-theme="tempest"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors) {
+  background: #b2e0ed;
+  color: #101d40;
+  border-color: #d0daff;
+}
+[data-chrome-theme="tempest"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material) {
+  color: var(--tempest-ink);
+  background: linear-gradient(135deg,#102c40a8,#06172bb5 75%);
+  backdrop-filter: blur(12px);
+  border: 0;
+  border-radius: 6px 3px 6px 3px;
+  box-shadow: 0 6px 16px #00091d50;
+}
+[data-chrome-theme="tempest"] .bbx-chat-user-paper {
+  background: #24506bcc;
+  backdrop-filter: blur(10px);
+  color: #eef7fa;
+  border: 0;
+  border-radius: 8px 6px 3px 8px;
+  box-shadow: 2px 3px 0 #0a1634;
+}
+[data-chrome-theme="tempest"] :is(.bbx-chat-reply-material,.bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+  --tw-prose-body: var(--tempest-ink);
+  --tw-prose-headings: var(--tempest-ink);
+  --tw-prose-bold: #fff0d5;
+  --tw-prose-links: #bacdff;
+  color: var(--tempest-ink);
+}
+[data-chrome-theme="tempest"] .bbx-chat-callout > .text-accent-dark { color: #b8c6e7; }
+[data-chrome-theme="tempest"] .bbx-composer-material > section { background: transparent; border: 0; }
+[data-chrome-theme="tempest"] .bbx-composer-material { backdrop-filter: none; }
+[data-chrome-theme="tempest"] .bbx-composer-material textarea { background: transparent; color: #e0eef4; }
+[data-chrome-theme="tempest"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic):enabled {
+  color: #0c193b;
+  background: #a8d4e5;
+  border: 1px solid #d6ddff;
+  border-radius: 6px 3px 6px 3px;
+  box-shadow: 0 2px 0 #304d8c;
+}
+[data-chrome-theme="tempest"] :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard):enabled {
+  background: #22345d;
+  color: #dce6ff;
+  border: 1px solid #6376ac;
+  border-radius: 12px;
+}
+.bbx-card-theme[data-card-theme="tempest"] {
+  --bbx-paper: #0b1b2b;
+  --bbx-ink: #e0eef4;
+  --bbx-ink-soft: #a4bac8;
+  --bbx-pen: #bacdff;
+  --bbx-edge: #456477;
+  --bbx-underlay: #0b142e;
+  --bbx-tint: #24355b;
+  --bbx-sheet: #24355b;
+  --bbx-quote-paper: #24355b;
+  --bbx-quote-layer-paper: #24355b;
+  --bbx-blockquote-paper: #24355b;
+  --bbx-blockquote-padding: .6em 1em;
+  --bbx-blockquote-edge: 2px;
+  --bbx-code-paper: #080f24;
+  --bbx-code-ink: #d7e3ff;
+  --bbx-sheet-radius: 6px 3px 6px 3px;
+  --bbx-selection: #edb49f;
+  --bbx-selection-ink: #152044;
+  --bbx-bullet: #edb49f;
+  --bbx-counter: #edb49f;
+}
+[data-chrome-theme="tempest"] .bbx-card-surface[data-card-theme="tempest"] {
+  border: 0;
+  background: linear-gradient(130deg,#0d263baa,#06172ba8);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px #02071966;
+
+}
+.bbx-card-theme[data-card-theme="tempest"] .bbx-card-heading { background: transparent; border-bottom: 0; }
+.bbx-card-theme[data-card-theme="tempest"] .bbx-themed-action {
+  color: #0b1b2b;
+  background: #a8d4e5;
+  border-radius: 12px 5px 12px 5px;
+}
+[data-chrome-theme="tempest"] :is(button,textarea,input):focus-visible:not(.bbx-card-theme *) {
+  outline: 2px solid #d4dfff;
+  outline-offset: 3px;
+}
+.bbx-card-theme[data-card-theme="tempest"] :is(button,textarea,input):focus-visible {
+  outline: 2px solid #d4dfff;
+  outline-offset: 3px;
+}
+@media (max-width:639px) {
+  .bbx-box-presentation[data-chrome-theme="tempest"] {
+    background-size: auto 1100px;
+    background-position: 25% top;
+    background-repeat: no-repeat;
+
+  }
+}

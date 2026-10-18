@@ -5,6 +5,8 @@ import { isRecord } from "@shared/is-record";
 import { useLocation, useParams } from "@tanstack/react-router";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 
+import { useDoodlebitMotion } from "./useDoodlebitMotion";
+
 interface PresentationState {
   data: RouterOutput["presentation"]["get"] | undefined;
   error: string | null;
@@ -42,9 +44,10 @@ export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string
   });
   const state = useMemo(() => ({ data: query.data, error: query.error?.message ?? null, retry }), [query.data, query.error, retry]);
   const chrome = query.data?.chrome;
+  const surface = useDoodlebitMotion(chrome?.choice.name === "doodlebit");
   return (
     <PresentationContext.Provider value={state}>
-      <div className="bbx-box-presentation h-full" data-chrome-theme={chrome?.choice.name ?? "plain"} data-chrome-stock={chrome?.choice.stock ?? "neutral"}>
+      <div ref={surface} className="bbx-box-presentation h-full" data-chrome-theme={chrome?.choice.name ?? "plain"} data-chrome-stock={chrome?.choice.stock ?? "neutral"}>
         {children}
       </div>
     </PresentationContext.Provider>

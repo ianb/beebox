@@ -136,6 +136,14 @@ s.context().error
 => Recording didn't start. Please try again.
 ```
 
+Nothing was recorded, so the chat bar shows it as an error the person must act
+on (issues/bugs/2026-08-25-one-pink-bar-three-severities.md):
+
+```ts continue
+s.context().errorLevel
+=> error
+```
+
 ## A network drop pauses live text, with no window
 
 `CONNECTION_DEGRADED` with cause `network` goes from `recording` to
@@ -223,6 +231,13 @@ s.state()
 
 s.context().error
 => Live transcription unavailable (code 1008) — still recording
+```
+
+The recording went on, so the chat bar shows this as a warning, not an error:
+
+```ts continue
+s.context().errorLevel
+=> warning
 
 s.emit({ type: "SERVER_ERROR", message: "upstream quota" });
 s.state()

@@ -48,17 +48,17 @@ async function lendingBox() {
     "navigation:",
     "  label: Lending",
     "  links:",
-    "    - ref: Gone.memo.card",
+    "    - ref: Gone.doc.card",
     "  expand:",
     "    - query: \"*.loan.card\"",
     "    - query: \"**/*.receipt.card\"",
-    "    - query: \"*.memo.card\"",
+    "    - query: \"*.doc.card\"",
     "      group: Notes",
     "---",
     "",
   ].join("\n"));
-  await box.write("_content/lending/Lending_List.memo.card", "---\nprominence: entry-point\n---\n");
-  await box.write("_content/lending/Rules.memo.card", "---\nprominence: primary\n---\n");
+  await box.write("_content/lending/Lending_List.doc.card", "---\ntitle: Lending List\nprominence: entry-point\n---\n");
+  await box.write("_content/lending/Rules.doc.card", "---\ntitle: Rules\nprominence: primary\n---\n");
   await box.write("_content/lending/Drill.loan.card", "---\n---\n");
   await box.write("_content/lending/Stove.loan.card", "---\n---\n");
   await box.write("_content/lending/tools/Tools.landmark.card", "---\nnavigation:\n  label: Tools\n---\n");
@@ -72,8 +72,8 @@ A single-type glob in the place's own folder, the same glob through every
 folder below, and anything else, which is named by its query.
 
 ```ts
-({ here: expandLabel("*.loan.card"), below: expandLabel("**/*.image.card"), other: expandLabel("2026-*.memo.card") })
-=> { here: "Every loan card here", below: "Every image card here and in folders below", other: "Cards matching 2026-*.memo.card" }
+({ here: expandLabel("*.loan.card"), below: expandLabel("**/*.image.card"), other: expandLabel("2026-*.doc.card") })
+=> { here: "Every loan card here", below: "Every image card here and in folders below", other: "Cards matching 2026-*.doc.card" }
 ```
 
 ## With `expandsAsGroups`, every expand is a group
@@ -91,15 +91,15 @@ const page = await payload(box.root, { dir: "_content/lending", expandsAsGroups:
 ({ links: rows(page.links), groups: groups(page.groups) })
 => {
   links: [
-    "listed _content/lending/Gone.memo.card (missing)",
-    "derived/entry-point _content/lending/Lending_List.memo.card",
-    "derived/primary _content/lending/Rules.memo.card",
+    "listed _content/lending/Gone.doc.card (missing)",
+    "derived/entry-point _content/lending/Lending_List.doc.card",
+    "derived/primary _content/lending/Rules.doc.card",
     "place/background _content/lending/tools/Tools.landmark.card"
   ],
   groups: [
     { label: "Every loan card here", count: 2, children: ["_content/lending/Drill.loan.card", "_content/lending/Stove.loan.card"] },
     { label: "Every receipt card here and in folders below", count: 0, children: [] },
-    { label: "Notes", count: 2, children: ["_content/lending/Lending_List.memo.card", "_content/lending/Rules.memo.card"] }
+    { label: "Notes", count: 2, children: ["_content/lending/Lending_List.doc.card", "_content/lending/Rules.doc.card"] }
   ]
 }
 ```
@@ -114,9 +114,9 @@ const menu = await payload(box.root, { dir: "_content/lending" });
 ({ links: rows(menu.links), groups: menu.groups.map((g) => g.label) })
 => {
   links: [
-    "listed _content/lending/Gone.memo.card (missing)",
-    "derived/entry-point _content/lending/Lending_List.memo.card",
-    "derived/primary _content/lending/Rules.memo.card",
+    "listed _content/lending/Gone.doc.card (missing)",
+    "derived/entry-point _content/lending/Lending_List.doc.card",
+    "derived/primary _content/lending/Rules.doc.card",
     "place/background _content/lending/tools/Tools.landmark.card",
     "expand _content/lending/Drill.loan.card",
     "expand _content/lending/Stove.loan.card"
@@ -132,7 +132,7 @@ A place with exactly one entry-point card arrives on that card.
 ```ts
 const box = await lendingBox();
 (await payload(box.root, { dir: "_content/lending" })).arrival
-=> _content/lending/Lending_List.memo.card
+=> _content/lending/Lending_List.doc.card
 ```
 
 ## Two entry points, or none, arrive on the landmark card
@@ -143,8 +143,8 @@ else to open. Either way it opens the place page.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/swim/Swim.landmark.card", "---\nnavigation:\n  label: Swim\n---\n");
-await box.write("_content/swim/Week.memo.card", "---\nprominence: entry-point\n---\n");
-await box.write("_content/swim/Meets.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/swim/Week.doc.card", "---\ntitle: Week\nprominence: entry-point\n---\n");
+await box.write("_content/swim/Meets.doc.card", "---\ntitle: Meets\nprominence: entry-point\n---\n");
 await box.write("_content/garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
 ({ two: (await payload(box.root, { dir: "_content/swim" })).arrival,
   none: (await payload(box.root, { dir: "_content/garden" })).arrival })
@@ -160,7 +160,7 @@ An entry point inside a nested place belongs to that place, not the root.
 const box = await makeTmpBox();
 await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: test\n---\n");
 await box.write("_content/lending/Lending.landmark.card", "---\nnavigation:\n  label: Lending\n---\n");
-await box.write("_content/lending/List.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/lending/List.doc.card", "---\ntitle: List\nprominence: entry-point\n---\n");
 const root = await payload(box.root, { dir: "" });
 ({ dir: root.dir, arrival: root.arrival })
 => { dir: "", arrival: "_content/Box.landmark.card" }
@@ -174,7 +174,7 @@ point to open.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/house/House.landmark.card", "---\nprominence: background\nnavigation:\n  label: Housekeeping\n---\n");
-await box.write("_content/house/Log.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/house/Log.doc.card", "---\ntitle: Log\nprominence: entry-point\n---\n");
 (await payload(box.root, { dir: "_content/house" })).arrival
 => _content/house/House.landmark.card
 ```
@@ -193,34 +193,34 @@ await box.write("_content/house/House.landmark.card", [
   "navigation:",
   "  label: House",
   "  links:",
-  "    - ref: Pinned.memo.card",
+  "    - ref: Pinned.doc.card",
   "  expand:",
-  "    - query: \"Recipe*.memo.card\"",
+  "    - query: \"Recipe*.doc.card\"",
   "      group: Recipes",
   "---",
   "",
 ].join("\n"));
-await box.write("_content/house/Pinned.memo.card", "---\n---\n");
-await box.write("_content/house/Start.memo.card", "---\nprominence: entry-point\n---\n");
-await box.write("_content/house/Recipe_Soup.memo.card", "---\n---\n");
+await box.write("_content/house/Pinned.doc.card", "---\ntitle: Pinned\n---\n");
+await box.write("_content/house/Start.doc.card", "---\ntitle: Start\nprominence: entry-point\n---\n");
+await box.write("_content/house/Recipe_Soup.doc.card", "---\ntitle: Recipe Soup\n---\n");
 await box.write("_content/house/chat/Hello.chat.card", "---\nsession: s1\n---\n");
 await box.write("_content/house/garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
-await box.write("_content/house/garden/Seeds.memo.card", "---\n---\n");
-await box.write("_content/house/Groceries.memo.card", "---\n---\n");
-await box.write("_content/house/notes/Landlord.memo.card", "---\n---\n");
-await box.write("_content/house/Spanish.memo.card", "---\n---\n");
-await utimes(box.path("_content/house/Groceries.memo.card"), 1_700_000_000, 1_700_000_000);
-await utimes(box.path("_content/house/notes/Landlord.memo.card"), 1_700_000_200, 1_700_000_200);
-await utimes(box.path("_content/house/Spanish.memo.card"), 1_700_000_100, 1_700_000_100);
+await box.write("_content/house/garden/Seeds.doc.card", "---\ntitle: Seeds\n---\n");
+await box.write("_content/house/Groceries.doc.card", "---\ntitle: Groceries\n---\n");
+await box.write("_content/house/notes/Landlord.doc.card", "---\ntitle: Landlord\n---\n");
+await box.write("_content/house/Spanish.doc.card", "---\ntitle: Spanish\n---\n");
+await utimes(box.path("_content/house/Groceries.doc.card"), 1_700_000_000, 1_700_000_000);
+await utimes(box.path("_content/house/notes/Landlord.doc.card"), 1_700_000_200, 1_700_000_200);
+await utimes(box.path("_content/house/Spanish.doc.card"), 1_700_000_100, 1_700_000_100);
 
 const page = await payload(box.root, { dir: "_content/house", expandsAsGroups: true });
 groups(page.groups)
 => [
-  { label: "Recipes", count: 1, children: ["_content/house/Recipe_Soup.memo.card"] },
+  { label: "Recipes", count: 1, children: ["_content/house/Recipe_Soup.doc.card"] },
   {
     label: "Also here",
     count: 3,
-    children: ["_content/house/notes/Landlord.memo.card", "_content/house/Spanish.memo.card", "_content/house/Groceries.memo.card"]
+    children: ["_content/house/notes/Landlord.doc.card", "_content/house/Spanish.doc.card", "_content/house/Groceries.doc.card"]
   }
 ]
 ```
@@ -229,7 +229,7 @@ Its rows are derived links with no level, titled like any other row.
 
 ```ts continue
 rows(page.groups[1]?.children ?? [])
-=> ["derived _content/house/notes/Landlord.memo.card", "derived _content/house/Spanish.memo.card", "derived _content/house/Groceries.memo.card"]
+=> ["derived _content/house/notes/Landlord.doc.card", "derived _content/house/Spanish.doc.card", "derived _content/house/Groceries.doc.card"]
 ```
 
 Only the server's group carries the `alsoHere` mark the page reads.
@@ -259,8 +259,8 @@ is 30, so the page can say "+20 more".
 const box = await makeTmpBox();
 await box.write("_content/many/Many.landmark.card", "---\nnavigation:\n  label: Many\n---\n");
 for (let i = 1; i <= 30; i++) {
-  const rel = `_content/many/Card_${i}.memo.card`;
-  await box.write(rel, "---\n---\n");
+  const rel = `_content/many/Card_${i}.doc.card`;
+  await box.write(rel, `---\ntitle: Card ${i}\n---\n`);
   await utimes(box.path(rel), 1_700_000_000 + i, 1_700_000_000 + i);
 }
 const [also] = (await payload(box.root, { dir: "_content/many", expandsAsGroups: true })).groups;
@@ -270,8 +270,8 @@ assert.ok(also);
   label: "Also here",
   count: 30,
   children: [
-    "Card_30.memo.card", "Card_29.memo.card", "Card_28.memo.card", "Card_27.memo.card", "Card_26.memo.card",
-    "Card_25.memo.card", "Card_24.memo.card", "Card_23.memo.card", "Card_22.memo.card", "Card_21.memo.card"
+    "Card_30.doc.card", "Card_29.doc.card", "Card_28.doc.card", "Card_27.doc.card", "Card_26.doc.card",
+    "Card_25.doc.card", "Card_24.doc.card", "Card_23.doc.card", "Card_22.doc.card", "Card_21.doc.card"
   ]
 }
 ```
@@ -289,12 +289,12 @@ numbers by value.
 const box = await makeTmpBox();
 await box.write("_content/same/Same.landmark.card", "---\nnavigation:\n  label: Same\n---\n");
 for (const name of ["B_10", "A", "B_2"]) {
-  const rel = `_content/same/${name}.memo.card`;
-  await box.write(rel, "---\n---\n");
+  const rel = `_content/same/${name}.doc.card`;
+  await box.write(rel, `---\ntitle: ${name}\n---\n`);
   await utimes(box.path(rel), 1_700_000_000, 1_700_000_000);
 }
 (await payload(box.root, { dir: "_content/same", expandsAsGroups: true })).groups[0]?.children.map((c) => c.ref)
-=> ["_content/same/A.memo.card", "_content/same/B_2.memo.card", "_content/same/B_10.memo.card"]
+=> ["_content/same/A.doc.card", "_content/same/B_2.doc.card", "_content/same/B_10.doc.card"]
 ```
 
 ```ts cleanup
@@ -313,18 +313,18 @@ await box.write("_content/den/Den.landmark.card", [
   "navigation:",
   "  label: Den",
   "  expand:",
-  "    - query: \"Book*.memo.card\"",
+  "    - query: \"Book*.doc.card\"",
   "      group: Also here",
   "---",
   "",
 ].join("\n"));
-await box.write("_content/den/Book_One.memo.card", "---\n---\n");
-await box.write("_content/den/Lamp.memo.card", "---\n---\n");
+await box.write("_content/den/Book_One.doc.card", "---\ntitle: Book One\n---\n");
+await box.write("_content/den/Lamp.doc.card", "---\ntitle: Lamp\n---\n");
 (await payload(box.root, { dir: "_content/den", expandsAsGroups: true })).groups
   .map((g) => ({ label: g.label, alsoHere: g.alsoHere === true, children: g.children.map((c) => c.ref) }))
 => [
-  { label: "Also here", alsoHere: false, children: ["_content/den/Book_One.memo.card"] },
-  { label: "Also here", alsoHere: true, children: ["_content/den/Lamp.memo.card"] }
+  { label: "Also here", alsoHere: false, children: ["_content/den/Book_One.doc.card"] },
+  { label: "Also here", alsoHere: true, children: ["_content/den/Lamp.doc.card"] }
 ]
 ```
 
@@ -339,7 +339,7 @@ Every card here is already in a tier, so the page adds no empty group.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/tidy/Tidy.landmark.card", "---\nnavigation:\n  label: Tidy\n---\n");
-await box.write("_content/tidy/Start.memo.card", "---\nprominence: entry-point\n---\n");
+await box.write("_content/tidy/Start.doc.card", "---\ntitle: Start\nprominence: entry-point\n---\n");
 await box.write("_content/tidy/Log.chat.card", "---\nsession: s1\n---\n");
 (await payload(box.root, { dir: "_content/tidy", expandsAsGroups: true })).groups
 => []
@@ -376,8 +376,8 @@ export default cardSchema("loan", {
 await box.write("_content/lending/Lending.landmark.card", "---\nnavigation:\n  label: Lending\n---\n");
 await box.write("_content/lending/Stove.loan.card", "---\nitem: Camp stove\nholder: Idris\ndue: 2026-10-17\n---\n");
 await box.write("_content/lending/Broken.loan.card", "---\nitem: Ladder\n---\n");
-await box.write("_content/lending/Rules.memo.card", "---\ntitle: House rules\n---\n");
-await box.write("_content/lending/Mislabeled.loan.card", "---\ntype: memo\nitem: Tent\nholder: Bram\ndue: 2026-11-01\n---\n");
+await box.write("_content/lending/Rules.doc.card", "---\ntitle: House rules\n---\n");
+await box.write("_content/lending/Mislabeled.loan.card", "---\ntype: doc\nitem: Tent\nholder: Bram\ndue: 2026-11-01\n---\n");
 const [also] = (await payload(box.root, { dir: "_content/lending", expandsAsGroups: true })).groups;
 assert.ok(also);
 also.children.map((c) => [c.title, c.detail ?? null]).toSorted()
@@ -396,11 +396,11 @@ parses only the frontmatter, so a body changes nothing about the payload.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/lending/Lending.landmark.card",
-  "---\nnavigation:\n  label: Lending\n  links:\n    - ref: Stove.memo.card\n---\nThe [stove](Stove.memo.card) is with Idris.\n");
-await box.write("_content/lending/Stove.memo.card", "---\n---\n");
+  "---\nnavigation:\n  label: Lending\n  links:\n    - ref: Stove.doc.card\n---\nThe [stove](Stove.doc.card) is with Idris.\n");
+await box.write("_content/lending/Stove.doc.card", "---\ntitle: Stove\n---\n");
 const p = await payload(box.root, { dir: "_content/lending", expandsAsGroups: true });
 ({ label: p.label, links: rows(p.links) })
-=> { label: "Lending", links: ["listed _content/lending/Stove.memo.card"] }
+=> { label: "Lending", links: ["listed _content/lending/Stove.doc.card"] }
 ```
 
 ```ts cleanup

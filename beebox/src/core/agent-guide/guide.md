@@ -76,7 +76,7 @@ from, `{% quote %}` marks that they are exact:
 
 <!-- rules: laws.quoting-citation -->
 ```
-{% source ref="/_content/inbox/Voice.memo.card" usage="verbatim" %}
+{% source ref="/_content/inbox/Voice.doc.card" usage="verbatim" %}
 {% quote %}I keep going back and forth on the kitchen.{% /quote %}
 {% /source %}
 ```
@@ -282,7 +282,7 @@ when the user shows interest in tracking something (plants, games, bills),
 first find out what they want out of it and how they'd use it, and only then
 build; don't create the first card or type in the same breath as the offer. A
 collection of repeated items with distinct typed fields gets a new card type,
-not generic memos or records. Read `node_modules/beebox/box-docs/schemas.md`
+not generic docs or records. Read `node_modules/beebox/box-docs/schemas.md`
 before writing one; it goes in the box's `src/schemas/`, never
 `_config/schemas/`. Other plugins: run `bbx plugins list` to see installed
 plugins and how to activate one.
@@ -403,7 +403,7 @@ editing one; what a landmark lists, and how a card surfaces in it, is in
 <!-- rules: intake.arrival -->
 Most items arrive on their own; you create cards with `bbx create` and move
 them with `bbx mv` only as part of your own work. The user records voice
-memos, photos, or text in the **capture UI**, which reaches chat as a
+notes, photos, or text in the **capture UI**, which reaches chat as a
 `<capture>` message pointing at a capture-session card. **Connectors**
 (Gmail, Google Calendar, Google Drive) sync during the wakeup
 cycle, creating cards in `_content/inbox/` and job cards in
@@ -464,10 +464,11 @@ propose adding the section, in the boxholder's words, at the next retro:
 <!-- rules: reaching.default-quote -->
 {{reaching_default}}
 
-<!-- rules: reaching.check-before-promising, reaching.notify-now -->
+<!-- rules: reaching.check-before-promising, reaching.person-enables, reaching.notify-now -->
 Before you promise a reminder or a watch, run `bbx notify --check`; if nothing
-can reach the person, say so instead of promising. To reach them now, `bbx
-notify` with a `--loudness` (`dot`, `quiet`, or `loud`) and a `--target` where
+can reach the person, say so instead of promising. You cannot turn a channel
+on: the person does that in Admin, on the Host tab, under Notifications, or
+pairs the iPhone app in Settings. To reach them now, `bbx notify` with a `--loudness` (`dot`, `quiet`, or `loud`) and a `--target` where
 a tap lands; in a chat turn, `<callout loudness="quiet">` does this for the
 turn's outcome.
 

@@ -17,11 +17,10 @@ export default function TestView({ cards }) {
 }
 `;
 
-const MEMO_CARD = `---
-status: new
-created: 2026-03-01T12:00:00Z
+const DOC_CARD = `---
+title: Test doc
 ---
-Test memo content
+Test doc content
 `;
 ```
 
@@ -86,7 +85,7 @@ The cards endpoint returns cards matching a view's dependency globs:
 ```ts
 const ctx = await makeTestServer();
 await ctx.seedView("test.tsx", VIEW_SOURCE);
-await ctx.seed("_content/inbox/Test.memo.card", MEMO_CARD);
+await ctx.seed("_content/inbox/Test.doc.card", DOC_CARD);
 ctx.commitAll("add test data");
 
 const res = await ctx.request({ method: "GET", url: "/api/views/test/cards" });
@@ -99,13 +98,13 @@ bodyField(res.body, "cards", "length")
 => 1
 
 bodyField(res.body, "cards", 0, "type")
-=> memo
+=> doc
 
 bodyField(res.body, "cards", 0, "path")
-=> _content/inbox/Test.memo.card
+=> _content/inbox/Test.doc.card
 
-bodyField(res.body, "cards", 0, "frontmatter", "status")
-=> new
+bodyField(res.body, "cards", 0, "frontmatter", "title")
+=> Test doc
 
 JSON.stringify(bodyField(res.body, "files"))
 => []

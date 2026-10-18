@@ -29,6 +29,23 @@ normalizeModelId("claude-fable-5[1m]")
 => claude-fable-5-1
 ```
 
+Sonnet 5 folds into Sonnet 5.5 and Haiku 4.5 into Haiku 5.5, the models the
+`sonnet` and `haiku` aliases now name.
+
+```ts
+normalizeModelId("claude-sonnet-5")
+=> claude-sonnet-5-5
+
+MODEL_ID.sonnet
+=> claude-sonnet-5-5
+
+normalizeModelId("claude-haiku-4-5-20251001")
+=> claude-haiku-5-5
+
+MODEL_ID.haiku
+=> claude-haiku-5-5
+```
+
 Fable 5 itself is retired the same way: a chat or procedure card that pinned
 it keeps working on Fable 5.1.
 
@@ -37,16 +54,17 @@ normalizeModelId("claude-fable-5")
 => claude-fable-5-1
 ```
 
-GPT-5.6 Luna and Sol selections move to the corresponding GPT-6 models. Terra
-stays on GPT-5.6 because GPT-6 has no Terra tier.
+GPT-5.6 Luna moves to GPT-6 Luna; GPT-5.6 Sol and GPT-6 Sol move to GPT-6.1
+Sol. Terra stays on GPT-5.6 because GPT-6 has no Terra tier.
 
 ```ts
-JSON.stringify([
+[
   normalizeModelId("gpt-5.6-luna"),
   normalizeModelId("gpt-5.6-sol"),
+  normalizeModelId("gpt-6-sol"),
   normalizeModelId("gpt-5.6-terra"),
-])
-=> ["gpt-6-luna","gpt-6-sol","gpt-5.6-terra"]
+]
+=> ["gpt-6-luna", "gpt-6.1-sol", "gpt-6.1-sol", "gpt-5.6-terra"]
 ```
 
 ## Live IDs pass through unchanged

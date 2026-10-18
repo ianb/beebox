@@ -115,7 +115,7 @@ const config: KnipConfig = {
         "test/**/*.ts",
         "test/**/*.doctest.md",
       ],
-      project: ["src/**/*.{ts,tsx}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}"],
+      project: ["src/**/*.{ts,tsx,css}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}", "test/**/*.doctest.md"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;
@@ -143,24 +143,18 @@ const config: KnipConfig = {
   ],
   ignoreBinaries: [
     // System tools, not npm packages — there is no dependency to declare.
-    // launchctl (bin/schedules install) and claude (the headless launcher's
-    // install-time probe) are the same kind.
-    "launchctl",
-    "claude",
+    // (knip 6 no longer reports launchctl, claude, tar, ps or lsof.)
     "pdfinfo",
     "pdftotext",
     "pdftoppm",
     "qpdf",
     "uvx",
-    "tar",
-    "ps",
-    "lsof",
+    // bin/deploy-lock.test.ts reads the deploy log with `tail`.
+    "tail",
     // box-growth/bytes.ts measures disk use with `du -sk`.
     "du",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
-    // A tracked executable in this repo, run by the root `dev` script.
-    "bin/workstreams",
     // beebox package scripts, invoked across the workspace boundary:
     // bin/deferred-issues.ts and bin/lib/manual-testing.sh run
     // `pnpm --dir beebox doc-check`, and the root postinstall runs

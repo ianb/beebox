@@ -19,7 +19,7 @@ A clean box reports nothing:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("_content/inbox/x.memo.card", "---\nstatus: new\n---\n");
+await box.write("_content/inbox/x.doc.card", "---\ntitle: Note\n---\n");
 JSON.stringify(await checkRootStrayErrors(box.root))
 => []
 ```

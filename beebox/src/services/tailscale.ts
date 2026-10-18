@@ -214,7 +214,7 @@ export function hasFunnelForTarget(serve: ServeConfigJson, hostPort: string): bo
 // ─── BackendState: the seven known ipn.State values plus a fail-closed unknown
 // branch (a "six states" schema would misreport InUseOtherUser). ─────────────
 
-export const KNOWN_BACKEND_STATES = [
+const KNOWN_BACKEND_STATES = [
   "NoState",
   "NeedsLogin",
   "NeedsMachineAuth",

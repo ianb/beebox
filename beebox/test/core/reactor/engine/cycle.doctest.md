@@ -226,7 +226,7 @@ reach an agent even when it's the only job around.
 const review = "review.todo-review.job.card";
 const card = createTodoReviewJobTemplate({
   escalated: [],
-  stirring: [{ locator: "a.memo.card:1", text: "Stirring item", detail: "started 2026-07-28" }],
+  stirring: [{ locator: "a.doc.card:1", text: "Stirring item", detail: "started 2026-07-28" }],
   stale: [],
 });
 summary(await cycleOn({ [review]: card }, { skipLowPriority: true, act: finishing(review) }))

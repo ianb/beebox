@@ -20,14 +20,14 @@ await fs.mkdir(box.path("_content/inbox/staged/Note.attach"), { recursive: true 
 await fs.mkdir(box.path("_content/inbox"), { recursive: true });
 await fs.mkdir(box.path(".git/annex/objects/aa/bb"), { recursive: true });
 await fs.writeFile(object, "annex bytes");
-await fs.writeFile(box.path("_content/inbox/staged/Note.memo.card"), "card");
+await fs.writeFile(box.path("_content/inbox/staged/Note.doc.card"), "card");
 const attach = box.path("_content/inbox/staged/Note.attach");
 await fs.symlink("../../../../.git/annex/objects/aa/bb/SHA256E--asset.bin", `${attach}/asset.bin`);
 await fs.writeFile(`${attach}/neighbor.bin`, "neighbor");
 await fs.symlink("neighbor.bin", `${attach}/neighbor-link.bin`);
 await movePhase2CardFiles(
-  box.path("_content/inbox/staged/Note.memo.card"),
-  box.path("_content/inbox/triaged/Filed/Note.memo.card"),
+  box.path("_content/inbox/staged/Note.doc.card"),
+  box.path("_content/inbox/triaged/Filed/Note.doc.card"),
 );
 const filedAttach = box.path("_content/inbox/triaged/Filed/Note.attach");
 const filed = await fs.readFile(`${filedAttach}/asset.bin`, "utf8");
@@ -54,10 +54,10 @@ Recovery uses the original source location to interpret unchanged link text
 after the directory rename already succeeded.
 
 ```ts continue
-await fs.mkdir(box.path("_content/inbox/intake/Recover.memo.attach"), { recursive: true });
-await fs.symlink("../../../../.git/annex/objects/aa/bb/SHA256E--asset.bin", box.path("_content/inbox/intake/Recover.memo.attach/asset.bin"));
-const oldScope = box.path("_content/inbox/intake/Recover.memo.attach");
-const newScope = box.path("_content/inbox/triaged/Filed/Recover.memo.attach");
+await fs.mkdir(box.path("_content/inbox/intake/Recover.doc.attach"), { recursive: true });
+await fs.symlink("../../../../.git/annex/objects/aa/bb/SHA256E--asset.bin", box.path("_content/inbox/intake/Recover.doc.attach/asset.bin"));
+const oldScope = box.path("_content/inbox/intake/Recover.doc.attach");
+const newScope = box.path("_content/inbox/triaged/Filed/Recover.doc.attach");
 await fs.mkdir(box.path("_content/inbox/triaged/Filed"), { recursive: true });
 await fs.rename(oldScope, newScope);
 await movePathPreservingAnnexSymlink(oldScope, newScope);
@@ -74,10 +74,10 @@ Both missing paths produce a visible retry failure.
 
 ```ts
 const plain = await makeTmpBox();
-await fs.writeFile(plain.path("_content/inbox/intake/Plain.memo.card"), "card");
+await fs.writeFile(plain.path("_content/inbox/intake/Plain.doc.card"), "card");
 (await movePhase2CardFiles(
-  plain.path("_content/inbox/intake/Plain.memo.card"),
-  plain.path("_content/inbox/staged/Plain.memo.card"),
+  plain.path("_content/inbox/intake/Plain.doc.card"),
+  plain.path("_content/inbox/staged/Plain.doc.card"),
 )).length
 => 1
 

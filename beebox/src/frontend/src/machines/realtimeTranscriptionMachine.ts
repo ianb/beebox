@@ -75,6 +75,7 @@ const EMPTY_SEGMENT = {
   interimTranscript: "",
   finalWords: null,
   error: null,
+  errorLevel: "error",
   recording: null,
   liveTextCue: "none",
 } as const;
@@ -85,6 +86,8 @@ const EMPTY_SEGMENT = {
  * return gets the matching cue), or `none`.
  */
 type LiveTextCue = "none" | "dropped" | "announced";
+
+export type TranscriptionErrorLevel = "error" | "warning";
 
 // -- Machine --
 
@@ -103,6 +106,12 @@ export const realtimeTranscriptionMachine = setup({
        */
       finalWords: FinalWord[] | null;
       error: string | null;
+      /**
+       * How the chat bar shows `error`: `error` when nothing was recorded
+       * (the person must act), `warning` when recording kept going or kept
+       * its text.
+       */
+      errorLevel: TranscriptionErrorLevel;
       liveTextCue: LiveTextCue;
       /**
        * The ended segment's staged recording, set on TRANSCRIPTION_DONE. The
@@ -138,7 +147,9 @@ export const realtimeTranscriptionMachine = setup({
         const message = `setError: event "${event.type}" has no message field`;
         throw new MachineActionError(message);
       }
-      return { error: event.message };
+      // SETUP_ERROR ends the start with nothing recorded; a live-socket error
+      // leaves the recording running.
+      return { error: event.message, errorLevel: event.type === "SETUP_ERROR" ? "error" as const : "warning" as const };
     }),
     setFinalTranscript: assign(({ context, event }) => {
       const e = requireEvent(event, { type: "TRANSCRIPTION_DONE", action: "setFinalTranscript" });
@@ -153,9 +164,9 @@ export const realtimeTranscriptionMachine = setup({
         recording: e.recording,
       };
     }),
-    setTimeoutWarning: assign({ error: "Transcription timed out — partial text preserved" }),
-    setMicInterrupted: assign({ error: "Microphone interrupted — recovering…" }),
-    setMicDropEnded: assign({ error: "Recording stopped — the microphone was taken away" }),
+    setTimeoutWarning: assign({ error: "Transcription timed out — partial text preserved", errorLevel: "warning" as const }),
+    setMicInterrupted: assign({ error: "Microphone interrupted — recovering…", errorLevel: "warning" as const }),
+    setMicDropEnded: assign({ error: "Recording stopped — the microphone was taken away", errorLevel: "warning" as const }),
     clearError: assign({ error: null }),
     playMicLost: () => {
       micLost.play();
@@ -177,7 +188,7 @@ export const realtimeTranscriptionMachine = setup({
       if (context.liveTextCue === "announced") enqueue("playLiveTextResumed");
       enqueue.assign({ liveTextCue: "none" });
     }),
-    setStartFailedError: assign({ error: "Recording didn't start. Please try again." }),
+    setStartFailedError: assign({ error: "Recording didn't start. Please try again.", errorLevel: "error" as const }),
     sendStopToTranscriber: ({ system }) => {
       // systemId (below) makes the actor reachable here; `id` alone is
       // invocation-scoped and system.get would return undefined.

@@ -24,6 +24,7 @@ import { createFirstUser, setPassword } from "../../src/webapp/local-users.js";
 import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/session.js";
+import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-auth-doctest";
@@ -126,6 +127,27 @@ JSON.stringify({
   secret: mobileBody.xBbxHubSecret,
 })
 => {"status":200,"url":"/test1/chat?nativeComposer=1","email":null,"secret":null}
+```
+
+## The box's agent token proxies without a browser session
+
+A `bbx` command run with the hub's URL sends the box's agent token. The hub
+checks it against that box's token file and proxies it with no identity
+attached; the box child checks it again. A different token is a bare 401.
+
+```ts continue
+const agentToken = getOrCreateAgentToken(mobileBox.root);
+const agentResponse = await fetch(`${hubBase}/test1/api/chat/ui/request`, {
+  method: "POST",
+  headers: { authorization: `Bearer ${agentToken}` },
+});
+const agentBody = BoxEcho.parse(await agentResponse.json());
+const wrongAgent = await fetch(`${hubBase}/test1/api/chat/ui/request`, {
+  method: "POST",
+  headers: { authorization: `Bearer ${"0".repeat(64)}` },
+});
+({ status: agentResponse.status, email: agentBody.xBbxAuthenticatedEmail, secret: agentBody.xBbxHubSecret, wrong: wrongAgent.status })
+=> { status: 200, email: null, secret: null, wrong: 401 }
 ```
 
 ## Unauthenticated and bogus API requests get a bare 401 (no redirect, no enumeration)

@@ -1,16 +1,16 @@
-/* Deck: charcoal panels, aqua messages and offset teal outlines. */
+/* Deck: worn turquoise screen printing on charcoal cloth. */
 .bbx-box-presentation[data-chrome-theme="deck"] {
-  --bbx-desk-background: #292e2c;
+  --bbx-desk-background: #242925;
   --bbx-desk-pattern: none;
   --bbx-desk-edge: #44959a;
-  --bbx-bar-paper: #202b2c;
-  --bbx-bar-edge: #44959a;
+  --bbx-bar-paper: #252e2b;
+  --bbx-bar-edge: #638d87;
   --bbx-focus-ring: #83e7ec;
   --bbx-selection: #78dedc;
   --bbx-selection-ink: #242f30;
   --bbx-selection-code: #78dedc;
   --bbx-selection-code-ink: #173e42;
-  --bbx-chat-user-paper: #91e1db;
+  --bbx-chat-user-paper: #9bd8cb;
   --bbx-chat-user-ink: #173d41;
 }
 .bbx-box-presentation[data-chrome-theme="deck"]:not(.bbx-system-theme-preview) {
@@ -37,7 +37,7 @@
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav {
   background: var(--bbx-bar-paper);
   color: #d8f4ef;
-  border-bottom: 4px solid #44959a;
+  border-bottom: 3px solid #5d9690;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav > div {
   background: var(--bbx-bar-paper);
@@ -50,7 +50,7 @@
   color: #d8f4ef;
   border: 1px solid #44959a;
   border-radius: 10px 10px 5px 5px;
-  box-shadow: 0 3px 0 #087f8a;
+  box-shadow: 0 2px 0 #163c3b;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav button:active { box-shadow: none; }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav :is(button, a):focus-visible {
@@ -58,11 +58,11 @@
   outline-offset: 2px;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material {
-  background: #242f30;
+  background: #29312e;
   color: #d8f4ef;
   border: 1px solid #44959a;
   border-radius: 28px 28px 0 0;
-  box-shadow: 5px 6px 0 #087f8a;
+  box-shadow: 4px 5px 0 #163c3b;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material > section {
   background: transparent;
@@ -70,7 +70,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r,
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material textarea {
-  background: #242f30;
+  background: #29312e;
   color: #d8f4ef;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material textarea::placeholder { color: #a4cbc9; }
@@ -97,7 +97,7 @@
   color: var(--bbx-chat-user-ink);
   border: 1px solid #44959a;
   border-radius: 28px 28px 4px 28px;
-  box-shadow: 5px 6px 0 #087f8a;
+  box-shadow: 4px 5px 0 #163c3b;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-user-paper :is(
   .bbx-chat-user-status, .bbx-chat-user-attachment-summary
@@ -115,12 +115,12 @@
   --bbx-ink: #d8f4ef;
   --bbx-ink-soft: #b2cbc5;
   --bbx-pen: #83e7ec;
-  --bbx-edge: #44959a;
-  background: #242f30;
+  --bbx-edge: #608b83;
+  background: #29312e;
   color: var(--bbx-ink);
   border: 1px solid #44959a;
   border-radius: 28px;
-  box-shadow: 5px 6px 0 #087f8a;
+  box-shadow: 4px 5px 0 #163c3b;
 }
 /* Tailwind typography declares its tokens on each prose node. Target the
    transcript prose itself, while leaving explicit nested cards independent. */
@@ -146,7 +146,7 @@
   color: #d8f4ef;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout {
-  background: #242f30;
+  background: #29312e;
   color: #d8f4ef;
   border: 1px solid #44959a;
   border-radius: 28px;
@@ -154,10 +154,10 @@
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout > .text-accent-dark { color: #d8f4ef; }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-meta-material {
   color: #b2cbc5;
-  background: #242f30;
+  background: #29312e;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-pending-material {
-  background: #242f30;
+  background: #29312e;
   color: #d8f4ef;
   border-radius: 12px;
   padding: 6px 10px;
@@ -183,21 +183,21 @@
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-empty-label {
   display: inline-block;
   color: #b2cbc5;
-  background: #242f30;
+  background: #29312e;
   border-radius: 5px;
   padding: 4px 8px;
 }
 .bbx-card-theme[data-card-theme="deck"] {
   color-scheme: dark;
-  --bbx-sheet: #354748;
-  --bbx-tint: #304142;
+  --bbx-sheet: #3b4944;
+  --bbx-tint: #35413b;
   --bbx-code-paper: #10272d;
   --bbx-code-ink: #d8f4ef;
-  --bbx-paper: #242f30;
+  --bbx-paper: #29312e;
   --bbx-ink: #d8f4ef;
   --bbx-ink-soft: #a4cbc9;
   --bbx-pen: #83e7ec;
-  --bbx-edge: #44959a;
+  --bbx-edge: #608b83;
   --bbx-underlay: #122e35;
   --bbx-font: ui-sans-serif, system-ui, sans-serif;
   --bbx-sheet-radius: 28px;
@@ -213,8 +213,8 @@
   --bbx-selection-code-ink: #173e42;
 }
 .bbx-card-surface[data-card-theme="deck"] {
-  border-top: 6px solid #78dedc;
-  box-shadow: 6px 7px 0 #087f8a;
+  border-top: 5px solid #8acabd;
+  box-shadow: 5px 6px 0 #225c59;
 }
 .bbx-card-surface[data-card-theme="deck"] > .bbx-card-properties {
   border-radius: 0 28px 0 12px;
@@ -226,18 +226,18 @@
   border-right-color: #44959a;
   border-radius: 16px 16px 0 0;
 }
-.bbx-interface-tab[data-card-theme="deck"][data-active="true"] { background: #242f30; }
+.bbx-interface-tab[data-card-theme="deck"][data-active="true"] { background: #29312e; }
 .bbx-interface-tab[data-card-theme="deck"]:not([data-active="true"]):hover { background: #3a5152; }
 .bbx-system-theme-preview[data-chrome-theme="deck"] {
-  background: url("./deck-panels.svg") center / cover, #292e2c;
+  background: url("./deck-panels.svg") center / cover, #242925;
 }
 .bbx-system-theme-preview[data-chrome-theme="deck"] .bbx-system-theme-toolbar {
-  background: #202b2c;
+  background: #252e2b;
   border-bottom: 3px solid #44959a;
 }
 .bbx-system-theme-preview[data-chrome-theme="deck"] .bbx-system-theme-toolbar i { background: #d8f4ef; }
 .bbx-system-theme-preview[data-chrome-theme="deck"] .bbx-system-theme-desk > span {
-  background: #242f30;
+  background: #29312e;
   border-color: #44959a;
   box-shadow: 3px 3px 0 #087f8a;
 }
@@ -247,12 +247,13 @@
   color: #173e42;
   border: 1px solid #44959a;
   border-radius: 10px 10px 5px 5px;
-  box-shadow: 0 3px 0 #087f8a;
+  box-shadow: 0 2px 0 #163c3b;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #173e42; }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material {
   color-scheme: dark;
-  border: 4px double #78dedc;
+  border: 1px solid #608b83;
+  border-top: 3px solid #82c5bb;
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material :is(textarea, input) { border-color: #44959a; }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material :is(button, textarea):focus-visible {
@@ -273,6 +274,37 @@
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-interface-card-desk[data-card-content="neutral"] {
   background: #fbf5ee;
 }
+/* Fine weave belongs to Deck surfaces only; nested explicit card themes
+   retain their own material. Texture is quieter underneath reading content. */
+.bbx-box-presentation[data-chrome-theme="deck"] :is(
+  .bbx-app-nav, .bbx-app-nav > div, .bbx-chat-reply-material,
+  .bbx-composer-material, .bbx-chat-callout, .bbx-chat-user-paper
+),
+.bbx-card-surface[data-card-theme="deck"],
+.bbx-interface-tab[data-card-theme="deck"] {
+  background-image: url("./deck-weave.svg");
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav :is(
+  #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
+  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill
+) {
+  background-image: url("./deck-weave.svg");
+  border-color: #608b83;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] :is(
+  .bbx-chat-reply-material, .bbx-chat-callout
+),
+.bbx-interface-tab[data-card-theme="deck"] {
+  border-color: #608b83;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material textarea {
+  background: transparent;
+}
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-user-paper {
+  border-color: #6eaa9e;
+  box-shadow: 4px 5px 0 #225c59;
+}
+
 @media print {
   .bbx-box-presentation[data-chrome-theme="deck"]::before { display: none; }
   .bbx-box-presentation[data-chrome-theme="deck"],

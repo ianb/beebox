@@ -103,6 +103,12 @@ function pageTitle(title: string): string {
   return title === "Bee Box" ? title : `${title} | Bee Box`;
 }
 
+// The light/dark switch (day-theme.ts handles the click). It shows the moon
+// on a light theme and the sun on a dark one; without JavaScript it is hidden.
+const THEME_TOGGLE = "<button class=\"theme-toggle\" type=\"button\" data-theme-toggle aria-label=\"Switch between light and dark themes\" title=\"Switch between light and dark themes\">"
+  + "<svg class=\"theme-moon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z\"/></svg>"
+  + "<svg class=\"theme-sun\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/></svg></button>";
+
 export function workspaceShell(workspace: SiteWorkspace, page: SitePage): string {
   const context = page.id === workspace.navigation.id || page.frontmatter.layout === "single" ? undefined
     : workspace.pages.find((candidate) => candidate.id === page.parentId) ?? workspace.navigation;
@@ -117,7 +123,7 @@ ${styles}<style>${FISHEYE_CSS}${THREADS_CSS}</style>
 </head><body class="bbx-box-presentation" data-chrome-theme="${chrome.theme}" data-chrome-stock="${chrome.stock ?? "cream"}" data-site-base="${escapeHtml(workspace.base)}">
 <script src="${escapeHtml(workspace.base)}assets/day-theme.js"></script>
 <a class="skip-link" href="#reading-card">Skip to reading</a>
-<header class="bbx-app-nav" id="site-header"><div><a class="brand" href="${escapeHtml(workspace.base)}">Bee Box</a>${menuHtml(workspace)}<span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></div></header>
+<header class="bbx-app-nav" id="site-header"><div><a class="brand" href="${escapeHtml(workspace.base)}">Bee Box</a>${menuHtml(workspace)}<span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span>${THEME_TOGGLE}</div></header>
 <main id="site-workspace" class="${context ? "" : "single"}" data-page="${escapeHtml(page.id)}" data-href="${escapeHtml(page.href)}" data-place="${escapeHtml(page.parentId ? context?.href ?? page.href : page.href)}"${page.id === HOME_PAGE_ID ? " data-threads" : ""} aria-label="Reading workspace">
 ${context ? pane(workspace, { page: context, context: true }) : ""}
 ${pane(workspace, { page, context: false }).replace('class="pane"', 'class="pane" id="reading-card" tabindex="-1"')}

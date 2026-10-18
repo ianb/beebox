@@ -46,7 +46,7 @@ export interface ResolvedThemeChoice {
   stock: string;
 }
 
-export const PresentationConfigSchema = z.object({
+const PresentationConfigSchema = z.object({
   default: ThemeChoiceSchema.optional(),
   cardTypes: z.record(z.string(), ThemeChoiceSchema).optional(),
   rules: z.array(z.object({

@@ -1,0 +1,9 @@
+{
+  "input": "beebox://pair?baseURL=https%3A%2F%2Fbox.example.ts.net%2Fwork&label=Work+Box&pairingToken=tok789",
+  "expected": {
+    "accepted": true,
+    "baseURL": "https://box.example.ts.net/work",
+    "label": "Work Box",
+    "pairingToken": "tok789"
+  }
+}

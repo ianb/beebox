@@ -12,18 +12,18 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ## Basenames that only differ by case also collide
 
-macOS (and Windows) filesystems are case-insensitive, so `Foo.memo.card` and
-`foo.memo.card` are the same path on disk even though a case-sensitive string
+macOS (and Windows) filesystems are case-insensitive, so `Foo.doc.card` and
+`foo.doc.card` are the same path on disk even though a case-sensitive string
 comparison would treat them as distinct basenames. The lint compares
 case-insensitively so this is caught before it ever reaches disk.
 
 ```ts
 const box2 = await makeTmpBox();
-await box2.write("Foo.memo.card", "---\nstatus: new\n---\n");
+await box2.write("Foo.doc.card", "---\ntitle: Note\n---\n");
 await box2.write("foo.record.card", "---\nname: x\n---\n");
 const errors2 = await lintAttachLayout(box2.root);
 JSON.stringify(errors2.map((e) => e.path).toSorted())
-=> ["Foo.memo.card","foo.record.card"]
+=> ["Foo.doc.card","foo.record.card"]
 
 errors2.every((e) => e.rule === "basename-collision")
 => true
@@ -43,8 +43,8 @@ not full filenames) — this stays true alongside the new case-insensitivity.
 
 ```ts
 const box3 = await makeTmpBox();
-await box3.write("Alpha.memo.card", "---\nstatus: new\n---\n");
-await box3.write("Beta.memo.card", "---\nstatus: new\n---\n");
+await box3.write("Alpha.doc.card", "---\ntitle: Note\n---\n");
+await box3.write("Beta.doc.card", "---\ntitle: Note\n---\n");
 const errors3 = await lintAttachLayout(box3.root);
 errors3.length
 => 0

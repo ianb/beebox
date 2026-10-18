@@ -29,13 +29,13 @@ async function run(options?: Parameters<typeof runTodosForBox>[1]) {
   return logs.join("\n");
 }
 
-function memo(frontmatterExtra: string, body: string) {
-  return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n${frontmatterExtra}---\n${body}`;
+function doc(frontmatterExtra: string, body: string) {
+  return `---\ntitle: Plate\n${frontmatterExtra}---\n${body}`;
 }
 
 await box.write(
-  "_content/plate.memo.card",
-  memo(
+  "_content/plate.doc.card",
+  doc(
     "",
     [
       '{% todo id="escalated-one" due="2026-07-27" assigned="Dana" %}Overdue vet call{% /todo %}',
@@ -59,11 +59,11 @@ await box.write(
 await run()
 =>
 OVERDUE (1)
-  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+  _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ON YOUR PLATE (1)
-  _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
+  _content/plate.doc.card:6  [on-plate-one] Undated, on the plate now
 LATER (1)
-  _content/plate.memo.card:9  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)
+  _content/plate.doc.card:8  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)
 ```
 
 ## `--status done`
@@ -72,7 +72,7 @@ LATER (1)
 await run({ status: "done" })
 =>
 DONE (1)
-  _content/plate.memo.card:13  [done-one] Already handled
+  _content/plate.doc.card:12  [done-one] Already handled
 ```
 
 ## `--status parked`
@@ -81,7 +81,7 @@ DONE (1)
 await run({ status: "parked" })
 =>
 PARKED (1)
-  _content/plate.memo.card:11  [parked-one] Parked
+  _content/plate.doc.card:10  [parked-one] Parked
 ```
 
 ## `--on-plate` narrows the default (open) filter further, excluding quiet
@@ -90,9 +90,9 @@ PARKED (1)
 await run({ onPlate: true })
 =>
 OVERDUE (1)
-  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+  _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ON YOUR PLATE (1)
-  _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
+  _content/plate.doc.card:6  [on-plate-one] Undated, on the plate now
 ```
 
 ## `--assigned`
@@ -101,7 +101,7 @@ ON YOUR PLATE (1)
 await run({ assigned: "Dana" })
 =>
 OVERDUE (1)
-  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+  _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ```
 
 ## No match
@@ -115,17 +115,17 @@ await run({ assigned: "Nobody" })
 
 ```ts continue
 await box.write(
-  "_content/bad.memo.card",
-  '---\nstatus: new\ncreated: not-a-date\n---\n{% todo %}Never collected{% /todo %}\n'
+  "_content/bad.doc.card",
+  '---\ntitle: 42\n---\n{% todo %}Never collected{% /todo %}\n'
 );
 await run({ status: "parked" })
 =>
 PARKED (1)
-  _content/plate.memo.card:11  [parked-one] Parked
+  _content/plate.doc.card:10  [parked-one] Parked
 «blankline»
 1 cards could not be read for todos:
-  [load] _content/bad.memo.card: _content/bad.memo.card: invalid memo frontmatter:
-  - created: Invalid ISO datetime
+  [load] _content/bad.doc.card: _content/bad.doc.card: invalid doc frontmatter:
+  - title: expected string, got number
 ```
 
 ## `--json` carries the full structured records, plus `issues` alongside

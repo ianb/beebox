@@ -9,7 +9,7 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { quickCaptureDeclarationSchema, quickCaptureDeclarationFieldsSchema, QUICK_CAPTURE_STATES, type QuickCaptureDeclaration } from "../../shared/quick-capture.js";
 import { invariant } from "../../shared/invariant.js";
 
-export const captureRecordSchema = z.object({
+const captureRecordSchema = z.object({
   id: z.string().uuid(), owner: z.string().nullable(), digest: z.string(),
   declaration: quickCaptureDeclarationFieldsSchema.partial({ source: true }), acceptedAt: z.string(),
   state: z.enum(QUICK_CAPTURE_STATES), sourceRef: z.string().optional(),
@@ -19,6 +19,7 @@ export const captureRecordSchema = z.object({
   error: z.string().optional(), attempts: z.number().int().nonnegative().default(0),
   discardedBeforeAcceptance: z.boolean().optional(),
   nextAttemptAt: z.string().optional(), blockedByGone: z.boolean().optional(),
+  filingRequested: z.literal(true).optional(), filingKicks: z.number().int().nonnegative().optional(), filingKickAt: z.string().optional(),
 }).superRefine((record, ctx) => {
   if (record.state !== "gone" && !quickCaptureDeclarationSchema.safeParse(record.declaration).success) {
     ctx.addIssue({ code: "custom", message: "A live capture needs its complete declaration." });
@@ -81,7 +82,8 @@ const CAPTURE_FAILURES = {
   "missing-parent": { code: "not-found", message: "Wait for the original capture to be accepted before sending context." },
   "deleted-parent": { code: "gone", message: "The original capture was deleted." },
   "invalid-source-ref": { code: "invalid", message: "The saved source reference is invalid." },
-  "duplicate-source": { code: "conflict", message: "The source capture ID appears on more than one memo." },
+  "duplicate-source": { code: "conflict", message: "The source capture ID appears on more than one saved source." },
+  "migration-pending": { code: "conflict", message: "The saved source is waiting for a box data migration. Retry after the box is migrated." },
   "missing-source": { code: "gone", message: "The saved source was deleted." },
   "different-owner": { code: "forbidden", message: "This capture belongs to another user." },
   "context-without-parent": { code: "invalid", message: "Context needs an original capture." },
