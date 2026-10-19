@@ -6,7 +6,10 @@ filed-by: agent
 discovered-in: finish-skill-audit worktree — adding a root `lint` script exposed it
 
 priority: backlog
+resolution: implemented
 ---
+
+Resolved 2026-10-19 in bug-burndown-3: `preset.ts` split into `preset/` modules, `lint` script added and wired into the pre-commit dispatcher. See Resolution below.
 
 The preset package that defines everyone else's lint has never linted itself.
 Its `lint` script was `eslint src/` — there is no `src/`; the package's code
@@ -30,7 +33,7 @@ audit warned about.
 ## Update 2026-08-25 — the structural blocker is gone; only content remains
 
 The `.mjs` → TypeScript sweep
-([2026-08-25-mjs-files-should-be-typescript](../closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md))
+([2026-08-25-mjs-files-should-be-typescript](2026-08-25-mjs-files-should-be-typescript.md))
 fixed the shadowing half of this by moving the preset out of `eslint.config.mjs`
 into **`preset.ts`**. `eslint.config.*` is now free for the package's own config,
 and `personal-vibe-check/eslint.config.ts` exists and works — `pnpm exec eslint .`
@@ -54,3 +57,21 @@ Two things did improve meanwhile: the package now has a `tsconfig.json` and a
 self-linting immediately caught a latent bug — a prose comment beginning with
 `eslint-disable-next-line` that ESLint was parsing as a real directive naming a
 nonexistent rule.
+
+## Resolution
+
+2026-10-19 (bug-burndown-3). `preset.ts` now only assembles `vibeCheck()`; the
+rule tables and config entries moved to `preset/` (`base-config.ts`,
+`enabled-rules.ts`, `disabled-rules.ts`, `react-rules.ts`, `main-plugins.ts`,
+`global-overrides.ts`, `tsx-overrides.ts`). The four default imports take the
+upstream default-export names (`config`, `plugin`, `unicorn`), with ddd and
+import-x in separate modules so both can be `plugin`. No rule was loosened or
+suppressed. A deep comparison of the old and new `vibeCheck()` output for four
+option sets found them identical; the exports map and default export are
+unchanged.
+
+`personal-vibe-check` has a `lint` script (cached eslint over the package), so
+the root `pnpm lint` covers it, and `.husky/pre-commit` runs its lint and
+typecheck when the package is staged. `lint:circular` now names the package's
+real sources (`preset.ts plugin.ts preset/ rules/ bin/`) instead of `src/`.
+

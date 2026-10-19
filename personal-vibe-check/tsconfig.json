@@ -11,6 +11,7 @@
   },
   "include": [
     "preset.ts",
+    "preset/**/*",
     "plugin.ts",
     "types.d.ts",
     "types/**/*",
