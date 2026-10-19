@@ -22,6 +22,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, containing } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
+import { removeTempCwdTranscripts } from "../../src/core/chat/session/transcript-paths.js";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createFieldBox } from "../../src/field-test/run-box.js";
@@ -42,6 +43,7 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   t.teardown(async () => {
     try {
       await rm(runDir, { recursive: true, force: true });
+      await removeTempCwdTranscripts(runDir);
     } catch (error) {
       t.error(error);
     }

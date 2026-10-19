@@ -1,13 +1,17 @@
 ---
 title: "The task-output read guard accepts a sibling box whose name extends this box's name with a hyphen"
-workstream: unattached
+workstream: flaky-tests
 area: beebox
 labels: [security, chat]
 priority: normal
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-flaky-tests — cross-model review (codex gpt-6-sol) of the transcript-path fix
+resolution: implemented
 ---
+
+Closed 2026-10-19. The guard now requires the encoded cwd segment to equal exactly the encoding of the box root or of a landmark directory in the box's chat history; the route reads the history on each request. On the developer's machine, all 15 real task-output directories of the one box that had any matched that set. One collision remains, documented at the function: a landmark `alpha/other` and a sibling box `alpha-other` encode the same.
+
 
 `isTaskOutputPathForBox` (`beebox/src/core/chat/session/transcript-paths.ts`)
 guards `GET /api/task-output`. It accepts a task-output path when its encoded

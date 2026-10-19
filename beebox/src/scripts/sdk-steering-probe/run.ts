@@ -26,11 +26,12 @@
  */
 
 import { query, type Options, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
-import { mkdtempSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAsyncIterableQueue } from "../../services/claude-chat-queue.js";
 import { resolveClaudeCodeBinary } from "../../core/sdk-binary-path.js";
+import { removeTempCwdTranscripts } from "../../core/chat/session/transcript-paths.js";
 import { classify, exitStatus, EXIT_BEHAVIOR_CHANGED, EXIT_INCONCLUSIVE, type Observation, type Outcome } from "./verdict.js";
 
 interface Scenario {
@@ -70,9 +71,19 @@ function userMsg(scenario: Scenario, text: string): SDKUserMessage {
 }
 
 async function runScenario(scenario: Scenario): Promise<Observation> {
+  const cwd = await mkdtemp(join(tmpdir(), "sdk-steering-probe-"));
+  try {
+    return await observe(scenario, cwd);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+    await removeTempCwdTranscripts(cwd);
+  }
+}
+
+async function observe(scenario: Scenario, cwd: string): Promise<Observation> {
   const input = createAsyncIterableQueue<SDKUserMessage>();
   const options: Options = {
-    cwd: mkdtempSync(join(tmpdir(), "sdk-steering-probe-")),
+    cwd,
     permissionMode: "bypassPermissions",
     includePartialMessages: true,
   };

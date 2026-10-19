@@ -8,7 +8,6 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, str } from "@ianbicking/tap-check/check";
 import { isTaskOutputPathForBox, encodeProjectDir } from "../../../../src/core/chat/session/transcript-paths.js";
 
 const BOX_ROOT = "/srv/boxes/alpha";
@@ -18,7 +17,11 @@ function taskPath({ root, cwd, session, file }: { root?: string; cwd?: string; s
   return `${root ?? "/private/tmp"}/claude-501/${cwd ?? ENCODED}/${session ?? "sess-1"}/tasks/${file ?? "t1.output"}`;
 }
 
-const ok = (filePath: string, boxRoot?: string) => isTaskOutputPathForBox({ boxRoot: boxRoot ?? BOX_ROOT, filePath });
+// The box's chat history binds one chat to the `landmarks/kitchen` directory.
+const CONTEXT_DIRS = ["landmarks/kitchen"];
+
+const ok = (filePath: string, boxRoot?: string) =>
+  isTaskOutputPathForBox({ boxRoot: boxRoot ?? BOX_ROOT, contextDirs: CONTEXT_DIRS, filePath });
 
 // ## A well-shaped path for this box's own root is accepted, on `/private/tmp` and `/tmp`
 void test("A well-shaped path for this box's own root is accepted, on `/private/tmp` and `/tmp`", async (t) => {
@@ -27,29 +30,30 @@ void test("A well-shaped path for this box's own root is accepted, on `/private/
     { privateTmp: true, bareTmp: true },
   );
 
-  // ## A landmark-bound subdirectory cwd (the `-`-extended encoded segment) is also this box's
-  //
-  // `encodeProjectDir` turns the subdirectory's extra `/segment` into a literal
-  // `-` plus more encoded characters appended to the box's own encoded root — so
-  // `isTaskOutputPathForBox` must accept the extension, not just the exact match.
+  // ## A landmark cwd the history records is this box's; one it does not record is not
 
-  const subdirCwd = encodeProjectDir(`${BOX_ROOT}/landmarks/kitchen`);
-  t.check(subdirCwd, str`${ENCODED}-${any(String)}`);
-  t.check(ok(taskPath({ cwd: subdirCwd })), true);
-
-  // ## Another box's encoded cwd is rejected — including one that merely shares a string prefix
-
-  const otherBox = "/srv/boxes/beta";
-  // A box whose encoded root is a bare STRING PREFIX of this box's (no `-`
-  // separator) must not pass — only an exact match or a `-`-delimited
-  // extension counts. `prefixSharingBox` drops the trailing "a" of ".../alpha".
-  const prefixSharingBox = BOX_ROOT.slice(0, -1);
   t.check(
     {
-      otherBox: ok(taskPath({ cwd: encodeProjectDir(otherBox) })),
-      bareStringPrefixBox: ok(taskPath({}), prefixSharingBox),
+      recordedLandmark: ok(taskPath({ cwd: encodeProjectDir(`${BOX_ROOT}/landmarks/kitchen`) })),
+      unrecordedLandmark: ok(taskPath({ cwd: encodeProjectDir(`${BOX_ROOT}/landmarks/garage`) })),
     },
-    { otherBox: false, bareStringPrefixBox: false },
+    { recordedLandmark: true, unrecordedLandmark: false },
+  );
+
+  // ## Another box's encoded cwd is rejected, including a sibling whose name extends this one
+  //
+  // The encoding maps every non-alphanumeric character to `-`, so the sibling
+  // `/srv/boxes/alpha-other` encodes to this box's encoded root plus `-other`.
+  // The earlier prefix rule ("the root, or the root plus `-`") accepted it.
+  // `prefixSharingBox` drops the trailing "a" of ".../alpha".
+
+  t.check(
+    {
+      otherBox: ok(taskPath({ cwd: encodeProjectDir("/srv/boxes/beta") })),
+      hyphenSibling: ok(taskPath({ cwd: encodeProjectDir("/srv/boxes/alpha-other") })),
+      bareStringPrefixBox: ok(taskPath({}), BOX_ROOT.slice(0, -1)),
+    },
+    { otherBox: false, hyphenSibling: false, bareStringPrefixBox: false },
   );
 
   // ## Outside the tmp root, missing `/tasks/`, or a nested path under `tasks/` is rejected
