@@ -7,7 +7,7 @@
  * - `cancel <label>`: cancel this chat's check-in.
  *
  * Every form prints one line naming what it made and when, or refuses with
- * exit 1 and one sentence naming the fix. See docs/plans/bbx-remind.md.
+ * exit 1 and one sentence naming the fix. See docs/implemented-plans/bbx-remind.md.
  */
 
 import { Command } from "commander";

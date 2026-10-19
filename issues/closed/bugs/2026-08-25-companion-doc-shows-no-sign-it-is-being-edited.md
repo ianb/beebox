@@ -1,5 +1,6 @@
 ---
 title: "The companion document gives no sign the agent is editing it"
+resolution: implemented
 workstream: turn-feedback
 area: beebox
 labels: [journey-findings, ui-sensibility]
@@ -9,13 +10,15 @@ discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk
 priority: normal
 ---
 
+Resolved by d2d305976: the companion panel shows "Updating..." while the chat turn edits it. Checked in the browser on the worktree test1 clone by polling page text: the indicator appeared about 4s into an editing turn and cleared at turn end. No screenshot, because bin/browse screenshots hung (known issue).
+
 ## Recovery assessment (2026-09-21)
 
 The concern remains plausible, not freshly reproduced. Current
 `beebox/src/frontend/src/components/chat/workspace/WorkspaceCanvas/view.tsx:24-60`
 renders tabs and FileView without agent-turn/mutation state. Initial loading is
 not an in-progress edit indicator; existing text remains available during a
-refresh. Related [card edit highlighting](../features/2026-08-01-card-diff-view-edit-highlighting.md)
+refresh. Related [card edit highlighting](../../features/2026-08-01-card-diff-view-edit-highlighting.md)
 is a separate question of showing changes, rather than showing that work is
 underway. Preserve this as historical user evidence pending focused UI testing.
 

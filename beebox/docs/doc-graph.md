@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-19T01:20:18Z
+Generated: 2026-10-19T01:32:37Z
 Total documents: 545
 
 ## Issues
@@ -12,6 +12,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/acknowledgements-backfill.md** — "Acknowledgements backfill: credit adopted external ideas" (319 lines) · shipped history · implemented
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines) · implementation review
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
+- **docs/implemented-plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · shipped history · implemented
 - **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
@@ -68,7 +69,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
-- **docs/plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · proposal · draft
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines) · proposal · partial
@@ -1771,10 +1771,10 @@ Title: "Notifications" | 244 lines | current reference
 Referenced by:
 - docs/design/interaction-model.md:37 (link) — [`../notifications.md`](../notifications.md) are implementation, not design,
 - docs/guides.md:40 (link) — | Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [notifications
+- docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/notifications.md:20 (mention) — > walk"](../notifications.md#verification-walk) — has not run; it is gated
 - docs/implemented-plans/remove-telegram.md:38 (mention) — so I am told. The channel rule (`docs/notifications.md`, *Channels*) has
 - docs/implemented-plans/retire-type-specific-core-tags.md:148 (mention) — The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/
-- docs/plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/server/configuration.md:71 (link) — [notifications](../notifications.md).
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:25 (mention) — is present (`docs/notifications.md`, the root briefing's "Reaching me").
 - ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:46 (mention) — (`docs/notifications.md`).
@@ -2915,13 +2915,13 @@ Referenced by:
 - docs/chat.md:11 (link) — | [Check-ins](chat/schedules.md) | Agent-set timers that come back to one conversation (`bbx remind --here`): lifecycle,
 - docs/design/README.md:35 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
 - docs/design/processing.md:26 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
+- docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/design-reconciliation.md:579 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-chat.md:70 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
 - docs/implemented-plans/mvp-implementation-guide.md:248 (mention) — See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:103 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
 - docs/notifications.md:95 (link) — ([chat check-ins](chat/schedules.md)).
-- docs/plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
-- ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
+- ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:67 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
 - ../research/fabric-review.md:73 (mention) — - **One agent per box, with the whole box.** The agent is Claude Code or Codex with a shell, procedures and schedules (`
 - ../research/lifeos-review.md:68 (mention) — | Weekly review that shows last week's "next step" and freezes a snapshot | **Adapt**, as a scheduled procedure that ope
 
@@ -3665,6 +3665,19 @@ References:
 - → README.md (mention)
 - → docs/implemented-plans/agent-field-tests.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
+
+#### docs/implemented-plans/bbx-remind.md **[ORPHAN]**
+
+Title: "bbx remind: one command for check-ins and reminders" | 290 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
+- → ../issues/closed/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
+- → src/core/agent-guide/guide.md (mention)
+- → src/hub/AGENTS.md (mention)
+- → docs/chat/schedules.md (mention)
+- → docs/notifications.md (mention)
 
 #### docs/implemented-plans/bloom-theme.md **[ORPHAN]**
 
@@ -7543,19 +7556,6 @@ References:
 - → docs/testing.md (mention)
 - → docs/cards/migrations.md (mention)
 
-#### docs/plans/bbx-remind.md **[ORPHAN]**
-
-Title: "bbx remind: one command for check-ins and reminders" | 290 lines | proposal | draft
-
-References:
-- → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (frontmatter)
-- → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
-- → ../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
-- → src/core/agent-guide/guide.md (mention)
-- → src/hub/AGENTS.md (mention)
-- → docs/chat/schedules.md (mention)
-- → docs/notifications.md (mention)
-
 #### docs/plans/box-commentary-surface.md
 
 Title: "In-box Commentary Surface for Out-of-Box Files" | 785 lines | proposal | partial
@@ -9872,13 +9872,13 @@ Referenced by:
 - docs/design/README.md:30 (mention) — The Laws (Saving, Cards, Checking, and Quoting, with its tiebreak: when unsure whether a change is a fix or a reword, it
 - docs/glossary.md:20 (mention) — Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
 - docs/implemented-plans/agent-guide-spec.md:171 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
+- docs/implemented-plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
 - docs/implemented-plans/place-shows-cards.md:184 (mention) — when the agent edits a landmark (`src/core/agent-guide/guide.md:393`).
 - docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/implemented-plans/remove-telegram.md:152 (mention) — - **Agent-facing text:** `src/core/agent-guide/guide.md:309, 405`,
 - docs/implemented-plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
-- docs/plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
@@ -10000,10 +10000,10 @@ Title: "Hub" | 70 lines
 Referenced by:
 - AGENTS.md:44 (link) — - Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpe
 - docs/chat/schedules.md:101 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- docs/implemented-plans/bbx-remind.md:85 (mention) — chat schedule is pending (`src/hub/AGENTS.md:55`, *"Chat schedules override
 - docs/implemented-plans/docs-reorg.md:320 (mention) — conventions documented at colocated homes (new `src/hub/AGENTS.md`,
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/mobile-token-handshake.md:82 (mention) — unacceptable."* `src/hub/AGENTS.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
-- docs/plans/bbx-remind.md:85 (mention) — chat schedule is pending (`src/hub/AGENTS.md:55`, *"Chat schedules override
 - docs/server/boxes.md:30 (mention) — persisted to `hub-state.json` beside the config) — see `src/hub/AGENTS.md`.
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:33 (mention) — `beebox/src/hub/AGENTS.md`,
 
@@ -10377,8 +10377,8 @@ References:
 - → test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md (link)
 - → ../issues/code-quality/2026-08-25-router-failure-page-addresses-nobody.md (link)
 - → ../issues/closed/bugs/2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path.md (link)
-- → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
-- → ../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
+- → ../issues/closed/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
 - → ../issues/closed/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
 - → ../issues/bugs/2026-08-25-one-pink-bar-three-severities.md (link)
 - → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
@@ -10387,7 +10387,7 @@ References:
 - → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md (link)
+- → ../issues/closed/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md (link)
 
 #### test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md
 

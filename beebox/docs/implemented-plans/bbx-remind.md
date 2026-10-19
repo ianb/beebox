@@ -1,9 +1,9 @@
 ---
 title: "bbx remind: one command for check-ins and reminders"
-status: draft
+status: implemented
 workstream: turn-feedback
 issues:
-  - ../../../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md
+  - ../../../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md
 ---
 # bbx remind: one command for check-ins and reminders
 
@@ -16,8 +16,8 @@ one `bbx remind` command that answers inside the turn, and caps check-ins at a
 length that fits a conversation.
 
 **Issues addressed:**
-- [chat-timer-over-25-days-fires-instantly](../../../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md) — resolved by this plan.
-- Related, already landed in this workstream: [agent-narrated-an-invented-root-cause](../../../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md) (prompt rule, commit `9b238136c`). The misfire triggered it, but the rule covers any internal failure, so it is not tied to this plan.
+- [chat-timer-over-25-days-fires-instantly](../../../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md) — resolved by this plan.
+- Related, already landed in this workstream: [agent-narrated-an-invented-root-cause](../../../issues/closed/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md) (prompt rule, commit `9b238136c`). The misfire triggered it, but the rule covers any internal failure, so it is not tied to this plan.
 - Queue search: `bin/issues search "chat schedule"`, `"reminder"`, `"setTimeout"`. No other open issue covers chat timers or reminder authoring.
 
 **Review:** cross-model plan review rounds 1 and 2 (codex gpt-6-astra,
