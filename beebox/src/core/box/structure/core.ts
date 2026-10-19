@@ -419,17 +419,27 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
     const stat = await fs.lstat(globalMemoryDir);
     if (stat.isDirectory() && !stat.isSymbolicLink()) {
       const files = await fs.readdir(globalMemoryDir);
+      const conflicts: string[] = [];
       for (const file of files) {
         const src = path.join(globalMemoryDir, file);
         const dest = path.join(localMemoryDir, file);
         try {
           await fs.access(dest);
-          // Local file already exists — skip (don't overwrite)
+          // Local file already exists — don't overwrite, and don't delete it below.
+          conflicts.push(file);
         } catch (_e) {
           // fs.access throws ENOENT when dest is absent — the normal case
           // for moving a file in. The error carries no actionable info.
           await fs.rename(src, dest);
         }
+      }
+      // Both copies of a file are memory someone wrote; which one wins is the
+      // boxholder's call. Leave the global directory unlinked until they merge.
+      if (conflicts.length > 0) {
+        console.warn(
+          `Not linking ${globalMemoryDir} to ${localMemoryDir}: both hold ${conflicts.join(", ")}. Merge them into the box copy and remove the global directory, then re-run init.`,
+        );
+        return false;
       }
       await fs.rm(globalMemoryDir, { recursive: true });
     }

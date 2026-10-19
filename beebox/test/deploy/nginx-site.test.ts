@@ -12,7 +12,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, str } from "@ianbicking/tap-check/check";
+import { any, eventually, str } from "@ianbicking/tap-check/check";
 import { execFile } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import { get as httpGet } from "node:http";
@@ -95,7 +95,8 @@ async function enabled(etc: string): Promise<string> {
  *  failed here: fetch reused an idle socket held by a worker the reload was
  *  retiring, and the worker closed it under the next request (ECONNRESET on
  *  2026-10-09, UND_ERR_SOCKET "other side closed" on 2026-10-17). A fresh
- *  connection is accepted by whichever workers hold the listener now. */
+ *  connection is accepted by whichever workers hold the listener now; a reset
+ *  that still lands mid-reload is one more poll, not a failure. */
 async function getOnce(port: number): Promise<{ status: number; deployPage: string | undefined }> {
   return new Promise((done, fail) => {
     const req = httpGet({ host: "127.0.0.1", port, path: "/any/path", agent: false }, (res) => {
@@ -111,14 +112,12 @@ async function getOnce(port: number): Promise<{ status: number; deployPage: stri
 }
 
 /** Poll until the reloaded configuration serves the deploy page; until then
- *  the old configuration answers. */
+ *  the old configuration answers. The timeout only bounds a failed reload. */
 async function statusWithPage(port: number): Promise<number> {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+  return eventually(async () => {
     const response = await getOnce(port);
-    if (response.deployPage === "in-progress") return response.status;
-    await new Promise((done) => setTimeout(done, 50));
-  }
-  return -1;
+    return response.deployPage === "in-progress" && response.status;
+  }, { label: "the reloaded site serves the deploy page", timeoutMs: 30_000, intervalMs: 50 });
 }
 
 // ## From the old layout to the repo site

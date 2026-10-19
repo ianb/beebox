@@ -348,14 +348,14 @@ void test("Stopping after the reload acknowledgment leaves a stopped box open", 
   await stopReloadSupervisor.startAll();
   stopReloadChildren[0]?.fireMessage({ type: "reload-request" });
   while (!stopReloadAcknowledged) await new Promise((resolve) => setImmediate(resolve));
-  // Wait for the reload controller to release the owner lock. Once no owner
-  // holds the box, whatever record remains is final. The timeout only bounds a
-  // failure; a passing run returns as soon as the lock is gone.
-  const { stopReloadPhase } = await eventually(async () => {
-    const status = await boxMaintenanceStatus(stopReloadFixture.root);
-    return (status === null || status.owner === null) && { stopReloadPhase: status };
-  }, { label: "reload controller released the owner lock", timeoutMs: 30_000 });
-  t.check(stopReloadPhase, null);
+  // Wait for the reload controller to clear its record. Release removes the
+  // phase and then the lock, so a read between the two still sees the phase;
+  // only an absent record is the end state. The timeout only bounds a failure:
+  // a stop that leaves the box blocked never gets here.
+  await eventually(async () => (await boxMaintenanceStatus(stopReloadFixture.root)) === null, {
+    label: "reload controller cleared its maintenance record",
+    timeoutMs: 30_000,
+  });
 
   t.check(stopReloadSupervisor.getStatuses()[0]?.status, "stopped");
 

@@ -53,3 +53,49 @@ void test("A box whose real path holds _ and ., reached through a symlink, links
   t.check(entries, [not(any(String).matches(/[._]/))]);
   t.check(path.basename(path.dirname(await fs.readlink(path.join(projects, entries[0] ?? "", "memory")))), ".claude");
 });
+
+// When the global directory and the box both hold a file of the same name, both
+// are memory someone wrote. The linker used to skip the global copy and then
+// remove its directory, deleting it. It now moves what it can, keeps the
+// conflicting global file, and leaves the link for the boxholder to finish.
+void test("A memory file in both places is kept in both, and nothing is linked", async (t) => {
+  t.teardown(async () => {
+    try {
+      if (previousProjects === undefined) delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
+      else process.env["BBX_CLAUDE_PROJECTS_DIR"] = previousProjects;
+      await fs.rm(projects, { recursive: true, force: true });
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const previousProjects = process.env["BBX_CLAUDE_PROJECTS_DIR"];
+  const projects = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-projects-"));
+  process.env["BBX_CLAUDE_PROJECTS_DIR"] = projects;
+  const globalMemory = path.join(projects, encodeProjectDir(await fs.realpath(box.root)), "memory");
+  await fs.mkdir(globalMemory, { recursive: true });
+  await fs.writeFile(path.join(globalMemory, "MEMORY.md"), "global\n");
+  await fs.writeFile(path.join(globalMemory, "only-global.md"), "moved\n");
+  await fs.mkdir(box.path(".claude/memory"), { recursive: true });
+  await fs.writeFile(box.path(".claude/memory/MEMORY.md"), "local\n");
+
+  const warnings: unknown[][] = [];
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  const linked = await symlinkClaudeMemory(box.root).finally(() => {
+    console.warn = warn;
+  });
+
+  t.check(
+    {
+      linked,
+      warnings,
+      global: await fs.readdir(globalMemory),
+      globalMemory: await fs.readFile(path.join(globalMemory, "MEMORY.md"), "utf8"),
+      local: (await fs.readdir(box.path(".claude/memory"))).toSorted(),
+      localMemory: await fs.readFile(box.path(".claude/memory/MEMORY.md"), "utf8"),
+    },
+    { linked: false, warnings: [[any(String).matches(/both hold MEMORY\.md\. Merge/)]], global: ["MEMORY.md"], globalMemory: "global\n", local: ["MEMORY.md", "only-global.md"], localMemory: "local\n" },
+  );
+});
