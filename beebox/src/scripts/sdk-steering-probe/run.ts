@@ -2,7 +2,7 @@
  * SDK steering-behavior probe. Run after every `@anthropic-ai/claude-agent-sdk`
  * bump (`pnpm update-agent-sdk` reminds you):
  *
- *   node --import tsx beebox/src/scripts/sdk-steering-probe.ts
+ *   node --import tsx beebox/src/scripts/sdk-steering-probe/run.ts
  *
  * The chat mid-turn steering design (see docs/chat/sessions.md) leans
  * on CLI behavior that is observable but NOT a documented SDK contract:
@@ -16,17 +16,22 @@
  *      turn to finish. Both deliver.
  *
  * Each scenario makes real API calls (a couple of short agent turns each,
- * ~30-60s total). Exit 0 = behavior holds; exit 1 = a scenario failed, meaning
- * an SDK bump changed the semantics chat steering depends on — investigate
- * before shipping the bump.
+ * ~30-60s total). A scenario that times out runs once more; two timeouts in a
+ * row are INCONCLUSIVE, since a slow turn says nothing about steering.
+ *
+ * Exit 0 = behavior holds. Exit 1 = a steer message was lost or answered in
+ * the wrong turn: an SDK bump changed the semantics chat steering depends on —
+ * investigate before shipping the bump. Exit 2 = inconclusive (a scenario timed
+ * out twice, nothing contradicted): re-run before deciding.
  */
 
 import { query, type Options, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAsyncIterableQueue } from "../services/claude-chat-queue.js";
-import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
+import { createAsyncIterableQueue } from "../../services/claude-chat-queue.js";
+import { resolveClaudeCodeBinary } from "../../core/sdk-binary-path.js";
+import { classify, exitStatus, EXIT_BEHAVIOR_CHANGED, EXIT_INCONCLUSIVE, type Observation, type Outcome } from "./verdict.js";
 
 interface Scenario {
   name: string;
@@ -62,13 +67,6 @@ function userMsg(scenario: Scenario, text: string): SDKUserMessage {
   };
   // eslint-disable-next-line no-restricted-syntax -- sound: SDKUserMessage declares fields (uuid) the SDK fills in itself — same construction as services/claude-chat.ts run.send()
   return msg as SDKUserMessage;
-}
-
-interface Observation {
-  /** Number of `result` messages before the steer answer (0 = same turn). */
-  turnsBeforeSteerAnswer: number | null;
-  resultCount: number;
-  timedOut: boolean;
 }
 
 async function runScenario(scenario: Scenario): Promise<Observation> {
@@ -138,32 +136,33 @@ async function runScenario(scenario: Scenario): Promise<Observation> {
   return obs;
 }
 
-function evaluate(scenario: Scenario, obs: Observation): string | null {
-  if (obs.turnsBeforeSteerAnswer === null) {
-    return obs.timedOut ? "timed out before the steer answer arrived" : "steer message was LOST (never answered)";
-  }
-  if (scenario.expectSameTurn === true && obs.turnsBeforeSteerAnswer !== 0) {
-    return `expected same-turn injection, but the answer came ${obs.turnsBeforeSteerAnswer} turn(s) later`;
-  }
-  return null;
+async function runWithRetry(scenario: Scenario): Promise<{ obs: Observation; outcome: Outcome }> {
+  const obs = await runScenario(scenario);
+  const outcome = classify(scenario.expectSameTurn === true, obs);
+  if (outcome.kind !== "inconclusive") return { obs, outcome };
+  process.stdout.write("timed out, retrying once ... ");
+  const retryObs = await runScenario(scenario);
+  return { obs: retryObs, outcome: classify(scenario.expectSameTurn === true, retryObs) };
 }
 
-let failed = false;
+const outcomes: Outcome[] = [];
 for (const scenario of SCENARIOS) {
   process.stdout.write(`${scenario.name} ... `);
-  const obs = await runScenario(scenario);
-  const failure = evaluate(scenario, obs);
+  const { obs, outcome } = await runWithRetry(scenario);
+  outcomes.push(outcome);
   const shape = obs.turnsBeforeSteerAnswer === 0 ? "same turn" : `after ${obs.turnsBeforeSteerAnswer ?? "∞"} result(s)`;
-  if (failure === null) {
-    console.log(`PASS (answered ${shape}; ${obs.resultCount} result(s) total)`);
-  } else {
-    failed = true;
-    console.log(`FAIL — ${failure}`);
-  }
+  if (outcome.kind === "pass") console.log(`PASS (answered ${shape}; ${obs.resultCount} result(s) total)`);
+  else if (outcome.kind === "fail") console.log(`FAIL — ${outcome.reason}`);
+  else console.log(`INCONCLUSIVE — ${outcome.reason} (twice)`);
 }
 
-if (failed) {
+const status = exitStatus(outcomes);
+if (status === EXIT_BEHAVIOR_CHANGED) {
   console.error("\nSteering behavior changed under this SDK version. Do not ship the bump until docs/chat/sessions.md and the chat steering design are reconciled.");
-  process.exit(1);
+} else if (status === EXIT_INCONCLUSIVE) {
+  console.error("\nINCONCLUSIVE: a scenario timed out twice, so the probe could not verify steering. Nothing contradicted it. Re-run the probe before deciding.");
+} else {
+  console.log("\nAll steering behaviors hold on this SDK version.");
 }
-console.log("\nAll steering behaviors hold on this SDK version.");
+// exitCode, not exit(): on macOS a piped stdout is async and exit() can cut the summary.
+process.exitCode = status;

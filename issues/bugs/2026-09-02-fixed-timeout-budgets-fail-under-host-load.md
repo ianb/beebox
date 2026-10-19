@@ -1,6 +1,6 @@
 ---
 title: "Fixed timeout budgets make load indistinguishable from red; consolidated from three filings"
-workstream: test-overload
+workstream: flaky-tests
 area: beebox
 labels: [testing, flake, timeout, load]
 filed-by: agent

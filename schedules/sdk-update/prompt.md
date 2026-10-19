@@ -107,7 +107,10 @@ all.
    (root, `@` includes, nested on Read); the probe method is in
    `beebox/docs/implemented-plans/box-agents-md.md` "Prior art".
 9. **After a bump**, run `pnpm -C beebox test`; for an SDK bump also
-   `node --import tsx beebox/src/scripts/sdk-steering-probe.ts`; for a Codex bump
+   `node --import tsx beebox/src/scripts/sdk-steering-probe/run.ts` (exit 0 holds;
+   exit 1 steering changed, a validation failure; exit 2 inconclusive, a
+   scenario timed out twice: re-run the probe once, and treat a second exit 2
+   as a failure to alert on, not as a behavior change); for a Codex bump
    also the deploy gate, on the workspace's pinned binary and never a bare
    `codex` from `PATH`: `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin
    --help` from the repo root. Update the ledger's pin,
